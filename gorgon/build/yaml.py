@@ -37,6 +37,11 @@ def get_team(author):
             return team
 
 
+def additional_tactics(name, tactic):
+    # need to get the potential additional tactics for technique via the ATT&CK API or web scraping
+    return tactic
+
+
 def find_nested_entity(field, entity_mappings):
     for entity, values in entity_mappings.items():
         for v in values:
@@ -135,15 +140,15 @@ def construct_yaml(
         operatorGuidance, detectionSteps
     )
 
+    all_tactics = additional_tactics(name, tactic)
     name = name.replace(" ", "").replace("/", "")
-    print(tactic)
-    tactic_list = ast.literal_eval(tactic)
+    tactic_list = ast.literal_eval(all_tactics)
     if (
         isinstance(tactic_list, list)
         and len(tactic_list) > 0
         and "name" in tactic_list[0]
     ):
-        tactic = tactic_list[0]["name"]
+        all_tactics = tactic_list[0]["name"]
 
     # Writing MDE YAML file
     for query in appended_mde_queries:
@@ -157,7 +162,7 @@ def construct_yaml(
                 tid,
                 tdesc,
                 "MicrosoftThreatProtection",
-                tactic,
+                all_tactics,
                 tag,
                 query_with_entities,
                 source,
@@ -184,7 +189,7 @@ def construct_yaml(
                 tid,
                 tdesc,
                 "Splunk",
-                tactic,
+                all_tactics,
                 tag,
                 query,
                 source,

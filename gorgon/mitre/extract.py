@@ -3,7 +3,16 @@ import re
 
 
 def extract_commands(combined_desc):
-    return {"cmd": re.findall("(?:`|<code>)([^`<]+)(?:`|</code>)", combined_desc)}
+    cleaned_desc = (
+        combined_desc.replace("“", '"')
+        .replace("”", '"')
+        .replace("‘", "'")
+        .replace("’", "'")
+    )
+    cmds = re.findall("(?:`|<code>)([^`<]+)(?:`|</code>)", cleaned_desc)
+    normalised_cmds = [cmd.strip() for cmd in cmds]
+
+    return {"cmd": normalised_cmds}
 
 
 def extract_software(combined_desc):

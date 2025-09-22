@@ -25,7 +25,7 @@ def obtain_all_techniques(bundle):
             ]
             techniques.append(f"{external_id[0]}: {technique_name}")
     techniques = sorted(list(set(techniques)))  # Remove duplicates
-    
+
     return techniques
 
 
@@ -41,7 +41,7 @@ def obtain_technique_descriptions(bundle):
             ]
             descriptions.append(f"{external_id[0]}: {technique_description}")
     descriptions = sorted(list(set(descriptions)))  # Remove duplicates
-    
+
     return descriptions
 
 
@@ -52,7 +52,7 @@ def check_group_in_mitre(bundle, group):
             aliases = str(obj.get("aliases")).lower()
             if group.lower() == group_name or group.lower() in aliases:
                 return "Y"
-    
+
     return "N"
 
 
@@ -61,7 +61,7 @@ def find_procedure_evidence(group_procedure_desc, procedure_desc, detection):
     # add this information to the red/blue team sections of the Template Test Case
     red_info = extract_red(combined_desc)
     blue_info = extract_blue(combined_desc, detection)
-    
+
     return red_info, blue_info
 
 
@@ -72,7 +72,7 @@ def consolidate_tactics(phases):
     )
     for phase_name in phase_names:
         tactics.append(phase_name.title().replace("-", " ").replace("_", " "))
-    
+
     return sorted(list(set(tactics)))
 
 
@@ -81,5 +81,5 @@ def merge_detect_guidance(data_source, blue_info):
     detection_sources = re.findall(r"'[^:]+: ([^']+)'", str(data_source))
     for source in detection_sources:
         data_sources.append(source)
-    
+
     return (data_sources, blue_info)

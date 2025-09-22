@@ -14,6 +14,7 @@ def define_values(payload, technique_descriptions, retrieved_data):
     for description in technique_descriptions:
         if description.startswith(f"{tid}: "):
             tdesc = description.split(f"{tid}: ")[1]
+    print(payload)
     tactic = payload["variables"]["input"]["createTestCasedata"][0]["testCaseData"][
         "phase"
     ]
@@ -68,7 +69,6 @@ def collate_data(operatorGuidance, detectionSteps):
     # For each indicator type (cmd, evt, reg, sw) in operator_guidance, fetch mapping
     with open(os.path.join("gorgon", "static", "mapSplunkIndecies.json")) as f:
         map_splunk_indices = json.load(f)
-    print(operatorGuidance.replace("'", '"'))
     og_dict = json.loads(operatorGuidance.replace("'", '"'))
 
     with open("gorgon/static/indicatorMapping.json", "r") as f:

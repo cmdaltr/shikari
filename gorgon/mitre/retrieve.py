@@ -36,6 +36,7 @@ def retrieve_procedures(bundle, retrieved_techniques):
                 red_info, blue_info = find_procedure_evidence(
                     group_procedure_desc, obj["description"], obj["x_mitre_detection"]
                 )
+                print(obj)
                 tactics = consolidate_tactics(obj["kill_chain_phases"])
                 op_guidance, red_tools = red_info
                 try:  # not all procedures have means of detection
