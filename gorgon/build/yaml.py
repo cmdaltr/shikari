@@ -1,10 +1,14 @@
 from gorgon.build.collate import collate_data
+from bs4 import BeautifulSoup
 
 import ast
 import getpass
 import json
 import os
+import re
 import uuid
+import requests
+import yaml
 
 
 def create_id():
@@ -27,7 +31,7 @@ def get_team(author):
     with open(os.path.join("gorgon", "static", "members.json")) as membersjson:
         members = json.load(membersjson)
 
-    team = None
+    team = "CTH"
     for key, people in members.items():
         for person in people:
             if person["username"].lower() == author.lower():
@@ -37,9 +41,23 @@ def get_team(author):
             return team
 
 
-def additional_tactics(name, tactic):
-    # need to get the potential additional tactics for technique via the ATT&CK API or web scraping
-    return tactic
+def additional_tactics(tid, tactic):
+    url = f"https://attack.mitre.org/techniques/{tid.replace(".", "/")}"
+    response = requests.get(url, timeout=5)  # 5 seconds timeout
+    soup = BeautifulSoup(response.text, "html.parser")
+    text = soup.text
+
+    # Find a specific string
+    if "Tactics:" in text:
+        extracted_tactics = re.findall(
+            "Reconnaissance|Resource Development|Initial Access|Execution|Persistence|Privilege Escalation|Defense Evasion|Credential Access|Discovery|Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
+            text.split("Sub-technique of")[1][0:200]
+            .split("Platforms:")[0]
+            .split("Tactics:")[1],
+        )
+        return extracted_tactics
+    else:
+        return list[tactic]
 
 
 def find_nested_entity(field, entity_mappings):
@@ -96,24 +114,27 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, s
         .replace("index=", "")
         .replace("_prod", "")
     )
+    tactic = str(tactic)[2:-2].replace("', '", "\n  - ")
     query = query.replace("\n| ", "\n  | ")
     author = getpass.getuser()
     team = get_team(author)
 
-    yaml_content = template.replace("§id§", uid)
-    yaml_content = yaml_content.replace("§name§", name)
-    yaml_content = yaml_content.replace("§tid§", tid)
-    yaml_content = yaml_content.replace("§tdesc§", tdesc)
-    yaml_content = yaml_content.replace("§severity§", "")
-    yaml_content = yaml_content.replace("§connectorId§", connector_id)
-    yaml_content = yaml_content.replace("§dataTypes§", datatype)
-    yaml_content = yaml_content.replace("§tactic§", tactic)
-    yaml_content = yaml_content.replace("§group§", tag)
-    yaml_content = yaml_content.replace("§query§", query)
-    yaml_content = yaml_content.replace("§ver§", "1.0")
-    yaml_content = yaml_content.replace("§source§", source)
-    yaml_content = yaml_content.replace("§author§", author)
-    yaml_content = yaml_content.replace("§support§", team)
+    yaml_content = (
+        template.replace("§id§", uid)
+        .replace("§name§", name)
+        .replace("§tid§", tid)
+        .replace("§tdesc§", tdesc)
+        .replace("§severity§", "")
+        .replace("§connectorId§", connector_id)
+        .replace("§dataTypes§", datatype)
+        .replace("§tactic§", tactic)
+        .replace("§group§", tag)
+        .replace("§query§", query)
+        .replace("§ver§", "1.0")
+        .replace("§source§", source)
+        .replace("§author§", author)
+        .replace("§support§", team)
+    )
 
     with open(query_file, "w") as new_yaml:
         new_yaml.write(yaml_content)
@@ -140,15 +161,8 @@ def construct_yaml(
         operatorGuidance, detectionSteps
     )
 
-    all_tactics = additional_tactics(name, tactic)
+    all_tactics = additional_tactics(tid, tactic)
     name = name.replace(" ", "").replace("/", "")
-    tactic_list = ast.literal_eval(all_tactics)
-    if (
-        isinstance(tactic_list, list)
-        and len(tactic_list) > 0
-        and "name" in tactic_list[0]
-    ):
-        all_tactics = tactic_list[0]["name"]
 
     # Writing MDE YAML file
     for query in appended_mde_queries:

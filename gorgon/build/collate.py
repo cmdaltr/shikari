@@ -1,5 +1,6 @@
 from gorgon.build.queries import compile_mde_queries, compile_splunk_queries
 
+import ast
 import json
 import os
 
@@ -68,7 +69,7 @@ def collate_data(operatorGuidance, detectionSteps):
     # For each indicator type (cmd, evt, reg, sw) in operator_guidance, fetch mapping
     with open(os.path.join("gorgon", "static", "mapSplunkIndecies.json")) as f:
         map_splunk_indices = json.load(f)
-    og_dict = json.loads(operatorGuidance.replace("'", '"'))
+    og_dict = ast.literal_eval(operatorGuidance)
 
     with open("gorgon/static/indicatorMapping.json", "r") as f:
         indicator_mapping = json.load(f)
