@@ -14,7 +14,6 @@ def define_values(payload, technique_descriptions, retrieved_data):
     for description in technique_descriptions:
         if description.startswith(f"{tid}: "):
             tdesc = description.split(f"{tid}: ")[1]
-    print(payload)
     tactic = payload["variables"]["input"]["createTestCasedata"][0]["testCaseData"][
         "phase"
     ]
