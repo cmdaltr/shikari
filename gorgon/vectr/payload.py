@@ -34,6 +34,7 @@ indicies = get_indicies(vectr_url, vectr_headers)
 orgs_in_vectr = get_orgs(vectr_url, vectr_headers)
 phases_in_vectr = get_phases(vectr_url, vectr_headers)  # campaigns and tactics
 redtools_in_vectr = get_redtools(vectr_url, vectr_headers)
+
 orgs = []
 for org_in_vectr in orgs_in_vectr:
     orgs.append(org_in_vectr.get("name"))
