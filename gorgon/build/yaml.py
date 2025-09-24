@@ -1,14 +1,13 @@
 from gorgon.build.collate import collate_data
 from bs4 import BeautifulSoup
 
-import ast
 import getpass
 import json
 import os
 import re
 import uuid
 import requests
-import yaml
+import time
 
 
 def create_id():
@@ -42,22 +41,30 @@ def get_team(author):
 
 
 def additional_tactics(tid, tactic):
-    url = f"https://attack.mitre.org/techniques/{tid.replace(".", "/")}"
-    response = requests.get(url, timeout=5)  # 5 seconds timeout
+    def extract_tactics(extract_from):
+        extracted_tactics = re.findall(
+            "Reconnaissance|Resource Development|Initial Access|Execution|Persistence|Privilege Escalation|Defense Evasion|Credential Access|Discovery|Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
+            extract_from,
+        )
+
+        return extracted_tactics
+
+    tid_uri = tid.replace(".", "/")
+    url = f"https://attack.mitre.org/techniques/{tid_uri}"
+    response = requests.get(url, timeout=5)
     soup = BeautifulSoup(response.text, "html.parser")
     text = soup.text
 
-    # Find a specific string
-    if "Tactics:" in text:
-        extracted_tactics = re.findall(
-            "Reconnaissance|Resource Development|Initial Access|Execution|Persistence|Privilege Escalation|Defense Evasion|Credential Access|Discovery|Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
+    if "Tactics:\\n" in text:
+        extracted_tactics = extract_tactics(
             text.split("Sub-technique of")[1][0:200]
             .split("Platforms:")[0]
             .split("Tactics:")[1],
         )
-        return extracted_tactics
     else:
-        return list[tactic]
+        extracted_tactics = extract_tactics(tactic)
+
+    return extracted_tactics
 
 
 def find_nested_entity(field, entity_mappings):
@@ -91,7 +98,7 @@ def map_entities(query):
     # Build entityMappings string efficiently
     entities = ""
     if results:
-        entities = "\nentityMappings:\n"
+        entities = "\nentityMappings:"
         for entity_type, identifier, column_name in results:
             entities += (
                 f"\n- entityType: {entity_type}\n"
@@ -108,6 +115,8 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, s
         template = queryTemplate.read()
 
     uid = check_id([])
+    desc = tdesc.replace("\n  \n", "\n  ").replace("\n* ", "\n  * ")
+    desc = re.sub(r"</?code>", r"`", desc)
     datatype = (
         query.split("\n")[0]
         .split(" earliest=")[0]
@@ -115,7 +124,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, s
         .replace("_prod", "")
     )
     tactic = str(tactic)[2:-2].replace("', '", "\n  - ")
-    query = query.replace("\n| ", "\n  | ")
+    query = query.replace("\n| ", "  | ")
     author = getpass.getuser()
     team = get_team(author)
 
@@ -123,7 +132,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, s
         template.replace("§id§", uid)
         .replace("§name§", name)
         .replace("§tid§", tid)
-        .replace("§tdesc§", tdesc)
+        .replace("§tdesc§", desc)
         .replace("§severity§", "")
         .replace("§connectorId§", connector_id)
         .replace("§dataTypes§", datatype)
@@ -141,10 +150,31 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, s
 
 
 def update_yaml(yamlfile, tag):
+
+    def increment_version(match):
+        major = match.group(1)
+        minor = int(match.group(2)) + 1  # increment minor version
+        patch = match.group(3)
+
+        return f"{major}{minor}{patch}"
+
     with open(yamlfile) as yfile:
-        ycontent = yfile.read()
-        if tag not in ycontent:
-            insert = tag
+        old_content = yfile.read()
+
+    if tag not in old_content:
+        # Insert new Threat Group
+        prefix, suffix = old_content.split("tags:\n  - ")
+        added_tags = f"{prefix}tags:\n  - {tag}\n  - {suffix}"
+
+        # Update version
+        newver = re.sub(
+            r"(version: \d+\.)(\d+)((\.\d+)?)", increment_version, added_tags
+        )
+        prefix = added_tags.split("version: ")[0]
+        suffix = added_tags.split("kind:")[1]
+
+        with open(yamlfile, "w") as yfile:
+            yfile.write(newver)
 
 
 def construct_yaml(
@@ -162,12 +192,18 @@ def construct_yaml(
     )
 
     all_tactics = additional_tactics(tid, tactic)
-    name = name.replace(" ", "").replace("/", "")
 
     # Writing MDE YAML file
     for query in appended_mde_queries:
         table = query.split("\n")[0].replace("Device", "")
+        query_with_entities = ""
         query_with_entities = map_entities(query)
+        if len(query_with_entities) > 10:
+            print(
+                f"  {name} ({table}) breaches the MDE entityMapping limit of 10.\n   Please review before commiting to production.\n"
+            )
+            time.sleep(0.5)
+        name = name.replace(" ", "").replace("/", "")
         yamlfile = os.path.join("data", "queries", f"{name}_{table}.yaml")
         if not os.path.exists(yamlfile):
             write_yaml(
@@ -192,9 +228,7 @@ def construct_yaml(
             .replace("index=", "")
             .replace("_prod", "")
         )
-        query = query.replace(" earliest=-1d\n", " earliest=-1d\n  ").replace(
-            "\n\n  | table ", "\n  | table "
-        )
+        query = query.replace(" earliest=-1d\n", " earliest=-1d\n  ")
         yamlfile = os.path.join("data", "queries", f"{name}_{index}.yaml")
         if not os.path.exists(yamlfile):
             write_yaml(
@@ -208,3 +242,5 @@ def construct_yaml(
                 query,
                 source,
             )
+        else:
+            update_yaml(yamlfile, tag)
