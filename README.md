@@ -1,6 +1,6 @@
 # 🏹 Archer: Threat Hunting Python Service
 
-Archer is a modular Python package/service designed for automated threat hunting, integrating VECTR, MITRE ATT&CK techniques, and workflow automation with n8n. It provides a FastAPI microservice that outputs structured hunt queries in YAML format, ready for correlation and enrichment.
+Archer is a modular Python package/service designed for automated threat hunting, integrating MITRE ATT&CK techniques, and workflow automation with n8n. It provides a FastAPI microservice that outputs structured hunt queries in YAML format, ready for correlation and enrichment.
 
 ---
 <br>
@@ -136,7 +136,6 @@ Content-Type: application/json
 ## 📚 References & Resources
 
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)  
-- [VECTR Platform](https://vectr.io/)  
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)  
 - [n8n Workflow Automation](https://n8n.io/)  
 - [Docker Documentation](https://docs.docker.com/)  

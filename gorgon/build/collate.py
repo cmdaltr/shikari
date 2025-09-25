@@ -1,11 +1,11 @@
 from .queries import compile_mde_queries, compile_splunk_queries
 
-import ast
 import json
 import os
 
 
-def define_values(payload, technique_descriptions, retrieved_data):
+def define_vectr_values(payload, technique_descriptions, retrieved_data):
+    print(payload)
     name = payload["variables"]["input"]["createTestCasedata"][0]["testCaseData"][
         "name"
     ]
@@ -19,18 +19,15 @@ def define_values(payload, technique_descriptions, retrieved_data):
         "phase"
     ]
     tag = retrieved_data["group_name"]
-    source = "example Internal"
-    support = "example Internal"
-
-    operatorGuidance = payload["variables"]["input"]["createTestCasedata"][0][
+    identifiers = payload["variables"]["input"]["createTestCasedata"][0][
         "testCaseData"
-    ]["operatorGuidance"]
+    ]["identifiers"]
     redTools = payload["variables"]["input"]["createTestCasedata"][0]["testCaseData"][
         "redTools"
     ]
-    detectionSteps = payload["variables"]["input"]["createTestCasedata"][0][
+    log_sources = payload["variables"]["input"]["createTestCasedata"][0][
         "testCaseData"
-    ]["detectionSteps"]
+    ]["log_sources"]
 
     return (
         name,
@@ -38,22 +35,22 @@ def define_values(payload, technique_descriptions, retrieved_data):
         tdesc,
         tactic,
         tag,
-        source,
-        support,
-        operatorGuidance,
+        identifiers,
         redTools,
-        detectionSteps,
+        log_sources,
     )
 
 
-def collate_data(operatorGuidance, detectionSteps):
-    # Map identified detectionSteps with the data sources and return the logging table/indexes
-    with open(os.path.join("archer", "config", "dataSources.json")) as datasourcesjson:
+def collate_data(identifiers, log_sources):
+    # Map identified log_sources with the data sources and return the logging table/indexes
+    with open(
+        os.path.join("gorgon", "mappings", "dataSources.json")
+    ) as datasourcesjson:
         data_sources = json.load(datasourcesjson)
 
     mitre_data_sources = data_sources["mitreDataSources"]
     alignment_results = []
-    for step in detectionSteps:
+    for step in log_sources:
         matched_sources = []
         for ds_name, ds_content in mitre_data_sources.items():
             if step.startswith(f"{ds_name} "):
@@ -67,14 +64,13 @@ def collate_data(operatorGuidance, detectionSteps):
         alignment_results.append({"detection_step": step, "matches": matched_sources})
 
     # For each indicator type (cmd, evt, reg, sw) in operator_guidance, fetch mapping
-    with open(os.path.join("archer", "config", "mapSplunkIndecies.json")) as f:
+    with open(os.path.join("gorgon", "mappings", "mapSplunkIndecies.json")) as f:
         map_splunk_indices = json.load(f)
-    og_dict = ast.literal_eval(operatorGuidance)
 
-    with open(os.path.join("archer", "config", "indicatorMapping.json"), "r") as f:
+    with open(os.path.join("gorgon", "mappings", "indicatorMapping.json"), "r") as f:
         indicator_mapping = json.load(f)
 
-    with open(os.path.join("archer", "config", "mapDefenderTables.json")) as f:
+    with open(os.path.join("gorgon", "mappings", "mapDefenderTables.json")) as f:
         map_defender_tables = json.load(f)
 
     for step in alignment_results:
@@ -87,7 +83,7 @@ def collate_data(operatorGuidance, detectionSteps):
 
     mde_queries = []
     splunk_queries = []
-    for indicator_type, indicators in og_dict.items():
+    for indicator_type, indicators in identifiers.items():
         if indicator_type in indicator_mapping:
             # Mapping and building MDE queries
             mde_queries = compile_mde_queries(

@@ -27,7 +27,7 @@ def check_id(existing_ids):
 
 
 def get_team(author):
-    with open(os.path.join("archer", "config", "members.json")) as membersjson:
+    with open(os.path.join("gorgon", "mappings", "members.json")) as membersjson:
         members = json.load(membersjson)
 
     team = "CTH"
@@ -84,7 +84,7 @@ def find_nested_entity(field, entity_mappings):
 
 def map_entities(query):
     fields = query.split("| summarize by Timestamp, ")[1].split(", ")
-    with open(os.path.join("archer", "config", "entityMappings.json")) as f:
+    with open(os.path.join("gorgon", "mappings", "entityMappings.json")) as f:
         entity_mappings = json.load(f)
 
     # Find and print nested field/entity matches
@@ -110,8 +110,8 @@ def map_entities(query):
     return f"{query}{entities}"
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, source):
-    with open(os.path.join("archer", "config", "template.yaml")) as queryTemplate:
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
+    with open(os.path.join("gorgon", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
     uid = check_id([])
@@ -140,7 +140,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, s
         .replace("§group§", tag)
         .replace("§query§", query)
         .replace("§ver§", "1.0")
-        .replace("§source§", source)
+        .replace("§source§", "Archer")
         .replace("§author§", author)
         .replace("§support§", team)
     )
@@ -183,12 +183,11 @@ def construct_yaml(
     tdesc,
     tactic,
     tag,
-    source,
-    operatorGuidance,
-    detectionSteps,
+    identifiers,
+    log_sources,
 ):
     appended_mde_queries, appended_splunk_queries = collate_data(
-        operatorGuidance, detectionSteps
+        identifiers, log_sources
     )
 
     all_tactics = additional_tactics(tid, tactic)
@@ -215,7 +214,6 @@ def construct_yaml(
                 all_tactics,
                 tag,
                 query_with_entities,
-                source,
             )
         else:
             update_yaml(yamlfile, tag)
@@ -240,7 +238,6 @@ def construct_yaml(
                 all_tactics,
                 tag,
                 query,
-                source,
             )
         else:
             update_yaml(yamlfile, tag)
