@@ -1,4 +1,4 @@
-from archer import (
+from .queries import (
     get_assessments,
     get_campaigns,
     get_indicies,

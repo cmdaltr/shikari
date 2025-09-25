@@ -1,5 +1,6 @@
 # Build module
 from .build.collate import define_values
+from .build.queries import compile_mde_queries, compile_splunk_queries
 from .build.yaml import construct_yaml
 
 # MITRE module
@@ -26,6 +27,8 @@ from .vectr.payload import build_payload
 __all__ = [
     # Build
     "define_values",
+    "compile_mde_queries",
+    "compile_splunk_queries",
     "construct_yaml",
     # MITRE
     "get_stix_data",

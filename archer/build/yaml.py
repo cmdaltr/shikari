@@ -1,4 +1,4 @@
- collate_data
+from .collate import collate_data
 from bs4 import BeautifulSoup
 
 import getpass

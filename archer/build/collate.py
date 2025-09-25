@@ -1,4 +1,4 @@
-from archer import compile_mde_queries, compile_splunk_queries
+from .queries import compile_mde_queries, compile_splunk_queries
 
 import ast
 import json
