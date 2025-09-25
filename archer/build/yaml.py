@@ -1,4 +1,4 @@
-from gorgon.build.collate import collate_data
+ collate_data
 from bs4 import BeautifulSoup
 
 import getpass
@@ -27,7 +27,7 @@ def check_id(existing_ids):
 
 
 def get_team(author):
-    with open(os.path.join("gorgon", "static", "members.json")) as membersjson:
+    with open(os.path.join("archer", "config", "members.json")) as membersjson:
         members = json.load(membersjson)
 
     team = "CTH"
@@ -84,7 +84,7 @@ def find_nested_entity(field, entity_mappings):
 
 def map_entities(query):
     fields = query.split("| summarize by Timestamp, ")[1].split(", ")
-    with open(os.path.join("gorgon", "static", "entityMappings.json")) as f:
+    with open(os.path.join("archer", "config", "entityMappings.json")) as f:
         entity_mappings = json.load(f)
 
     # Find and print nested field/entity matches
@@ -111,7 +111,7 @@ def map_entities(query):
 
 
 def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, source):
-    with open(os.path.join("gorgon", "static", "template.yaml")) as queryTemplate:
+    with open(os.path.join("archer", "config", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
     uid = check_id([])

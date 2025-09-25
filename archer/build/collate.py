@@ -1,4 +1,4 @@
-from gorgon.build.queries import compile_mde_queries, compile_splunk_queries
+from archer import compile_mde_queries, compile_splunk_queries
 
 import ast
 import json
@@ -48,7 +48,7 @@ def define_values(payload, technique_descriptions, retrieved_data):
 
 def collate_data(operatorGuidance, detectionSteps):
     # Map identified detectionSteps with the data sources and return the logging table/indexes
-    with open(os.path.join("gorgon", "static", "dataSources.json")) as datasourcesjson:
+    with open(os.path.join("archer", "config", "dataSources.json")) as datasourcesjson:
         data_sources = json.load(datasourcesjson)
 
     mitre_data_sources = data_sources["mitreDataSources"]
@@ -67,14 +67,14 @@ def collate_data(operatorGuidance, detectionSteps):
         alignment_results.append({"detection_step": step, "matches": matched_sources})
 
     # For each indicator type (cmd, evt, reg, sw) in operator_guidance, fetch mapping
-    with open(os.path.join("gorgon", "static", "mapSplunkIndecies.json")) as f:
+    with open(os.path.join("archer", "config", "mapSplunkIndecies.json")) as f:
         map_splunk_indices = json.load(f)
     og_dict = ast.literal_eval(operatorGuidance)
 
-    with open("gorgon/static/indicatorMapping.json", "r") as f:
+    with open(os.path.join("archer", "config", "indicatorMapping.json"), "r") as f:
         indicator_mapping = json.load(f)
 
-    with open(os.path.join("gorgon", "static", "mapDefenderTables.json")) as f:
+    with open(os.path.join("archer", "config", "mapDefenderTables.json")) as f:
         map_defender_tables = json.load(f)
 
     for step in alignment_results:

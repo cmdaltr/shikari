@@ -1,5 +1,5 @@
 #!/usr/bin/env python3 -tt
-from gorgon.mitre.enterprise import (
+ (
     consolidate_tactics,
     find_procedure_evidence,
     merge_detect_guidance,

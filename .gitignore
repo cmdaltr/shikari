@@ -1,3 +1,4 @@
-.venv/
 .DS_Store
-TEST/
+.temp/*
+.venv/*
+__pycache__/*

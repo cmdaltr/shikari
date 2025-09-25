@@ -1,0 +1,1 @@
+docker compose -f /Users/ben/OneDrive/Projects/Docker/n8n/docker-compose.yml down

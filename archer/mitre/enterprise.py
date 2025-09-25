@@ -1,5 +1,5 @@
 #!/usr/bin/env python3 -tt
-from gorgon.mitre.extract import extract_red, extract_blue
+ extract_red, extract_blue
 import re
 import requests
 import stix2

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "archer"
+version = "0.1.0"
+description = "Threat hunting Python service with VECTR integration"
+authors = [
+  { name = "cmdshiftd", email = "cmdshiftd [@] gmail [.] com" }
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "pyyaml",
+  "requests",
+  "python-dotenv"
+]
+
+[project.urls]
+homepage = "https://github.com/cmdshiftd/archer"
+repository = "https://github.com/cmdshiftd/archer"

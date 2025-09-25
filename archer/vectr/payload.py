@@ -1,4 +1,4 @@
-from gorgon.vectr.queries import (
+from archer import (
     get_assessments,
     get_campaigns,
     get_indicies,
@@ -9,6 +9,7 @@ from gorgon.vectr.queries import (
     send_request,
 )
 from dotenv import load_dotenv
+
 import getpass
 import json
 import os
@@ -16,7 +17,7 @@ import time
 
 
 # Enviornment variables
-load_dotenv(dotenv_path="gorgon/vectr/.env")
+load_dotenv(dotenv_path=os.path.join("archer", "vectr", ".env"))
 api_key = os.getenv("API_KEY")
 secret = os.getenv("SECRET")
 instance = os.getenv("INSTANCE")
