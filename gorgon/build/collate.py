@@ -4,8 +4,7 @@ import json
 import os
 
 
-def define_vectr_values(payload, technique_descriptions, retrieved_data):
-    print(payload)
+"""def define_vectr_values(payload, technique_descriptions, retrieved_data):
     name = payload["variables"]["input"]["createTestCasedata"][0]["testCaseData"][
         "name"
     ]
@@ -39,6 +38,7 @@ def define_vectr_values(payload, technique_descriptions, retrieved_data):
         redTools,
         log_sources,
     )
+"""
 
 
 def collate_data(identifiers, log_sources):

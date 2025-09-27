@@ -1,29 +1,80 @@
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
-
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-# Recommended: keep absolute imports for clarity
-
-from gorgon.build import define_vectr_values, construct_yaml
+# from gorgon.build import define_vectr_values
 from gorgon.mitre import (
     get_stix_data,
     obtain_all_techniques,
     obtain_technique_descriptions,
 )
-from gorgon.mitre import (
-    retrieve_group,
-    retrieve_techniques,
-    retrieve_procedures,
-)
-from archer import process_group
+from gorgon.mitre.enterprise import check_group_in_mitre
+from gorgon.build.orchestrator import process_group
+from datetime import datetime
 
 
 templates = Jinja2Templates(directory="templates")
 
 app = FastAPI(title="Archer Threat Hunting Service")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+# Cleanup old drafts on startup (default: 30 days)
+@app.on_event("startup")
+def cleanup_old_drafts():
+    drafts_dir = os.path.join("data", "drafts")
+    if not os.path.exists(drafts_dir):
+        return
+    try:
+        max_age_days = int(os.environ.get("DRAFT_MAX_AGE_DAYS", "30"))
+        cutoff = (
+            datetime.utcnow() - __import__("datetime").timedelta(days=max_age_days)
+        ).timestamp()
+        for root, dirs, files in os.walk(drafts_dir):
+            for fname in files:
+                path = os.path.join(root, fname)
+                try:
+                    if os.path.getmtime(path) < cutoff:
+                        os.remove(path)
+                except Exception:
+                    pass
+    except Exception:
+        # non-fatal
+        pass
+
+
+def get_mitre_lists():
+    mitre_order = [
+        "Reconnaissance",
+        "Resource Development",
+        "Initial Access",
+        "Execution",
+        "Persistence",
+        "Privilege Escalation",
+        "Defense Evasion",
+        "Credential Access",
+        "Discovery",
+        "Lateral Movement",
+        "Collection",
+        "Command And Control",
+        "Exfiltration",
+        "Impact",
+    ]
+    bundle = getattr(app.state, "bundle", None)
+    if bundle:
+        tactics = [
+            phase["phase_name"].title().replace("-", " ")
+            for obj in getattr(bundle, "objects", [])
+            if obj.get("type") == "attack-pattern" and "kill_chain_phases" in obj
+            for phase in obj["kill_chain_phases"]
+        ]
+        tactics = list(dict.fromkeys(tactics))
+        tactics = [t for t in mitre_order if t in tactics]
+    else:
+        tactics = []
+    techniques = getattr(app.state, "techniques_to_choose", [])
+    return tactics, techniques
 
 
 # Load MITRE data on startup and cache in app.state
@@ -43,31 +94,293 @@ def read_form(request: Request):
         {
             "request": request,
             "techniques": getattr(app.state, "techniques_to_choose", []),
+            "message": None,
+            "actor_found": None,
+            "wait_message": None,
+            "js_script": None,
         },
     )
 
 
 # POST handler for Generate button
+from fastapi.responses import RedirectResponse, JSONResponse
+import json
+import os
+
+
 @app.post("/generate")
 async def generate(request: Request, group_name: str = Form(...)):
-    # You can add more form fields as needed
-    hypothesis = "Generated from form"  # Replace with actual form field if needed
-    # Call process_group with cached technique_descriptions
-    process_group(
-        group_name,
-        hypothesis,
-        manual_data=None,  # Extend to parse more form data if needed
-    )
+    actor_found = check_group_in_mitre(app.state.bundle, group_name)
+    if actor_found == "Y":
+        hypothesis = "Generated from form"
+        process_group(
+            group_name,
+            hypothesis,
+            manual_data=None,
+        )
+        # Return JSON with redirect_url for AJAX
+        return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
+    else:
+        # Show manual group input form
+        mitre_order = [
+            "Reconnaissance",
+            "Resource Development",
+            "Initial Access",
+            "Execution",
+            "Persistence",
+            "Privilege Escalation",
+            "Defense Evasion",
+            "Credential Access",
+            "Discovery",
+            "Lateral Movement",
+            "Collection",
+            "Command And Control",
+            "Exfiltration",
+            "Impact",
+        ]
+        tactics = [
+            phase["phase_name"].title().replace("-", " ")
+            for obj in getattr(app.state.bundle, "objects", [])
+            if obj.get("type") == "attack-pattern" and "kill_chain_phases" in obj
+            for phase in obj["kill_chain_phases"]
+        ]
+        tactics = list(dict.fromkeys(tactics))  # preserve order, remove duplicates
+        tactics = [t for t in mitre_order if t in tactics]
+        techniques = getattr(app.state, "techniques_to_choose", [])
+        render_time = datetime.utcnow().isoformat() + "Z"
+        return templates.TemplateResponse(
+            "manual_group.html",
+            {
+                "request": request,
+                "group_name": group_name,
+                "tactics": tactics,
+                "techniques": techniques,
+                "render_time": render_time,
+            },
+        )
+
+
+# Progress page endpoint
+@app.get("/progress", response_class=HTMLResponse)
+async def progress(request: Request, group_name: str = ""):
+    # In the future, pass progress/correlation data here
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "techniques": getattr(app.state, "techniques_to_choose", []),
-            "message": f"Processed group: {group_name}",
-        },
+        "progress.html",
+        {"request": request, "group_name": group_name},
     )
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/save_draft")
+async def save_draft(request: Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False}, status_code=400)
+    draft_id = payload.get("draft_id")
+    user_id = payload.get("user_id")
+    if not draft_id:
+        return JSONResponse({"ok": False}, status_code=400)
+    # If user_id present in payload, require X-USER-ID header to match.
+    if user_id:
+        header_uid = request.headers.get("X-USER-ID")
+        if not header_uid or header_uid != str(user_id):
+            return JSONResponse(
+                {"ok": False, "error": "user_id header mismatch"}, status_code=403
+            )
+    drafts_dir = os.path.join("data", "drafts")
+    if user_id:
+        user_dir = os.path.join(drafts_dir, "users", user_id)
+        os.makedirs(user_dir, exist_ok=True)
+        path = os.path.join(user_dir, f"{draft_id}.json")
+    else:
+        os.makedirs(drafts_dir, exist_ok=True)
+        path = os.path.join(drafts_dir, f"{draft_id}.json")
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+    return JSONResponse({"ok": True})
+
+
+@app.get("/load_draft")
+async def load_draft(draft_id: str = "", user_id: str = ""):
+    if not draft_id:
+        return JSONResponse({"ok": False}, status_code=400)
+
+    # If user_id provided, only look under that user's drafts
+    if user_id:
+        user_path = os.path.join("data", "drafts", "users", user_id, f"{draft_id}.json")
+        if not os.path.exists(user_path):
+            # not found or access denied
+            return JSONResponse({"ok": False, "entries": []}, status_code=403)
+        try:
+            with open(user_path, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            return JSONResponse({"ok": True, "entries": data.get("entries", [])})
+        except Exception:
+            return JSONResponse({"ok": False}, status_code=500)
+
+    # No user_id: only allow top-level drafts
+    path = os.path.join("data", "drafts", f"{draft_id}.json")
+    if not os.path.exists(path):
+        return JSONResponse({"ok": True, "entries": []})
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        return JSONResponse({"ok": True, "entries": data.get("entries", [])})
+    except Exception:
+        return JSONResponse({"ok": False}, status_code=500)
+
+
+# Handler for manual submission of appended techniques
+@app.post("/manual_group_submit")
+async def manual_group_submit(
+    request: Request,
+    group_name: str = Form("manual_group"),
+    group_desc: str = Form(""),
+    technique_entries: str = Form(""),
+):
+    """Receive manual technique entries (JSON string), transform into the
+    expected manual_data structure and process the group.
+    """
+    try:
+        entries = json.loads(technique_entries) if technique_entries else []
+    except Exception:
+        entries = []
+
+    # Server-side validation: require at least one entry and each must have technique and procedures
+    if not entries:
+        # Re-render manual page with an error message
+        tactics, techniques = get_mitre_lists()
+        render_time = datetime.utcnow().isoformat() + "Z"
+        return templates.TemplateResponse(
+            "manual_group.html",
+            {
+                "request": request,
+                "group_name": group_name,
+                "tactics": tactics,
+                "techniques": techniques,
+                "render_time": render_time,
+                "error_message": "Please append at least one technique before submitting.",
+            },
+        )
+
+    invalid = False
+    for ent in entries:
+        if not ent.get("technique") or not ent.get("procedures"):
+            invalid = True
+            break
+    if invalid:
+        tactics, techniques = get_mitre_lists()
+        render_time = datetime.utcnow().isoformat() + "Z"
+        return templates.TemplateResponse(
+            "manual_group.html",
+            {
+                "request": request,
+                "group_name": group_name,
+                "tactics": tactics,
+                "techniques": techniques,
+                "render_time": render_time,
+                "error_message": "Each appended technique must include a technique name and procedures.",
+            },
+        )
+
+    # Group techniques by tactic to match process_group expected schema
+    tactic_map = {}
+    for ent in entries:
+        tech = ent.get("technique")
+        tactics = ent.get("tactics") or []
+        procedures = ent.get("procedures", "")
+        # If no tactics were selected, put under a generic 'Unknown' tactic
+        if not tactics:
+            tactics = ["Unknown"]
+        for tac in tactics:
+            tactic_map.setdefault(tac, []).append(
+                {
+                    "technique": tech,
+                    "op_guidance": procedures,
+                    "red_tool": "",
+                    "detect_guidance": "",
+                }
+            )
+
+    manual_data = []
+    for tac, techs in tactic_map.items():
+        manual_data.append({"tactic": tac, "techniques": techs})
+
+    # Use the provided group_desc as hypothesis if present
+    hypothesis = group_desc or "Manual submission"
+
+    # Persist draft to data/drafts/{group_name}.json for auditing/debugging
+    try:
+        drafts_dir = os.path.join("data", "drafts")
+        os.makedirs(drafts_dir, exist_ok=True)
+        draft_path = os.path.join(drafts_dir, f"{group_name}.json")
+        with open(draft_path, "w", encoding="utf-8") as fh:
+            json.dump(
+                {
+                    "group_name": group_name,
+                    "group_desc": group_desc,
+                    "entries": entries,
+                },
+                fh,
+                indent=2,
+            )
+    except Exception:
+        # non-fatal: if we can't write the draft, continue processing
+        pass
+
+    # Call the orchestrator to process the manual data
+    process_group(group_name, hypothesis, manual_data=manual_data)
+
+    # Redirect user to progress page
+    return RedirectResponse(url=f"/progress?group_name={group_name}", status_code=303)
+
+
+@app.get("/list_drafts")
+async def list_drafts(user_id: str = ""):
+    drafts_dir = os.path.join("data", "drafts")
+    results = []
+    if user_id:
+        user_dir = os.path.join(drafts_dir, "users", user_id)
+        if not os.path.exists(user_dir):
+            return JSONResponse({"ok": True, "drafts": []})
+        for fname in os.listdir(user_dir):
+            if fname.endswith(".json"):
+                path = os.path.join(user_dir, fname)
+                try:
+                    with open(path, "r", encoding="utf-8") as fh:
+                        j = json.load(fh)
+                    results.append(
+                        {
+                            "draft_id": fname[:-5],
+                            "group_name": j.get("group_name", ""),
+                            "mtime": os.path.getmtime(path),
+                        }
+                    )
+                except Exception:
+                    pass
+        return JSONResponse({"ok": True, "drafts": results})
+
+    # list top-level drafts
+    if not os.path.exists(drafts_dir):
+        return JSONResponse({"ok": True, "drafts": []})
+    for fname in os.listdir(drafts_dir):
+        if fname.endswith(".json"):
+            path = os.path.join(drafts_dir, fname)
+            try:
+                with open(path, "r", encoding="utf-8") as fh:
+                    j = json.load(fh)
+                results.append(
+                    {
+                        "draft_id": fname[:-5],
+                        "group_name": j.get("group_name", ""),
+                        "mtime": os.path.getmtime(path),
+                    }
+                )
+            except Exception:
+                pass
+    return JSONResponse({"ok": True, "drafts": results})

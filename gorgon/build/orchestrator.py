@@ -11,7 +11,7 @@ from gorgon.mitre import (
     retrieve_procedures,
 )
 
-from gorgon.build import compile_query
+from gorgon.build.detections import compile_query
 
 
 def process_group(group_name, hypothesis, manual_data=None):
@@ -83,51 +83,3 @@ def process_group(group_name, hypothesis, manual_data=None):
             retrieved_data["detect_guidance"] = procedure[6][0]
 
             compile_query(retrieved_data, technique_descriptions)
-
-
-def main():
-    # Example hard-coded inputs for testing
-    group_name = "Example Group"
-    hypothesis = "Example hypothesis about the group"
-
-    # Example manual_data structure for a group not in MITRE
-    manual_data = [
-        {
-            "tactic": "Initial Access",
-            "techniques": [
-                {
-                    "technique": "Spearphishing Attachment",
-                    "op_guidance": "Use email filters and educate users.",
-                    "red_tool": "Phishing toolkit",
-                    "detect_guidance": "Monitor email attachments for suspicious content.",
-                },
-                {
-                    "technique": "Drive-by Compromise",
-                    "op_guidance": "Keep browsers updated.",
-                    "red_tool": "Malicious website simulation",
-                    "detect_guidance": "Check web traffic for unusual downloads.",
-                },
-            ],
-        },
-        {
-            "tactic": "Execution",
-            "techniques": [
-                {
-                    "technique": "PowerShell",
-                    "op_guidance": "Restrict PowerShell usage.",
-                    "red_tool": "PowerShell Empire",
-                    "detect_guidance": "Monitor PowerShell command logs.",
-                }
-            ],
-        },
-    ]
-
-    # Call process_group with manual_data to simulate a group not in MITRE
-    process_group(group_name, hypothesis, manual_data=manual_data)
-
-    # For a group in MITRE, call without manual_data
-    # process_group("APT29", "Hypothesis about APT29")
-
-
-if __name__ == "__main__":
-    main()

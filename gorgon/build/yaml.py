@@ -1,4 +1,4 @@
-from .collate import collate_data
+from gorgon.build.collate import collate_data
 from bs4 import BeautifulSoup
 
 import getpass
@@ -197,11 +197,11 @@ def construct_yaml(
         table = query.split("\n")[0].replace("Device", "")
         query_with_entities = ""
         query_with_entities = map_entities(query)
-        if len(query_with_entities) > 10:
+        """if len(query_with_entities) > 10:
             print(
                 f"  {name} ({table}) breaches the MDE entityMapping limit of 10.\n   Please review before commiting to production.\n"
             )
-            time.sleep(0.5)
+            time.sleep(0.5)"""
         name = name.replace(" ", "").replace("/", "")
         yamlfile = os.path.join("data", "queries", f"{name}_{table}.yaml")
         if not os.path.exists(yamlfile):

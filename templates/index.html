@@ -55,24 +55,56 @@
                     </div>
                 </div>
             </form>
+
+            {% if message %}
+            <div style="margin-top: 1em; text-align: center; font-weight: bold; color: #333;">
+                {{ message }}
+            </div>
+            {% endif %}
+
+            {% if wait_message %}
+            <div style="margin-top: 0.5em; text-align: center; color: #666;">
+                {{ wait_message }}
+            </div>
+            {% endif %}
+
         </div>
     </div>
     <div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.9);z-index:1000;align-items:center;justify-content:center;">
         <div style="text-align:center;">
-            <h2 id="loading-message">Searching...</h2>
+            <h2 id="loading-message">
+                Searching <span id="loading-group"></span><span id="loading-dots" style="display:inline-block; width:1.5em; text-align:left;"></span>
+            </h2>
         </div>
     </div>
     <script>
-        function showLoading(message) {
+        var loadingInterval;
+        function showLoading(groupName) {
             var overlay = document.getElementById('loading-overlay');
-            var msg = document.getElementById('loading-message');
-            if (msg && message) {
-                msg.textContent = message;
+            var groupSpan = document.getElementById('loading-group');
+            var dots = document.getElementById('loading-dots');
+            if (groupSpan) {
+                groupSpan.textContent = groupName ? ("for '" + groupName + "'") : '';
             }
             overlay.style.display = 'flex';
+            if (dots) {
+                let count = 0;
+                loadingInterval = setInterval(function() {
+                    count = (count + 1) % 4;
+                    dots.textContent = '.'.repeat(count);
+                }, 500);
+            }
         }
         function hideLoading() {
             document.getElementById('loading-overlay').style.display = 'none';
+            if (loadingInterval) {
+                clearInterval(loadingInterval);
+                loadingInterval = null;
+            }
+            var dots = document.getElementById('loading-dots');
+            if (dots) dots.textContent = '';
+            var groupSpan = document.getElementById('loading-group');
+            if (groupSpan) groupSpan.textContent = '';
         }
         document.addEventListener('DOMContentLoaded', function() {
             // Show pop-up on page load unless 'Do not show again' is set
@@ -133,12 +165,48 @@
 
             if (form) {
                 form.addEventListener('submit', function(e) {
+                    e.preventDefault();
                     if (input.value.trim() === '') {
-                        e.preventDefault();
                         btn.disabled = true;
                         return false;
                     }
-                    showLoading('Searching for ' + input.value);
+                    showLoading(input.value);
+
+                    var formData = new FormData(form);
+                    fetch('/generate', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(response) {
+                        var contentType = response.headers.get('content-type') || '';
+                        if (contentType.includes('application/json')) {
+                            return response.json();
+                        } else {
+                            return response.text();
+                        }
+                    })
+                    .then(function(data) {
+                        if (typeof data === 'object' && data.redirect_url) {
+                            window.location = data.redirect_url;
+                            return;
+                        }
+                        // If not a redirect, treat as HTML
+                        var parser = new DOMParser();
+                        var doc = parser.parseFromString(data, 'text/html');
+                        var newContent = doc.getElementById('main-content');
+                        var oldContent = document.getElementById('main-content');
+                        if (newContent && oldContent) {
+                            oldContent.innerHTML = newContent.innerHTML;
+                        }
+                        hideLoading();
+                    })
+                    .catch(function(err) {
+                        hideLoading();
+                        alert('Error: ' + err.message);
+                    });
                 });
             }
         });

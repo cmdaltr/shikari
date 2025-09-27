@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="progress-content" class="centered">
+    <h2>Query Correlation Progress</h2>
+    <div id="progress-status">
+        <!-- Progress details will be dynamically updated here -->
+        <p>Assessing YAML queries for possible merging and correlation...</p>
+        <div id="progress-bar" style="width: 100%; background: #eee; border-radius: 6px; margin: 1em 0;">
+            <div id="progress-bar-inner" style="width: 10%; background: #4caf50; height: 20px; border-radius: 6px;"></div>
+        </div>
+        <div id="progress-details">
+            <h3>Vendor-based Correlations</h3>
+            <ul id="vendor-corr-list">
+                <!-- List of vendor-based correlations -->
+            </ul>
+            <h3>Cross-Vendor Correlations</h3>
+            <ul id="cross-corr-list">
+                <!-- List of cross-vendor correlations -->
+            </ul>
+        </div>
+    </div>
+</div>
+<script>
+// This script would poll the backend for progress updates and update the DOM accordingly
+</script>
+{% endblock %}

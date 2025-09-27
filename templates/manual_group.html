@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    /* Page-scoped styles to match the screenshot */
+    .manual-group-container { margin-top: 0 !important; padding-top: 0 !important; }
+    .manual-group-container h2 { margin-top: 8px; margin-bottom: 0.75em; text-align:center; }
+    form { width:100%; display:flex; flex-direction:column; align-items:center; }
+        label { font-weight:600; margin-bottom:0.5em; display:block; text-align:left; width:100%; }
+    textarea, select, input[type="text"] { width:100%; margin-bottom:1.5em; font-size:1rem; padding:0.6em 0.75em; box-sizing:border-box; border:1px solid #e5e7eb; border-radius:6px; background:#fff }
+    select { background:#f7f7f7 }
+        .tactics-row { display:flex; gap:1rem; margin-bottom:1.5em; width:100%; max-width:700px; flex-wrap:nowrap; }
+        /* Each child becomes a vertical column */
+        .tactics-row > div { display:flex; flex-direction:column; align-items:flex-start; flex:1 1 0; min-width:140px; }
+        /* Force labels inside tactics columns to be block so items stack vertically */
+        .tactics-row .tactics-item { display:block !important; width:100% !important; }
+        .tactics-row .tactics-item input[type="checkbox"] { margin-right:0.5rem; }
+    .tactics-item { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0.25rem }
+    .tactic-badge { display:inline-block; background:#eef6ff; color:#0366d6; border-radius:12px; padding:2px 8px; font-size:0.8rem; margin-right:0.25rem }
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:9999}
+    .modal{background:#fff;padding:1.25rem;border-radius:8px;max-width:420px;width:90%;box-shadow:0 6px 18px rgba(0,0,0,0.15)}
+    .modal .actions{display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem}
+    .btn{background:#0366d6;color:#fff;border:none;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer}
+    .btn.ghost{background:#f3f4f6;color:#111;border:1px solid #ddd}
+    .form-actions { display:flex; gap:0.75em; margin-bottom:1.5em; justify-content:flex-start }
+    .form-actions .btn{ background:#efefef; color:#111; border:1px solid #ddd }
+    #append-message { color:green; font-weight:600; margin-bottom:1em; display:none; text-align:center }
+    .required { color:red }
+</style>
+
+<div id="main-content">
+    <div class="manual-group-container">
+    <h2 style="text-align:center; width:100%;">Manual Group Entry{% if group_name %}: {{ group_name }}{% endif %}</h2>
+        <div style="font-size:0.8rem; color:#666; margin-bottom:1em; text-align:center;">Rendered: {{ render_time if render_time is defined else 'n/a' }}</div>
+        {% if error_message is defined and error_message %}
+            <div style="color:darkred; font-weight:bold; margin-bottom:1em; text-align:center;">{{ error_message }}</div>
+        {% endif %}
+
+        <form id="manual-group-form" method="post" action="/manual_group_submit" autocomplete="off" style="width:100%; max-width:720px; display:flex; flex-direction:column; align-items:center;">
+            <input type="hidden" name="group_name" value="{% if group_name %}{{ group_name }}{% else %}manual_group{% endif %}">
+
+            <div style="width:100%; max-width:520px; margin-bottom:1.5em;">
+                <label for="group_desc">Group Description</label>
+                 <textarea name="group_desc" id="group_desc" rows="3"></textarea>
+            </div>
+
+            <div style="width:100%; max-width:520px; margin-bottom:1.5em;">
+                <label for="technique">Technique</label>
+                <select name="technique" id="technique">
+                    <option value="">Select a technique...</option>
+                    {% for technique in techniques %}
+                        <option value="{{ technique }}">{{ technique }}</option>
+                    {% endfor %}
+                </select>
+                <div style="font-size:0.95em; color:#666; margin-bottom:1em; text-align:center;">Select one technique only.</div>
+            </div>
+
+            <label>Tactics</label>
+            {# Two fixed columns of up to 7 items each implemented as a table for maximum layout resilience #}
+            {% set total = tactics|length %}
+            {% set left_slice_end = 7 %}
+            {% set right_slice_end = 14 %}
+            <div style="width:100%; max-width:700px; margin-bottom:1.5em;">
+                <table class="tactics-table" style="display:table !important; width:100% !important; border-collapse:collapse;">
+                    <tr>
+                        <td style="display:table-cell !important; vertical-align:top; width:50% !important; padding-right:0.75rem; box-sizing:border-box;">
+                            {% for tactic in tactics[0:left_slice_end] %}
+                                <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block;"> <input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
+                            {% endfor %}
+                        </td>
+                        <td style="display:table-cell !important; vertical-align:top; width:50% !important; padding-left:0.75rem; box-sizing:border-box;">
+                            {% for tactic in tactics[left_slice_end:right_slice_end] %}
+                                <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block;"> <input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            {# Any remaining tactics beyond 14 are shown below as a stacked list #}
+            {% if total > right_slice_end %}
+                <div style="margin-top:0.75rem; max-width:700px;">
+                    {% for tactic in tactics[right_slice_end:total] %}
+                        <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block;"><input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <label for="procedures">Procedures</label>
+                <textarea name="procedures" id="procedures" rows="6" required style="min-height:120px; width:100%; max-width:520px;"></textarea>
+            <div style="font-size:0.9em;color:#666;">List one per line. <span class="required">Required</span></div>
+
+            <div class="form-actions">
+                <button type="button" id="append-btn" class="btn">Append</button>
+                <button type="submit" id="submit-btn" class="btn">Submit</button>
+            </div>
+            <div id="append-message"></div>
+        </form>
+
+        <div id="technique-list" style="margin-top:2em; width:100%; max-width:700px;"></div>
+
+        <!-- Delete confirm modal -->
+            <!-- Delete is handled on the post-submit page; removed from this page -->
+    </div>
+</div>
+
+<script>
+// Client-side append/edit/delete & draft handling (copied from standalone)
+(function(){
+    const form = document.getElementById('manual-group-form');
+    const appendBtn = document.getElementById('append-btn');
+    const appendMsg = document.getElementById('append-message');
+    const techniqueList = document.getElementById('technique-list');
+
+    let techniqueEntries = [];
+    let editingIndex = -1; // -1 means not editing
+
+    function uuidv4(){
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+            const r = Math.random()*16|0, v = c=='x'? r : (r&0x3|0x8);
+            return v.toString(16);
+        });
+    }
+
+    function getDraftId(){
+        const name = 'draft_id=';
+        const dc = document.cookie.split(';').map(s=>s.trim());
+        for(const c of dc){ if(c.indexOf(name)===0) return c.substring(name.length); }
+        const id = uuidv4();
+        const d = new Date(); d.setFullYear(d.getFullYear()+1);
+        document.cookie = `draft_id=${id}; path=/; expires=${d.toUTCString()}`;
+        return id;
+    }
+
+    function getUserIdFromCookie(){
+        const name = 'user_id=';
+        const dc = document.cookie.split(';').map(s=>s.trim());
+        for(const c of dc){ if(c.indexOf(name)===0) return c.substring(name.length); }
+        return null;
+    }
+
+    function readUserId(){ if(typeof window !== 'undefined' && window.USER_ID) return window.USER_ID; return getUserIdFromCookie(); }
+
+    async function saveDraft(){
+        try{
+            const payload = {draft_id: draftId, group_name: form.group_name.value || '', entries: techniqueEntries};
+            const uid = readUserId(); if(uid) payload.user_id = uid;
+            await fetch('/save_draft', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        }catch(e){ }
+    }
+
+    async function loadDraft(){
+        try{
+            const uid = readUserId();
+            const qp = uid ? `?draft_id=${draftId}&user_id=${encodeURIComponent(uid)}` : `?draft_id=${draftId}`;
+            const res = await fetch(`/load_draft${qp}`);
+            if(res.ok){ const data = await res.json(); if(data && data.entries){ techniqueEntries = data.entries; renderTechniqueList(); } }
+        }catch(e){ }
+    }
+
+    function renderTechniqueList(){
+        if(!techniqueEntries.length){ techniqueList.innerHTML = ''; return; }
+        let html = '<h4>Appended Techniques</h4><ul style="list-style:none; padding:0;">';
+        techniqueEntries.forEach((e, idx)=>{
+            const badges = (e.tactics||[]).map(t=>`<span class="tactic-badge">${escapeHtml(t)}</span>`).join(' ');
+            html += `<li style="padding:0.4rem 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <div style="flex:1;">
+                    <div><strong>${escapeHtml(e.technique)}</strong></div>
+                    <div style="font-size:0.9rem;color:#444;">${badges || '<span style="color:#888">No tactics</span>'}</div>
+                    <div style="font-size:0.9rem;color:#666;">Procedures: ${escapeHtml(e.procedures.replace(/\n/g, ', '))}</div>
+                </div>
+                    <div style="margin-left:1rem; white-space:nowrap;">
+                        <button data-idx="${idx}" class="edit-btn">Edit</button>
+                    </div>
+            </li>`;
+        });
+        html += '</ul>';
+        techniqueList.innerHTML = html;
+
+    // Delete functionality removed from this page; managed after submit
+        techniqueList.querySelectorAll('.edit-btn').forEach(b=>{ b.addEventListener('click', (ev)=>{ const i = parseInt(ev.currentTarget.getAttribute('data-idx')); const item = techniqueEntries[i]; form.technique.value = item.technique; form.procedures.value = item.procedures; form.querySelectorAll('input[name="tactics"]').forEach(cb=>cb.checked = item.tactics && item.tactics.includes(cb.value)); editingIndex = i; appendMsg.style.display = 'block'; appendMsg.style.color='green'; appendMsg.textContent='Editing entry, click Append to save changes.'; }); });
+    }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>\"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]; }); }
+
+    appendBtn.addEventListener('click', async function(e){
+        e.preventDefault();
+        const technique = form.technique.value;
+        const procedures = form.procedures.value.trim();
+        const tactics = Array.from(form.querySelectorAll('input[name="tactics"]:checked')).map(cb=>cb.value);
+        if(!technique){ appendMsg.style.display='block'; appendMsg.style.color='red'; appendMsg.textContent='Please select a technique before appending.'; return; }
+        if(!procedures){ appendMsg.style.display='block'; appendMsg.style.color='red'; appendMsg.textContent='Procedures must have content before appending.'; return; }
+        const entry = {technique, tactics, procedures};
+        if(editingIndex >= 0){ techniqueEntries[editingIndex] = entry; editingIndex = -1; } else { techniqueEntries.push(entry); }
+        appendMsg.style.display='block'; appendMsg.style.color='green'; appendMsg.textContent='Technique saved successfully.';
+        renderTechniqueList(); await saveDraft();
+        form.technique.value = ''; form.procedures.value = ''; form.querySelectorAll('input[name="tactics"]').forEach(cb=>cb.checked=false);
+        setTimeout(()=>{ appendMsg.style.display='none'; }, 2000);
+    });
+
+    form.addEventListener('submit', function(e){
+        if(techniqueEntries.length === 0){ e.preventDefault(); appendMsg.style.display='block'; appendMsg.style.color='red'; appendMsg.textContent='Please append at least one technique before submitting.'; return false; }
+        const hidden = document.createElement('input'); hidden.type='hidden'; hidden.name='technique_entries'; hidden.value=JSON.stringify(techniqueEntries); form.appendChild(hidden); return true;
+    });
+
+    const draftId = getDraftId();
+    window.addEventListener('load', function(){ loadDraft(); });
+})();
+</script>
+
+    <script>
+    // Enforce column widths from data attributes to avoid inline Jinja in CSS and to override global styles
+    (function(){
+        function applyColWidths(){
+            const cols = document.querySelectorAll('.manual-tactics-col');
+            if(!cols || !cols.length) return;
+            cols.forEach(c=>{
+                const pct = c.getAttribute('data-col-width');
+                if(pct){ c.style.width = pct + '%'; c.style.minWidth = '120px'; c.style.boxSizing = 'border-box'; }
+            });
+        }
+        window.addEventListener('load', applyColWidths);
+        window.addEventListener('resize', applyColWidths);
+    })();
+    </script>
+
+    <style>
+    /* Namespaced overrides to defeat global stylesheet collisions */
+    .manual-group-container .tactics-row { display:flex !important; gap:1rem !important; flex-wrap:nowrap !important; align-items:flex-start !important; }
+    .manual-group-container .manual-tactics-col { display:flex !important; flex-direction:column !important; align-items:flex-start !important; }
+    .manual-group-container .tactics-row .tactics-item { display:block !important; width:100% !important; }
+    /* Stronger enforcement: each column should occupy half the row */
+    .manual-group-container .manual-tactics-col { flex: 0 0 50% !important; max-width:50% !important; width:50% !important; box-sizing:border-box !important; padding-right:0.5rem !important; }
+    .manual-group-container .tactics-row { justify-content:space-between !important; }
+    </style>
+
+    {% endblock %}
+
+<!-- Diagnostic helper: logs computed sizes/positions of tactics columns and highlights them visually -->
+<script>
+    (function(){
+        function diag(){
+            const cols = Array.from(document.querySelectorAll('.manual-tactics-col'));
+            console.log('Tactics columns found:', cols.length);
+            cols.forEach((c, i)=>{
+                const cs = window.getComputedStyle(c);
+                console.log('col', i, 'width:', cs.width, 'display:', cs.display, 'flex:', cs.flex, 'offsetLeft:', c.offsetLeft);
+                // visual highlight
+                c.style.outline = '1px dashed rgba(0,128,0,0.6)';
+                c.style.background = i % 2 === 0 ? 'rgba(0,128,0,0.03)' : 'rgba(0,0,128,0.02)';
+            });
+            if(cols.length === 0) console.warn('No .manual-tactics-col elements found');
+        }
+        window.addEventListener('load', function(){ setTimeout(diag, 50); });
+        window.addEventListener('resize', function(){ setTimeout(diag, 50); });
+    })();
+</script>
