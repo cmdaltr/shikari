@@ -28,9 +28,8 @@
 </style>
 
 <div id="main-content">
-    <div class="manual-group-container">
+    <div class="manual-group-container" style="padding-top:6px; margin-top:6px;">
     <h2 style="text-align:center; width:100%;">Manual Group Entry{% if group_name %}: {{ group_name }}{% endif %}</h2>
-        <div style="font-size:0.8rem; color:#666; margin-bottom:1em; text-align:center;">Rendered: {{ render_time if render_time is defined else 'n/a' }}</div>
         {% if error_message is defined and error_message %}
             <div style="color:darkred; font-weight:bold; margin-bottom:1em; text-align:center;">{{ error_message }}</div>
         {% endif %}
@@ -58,7 +57,9 @@
                 <div style="font-size:0.95em; color:#666; margin-bottom:1em; text-align:center;">Select one technique only.</div>
             </div>
 
-            <label>Tactics</label>
+            <div style="width:100%; max-width:560px; margin-bottom:0.5em;">
+                <label style="display:block; text-align:left;">Tactics</label>
+            </div>
             {# Two fixed columns of up to 7 items each implemented as a table for maximum layout resilience.
                Special-case: when there are exactly 7 tactics, render a single centered column to match the screenshot. #}
             {% set total = tactics|length %}
@@ -99,11 +100,13 @@
                 {% endif %}
             {% endif %}
 
-            <label for="procedures">Procedures</label>
-                <textarea name="procedures" id="procedures" rows="6" required style="min-height:120px; width:100%; max-width:560px;"></textarea>
-            <div style="font-size:0.9em;color:#666;">List one per line. <span class="required">Required</span></div>
+            <div style="width:100%; max-width:560px; margin-bottom:0.75em;">
+                <label for="procedures" style="display:block; text-align:left;">Procedures</label>
+                <textarea name="procedures" id="procedures" rows="6" required style="min-height:120px; width:100%;"></textarea>
+                <div style="font-size:0.9em;color:#666; margin-top:0.5em;">List one per line. <span class="required">Required</span></div>
+            </div>
 
-            <div class="form-actions">
+            <div class="form-actions" style="margin-top:0.5em;">
                 <button type="button" id="append-btn" class="btn">Append</button>
                 <button type="submit" id="submit-btn" class="btn">Submit</button>
             </div>
