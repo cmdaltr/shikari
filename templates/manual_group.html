@@ -5,7 +5,7 @@
     .manual-group-container { margin-top: 0 !important; padding-top: 0 !important; }
     .manual-group-container h2 { margin-top: 8px; margin-bottom: 0.75em; text-align:center; }
     form { width:100%; display:flex; flex-direction:column; align-items:center; }
-        label { font-weight:600; margin-bottom:0.5em; display:block; text-align:left; width:100%; }
+    label { font-size:1.325em !important; font-weight:700 !important; margin-bottom:0.5em; display:block; text-align:left; width:100%; }
     textarea, select, input[type="text"] { width:100%; margin-bottom:1.5em; font-size:1rem; padding:0.6em 0.75em; box-sizing:border-box; border:1px solid #e5e7eb; border-radius:6px; background:#fff }
     select { background:#f7f7f7 }
         .tactics-row { display:flex; gap:1rem; margin-bottom:1.5em; width:100%; max-width:700px; flex-wrap:nowrap; }
@@ -27,25 +27,34 @@
     .required { color:red }
 </style>
 
-<div id="main-content">
-    <div class="manual-group-container" style="padding-top:6px; margin-top:6px;">
-    <h2 style="text-align:center; width:100%;">Manual Group Entry{% if group_name %}: {{ group_name }}{% endif %}</h2>
+<div id="main-content" style="padding-top:0; margin-top:-40px;">
+    <div class="manual-group-container" style="padding-top:0px; margin-top:-24px;">
+    <!-- Page heading for manual entry (visual placement tuned with inline margins) -->
+    <h2 style="text-align:center; width:100%; margin-top:-112px; margin-bottom:0; font-size:calc(1.5em + 2px);">Manual Group Entry</h2>
+    {% if group_name %}
+        <div style="text-align:center; width:100%; margin-top:6px; font-size:1.5em; font-weight:300;">{{ group_name }}</div>
+    {% endif %}
+    <!-- Back button: navigates explicitly to the index page instead of history.back() -->
+    <div style="width:100%; max-width:720px; display:flex; justify-content:flex-start; margin:8px 0 0 0;">
+        <button type="button" onclick="location.href='/'" class="btn ghost" style="background:transparent; color:#111; border:1px solid #ddd; padding:0.35rem 0.7rem;">← Back</button>
+    </div>
         {% if error_message is defined and error_message %}
             <div style="color:darkred; font-weight:bold; margin-bottom:1em; text-align:center;">{{ error_message }}</div>
         {% endif %}
 
-        <form id="manual-group-form" method="post" action="/manual_group_submit" autocomplete="off" style="width:100%; max-width:720px; display:flex; flex-direction:column; align-items:center;">
+    <!-- Manual form: append techniques (client-side), then submit serialized entries to the server -->
+    <form id="manual-group-form" method="post" action="/manual_group_submit" autocomplete="off" style="width:100%; max-width:720px; display:flex; flex-direction:column; align-items:center;">
             <input type="hidden" name="group_name" value="{% if group_name %}{{ group_name }}{% else %}manual_group{% endif %}">
 
-            <div style="width:100%; max-width:560px; margin-bottom:1.5em;">
-                <label for="group_desc">Group Description</label>
+            <div style="width:100%; max-width:560px; margin-top:16px; margin-bottom:1.5em;">
+                <label for="group_desc" style="font-size:1.125em; font-weight:700; margin-bottom:0.5em; display:block; text-align:left; width:100%;">Group Description</label>
                 <div style="width:100%;">
-                    <textarea name="group_desc" id="group_desc" rows="3" style="width:100%; box-sizing:border-box;"></textarea>
+                    <textarea name="group_desc" id="group_desc" rows="3" style="width:100%; box-sizing:border-box; font-size:1rem;"></textarea>
                 </div>
             </div>
 
             <div style="width:100%; max-width:560px; margin-bottom:1.5em;">
-                <label for="technique">Technique</label>
+                <label for="technique" style="font-size:1.125em; font-weight:700; margin-bottom:0.5em; display:block; text-align:left; width:100%;">Technique</label>
                 <div style="width:100%; overflow:hidden;">
                     <select name="technique" id="technique" style="width:100% !important; box-sizing:border-box !important; max-width:100% !important; min-width:0 !important; display:block !important; -webkit-appearance:none; -moz-appearance:none; appearance:none;">
                         <option value="">Select a technique...</option>
@@ -58,7 +67,7 @@
             </div>
 
             <div style="width:100%; max-width:560px; margin-bottom:0.5em;">
-                <label style="display:block; text-align:left;">Tactics</label>
+                <label style="font-size:1.125em; font-weight:700; margin-bottom:0.5em; display:block; text-align:left; width:100%;">Tactics</label>
             </div>
             {# Two fixed columns of up to 7 items each implemented as a table for maximum layout resilience.
                Special-case: when there are exactly 7 tactics, render a single centered column to match the screenshot. #}
@@ -69,19 +78,22 @@
                 <div style="width:100%; max-width:700px; margin-bottom:1.5em; display:flex; justify-content:center;">
                     <div style="width:100%; max-width:420px;">
                         {% for tactic in tactics %}
-                            <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block; width:100%;"> <input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
+                            <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block; width:100%"> <input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
                         {% endfor %}
                     </div>
                 </div>
             {% else %}
                 <div style="width:100%; max-width:700px; margin-bottom:1.5em;">
-                    <table class="tactics-table" style="display:table !important; width:100% !important; border-collapse:collapse;">
+                     <!-- Technique selector: choose one ATT&CK technique from the server-provided list -->
+                     <label for="technique" style="font-size:1.125em; font-weight:700; margin-bottom:0.5em; display:block; text-align:left; width:100%;">Technique</label>
                         <tr>
                             <td style="display:table-cell !important; vertical-align:top; width:50% !important; padding-right:0.75rem; box-sizing:border-box;">
-                                {% for tactic in tactics[0:left_slice_end] %}
+                     <!-- Tactics: select one or more tactics that apply to the technique -->
+                     <label style="font-size:1.125em; font-weight:700; margin-bottom:0.5em; display:block; text-align:left; width:100%">Tactics</label>
                                     <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block;"> <input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
                                 {% endfor %}
-                            </td>
+                     <!-- Procedures: required freeform field; list one procedure per line -->
+                     <label for="procedures" style="font-size:1.125em; font-weight:700; margin-bottom:0.5em; display:block; text-align:left; width:100%">Procedures</label>
                             <td style="display:table-cell !important; vertical-align:top; width:50% !important; padding-left:0.75rem; box-sizing:border-box;">
                                 {% for tactic in tactics[left_slice_end:right_slice_end] %}
                                     <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block;"> <input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
@@ -100,13 +112,13 @@
                 {% endif %}
             {% endif %}
 
-            <div style="width:100%; max-width:560px; margin-bottom:0.75em;">
-                <label for="procedures" style="display:block; text-align:left;">Procedures</label>
-                <textarea name="procedures" id="procedures" rows="6" required style="min-height:120px; width:100%;"></textarea>
-                <div style="font-size:0.9em;color:#666; margin-top:0.5em;">List one per line. <span class="required">Required</span></div>
+            <div style="width:100%; max-width:560px; margin-bottom:1.25em;">
+                <label for="procedures" style="font-size:1.125em; font-weight:700; margin-bottom:0.5em; display:block; text-align:left; width:100%;">Procedures</label>
+                <textarea name="procedures" id="procedures" rows="6" required style="min-height:120px; width:100%; font-size:1rem;"></textarea>
+                <div style="font-size:0.9em;color:#666; margin-top:0.5em;">List one per line. <span class="required">Required.</span></div>
             </div>
 
-            <div class="form-actions" style="margin-top:0.5em;">
+            <div class="form-actions" style="margin-top:1em;">
                 <button type="button" id="append-btn" class="btn">Append</button>
                 <button type="submit" id="submit-btn" class="btn">Submit</button>
             </div>
@@ -121,7 +133,10 @@
 </div>
 
 <script>
-// Client-side append/edit/delete & draft handling (copied from standalone)
+// Client-side append/edit/delete & draft handling
+// - Maintains an in-memory `techniqueEntries` array representing appended
+//   techniques. Entries are saved to the server via /save_draft and are
+//   serialized into a hidden form field when the form is finally submitted.
 (function(){
     const form = document.getElementById('manual-group-form');
     const appendBtn = document.getElementById('append-btn');

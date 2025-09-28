@@ -3,6 +3,17 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
+# -----------------------------------------------------------------------------
+# Archer service - main FastAPI application
+#
+# This module wires up the web application, mounts static assets, loads
+# MITRE ATT&CK data into `app.state` on startup, and exposes the public
+# HTTP endpoints used by the front-end templates (index, generate,
+# manual submission, draft saving/loading, and progress). Comments in
+# this file explain the purpose of each handler and the shape of data
+# passed between client and server.
+# -----------------------------------------------------------------------------
+
 # from gorgon.build import define_vectr_values
 from gorgon.mitre import (
     get_stix_data,
@@ -12,17 +23,27 @@ from gorgon.mitre import (
 from gorgon.mitre.enterprise import check_group_in_mitre
 from gorgon.build.orchestrator import process_group
 from datetime import datetime
+import os
+import json
 
 
 templates = Jinja2Templates(directory="templates")
 
 app = FastAPI(title="Archer Threat Hunting Service")
+# Serve local static files (CSS/JS) via the /static path
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # Cleanup old drafts on startup (default: 30 days)
 @app.on_event("startup")
 def cleanup_old_drafts():
+    """
+    Remove draft files older than DRAFT_MAX_AGE_DAYS from data/drafts.
+
+    This is a housekeeping task executed once during app startup. If the
+    drafts directory doesn't exist we simply return. Any exceptions are
+    caught and ignored because cleanup is non-fatal.
+    """
     drafts_dir = os.path.join("data", "drafts")
     if not os.path.exists(drafts_dir):
         return
@@ -38,13 +59,21 @@ def cleanup_old_drafts():
                     if os.path.getmtime(path) < cutoff:
                         os.remove(path)
                 except Exception:
+                    # If a single file can't be removed, continue
                     pass
     except Exception:
-        # non-fatal
+        # non-fatal: don't prevent the app from starting if cleanup fails
         pass
 
 
 def get_mitre_lists():
+    """
+    Helper to return (tactics, techniques) used by templates.
+
+    - tactics: ordered list of ATT&CK tactic names (filtered to an opinionated
+      ordering defined by mitre_order).
+    - techniques: cached list of technique display names stored in app.state
+    """
     mitre_order = [
         "Reconnaissance",
         "Resource Development",
@@ -80,6 +109,10 @@ def get_mitre_lists():
 # Load MITRE data on startup and cache in app.state
 @app.on_event("startup")
 def load_mitre_data():
+    # Download the MITRE ATT&CK STIX bundle and cache useful indexes in
+    # app.state so template handlers can access them without repeated network
+    # calls. These calls are synchronous during startup to ensure the data
+    # is available for user requests.
     url = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
     bundle = get_stix_data(url)
     app.state.bundle = bundle
@@ -89,6 +122,9 @@ def load_mitre_data():
 
 @app.get("/", response_class=HTMLResponse)
 def read_form(request: Request):
+    # Render the index page where the user can enter a group name. The
+    # template expects a `request` object and optionally lists of
+    # techniques; other placeholders are provided for future features.
     return templates.TemplateResponse(
         "index.html",
         {
@@ -110,8 +146,13 @@ import os
 
 @app.post("/generate")
 async def generate(request: Request, group_name: str = Form(...)):
+    # Called when the user clicks Generate on the index page. We first
+    # check whether the provided group name maps to a known MITRE actor.
     actor_found = check_group_in_mitre(app.state.bundle, group_name)
     if actor_found == "Y":
+        # Known actor: immediately kick off processing and return a JSON
+        # payload containing a redirect URL so the front-end can navigate
+        # to the progress page without a full-page form post.
         hypothesis = "Generated from form"
         process_group(
             group_name,
@@ -121,7 +162,8 @@ async def generate(request: Request, group_name: str = Form(...)):
         # Return JSON with redirect_url for AJAX
         return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
     else:
-        # Show manual group input form
+        # Unknown actor: render the manual form which allows the user to
+        # append techniques, select tactics and provide procedures.
         mitre_order = [
             "Reconnaissance",
             "Resource Development",
@@ -163,7 +205,8 @@ async def generate(request: Request, group_name: str = Form(...)):
 # Progress page endpoint
 @app.get("/progress", response_class=HTMLResponse)
 async def progress(request: Request, group_name: str = ""):
-    # In the future, pass progress/correlation data here
+    # Simple progress page shown while the orchestrator runs. Currently
+    # the template only needs the request and the group_name to display.
     return templates.TemplateResponse(
         "progress.html",
         {"request": request, "group_name": group_name},
@@ -181,6 +224,8 @@ async def save_draft(request: Request):
         payload = await request.json()
     except Exception:
         return JSONResponse({"ok": False}, status_code=400)
+    # Expect payload to include a `draft_id` and optional `user_id`.
+    # The payload is stored to disk for later retrieval by /load_draft.
     draft_id = payload.get("draft_id")
     user_id = payload.get("user_id")
     if not draft_id:
@@ -243,8 +288,19 @@ async def manual_group_submit(
     group_desc: str = Form(""),
     technique_entries: str = Form(""),
 ):
-    """Receive manual technique entries (JSON string), transform into the
-    expected manual_data structure and process the group.
+    """
+    Receive manual technique entries (JSON string), validate them,
+    transform the client payload into the `manual_data` structure expected
+    by the `process_group` orchestrator, persist a draft for auditing,
+    then call the orchestrator and redirect to the progress page.
+
+    Inputs (form fields):
+    - group_name: the name supplied on the previous page
+    - group_desc: optional description/hypothesis
+    - technique_entries: JSON string of appended technique objects
+
+    Returns: RedirectResponse to /progress on success, or re-renders the
+    manual form with an error message on validation failure.
     """
     try:
         entries = json.loads(technique_entries) if technique_entries else []

@@ -7,7 +7,11 @@
 <body>
     <div id="main-content" class="centered">
         <div>
+            <!-- Page title / app name -->
             <h1 style="text-align:center; font-size:2.5em;">Archer Hunting Application</h1>
+            <!-- Description pop-up: brief explanation about what Archer does. The
+                 popup supports 'hide' (temporary) and 'do not show again' (persist)
+                 interactions which are stored in localStorage. -->
             <div id="archer-desc-popup" style="
                 display: none;
                 position: fixed;
@@ -38,14 +42,20 @@
                     </label>
                 </div>
             </div>
-            <form id="main-form" action="/generate" method="post" autocomplete="off">
+          <!-- Main form: enter an actor/group name and click Generate.
+              Submitted via AJAX (see the script at bottom) so we can either
+              redirect to progress or inject the manual form when not found. -->
+          <form id="main-form" action="/generate" method="post" autocomplete="off">
                 <div class="form-grid">
                     <!-- Top row -->
                     <div style="text-align: right;">
                         <label for="group_name_input">Group Name:</label>
                     </div>
                     <div style="text-align: center;">
-                        <input type="text" name="group_name" id="group_name_input">
+                        <input type="text" name="group_name" id="group_name_input" maxlength="200">
+                        <div id="group-name-controls" style="margin-top:6px; font-size:0.9em; color:#666;">
+                            <span id="group-name-error" style="color:darkred; font-weight:600; margin-left:12px; display:none;">Name must be 30 characters or fewer.</span>
+                        </div>
                     </div>
                     <div></div>
                     <!-- Bottom row -->
@@ -56,6 +66,7 @@
                 </div>
             </form>
 
+            <!-- Optional messages injected by the server (e.g. errors/status) -->
             {% if message %}
             <div style="margin-top: 1em; text-align: center; font-weight: bold; color: #333;">
                 {{ message }}
@@ -77,6 +88,8 @@
             </h2>
         </div>
     </div>
+    <!-- Client-side interactivity: handles the description popup, input
+        validation and the AJAX submit behavior for the Generate button. -->
     <script>
         var loadingInterval;
         function showLoading(groupName) {
@@ -152,8 +165,18 @@
             var form = document.getElementById('main-form');
             var input = document.getElementById('group_name_input');
             var btn = document.getElementById('generate_btn');
+            var errorSpan = document.getElementById('group-name-error');
             function validate() {
-                if (input.value.trim() === '') {
+                var val = input.value || '';
+                if (val.length > 30) {
+                    errorSpan.style.display = 'inline';
+                    btn.disabled = true;
+                    return;
+                } else {
+                    errorSpan.style.display = 'none';
+                }
+                var trimmed = val.trim();
+                if (trimmed === '') {
                     btn.disabled = true;
                 } else {
                     btn.disabled = false;
