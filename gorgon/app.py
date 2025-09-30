@@ -32,8 +32,13 @@ from gorgon.build.progress import read_progress, write_progress
 templates = Jinja2Templates(directory="templates")
 
 app = FastAPI(title="Archer Threat Hunting Service")
-# Serve local static files (CSS/JS) via the /static path
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+# Cache-busting token for static assets
+@app.on_event("startup")
+async def _set_asset_version():
+    app.state.asset_version = datetime.now().strftime("%Y%m%d%H%M%S")
 
 
 # Cleanup old drafts on startup (default: 30 days)

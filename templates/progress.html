@@ -1,31 +1,30 @@
 {% extends "base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/progress.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/progress.css') }}">
-
-<div id="main-content" style="padding-top:0; margin-top:-40px;">
-  <div class="progress-container" style="padding-top:0px; margin-top:-24px;">
-    <h2 class="page-title">Query Correlation Progress</h2>
-
-    <!-- Back button (same style/placement as Manual Group Entry) -->
-    <div class="nav-row">
-      <button type="button" onclick="location.href='/'" class="btn ghost">← Back</button>
-    </div>
-
+<div id="main-content" style="padding-top: 72px; margin-top: 0;">
+  <div class="progress-container" style="padding-top: 0; margin-top: 0;">
+    <h2 class="page-title" style="margin-top: 0;">Query Correlation Progress</h2>
     <div id="progress-content">
       <div class="center-left">
+        <div class="nav-row">
+          <button type="button" onclick="location.href='/'" class="btn ghost">← Back</button>
+        </div>
+
         <p class="lead">Assessing YAML queries for possible merging and correlation...</p>
 
         <div class="section">
           <h3 class="subheading">YAML generation progress</h3>
           <div class="progress-bar">
-            <div id="yaml-progress-inner" class="progress-fill yaml" style="width:5%;"></div>
+            <div id="yaml-progress-inner" class="progress-fill yaml"></div>
           </div>
         </div>
 
         <div class="section">
           <h3 class="subheading">GenAI correlation progress</h3>
           <div class="progress-bar">
-            <div id="genai-progress-inner" class="progress-fill genai" style="width:0%;"></div>
+            <div id="genai-progress-inner" class="progress-fill genai"></div>
           </div>
         </div>
 
@@ -40,11 +39,10 @@
             <ul id="cross-corr-list"></ul>
           </div>
         </div>
+
       </div>
     </div>
-
   </div>
 </div>
-
-<script src="{{ url_for('static', filename='js/progress.js') }}" defer></script>
+<script src="{{ url_for('static', path='js/progress.js') }}?v={{ request.app.state.asset_version }}" defer></script>
 {% endblock %}

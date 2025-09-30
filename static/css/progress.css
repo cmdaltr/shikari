@@ -2,7 +2,7 @@
 .page-title {
   text-align: center;
   width: 100%;
-  margin-top: -112px;
+  margin-top: 0;        /* was -112px */
   margin-bottom: 0;
   font-size: calc(1.5em + 2px);
 }
@@ -12,13 +12,13 @@
   width: 100%;
   max-width: 720px;
   display: flex;
-  justify-content: flex-start;
-  margin: 8px 0 0 0;
+  align-items: center;
+  margin: 8px 0 24px 0;
 }
 
 /* Buttons (shared look with manual page) */
 .btn{background:#0366d6;color:#fff;border:none;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer}
-.btn.ghost{background:#f3f4f6;color:#111;border:1px solid #ddd}
+.btn.ghost{background:#f3f4f6;color:#111;border:1px solid #ddd;margin-left: 0}
 
 /* Center container but left-align inner content */
 #progress-content {
@@ -30,6 +30,13 @@
   margin: 0 auto;
   max-width: 720px;
   text-align: left;
+}
+
+/* Center the page content and inset the back button */
+.progress-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 /* Typography */

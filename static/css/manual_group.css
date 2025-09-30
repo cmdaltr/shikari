@@ -1,7 +1,48 @@
 /* Page-scoped styles */
 .manual-group-container { margin-top: 0 !important; padding-top: 0 !important; }
-.manual-title { margin-top: 8px; margin-bottom: 0.75em; text-align:center; }
 
+/* Match progress page heading and layout */
+.page-title {
+  text-align: center;
+  width: 100%;
+  margin-top: 0;
+  margin-bottom: 0;
+  font-size: calc(1.5em + 2px);
+}
+
+.manual-group-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+#manual-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+}
+
+/* Same centered column as progress */
+.center-left {
+  margin: 0 auto;
+  max-width: 720px;
+  text-align: left;
+}
+
+/* Back row matches progress page */
+.nav-row {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  align-items: center;
+  margin: 8px 0 24px 0;
+}
+
+/* Buttons */
+.btn{background:#0366d6;color:#fff;border:none;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer}
+.btn.ghost{background:#f3f4f6;color:#111;border:1px solid #ddd;margin-left:0}
+
+/* Form controls */
 form { width:100%; display:flex; flex-direction:column; align-items:center; }
 label { font-size:1.325em !important; font-weight:700 !important; margin-bottom:0.5em; display:block; text-align:left; width:100%; }
 textarea, select, input[type="text"] { width:100%; margin-bottom:1.5em; font-size:1rem; padding:0.6em 0.75em; box-sizing:border-box; border:1px solid #e5e7eb; border-radius:6px; background:#fff }
@@ -28,7 +69,38 @@ select { background:#f7f7f7 }
 #append-message { color:green; font-weight:600; margin-bottom:1em; display:none; text-align:center }
 .required { color:red }
 
-/* Back button row matches progress page nav row */
-.form-actions-row {
-  width:100%; max-width:720px; display:flex; justify-content:flex-start; margin:8px 0 0 0;
+/* Align with progress page heading and layout */
+/* Match progress page layout */
+.manual-group-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.manual-group-container .page-title {
+  text-align: center !important;
+  width: 100%;
+  margin: 0;
+  font-size: calc(1.5em + 2px);
+}
+
+#manual-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+}
+
+/* Same centered column as progress */
+.center-left {
+  margin: 0 auto;
+  max-width: 720px;
+  text-align: left;
+}
+
+.nav-row {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  align-items: center;
+  margin: 8px 0 24px 0;
 }

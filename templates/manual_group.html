@@ -1,25 +1,27 @@
 {% extends "base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/manual_group.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/manual_group.css') }}">
+<div id="main-content" style="padding-top: 72px; margin-top: 0;">
+  <div class="manual-group-container" style="padding-top: 0; margin-top: 0;">
+    <!-- Page heading (match progress) -->
+    <h2 class="page-title" style="text-align:center; width:100%; margin:0;">Manual Group Entry</h2>
 
-<div id="main-content" style="padding-top:0; margin-top:-40px;">
-  <div class="manual-group-container" style="padding-top:0px; margin-top:-24px;">
-    <!-- Page heading -->
-    <h2 class="manual-title">Manual Group Entry</h2>
+    <!-- Back button row (match progress) -->
+    <div class="nav-row">
+      <button type="button" onclick="location.href='/'" class="btn ghost">← Back</button>
+    </div>
+
     {% if group_name %}
       <div style="text-align:center; width:100%; margin-top:6px; font-size:1.5em; font-weight:300;">{{ group_name }}</div>
     {% endif %}
-
-    <!-- Back button -->
-    <div class="form-actions-row">
-      <button type="button" onclick="location.href='/'" class="btn ghost" style="background:transparent; color:#111; border:1px solid #ddd; padding:0.35rem 0.7rem;">← Back</button>
-    </div>
 
     {% if error_message is defined and error_message %}
       <div style="color:darkred; font-weight:bold; margin-bottom:1em; text-align:center;">{{ error_message }}</div>
     {% endif %}
 
-    <!-- Manual form (unchanged structure) -->
+    <!-- Form -->
     <form id="manual-group-form" method="post" action="/manual_group_submit" autocomplete="off" style="width:100%; max-width:720px; display:flex; flex-direction:column; align-items:center;">
       <input type="hidden" name="group_name" value="{% if group_name %}{{ group_name }}{% else %}manual_group{% endif %}">
 
@@ -101,5 +103,5 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/manual_group.js') }}" defer></script>
+<script src="{{ url_for('static', path='js/manual_group.js') }}?v={{ request.app.state.asset_version }}" defer></script>
 {% endblock %}
