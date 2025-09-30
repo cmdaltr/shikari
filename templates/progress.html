@@ -1,26 +1,50 @@
 {% extends "base.html" %}
 {% block content %}
-<div id="progress-content" class="centered">
-    <h2>Query Correlation Progress</h2>
-    <div id="progress-status">
-        <!-- Progress details will be dynamically updated here -->
-        <p>Assessing YAML queries for possible merging and correlation...</p>
-        <div id="progress-bar" style="width: 100%; background: #eee; border-radius: 6px; margin: 1em 0;">
-            <div id="progress-bar-inner" style="width: 10%; background: #4caf50; height: 20px; border-radius: 6px;"></div>
-        </div>
-        <div id="progress-details">
-            <h3>Vendor-based Correlations</h3>
-            <ul id="vendor-corr-list">
-                <!-- List of vendor-based correlations -->
-            </ul>
-            <h3>Cross-Vendor Correlations</h3>
-            <ul id="cross-corr-list">
-                <!-- List of cross-vendor correlations -->
-            </ul>
-        </div>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/progress.css') }}">
+
+<div id="main-content" style="padding-top:0; margin-top:-40px;">
+  <div class="progress-container" style="padding-top:0px; margin-top:-24px;">
+    <h2 class="page-title">Query Correlation Progress</h2>
+
+    <!-- Back button (same style/placement as Manual Group Entry) -->
+    <div class="nav-row">
+      <button type="button" onclick="location.href='/'" class="btn ghost">← Back</button>
     </div>
+
+    <div id="progress-content">
+      <div class="center-left">
+        <p class="lead">Assessing YAML queries for possible merging and correlation...</p>
+
+        <div class="section">
+          <h3 class="subheading">YAML generation progress</h3>
+          <div class="progress-bar">
+            <div id="yaml-progress-inner" class="progress-fill yaml" style="width:5%;"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3 class="subheading">GenAI correlation progress</h3>
+          <div class="progress-bar">
+            <div id="genai-progress-inner" class="progress-fill genai" style="width:0%;"></div>
+          </div>
+        </div>
+
+        <h3 class="subheading correlations-title">Correlations</h3>
+        <div class="corr-grid">
+          <div class="corr-card">
+            <h4>Vendor-based</h4>
+            <ul id="vendor-corr-list"></ul>
+          </div>
+          <div class="corr-card">
+            <h4>Cross-Vendor</h4>
+            <ul id="cross-corr-list"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
-<script>
-// This script would poll the backend for progress updates and update the DOM accordingly
-</script>
+
+<script src="{{ url_for('static', filename='js/progress.js') }}" defer></script>
 {% endblock %}

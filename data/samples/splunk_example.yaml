@@ -1,0 +1,5 @@
+vendor: splunk
+name: Splunk Example Detection
+query: |
+  index=main sourcetype=unusual_activity | stats count by src_ip
+notes: "Simple Splunk query example used for smoke testing."

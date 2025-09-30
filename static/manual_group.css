@@ -1,0 +1,34 @@
+/* Page-scoped styles */
+.manual-group-container { margin-top: 0 !important; padding-top: 0 !important; }
+.manual-title { margin-top: 8px; margin-bottom: 0.75em; text-align:center; }
+
+form { width:100%; display:flex; flex-direction:column; align-items:center; }
+label { font-size:1.325em !important; font-weight:700 !important; margin-bottom:0.5em; display:block; text-align:left; width:100%; }
+textarea, select, input[type="text"] { width:100%; margin-bottom:1.5em; font-size:1rem; padding:0.6em 0.75em; box-sizing:border-box; border:1px solid #e5e7eb; border-radius:6px; background:#fff }
+select { background:#f7f7f7 }
+
+.tactics-row { display:flex; gap:1rem; margin-bottom:1.5em; width:100%; max-width:700px; flex-wrap:nowrap; }
+.tactics-row > div { display:flex; flex-direction:column; align-items:flex-start; flex:1 1 0; min-width:140px; }
+.tactics-row .tactics-item { display:block !important; width:100% !important; }
+.tactics-row .tactics-item input[type="checkbox"] { margin-right:0.5rem; }
+
+.tactics-item { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0.25rem }
+.tactic-badge { display:inline-block; background:#eef6ff; color:#0366d6; border-radius:12px; padding:2px 8px; font-size:0.8rem; margin-right:0.25rem }
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:9999}
+.modal{background:#fff;padding:1.25rem;border-radius:8px;max-width:420px;width:90%;box-shadow:0 6px 18px rgba(0,0,0,0.15)}
+.modal .actions{display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem}
+
+.btn{background:#0366d6;color:#fff;border:none;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer}
+.btn.ghost{background:#f3f4f6;color:#111;border:1px solid #ddd}
+
+.form-actions { display:flex; gap:0.75em; margin-bottom:1.5em; justify-content:flex-start }
+.form-actions .btn{ background:#efefef; color:#111; border:1px solid #ddd }
+
+#append-message { color:green; font-weight:600; margin-bottom:1em; display:none; text-align:center }
+.required { color:red }
+
+/* Back button row matches progress page nav row */
+.form-actions-row {
+  width:100%; max-width:720px; display:flex; justify-content:flex-start; margin:8px 0 0 0;
+}

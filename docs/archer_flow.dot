@@ -1,0 +1,68 @@
+// Archer project flow diagram (generated)
+// Nodes: templates, app handlers, mitre helpers, orchestrator, drafts
+
+digraph ArcherFlow {
+  rankdir=LR;
+  node [shape=box, style=filled, fillcolor="#f8f9fa", fontname="Helvetica"];
+
+  // Templates
+  index_html [label="templates/index.html\n(form: /generate)", shape=note, fillcolor="#fff1c6"];
+  manual_html [label="templates/manual_group.html\n(form: /manual_group_submit)", shape=note, fillcolor="#fff1c6"];
+  progress_html [label="templates/progress.html", shape=note, fillcolor="#fff1c6"];
+
+  // App handlers
+  app_read_form [label="gorgon.app: read_form()\nGET /", shape=component, fillcolor="#e6f0ff"];
+  app_generate [label="gorgon.app: generate()\nPOST /generate", shape=component, fillcolor="#e6f0ff"];
+  app_manual_submit [label="gorgon.app: manual_group_submit()\nPOST /manual_group_submit", shape=component, fillcolor="#e6f0ff"];
+  app_progress [label="gorgon.app: progress()\nGET /progress", shape=component, fillcolor="#e6f0ff"];
+  app_save_draft [label="gorgon.app: save_draft()\nPOST /save_draft", shape=component, fillcolor="#e6f0ff"];
+  app_load_draft [label="gorgon.app: load_draft()\nGET /load_draft", shape=component, fillcolor="#e6f0ff"];
+
+  // Helpers
+  mitre_helpers [label="gorgon.mitre\nget_stix_data(), obtain_all_techniques(), obtain_technique_descriptions()", shape=folder, fillcolor="#e8ffe8"];
+  mitre_enterprise [label="gorgon.mitre.enterprise\ncheck_group_in_mitre()", shape=folder, fillcolor="#e8ffe8"];
+
+  // Orchestrator
+  orchestrator [label="gorgon.build.orchestrator\nprocess_group()", shape=folder, fillcolor="#ffe8e8"];
+
+  // Data/drafts
+  drafts [label="data/drafts\n(persisted drafts & audit)", shape=folder, fillcolor="#f0f0f0"];
+
+  // Edges: how pages invoke handlers and helpers
+  index_html -> app_read_form [label="render"];
+  app_read_form -> index_html [label="TemplateResponse"];
+
+  index_html -> app_generate [label="submit group_name"];
+  app_generate -> mitre_enterprise [label="check_group_in_mitre()"];
+  mitre_enterprise -> app_generate [label="Y/N"];
+  app_generate -> orchestrator [label="process_group() when known"];
+  app_generate -> manual_html [label="render manual form when unknown"];
+
+  manual_html -> app_manual_submit [label="submit technique_entries"];
+  app_manual_submit -> orchestrator [label="process_group(manual_data)"];
+  app_manual_submit -> drafts [label="persist draft JSON"];
+
+  // Draft save/load
+  manual_html -> app_save_draft [label="save draft via AJAX"];
+  app_save_draft -> drafts [label="write JSON file"];
+  manual_html -> app_load_draft [label="load draft via AJAX on load"];
+  app_load_draft -> drafts [label="read JSON file"];
+  app_load_draft -> manual_html [label="return entries JSON"];
+
+  // Navigation
+  index_html -> manual_html [label="AJAX replace on unknown actor"];
+  app_generate -> app_progress [label="redirect_url on known actor"];
+  app_manual_submit -> app_progress [label="303 redirect after processing"];
+
+  // Progress
+  app_progress -> progress_html [label="render progress"];
+
+  // Styling/JS (static)
+  static [label="static/* (CSS/JS)", shape=folder, fillcolor="#f3f3ff"];
+  index_html -> static [label="loads style/script"];
+  manual_html -> static [label="loads style/script"];
+
+  // Group nodes visually
+  { rank=same; index_html; manual_html; progress_html }
+  { rank=same; app_read_form; app_generate; app_manual_submit }
+}

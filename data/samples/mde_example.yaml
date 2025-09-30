@@ -1,0 +1,5 @@
+vendor: mde
+name: MDE Example Detection
+query: |
+  DeviceProcessEvents | where FileName == "powershell.exe"
+notes: "Simple MDE example used for smoke testing."

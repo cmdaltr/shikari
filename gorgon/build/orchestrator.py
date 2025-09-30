@@ -12,6 +12,11 @@ from gorgon.mitre import (
 )
 
 from gorgon.build.detections import compile_query
+from gorgon.build.progress import write_progress
+from gorgon.genai import generate_correlations
+import os
+from gorgon.build.progress import write_progress
+from gorgon.genai import generate_correlations
 
 
 def process_group(group_name, hypothesis, manual_data=None):
@@ -44,13 +49,36 @@ def process_group(group_name, hypothesis, manual_data=None):
 
     group_in_mitre = check_group_in_mitre(bundle, group_name)
 
+    # initialize a progress file for the group
+    try:
+        write_progress(
+            group_name, {"status": "started", "stage": "init", "created_yaml": 0}
+        )
+    except Exception:
+        pass
+
     if group_in_mitre == "N":
         # manual_data must be provided
         if not manual_data:
             raise ValueError(
                 f"Group '{group_name}' not found in MITRE ATT&CK and no manual data provided. Cannot proceed."
             )
+        # compute total expected YAMLs for progress reporting
+        total = sum(len(entry.get("techniques", [])) for entry in manual_data)
+        try:
+            write_progress(
+                group_name,
+                {
+                    "status": "creating_yamls",
+                    "stage": "yaml",
+                    "created_yaml": 0,
+                    "total_yaml": total,
+                },
+            )
+        except Exception:
+            pass
 
+        created = 0
         for entry in manual_data:
             tactic = entry.get("tactic")
             techniques = entry.get("techniques", [])
@@ -64,6 +92,19 @@ def process_group(group_name, hypothesis, manual_data=None):
 
                 # Build detection queries and YAML
                 compile_query(retrieved_data, technique_descriptions)
+                created += 1
+                try:
+                    write_progress(
+                        group_name,
+                        {
+                            "status": "creating_yamls",
+                            "stage": "yaml",
+                            "created_yaml": created,
+                            "total_yaml": total,
+                        },
+                    )
+                except Exception:
+                    pass
 
     else:
         # retrieve group id based on group name provided
@@ -72,6 +113,21 @@ def process_group(group_name, hypothesis, manual_data=None):
         retrieved_techniques = retrieve_techniques(bundle, group_id)
         # retrieve every procedure example of each technique
         procedures = retrieve_procedures(bundle, retrieved_techniques)
+
+        created = 0
+        total = len(procedures)
+        try:
+            write_progress(
+                group_name,
+                {
+                    "status": "creating_yamls",
+                    "stage": "yaml",
+                    "created_yaml": 0,
+                    "total_yaml": total,
+                },
+            )
+        except Exception:
+            pass
 
         for procedure in procedures:
             retrieved_data["technique_id"] = procedure[0]
@@ -83,3 +139,28 @@ def process_group(group_name, hypothesis, manual_data=None):
             retrieved_data["detect_guidance"] = procedure[6][0]
 
             compile_query(retrieved_data, technique_descriptions)
+            created += 1
+            try:
+                write_progress(
+                    group_name,
+                    {
+                        "status": "creating_yamls",
+                        "stage": "yaml",
+                        "created_yaml": created,
+                        "total_yaml": total,
+                    },
+                )
+            except Exception:
+                pass
+    # After YAMLs are created, run the GenAI correlation generator
+    try:
+        write_progress(group_name, {"status": "genai_starting"})
+        # assume YAMLs are under data/yamls/<group_name> or similar; compile_query should write them
+        yaml_dir = os.path.join("data", "yamls", group_name)
+        generate_correlations(group_name, yaml_dir)
+        write_progress(group_name, {"status": "complete"})
+    except Exception:
+        try:
+            write_progress(group_name, {"status": "genai_failed"})
+        except Exception:
+            pass

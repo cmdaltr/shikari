@@ -25,6 +25,8 @@ from gorgon.build.orchestrator import process_group
 from datetime import datetime
 import os
 import json
+import threading
+from gorgon.build.progress import read_progress, write_progress
 
 
 templates = Jinja2Templates(directory="templates")
@@ -150,16 +152,28 @@ async def generate(request: Request, group_name: str = Form(...)):
     # check whether the provided group name maps to a known MITRE actor.
     actor_found = check_group_in_mitre(app.state.bundle, group_name)
     if actor_found == "Y":
-        # Known actor: immediately kick off processing and return a JSON
-        # payload containing a redirect URL so the front-end can navigate
-        # to the progress page without a full-page form post.
+        # Known actor: kick off processing in a background thread and
+        # immediately return a JSON payload containing a redirect URL so
+        # the front-end can navigate to the progress page.
         hypothesis = "Generated from form"
-        process_group(
-            group_name,
-            hypothesis,
-            manual_data=None,
-        )
-        # Return JSON with redirect_url for AJAX
+
+        def _bg():
+            try:
+                process_group(group_name, hypothesis, manual_data=None)
+            except Exception:
+                try:
+                    write_progress(group_name, {"status": "failed"})
+                except Exception:
+                    pass
+
+        threading.Thread(target=_bg, daemon=True).start()
+        # Initialize a progress file so the front-end has something to poll
+        try:
+            write_progress(
+                group_name, {"status": "started", "stage": "queued", "created_yaml": 0}
+            )
+        except Exception:
+            pass
         return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
     else:
         # Unknown actor: render the manual form which allows the user to
@@ -389,11 +403,51 @@ async def manual_group_submit(
         # non-fatal: if we can't write the draft, continue processing
         pass
 
-    # Call the orchestrator to process the manual data
-    process_group(group_name, hypothesis, manual_data=manual_data)
+    # Call the orchestrator to process the manual data in background
+    def _bg_manual():
+        try:
+            process_group(group_name, hypothesis, manual_data=manual_data)
+        except Exception:
+            try:
+                write_progress(group_name, {"status": "failed"})
+            except Exception:
+                pass
+
+    threading.Thread(target=_bg_manual, daemon=True).start()
+    try:
+        write_progress(
+            group_name, {"status": "started", "stage": "queued", "created_yaml": 0}
+        )
+    except Exception:
+        pass
 
     # Redirect user to progress page
     return RedirectResponse(url=f"/progress?group_name={group_name}", status_code=303)
+
+
+@app.get("/progress_status")
+async def progress_status(group_name: str = ""):
+    # Return the JSON progress status for the given group_name so the
+    # front-end can poll and update progress bars.
+    if not group_name:
+        return JSONResponse(
+            {"ok": False, "error": "group_name required"}, status_code=400
+        )
+    data = read_progress(group_name)
+    return JSONResponse({"ok": True, "progress": data})
+
+
+@app.get("/correlations/{group_name}.json")
+async def correlations_json(group_name: str):
+    path = os.path.join("data", "correlations", f"{group_name}.json")
+    if not os.path.exists(path):
+        return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        return JSONResponse({"ok": True, "results": data})
+    except Exception:
+        return JSONResponse({"ok": False}, status_code=500)
 
 
 @app.get("/list_drafts")
