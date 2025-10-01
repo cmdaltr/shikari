@@ -1,16 +1,21 @@
 /* Page-scoped styles */
-.manual-container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+.manual-container { max-width: 960px; margin: 0 auto; padding: 0 24px; --subheading-size: 1.05rem; /* match progress .subheading */ }
 
 /* Ensure nothing on this page reintroduces top offset */
 #main-content.page-shell {
-  padding-top: 0 !important;   /* was: var(--page-top) */
+  /* was forcing 0; match progress page spacing */
+  padding-top: var(--page-top) !important;
   margin-top: 0 !important;
 }
 .manual-container,
 #manual-content { margin-top: 0 !important; padding-top: 0 !important; }
 
 /* Kill the base .centered top padding on this page */
-#main-content.centered { padding-top: 0 !important; margin-top: 0 !important; }
+#main-content.centered { 
+  /* was 0; match progress page spacing */
+  padding-top: var(--page-top) !important; 
+  margin-top: 0 !important; 
+}
 
 /* Keep title identical to progress */
 .page-title { margin: 0; text-align: center; width: 100%; font-size: calc(1.5em + 2px); }
@@ -63,9 +68,16 @@ select { background:#f7f7f7 }
   font-size: calc(1.5em + 2px);
 }
 
-/* Ensure no extra top offset */
+/* Match progress page top offset */
 #main-content.page-shell,
 #main-content.centered { padding-top: var(--page-top) !important; margin-top: 0 !important; }
+
+/* Match progress subheading on manual page */
+#manual-content .subheading {
+  font-size: var(--subheading-size);
+  font-weight: 600;
+  margin: 1rem 0 .4rem;
+}
 
 /* Keep layout centered like progress */
 .manual-group-container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
@@ -138,3 +150,8 @@ select { background:#f7f7f7 }
 
 .back-btn .arrow { font-size: 1.1rem; line-height: 1; }
 .back-btn:hover, .back-btn:focus { text-decoration: underline; }
+
+#group-name {
+  color: #8B0000; /* dark red */
+  font-size: calc(1em + 2px);
+}

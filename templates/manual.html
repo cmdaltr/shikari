@@ -15,11 +15,15 @@
       </div>
 
       <h2 class="page-title">Manual Group Entry</h2>
+      <!-- Group name under the title (shown if provided or after first Append) -->
+      <div id="group-name" class="lead" style="text-align:center; margin-top:0.5rem;" {% if not group_name %}hidden{% endif %}>
+        {{ group_name | default('', true) }}
+      </div>
 
       <div id="manual-content">
         <div class="center-left">
           <!-- Group Description -->
-          <div style="width:100%; max-width:560px; margin-top:16px; margin-bottom:1.5em;">
+          <div id="group_desc_block" style="width:100%; max-width:560px; margin-top:16px; margin-bottom:1.5em;">
             <label for="group_desc" class="section-label">Group Description</label>
             <div style="width:100%;">
               <textarea name="group_desc" id="group_desc" rows="3" style="width:100%; box-sizing:border-box; font-size:1rem;"></textarea>
@@ -89,9 +93,14 @@
             <div class="procedures-help">List one per line.</div>
           </div>
 
-          <div class="form-actions" style="margin-top:1em;">
-            <button type="button" id="append-btn" class="btn">Append</button>
-            <button type="submit" id="submit-btn" class="btn">Submit</button>
+          <div class="form-actions" style="margin-top:1em; display:flex; align-items:center; justify-content:space-between;">
+            <div style="flex:1 1 0;"></div>
+            <div style="flex:0 0 auto; text-align:center;">
+              <button type="button" id="append-btn" class="btn">Append</button>
+            </div>
+            <div style="flex:1 1 0; text-align:right;">
+              <button type="submit" id="submit-btn" class="btn">Submit</button>
+            </div>
           </div>
           <div id="append-message"></div>
 
@@ -102,4 +111,157 @@
   </div>
 </div>
 <script src="{{ url_for('static', path='js/manual.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+<script>
+(function () {
+  var STORAGE_KEY = 'archer.manualEntries';
+  var entries = [];
+
+  function safeParse(json) {
+    try { return JSON.parse(json); } catch (_) { return null; }
+  }
+
+  function loadEntries() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      var arr = safeParse(raw);
+      entries = Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      entries = [];
+    }
+  }
+
+  function saveEntries() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    } catch (_) {}
+  }
+
+  function buildCard(entry) {
+    var card = document.createElement('div');
+    card.className = 'manual-entry';
+    card.style.border = '1px solid #e5e7eb';
+    card.style.borderRadius = '8px';
+    card.style.padding = '0.75rem';
+    card.style.marginBottom = '0.75rem';
+    card.style.background = '#fafafa';
+
+    if (entry.technique) {
+      var head = document.createElement('div');
+      head.className = 'subheading';
+      head.textContent = entry.technique;
+      card.appendChild(head);
+    }
+    if (entry.group_desc) {
+      var desc = document.createElement('p');
+      desc.style.margin = '0 0 .5rem 0';
+      desc.textContent = entry.group_desc;
+      card.appendChild(desc);
+    }
+    if (entry.tactics && entry.tactics.length) {
+      var badgeWrap = document.createElement('div');
+      badgeWrap.style.margin = '0 0 .5rem 0';
+      entry.tactics.forEach(function (t) {
+        var b = document.createElement('span');
+        b.className = 'tactic-badge';
+        b.textContent = t;
+        badgeWrap.appendChild(b);
+      });
+      card.appendChild(badgeWrap);
+    }
+    if (entry.procedures && entry.procedures.length) {
+      var ul = document.createElement('ul');
+      ul.style.margin = '0';
+      ul.style.paddingLeft = '1.1rem';
+      entry.procedures.forEach(function (p) {
+        var li = document.createElement('li');
+        li.textContent = p;
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+    }
+    return card;
+  }
+
+  function renderAll() {
+    var list = document.getElementById('technique-list');
+    if (!list) return;
+    list.innerHTML = '';
+    entries.forEach(function (e) {
+      list.appendChild(buildCard(e));
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    loadEntries();
+    renderAll();
+
+    // Hide Group Description if entries already exist, and show group name from first entry if available
+    var nameEl = document.getElementById('group-name');
+    var descBlock = document.getElementById('group_desc_block');
+    if (entries.length > 0) {
+      if (descBlock) descBlock.style.display = 'none';
+      if (nameEl && !nameEl.textContent.trim()) {
+        var firstDesc = entries[0] && entries[0].group_desc;
+        if (firstDesc) {
+          nameEl.textContent = firstDesc;
+          nameEl.hidden = false;            // unhide instead of inline display Jinja
+          nameEl.style.display = 'block';   // keep for consistency with prior logic
+        }
+      }
+    }
+
+    var btn = document.getElementById('append-btn');
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+
+    btn.addEventListener('click', function () {
+      try {
+        var groupDescEl = document.getElementById('group_desc');
+        var techniqueEl = document.getElementById('technique');
+        var proceduresEl = document.getElementById('procedures');
+        var list = document.getElementById('technique-list');
+        if (!list) return;
+
+        var groupDesc = (groupDescEl && groupDescEl.value || '').trim();
+        var technique = (techniqueEl && techniqueEl.value || '').trim();
+        var proceduresRaw = (proceduresEl && proceduresEl.value) || '';
+        var procedures = proceduresRaw.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+        var tactics = Array.prototype.slice.call(document.querySelectorAll('input[name="tactics"]:checked'))
+          .map(function (i) { return i.value; });
+
+        if (!technique && !groupDesc && !tactics.length && !procedures.length) return;
+
+        var entry = { group_desc: groupDesc, technique: technique, tactics: tactics, procedures: procedures };
+
+        entries.push(entry);
+        saveEntries();
+
+        list.appendChild(buildCard(entry));
+
+        // After first Append, hide Group Description and show group name (if not already shown)
+        if (entries.length === 1) {
+          if (descBlock) descBlock.style.display = 'none';
+          if (nameEl && !nameEl.textContent.trim() && groupDesc) {
+            nameEl.textContent = groupDesc;
+            nameEl.hidden = false;          // unhide on first append
+            nameEl.style.display = 'block';
+          }
+        }
+
+        var msg = document.getElementById('append-message');
+        if (msg) {
+          msg.textContent = 'Appended (saved locally).';
+          msg.style.display = 'block';
+          msg.style.color = 'green';
+          msg.setAttribute('role', 'status');
+          clearTimeout(window.__appendMsgTimer);
+          window.__appendMsgTimer = setTimeout(function () { msg.style.display = 'none'; }, 1800);
+        }
+      } catch (e) {
+        if (window.console && console.error) console.error(e);
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}

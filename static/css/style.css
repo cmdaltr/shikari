@@ -187,3 +187,8 @@ h2.page-title {
 
 /* Inner content blocks fill the wrapper */
 #manual-content, #progress-content { width: 100% !important; max-width: none !important; padding: 0; }
+#main-content.page-shell,
+#main-content.centered {
+  padding-top: var(--page-top) !important;
+  margin-top: 0 !important;
+}
