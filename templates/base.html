@@ -7,7 +7,9 @@
 </head>
 <body>
     <div id="container">
-        {% block content %}{% endblock %}
+        <div id="main-content" class="{% block main_class %}centered{% endblock %}">
+          {% block content %}{% endblock %}
+        </div>
     </div>
 </body>
 </html>

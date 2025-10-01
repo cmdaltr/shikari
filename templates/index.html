@@ -3,83 +3,88 @@
 <head>
     <title>Archer Hunting Application</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    {% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/index.css') }}?v={{ request.app.state.asset_version }}">
+    <style>
+      :root { --page-top: 72px; }  /* index-only top spacing */
+    </style>
+    {% endblock %}
 </head>
 <body>
-    <div id="main-content" class="centered">
-        <div>
-            <!-- Page title / app name -->
-            <h1 style="text-align:center; font-size:2.5em;">Archer Hunting Application</h1>
-            <!-- Description pop-up: brief explanation about what Archer does. The
-                 popup supports 'hide' (temporary) and 'do not show again' (persist)
-                 interactions which are stored in localStorage. -->
-            <div id="archer-desc-popup" style="
-                display: none;
-                position: fixed;
-                top: 40px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #f8f9fa;
-                color: #222;
-                border: 1px solid #bbb;
-                border-radius: 8px;
-                box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-                padding: 1.2em 2em 2.5em 2em;
-                z-index: 2000;
-                font-size: .9em;
-                max-width: 600px;
-                text-align: left;
-            ">
-                Archer has been built to quickly build detection queries based on actionable intelligence attributed to a specific threat actor.<br><br>
-                The app will search ATT&CK for documentated instances and obtain the respective TTPs. If the actor (or it's alias) does not exist in ATT&CK, you will be subsequently prompted for information to provide the TTPs the invoke.<br><br>
-                Archer will produce detection queries for the respective TTPs for both MDE (KQL) and Splunk (SPL).<br>
-                Archer compiles queries based on the data provided in the mappings and enriches simple searches with Generative AI to increase the fidelity.
-                <div style="margin-top: 1.5em; display: flex; gap: 2em; align-items: center;">
-                    <label style="font-size:0.98em;cursor:pointer;">
-                        <input type="checkbox" id="hide-desc-popup-checkbox" style="vertical-align:middle;"> Hide
-                    </label>
-                    <label style="font-size:0.98em;cursor:pointer;">
-                        <input type="checkbox" id="dont-show-desc-popup-checkbox" style="vertical-align:middle;"> Do not show again
-                    </label>
-                </div>
-            </div>
-          <!-- Main form: enter an actor/group name and click Generate.
-              Submitted via AJAX (see the script at bottom) so we can either
-              redirect to progress or inject the manual form when not found. -->
-          <form id="main-form" action="/generate" method="post" autocomplete="off">
-                <div class="form-grid">
-                    <!-- Top row -->
-                    <div style="text-align: right;">
-                        <label for="group_name_input">Group Name:</label>
-                    </div>
-                    <div style="text-align: center;">
-                        <input type="text" name="group_name" id="group_name_input" maxlength="200">
-                        <div id="group-name-controls" style="margin-top:6px; font-size:0.9em; color:#666;">
-                            <span id="group-name-error" style="color:darkred; font-weight:600; margin-left:12px; display:none;">Name must be 30 characters or fewer.</span>
-                        </div>
-                    </div>
-                    <div></div>
-                    <!-- Bottom row -->
-                    <div></div>
-                    <div style="text-align: center;">
-                        <input type="submit" value="Generate" id="generate_btn" disabled>
-                    </div>
-                </div>
-            </form>
+    {% block content %}
+    <div class="page-container">
+      <!-- Page title / app name -->
+      <h1 style="text-align:center; font-size:2.5em;">Archer Hunting Application</h1>
+      <!-- Description pop-up: brief explanation about what Archer does. The
+           popup supports 'hide' (temporary) and 'do not show again' (persist)
+           interactions which are stored in localStorage. -->
+      <div id="archer-desc-popup" style="
+          display: none;
+          position: fixed;
+          top: 40px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #f8f9fa;
+          color: #222;
+          border: 1px solid #bbb;
+          border-radius: 8px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+          padding: 1.2em 2em 2.5em 2em;
+          z-index: 2000;
+          font-size: .9em;
+          max-width: 600px;
+          text-align: left;
+      ">
+          Archer has been built to quickly build detection queries based on actionable intelligence attributed to a specific threat actor.<br><br>
+          The app will search ATT&CK for documentated instances and obtain the respective TTPs. If the actor (or it's alias) does not exist in ATT&CK, you will be subsequently prompted for information to provide the TTPs the invoke.<br><br>
+          Archer will produce detection queries for the respective TTPs for both MDE (KQL) and Splunk (SPL).<br>
+          Archer compiles queries based on the data provided in the mappings and enriches simple searches with Generative AI to increase the fidelity.
+          <div style="margin-top: 1.5em; display: flex; gap: 2em; align-items: center;">
+              <label style="font-size:0.98em;cursor:pointer;">
+                  <input type="checkbox" id="hide-desc-popup-checkbox" style="vertical-align:middle;"> Hide
+              </label>
+              <label style="font-size:0.98em;cursor:pointer;">
+                  <input type="checkbox" id="dont-show-desc-popup-checkbox" style="vertical-align:middle;"> Do not show again
+              </label>
+          </div>
+      </div>
+    <!-- Main form: enter an actor/group name and click Generate.
+        Submitted via AJAX (see the script at bottom) so we can either
+        redirect to progress or inject the manual form when not found. -->
+    <form id="main-form" action="/generate" method="post" autocomplete="off">
+          <div class="form-grid">
+              <!-- Top row -->
+              <div style="text-align: right;">
+                  <label for="group_name_input">Group Name:</label>
+              </div>
+              <div style="text-align: center;">
+                  <input type="text" name="group_name" id="group_name_input" maxlength="200">
+                  <div id="group-name-controls" style="margin-top:6px; font-size:0.9em; color:#666;">
+                      <span id="group-name-error" style="color:darkred; font-weight:600; margin-left:12px; display:none;">Name must be 30 characters or fewer.</span>
+                  </div>
+              </div>
+              <div></div>
+              <!-- Bottom row -->
+              <div></div>
+              <div style="text-align: center;">
+                  <input type="submit" value="Generate" id="generate_btn" disabled>
+              </div>
+          </div>
+      </form>
 
-            <!-- Optional messages injected by the server (e.g. errors/status) -->
-            {% if message %}
-            <div style="margin-top: 1em; text-align: center; font-weight: bold; color: #333;">
-                {{ message }}
-            </div>
-            {% endif %}
+      <!-- Optional messages injected by the server (e.g. errors/status) -->
+      {% if message %}
+      <div style="margin-top: 1em; text-align: center; font-weight: bold; color: #333;">
+          {{ message }}
+      </div>
+      {% endif %}
 
-            {% if wait_message %}
-            <div style="margin-top: 0.5em; text-align: center; color: #666;">
-                {{ wait_message }}
-            </div>
-            {% endif %}
+      {% if wait_message %}
+      <div style="margin-top: 0.5em; text-align: center; color: #666;">
+          {{ wait_message }}
+      </div>
+      {% endif %}
 
-        </div>
     </div>
     <div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.9);z-index:1000;align-items:center;justify-content:center;">
         <div style="text-align:center;">
@@ -234,5 +239,6 @@
             }
         });
     </script>
+    {% endblock %}
 </body>
 </html>

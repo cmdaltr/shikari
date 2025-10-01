@@ -93,7 +93,97 @@ form#main-form input[type="submit"] {
   display: flex;
   justify-content: center;  /* horizontal center */
   align-items: flex-start;   /* align to top */
-  height: 100vh;            /* full viewport height */
-  padding-top: 25vh;        /* push content down 40% of viewport height */
+  min-height: 100vh;            /* full viewport height */
+  padding-top: var(--page-top) !important;        /* push content down 40% of viewport height */
   box-sizing: border-box;
 }
+
+/* Global page top spacing */
+:root {
+  --page-top: 20px;
+
+  /* Shared typography tokens */
+  --subheading-size: 1.1rem;   /* matches h3.subheading on progress */
+  --lead-size: 1.0625rem;       /* matches p.lead on progress */
+}
+
+html, body { margin: 0; padding: 0; }
+
+/* Single source of top spacing for all pages */
+#main-content { padding-top: var(--page-top) !important; margin-top: 0 !important; }
+
+/* Remove hardcoded 25vh push-down from .centered */
+.centered {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;                 /* keep full-height layout */
+  padding-top: var(--page-top) !important;  /* now controlled via variable */
+  box-sizing: border-box;
+}
+
+/* Shared container */
+.page-container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+/* Titles */
+.page-title,
+h2.page-title {
+  text-align: center;
+  width: 100%;
+  margin: 0 !important;
+  margin-block-start: 0 !important;
+  margin-block-end: 0 !important;
+  padding-top: 0 !important;
+  font-size: calc(1.5em + 2px);
+}
+
+/* Single inner width used by both pages */
+.content-wrap { max-width: 720px; margin: 0 auto; text-align: left; }
+
+/* Inner content area */
+#manual-content,
+#progress-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+  box-sizing: border-box;
+}
+
+/* Normalize the page shell */
+#main-content.page-shell { display: block !important; }
+
+/* The page container should not constrain width */
+#main-content > .page-container {
+  width: 100% !important;
+  max-width: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box;
+}
+
+/* Single inner wrapper used by both pages: exact 552px */
+#main-content > .page-container > .content-wrap {
+  width: 552px !important;
+  max-width: 552px !important;
+  margin: 0 auto;
+  padding: 0;               /* keep padding on inner content blocks instead */
+  box-sizing: border-box;
+}
+
+/* Ensure block flow (no flex shrink surprises) */
+#main-content.page-shell { display: block !important; }
+
+/* Page container fills row; inner wrapper controls width */
+#main-content > .page-container { width: 100% !important; padding-left: 0; padding-right: 0; }
+
+/* Single shared inner wrapper width for BOTH pages */
+.content-wrap {
+  width: 100%;
+  max-width: 584px;     /* match manual’s current width exactly */
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 0 16px 32px; /* matches your computed padding */
+}
+
+/* Inner content blocks fill the wrapper */
+#manual-content, #progress-content { width: 100% !important; max-width: none !important; padding: 0; }

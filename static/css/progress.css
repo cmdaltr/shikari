@@ -1,20 +1,38 @@
-/* Match Manual Group Entry heading spacing and alignment */
-.page-title {
-  text-align: center;
-  width: 100%;
-  margin-top: 0;        /* was -112px */
-  margin-bottom: 0;
-  font-size: calc(1.5em + 2px);
-}
-
-/* Back button row (matches manual page) */
-.nav-row {
-  width: 100%;
+/* Ensure no extra top offset comes from page CSS */
+.progress-container {
   max-width: 720px;
-  display: flex;
-  align-items: center;
-  margin: 8px 0 24px 0;
+  margin: 0 auto;
+  padding: 0 24px; /* keep same side padding as manual */
 }
+.center-left { margin: 0 auto; max-width: 720px; text-align: left; }
+.nav-row { display: flex; align-items: center; margin: 8px 0 16px; }
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0a66c2;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.back-btn .arrow { font-size: 1.1rem; line-height: 1; }
+.back-btn:hover, .back-btn:focus { text-decoration: underline; }
+
+.page-title { margin: 0 !important; text-align: center; width: 100%; font-size: calc(1.5em + 2px); }
+
+/* Extra space between the title and the lead line on Progress only */
+.progress-container h2.page-title { margin-bottom: 1.5rem !important; }
+
+/* Extra space between the title and the lead line */
+.page-title + .lead { margin-top: 5rem; }  /* tweak as needed */
+
+/* Extra space between the lead and "YAML generation progress" */
+.progress-container .lead { margin-bottom: 1.5rem !important; }
+
+/* If your subheading has a class or is an h3, this ensures the gap too */
+.progress-container .lead + .subheading,
+.progress-container .lead + h3 { margin-top: 1.5rem !important; }
 
 /* Buttons (shared look with manual page) */
 .btn{background:#0366d6;color:#fff;border:none;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer}
@@ -25,18 +43,7 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 0 1rem 2rem;
-}
-.center-left {
-  margin: 0 auto;
-  max-width: 720px;
-  text-align: left;
-}
-
-/* Center the page content and inset the back button */
-.progress-container {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 24px;
+  box-sizing: border-box;
 }
 
 /* Typography */
@@ -46,7 +53,7 @@
   font-weight: 600;
   margin: 1rem 0 .4rem;
 }
-.section { margin: 1em 0; }
+.section { margin: 2.5em 0; }
 .correlations-title { margin-top: 1.5rem; }
 
 /* Progress bars */
@@ -84,4 +91,32 @@
 .corr-card h4 {
   font-size: 1rem; /* smaller than the subheading */
   margin: 0 0 .5rem 0;
+}
+
+/* Match manual.html width (override .page-container) */
+#main-content .progress-container.page-container {
+  max-width: 720px !important;
+  margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* Match manual.html inner content width/padding */
+#progress-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+  box-sizing: border-box;
+}
+
+/* Keep existing spacing tweaks */
+.progress-container h2.page-title { margin-bottom: 1.5rem !important; }
+.progress-container .lead { margin-bottom: 1.5rem !important; }
+
+/* Remove debug outlines/borders */
+#main-content .page-container,
+.progress-container .content-wrap,
+#progress-content {
+  outline: none !important;
+  border: none !important;
 }

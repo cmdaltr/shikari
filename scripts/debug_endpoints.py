@@ -36,12 +36,12 @@ def check_static():
 
 def check_manual_page():
     # try both GET and a safe POST if endpoint exists
-    r = client.get("/manual_group")
-    print("GET /manual_group ->", r.status_code)
+    r = client.get("/manual")
+    print("GET /manual ->", r.status_code)
     ok = r.status_code == 200
-    # attempt a safe POST to manual_group_submit if route exists (non-LLM)
+    # attempt a safe POST to manual_submit if route exists (non-LLM)
     r2 = client.post(
-        "/manual_group_submit",
+        "/manual_submit",
         data={
             "group_name": "test",
             "group_desc": "desc",
@@ -49,7 +49,7 @@ def check_manual_page():
             "procedures": "proc1\nproc2",
         },
     )
-    print("POST /manual_group_submit ->", r2.status_code)
+    print("POST /manual_submit ->", r2.status_code)
     if r2.status_code >= 400:
         print("POST body/response (truncated):", r2.text[:400])
         # don't treat as fatal; many apps redirect or expect more

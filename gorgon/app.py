@@ -181,44 +181,7 @@ async def generate(request: Request, group_name: str = Form(...)):
             pass
         return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
     else:
-        # Unknown actor: render the manual form which allows the user to
-        # append techniques, select tactics and provide procedures.
-        mitre_order = [
-            "Reconnaissance",
-            "Resource Development",
-            "Initial Access",
-            "Execution",
-            "Persistence",
-            "Privilege Escalation",
-            "Defense Evasion",
-            "Credential Access",
-            "Discovery",
-            "Lateral Movement",
-            "Collection",
-            "Command And Control",
-            "Exfiltration",
-            "Impact",
-        ]
-        tactics = [
-            phase["phase_name"].title().replace("-", " ")
-            for obj in getattr(app.state.bundle, "objects", [])
-            if obj.get("type") == "attack-pattern" and "kill_chain_phases" in obj
-            for phase in obj["kill_chain_phases"]
-        ]
-        tactics = list(dict.fromkeys(tactics))  # preserve order, remove duplicates
-        tactics = [t for t in mitre_order if t in tactics]
-        techniques = getattr(app.state, "techniques_to_choose", [])
-        render_time = datetime.utcnow().isoformat() + "Z"
-        return templates.TemplateResponse(
-            "manual_group.html",
-            {
-                "request": request,
-                "group_name": group_name,
-                "tactics": tactics,
-                "techniques": techniques,
-                "render_time": render_time,
-            },
-        )
+        return JSONResponse({"redirect_url": f"/manual?group_name={group_name}"})
 
 
 # Progress page endpoint
@@ -229,6 +192,22 @@ async def progress(request: Request, group_name: str = ""):
     return templates.TemplateResponse(
         "progress.html",
         {"request": request, "group_name": group_name},
+    )
+
+
+@app.get("/manual", response_class=HTMLResponse)
+def manual(request: Request, group_name: str = ""):
+    tactics, techniques = get_mitre_lists()
+    render_time = datetime.utcnow().isoformat() + "Z"
+    return templates.TemplateResponse(
+        "manual.html",
+        {
+            "request": request,
+            "group_name": group_name,
+            "tactics": tactics,
+            "techniques": techniques,
+            "render_time": render_time,
+        },
     )
 
 
@@ -300,10 +279,10 @@ async def load_draft(draft_id: str = "", user_id: str = ""):
 
 
 # Handler for manual submission of appended techniques
-@app.post("/manual_group_submit")
-async def manual_group_submit(
+@app.post("/manual_submit")
+async def manual_submit(
     request: Request,
-    group_name: str = Form("manual_group"),
+    group_name: str = Form("manual"),
     group_desc: str = Form(""),
     technique_entries: str = Form(""),
 ):
@@ -332,7 +311,7 @@ async def manual_group_submit(
         tactics, techniques = get_mitre_lists()
         render_time = datetime.utcnow().isoformat() + "Z"
         return templates.TemplateResponse(
-            "manual_group.html",
+            "manual.html",
             {
                 "request": request,
                 "group_name": group_name,
@@ -352,7 +331,7 @@ async def manual_group_submit(
         tactics, techniques = get_mitre_lists()
         render_time = datetime.utcnow().isoformat() + "Z"
         return templates.TemplateResponse(
-            "manual_group.html",
+            "manual.html",
             {
                 "request": request,
                 "group_name": group_name,

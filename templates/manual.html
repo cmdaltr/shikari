@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/manual.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+{% block content %}
+<div id="main-content" class="page-shell">
+  <div class="manual-group-container page-container">
+    <div class="content-wrap">  <!-- single shared wrapper -->
+      <div class="nav-row">
+        <a href="/" class="back-btn" aria-label="Go back" onclick="if (history.length > 1) { history.back(); return false; }">
+          <span class="arrow" aria-hidden="true">←</span> Back
+        </a>
+      </div>
+
+      <h2 class="page-title">Manual Group Entry</h2>
+
+      <div id="manual-content">
+        <div class="center-left">
+          <!-- Group Description -->
+          <div style="width:100%; max-width:560px; margin-top:16px; margin-bottom:1.5em;">
+            <label for="group_desc" class="section-label">Group Description</label>
+            <div style="width:100%;">
+              <textarea name="group_desc" id="group_desc" rows="3" style="width:100%; box-sizing:border-box; font-size:1rem;"></textarea>
+            </div>
+          </div>
+
+          <!-- Technique -->
+          <div style="width:100%; max-width:560px; margin-bottom:1.25em;">
+            <label for="technique" class="section-label">Technique</label>
+            <div style="width:100%; overflow:hidden;">
+              <select name="technique" id="technique" style="width:100% !important; box-sizing:border-box !important; max-width:100% !important; min-width:0 !important; display:block !important; -webkit-appearance:none; -moz-appearance:none; appearance:none;">
+                <option value="">Select a technique...</option>
+                {% for technique in techniques %}
+                  <option value="{{ technique }}">{{ technique }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="technique-help">Select one technique only.</div>
+          </div>
+
+          <!-- Tactics -->
+          <div style="width:100%; max-width:560px; margin-bottom:0.5em;">
+            <label class="section-label">Tactics</label>
+          </div>
+
+          {% set total = tactics|length %}
+          {% set left_slice_end = 7 %}
+          {% set right_slice_end = 14 %}
+          {% if total == 7 %}
+            <div style="width:100%; max-width:700px; margin-bottom:1.5em; display:flex; justify-content:center;">
+              <div style="width:100%; max-width:420px;">
+                {% for tactic in tactics[0:left_slice_end] %}
+                  <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block;"> <input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <div style="width:100%; max-width:700px; margin-bottom:1.5em;">
+              <table style="width:100%;">
+                <tr>
+                  <td style="display:table-cell !important; vertical-align:top; width:50% !important; padding-right:0.75rem; box-sizing:border-box;">
+                    {% for tactic in tactics[0:left_slice_end] %}
+                      <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block;"> <input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
+                    {% endfor %}
+                  </td>
+                  <td style="display:table-cell !important; vertical-align:top; width:50% !important; padding-left:0.75rem; box-sizing:border-box;">
+                    {% for tactic in tactics[left_slice_end:right_slice_end] %}
+                      <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block;"> <input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
+                    {% endfor %}
+                  </td>
+                </tr>
+              </table>
+            </div>
+            {% if total > right_slice_end %}
+              <div style="margin-top:0.75rem; max-width:700px;">
+                {% for tactic in tactics[right_slice_end:total] %}
+                  <div class="tactics-item" style="display:block; width:100%;"><label style="display:inline-block;"><input type="checkbox" name="tactics" value="{{ tactic }}" style="margin-right:0.5rem; vertical-align:middle;"> {{ tactic }}</label></div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endif %}
+
+          <!-- Procedures -->
+          <div style="width:100%; max-width:560px; margin-bottom:1.25em;">
+            <label for="procedures" class="section-label">Procedures</label>
+            <textarea name="procedures" id="procedures" rows="6" required style="min-height:120px; width:100%; font-size:1rem;"></textarea>
+            <div class="procedures-help">List one per line.</div>
+          </div>
+
+          <div class="form-actions" style="margin-top:1em;">
+            <button type="button" id="append-btn" class="btn">Append</button>
+            <button type="submit" id="submit-btn" class="btn">Submit</button>
+          </div>
+          <div id="append-message"></div>
+
+          <div id="technique-list" style="margin-top:2em; width:100%; max-width:700px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', path='js/manual.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+{% endblock %}

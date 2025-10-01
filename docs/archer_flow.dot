@@ -7,13 +7,13 @@ digraph ArcherFlow {
 
   // Templates
   index_html [label="templates/index.html\n(form: /generate)", shape=note, fillcolor="#fff1c6"];
-  manual_html [label="templates/manual_group.html\n(form: /manual_group_submit)", shape=note, fillcolor="#fff1c6"];
+  manual_html [label="templates/manual.html\n(form: /manual_submit)", shape=note, fillcolor="#fff1c6"];
   progress_html [label="templates/progress.html", shape=note, fillcolor="#fff1c6"];
 
   // App handlers
   app_read_form [label="gorgon.app: read_form()\nGET /", shape=component, fillcolor="#e6f0ff"];
   app_generate [label="gorgon.app: generate()\nPOST /generate", shape=component, fillcolor="#e6f0ff"];
-  app_manual_submit [label="gorgon.app: manual_group_submit()\nPOST /manual_group_submit", shape=component, fillcolor="#e6f0ff"];
+  app_manual_submit [label="gorgon.app: manual_submit()\nPOST /manual_submit", shape=component, fillcolor="#e6f0ff"];
   app_progress [label="gorgon.app: progress()\nGET /progress", shape=component, fillcolor="#e6f0ff"];
   app_save_draft [label="gorgon.app: save_draft()\nPOST /save_draft", shape=component, fillcolor="#e6f0ff"];
   app_load_draft [label="gorgon.app: load_draft()\nGET /load_draft", shape=component, fillcolor="#e6f0ff"];

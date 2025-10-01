@@ -1,6 +1,6 @@
 // Client-side append/edit/draft handling for Manual Group Entry
 (function(){
-  const form = document.getElementById('manual-group-form');
+  const form = document.getElementById('manual-form');
   const appendBtn = document.getElementById('append-btn');
   const appendMsg = document.getElementById('append-message');
   const techniqueList = document.getElementById('technique-list');

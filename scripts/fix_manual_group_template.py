@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Fix the missing `{% for %}` in templates/manual_group.html by replacing the
+Fix the missing `{% for %}` in templates/manual.html by replacing the
 div + stray `{% endfor %}` with a proper for-loop over tactics[0:left_slice_end].
 A backup of the original file is written as .bak.
 """
 from pathlib import Path
 import re
 
-p = Path("templates/manual_group.html")
+p = Path("templates/manual.html")
 if not p.exists():
-    print("templates/manual_group.html not found")
+    print("templates/manual.html not found")
     raise SystemExit(1)
 
 text = p.read_text()

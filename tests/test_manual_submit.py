@@ -31,7 +31,7 @@ def test_manual_submit_monkeypatch_process(monkeypatch, tmp_path):
         "technique_entries": json.dumps(technique_entries),
     }
 
-    resp = client.post("/manual_group_submit", data=data, allow_redirects=False)
+    resp = client.post("/manual_submit", data=data, allow_redirects=False)
     # Expect redirect to progress
     assert resp.status_code in (303, 307, 302)
     assert "Location" in resp.headers
