@@ -34,6 +34,10 @@ templates = Jinja2Templates(directory="templates")
 app = FastAPI(title="Archer Threat Hunting Service")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Resetting latest.yaml to blank on startup
+with open(os.path.join("data", "queries", "latest.yaml"), "w") as latest_yaml:
+    latest_yaml.write("")
+
 
 # Cache-busting token for static assets
 @app.on_event("startup")
@@ -410,7 +414,7 @@ async def manual_submit(
 
 
 @app.get("/progress_status")
-async def progress_status(group_name: str = ""):
+async def progress_status(group_name: str = "", include_latest_file: bool = False):
     # Return the JSON progress status for the given group_name so the
     # front-end can poll and update progress bars.
     if not group_name:
@@ -418,7 +422,61 @@ async def progress_status(group_name: str = ""):
             {"ok": False, "error": "group_name required"}, status_code=400
         )
     data = read_progress(group_name)
-    return JSONResponse({"ok": True, "progress": data})
+    response = {"ok": True, "progress": data}
+
+    # Add latest file info if requested
+    if include_latest_file:
+        try:
+            latest_yaml_path = os.path.join("data", "queries", "latest.yaml")
+            if os.path.exists(latest_yaml_path):
+                with open(latest_yaml_path, "r") as file:
+                    latest_file = file.read().strip()
+
+                    # Format the path for cleaner display
+                    # 1. Extract just the filename if it's a full path
+                    if os.path.sep in latest_file:
+                        filename = os.path.basename(latest_file)
+                    else:
+                        filename = latest_file
+
+                    # 2. Remove any path prefixes like "data/queries/"
+                    filename = filename.replace("data/queries/", "")
+
+                    # 3. Format the display name like "DirectVolumeAccess (aws guardduty)"
+                    name_parts = os.path.splitext(filename)[0].split("_")
+                    if len(name_parts) > 1:
+                        # Assume format like "ActionName_platform.yaml"
+                        action_name = name_parts[0]
+                        platform = "_".join(name_parts[1:])
+
+                        # Convert CamelCase to spaced words if needed
+                        action_display = action_name
+                        # Add spaces to CamelCase - uncomment if needed
+                        # action_display = re.sub(r'(?<!^)(?=[A-Z])', ' ', action_name)
+
+                        # Format platform - typically lowercase with spaces
+                        platform_display = platform.replace("_", " ")
+
+                        pretty_name = f"{action_display} ({platform_display})"
+                    else:
+                        # If no underscore, just use the filename without extension
+                        pretty_name = os.path.splitext(filename)[0]
+
+                    response["latest_file"] = latest_file  # Original path for reference
+                    response["latest_filename"] = filename  # Just the filename
+                    response["latest_file_pretty"] = (
+                        pretty_name  # Formatted display name
+                    )
+
+                    print(
+                        f"Returning latest file: {latest_file} (display: {pretty_name})"
+                    )
+            else:
+                print(f"Latest YAML file not found at {latest_yaml_path}")
+        except Exception as e:
+            print(f"Error reading latest.yaml: {e}")
+
+    return JSONResponse(response)
 
 
 @app.get("/correlations/{group_name}.json")

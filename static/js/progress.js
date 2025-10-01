@@ -2,65 +2,432 @@
 const params = new URLSearchParams(window.location.search);
 const group = params.get('group_name') || '';
 
+// Track YAML state to avoid regressions and lock at 100% once complete
+let lastYamlPct = 0;
+let yamlComplete = false;
+// Track last created count and last reported YAML file path
+let lastYamlCreated = 0;
+let lastYamlFileShown = '';
+
+// Ellipsis animation state
+let ellipsisTimer = null;
+let ellipsisCount = 0;
+let ellipsisEl = null;
+
+// Ensure an animated ellipsis span exists after the waiting text in the "last YAML file" line
+function ensureEllipsisSpan(hostEl) {
+  // Reuse existing span if already attached to the same host
+  if (ellipsisEl && ellipsisEl.parentElement === hostEl) return ellipsisEl;
+  // If the span exists elsewhere, remove it so we can reattach
+  if (ellipsisEl && ellipsisEl.parentElement && ellipsisEl.parentElement !== hostEl) {
+    try { ellipsisEl.remove(); } catch (_) {}
+    ellipsisEl = null;
+  }
+  if (!hostEl) return null;
+  const span = document.createElement('span');
+  span.id = 'progress-ellipsis';
+  span.style.display = 'inline-block';
+  span.style.minWidth = '1.2em';
+  span.textContent = ''; // start empty; will animate
+  hostEl.appendChild(document.createTextNode(''));
+  hostEl.appendChild(span);
+  ellipsisEl = span;
+  return span;
+}
+function startEllipsis(hostEl) {
+  if (ellipsisTimer) return;
+  const span = ensureEllipsisSpan(hostEl);
+  if (!span) return;
+  ellipsisCount = 0;
+  ellipsisTimer = setInterval(function () {
+    ellipsisCount = (ellipsisCount + 1) % 4;
+    span.textContent = '.'.repeat(ellipsisCount);
+  }, 400);
+}
+function stopEllipsis(removeSpan) {
+  if (ellipsisTimer) {
+    clearInterval(ellipsisTimer);
+    ellipsisTimer = null;
+  }
+  if (!ellipsisEl) return;
+  if (removeSpan) {
+    try { ellipsisEl.remove(); } catch (_) {}
+    ellipsisEl = null;
+  } else {
+    ellipsisEl.textContent = '...';
+  }
+}
+
 function pct(part, total){
   if(!total || total<=0) return 0;
   return Math.min(100, Math.round((part/total)*100));
 }
 
+// Deep-scan helper: find last string value that looks like a YAML path
+function findLastYamlStringDeep(value, acc) {
+  acc = acc || [];
+  if (typeof value === 'string') {
+    if (/\.(ya?ml)$/i.test(value)) acc.push(value);
+    return acc;
+  }
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) findLastYamlStringDeep(value[i], acc);
+    return acc;
+  }
+  if (value && typeof value === 'object') {
+    for (const k in value) {
+      if (!Object.prototype.hasOwnProperty.call(value, k)) continue;
+      findLastYamlStringDeep(value[k], acc);
+    }
+    return acc;
+  }
+  return acc;
+}
+
+// Extract a best-guess "last file written" from server payload
+function extractLastYamlFile(root, progress) {
+  const j = root || {};
+  const p = progress || {};
+  // direct fields (expanded)
+  const candidates = [
+    p.last_yaml_file, p.last_yaml, p.last_yaml_filename, p.last_yaml_path, p.last_yaml_filepath, p.last_yaml_fullpath, p.last_yaml_full_path,
+    p.last_written_file, p.last_output_file, p.latest_yaml, p.latest_yaml_file, p.latest_file, p.current_yaml_file, p.current_file, p.file,
+    j.last_yaml_file, j.last_yaml, j.last_yaml_filename, j.last_yaml_path, j.last_yaml_filepath, j.last_yaml_fullpath, j.last_yaml_full_path,
+    j.last_written_file, j.last_output_file, j.latest_yaml, j.latest_yaml_file, j.latest_file, j.current_yaml_file, j.current_file, j.file,
+    (p.output && p.output.last_yaml), (j.output && j.output.last_yaml)
+  ].filter(Boolean);
+  const direct = candidates.find(s => typeof s === 'string' && /\.(ya?ml)$/i.test(s));
+  if (direct) return String(direct);
+  // arrays
+  const arrays = [
+    p.yaml_files, p.created_yaml_files, p.files,
+    j.yaml_files, j.created_yaml_files, j.files
+  ].filter(Array.isArray);
+  for (const arr of arrays) {
+    const lastYaml = [...arr].reverse().find(f => typeof f === 'string' && /\.(ya?ml)$/i.test(f));
+    if (lastYaml) return String(lastYaml);
+  }
+  // deep scan anywhere in payloads
+  const found = findLastYamlStringDeep([p, j]);
+  if (found.length) return String(found[found.length - 1]);
+  return '';
+}
+
+// Ensure there is a small line under the YAML bar to show the last file written
+function getOrCreateLastFileEl(yamlFillEl) {
+  // Prefer the placeholder in the HTML if present
+  let el = document.getElementById('last-yaml-file');
+  if (el) return el;
+
+  // Fallback: create if missing and insert after the YAML bar
+  el = document.createElement('div');
+  el.id = 'last-yaml-file';
+  el.style.marginTop = '6px';
+  el.style.fontSize = '0.9em';
+  el.style.color = '#666';
+  el.style.display = 'block';
+  el.style.whiteSpace = 'normal';
+  el.style.wordBreak = 'break-all';
+  let bar = null;
+  try { bar = yamlFillEl && (yamlFillEl.closest && yamlFillEl.closest('.progress-bar')) || yamlFillEl.parentElement; } catch (_) {}
+  if (bar && bar.parentElement) {
+    bar.insertAdjacentElement('afterend', el);
+  } else {
+    const container = document.getElementById('progress-content') || document.body;
+    container.appendChild(el);
+  }
+  return el;
+}
+
+// HEAD a subset and pick the "best" candidate by size, then Last-Modified
+async function pickByHead(urls) {
+  const limit = Math.min(urls.length, 25);
+  let best = { url: '', size: -1, ts: 0 };
+  for (let i = 0; i < limit; i++) {
+    const u = urls[i];
+    try {
+      const resp = await fetch(u, { method: 'HEAD' });
+      if (!resp.ok) continue;
+      const len = Number(resp.headers.get('content-length')) || 0;
+      const lm = resp.headers.get('last-modified');
+      const ts = lm ? Date.parse(lm) : 0;
+      if (len > best.size || (len === best.size && ts > best.ts)) {
+        best = { url: u, size: len, ts };
+      }
+    } catch (_) {}
+  }
+  return best.url || urls[urls.length - 1] || '';
+}
+
+// Fetch a YAML file list from an API endpoint (data-files-url) and normalize to absolute URLs
+async function listYamlFilesFromApi(filesUrl) {
+  const resp = await fetch(filesUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+  if (!resp.ok) throw new Error('FILES_API_NOT_AVAILABLE');
+  const data = await resp.json();
+  const arrays = [data.files, data.entries, data.items, data.list].filter(Array.isArray);
+  const out = new Set();
+  arrays.forEach(arr => {
+    arr.forEach(x => {
+      let path = '';
+      if (typeof x === 'string') path = x;
+      else if (x && typeof x === 'object') path = x.path || x.file || x.name || '';
+      if (path && /\.(ya?ml)$/i.test(path)) {
+        if (/^https?:\/\//i.test(path) || path.startsWith('/')) out.add(path);
+        else out.add(`${path}`.replace(/\/{2,}/g, '/'));
+      }
+    });
+  });
+  return Array.from(out);
+}
+
+// Replace the fetchDirectoryYamlFiles and getMostRecentQueryYaml functions with these versions
+async function fetchYamlFilesInDirectory(dirPath = 'data/queries') {
+  try {
+    // First attempt - try to directly access the directory listing if it's enabled on the server
+    try {
+      const dirRes = await fetch(`/${dirPath}/`, { 
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      
+      if (dirRes.ok && dirRes.headers.get('content-type')?.includes('text/html')) {
+        const html = await dirRes.text();
+        // Parse HTML directory listing to extract YAML files
+        const regex = new RegExp(`href="([^"]+\\.(ya?ml))"[^>]*>([^<]+)<\\/a>\\s*<\\/td>\\s*<td[^>]*>([\\d-]+\\s+[\\d:]+)`, 'gi');
+        const files = [];
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+          const [_, href, __, name, dateStr] = match;
+          const fullPath = `${dirPath}/${href}`.replace(/\/{2,}/g, '/');
+          files.push({
+            path: fullPath,
+            name: name || href,
+            url: `/${fullPath}`
+          });
+        }
+        
+        if (files.length > 0) {
+          // Get timestamps via HEAD requests to sort by last-modified
+          const fileDetails = await Promise.all(files.map(async file => {
+            try {
+              const headRes = await fetch(file.url, { method: 'HEAD' });
+              if (headRes.ok) {
+                const lastMod = headRes.headers.get('last-modified');
+                return {
+                  ...file,
+                  modified: lastMod ? new Date(lastMod) : new Date(0),
+                  size: parseInt(headRes.headers.get('content-length') || '0')
+                };
+              }
+            } catch (_) {}
+            return { ...file, modified: new Date(0), size: 0 };
+          }));
+          
+          return fileDetails.sort((a, b) => b.modified - a.modified);
+        }
+      }
+    } catch (e) {
+      console.debug('Directory listing parse failed:', e);
+    }
+    
+    // Second attempt - try a predictable file pattern with date-based naming
+    // Assuming files might be named like YYYY-MM-DD-query.yaml or query-YYYY-MM-DD.yaml
+    const today = new Date();
+    const dates = [];
+    
+    // Generate the last 7 days of possible dates
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      dates.push(`${year}-${month}-${day}`);
+      dates.push(`${year}${month}${day}`);
+    }
+    
+    // Try different filename patterns
+    const candidates = [
+      ...dates.map(date => `${dirPath}/query-${date}.yaml`),
+      ...dates.map(date => `${dirPath}/${date}-query.yaml`),
+      ...dates.map(date => `${dirPath}/queries-${date}.yaml`),
+      ...dates.map(date => `${dirPath}/${date}-queries.yaml`),
+      `${dirPath}/latest.yaml`,
+      `${dirPath}/query.yaml`,
+      `${dirPath}/queries.yaml`
+    ];
+    
+    // Check each candidate with HEAD request
+    const validFiles = [];
+    for (const path of candidates) {
+      try {
+        const res = await fetch(`/${path}`, { method: 'HEAD' });
+        if (res.ok) {
+          const lastMod = res.headers.get('last-modified');
+          validFiles.push({
+            path,
+            name: path.split('/').pop(),
+            modified: lastMod ? new Date(lastMod) : new Date(),
+            size: parseInt(res.headers.get('content-length') || '0')
+          });
+        }
+      } catch (_) {}
+    }
+    
+    return validFiles.sort((a, b) => b.modified - a.modified);
+  } catch (e) {
+    console.debug('Error fetching directory files:', e);
+    return [];
+  }
+}
+
+// Add variables to track latest.yaml polling
+let lastYamlFileCheckTime = 0;
+const YAML_FILE_CHECK_INTERVAL = 20000; // 20 seconds in milliseconds
+
+// Simplified function to get the latest YAML file path from latest.yaml
+async function getMostRecentQueryYaml() {
+  try {
+    // Only check for the latest.yaml file every 10 seconds
+    const now = Date.now();
+    if (now - lastYamlFileCheckTime < YAML_FILE_CHECK_INTERVAL) {
+      return ''; // Skip checking if it's too soon
+    }
+    
+    lastYamlFileCheckTime = now;
+    
+    // Try to fetch the content of latest.yaml which contains the path to the latest file
+    const latestYamlRes = await fetch('/data/queries/latest.yaml');
+    
+    if (latestYamlRes.ok) {
+      // The content of latest.yaml is the path to the actual latest YAML file
+      const filePath = await latestYamlRes.text();
+      console.debug('Latest file from latest.yaml:', filePath.trim());
+      return filePath.trim();
+    } else {
+      console.debug('Could not access latest.yaml file:', latestYamlRes.status);
+    }
+    
+    return '';
+  } catch (err) {
+    console.debug('Error fetching latest YAML file info:', err);
+    return '';
+  }
+}
+
+// Fix the syntax error in the file
 async function refresh(){
   if(!group) return;
   try{
     const res = await fetch(`/progress_status?group_name=${encodeURIComponent(group)}`);
     const j = await res.json();
-    if(!j.ok) return;
-    const p = j.progress || {};
+    const p = j.progress || j.progress_state || j || {};
 
-    // YAML progress
-    const created = p.created_yaml || 0;
-    const total = p.total_yaml || 10; // default guess if backend doesn't supply
-    const yamlPct = pct(created, total);
-    document.getElementById('yaml-progress-inner').style.width = yamlPct + '%';
+    // YAML progress (monotonic + lock at 100%)
+    const created = p.created_yaml || p.yaml_created || 0;
+    const total = p.total_yaml || p.yaml_total || 10;
+    const currentPct = Math.min(100, Math.round((total > 0 ? (created/total)*100 : 0)));
 
-    // GenAI progress
-    const genaiFill = document.getElementById('genai-progress-inner');
-    if(p.status === 'genai_started' || p.status === 'genai_starting'){
-      genaiFill.style.width = '20%';
-      genaiFill.style.background = '#2196F3';
-    } else if(p.status === 'genai_complete'){
-      genaiFill.style.width = '100%';
-      genaiFill.style.background = '#2196F3';
-    } else if(p.status === 'genai_failed'){
-      genaiFill.style.background = '#f44336';
-      genaiFill.style.width = '100%';
+    const serverMovedToGenAI = (p.status === 'genai_started' || p.status === 'genai_starting' || p.status === 'genai_complete');
+    if (!yamlComplete && (serverMovedToGenAI || (total > 0 && created >= total) || currentPct >= 100)) {
+      yamlComplete = true;
     }
 
-    // If final state, load correlations JSON
-    if(p.status === 'genai_complete'){
-      const corrResp = await fetch(`/correlations/${encodeURIComponent(group)}.json`);
-      if(corrResp.ok){
-        const wrapper = await corrResp.json();
-        const corr = wrapper.results || {};
-        const vlist = document.getElementById('vendor-corr-list');
-        const xlist = document.getElementById('cross-corr-list');
-        vlist.innerHTML = '';
-        xlist.innerHTML = '';
-        (corr.vendor_correlations||[]).forEach(item=>{
-          const li = document.createElement('li');
-          li.textContent = `${item.vendor}: ${item.a} <-> ${item.b}`;
-          vlist.appendChild(li);
-        });
-        (corr.cross_vendor_correlations||[]).forEach(item=>{
-          const li = document.createElement('li');
-          li.textContent = `${item.a_vendor}(${item.a}) <-> ${item.b_vendor}(${item.b})`;
-          xlist.appendChild(li);
-        });
+    const yamlFill = document.getElementById('yaml-progress') || document.querySelector('.progress-fill.yaml');
+    if (yamlFill) {
+      const nextPct = yamlComplete ? 100 : Math.max(lastYamlPct, currentPct);
+      if (nextPct > 0 && ellipsisTimer) stopEllipsis();
+      lastYamlPct = nextPct;
+      yamlFill.style.width = nextPct + '%';
+      if (nextPct >= 100) yamlFill.classList.add('complete');
+    }
+
+    // Drive the "last file" line every tick
+    const lastEl = getOrCreateLastFileEl(yamlFill);
+    
+    // MODIFIED: Extract file path from the server response, or try to read the latest.yaml file content
+    // via the server's existing endpoints instead of trying to access it directly
+    let detectedFile = extractLastYamlFile(j, p);
+    let displayFile = detectedFile; // Default to the same value
+
+    // If no file is detected through the standard method, we'll send a request to a simple server-side script
+    // that will read the latest.yaml file and return its contents (fallback mechanism)
+    if (!detectedFile) {
+      try {
+        // Make a special request to the progress_status endpoint with a parameter to include the latest file
+        const latestFileRes = await fetch(`/progress_status?group_name=${encodeURIComponent(group)}&include_latest_file=true`);
+        if (latestFileRes.ok) {
+          const latestFileData = await latestFileRes.json();
+          
+          // Use the prettified name if available, otherwise use whatever we can get
+          if (latestFileData && latestFileData.latest_file_pretty) {
+            detectedFile = latestFileData.latest_file; // Store full path
+            displayFile = latestFileData.latest_file_pretty; // Use pretty name for display
+          } else if (latestFileData && latestFileData.latest_filename) {
+            detectedFile = latestFileData.latest_file;
+            displayFile = latestFileData.latest_filename;
+          } else if (latestFileData && latestFileData.latest_file) {
+            detectedFile = latestFileData.latest_file;
+            displayFile = detectedFile;
+          }
+        }
+      } catch (err) {
+        console.debug('Error fetching latest file info:', err);
+      }
+    }
+    
+    const createdIncreased = created > lastYamlCreated;
+    if (createdIncreased) lastYamlCreated = created;
+
+    if (lastEl) {
+      if (detectedFile) {
+        if (detectedFile !== lastYamlFileShown) {
+          lastYamlFileShown = String(detectedFile);
+        }
+        // Use the display-friendly version for the UI
+        lastEl.textContent = `Last YAML file: ${displayFile}`;
+        lastEl.title = detectedFile; // Keep full path in tooltip
+        stopEllipsis(true);
+      } else if (!lastYamlFileShown) {
+        lastEl.textContent = 'Waiting for first file';
+        lastEl.removeAttribute('title');
+        startEllipsis(lastEl);
+      } else if (createdIncreased) {
+        // Use existing lastYamlFileShown since we don't have new display text
+        lastEl.textContent = `Last YAML file: ${lastYamlFileShown}`;
+        lastEl.title = lastYamlFileShown;
+        stopEllipsis(true);
       }
     }
 
-  }catch(e){
+    // GenAI progress (start when YAML completes, if server hasn't started it yet)
+    if (yamlComplete && !serverMovedToGenAI) {
+      const genAIEl = document.getElementById('genai-progress');
+      if (genAIEl) {
+        genAIEl.style.display = 'block';
+        const statusEl = document.getElementById('genai-status');
+        if (statusEl) {
+          statusEl.textContent = 'Starting GenAI processing...';
+          statusEl.classList.add('loading');
+        }
+      }
+    }
+
+    // Correlation progress (if present)
+    const corrEl = document.getElementById('correlation-progress');
+    if (corrEl) {
+      const corrPct = Math.min(100, Math.round((p.correlation_progress || 0) * 100));
+      corrEl.style.width = corrPct + '%';
+      if (corrPct >= 100) corrEl.classList.add('complete');
+    }
+
+  } catch(e) {
     console.debug('progress poll err', e);
   }
 }
-
 setInterval(refresh, 1500);
 refresh();
+// Remove previous DOMContentLoaded ellipsis start tied to the leady when in the "Waiting for first file" state.
+// It now starts only when in the "Waiting for first file" state.Loaded', function () {
+// document.addEventListener('DOMContentLoaded', function () {
+//   startEllipsis();// });

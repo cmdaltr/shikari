@@ -7,7 +7,6 @@ import os
 import re
 import uuid
 import requests
-import time
 
 
 def create_id():
@@ -147,6 +146,10 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
 
     with open(query_file, "w") as new_yaml:
         new_yaml.write(yaml_content)
+
+    # Inserting this to create a simple approach for the latest file having been created for the web application to provide progress
+    with open(os.path.join("data", "queries", "latest.yaml"), "w") as latest_yaml:
+        latest_yaml.write(query_file)
 
 
 def update_yaml(yamlfile, tag):

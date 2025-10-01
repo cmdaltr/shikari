@@ -120,3 +120,26 @@
   outline: none !important;
   border: none !important;
 }
+
+#progress-content #group-name,
+.lead #group-name,
+#group-name,
+#loading-group {
+  color: #8B0000 !important;
+}
+
+#last-yaml-file {
+  margin-top: 6px;
+  font-size: 0.9em;
+  color: #666;
+  white-space: normal;
+  word-break: break-all;
+}
+
+/* Keep YAML bar green after completion (apply 'complete' on wrapper or fill) */
+.progress-bar.complete .progress-fill.yaml,
+.progress-fill.yaml.complete {
+  width: 100% !important;
+  background: #4caf50 !important;
+  transition: none;
+}

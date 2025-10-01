@@ -16,20 +16,26 @@
 
       <h2 class="page-title">Query Correlation Progress</h2>
 
-      <div id="progress-content">
-        <p class="lead">Building YAML queries for {{ group_name }} and assessing potential merging and correlation...</p>
+      <div id="progress-content"
+           data-group-name="{{ group_name }}"
+           data-progress-url="/progress_status?group_name={{ group_name }}"
+           data-files-url=""> <!-- optional: e.g. /api/queries/list?group_name={{ group_name }} -->
+        <p class="lead">Building detection queries for <span id="group-name" style="color:#8B0000">{{ group_name }}</span> and assessing potential merging and correlation.</p>
 
         <div class="section">
-          <h3 class="subheading">YAML generation progress:</h3>
-          <div class="progress-bar" style="width:100%; max-width:560px; margin-top:16px; margin-bottom:1.5em;">
-            <div id="yaml-progress-inner" class="progress-fill yaml"></div>
+          <h3 class="subheading">YAML generation:</h3>
+          <div class="progress-bar">
+            <div class="progress-fill yaml" id="yaml-progress"></div>
           </div>
+          <!-- Last YAML file placeholder (populated by JS) -->
+          <div id="last-yaml-file" aria-live="polite"></div>
         </div>
 
         <div class="section">
-          <h3 class="subheading">GenAI correlation progress:</h3>
+          <h3 class="subheading">GenAI correlation:</h3>
+          <!-- GenAI correlation progress -->
           <div class="progress-bar">
-            <div id="genai-progress-inner" class="progress-fill genai"></div>
+            <div class="progress-fill genai" id="genai-progress"></div>
           </div>
         </div>
 
