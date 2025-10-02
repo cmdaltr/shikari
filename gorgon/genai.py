@@ -308,7 +308,7 @@ def _combine_queries(
             # Heuristic semantic overlap percentage for KQL
             overlap_pct = _estimate_semantic_overlap_kql(query_a, query_b)
             header = f"// {source_a} followed by {source_b}" + (
-                f"; {overlap_pct}% semantic overlap." if overlap_pct else "."
+                f"; {overlap_pct}% semantic overlap" if overlap_pct else ""
             )
             out = f"""{header}
 {final_query}"""
@@ -430,7 +430,7 @@ def _combine_queries(
             except Exception:
                 insights = f"\n// Semantic: {overlap_pct}% overlap"
         header_line = f"// {source_a} followed by {source_b}" + (
-            f"; {overlap_pct}% semantic overlap." if overlap_pct else "."
+            f"; {overlap_pct}% semantic overlap" if overlap_pct else ""
         )
         out = f"""{header_line}
 // {generation_method} combination
@@ -572,7 +572,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         )
 
         # Limit the number of pairs to avoid performance issues
-        MAX_PAIRS_PER_VENDOR = 100
+        MAX_PAIRS_PER_VENDOR = 10000
         if potential_pairs > MAX_PAIRS_PER_VENDOR:
             print(
                 f"GenAI: Limiting {v} to {MAX_PAIRS_PER_VENDOR} pairs (from potential {potential_pairs})"
@@ -609,6 +609,12 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                     "Device"
                 ) or query_b.lstrip().startswith("Device"):
                     detected_vendor = "mde"
+
+                # KQL-only filter: require semantic overlap > 50% to include result
+                if detected_vendor in ["mde", "microsoft", "sentinel", "kql"]:
+                    ov = _estimate_semantic_overlap_kql(query_a, query_b)
+                    if ov <= 50:
+                        continue
 
                 # Generate combined query
                 combined_query = _combine_queries(
