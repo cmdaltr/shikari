@@ -467,10 +467,6 @@ async def progress_status(group_name: str = "", include_latest_file: bool = Fals
                     response["latest_file_pretty"] = (
                         pretty_name  # Formatted display name
                     )
-
-                    print(
-                        f"Returning latest file: {latest_file} (display: {pretty_name})"
-                    )
             else:
                 print(f"Latest YAML file not found at {latest_yaml_path}")
         except Exception as e:

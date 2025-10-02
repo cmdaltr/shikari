@@ -124,7 +124,7 @@ function getOrCreateLastFileEl(yamlFillEl) {
   el.id = 'last-yaml-file';
   el.style.marginTop = '6px';
   el.style.fontSize = '0.9em';
-  el.style.color = '#666';
+  el.style.color = '#666'; // Default color for "Waiting for first file"
   el.style.display = 'block';
   el.style.whiteSpace = 'normal';
   el.style.wordBreak = 'break-all';
@@ -323,7 +323,7 @@ async function refresh(){
     const j = await res.json();
     const p = j.progress || j.progress_state || j || {};
 
-    // YAML progress (monotonic + lock at 100%)
+    // YAML progress (monotonic + lock at 100% once complete)
     const created = p.created_yaml || p.yaml_created || 0;
     const total = p.total_yaml || p.yaml_total || 10;
     const currentPct = Math.min(100, Math.round((total > 0 ? (created/total)*100 : 0)));
@@ -336,7 +336,8 @@ async function refresh(){
     const yamlFill = document.getElementById('yaml-progress') || document.querySelector('.progress-fill.yaml');
     if (yamlFill) {
       const nextPct = yamlComplete ? 100 : Math.max(lastYamlPct, currentPct);
-      if (nextPct > 0 && ellipsisTimer) stopEllipsis();
+      // Only stop ellipsis when the progress is 100% AND we have a file name
+      // (moved this check to the lastEl section below)
       lastYamlPct = nextPct;
       yamlFill.style.width = nextPct + '%';
       if (nextPct >= 100) yamlFill.classList.add('complete');
@@ -384,19 +385,54 @@ async function refresh(){
         if (detectedFile !== lastYamlFileShown) {
           lastYamlFileShown = String(detectedFile);
         }
-        // Use the display-friendly version for the UI
-        lastEl.textContent = `Last YAML file: ${displayFile}`;
+        
+        // Set up the content with a colored filename
+        const prefixText = 'Detection file created: ';
+        lastEl.innerHTML = ''; // Clear existing content
+        
+        // Add the prefix text
+        const prefixSpan = document.createElement('span');
+        prefixSpan.textContent = prefixText;
+        prefixSpan.style.color = '#666'; // Grey color for the prefix
+        lastEl.appendChild(prefixSpan);
+        
+        // Add the filename in dark green (changed from light green)
+        const filenameSpan = document.createElement('span');
+        filenameSpan.textContent = displayFile;
+        filenameSpan.style.color = '#2e8b57'; // Dark green color (SeaGreen)
+        filenameSpan.style.fontWeight = '500'; // Slightly bolder
+        lastEl.appendChild(filenameSpan);
+        
         lastEl.title = detectedFile; // Keep full path in tooltip
         stopEllipsis(true);
       } else if (!lastYamlFileShown) {
         lastEl.textContent = 'Waiting for first file';
+        lastEl.style.color = '#666'; // Default gray for waiting text
         lastEl.removeAttribute('title');
         startEllipsis(lastEl);
       } else if (createdIncreased) {
-        // Use existing lastYamlFileShown since we don't have new display text
-        lastEl.textContent = `Last YAML file: ${lastYamlFileShown}`;
+        // Use the existing styling approach for consistency
+        const prefixText = 'Detection file created: ';
+        lastEl.innerHTML = ''; // Clear existing content
+        
+        const prefixSpan = document.createElement('span');
+        prefixSpan.textContent = prefixText;
+        prefixSpan.style.color = '#666';
+        lastEl.appendChild(prefixSpan);
+        
+        const filenameSpan = document.createElement('span');
+        filenameSpan.textContent = lastYamlFileShown;
+        filenameSpan.style.color = '#2e8b57'; // Dark green color (SeaGreen)
+        filenameSpan.style.fontWeight = '500';
+        lastEl.appendChild(filenameSpan);
+        
         lastEl.title = lastYamlFileShown;
         stopEllipsis(true);
+      }
+      
+      // Additional check to ensure ellipsis animation stays active until we have a file
+      if (!detectedFile && !lastYamlFileShown) {
+        startEllipsis(lastEl);
       }
     }
 
