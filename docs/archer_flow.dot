@@ -25,6 +25,13 @@ digraph ArcherFlow {
   // Orchestrator
   orchestrator [label="gorgon.build.orchestrator\nprocess_group()", shape=folder, fillcolor="#ffe8e8"];
 
+  // GenAI pipeline
+  genai [label="gorgon.genai\nprocess_genai(), generate_correlations()", shape=folder, fillcolor="#ffe8e8"];
+  progress_writer [label="gorgon.build.progress\nwrite_progress()", shape=folder, fillcolor="#e8ffe8"];
+  queries [label="data/queries\n(input YAMLs)", shape=folder, fillcolor="#f0f0f0"];
+  correlations [label="data/correlations/*.json\n(correlation output)", shape=folder, fillcolor="#f0f0f0"];
+  progress_store [label="data/progress/*.json\n(progress state)", shape=folder, fillcolor="#f0f0f0"];
+
   // Data/drafts
   drafts [label="data/drafts\n(persisted drafts & audit)", shape=folder, fillcolor="#f0f0f0"];
 
@@ -62,7 +69,16 @@ digraph ArcherFlow {
   index_html -> static [label="loads style/script"];
   manual_html -> static [label="loads style/script"];
 
+  // Orchestrator -> GenAI and outputs
+  orchestrator -> genai [label="invoke GenAI"];
+  genai -> queries [label="scan"];
+  genai -> correlations [label="write results"];
+  genai -> progress_writer [label="write_progress()"];
+  progress_writer -> progress_store [label="persist"];
+  app_progress -> progress_store [label="read"];
+
   // Group nodes visually
   { rank=same; index_html; manual_html; progress_html }
   { rank=same; app_read_form; app_generate; app_manual_submit }
+  { rank=same; orchestrator; genai }
 }
