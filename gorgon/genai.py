@@ -8,26 +8,82 @@ replaced with a true GenAI integration later (e.g., OpenAI, local LLM, n8n).
 
 import os
 import json
-from typing import List, Dict
+import math
+import importlib.util
+import time
+import re
+from typing import List, Dict, Tuple, Optional
 from .build.progress import write_progress
+
+# Global generation mode; set in generate_correlations
+_GEN_MODE: str = "heuristic"
+
+# Import our parser modules - use dynamic imports to handle potential missing modules
+_HAS_ADVANCED_PARSING = False
+_HAS_SEMANTIC_ANALYSIS = False
+_HAS_QUERY_VALIDATION = False
+_HAS_AI_GENERATORS = False
+
+# Try to import the parser modules
+try:
+    from .parsers.splunk import (
+        parse_splunk_query,
+        validate_splunk_query,
+        combine_splunk_queries,
+        SplunkQuery,
+    )
+    from .parsers.mde import (
+        parse_kql_query,
+        validate_kql_query,
+        combine_kql_queries,
+        KQLQuery,
+    )
+
+    _HAS_ADVANCED_PARSING = True
+except ImportError:
+    print("Advanced query parsing modules not available - will use basic methods")
+
+# Fix incorrect import paths - these paths don't match the directory structure you described
+try:
+    from .parsers.validator import (
+        QueryValidator,
+        test_combined_query,
+    )  # Changed from .parsers.validator
+
+    _HAS_QUERY_VALIDATION = True
+except ImportError:
+    print("Query validation module not available - will skip validation")
+
+try:
+    from .parsers.semantics import (
+        QuerySemanticAnalyzer,
+    )  # Changed from .parsers.semantics
+
+    _HAS_SEMANTIC_ANALYSIS = True
+except ImportError:
+    print("Semantic analysis module not available - will skip semantic analysis")
 
 # Optional local-LLM support. We attempt to import known local backends but
 # degrade gracefully to the heuristic generator if none are available.
 _HAS_LLAMA = False
 _HAS_TRANSFORMERS = False
-try:
-    import llama_cpp  # type: ignore
 
-    _HAS_LLAMA = True
-except Exception:
-    _HAS_LLAMA = False
+# Use importlib to check for package availability before attempting import
+if importlib.util.find_spec("llama_cpp"):
+    try:
+        import llama_cpp  # type: ignore
 
-try:
-    import transformers  # type: ignore
+        _HAS_LLAMA = True
+    except Exception:
+        _HAS_LLAMA = False
 
-    _HAS_TRANSFORMERS = True
-except Exception:
-    _HAS_TRANSFORMERS = False
+if importlib.util.find_spec("transformers"):
+    try:
+        import transformers  # type: ignore
+
+        _HAS_TRANSFORMERS = True
+    except Exception:
+        _HAS_TRANSFORMERS = False
 
 
 def _list_yaml_files(group_name: str, yaml_dir: str) -> List[str]:
@@ -41,44 +97,362 @@ def _list_yaml_files(group_name: str, yaml_dir: str) -> List[str]:
 
 
 def _parse_yaml_for_vendor(path: str) -> Dict:
-    # Very small heuristic: look for a top-level 'vendor' field or 'platform'
+    """
+    Parse a YAML file to extract vendor information and search query content.
+
+    Returns a dictionary with:
+    - path: the file path
+    - vendor: detected vendor (or None)
+    - query: the search query if found (or None)
+    """
     try:
         with open(path, "r", encoding="utf-8") as fh:
             text = fh.read()
     except Exception:
-        return {}
+        return {"path": path, "vendor": None, "query": None}
+
     vendor = None
+    query = None
+    connector_id = None
+
+    # Look for the connectorId field to determine vendor
     for line in text.splitlines():
-        if line.lower().startswith("vendor:"):
-            vendor = line.split(":", 1)[1].strip()
+        line_lower = line.lower().strip()
+        if line_lower.startswith("connectorid:"):
+            connector_id = line.split(":", 1)[1].strip()
             break
-        if line.lower().startswith("platform:"):
-            vendor = line.split(":", 1)[1].strip()
-            break
-    # fallback: try filename hints
+
+    # Set vendor based on connectorId
+    if connector_id:
+        if connector_id == "Splunk":
+            vendor = "splunk"
+        elif connector_id == "MicrosoftThreatProtection":
+            vendor = "mde"
+
+    # If connectorId wasn't found, try other methods to find vendor/platform
+    if not vendor:
+        for line in text.splitlines():
+            if line.lower().startswith("vendor:"):
+                vendor = line.split(":", 1)[1].strip()
+                break
+            if line.lower().startswith("platform:"):
+                vendor = line.split(":", 1)[1].strip()
+                break
+
+    # Try to extract search query
+    query_marker = False
+    query_lines = []
+
+    for line in text.splitlines():
+        line_lower = line.lower().strip()
+
+        # Look for common search query markers
+        if not query_marker:
+            if (
+                line_lower.startswith("search:")
+                or line_lower.startswith("query:")
+                or line_lower.startswith("kql:")
+                or line_lower.startswith("spl:")
+            ):
+                query_marker = True
+                # Extract just the query part after the colon
+                if ":" in line:
+                    query_part = line.split(":", 1)[1].strip()
+                    if query_part:  # If there's content after the colon on this line
+                        query_lines.append(query_part)
+                continue
+
+        # If we're in the query section, collect lines until we hit another section
+        elif query_marker:
+            if (
+                line.strip()
+                and not line.startswith(" ")
+                and not line.startswith("\t")
+                and ":" in line
+            ):
+                # This appears to be a new section
+                query_marker = False
+            else:
+                query_lines.append(line)
+
+    if query_lines:
+        query = "\n".join(query_lines).strip()
+        # Clean up the query - remove leading "|\n  " if present
+        if query.startswith("|\n"):
+            query = query[2:].lstrip()
+
+        # Always override vendor detection based on query content
+        if query.lstrip().startswith("index="):
+            vendor = "splunk"
+        elif query.lstrip().startswith("Device"):
+            vendor = "mde"
+
+    # fallback: try filename hints if vendor not found
     if not vendor:
         name = os.path.basename(path).lower()
         if "splunk" in name:
             vendor = "splunk"
-        elif "mde" in name or "microsoft" in name:
+        elif (
+            "kql" in name or "mde" in name or "microsoft" in name or "sentinel" in name
+        ):
             vendor = "mde"
-        elif "ecs" in name or "prisma" in name:
-            vendor = "prisma"
-    return {"path": path, "vendor": vendor}
+
+    # Normalize vendor names to ensure consistency
+    if vendor and vendor.lower() in ["splunk"]:
+        vendor = "splunk"
+    elif vendor and vendor.lower() in [
+        "mde",
+        "microsoft",
+        "sentinel",
+        "kql",
+        "microsoftthreatprotection",
+    ]:
+        vendor = "mde"
+
+    return {"path": path, "vendor": vendor, "query": query}
+
+
+def _combine_queries(
+    vendor: str, query_a: str, query_b: str, a: str = None, b: str = None
+) -> str:
+    """
+    Combine two queries based on the vendor's query language using all available methods.
+
+    Args:
+        vendor: The vendor name (e.g., 'splunk', 'mde')
+        query_a: The first query
+        query_b: The second query
+        a: Path to the first query file (optional, for better naming)
+        b: Path to the second query file (optional, for better naming)
+
+    Returns:
+        A combined query string
+    """
+    # Defensive: ensure strings
+    query_a = query_a or ""
+    query_b = query_b or ""
+
+    if not isinstance(query_a, str) or not isinstance(query_b, str):
+        return "// Could not combine queries - inputs not strings"
+
+    if not query_a.strip() or not query_b.strip():
+        return "// Could not combine queries - one or both queries were empty"
+
+    # Detect query type based on content
+    is_splunk_a = query_a.lstrip().startswith("index=")
+    is_splunk_b = query_b.lstrip().startswith("index=")
+    is_mde_a = query_a.lstrip().startswith("Device")
+    is_mde_b = query_b.lstrip().startswith("Device")
+
+    # Override vendor detection based on query content
+    detected_vendor = vendor.lower()
+    if is_splunk_a or is_splunk_b:
+        detected_vendor = "splunk"
+    elif is_mde_a and is_mde_b:
+        detected_vendor = "mde"
+
+    # Heuristic mode: skip AI and advanced parsers entirely
+    if _GEN_MODE == "heuristic":
+        final_query = _basic_combine_queries(
+            detected_vendor,
+            query_a,
+            query_b,
+            (
+                os.path.basename(a)
+                .replace("_microsoft_defender.yaml", "")
+                .replace(".yaml", "")
+                if a
+                else "Query A"
+            ),
+            (
+                os.path.basename(b)
+                .replace("_microsoft_defender.yaml", "")
+                .replace(".yaml", "")
+                if b
+                else "Query B"
+            ),
+        )
+        if detected_vendor == "splunk":
+            source_a = (
+                os.path.basename(a)
+                .replace("_microsoft_defender.yaml", "")
+                .replace(".yaml", "")
+                if a
+                else "Query A"
+            )
+            source_b = (
+                os.path.basename(b)
+                .replace("_microsoft_defender.yaml", "")
+                .replace(".yaml", "")
+                if b
+                else "Query B"
+            )
+            out = f"""``` Combined Splunk Query ({source_a} followed by {source_b}) ```
+{final_query}"""
+            return _collapse_double_newlines(out)
+        elif detected_vendor in ["mde", "microsoft", "sentinel", "kql"]:
+            source_a = (
+                os.path.basename(a)
+                .replace("_microsoft_defender.yaml", "")
+                .replace(".yaml", "")
+                if a
+                else "Query A"
+            )
+            source_b = (
+                os.path.basename(b)
+                .replace("_microsoft_defender.yaml", "")
+                .replace(".yaml", "")
+                if b
+                else "Query B"
+            )
+            # Heuristic semantic overlap percentage for KQL
+            overlap_pct = _estimate_semantic_overlap_kql(query_a, query_b)
+            header = f"// {source_a} followed by {source_b}" + (
+                f"; {overlap_pct}% semantic overlap." if overlap_pct else "."
+            )
+            out = f"""{header}
+{final_query}"""
+            return _collapse_double_newlines(out)
+        else:
+            return _collapse_double_newlines(final_query)
+
+    # Non-heuristic modes: may use AI/advanced/semantic if available
+    ai_combined = None
+    advanced_combined = None
+    semantic_strategy = None
+
+    # Lazy-import AI generators only when explicitly requested and available
+    if _GEN_MODE in ("ai_generators", "local_llm"):
+        try:
+            from .ai_models.generator import get_generator, QueryGeneratorBase  # type: ignore
+
+            _local_ai_available = True
+        except Exception:
+            _local_ai_available = False
+        if _local_ai_available:
+            try:
+                ai_method = os.environ.get("GENAI_MODEL", "local").lower()
+                generator = get_generator(ai_method)
+                ai_result = generator.combine_queries(query_a, query_b, detected_vendor)
+                if isinstance(ai_result, dict) and "combined_query" in ai_result:
+                    ai_combined = ai_result.get("combined_query")
+            except Exception as e:
+                print(f"AI-based query generation failed: {e}")
+
+    # Only attempt advanced parsers if in advanced mode and inputs are non-empty strings
+    if _HAS_ADVANCED_PARSING and _GEN_MODE in ("advanced_parsing", "semantic"):
+        try:
+            if detected_vendor == "splunk":
+                advanced_combined = combine_splunk_queries(query_a, query_b)
+            elif detected_vendor in ["mde", "microsoft", "sentinel", "kql"]:
+                advanced_combined = combine_kql_queries(query_a, query_b)
+        except Exception as e:
+            print(f"Advanced parser-based query generation failed: {e}")
+
+    if _HAS_SEMANTIC_ANALYSIS and _GEN_MODE == "semantic":
+        try:
+            analyzer = QuerySemanticAnalyzer()
+            semantic_strategy = analyzer.suggest_combination_strategy(
+                query_a, query_b, detected_vendor
+            )
+        except Exception as e:
+            print(f"Semantic analysis failed: {e}")
+
+    # Validate advanced/AI outputs if validators available
+    def _valid(vendor_name: str, q: Optional[str]) -> bool:
+        if not q or not isinstance(q, str):
+            return False
+        if vendor_name == "splunk":
+            try:
+                ok, _ = validate_splunk_query(q)
+                return ok
+            except Exception:
+                return False
+        elif vendor_name in ["mde", "microsoft", "sentinel", "kql"]:
+            try:
+                ok, _ = validate_kql_query(q)
+                return ok
+            except Exception:
+                return False
+        return True
+
+    final_query = None
+    generation_method = ""
+
+    if ai_combined and _valid(detected_vendor, ai_combined):
+        final_query = ai_combined
+        generation_method = "AI-assisted"
+    elif advanced_combined and _valid(detected_vendor, advanced_combined):
+        final_query = advanced_combined
+        generation_method = "Parser-based"
+    else:
+        final_query = _basic_combine_queries(detected_vendor, query_a, query_b)
+        generation_method = "Basic"
+
+    # Format output
+    source_a = (
+        os.path.basename(a).replace("_microsoft_defender.yaml", "").replace(".yaml", "")
+        if a
+        else "Query A"
+    )
+    source_b = (
+        os.path.basename(b).replace("_microsoft_defender.yaml", "").replace(".yaml", "")
+        if b
+        else "Query B"
+    )
+
+    if detected_vendor == "splunk":
+        insights = ""
+        if semantic_strategy:
+            s = semantic_strategy.get("strategy", "unknown")
+            ov = int(semantic_strategy.get("overlap", {}).get("overlap_score", 0) * 100)
+            insights = f"\n``` Semantic: {ov}% overlap via {s} ```"
+        out = f"""``` Combined Splunk Query ({source_a} followed by {source_b}) ```
+{final_query}{insights}"""
+        return _collapse_double_newlines(out)
+    elif detected_vendor in ["mde", "microsoft", "sentinel", "kql"]:
+        # Normalize spacing for KQL before returning
+        final_query = _normalize_kql_spacing(final_query)
+        # Prefer semantic analyzer if available, else fallback to heuristic estimate
+        try:
+            overlap_pct = (
+                int(semantic_strategy.get("overlap", {}).get("overlap_score", 0) * 100)
+                if semantic_strategy
+                else _estimate_semantic_overlap_kql(query_a, query_b)
+            )
+        except Exception:
+            overlap_pct = _estimate_semantic_overlap_kql(query_a, query_b)
+        insights = ""
+        if semantic_strategy:
+            try:
+                s = semantic_strategy.get("strategy", "unknown")
+                insights = f"\n// Semantic: {overlap_pct}% overlap via {s}"
+            except Exception:
+                insights = f"\n// Semantic: {overlap_pct}% overlap"
+        header_line = f"// {source_a} followed by {source_b}" + (
+            f"; {overlap_pct}% semantic overlap." if overlap_pct else "."
+        )
+        out = f"""{header_line}
+// {generation_method} combination
+{final_query}{insights}"""
+        return _collapse_double_newlines(out)
+    else:
+        return _collapse_double_newlines(final_query)
 
 
 def generate_correlations(
     group_name: str, yaml_dir: str, progress_prefix: str = "genai"
 ) -> Dict:
     """
-    Scan YAMLs and produce two result sets:
+    Scan YAMLs and produce vendor correlations (cross-vendor correlations disabled).
     - vendor_correlations: list of dicts where multiple queries from same vendor are paired
-    - cross_vendor_correlations: list of dicts correlating results across vendors
+    - cross_vendor_correlations: empty list (disabled)
 
     Progress updates are written using `write_progress` with keys under the
     provided `group_name` progress JSON.
     """
     files = _list_yaml_files(group_name, yaml_dir)
+    print(f"GenAI: Found {len(files)} YAML files for {group_name}")
     write_progress(
         group_name,
         {"status": "genai_started", "total_files": len(files), "processed": 0},
@@ -86,7 +460,26 @@ def generate_correlations(
 
     # If configured to use a local model, attempt it and gracefully fallback
     mode = os.environ.get("GENAI_MODE", "heuristic").lower()
-    if mode == "local_llm" and (_HAS_LLAMA or _HAS_TRANSFORMERS):
+    print(f"GenAI: Using mode '{mode}'")
+
+    # Track available capabilities for logging only
+    available_modes = ["heuristic"]
+    if _HAS_ADVANCED_PARSING:
+        available_modes.append("advanced_parsing")
+    if _HAS_SEMANTIC_ANALYSIS:
+        available_modes.append("semantic")
+    if _HAS_AI_GENERATORS:
+        available_modes.append("ai_generators")
+    if _HAS_LLAMA or _HAS_TRANSFORMERS:
+        available_modes.append("local_llm")
+    print(f"GenAI: Available capability modes: {', '.join(available_modes)}")
+
+    # Set global generation mode to control downstream behavior
+    global _GEN_MODE
+    _GEN_MODE = mode if mode in available_modes else "heuristic"
+
+    # Only run local LLM path if explicitly requested and supported
+    if _GEN_MODE == "local_llm" and (_HAS_LLAMA or _HAS_TRANSFORMERS):
         try:
             results = _generate_with_local_llm(group_name, files)
             write_progress(
@@ -98,176 +491,371 @@ def generate_correlations(
                 },
             )
             return results
-        except Exception:
-            # fall through to heuristic
-            pass
-
-    parsed = [_parse_yaml_for_vendor(p) for p in files]
-    by_vendor = {}
-    for p in parsed:
-        v = p.get("vendor") or "unknown"
-        by_vendor.setdefault(v, []).append(p["path"])
-
-    vendor_corr = []
-    # vendor correlations: pair files within same vendor
-    for v, paths in by_vendor.items():
-        if len(paths) < 2:
-            continue
-        # simple pairwise combinations
-        for i in range(len(paths)):
-            for j in range(i + 1, len(paths)):
-                vendor_corr.append({"vendor": v, "a": paths[i], "b": paths[j]})
-
-    # cross-vendor correlations: take top N from each vendor and cross correlate
-    cross_corr = []
-    vendors = [k for k in by_vendor.keys() if k != "unknown"]
-    if len(vendors) >= 2:
-        # pair first vendor with each of the others for a simple cross correlation
-        base = vendors[0]
-        for other in vendors[1:]:
-            a = by_vendor[base][0]
-            b = by_vendor[other][0]
-            cross_corr.append({"a_vendor": base, "b_vendor": other, "a": a, "b": b})
-
-    # write results to data/correlations/<group_name>.json
-    out_dir = os.path.join("data", "correlations")
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f"{group_name}.json")
-    results = {
-        "vendor_correlations": vendor_corr,
-        "cross_vendor_correlations": cross_corr,
-    }
-    try:
-        with open(out_path, "w", encoding="utf-8") as fh:
-            json.dump(results, fh, indent=2)
-    except Exception:
-        pass
-
-    # final progress update
+        except Exception as e:
+            print(f"GenAI: Local LLM generation failed: {e}, falling back to heuristic")
+            _GEN_MODE = "heuristic"
+    # Default case - run the heuristic generation
+    results = _generate_with_heuristic(group_name, files)
     write_progress(
         group_name,
         {
             "status": "genai_complete",
-            "vendor_count": len(vendor_corr),
-            "cross_count": len(cross_corr),
+            "vendor_count": len(results.get("vendor_correlations", [])),
+            "cross_count": 0,  # Always 0 now
         },
     )
     return results
 
 
-def _generate_with_local_llm(group_name: str, files: List[str]) -> Dict:
+def process_genai(group_name: str):
     """
-    Very small local-LLM driver. Uses llama_cpp or transformers if available.
-    The prompt is a simple instruction to summarize YAMLs and suggest correlations.
-    This is a best-effort fallback and should be tuned for your local model.
+    Main entry point for GenAI processing that can be called from other modules.
+    This function is the primary hook for correlation generation from app.py.
+
+    Args:
+        group_name: The group name to process
     """
-    texts = []
-    for p in files:
-        try:
-            with open(p, "r", encoding="utf-8") as fh:
-                texts.append((p, fh.read()[:4096]))
-        except Exception:
-            texts.append((p, ""))
-
-    prompt = """
-You are a tool that examines detection YAMLs and suggests correlation pairs.
-For each file, identify a vendor/platform if present, then produce two lists:
-- vendor_correlations: pairs of files from the same vendor that should be correlated
-- cross_vendor_correlations: pairs across vendors to check for combined activity
-Represent results as JSON with keys vendor_correlations and cross_vendor_correlations.
-"""
-
-    # Basic single-shot prompt construction (concatenate filenames + snippets)
-    body = prompt + "\nFiles:\n"
-    for p, t in texts:
-        body += f"--- {p}\n{t}\n"
-
-    # llama_cpp path
-    if _HAS_LLAMA:
-        try:
-            # Keep import local to avoid top-level import issues
-            from llama_cpp import Llama  # type: ignore
-
-            model_path = os.environ.get("LLAMA_MODEL_PATH")
-            if not model_path:
-                raise RuntimeError("LLAMA_MODEL_PATH not set")
-            llm = Llama(model_path=model_path)
-            resp = llm.create_completion(prompt=body, max_tokens=512)
-            text = resp.get("choices", [{}])[0].get("text", "")
-            return _parse_llm_json_output(text, files)
-        except Exception:
-            pass
-
-    if _HAS_TRANSFORMERS:
-        try:
-            # Use a text-generation pipeline if available
-            from transformers import pipeline  # type: ignore
-
-            gen = pipeline(
-                "text-generation", model=os.environ.get("TRANSFORMERS_MODEL", "gpt2")
-            )
-            out = gen(body, max_length=1024, do_sample=False)
-            text = out[0].get("generated_text", "")
-            return _parse_llm_json_output(text, files)
-        except Exception:
-            pass
-
-    # If we get here, fallback to heuristic
-    return _heuristic_fallback(files)
+    print(f"process_genai called for group {group_name}")
+    yaml_dir = os.path.join("data", "queries")
+    return generate_correlations(group_name, yaml_dir)
 
 
-def _parse_llm_json_output(text: str, files: List[str]) -> Dict:
-    # Try to extract JSON from LLM output
-    import re
-
-    m = re.search(r"(\{.*\})", text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group(1))
-        except Exception:
-            pass
-    # fallback
-    return _heuristic_fallback(files)
+def process(group_name: str):
+    """Alias for process_genai for compatibility."""
+    print(f"process alias called for group {group_name}")
+    return process_genai(group_name)
 
 
-def _heuristic_fallback(files: List[str]) -> Dict:
+def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
+    """Generate correlations using a rule-based heuristic approach."""
+    print(f"GenAI: Running heuristic correlation generation for {len(files)} files")
+
+    # Parse all files to extract vendor information and queries
     parsed = [_parse_yaml_for_vendor(p) for p in files]
+
+    # Create lookup for easy access to file info including queries
+    file_info = {p["path"]: p for p in parsed}
+
+    # Logging for debugging
+    vendor_counts = {}
+    for p in parsed:
+        v = p.get("vendor") or "unknown"
+        vendor_counts[v] = vendor_counts.get(v, 0) + 1
+
+    print(f"GenAI: Vendor distribution: {vendor_counts}")
+
+    # Group files by vendor
     by_vendor = {}
     for p in parsed:
         v = p.get("vendor") or "unknown"
+        # No need for additional normalization since it's done in _parse_yaml_for_vendor
         by_vendor.setdefault(v, []).append(p["path"])
 
+    # Generate vendor correlations (files from same vendor)
     vendor_corr = []
     for v, paths in by_vendor.items():
-        if len(paths) < 2:
+        # Only process MDE and Splunk vendors
+        if v.lower() not in ["mde", "splunk"]:
+            print(f"GenAI: Skipping vendor '{v}' as it's not MDE or Splunk")
             continue
+
+        if len(paths) < 2:
+            print(
+                f"GenAI: Vendor '{v}' has only {len(paths)} file(s), skipping intra-vendor correlations"
+            )
+            continue
+
+        # Calculate potential number of pairs
+        potential_pairs = len(paths) * (len(paths) - 1) // 2
+        print(
+            f"GenAI: Vendor '{v}' has {len(paths)} files, potentially {potential_pairs} pairs"
+        )
+
+        # Limit the number of pairs to avoid performance issues
+        MAX_PAIRS_PER_VENDOR = 100
+        if potential_pairs > MAX_PAIRS_PER_VENDOR:
+            print(
+                f"GenAI: Limiting {v} to {MAX_PAIRS_PER_VENDOR} pairs (from potential {potential_pairs})"
+            )
+            # Limit by taking only the first N files
+            max_files = int(math.sqrt(MAX_PAIRS_PER_VENDOR * 2)) + 1
+            paths = paths[:max_files]
+            print(f"GenAI: Limited to first {len(paths)} files")
+
+        # Generate pairs using combinatorial approach
+        count = 0
         for i in range(len(paths)):
             for j in range(i + 1, len(paths)):
-                vendor_corr.append({"vendor": v, "a": paths[i], "b": paths[j]})
+                path_a = paths[i]
+                path_b = paths[j]
 
+                # Get queries from our file_info lookup
+                query_a = file_info.get(path_a, {}).get("query", "")
+                query_b = file_info.get(path_b, {}).get("query", "")
+
+                # Clean up queries - remove leading "|\n  " if present
+                if query_a and query_a.startswith("|\n"):
+                    query_a = query_a[2:].lstrip()
+                if query_b and query_b.startswith("|\n"):
+                    query_b = query_b[2:].lstrip()
+
+                # Detect if these are Splunk queries by checking for index=
+                detected_vendor = v.lower()
+                if query_a.lstrip().startswith("index=") or query_b.lstrip().startswith(
+                    "index="
+                ):
+                    detected_vendor = "splunk"
+                elif query_a.lstrip().startswith(
+                    "Device"
+                ) or query_b.lstrip().startswith("Device"):
+                    detected_vendor = "mde"
+
+                # Generate combined query
+                combined_query = _combine_queries(
+                    detected_vendor, query_a, query_b, path_a, path_b
+                )
+
+                vendor_corr.append(
+                    {
+                        "vendor": detected_vendor,
+                        "a": path_a,
+                        "b": path_b,
+                        "query_a": query_a,
+                        "query_b": query_b,
+                        "combined_query": combined_query,
+                    }
+                )
+                count += 1
+
+                # Update progress periodically
+                if count % 10 == 0:
+                    print(f"GenAI: Generated {count} pairs so far for vendor '{v}'")
+                    write_progress(
+                        group_name,
+                        {"status": "genai_processing", "processed": count},
+                    )
+
+        print(f"GenAI: Generated {count} pairs for vendor '{v}'")
+
+    # No cross-vendor correlations - explicitly create an empty list
     cross_corr = []
-    vendors = [k for k in by_vendor.keys() if k != "unknown"]
-    if len(vendors) >= 2:
-        base = vendors[0]
-        for other in vendors[1:]:
-            a = by_vendor[base][0]
-            b = by_vendor[other][0]
-            cross_corr.append({"a_vendor": base, "b_vendor": other, "a": a, "b": b})
+    print(f"GenAI: Cross-vendor correlations disabled")
 
+    # Write results to correlation JSON file
     results = {
         "vendor_correlations": vendor_corr,
-        "cross_vendor_correlations": cross_corr,
+        "cross_vendor_correlations": cross_corr,  # Empty list
     }
+
     out_dir = os.path.join("data", "correlations")
     os.makedirs(out_dir, exist_ok=True)
-    # derive a filename from the first YAML or fallback to 'group'
-    base = "group"
-    if files:
-        base = os.path.splitext(os.path.basename(files[0]))[0]
-    out_path = os.path.join(out_dir, f"{base}.json")
+    out_path = os.path.join(out_dir, f"{group_name}.json")
+
     try:
         with open(out_path, "w", encoding="utf-8") as fh:
             json.dump(results, fh, indent=2)
-    except Exception:
-        pass
+        print(f"GenAI: Wrote correlation results to {out_path}")
+    except Exception as e:
+        print(f"GenAI: Error writing correlations file: {e}")
+
     return results
+
+
+def _normalize_kql_spacing(q: str) -> str:
+    """Ensure exactly three spaces before each KQL pipe."""
+    if not isinstance(q, str):
+        return q
+    q = re.sub(r"^[ \t]*\|", "   |", q, flags=re.MULTILINE)
+    q = q.replace("\n|", "\n   |")
+    return q
+
+
+def _collapse_double_newlines(text: str) -> str:
+    """Reduce double or multiple consecutive newlines to a single newline."""
+    if not isinstance(text, str):
+        return text
+    return re.sub(r"\n[ \t]*\n+", "\n", text)
+
+
+# Heuristic semantic overlap (KQL)
+_KQL_STOPWORDS = {
+    "let",
+    "query",
+    "union",
+    "where",
+    "summarize",
+    "project",
+    "by",
+    "and",
+    "or",
+    "has",
+    "has_any",
+    "has_all",
+    "contains",
+    "startswith",
+    "endswith",
+    "in",
+    "not",
+    "ago",
+    "timestamp",
+    "device",
+    "name",
+    "id",
+    "type",
+    "true",
+    "false",
+    "count",
+    "as",
+    "join",
+    "extend",
+    "take",
+    "top",
+    "sort",
+    "order",
+    "desc",
+    "asc",
+    # common schema/columns stripped from overlap scoring
+    "devicename",
+    "deviceid",
+    "actiontype",
+    "accountname",
+    "accountupn",
+    "filename",
+    "folderpath",
+    "sha256",
+    "sha1",
+    "processcommandline",
+    "initiatingprocesscommandline",
+    "initiatingprocessaccountname",
+    "initiatingprocessaccountupn",
+    "initiatingprocessfolderpath",
+    "initiatingprocesssha256",
+    "initiatingprocessparentfilename",
+    "timestamp",
+}
+
+
+def _tokenize_for_overlap(text: str) -> set:
+    if not isinstance(text, str) or not text:
+        return set()
+    # pull alnum tokens length>=3, lowercase
+    toks = re.findall(r"[A-Za-z_][A-Za-z_0-9]{2,}", text)
+    toks = [t.lower() for t in toks]
+    return {t for t in toks if t not in _KQL_STOPWORDS}
+
+
+def _estimate_semantic_overlap_kql(q1: str, q2: str) -> int:
+    """Estimate semantic overlap between two KQL queries as a percentage (0-100)."""
+    s1 = _tokenize_for_overlap(q1)
+    s2 = _tokenize_for_overlap(q2)
+    if not s1 or not s2:
+        return 0
+    inter = len(s1 & s2)
+    union = len(s1 | s2)
+    if union == 0:
+        return 0
+    return max(0, min(100, int(round((inter / union) * 100))))
+
+
+def _basic_combine_queries(
+    vendor: str,
+    query_a: str,
+    query_b: str,
+    source_a: Optional[str] = None,
+    source_b: Optional[str] = None,
+) -> str:
+    """Basic fallback method for combining queries."""
+    # Handle Splunk queries
+    if (
+        vendor == "splunk"
+        or (isinstance(query_a, str) and query_a.lstrip().startswith("index="))
+        or (isinstance(query_b, str) and query_b.lstrip().startswith("index="))
+    ):
+        # Extract index from each query if present
+        index_a_match = re.search(r"index\s*=\s*(\w+)", query_a)
+        index_b_match = re.search(r"index\s*=\s*(\w+)", query_b)
+
+        index_a = index_a_match.group(1) if index_a_match else None
+        index_b = index_b_match.group(1) if index_b_match else None
+
+        # Use the same index if possible
+        index = index_a or index_b or "edr_events"
+
+        # Extract search terms (everything after the index and before | table)
+        search_a = ""
+        if index_a_match:
+            search_start = query_a.find(index_a) + len(index_a)
+            search_a = query_a[search_start:].strip()
+            table_index = search_a.find("| table ")
+            if table_index > 0:
+                search_a = search_a[:table_index].strip()
+        else:
+            search_a = query_a.strip()
+            table_index = search_a.find("| table ")
+            if table_index > 0:
+                search_a = search_a[:table_index].strip()
+
+        search_b = ""
+        if index_b_match:
+            search_start = query_b.find(index_b) + len(index_b)
+            search_b = query_b[search_start:].strip()
+            table_index = search_b.find("| table ")
+            if table_index > 0:
+                search_b = search_b[:table_index].strip()
+        else:
+            search_b = query_b.strip()
+            table_index = search_b.find("| table ")
+            if table_index > 0:
+                search_b = search_b[:table_index].strip()
+
+        # Combine with simple OR
+        combined = f"""index={index} earliest=-1d
+  (({search_a}) OR ({search_b}))
+  | stats count BY AccountName AccountUpn ActionType DeviceName FileName FolderPath ProcessCommandLine InitiatingProcessAccountName InitiatingProcessAccountUpn InitiatingProcessCommandLine InitiatingProcessFileName InitiatingProcessFolderPath InitiatingProcessParentFileName user user_HVT_Flags user_LanID user_active user_bunit user_category user_email user_employee_number user_first user_id user_identity user_last user_location user_locked_out user_managedBy user_nick user_org user_phone user_prefix user_startDate user_status user_supervisor_employee_number user_type user_watchlist user_work_city user_work_country"""
+
+        return _collapse_double_newlines(combined)
+
+    # Handle MDE/KQL queries
+    elif vendor in ["mde", "microsoft", "sentinel", "kql"]:
+        # Normalize labels
+        label_a = (source_a or "Query A").strip()
+        label_b = (source_b or "Query B").strip()
+
+        # Normalize inner queries' pipe spacing first
+        qa = _normalize_kql_spacing(query_a or "")
+        qb = _normalize_kql_spacing(query_b or "")
+
+        # Use three spaces before pipes in the tail, too
+        combined_kql = f"""// {label_a}
+let query_a = (
+    {qa}
+);
+// {label_b}
+let query_b = (
+    {qb}
+);
+// Combined query
+union query_a, query_b
+   | where Timestamp > ago(1d)
+   | project DeviceId, DeviceName, Timestamp, ProcessId, FileName, AccountName
+"""
+        return _collapse_double_newlines(_normalize_kql_spacing(combined_kql))
+
+    # Generic combination for other vendors
+    else:
+        return _collapse_double_newlines(
+            f"""
+// Combined Query
+// {source_a or 'Query A'}:
+{query_a}
+
+// {source_b or 'Query B'}:
+{query_b}
+
+// TODO: Combine these queries using the appropriate method for {vendor}
+"""
+        )
+
+
+# Make sure key functions are explicitly exposed at the module level
+__all__ = ["generate_correlations", "process", "process_genai"]

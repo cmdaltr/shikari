@@ -161,14 +161,14 @@ async def generate(request: Request, group_name: str = Form(...)):
     # check whether the provided group name maps to a known MITRE actor.
     actor_found = check_group_in_mitre(app.state.bundle, group_name)
     if actor_found == "Y":
-        # Known actor: kick off processing in a background thread and
-        # immediately return a JSON payload containing a redirect URL so
-        # the front-end can navigate to the progress page.
+        # Known actor: kick off processing in a background thread and immediately return a JSON
+        # payload containing a redirect URL so the front-end can navigate to the progress page.
         hypothesis = "Generated from form"
 
         def _bg():
             try:
-                process_group(group_name, hypothesis, manual_data=None)
+                # Use the modified wrapper instead of direct process_group
+                modified_process_group_wrapper(group_name, hypothesis, manual_data=None)
             except Exception:
                 try:
                     write_progress(group_name, {"status": "failed"})
@@ -394,7 +394,10 @@ async def manual_submit(
     # Call the orchestrator to process the manual data in background
     def _bg_manual():
         try:
-            process_group(group_name, hypothesis, manual_data=manual_data)
+            # Use the modified wrapper instead of direct process_group
+            modified_process_group_wrapper(
+                group_name, hypothesis, manual_data=manual_data
+            )
         except Exception:
             try:
                 write_progress(group_name, {"status": "failed"})
@@ -447,12 +450,10 @@ async def progress_status(group_name: str = "", include_latest_file: bool = Fals
                     if len(name_parts) > 1:
                         # Assume format like "ActionName_platform.yaml"
                         action_name = name_parts[0]
-                        platform = "_".join(name_parts[1:])
+                        platform = "_".join(name_parts[1:])  # Define platform variable
 
                         # Convert CamelCase to spaced words if needed
-                        action_display = action_name
-                        # Add spaces to CamelCase - uncomment if needed
-                        # action_display = re.sub(r'(?<!^)(?=[A-Z])', ' ', action_name)
+                        action_display = action_name  # Define action_display variable
 
                         # Format platform - typically lowercase with spaces
                         platform_display = platform.replace("_", " ")
@@ -532,3 +533,183 @@ async def list_drafts(user_id: str = ""):
             except Exception:
                 pass
     return JSONResponse({"ok": True, "drafts": results})
+
+
+# Add this function to explicitly start the GenAI processing after YAML generation
+def start_genai_processing(group_name):
+    """
+    Helper function to start GenAI processing explicitly after YAML generation completes.
+    This ensures proper transition between phases.
+    """
+    # Update progress to mark YAML generation as complete
+    progress_data = read_progress(group_name) or {}
+
+    # Make sure created_yaml equals total_yaml to show 100% completion
+    if "total_yaml" in progress_data and progress_data.get("total_yaml", 0) > 0:
+        progress_data["created_yaml"] = progress_data["total_yaml"]
+    else:
+        # If total_yaml is not set, set both to ensure 100% progress
+        progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
+        progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
+
+    # Mark status as transitioning to GenAI
+    progress_data["status"] = "genai_starting"
+    write_progress(group_name, progress_data)
+
+    # Start the actual GenAI processing
+    try:
+        import importlib.util
+
+        spec = importlib.util.find_spec("gorgon.build.genai")
+        if spec:
+            genai_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(genai_module)
+
+            # Start GenAI processing in a new thread
+            def _bg_genai():
+                try:
+                    # Call the appropriate GenAI processing function
+                    if hasattr(genai_module, "process_genai"):
+                        # This is where GenAI correlation starts (dynamically loaded)
+                        genai_module.process_genai(group_name)
+                    elif hasattr(genai_module, "process"):
+                        # Alternative entry point for GenAI processing
+                        genai_module.process(group_name)
+                    else:
+                        print(
+                            f"Warning: GenAI module loaded but no process function found"
+                        )
+                        # Update progress to show GenAI is complete (fallback)
+                        progress_data = read_progress(group_name) or {}
+                        progress_data["status"] = "genai_complete"
+                        write_progress(group_name, progress_data)
+                except Exception as e:
+                    print(f"Error in GenAI processing: {e}")
+                    # Mark as failed
+                    try:
+                        progress_data = read_progress(group_name) or {}
+                        progress_data["status"] = "failed"
+                        write_progress(group_name, progress_data)
+                    except:
+                        pass
+
+            threading.Thread(target=_bg_genai, daemon=True).start()
+    except Exception as e:
+        print(f"Error starting GenAI: {e}")
+
+
+# Modify the orchestrator process to ensure completion
+def modified_process_group_wrapper(group_name, hypothesis, manual_data=None):
+    """Wrapper for process_group to ensure proper completion and transition to GenAI."""
+    try:
+        # Call the original process_group
+        process_group(group_name, hypothesis, manual_data)
+
+        # After YAML generation completes, explicitly mark as 100% and start GenAI
+        # Read current progress to avoid overwriting other fields
+        progress_data = read_progress(group_name) or {}
+
+        # Ensure YAML progress shows as complete
+        if "total_yaml" in progress_data:
+            progress_data["created_yaml"] = progress_data["total_yaml"]
+        else:
+            progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
+            progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
+
+        # Mark as ready for GenAI
+        progress_data["status"] = "genai_starting"
+        write_progress(group_name, progress_data)
+
+        # Direct import of genai module and explicitly invoke correlation processing
+        try:
+            # Try the standard import first
+            from gorgon import genai
+
+            print(f"Starting GenAI correlation for {group_name}")
+            genai.process_genai(group_name)
+        except ImportError:
+            # Fallback to dynamic import if needed
+            print("Standard import failed, trying dynamic import")
+            import importlib.util
+
+            spec = importlib.util.find_spec("gorgon.genai")
+            if spec:
+                genai_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(genai_module)
+                if hasattr(genai_module, "process_genai"):
+                    print(
+                        f"Dynamic import succeeded, running process_genai for {group_name}"
+                    )
+                    genai_module.process_genai(group_name)
+                else:
+                    print(
+                        "No process_genai function found in dynamically loaded module"
+                    )
+            else:
+                print("Could not find gorgon.genai module")
+
+    except Exception as e:
+        print(f"Error in process group or GenAI processing: {e}")
+        try:
+            write_progress(group_name, {"status": "failed"})
+        except:
+            pass
+
+
+# Add a new endpoint to handle completion signals from the frontend
+@app.post("/complete_yaml")
+async def complete_yaml(request: Request, group_name: str = ""):
+    """Handle explicit completion signal from frontend when YAML progress reaches 100%."""
+    if not group_name:
+        return JSONResponse(
+            {"ok": False, "error": "group_name required"}, status_code=400
+        )
+
+    # Fetch current progress
+    progress_data = read_progress(group_name) or {}
+
+    # Only proceed if we're not already in GenAI phase
+    if progress_data.get("status") not in [
+        "genai_started",
+        "genai_starting",
+        "genai_complete",
+    ]:
+        # Ensure YAML progress shows as complete
+        if "total_yaml" in progress_data:
+            progress_data["created_yaml"] = progress_data["total_yaml"]
+        else:
+            progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
+            progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
+
+        # Mark as ready for GenAI
+        progress_data["status"] = "genai_starting"
+        write_progress(group_name, progress_data)
+
+        # Start GenAI processing in a background thread
+        try:
+            # Import genai module directly
+            from gorgon import genai
+
+            def _bg_genai():
+                try:
+                    print(
+                        f"Starting GenAI correlation for {group_name} in background thread"
+                    )
+                    genai.process_genai(group_name)
+                    print(f"GenAI correlation for {group_name} completed")
+                except Exception as e:
+                    print(f"Error in GenAI processing: {e}")
+                    try:
+                        progress_data = read_progress(group_name) or {}
+                        progress_data["status"] = "failed"
+                        write_progress(group_name, progress_data)
+                    except:
+                        pass
+
+            thread = threading.Thread(target=_bg_genai, daemon=True)
+            thread.start()
+            print(f"Started background thread for GenAI processing: {thread.name}")
+        except Exception as e:
+            print(f"Error starting GenAI: {e}")
+
+    return JSONResponse({"ok": True})

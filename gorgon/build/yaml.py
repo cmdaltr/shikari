@@ -14,7 +14,7 @@ def create_id():
 
 
 def check_id(existing_ids):
-    if len(existing_ids) == 0:
+    if len(existing_ids) > 0:
         for queryfile in os.listdir(os.path.join("data", "queries")):
             with open(os.path.join("data", "queries", queryfile)) as qf:
                 existing_ids.append(qf.readline())
@@ -142,10 +142,19 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
         .replace("§source§", "Archer")
         .replace("§author§", author)
         .replace("§support§", team)
+        .replace("query:  |", "query: |")
+        .replace("  | ", " | ")
+        .replace("\n | ", "\n  | ")
     )
+    yaml_content = re.sub(r"\n\n", r"\n  ", yaml_content)
+    yaml_content = re.sub(r"(\(Citation: [^\)]+\))", r"", yaml_content)
+    yaml_content = yaml_content.replace(" | where ", "\n   | where ")
 
-    with open(query_file, "w") as new_yaml:
-        new_yaml.write(yaml_content)
+    if "()" in query or "( OR )" in query or "\n  | where \n  | " in query:
+        pass
+    else:
+        with open(query_file, "w") as new_yaml:
+            new_yaml.write(yaml_content)
 
     # Inserting this to create a simple approach for the latest file having been created for the web application to provide progress
     with open(os.path.join("data", "queries", "latest.yaml"), "w") as latest_yaml:

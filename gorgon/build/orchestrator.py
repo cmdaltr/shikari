@@ -91,7 +91,7 @@ def process_group(group_name, hypothesis, manual_data=None):
                 retrieved_data["detect_guidance"] = tech_info.get("detect_guidance", "")
 
                 # Build detection queries and YAML
-                compile_query(retrieved_data, technique_descriptions)
+                compile_query(retrieved_data)
                 created += 1
                 try:
                     write_progress(
@@ -138,7 +138,7 @@ def process_group(group_name, hypothesis, manual_data=None):
             retrieved_data["red_tool"] = procedure[5]
             retrieved_data["detect_guidance"] = procedure[6][0]
 
-            compile_query(retrieved_data, technique_descriptions)
+            compile_query(retrieved_data)
             created += 1
             try:
                 write_progress(

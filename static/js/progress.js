@@ -331,13 +331,25 @@ async function refresh(){
     const serverMovedToGenAI = (p.status === 'genai_started' || p.status === 'genai_starting' || p.status === 'genai_complete');
     if (!yamlComplete && (serverMovedToGenAI || (total > 0 && created >= total) || currentPct >= 100)) {
       yamlComplete = true;
+      console.debug('YAML generation complete, should transition to GenAI');
+      
+      // Force a final progress update to ensure backend knows YAML is complete
+      if (!serverMovedToGenAI) {
+        try {
+          // Signal completion to the backend via special endpoint
+          await fetch(`/complete_yaml?group_name=${encodeURIComponent(group)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (err) {
+          console.debug('Error signaling YAML completion:', err);
+        }
+      }
     }
 
     const yamlFill = document.getElementById('yaml-progress') || document.querySelector('.progress-fill.yaml');
     if (yamlFill) {
       const nextPct = yamlComplete ? 100 : Math.max(lastYamlPct, currentPct);
-      // Only stop ellipsis when the progress is 100% AND we have a file name
-      // (moved this check to the lastEl section below)
       lastYamlPct = nextPct;
       yamlFill.style.width = nextPct + '%';
       if (nextPct >= 100) yamlFill.classList.add('complete');
@@ -346,42 +358,71 @@ async function refresh(){
     // Drive the "last file" line every tick
     const lastEl = getOrCreateLastFileEl(yamlFill);
     
-    // MODIFIED: Extract file path from the server response, or try to read the latest.yaml file content
-    // via the server's existing endpoints instead of trying to access it directly
+    // Extract file path from the server response, or try to read the latest.yaml file
     let detectedFile = extractLastYamlFile(j, p);
     let displayFile = detectedFile; // Default to the same value
+    let validFileDetected = false; // Flag to track if we have a valid file
 
-    // If no file is detected through the standard method, we'll send a request to a simple server-side script
-    // that will read the latest.yaml file and return its contents (fallback mechanism)
+    // If no file is detected through the standard method, we'll send a request to get the latest file
     if (!detectedFile) {
       try {
         // Make a special request to the progress_status endpoint with a parameter to include the latest file
         const latestFileRes = await fetch(`/progress_status?group_name=${encodeURIComponent(group)}&include_latest_file=true`);
         if (latestFileRes.ok) {
           const latestFileData = await latestFileRes.json();
+          console.debug('Latest file data:', latestFileData);
           
-          // Use the prettified name if available, otherwise use whatever we can get
-          if (latestFileData && latestFileData.latest_file_pretty) {
-            detectedFile = latestFileData.latest_file; // Store full path
-            displayFile = latestFileData.latest_file_pretty; // Use pretty name for display
-          } else if (latestFileData && latestFileData.latest_filename) {
-            detectedFile = latestFileData.latest_file;
-            displayFile = latestFileData.latest_filename;
-          } else if (latestFileData && latestFileData.latest_file) {
-            detectedFile = latestFileData.latest_file;
-            displayFile = detectedFile;
+          // Check if we have actual content in the latest file (not empty)
+          const hasContent = latestFileData && 
+                            latestFileData.latest_file && 
+                            latestFileData.latest_file.trim() !== '';
+          
+          // Only use the file info if we have actual content
+          if (hasContent) {
+            // Use the prettified name if available, otherwise use whatever we can get
+            if (latestFileData.latest_file_pretty) {
+              detectedFile = latestFileData.latest_file; // Store full path
+              displayFile = latestFileData.latest_file_pretty; // Use pretty name for display
+              validFileDetected = true;
+            } else if (latestFileData.latest_filename) {
+              detectedFile = latestFileData.latest_file;
+              displayFile = latestFileData.latest_filename;
+              validFileDetected = true;
+            } else {
+              detectedFile = latestFileData.latest_file;
+              displayFile = detectedFile;
+              validFileDetected = true;
+            }
           }
         }
       } catch (err) {
         console.debug('Error fetching latest file info:', err);
       }
+    } else {
+      // We already have a file from the first method
+      validFileDetected = detectedFile.trim() !== '';
     }
     
     const createdIncreased = created > lastYamlCreated;
     if (createdIncreased) lastYamlCreated = created;
 
     if (lastEl) {
-      if (detectedFile) {
+      // YAML generation is complete, show "Complete" message
+      if (yamlComplete) {
+        lastEl.innerHTML = ''; // Clear existing content
+        
+        const completeText = document.createElement('span');
+        completeText.textContent = 'Complete';
+        completeText.style.color = '#2e8b57'; // Dark green color
+        completeText.style.fontWeight = 'bold'; 
+        lastEl.appendChild(completeText);
+        
+        // Stop ellipsis animation if it's still running
+        stopEllipsis(true);
+      }
+      // Still in progress, show file or waiting message
+      else if (detectedFile && detectedFile.trim() !== '') {
+        // We have a valid file path - display it and stop the ellipsis
         if (detectedFile !== lastYamlFileShown) {
           lastYamlFileShown = String(detectedFile);
         }
@@ -396,7 +437,7 @@ async function refresh(){
         prefixSpan.style.color = '#666'; // Grey color for the prefix
         lastEl.appendChild(prefixSpan);
         
-        // Add the filename in dark green (changed from light green)
+        // Add the filename in dark green
         const filenameSpan = document.createElement('span');
         filenameSpan.textContent = displayFile;
         filenameSpan.style.color = '#2e8b57'; // Dark green color (SeaGreen)
@@ -404,35 +445,15 @@ async function refresh(){
         lastEl.appendChild(filenameSpan);
         
         lastEl.title = detectedFile; // Keep full path in tooltip
-        stopEllipsis(true);
-      } else if (!lastYamlFileShown) {
+        stopEllipsis(true); // Stop ellipsis animation
+        
+        console.debug('Displaying file:', displayFile);
+      } else {
+        // No valid file yet - show waiting message with animated ellipsis
         lastEl.textContent = 'Waiting for first file';
         lastEl.style.color = '#666'; // Default gray for waiting text
         lastEl.removeAttribute('title');
-        startEllipsis(lastEl);
-      } else if (createdIncreased) {
-        // Use the existing styling approach for consistency
-        const prefixText = 'Detection file created: ';
-        lastEl.innerHTML = ''; // Clear existing content
-        
-        const prefixSpan = document.createElement('span');
-        prefixSpan.textContent = prefixText;
-        prefixSpan.style.color = '#666';
-        lastEl.appendChild(prefixSpan);
-        
-        const filenameSpan = document.createElement('span');
-        filenameSpan.textContent = lastYamlFileShown;
-        filenameSpan.style.color = '#2e8b57'; // Dark green color (SeaGreen)
-        filenameSpan.style.fontWeight = '500';
-        lastEl.appendChild(filenameSpan);
-        
-        lastEl.title = lastYamlFileShown;
-        stopEllipsis(true);
-      }
-      
-      // Additional check to ensure ellipsis animation stays active until we have a file
-      if (!detectedFile && !lastYamlFileShown) {
-        startEllipsis(lastEl);
+        startEllipsis(lastEl); // Keep ellipsis animating
       }
     }
 

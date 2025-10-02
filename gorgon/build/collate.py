@@ -84,36 +84,42 @@ def collate_data(identifiers, log_sources):
     mde_queries = []
     splunk_queries = []
     for indicator_type, indicators in identifiers.items():
-        if indicator_type in indicator_mapping:
-            # Mapping and building MDE queries
-            mde_queries = compile_mde_queries(
-                indicator_mapping, indicators, indicator_type, mde_queries
-            )
+        if len(indicators) > 0:
+            if indicator_type in indicator_mapping:
+                # Mapping and building MDE queries
+                mde_queries = compile_mde_queries(
+                    indicator_mapping, indicators, indicator_type, mde_queries
+                )
 
-            appended_mde_queries = []
-            for query in mde_queries:
-                # Extract the table name from the query string (assumes first line is the table name)
-                table_name = query.split("\n")[0].strip()
-                mde_mapping = map_defender_tables.get(table_name, "")
-                appended_query = f"{query}\n{mde_mapping}"
-                appended_mde_queries.append(appended_query)
+                appended_mde_queries = []
+                for query in mde_queries:
+                    # Extract the table name from the query string (assumes first line is the table name)
+                    table_name = query.split("\n")[0].strip()
+                    mde_mapping = map_defender_tables.get(table_name, "")
+                    appended_query = f"{query}\n{mde_mapping}"
+                    appended_mde_queries.append(appended_query)
 
-            # Mapping and building Splunk queries
-            splunk_queries = compile_splunk_queries(
-                indicator_mapping, indicators, indicator_type, splunk_queries
-            )
+                # Mapping and building Splunk queries
+                splunk_queries = compile_splunk_queries(
+                    indicator_mapping, indicators, indicator_type, splunk_queries
+                )
 
-            appended_splunk_queries = []
-            for query in splunk_queries:
-                # Extract the index name from the query string
-                index_name = None
-                if query.startswith("index="):
-                    index_name = query.split()[0].replace("index=", "")
-                if index_name:
-                    splunk_mapping = map_splunk_indices.get(index_name, "")
-                    appended_query = f"{query}\n{splunk_mapping}"
-                    appended_splunk_queries.append(appended_query)
-                else:
-                    appended_splunk_queries.append(query)
+                appended_splunk_queries = []
+                for query in splunk_queries:
+                    # Extract the index name from the query string
+                    index_name = None
+                    if query.startswith("index="):
+                        index_name = query.split()[0].replace("index=", "")
+                    if index_name:
+                        splunk_mapping = map_splunk_indices.get(index_name, "")
+                        appended_query = f"{query}\n{splunk_mapping}"
+                        appended_splunk_queries.append(appended_query)
+                    else:
+                        appended_splunk_queries.append(query)
 
-    return appended_mde_queries, appended_splunk_queries
+            else:
+                print(f"Indicator type '{indicator_type}' not found in mapping.")
+
+        else:
+            appended_mde_queries, appended_splunk_queries = [], []
+        return appended_mde_queries, appended_splunk_queries
