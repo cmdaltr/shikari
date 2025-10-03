@@ -190,14 +190,21 @@ def update_yaml(yamlfile, tag):
 
 
 def construct_yaml(
-    name,
-    tid,
-    tdesc,
-    tactic,
-    tag,
-    identifiers,
-    log_sources,
+    name, tid, tdesc, tactic, tag, identifiers, log_sources, index_name=None
 ):
+    """
+    Construct a YAML file for a detection
+
+    Args:
+        name: Name of the technique
+        tid: Technique ID
+        tdesc: Activity description
+        tactic: Tactic
+        tag: Group name tag
+        identifiers: Dictionary of identifiers
+        log_sources: List of log sources
+        index_name: Optional index name to include in the filename
+    """
     appended_mde_queries, appended_splunk_queries = collate_data(
         identifiers, log_sources
     )
@@ -215,7 +222,12 @@ def construct_yaml(
             )
             time.sleep(0.5)"""
         name = name.replace(" ", "").replace("/", "")
-        yamlfile = os.path.join("data", "queries", f"{name}_{table}.yaml")
+        # If index_name is provided, include it in the filename
+        if index_name:
+            filename = f"{name}_{index_name.replace('=', '').replace(' ', '')}.yaml"
+        else:
+            filename = f"{name}.yaml"
+        yamlfile = os.path.join("data", "queries", filename)
         if not os.path.exists(yamlfile):
             write_yaml(
                 yamlfile,

@@ -5,41 +5,250 @@ from gorgon.mitre.enterprise import (
     obtain_technique_descriptions,
 )
 from gorgon.mitre.retrieve import retrieve_procedures
+import json
+import os
+from pathlib import Path
+
+
+def load_indicator_mappings():
+    """Load indicator mappings from JSON files in the mappings directory"""
+    import os
+    import json
+    import sys
+
+    # Use only one specific path for mappings
+    mappings_dir = (
+        Path(os.path.dirname(__file__)) / ".." / "mappings"
+    )  # gorgon/mappings
+
+    # Check for user-specific mappings first (not committed to GitHub)
+    user_mapping_file = mappings_dir / "default_mappings.json"
+    sample_mapping_file = mappings_dir / "default_mappings_sample.json"
+
+    # Check if directory exists
+    if not mappings_dir.exists():
+        print(
+            f"CRITICAL ERROR: Mappings directory does not exist: {mappings_dir.resolve()}"
+        )
+        print("Please create the mappings directory and add your JSON mapping files.")
+        sys.exit(1)
+
+    # Load JSON files in order of preference
+    mappings = {}
+
+    # Try to load user-specific mappings first
+    if user_mapping_file.exists():
+        try:
+            with open(user_mapping_file, "r") as f:
+                mappings = json.load(f)
+            print(f"Using custom mappings from: {user_mapping_file}")
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Could not parse {user_mapping_file}: {e}")
+            print("Falling back to sample mappings...")
+
+    # If no user mappings or they failed to load, try sample mappings
+    if not mappings and sample_mapping_file.exists():
+        try:
+            with open(sample_mapping_file, "r") as f:
+                mappings = json.load(f)
+            print(f"Using sample mappings from: {sample_mapping_file}")
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Could not parse {sample_mapping_file}: {e}")
+
+    # If we still don't have mappings, try other JSON files in the directory
+    if not mappings:
+        json_files = list(mappings_dir.glob("*.json"))
+        if not json_files:
+            print(f"CRITICAL ERROR: No JSON files found in: {mappings_dir.resolve()}")
+            print("Please add JSON mapping files to the mappings directory.")
+            sys.exit(1)
+
+        # Load each JSON file in the mappings directory
+        for mapping_file in json_files:
+            try:
+                with open(mapping_file, "r") as f:
+                    mapping_data = json.load(f)
+                    mappings.update(mapping_data)
+            except json.JSONDecodeError as e:
+                print(f"WARNING: Could not parse {mapping_file}: {e}")
+
+    # Make sure we have the expected indicator types
+    required_types = ["cmd", "reg", "evt", "sw"]
+    missing_types = [t for t in required_types if t not in mappings]
+    if missing_types:
+        print(
+            f"CRITICAL ERROR: Missing required indicator types in mappings: {', '.join(missing_types)}"
+        )
+        print(f"Please ensure your mapping files include all required indicator types.")
+        sys.exit(1)
+
+    return mappings
+
+
+def create_default_mappings():
+    """Create default mappings if none are found"""
+    print("Creating default mappings")
+    default_mappings = {
+        "cmd": {
+            "Splunk": {
+                "index=windows_events": [
+                    "properties.command",
+                    "properties.CommandLine",
+                    "properties.Process_CommandLine",
+                ],
+                "index=linux_syslog": ["properties.command", "properties.cmdline"],
+                "index=aws_cloudtrail": [
+                    "properties.command",
+                    "properties.commandline",
+                ],
+                "index=aws_directoryservicead": ["properties.command"],
+            },
+            "MDE": {
+                "DeviceProcessEvents": ["ProcessCommandLine"],
+                "DeviceEvents": ["AdditionalFields"],
+            },
+        },
+        "reg": {
+            "Splunk": {
+                "index=windows_events": [
+                    "properties.TargetObject",
+                    "properties.Registry_Key_Path",
+                ]
+            },
+            "MDE": {"DeviceRegistryEvents": ["RegistryKey", "RegistryValueData"]},
+        },
+        "evt": {
+            "Splunk": {
+                "index=windows_events": ["properties.event_id", "properties.EventID"]
+            },
+            "MDE": {"DeviceEvents": ["ActionType"]},
+        },
+        "sw": {
+            "Splunk": {
+                "index=windows_events": [
+                    "properties.Image",
+                    "properties.process_path",
+                    "properties.process_name",
+                    "properties.ParentImage",
+                ],
+                "index=linux_syslog": ["properties.process", "properties.process_name"],
+                "index=aws_cloudtrail": ["properties.service", "properties.process"],
+            },
+            "MDE": {
+                "DeviceProcessEvents": [
+                    "FileName",
+                    "ProcessVersionInfoProductName",
+                    "ProcessVersionInfoCompanyName",
+                ],
+                "DeviceFileEvents": ["FileName"],
+            },
+        },
+    }
+    return default_mappings
 
 
 def compile_query(retrieved_data):
+    from gorgon.build.queries import is_query_applicable
+
+    # Load indicator mappings
+    indicator_mappings = load_indicator_mappings()
+
     name = retrieved_data.get("technique")
     tid = retrieved_data.get("technique_id")
     tdesc = retrieved_data.get("activity_desc")
     tactic = retrieved_data.get("tactic")
     tag = retrieved_data.get("group_name")
-    op_guidance = retrieved_data.get("op_guidance")
-    red_tool = retrieved_data.get("red_tool")
-    log_sources = retrieved_data.get("detect_guidance")
-    # detect_guidance = retrieved_data.get("detect_guidance")
+    op_guidance = retrieved_data.get("op_guidance", {})
+    red_tool = retrieved_data.get("red_tool", {})
+    log_sources = retrieved_data.get("detect_guidance", [])
 
-    if type(op_guidance) is not dict and type(red_tool) is not dict:
-        identifiers = {}
-    elif type(op_guidance) is not dict:
-        identifiers = red_tool
-    elif type(red_tool) is not dict:
-        identifiers = op_guidance
-    else:
+    # Get all identifiers
+    if isinstance(op_guidance, dict) and isinstance(red_tool, dict):
         identifiers = {**op_guidance, **red_tool}
-    op_guidance = None
-    red_tool = None
+    elif isinstance(op_guidance, dict):
+        identifiers = op_guidance
+    elif isinstance(red_tool, dict):
+        identifiers = red_tool
+    else:
+        identifiers = {}
 
-    # Only construct YAML if there is means of detection i.e. more than 1 indentifier/indicator
-    if len(identifiers) > 0:
-        construct_yaml(
-            name,
-            tid,
-            tdesc,
-            tactic,
-            tag,
-            identifiers,
-            log_sources,
-        )
+    # Extract platform information if available
+    procedure_platforms = retrieved_data.get("procedure_platforms", [])
+    software_platforms = retrieved_data.get("software_platforms", {})
+
+    # Only construct YAML if there are identifiers for detection
+    if identifiers:
+        # Track if we found any compatible platform
+        compatible_platform_found = False
+
+        # Check each indicator type
+        for indicator_type in identifiers:
+            if indicator_type not in indicator_mappings:
+                continue
+
+            indicators = identifiers[indicator_type]
+            if not indicators:
+                continue
+
+            # Check Splunk indices
+            if "Splunk" in indicator_mappings[indicator_type]:
+                for index_name in indicator_mappings[indicator_type]["Splunk"]:
+                    # Check platform compatibility
+                    is_compatible = is_query_applicable(
+                        procedure_platforms, software_platforms, index_name
+                    )
+
+                    if is_compatible:
+                        compatible_platform_found = True
+                        # Only if compatible, construct the YAML
+                        print(
+                            f"✅ Found compatible platform for {name} on {index_name}"
+                        )
+                        identifiers_with_index = identifiers.copy()
+                        identifiers_with_index["_index_name"] = index_name
+                        construct_yaml(
+                            name,
+                            tid,
+                            tdesc,
+                            tactic,
+                            tag,
+                            identifiers_with_index,
+                            log_sources,
+                        )
+
+            # Check MDE tables
+            if "MDE" in indicator_mappings[indicator_type]:
+                for table_name in indicator_mappings[indicator_type]["MDE"]:
+                    # Check platform compatibility
+                    is_compatible = is_query_applicable(
+                        procedure_platforms, software_platforms, table_name
+                    )
+
+                    if is_compatible:
+                        compatible_platform_found = True
+                        # Only if compatible, construct the YAML
+                        print(
+                            f"✅ Found compatible platform for {name} on {table_name}"
+                        )
+                        construct_yaml(
+                            name,
+                            tid,
+                            tdesc,
+                            tactic,
+                            tag,
+                            identifiers,
+                            log_sources,
+                            table_name,
+                        )
+
+        if compatible_platform_found:
+            print(f"✅ Found compatible platform for {name} - generating YAML")
+        else:
+            print(
+                f"❌ No compatible platforms found for {name} - skipping YAML generation"
+            )
+    else:
+        print(f"No identifiers found for {name} - skipping YAML generation")
 
 
 def main():
@@ -50,7 +259,6 @@ def main():
 
     # Get all techniques
     techniques = obtain_all_techniques(bundle)
-    # technique_descriptions = obtain_technique_descriptions(bundle)
 
     # Process each technique
     for technique in techniques:
