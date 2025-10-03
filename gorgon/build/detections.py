@@ -189,16 +189,20 @@ def compile_query(retrieved_data):
             if not indicators:
                 continue
 
-            # Check Splunk indices
+            # SPLUNK
             if "Splunk" in indicator_mappings[indicator_type]:
                 for index_name in indicator_mappings[indicator_type]["Splunk"]:
-                    # Use platform mappings to check compatibility
-                    is_compatible = is_query_applicable(
-                        procedure_platforms, software_platforms, index_name
+                    print(
+                        f"Checking {name} on {index_name} with platforms {procedure_platforms}"
                     )
-
+                    clean_index_name = index_name.replace("index=", "")
+                    is_compatible = is_query_applicable(
+                        procedure_platforms, software_platforms, clean_index_name
+                    )
+                    print(
+                        f"is_query_applicable returned {is_compatible} for {index_name}"
+                    )
                     if is_compatible:
-                        compatible_found = True
                         print(
                             f"✅ Found compatible platform for {name} on {index_name}"
                         )
@@ -211,18 +215,18 @@ def compile_query(retrieved_data):
                             identifiers,
                             log_sources,
                             index_name,
+                            procedure_platforms,
+                            software_platforms,
                         )
+                    # DO NOT call construct_yaml here if not compatible!
 
-            # Check MDE tables
+            # MDE
             if "MDE" in indicator_mappings[indicator_type]:
                 for table_name in indicator_mappings[indicator_type]["MDE"]:
-                    # Use platform mappings to check compatibility
                     is_compatible = is_query_applicable(
                         procedure_platforms, software_platforms, table_name
                     )
-
                     if is_compatible:
-                        compatible_found = True
                         print(
                             f"✅ Found compatible platform for {name} on {table_name}"
                         )
@@ -235,7 +239,10 @@ def compile_query(retrieved_data):
                             identifiers,
                             log_sources,
                             table_name,
+                            procedure_platforms,
+                            software_platforms,
                         )
+                    # DO NOT call construct_yaml here if not compatible!
 
         # Print summary for this technique
         if not compatible_found:
@@ -261,6 +268,31 @@ def main():
         procedures = retrieve_procedures(bundle, [technique])
         for procedure in procedures:
             compile_query(procedure)
+
+
+def is_query_applicable(procedure_platforms, software_platforms, index_name):
+    # Get platforms for this index from mapping
+    index_platforms = get_platforms_for_index(index_name)
+
+    # If no mapping, be strict
+    if not index_platforms:
+        return False
+
+    # If procedure is Windows-only, only allow if index is also Windows
+    procedure_is_windows_only = (
+        len(procedure_platforms) == 1 and procedure_platforms[0].lower() == "windows"
+    )
+    index_is_windows = "Windows" in index_platforms
+
+    if procedure_is_windows_only and not index_is_windows:
+        return False
+
+    # Otherwise, require at least one overlap
+    for platform in procedure_platforms:
+        if platform in index_platforms:
+            return True
+
+    return False
 
 
 if __name__ == "__main__":

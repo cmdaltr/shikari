@@ -190,7 +190,16 @@ def update_yaml(yamlfile, tag):
 
 
 def construct_yaml(
-    name, tid, tdesc, tactic, tag, identifiers, log_sources, index_name=None
+    name,
+    tid,
+    tdesc,
+    tactic,
+    tag,
+    identifiers,
+    log_sources,
+    index_name,
+    procedure_platforms,
+    software_platforms,
 ):
     """
     Construct a YAML file for a detection
@@ -206,7 +215,7 @@ def construct_yaml(
         index_name: Optional index name to include in the filename
     """
     appended_mde_queries, appended_splunk_queries = collate_data(
-        identifiers, log_sources
+        identifiers, log_sources, procedure_platforms, software_platforms
     )
 
     all_tactics = additional_tactics(tid, tactic)
@@ -223,10 +232,7 @@ def construct_yaml(
             time.sleep(0.5)"""
         name = name.replace(" ", "").replace("/", "")
         # If index_name is provided, include it in the filename
-        if index_name:
-            filename = f"{name}_{index_name.replace('=', '').replace(' ', '')}.yaml"
-        else:
-            filename = f"{name}.yaml"
+        filename = f"{name}_{index_name.replace('=', '').replace(' ', '')}.yaml"
         yamlfile = os.path.join("data", "queries", filename)
         if not os.path.exists(yamlfile):
             write_yaml(
@@ -248,7 +254,7 @@ def construct_yaml(
             query.split("\n")[0]
             .split(" earliest=")[0]
             .replace("index=", "")
-            .replace("_prod", "")
+            .replace(" ", "")
         )
         query = query.replace(" earliest=-1d\n", " earliest=-1d\n  ")
         yamlfile = os.path.join("data", "queries", f"{name}_{index}.yaml")

@@ -102,47 +102,28 @@ def get_platforms_for_index(index_name):
 
 
 def is_query_applicable(procedure_platforms, software_platforms, index_name):
-    """
-    Determine if a query should be built based on platform compatibility
-
-    Args:
-        procedure_platforms: List of platforms applicable to the procedure
-        software_platforms: Dict of platforms applicable to each software
-        index_name: Name of the Splunk index or MDE table
-
-    Returns:
-        Boolean indicating if query should be built
-    """
-    # If there's no platform information, assume compatibility
-    if not procedure_platforms and not software_platforms:
-        return True
-
-    # Get platforms for this index from our mapping
     index_platforms = get_platforms_for_index(index_name)
+    print(
+        f"Checking index: {index_name}, index_platforms: {index_platforms}, procedure_platforms: {procedure_platforms}"
+    )
 
-    # If we couldn't determine the platform of the index, be permissive
     if not index_platforms:
-        return True
-
-    # Check if there's any overlap between procedure platforms and index platforms
-    for platform in procedure_platforms:
-        if platform in index_platforms:
-            return True
-
-    # Special case: If the index is cloud-only and the procedure is Windows/OS-only
-    cloud_platforms = ["IaaS", "SaaS", "Identity Provider"]
-    os_platforms = ["Windows", "Linux", "macOS"]
-
-    index_is_cloud_only = all(
-        platform in cloud_platforms for platform in index_platforms
-    )
-    procedure_is_os_only = all(
-        platform in os_platforms for platform in procedure_platforms
-    )
-
-    # Block OS-only procedures on cloud-only indices
-    if index_is_cloud_only and procedure_is_os_only:
+        print("No platform mapping found, skipping.")
         return False
 
-    # Default: No match found, be conservative and don't generate the query
+    procedure_is_windows_only = (
+        len(procedure_platforms) == 1 and procedure_platforms[0].lower() == "windows"
+    )
+    index_is_windows = "Windows" in index_platforms
+
+    if procedure_is_windows_only and not index_is_windows:
+        print("Windows-only procedure, but index is not Windows, skipping.")
+        return False
+
+    for platform in procedure_platforms:
+        if platform in index_platforms:
+            print("Platform match found, allowing.")
+            return True
+
+    print("No platform match, skipping.")
     return False

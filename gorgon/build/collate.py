@@ -1,4 +1,5 @@
 from .queries import compile_mde_queries, compile_splunk_queries
+from gorgon.build.queries import is_query_applicable
 
 import json
 import os
@@ -41,7 +42,7 @@ import os
 """
 
 
-def collate_data(identifiers, log_sources):
+def collate_data(identifiers, log_sources, procedure_platforms, software_platforms):
     # Map identified log_sources with the data sources and return the logging table/indexes
     with open(
         os.path.join("gorgon", "mappings", "dataSources.json")
@@ -110,10 +111,15 @@ def collate_data(identifiers, log_sources):
                     index_name = None
                     if query.startswith("index="):
                         index_name = query.split()[0].replace("index=", "")
+                    # Add compatibility check here!
                     if index_name:
-                        splunk_mapping = map_splunk_indices.get(index_name, "")
-                        appended_query = f"{query}\n{splunk_mapping}"
-                        appended_splunk_queries.append(appended_query)
+                        # Assume you have procedure_platforms and software_platforms available
+                        if is_query_applicable(
+                            procedure_platforms, software_platforms, index_name
+                        ):
+                            splunk_mapping = map_splunk_indices.get(index_name, "")
+                            appended_query = f"{query}\n{splunk_mapping}"
+                            appended_splunk_queries.append(appended_query)
                     else:
                         appended_splunk_queries.append(query)
 
@@ -122,4 +128,5 @@ def collate_data(identifiers, log_sources):
 
         else:
             appended_mde_queries, appended_splunk_queries = [], []
-        return appended_mde_queries, appended_splunk_queries
+
+    return appended_mde_queries, appended_splunk_queries
