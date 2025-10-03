@@ -1,3 +1,8 @@
+import os
+import json
+from pathlib import Path
+
+
 def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queries):
     # Mapping and building MDE queries
     for table, fields in indicator_mapping[indicator_type]["MDE"].items():
@@ -56,11 +61,6 @@ def compile_splunk_queries(
 
 
 def load_platform_mappings():
-    """Load platform mappings from platforms.json"""
-    import os
-    import json
-    from pathlib import Path
-
     platforms_file = (
         Path(os.path.dirname(__file__)) / ".." / "mappings" / "platforms.json"
     )
@@ -74,27 +74,17 @@ def load_platform_mappings():
         return {}
 
 
-# Load platform mappings once when the module is imported
 PLATFORM_MAPPINGS = load_platform_mappings()
 
 
 def get_platforms_for_index(index_name):
-    """
-    Get platforms associated with a given index/table name
-
-    Args:
-        index_name: The index or table name (possibly with "index=" prefix)
-
-    Returns:
-        List of platforms that include this index
-    """
-    # Remove "index=" prefix if present
+    # Get platforms associated with a given index/table name and returns list of platforms that include this index
     clean_index_name = index_name.replace("index=", "")
 
     # Find all platforms that include this index
     matching_platforms = []
     for platform, sources in PLATFORM_MAPPINGS.items():
-        for source_type, indices in sources.items():
+        for _, indices in sources.items():
             if clean_index_name in indices:
                 matching_platforms.append(platform)
 
@@ -108,7 +98,6 @@ def is_query_applicable(procedure_platforms, software_platforms, index_name):
     )
 
     if not index_platforms:
-        print("No platform mapping found, skipping.")
         return False
 
     procedure_is_windows_only = (
@@ -117,13 +106,10 @@ def is_query_applicable(procedure_platforms, software_platforms, index_name):
     index_is_windows = "Windows" in index_platforms
 
     if procedure_is_windows_only and not index_is_windows:
-        print("Windows-only procedure, but index is not Windows, skipping.")
         return False
 
     for platform in procedure_platforms:
         if platform in index_platforms:
-            print("Platform match found, allowing.")
             return True
 
-    print("No platform match, skipping.")
     return False

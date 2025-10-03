@@ -124,7 +124,7 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                         appended_splunk_queries.append(query)
 
             else:
-                print(f"Indicator type '{indicator_type}' not found in mapping.")
+                pass
 
         else:
             appended_mde_queries, appended_splunk_queries = [], []
