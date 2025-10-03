@@ -64,13 +64,13 @@ def collate_data(identifiers, log_sources):
         alignment_results.append({"detection_step": step, "matches": matched_sources})
 
     # For each indicator type (cmd, evt, reg, sw) in operator_guidance, fetch mapping
-    with open(os.path.join("gorgon", "mappings", "mapSplunkIndecies.json")) as f:
+    with open(os.path.join("gorgon", "mappings", "schemaSplunk.json")) as f:
         map_splunk_indices = json.load(f)
 
     with open(os.path.join("gorgon", "mappings", "indicatorMapping.json"), "r") as f:
         indicator_mapping = json.load(f)
 
-    with open(os.path.join("gorgon", "mappings", "mapDefenderTables.json")) as f:
+    with open(os.path.join("gorgon", "mappings", "schemaMDE.json")) as f:
         map_defender_tables = json.load(f)
 
     for step in alignment_results:

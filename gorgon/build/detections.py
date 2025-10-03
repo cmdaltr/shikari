@@ -22,8 +22,8 @@ def load_indicator_mappings():
     )  # gorgon/mappings
 
     # Check for user-specific mappings first (not committed to GitHub)
-    user_mapping_file = mappings_dir / "default_mappings.json"
-    sample_mapping_file = mappings_dir / "default_mappings_sample.json"
+    user_mapping_file = mappings_dir / "indicatorMappings.json"
+    sample_mapping_file = mappings_dir / "indicatorMappings_sample.json"
 
     # Check if directory exists
     if not mappings_dir.exists():
@@ -85,10 +85,10 @@ def load_indicator_mappings():
     return mappings
 
 
-def create_default_mappings():
+def create_indicatorMappings():
     """Create default mappings if none are found"""
     print("Creating default mappings")
-    default_mappings = {
+    indicatorMappings = {
         "cmd": {
             "Splunk": {
                 "index=windows_events": [
@@ -144,7 +144,7 @@ def create_default_mappings():
             },
         },
     }
-    return default_mappings
+    return indicatorMappings
 
 
 def compile_query(retrieved_data):
@@ -178,8 +178,7 @@ def compile_query(retrieved_data):
 
     # Only construct YAML if there are identifiers for detection
     if identifiers:
-        # Track if we found any compatible platform
-        compatible_platform_found = False
+        compatible_found = False
 
         # Check each indicator type
         for indicator_type in identifiers:
@@ -193,40 +192,37 @@ def compile_query(retrieved_data):
             # Check Splunk indices
             if "Splunk" in indicator_mappings[indicator_type]:
                 for index_name in indicator_mappings[indicator_type]["Splunk"]:
-                    # Check platform compatibility
+                    # Use platform mappings to check compatibility
                     is_compatible = is_query_applicable(
                         procedure_platforms, software_platforms, index_name
                     )
 
                     if is_compatible:
-                        compatible_platform_found = True
-                        # Only if compatible, construct the YAML
+                        compatible_found = True
                         print(
                             f"✅ Found compatible platform for {name} on {index_name}"
                         )
-                        identifiers_with_index = identifiers.copy()
-                        identifiers_with_index["_index_name"] = index_name
                         construct_yaml(
                             name,
                             tid,
                             tdesc,
                             tactic,
                             tag,
-                            identifiers_with_index,
+                            identifiers,
                             log_sources,
+                            index_name,
                         )
 
             # Check MDE tables
             if "MDE" in indicator_mappings[indicator_type]:
                 for table_name in indicator_mappings[indicator_type]["MDE"]:
-                    # Check platform compatibility
+                    # Use platform mappings to check compatibility
                     is_compatible = is_query_applicable(
                         procedure_platforms, software_platforms, table_name
                     )
 
                     if is_compatible:
-                        compatible_platform_found = True
-                        # Only if compatible, construct the YAML
+                        compatible_found = True
                         print(
                             f"✅ Found compatible platform for {name} on {table_name}"
                         )
@@ -241,9 +237,8 @@ def compile_query(retrieved_data):
                             table_name,
                         )
 
-        if compatible_platform_found:
-            print(f"✅ Found compatible platform for {name} - generating YAML")
-        else:
+        # Print summary for this technique
+        if not compatible_found:
             print(
                 f"❌ No compatible platforms found for {name} - skipping YAML generation"
             )

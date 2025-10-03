@@ -55,6 +55,52 @@ def compile_splunk_queries(
     return splunk_queries
 
 
+def load_platform_mappings():
+    """Load platform mappings from platforms.json"""
+    import os
+    import json
+    from pathlib import Path
+
+    platforms_file = (
+        Path(os.path.dirname(__file__)) / ".." / "mappings" / "platforms.json"
+    )
+    if not platforms_file.exists():
+        return {}
+
+    try:
+        with open(platforms_file, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+# Load platform mappings once when the module is imported
+PLATFORM_MAPPINGS = load_platform_mappings()
+
+
+def get_platforms_for_index(index_name):
+    """
+    Get platforms associated with a given index/table name
+
+    Args:
+        index_name: The index or table name (possibly with "index=" prefix)
+
+    Returns:
+        List of platforms that include this index
+    """
+    # Remove "index=" prefix if present
+    clean_index_name = index_name.replace("index=", "")
+
+    # Find all platforms that include this index
+    matching_platforms = []
+    for platform, sources in PLATFORM_MAPPINGS.items():
+        for source_type, indices in sources.items():
+            if clean_index_name in indices:
+                matching_platforms.append(platform)
+
+    return matching_platforms
+
+
 def is_query_applicable(procedure_platforms, software_platforms, index_name):
     """
     Determine if a query should be built based on platform compatibility
@@ -71,86 +117,32 @@ def is_query_applicable(procedure_platforms, software_platforms, index_name):
     if not procedure_platforms and not software_platforms:
         return True
 
-    index_name_lower = index_name.lower()
+    # Get platforms for this index from our mapping
+    index_platforms = get_platforms_for_index(index_name)
 
-    # Define platform categories based on common terms
-    windows_terms = ["windows", "microsoft", "defender"]
-    unix_terms = ["unix", "linux", "macos", "mac"]
-    cloud_terms = ["aws", "azure", "gcp", "cloud", "office365", "saas", "iaas"]
-    network_terms = ["network", "cisco", "firewall", "proxy"]
+    # If we couldn't determine the platform of the index, be permissive
+    if not index_platforms:
+        return True
 
-    # Categorize the index
-    is_windows_index = any(term in index_name_lower for term in windows_terms)
-    is_unix_index = any(term in index_name_lower for term in unix_terms)
-    is_cloud_index = any(term in index_name_lower for term in cloud_terms)
-    is_network_index = any(term in index_name_lower for term in network_terms)
+    # Check if there's any overlap between procedure platforms and index platforms
+    for platform in procedure_platforms:
+        if platform in index_platforms:
+            return True
 
-    # Categorize the procedure platforms
-    procedure_platforms_lower = [p.lower() for p in procedure_platforms]
-    has_windows = any("windows" in p for p in procedure_platforms_lower)
-    has_unix = any(
-        unix in p
-        for p in procedure_platforms_lower
-        for unix in ["linux", "macos", "mac os"]
+    # Special case: If the index is cloud-only and the procedure is Windows/OS-only
+    cloud_platforms = ["IaaS", "SaaS", "Identity Provider"]
+    os_platforms = ["Windows", "Linux", "macOS"]
+
+    index_is_cloud_only = all(
+        platform in cloud_platforms for platform in index_platforms
     )
-    has_cloud = any(
-        cloud in p
-        for p in procedure_platforms_lower
-        for cloud in ["saas", "iaas", "aws", "azure", "gcp", "cloud", "office 365"]
+    procedure_is_os_only = all(
+        platform in os_platforms for platform in procedure_platforms
     )
-    has_network = any("network" in p for p in procedure_platforms_lower)
 
-    # Windows-only test (all platforms are Windows)
-    is_windows_only = has_windows and not has_unix and not has_cloud and not has_network
+    # Block OS-only procedures on cloud-only indices
+    if index_is_cloud_only and procedure_is_os_only:
+        return False
 
-    # CRITICAL FIX: Windows-only procedures should not run on non-Windows indices
-    if is_windows_only:
-        if is_unix_index:
-            return False
-        if (
-            is_cloud_index and not is_windows_index
-        ):  # Allow if it's both Windows and Cloud
-            return False
-
-    # Basic compatibility rules:
-
-    # Rule 1: If platform includes this index type, it's compatible
-    if is_windows_index and has_windows:
-        return True
-
-    if is_unix_index and has_unix:
-        return True
-
-    if is_cloud_index and has_cloud:
-        return True
-
-    if is_network_index and has_network:
-        return True
-
-    # Rule 2: Cloud procedures can run on any platform
-    if has_cloud:
-        return True
-
-    # Rule 3: If index has no clear platform identifier, be permissive
-    if (
-        not is_windows_index
-        and not is_unix_index
-        and not is_cloud_index
-        and not is_network_index
-    ):
-        return True
-
-    # Rule 4: If procedure runs on multiple OS types, be permissive unless it's clearly incompatible
-    if (
-        (has_windows and has_unix)
-        or (has_windows and has_network)
-        or (has_unix and has_network)
-    ):
-        # Still enforce Windows-only techniques on Windows-only indices
-        if "ntds" in index_name_lower or "volume shadow" in index_name_lower:
-            if not is_windows_index:
-                return False
-        return True
-
-    # Default case: If we've made it here, we likely have a mismatch
+    # Default: No match found, be conservative and don't generate the query
     return False

@@ -5,6 +5,8 @@ __pycache__/*
 */__pycache__/*
 */*/__pycache__/*
 */*/*/__pycache__/*
-
-gorgon/mappings/defaultMapping.json
+gorgon/mappings/dataSources.json
+gorgon/mappings/indicatorMapping.json
+gorgon/mappings/mapSplunkIndicies.json
 gorgon/mappings/members.json
+gorgon/mappings/platforms.json
