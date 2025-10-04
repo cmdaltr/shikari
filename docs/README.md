@@ -22,7 +22,7 @@ Comprehensive documentation for the Archer threat hunting application.
 - Configuration and environment variables
 - Quick reference tables
 
-### CORRELATION_BUILDER.md
+### CORRELATIONS.md
 **The complete guide to the correlation query builder system**
 
 - Overview and features
@@ -34,7 +34,7 @@ Comprehensive documentation for the Archer threat hunting application.
 - Advanced usage and customization
 - Module reference and API
 
-### LOCAL_LLAMA.md
+### MODELS.md
 **Setup guide for running local AI models with llama.cpp**
 
 - Prerequisites and installation (macOS M1/M2)
@@ -43,7 +43,7 @@ Comprehensive documentation for the Archer threat hunting application.
 - Running the smoke test
 - Troubleshooting tips
 
-### semantic-overlap.md
+### SEMANTICS.md
 **Technical explanation of the semantic overlap algorithm**
 
 - How overlap percentage is calculated
