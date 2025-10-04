@@ -2,15 +2,19 @@ version: "3.8"
 
 services:
   archer:
-    build: .
+    build:
+      context: .
+      dockerfile: gorgon/Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ./archer:/app/archer
+      - ./gorgon:/app/gorgon
       - ./templates:/app/templates
       - ./static:/app/static
+      - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+    restart: unless-stopped
 
   n8n:
     image: n8nio/n8n
@@ -22,6 +26,7 @@ services:
       N8N_BASIC_AUTH_PASSWORD: supersecret
     volumes:
       - n8n_data:/home/node/.n8n
+    restart: unless-stopped
 
 volumes:
   n8n_data:

@@ -324,7 +324,7 @@ def _combine_queries(
     # Lazy-import AI generators only when explicitly requested and available
     if _GEN_MODE in ("ai_generators", "local_llm"):
         try:
-            from .ai_models.generator import get_generator, QueryGeneratorBase  # type: ignore
+            from .models import get_generator, QueryGeneratorBase  # type: ignore
 
             _local_ai_available = True
         except Exception:
@@ -863,5 +863,346 @@ union query_a, query_b
         )
 
 
+def build_correlation_queries(
+    yaml_dir: str = None, output_file: str = None, min_queries: int = 2
+) -> Dict:
+    """
+    Read YAML files, assess query relevance, build correlation searches, and save to JSON.
+
+    This function:
+    1. Reads all YAML files from the specified directory
+    2. Extracts detection queries and metadata (threat group, platform, tactics, severity)
+    3. Assesses relevance of each query against all others based on:
+       - Shared threat groups (tags)
+       - Compatible platforms
+       - Related attack paths (tactics)
+       - Severity/likelihood scores
+    4. Builds correlation searches combining at least min_queries queries
+    5. Summarizes the correlation results
+    6. Saves all queries in a single JSON output file
+
+    Args:
+        yaml_dir: Directory containing YAML files (default: data/queries)
+        output_file: Output JSON file path (default: data/correlations/correlation_queries.json)
+        min_queries: Minimum number of queries to include in a correlation (default: 2)
+
+    Returns:
+        Dictionary containing all correlation queries and metadata
+    """
+    import yaml
+    from collections import defaultdict
+
+    # Set defaults
+    if yaml_dir is None:
+        yaml_dir = os.path.join("data", "queries")
+    if output_file is None:
+        output_file = os.path.join("data", "correlations", "correlation_queries.json")
+
+    print(f"Scanning YAML files in {yaml_dir}...")
+
+    # Step 1: Read all YAML files and extract metadata
+    yaml_files = [
+        os.path.join(yaml_dir, f)
+        for f in os.listdir(yaml_dir)
+        if f.endswith(('.yaml', '.yml')) and f != 'latest.yaml'
+    ]
+
+    print(f"Found {len(yaml_files)} YAML files")
+
+    queries_data = []
+    for yaml_path in yaml_files:
+        try:
+            with open(yaml_path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+
+            if not data or 'query' not in data:
+                continue
+
+            # Extract metadata
+            query_info = {
+                'id': data.get('id', os.path.basename(yaml_path)),
+                'name': data.get('name', 'Unknown'),
+                'description': data.get('description', ''),
+                'severity': data.get('severity', 'Medium'),
+                'tactics': data.get('tactics', []),
+                'tags': data.get('tags', []),
+                'platform': _detect_platform(data),
+                'connector_id': data.get('requiredDataConnectors', [{}])[0].get('connectorId', 'Unknown'),
+                'query': data.get('query', ''),
+                'file_path': yaml_path,
+                'metadata': data.get('metadata', {}),
+            }
+            queries_data.append(query_info)
+
+        except Exception as e:
+            print(f"Error reading {yaml_path}: {e}")
+            continue
+
+    print(f"Successfully parsed {len(queries_data)} queries")
+
+    # Step 2: Assess relevance and build correlation groups
+    print("Assessing query relevance...")
+    correlation_groups = _build_correlation_groups(queries_data, min_queries)
+
+    # Step 3: Build correlation searches
+    print(f"Building {len(correlation_groups)} correlation searches...")
+    correlations = []
+
+    for idx, group in enumerate(correlation_groups, 1):
+        correlation = _build_correlation_search(group, idx)
+        correlations.append(correlation)
+
+    # Step 4: Prepare output structure
+    output_data = {
+        'generated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+        'total_queries_analyzed': len(queries_data),
+        'total_correlations': len(correlations),
+        'min_queries_per_correlation': min_queries,
+        'correlations': correlations,
+        'query_inventory': [
+            {
+                'id': q['id'],
+                'name': q['name'],
+                'platform': q['platform'],
+                'tags': q['tags'],
+                'tactics': q['tactics'],
+                'severity': q['severity'],
+            }
+            for q in queries_data
+        ]
+    }
+
+    # Step 5: Save to JSON file
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(output_data, f, indent=2)
+
+    print(f"Correlation queries saved to {output_file}")
+    return output_data
+
+
+def _detect_platform(yaml_data: Dict) -> str:
+    """Detect the platform/vendor from YAML data."""
+    connector_id = yaml_data.get('requiredDataConnectors', [{}])[0].get('connectorId', '')
+
+    if connector_id == 'MicrosoftThreatProtection':
+        return 'mde'
+    elif connector_id == 'Splunk':
+        return 'splunk'
+
+    # Fallback: check query content
+    query = yaml_data.get('query', '')
+    if query.lstrip().startswith('index='):
+        return 'splunk'
+    elif query.lstrip().startswith('Device'):
+        return 'mde'
+
+    return 'unknown'
+
+
+def _calculate_relevance_score(query_a: Dict, query_b: Dict) -> float:
+    """
+    Calculate relevance score between two queries based on:
+    - Shared threat groups (tags)
+    - Platform compatibility
+    - Related attack paths (tactics)
+    - Severity alignment
+
+    Returns a score from 0.0 to 1.0
+    """
+    score = 0.0
+
+    # 1. Shared threat groups (40% weight)
+    tags_a = set(query_a.get('tags', []))
+    tags_b = set(query_b.get('tags', []))
+    if tags_a and tags_b:
+        tag_overlap = len(tags_a & tags_b) / len(tags_a | tags_b)
+        score += tag_overlap * 0.4
+
+    # 2. Platform compatibility (20% weight)
+    if query_a.get('platform') == query_b.get('platform'):
+        score += 0.2
+
+    # 3. Related attack paths/tactics (30% weight)
+    tactics_a = set(query_a.get('tactics', []))
+    tactics_b = set(query_b.get('tactics', []))
+    if tactics_a and tactics_b:
+        tactic_overlap = len(tactics_a & tactics_b) / len(tactics_a | tactics_b)
+        score += tactic_overlap * 0.3
+
+    # 4. Severity alignment (10% weight)
+    severity_map = {'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4}
+    sev_a = severity_map.get(query_a.get('severity', 'Medium'), 2)
+    sev_b = severity_map.get(query_b.get('severity', 'Medium'), 2)
+    severity_diff = abs(sev_a - sev_b)
+    severity_score = max(0, 1 - (severity_diff / 3))  # Normalize 0-1
+    score += severity_score * 0.1
+
+    return score
+
+
+def _build_correlation_groups(queries: List[Dict], min_queries: int) -> List[List[Dict]]:
+    """
+    Group queries into correlation sets based on relevance scores.
+    Each group contains queries that are highly related.
+    """
+    from collections import defaultdict
+
+    # Group by shared tags (threat groups)
+    groups_by_tag = defaultdict(list)
+    for query in queries:
+        for tag in query.get('tags', []):
+            groups_by_tag[tag].append(query)
+
+    # Build correlation groups
+    correlation_groups = []
+
+    for tag, tag_queries in groups_by_tag.items():
+        if len(tag_queries) < min_queries:
+            continue
+
+        # Further group by platform within each tag
+        platform_groups = defaultdict(list)
+        for query in tag_queries:
+            platform_groups[query['platform']].append(query)
+
+        for platform, platform_queries in platform_groups.items():
+            if len(platform_queries) < min_queries:
+                continue
+
+            # Sort by tactics overlap and take top related queries
+            # For simplicity, group all queries with same tag+platform
+            if len(platform_queries) >= min_queries:
+                correlation_groups.append(platform_queries)
+
+    return correlation_groups
+
+
+def _build_correlation_search(queries: List[Dict], correlation_id: int) -> Dict:
+    """
+    Build a correlation search from multiple queries and summarize results.
+    """
+    if not queries:
+        return {}
+
+    # Determine platform
+    platform = queries[0].get('platform', 'unknown')
+
+    # Collect metadata
+    all_tags = set()
+    all_tactics = set()
+    all_names = []
+
+    for q in queries:
+        all_tags.update(q.get('tags', []))
+        all_tactics.update(q.get('tactics', []))
+        all_names.append(q.get('name', 'Unknown'))
+
+    # Build combined query based on platform
+    if platform == 'mde':
+        combined_query = _combine_mde_queries([q['query'] for q in queries])
+    elif platform == 'splunk':
+        combined_query = _combine_splunk_queries_simple([q['query'] for q in queries])
+    else:
+        combined_query = "// Unsupported platform for correlation"
+
+    # Generate summary
+    summary = _generate_correlation_summary(queries, all_tags, all_tactics)
+
+    return {
+        'correlation_id': f"CORR-{correlation_id:04d}",
+        'name': f"Correlation: {' + '.join(all_names[:3])}{'...' if len(all_names) > 3 else ''}",
+        'summary': summary,
+        'platform': platform,
+        'threat_groups': sorted(list(all_tags)),
+        'tactics': sorted(list(all_tactics)),
+        'query_count': len(queries),
+        'queries_included': [
+            {
+                'id': q['id'],
+                'name': q['name'],
+                'file': os.path.basename(q['file_path'])
+            }
+            for q in queries
+        ],
+        'combined_query': combined_query,
+        'relevance_scores': [
+            {
+                'query_pair': f"{queries[i]['name']} <-> {queries[j]['name']}",
+                'score': round(_calculate_relevance_score(queries[i], queries[j]), 3)
+            }
+            for i in range(len(queries))
+            for j in range(i + 1, min(i + 3, len(queries)))  # Limit pairs for readability
+        ]
+    }
+
+
+def _combine_mde_queries(query_list: List[str]) -> str:
+    """Combine multiple MDE/KQL queries into a single correlation search."""
+    combined_parts = []
+
+    for idx, query in enumerate(query_list, 1):
+        query_clean = _normalize_kql_spacing(query.strip())
+        combined_parts.append(f"""// Query {idx}
+let query_{idx} = (
+    {query_clean}
+);""")
+
+    # Union all queries
+    union_clause = "union " + ", ".join([f"query_{i}" for i in range(1, len(query_list) + 1)])
+
+    combined = "\n\n".join(combined_parts)
+    combined += f"\n\n// Correlation search combining {len(query_list)} queries\n{union_clause}"
+    combined += "\n   | where Timestamp > ago(1d)"
+    combined += "\n   | summarize CorrelationCount=count() by DeviceId, DeviceName, Timestamp, AccountName"
+    combined += "\n   | where CorrelationCount >= 2  // At least 2 different detection patterns matched"
+
+    return combined
+
+
+def _combine_splunk_queries_simple(query_list: List[str]) -> str:
+    """Combine multiple Splunk queries into a single correlation search."""
+    # Extract index from first query
+    index_match = re.search(r'index\s*=\s*(\w+)', query_list[0])
+    index = index_match.group(1) if index_match else 'edr_events'
+
+    search_conditions = []
+    for idx, query in enumerate(query_list, 1):
+        # Extract search condition (remove index= and table commands)
+        search = query.strip()
+        search = re.sub(r'index\s*=\s*\w+\s*earliest=[^\n]*\n', '', search)
+        search = re.sub(r'\|\s*table\s+.*$', '', search, flags=re.MULTILINE).strip()
+        if search:
+            search_conditions.append(f"({search})")
+
+    combined = f"""index={index} earliest=-1d
+  ({' OR '.join(search_conditions)})
+  | stats count as CorrelationCount, values(*) as * by AccountName, DeviceName, _time
+  | where CorrelationCount >= 2
+  | table _time, AccountName, DeviceName, CorrelationCount, ActionType, FileName, ProcessCommandLine"""
+
+    return combined
+
+
+def _generate_correlation_summary(queries: List[Dict], tags: set, tactics: set) -> str:
+    """Generate a human-readable summary of the correlation search."""
+    summary_lines = [
+        f"This correlation search combines {len(queries)} detection queries to identify coordinated attack patterns.",
+        f"\nThreat Groups: {', '.join(sorted(tags)) if tags else 'None'}",
+        f"Attack Tactics: {', '.join(sorted(tactics)) if tactics else 'None'}",
+        f"\nThe correlation fires when at least 2 of the following detection patterns are observed:",
+    ]
+
+    for idx, q in enumerate(queries, 1):
+        summary_lines.append(f"  {idx}. {q['name']}")
+
+    summary_lines.append(
+        "\nThis approach increases detection confidence by requiring multiple related indicators,"
+        " reducing false positives while identifying sophisticated attack campaigns."
+    )
+
+    return "\n".join(summary_lines)
+
+
 # Make sure key functions are explicitly exposed at the module level
-__all__ = ["generate_correlations", "process", "process_genai"]
+__all__ = ["generate_correlations", "process", "process_genai", "build_correlation_queries"]

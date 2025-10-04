@@ -70,27 +70,54 @@ The service will be available at `http://localhost:8000`.
 ---
 <br>
 
-### Option C: Use as a Console Script
+### Option C: Use as a Console Script (CLI)
 
-Archer can also be used as a standalone console script for quick queries without running the full service.
+Archer includes a powerful CLI for running core functionality without the web interface.
 
-1. Install Archer as a package (if published) or install locally:
-
-```bash
-pip install .
-```
-
-2. Run the console script:
+1. View available commands:
 
 ```bash
-archer --help
+python3 cli.py --help
 ```
 
-3. Example usage:
+2. Example usage:
 
 ```bash
-archer hunt --technique T1059 --output yaml
+# Generate detections for a threat group
+python3 cli.py process-group "Scattered Spider"
+
+# Build correlation queries from YAML files
+python3 cli.py build-correlations --verbose
+
+# List all MITRE ATT&CK techniques
+python3 cli.py list-techniques
+
+# Generate detection for a specific technique
+python3 cli.py detect "PowerShell"
+
+# Run GenAI correlation processing
+python3 cli.py genai "APT29"
 ```
+
+**New: Correlation Query Builder**
+
+The CLI now includes an intelligent correlation builder that:
+- Analyzes YAML detection files
+- Assesses query relevance based on threat groups, platforms, attack paths, and severity
+- Builds correlation searches combining related queries
+- Generates both MDE (KQL) and Splunk correlation queries
+- Exports results to structured JSON
+
+```bash
+# Build correlations with custom settings
+python3 cli.py build-correlations \
+  --yaml-dir ./detections \
+  --output ./correlations.json \
+  --min-queries 3 \
+  --verbose
+```
+
+See [docs/CORRELATION_BUILDER.md](docs/CORRELATION_BUILDER.md) for detailed documentation.
 
 ---
 <br>

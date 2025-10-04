@@ -116,6 +116,60 @@ def generate_detection(technique_name):
     print("Detection generation complete.")
 
 
+def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=False):
+    """Build correlation queries from YAML detection files"""
+    from gorgon.genai import build_correlation_queries
+
+    print("=" * 70)
+    print("Correlation Query Builder")
+    print("=" * 70)
+    print()
+
+    try:
+        result = build_correlation_queries(
+            yaml_dir=yaml_dir,
+            output_file=output_file,
+            min_queries=min_queries
+        )
+
+        print()
+        print("=" * 70)
+        print("SUMMARY")
+        print("=" * 70)
+        print(f"Total queries analyzed: {result['total_queries_analyzed']}")
+        print(f"Correlations built: {result['total_correlations']}")
+        print(f"Minimum queries per correlation: {result['min_queries_per_correlation']}")
+        print()
+
+        if verbose and result['total_correlations'] > 0:
+            print("Correlation Details:")
+            print("-" * 70)
+            for corr in result['correlations']:
+                print(f"\n{corr['correlation_id']}: {corr['name']}")
+                print(f"  Platform: {corr['platform']}")
+                print(f"  Threat Groups: {', '.join(corr['threat_groups'])}")
+                print(f"  Tactics: {', '.join(corr['tactics'][:5])}{'...' if len(corr['tactics']) > 5 else ''}")
+                print(f"  Queries: {corr['query_count']}")
+
+        print()
+        print(f"✓ Output saved to: {output_file or 'data/correlations/correlation_queries.json'}")
+        print()
+
+        return result
+
+    except FileNotFoundError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        print("\nPlease ensure the YAML directory exists and contains detection files.", file=sys.stderr)
+        return None
+
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        if verbose:
+            import traceback
+            traceback.print_exc()
+        return None
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Archer CLI - Run core functionality without web interface"
@@ -129,6 +183,30 @@ def main():
     genai_parser.add_argument("group_name", help="Name of the group to process")
     genai_parser.add_argument(
         "--yaml-dir", help="Directory containing YAML files (default: data/queries)"
+    )
+
+    # Build correlations
+    corr_parser = subparsers.add_parser(
+        "build-correlations", help="Build correlation queries from YAML detection files"
+    )
+    corr_parser.add_argument(
+        "--yaml-dir",
+        help="Directory containing YAML files (default: data/queries)"
+    )
+    corr_parser.add_argument(
+        "--output",
+        help="Output JSON file path (default: data/correlations/correlation_queries.json)"
+    )
+    corr_parser.add_argument(
+        "--min-queries",
+        type=int,
+        default=2,
+        help="Minimum number of queries to include in a correlation (default: 2)"
+    )
+    corr_parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose output"
     )
 
     # Process group
@@ -155,6 +233,13 @@ def main():
 
     if args.command == "genai":
         run_genai(args.group_name, args.yaml_dir)
+    elif args.command == "build-correlations":
+        build_correlations(
+            yaml_dir=args.yaml_dir,
+            output_file=args.output,
+            min_queries=args.min_queries,
+            verbose=args.verbose
+        )
     elif args.command == "process-group":
         process_group(args.group_name, args.hypothesis)
     elif args.command == "list-techniques":

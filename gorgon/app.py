@@ -22,6 +22,7 @@ from gorgon.mitre import (
 )
 from gorgon.mitre.enterprise import check_group_in_mitre
 from gorgon.build.orchestrator import process_group
+from gorgon.genai import process_genai
 from datetime import datetime
 import os
 import json
@@ -620,33 +621,14 @@ def modified_process_group_wrapper(group_name, hypothesis, manual_data=None):
         progress_data["status"] = "genai_starting"
         write_progress(group_name, progress_data)
 
-        # Direct import of genai module and explicitly invoke correlation processing
+        # Run GenAI correlation processing
         try:
-            # Try the standard import first
-            from gorgon import genai
-
             print(f"Starting GenAI correlation for {group_name}")
-            genai.process_genai(group_name)
-        except ImportError:
-            # Fallback to dynamic import if needed
-            print("Standard import failed, trying dynamic import")
-            import importlib.util
-
-            spec = importlib.util.find_spec("gorgon.genai")
-            if spec:
-                genai_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(genai_module)
-                if hasattr(genai_module, "process_genai"):
-                    print(
-                        f"Dynamic import succeeded, running process_genai for {group_name}"
-                    )
-                    genai_module.process_genai(group_name)
-                else:
-                    print(
-                        "No process_genai function found in dynamically loaded module"
-                    )
-            else:
-                print("Could not find gorgon.genai module")
+            process_genai(group_name)
+        except Exception as e:
+            print(f"GenAI correlation failed: {e}")
+            import traceback
+            traceback.print_exc()
 
     except Exception as e:
         print(f"Error in process group or GenAI processing: {e}")
@@ -687,15 +669,12 @@ async def complete_yaml(request: Request, group_name: str = ""):
 
         # Start GenAI processing in a background thread
         try:
-            # Import genai module directly
-            from gorgon import genai
-
             def _bg_genai():
                 try:
                     print(
                         f"Starting GenAI correlation for {group_name} in background thread"
                     )
-                    genai.process_genai(group_name)
+                    process_genai(group_name)
                     print(f"GenAI correlation for {group_name} completed")
                 except Exception as e:
                     print(f"Error in GenAI processing: {e}")

@@ -1,8 +1,49 @@
+# macOS
 .DS_Store
-.temp/*
-.venv/*
-__pycache__/*
-*/__pycache__/*
-*/*/__pycache__/*
-*/*/*/__pycache__/*
+.AppleDouble
+.LSOverride
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/
+
+# Project specific
+.temp/
+data/ai_cache/
+data/drafts/
+data/progress/
 gorgon/mappings/*.json
+*.log
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
