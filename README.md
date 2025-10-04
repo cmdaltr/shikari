@@ -83,20 +83,14 @@ python3 archer.py --help
 2. Example usage:
 
 ```bash
-# Generate detections for a threat group
-python3 archer.py process-group "Scattered Spider"
+# Step 1: Generate detections for a threat group
+python3 archer.py generate "Scattered Spider"
 
-# Build correlation queries from YAML files
-python3 archer.py build-correlations --verbose
+# Step 2: Correlate the generated detections
+python3 archer.py correlate --verbose
 
-# List all MITRE ATT&CK techniques
-python3 archer.py list-techniques
-
-# Generate detection for a specific technique
-python3 archer.py detect "PowerShell"
-
-# Run GenAI correlation processing
-python3 archer.py genai "APT29"
+# Alternative: Hunt for a specific technique
+python3 archer.py hunt "PowerShell"
 ```
 
 **New: Correlation Query Builder**
@@ -109,8 +103,8 @@ The CLI now includes an intelligent correlation builder that:
 - Exports results to structured JSON
 
 ```bash
-# Build correlations with custom settings
-python3 archer.py build-correlations \
+# Correlate with custom settings
+python3 archer.py correlate \
   --yaml-dir ./detections \
   --output ./correlations.json \
   --min-queries 3 \

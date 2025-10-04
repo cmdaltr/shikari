@@ -99,14 +99,14 @@ uvicorn archer.app:app --reload
 # Web application (production mode)
 uvicorn archer.app:app --host 0.0.0.0 --port 8000
 
-# CLI - Build correlations
-python3 archer.py build-correlations
-
 # CLI - Generate detections for threat group
-python3 archer.py process-group "APT29"
+python3 archer.py generate "APT29"
 
-# CLI - List MITRE techniques
-python3 archer.py list-techniques
+# CLI - Correlate detections
+python3 archer.py correlate
+
+# CLI - Hunt for specific technique
+python3 archer.py hunt "PowerShell"
 ```
 
 ### Docker
@@ -341,7 +341,8 @@ Edit `docker-compose.yml` for container settings:
 | Activate venv | `source .venv/bin/activate` |
 | Install deps | `pip install -r requirements.txt` |
 | Start web app | `uvicorn archer.app:app --reload` |
-| Build correlations | `python3 archer.py build-correlations` |
+| Generate detections | `python3 archer.py generate "APT29"` |
+| Correlate detections | `python3 archer.py correlate` |
 | Run tests | `pytest` |
 | Docker start | `docker-compose up` |
 
@@ -393,9 +394,10 @@ Once Archer is running:
    python3 archer.py --help
    ```
 
-2. **Build your first correlation**
+2. **Generate and correlate detections**
    ```bash
-   python3 archer.py build-correlations --verbose
+   python3 archer.py generate "APT29"
+   python3 archer.py correlate --verbose
    ```
 
 3. **Access the web interface**
@@ -406,9 +408,9 @@ Once Archer is running:
    - [CORRELATIONS.md](CORRELATIONS.md) - Detailed usage
    - [MODELS.md](MODELS.md) - AI features
 
-5. **Generate detections**
+5. **Hunt for specific techniques**
    ```bash
-   python3 archer.py process-group "APT29"
+   python3 archer.py hunt "PowerShell"
    ```
 
 ---

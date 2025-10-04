@@ -13,25 +13,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 
-def run_genai(group_name, yaml_dir=None):
-    """Run the GenAI correlation processing for a specific group"""
-    from archer import genai
-
-    if yaml_dir is None:
-        yaml_dir = os.path.join("data", "queries")
-
-    print(f"Starting GenAI processing for group: {group_name}")
-    print(f"YAML directory: {yaml_dir}")
-
-    result = genai.generate_correlations(group_name, yaml_dir)
-    print(
-        f"Processing complete. Generated {len(result.get('vendor_correlations', []))} vendor correlations "
-        f"and {len(result.get('cross_vendor_correlations', []))} cross-vendor correlations."
-    )
-
-    return result
-
-
 def process_group(group_name, hypothesis=None, manual_data=None):
     """Run the process_group function to generate YAML files"""
     from archer.build.orchestrator import process_group
@@ -44,24 +25,6 @@ def process_group(group_name, hypothesis=None, manual_data=None):
 
     process_group(group_name, hypothesis, manual_data)
     print(f"YAML generation complete for {group_name}")
-
-
-def list_techniques():
-    """List all available techniques from MITRE ATT&CK"""
-    from archer.mitre import get_stix_data, obtain_all_techniques
-
-    print("Fetching MITRE ATT&CK data...")
-    bundle = get_stix_data(
-        "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
-    )
-
-    techniques = obtain_all_techniques(bundle)
-    print(f"Found {len(techniques)} techniques:")
-
-    for i, technique in enumerate(techniques, 1):
-        print(f"{i}. {technique}")
-
-    return techniques
 
 
 def generate_detection(technique_name):
@@ -172,79 +135,65 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=F
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Archer CLI - Run core functionality without web interface"
+        description="Archer CLI - Threat hunting detection generator",
+        epilog="Typical workflow: generate → correlate"
     )
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 
-    # GenAI correlation processing
-    genai_parser = subparsers.add_parser(
-        "genai", help="Run GenAI correlation processing"
+    # Step 1: Generate detections for a threat group
+    generate_parser = subparsers.add_parser(
+        "generate",
+        help="Generate detections for a threat group (Step 1)"
     )
-    genai_parser.add_argument("group_name", help="Name of the group to process")
-    genai_parser.add_argument(
-        "--yaml-dir", help="Directory containing YAML files (default: data/queries)"
-    )
+    generate_parser.add_argument("group_name", help="Name of the threat group (e.g., APT29)")
+    generate_parser.add_argument("--hypothesis", help="Optional hypothesis for the group")
 
-    # Build correlations
-    corr_parser = subparsers.add_parser(
-        "build-correlations", help="Build correlation queries from YAML detection files"
+    # Step 2: Correlate generated detections
+    correlate_parser = subparsers.add_parser(
+        "correlate",
+        help="Correlate generated detections into multi-query searches (Step 2)"
     )
-    corr_parser.add_argument(
+    correlate_parser.add_argument(
         "--yaml-dir",
         help="Directory containing YAML files (default: data/queries)"
     )
-    corr_parser.add_argument(
+    correlate_parser.add_argument(
         "--output",
         help="Output JSON file path (default: data/correlations/correlation_queries.json)"
     )
-    corr_parser.add_argument(
+    correlate_parser.add_argument(
         "--min-queries",
         type=int,
         default=2,
         help="Minimum number of queries to include in a correlation (default: 2)"
     )
-    corr_parser.add_argument(
+    correlate_parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose output"
     )
 
-    # Process group
-    process_parser = subparsers.add_parser(
-        "process-group", help="Generate YAML files for a group"
+    # Alternative: Hunt for a specific technique
+    hunt_parser = subparsers.add_parser(
+        "hunt",
+        help="Hunt for a specific MITRE ATT&CK technique"
     )
-    process_parser.add_argument("group_name", help="Name of the group to process")
-    process_parser.add_argument("--hypothesis", help="Hypothesis for the group")
-
-    # List techniques
-    list_parser = subparsers.add_parser(
-        "list-techniques", help="List all available techniques"
-    )
-
-    # Generate detection
-    detect_parser = subparsers.add_parser(
-        "detect", help="Generate a detection for a specific technique"
-    )
-    detect_parser.add_argument(
-        "technique", help="Name of the technique (partial match supported)"
+    hunt_parser.add_argument(
+        "technique", help="Name of the technique (partial match supported, e.g., 'PowerShell')"
     )
 
     args = parser.parse_args()
 
-    if args.command == "genai":
-        run_genai(args.group_name, args.yaml_dir)
-    elif args.command == "build-correlations":
+    if args.command == "generate":
+        process_group(args.group_name, args.hypothesis)
+    elif args.command == "correlate":
         build_correlations(
             yaml_dir=args.yaml_dir,
             output_file=args.output,
             min_queries=args.min_queries,
             verbose=args.verbose
         )
-    elif args.command == "process-group":
-        process_group(args.group_name, args.hypothesis)
-    elif args.command == "list-techniques":
-        list_techniques()
-    elif args.command == "detect":
+    elif args.command == "hunt":
         generate_detection(args.technique)
     else:
         parser.print_help()
