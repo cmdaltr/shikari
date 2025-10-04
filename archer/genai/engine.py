@@ -13,7 +13,7 @@ import importlib.util
 import time
 import re
 from typing import List, Dict, Tuple, Optional
-from .build.progress import write_progress
+from ..build.progress import write_progress
 
 # Global generation mode; set in generate_correlations
 _GEN_MODE: str = "heuristic"
@@ -24,15 +24,15 @@ _HAS_SEMANTIC_ANALYSIS = False
 _HAS_QUERY_VALIDATION = False
 _HAS_AI_GENERATORS = False
 
-# Try to import the parser modules
+# Try to import the parser modules (from archer/parsers/ - one level up from genai/)
 try:
-    from .parsers.splunk import (
+    from ..parsers.splunk import (
         parse_splunk_query,
         validate_splunk_query,
         combine_splunk_queries,
         SplunkQuery,
     )
-    from .parsers.mde import (
+    from ..parsers.mde import (
         parse_kql_query,
         validate_kql_query,
         combine_kql_queries,
@@ -40,28 +40,29 @@ try:
     )
 
     _HAS_ADVANCED_PARSING = True
-except ImportError:
-    print("Advanced query parsing modules not available - will use basic methods")
+except ImportError as e:
+    print(f"Advanced query parsing modules not available - will use basic methods ({e})")
 
-# Fix incorrect import paths - these paths don't match the directory structure you described
+# Import query validator
 try:
-    from .parsers.validator import (
+    from ..parsers.validator import (
         QueryValidator,
         test_combined_query,
-    )  # Changed from .parsers.validator
+    )
 
     _HAS_QUERY_VALIDATION = True
-except ImportError:
-    print("Query validation module not available - will skip validation")
+except ImportError as e:
+    print(f"Query validation module not available - will skip validation ({e})")
 
+# Import semantic analyzer
 try:
-    from .parsers.semantics import (
+    from ..parsers.semantics import (
         QuerySemanticAnalyzer,
-    )  # Changed from .parsers.semantics
+    )
 
     _HAS_SEMANTIC_ANALYSIS = True
-except ImportError:
-    print("Semantic analysis module not available - will skip semantic analysis")
+except ImportError as e:
+    print(f"Semantic analysis module not available - will skip semantic analysis ({e})")
 
 # Optional local-LLM support. We attempt to import known local backends but
 # degrade gracefully to the heuristic generator if none are available.

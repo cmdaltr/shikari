@@ -284,17 +284,62 @@ pytest
 Optional environment variables for advanced features:
 
 ```bash
-# GenAI Mode (heuristic, advanced_parsing, semantic, ai_generators, local_llm)
-export GENAI_MODE=heuristic
+# GenAI Mode - Controls correlation intelligence level
+export GENAI_MODE=heuristic        # Default: basic correlation (recommended)
+# export GENAI_MODE=advanced_parsing  # Structured query parsing
+# export GENAI_MODE=semantic          # Semantic query understanding (BEST)
+# export GENAI_MODE=ai_generators     # AI-powered (requires setup)
+# export GENAI_MODE=local_llm         # Local LLM (requires llama.cpp)
 
-# Local LLM Path (for AI mode)
+# Local LLM Path (only for local_llm mode)
 export LLAMA_MODEL_PATH=/path/to/model.gguf
 
-# OpenAI API Key (for AI mode)
+# OpenAI API Key (only for ai_generators mode)
 export OPENAI_API_KEY=sk-...
 
 # Draft retention (days)
 export DRAFT_MAX_AGE_DAYS=30
+```
+
+#### GENAI_MODE Options Explained
+
+**`heuristic` (Default)** - Basic correlation generation
+- ✅ Fast, no dependencies
+- ✅ Works out of the box
+- ⚠️ Simple tag-based grouping
+- **Use when**: Getting started, basic needs
+
+**`advanced_parsing` (Recommended)** - Structured query parsing
+- ✅ Understands query structure (tables, fields, operators)
+- ✅ Better query combination
+- ✅ No extra dependencies needed
+- **Use when**: Want smarter correlations without complexity
+
+**`semantic` (BEST)** - Semantic query understanding
+- ✅ All benefits of advanced_parsing
+- ✅ Categorizes queries (authentication, network, file activity, etc.)
+- ✅ Groups by meaning, not just tags
+- ✅ No extra dependencies needed
+- **Use when**: Want the smartest correlations (recommended)
+
+**`ai_generators`** - AI-powered generation
+- ⚠️ Requires OpenAI API key or other AI service
+- ⚠️ Costs money (API calls)
+- ✅ Most intelligent correlations
+- **Use when**: You have AI credits and want maximum intelligence
+
+**`local_llm`** - Local LLM models
+- ⚠️ Requires llama.cpp or transformers
+- ⚠️ Requires downloading models (~4GB+)
+- ⚠️ Slower processing
+- ✅ No API costs, private
+- **Use when**: You want AI without cloud services
+
+**Example: Using semantic mode**
+```bash
+# Activate semantic analysis for better correlations
+export GENAI_MODE=semantic
+python3 archer.py correlate --verbose
 ```
 
 **Add to your shell profile** (optional):
@@ -319,6 +364,28 @@ Edit `docker-compose.yml` for container settings:
 - Volume mounts
 - Environment variables
 - Service dependencies
+
+### Advanced Features Quick Start
+
+**Try semantic mode for smarter correlations:**
+```bash
+# 1. Set environment variable
+export GENAI_MODE=semantic
+
+# 2. Run correlation with verbose output
+python3 archer.py correlate --verbose
+
+# 3. Check output - should show semantic categories
+```
+
+**Compare modes:**
+```bash
+# Basic mode
+GENAI_MODE=heuristic python3 archer.py correlate
+
+# Semantic mode (smarter grouping)
+GENAI_MODE=semantic python3 archer.py correlate
+```
 
 ---
 
