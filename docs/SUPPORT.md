@@ -43,10 +43,10 @@ pip install -r requirements.txt
 
 ```bash
 # Test CLI
-python3 cli.py --help
+python3 archer.py --help
 
 # Test imports
-python3 -c "from gorgon.genai import build_correlation_queries; print('✅ Success')"
+python3 -c "from archer.genai import build_correlation_queries; print('✅ Success')"
 ```
 
 ### 5. Run the Application
@@ -55,13 +55,13 @@ Choose one:
 
 **Option A: Web Interface**
 ```bash
-uvicorn gorgon.app:app --reload
+uvicorn archer.app:app --reload
 # Open browser to http://localhost:8000
 ```
 
 **Option B: Command Line**
 ```bash
-python3 cli.py build-correlations --help
+python3 archer.py --help
 ```
 
 **Option C: Docker**
@@ -94,19 +94,19 @@ pip install -r requirements.txt
 
 ```bash
 # Web application (with auto-reload)
-uvicorn gorgon.app:app --reload
+uvicorn archer.app:app --reload
 
 # Web application (production mode)
-uvicorn gorgon.app:app --host 0.0.0.0 --port 8000
+uvicorn archer.app:app --host 0.0.0.0 --port 8000
 
 # CLI - Build correlations
-python3 cli.py build-correlations
+python3 archer.py build-correlations
 
 # CLI - Generate detections for threat group
-python3 cli.py process-group "APT29"
+python3 archer.py process-group "APT29"
 
 # CLI - List MITRE techniques
-python3 cli.py list-techniques
+python3 archer.py list-techniques
 ```
 
 ### Docker
@@ -138,14 +138,14 @@ docker-compose exec archer /bin/bash
 pytest
 
 # Type checking
-mypy gorgon tests
+mypy archer tests
 
 # Code formatting (if installed)
-black gorgon/
-isort gorgon/
+black archer/
+isort archer/
 
 # Check for syntax errors
-python3 -m py_compile gorgon/**/*.py
+python3 -m py_compile archer/**/*.py
 ```
 
 ---
@@ -154,7 +154,7 @@ python3 -m py_compile gorgon/**/*.py
 
 ```
 archer/
-├── cli.py                  # Command-line interface
+├── archer.py               # Command-line interface
 ├── requirements.txt        # Python dependencies
 ├── docker-compose.yml      # Docker setup
 ├── data/                   # Data directory
@@ -163,9 +163,9 @@ archer/
 │   └── progress/          # Progress tracking
 ├── docs/                   # Documentation
 │   ├── SUPPORT.md         # This file
-│   ├── CORRELATION_BUILDER.md
-│   └── LOCAL_LLAMA.md
-├── gorgon/                 # Main Python package
+│   ├── CORRELATIONS.md
+│   └── MODELS.md
+├── archer/                 # Main Python package
 │   ├── app.py             # FastAPI application
 │   ├── genai/             # Correlation engine
 │   ├── parsers/           # Query parsers
@@ -220,7 +220,7 @@ python3 --version
 **Solution**:
 ```bash
 # Use different port
-uvicorn gorgon.app:app --port 8080
+uvicorn archer.app:app --port 8080
 
 # Or kill existing process
 lsof -ti:8000 | xargs kill -9  # macOS/Linux
@@ -253,7 +253,7 @@ docker-compose up --build
 source /full/path/to/archer/.venv/bin/activate
 
 # Or use Python directly
-/full/path/to/archer/.venv/bin/python3 cli.py --help
+/full/path/to/archer/.venv/bin/python3 archer.py --help
 
 # Or recreate venv
 rm -rf .venv
@@ -263,7 +263,7 @@ source .venv/bin/activate
 
 ### Tests Fail to Import Modules
 
-**Problem**: Tests can't find gorgon module
+**Problem**: Tests can't find archer module
 
 **Solution**:
 ```bash
@@ -306,7 +306,7 @@ source ~/.zshrc
 
 ### Application Settings
 
-Edit `gorgon/app.py` for application-level settings:
+Edit `archer/app.py` for application-level settings:
 - Port number (default: 8000)
 - Template directory
 - Static files location
@@ -328,10 +328,10 @@ Edit `docker-compose.yml` for container settings:
 
 | File | Purpose |
 |------|---------|
-| `cli.py` | Command-line interface |
+| `archer.py` | Command-line interface |
 | `requirements.txt` | Python dependencies |
-| `gorgon/app.py` | Web application entry point |
-| `gorgon/genai/engine.py` | Correlation generation engine |
+| `archer/app.py` | Web application entry point |
+| `archer/genai/engine.py` | Correlation generation engine |
 | `docker-compose.yml` | Docker configuration |
 
 ### Essential Commands
@@ -340,8 +340,8 @@ Edit `docker-compose.yml` for container settings:
 |------|---------|
 | Activate venv | `source .venv/bin/activate` |
 | Install deps | `pip install -r requirements.txt` |
-| Start web app | `uvicorn gorgon.app:app --reload` |
-| Build correlations | `python3 cli.py build-correlations` |
+| Start web app | `uvicorn archer.app:app --reload` |
+| Build correlations | `python3 archer.py build-correlations` |
 | Run tests | `pytest` |
 | Docker start | `docker-compose up` |
 
@@ -349,9 +349,9 @@ Edit `docker-compose.yml` for container settings:
 
 | Topic | Document |
 |-------|----------|
-| Correlation builder | [CORRELATION_BUILDER.md](CORRELATION_BUILDER.md) |
-| Local AI setup | [LOCAL_LLAMA.md](LOCAL_LLAMA.md) |
-| Semantic overlap | [semantic-overlap.md](semantic-overlap.md) |
+| Correlation builder | [CORRELATIONS.md](CORRELATIONS.md) |
+| Local AI setup | [MODELS.md](MODELS.md) |
+| Semantic overlap | [SEMANTICS.md](SEMANTICS.md) |
 | All docs | [README.md](README.md) |
 
 ---
@@ -361,7 +361,7 @@ Edit `docker-compose.yml` for container settings:
 ### Check Documentation
 
 1. **[docs/README.md](README.md)** - Documentation index
-2. **[docs/CORRELATION_BUILDER.md](CORRELATION_BUILDER.md)** - Main guide
+2. **[docs/CORRELATIONS.md](CORRELATIONS.md)** - Main guide
 3. **Project README** - `../README.md`
 
 ### Common Issues
@@ -390,25 +390,25 @@ Once Archer is running:
 
 1. **Explore the CLI**
    ```bash
-   python3 cli.py --help
+   python3 archer.py --help
    ```
 
 2. **Build your first correlation**
    ```bash
-   python3 cli.py build-correlations --verbose
+   python3 archer.py build-correlations --verbose
    ```
 
 3. **Access the web interface**
-   - Start server: `uvicorn gorgon.app:app --reload`
+   - Start server: `uvicorn archer.app:app --reload`
    - Open browser: http://localhost:8000
 
 4. **Read the guides**
-   - [CORRELATION_BUILDER.md](CORRELATION_BUILDER.md) - Detailed usage
-   - [LOCAL_LLAMA.md](LOCAL_LLAMA.md) - AI features
+   - [CORRELATIONS.md](CORRELATIONS.md) - Detailed usage
+   - [MODELS.md](MODELS.md) - AI features
 
 5. **Generate detections**
    ```bash
-   python3 cli.py process-group "APT29"
+   python3 archer.py process-group "APT29"
    ```
 
 ---

@@ -5,9 +5,9 @@ Comprehensive documentation for the Archer threat hunting application.
 ## Quick Start
 
 - **[SUPPORT.md](SUPPORT.md)** 🚀 - **START HERE**: Setup guide & troubleshooting
-- **[CORRELATION_BUILDER.md](CORRELATION_BUILDER.md)** - Main guide for correlation query builder
-- **[LOCAL_LLAMA.md](LOCAL_LLAMA.md)** - Setup guide for local AI models
-- **[semantic-overlap.md](semantic-overlap.md)** - Technical reference for semantic overlap scoring
+- **[CORRELATIONS.md](CORRELATIONS.md)** - Main guide for correlation query builder
+- **[MODELS.md](MODELS.md)** - Setup guide for local AI models
+- **[SEMANTICS.md](SEMANTICS.md)** - Technical reference for semantic overlap scoring
 
 ## Main Documentation
 
@@ -71,9 +71,9 @@ The `archive/` directory contains historical documentation:
 docs/
 ├── README.md                     # This file
 ├── SUPPORT.md                    # Setup & troubleshooting (300+ lines) 🚀
-├── CORRELATION_BUILDER.md        # Main user guide (400+ lines)
-├── LOCAL_LLAMA.md                # AI setup guide (61 lines)
-├── semantic-overlap.md           # Technical reference (48 lines)
+├── CORRELATIONS.md        # Main user guide (400+ lines)
+├── MODELS.md                # AI setup guide (61 lines)
+├── SEMANTICS.md           # Technical reference (48 lines)
 ├── archive/                      # Historical documents
 │   ├── README.md
 │   ├── CLEANUP_REPORT.md
@@ -90,9 +90,9 @@ docs/
 
 - **Get Archer running** → [SUPPORT.md](SUPPORT.md) 🚀
 - **Troubleshoot setup issues** → [SUPPORT.md](SUPPORT.md)
-- **Build correlation queries** → [CORRELATION_BUILDER.md](CORRELATION_BUILDER.md)
-- **Set up local AI models** → [LOCAL_LLAMA.md](LOCAL_LLAMA.md)
-- **Understand semantic overlap** → [semantic-overlap.md](semantic-overlap.md)
+- **Build correlation queries** → [CORRELATIONS.md](CORRELATIONS.md)
+- **Set up local AI models** → [MODELS.md](MODELS.md)
+- **Understand semantic overlap** → [SEMANTICS.md](SEMANTICS.md)
 - **See architecture diagrams** → [flow/](flow/)
 - **Review past changes** → [archive/](archive/)
 
@@ -109,7 +109,7 @@ When adding new documentation:
 ## Related Documentation
 
 - **[../README.md](../README.md)** - Main project README
-- **[../gorgon/genai/](../gorgon/genai/)** - Source code for correlation engine
+- **[../archer/genai/](../archer/genai/)** - Source code for correlation engine
 
 ---
 

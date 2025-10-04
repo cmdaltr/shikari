@@ -31,7 +31,7 @@ build/
 data/ai_cache/
 data/drafts/
 data/progress/
-gorgon/mappings/*.json
+archer/mappings/*.json
 *.log
 
 # Test coverage

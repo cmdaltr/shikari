@@ -11,23 +11,23 @@ digraph ArcherFlow {
   progress_html [label="templates/progress.html", shape=note, fillcolor="#fff1c6"];
 
   // App handlers
-  app_read_form [label="gorgon.app: read_form()\nGET /", shape=component, fillcolor="#e6f0ff"];
-  app_generate [label="gorgon.app: generate()\nPOST /generate", shape=component, fillcolor="#e6f0ff"];
-  app_manual_submit [label="gorgon.app: manual_submit()\nPOST /manual_submit", shape=component, fillcolor="#e6f0ff"];
-  app_progress [label="gorgon.app: progress()\nGET /progress", shape=component, fillcolor="#e6f0ff"];
-  app_save_draft [label="gorgon.app: save_draft()\nPOST /save_draft", shape=component, fillcolor="#e6f0ff"];
-  app_load_draft [label="gorgon.app: load_draft()\nGET /load_draft", shape=component, fillcolor="#e6f0ff"];
+  app_read_form [label="archer.app: read_form()\nGET /", shape=component, fillcolor="#e6f0ff"];
+  app_generate [label="archer.app: generate()\nPOST /generate", shape=component, fillcolor="#e6f0ff"];
+  app_manual_submit [label="archer.app: manual_submit()\nPOST /manual_submit", shape=component, fillcolor="#e6f0ff"];
+  app_progress [label="archer.app: progress()\nGET /progress", shape=component, fillcolor="#e6f0ff"];
+  app_save_draft [label="archer.app: save_draft()\nPOST /save_draft", shape=component, fillcolor="#e6f0ff"];
+  app_load_draft [label="archer.app: load_draft()\nGET /load_draft", shape=component, fillcolor="#e6f0ff"];
 
   // Helpers
-  mitre_helpers [label="gorgon.mitre\nget_stix_data(), obtain_all_techniques(), obtain_technique_descriptions()", shape=folder, fillcolor="#e8ffe8"];
-  mitre_enterprise [label="gorgon.mitre.enterprise\ncheck_group_in_mitre()", shape=folder, fillcolor="#e8ffe8"];
+  mitre_helpers [label="archer.mitre\nget_stix_data(), obtain_all_techniques(), obtain_technique_descriptions()", shape=folder, fillcolor="#e8ffe8"];
+  mitre_enterprise [label="archer.mitre.enterprise\ncheck_group_in_mitre()", shape=folder, fillcolor="#e8ffe8"];
 
   // Orchestrator
-  orchestrator [label="gorgon.build.orchestrator\nprocess_group()", shape=folder, fillcolor="#ffe8e8"];
+  orchestrator [label="archer.build.orchestrator\nprocess_group()", shape=folder, fillcolor="#ffe8e8"];
 
   // GenAI pipeline
-  genai [label="gorgon.genai\nprocess_genai(), generate_correlations()", shape=folder, fillcolor="#ffe8e8"];
-  progress_writer [label="gorgon.build.progress\nwrite_progress()", shape=folder, fillcolor="#e8ffe8"];
+  genai [label="archer.genai\nprocess_genai(), generate_correlations()", shape=folder, fillcolor="#ffe8e8"];
+  progress_writer [label="archer.build.progress\nwrite_progress()", shape=folder, fillcolor="#e8ffe8"];
   queries [label="data/queries\n(input YAMLs)", shape=folder, fillcolor="#f0f0f0"];
   correlations [label="data/correlations/*.json\n(correlation output)", shape=folder, fillcolor="#f0f0f0"];
   progress_store [label="data/progress/*.json\n(progress state)", shape=folder, fillcolor="#f0f0f0"];

@@ -14,20 +14,20 @@ from fastapi.staticfiles import StaticFiles
 # passed between client and server.
 # -----------------------------------------------------------------------------
 
-# from gorgon.build import define_vectr_values
-from gorgon.mitre import (
+# from archer.build import define_vectr_values
+from archer.mitre import (
     get_stix_data,
     obtain_all_techniques,
     obtain_technique_descriptions,
 )
-from gorgon.mitre.enterprise import check_group_in_mitre
-from gorgon.build.orchestrator import process_group
-from gorgon.genai import process_genai
+from archer.mitre.enterprise import check_group_in_mitre
+from archer.build.orchestrator import process_group
+from archer.genai import process_genai
 from datetime import datetime
 import os
 import json
 import threading
-from gorgon.build.progress import read_progress, write_progress
+from archer.build.progress import read_progress, write_progress
 
 
 templates = Jinja2Templates(directory="templates")
@@ -561,7 +561,7 @@ def start_genai_processing(group_name):
     try:
         import importlib.util
 
-        spec = importlib.util.find_spec("gorgon.build.genai")
+        spec = importlib.util.find_spec("archer.build.genai")
         if spec:
             genai_module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(genai_module)

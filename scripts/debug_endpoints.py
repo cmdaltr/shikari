@@ -10,10 +10,10 @@ except Exception as e:
 
 # import the app
 try:
-    mod = import_module("gorgon.app")
+    mod = import_module("archer.app")
     app = getattr(mod, "app")
 except Exception as e:
-    print("Failed to import gorgon.app:app -", e)
+    print("Failed to import archer.app:app -", e)
     sys.exit(2)
 
 client = TestClient(app)

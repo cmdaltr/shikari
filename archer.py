@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 def run_genai(group_name, yaml_dir=None):
     """Run the GenAI correlation processing for a specific group"""
-    from gorgon import genai
+    from archer import genai
 
     if yaml_dir is None:
         yaml_dir = os.path.join("data", "queries")
@@ -34,7 +34,7 @@ def run_genai(group_name, yaml_dir=None):
 
 def process_group(group_name, hypothesis=None, manual_data=None):
     """Run the process_group function to generate YAML files"""
-    from gorgon.build.orchestrator import process_group
+    from archer.build.orchestrator import process_group
 
     print(f"Starting process_group for: {group_name}")
     if hypothesis:
@@ -48,7 +48,7 @@ def process_group(group_name, hypothesis=None, manual_data=None):
 
 def list_techniques():
     """List all available techniques from MITRE ATT&CK"""
-    from gorgon.mitre import get_stix_data, obtain_all_techniques
+    from archer.mitre import get_stix_data, obtain_all_techniques
 
     print("Fetching MITRE ATT&CK data...")
     bundle = get_stix_data(
@@ -66,9 +66,9 @@ def list_techniques():
 
 def generate_detection(technique_name):
     """Generate a detection for a specific technique"""
-    from gorgon.mitre import get_stix_data, obtain_all_techniques
-    from gorgon.mitre.retrieve import retrieve_procedures
-    from gorgon.build.detections import compile_query
+    from archer.mitre import get_stix_data, obtain_all_techniques
+    from archer.mitre.retrieve import retrieve_procedures
+    from archer.build.detections import compile_query
 
     print(f"Generating detection for technique: {technique_name}")
 
@@ -118,7 +118,7 @@ def generate_detection(technique_name):
 
 def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=False):
     """Build correlation queries from YAML detection files"""
-    from gorgon.genai import build_correlation_queries
+    from archer.genai import build_correlation_queries
 
     print("=" * 70)
     print("Correlation Query Builder")

@@ -21,10 +21,10 @@ The Correlation Query Builder analyzes YAML detection files and automatically cr
 
 ### Module Structure
 
-The correlation system is organized in the `gorgon/genai/` module:
+The correlation system is organized in the `archer/genai/` module:
 
 ```
-gorgon/genai/
+archer/genai/
 ├── __init__.py    # Public API exports
 ├── engine.py      # Core correlation engine (1200+ lines)
 └── models.py      # Optional AI providers (400+ lines)
@@ -39,32 +39,32 @@ gorgon/genai/
 
 ```bash
 # Basic usage with defaults
-python3 cli.py build-correlations
+python3 archer.py build-correlations
 
 # Specify custom paths
-python3 cli.py build-correlations --yaml-dir ./my-detections --output ./results.json
+python3 archer.py build-correlations --yaml-dir ./my-detections --output ./results.json
 
 # Require at least 3 queries per correlation
-python3 cli.py build-correlations --min-queries 3
+python3 archer.py build-correlations --min-queries 3
 
 # Enable verbose output
-python3 cli.py build-correlations --verbose
+python3 archer.py build-correlations --verbose
 ```
 
 ### Via Standalone Script
 
 ```bash
 # Basic usage
-python3 gorgon/parsers/correlations.py
+python3 archer/parsers/correlations.py
 
 # With options
-python3 gorgon/parsers/correlations.py --yaml-dir ./detections --output ./correlations.json --min-queries 3 -v
+python3 archer/parsers/correlations.py --yaml-dir ./detections --output ./correlations.json --min-queries 3 -v
 ```
 
 ### Programmatic Usage
 
 ```python
-from gorgon.genai import build_correlation_queries
+from archer.genai import build_correlation_queries
 
 # Build correlations
 result = build_correlation_queries(
@@ -234,7 +234,7 @@ query: |
 ### Example 1: Basic Usage
 
 ```bash
-python3 cli.py build-correlations
+python3 archer.py build-correlations
 ```
 
 Output:
@@ -262,7 +262,7 @@ Minimum queries per correlation: 2
 ### Example 2: Custom Configuration
 
 ```bash
-python3 cli.py build-correlations \
+python3 archer.py build-correlations \
   --yaml-dir ./custom-detections \
   --output ./custom-correlations.json \
   --min-queries 3 \
@@ -273,10 +273,10 @@ python3 cli.py build-correlations \
 
 ```bash
 # Generate detections for a threat group
-python3 cli.py process-group "Scattered Spider"
+python3 archer.py process-group "Scattered Spider"
 
 # Build correlations from the generated queries
-python3 cli.py build-correlations --verbose
+python3 archer.py build-correlations --verbose
 ```
 
 ## Troubleshooting
@@ -312,7 +312,7 @@ pip install pyyaml
 The correlation builder extends the existing `genai.py` module:
 
 ```python
-from gorgon.genai import build_correlation_queries, generate_correlations
+from archer.genai import build_correlation_queries, generate_correlations
 
 # New correlation builder (relevance-based)
 correlations = build_correlation_queries(yaml_dir='data/queries')
@@ -326,7 +326,7 @@ results = generate_correlations(group_name='APT29', yaml_dir='data/queries')
 To integrate with your FastAPI app:
 
 ```python
-from gorgon.genai import build_correlation_queries
+from archer.genai import build_correlation_queries
 
 @app.post("/api/build-correlations")
 async def build_correlations_endpoint(group_name: str):
@@ -350,7 +350,7 @@ async def build_correlations_endpoint(group_name: str):
 ### Filtering by Threat Group
 
 ```python
-from gorgon.genai import build_correlation_queries
+from archer.genai import build_correlation_queries
 import json
 
 # Build all correlations
@@ -369,7 +369,7 @@ with open('apt29_correlations.json', 'w') as f:
 
 ### Custom Relevance Scoring
 
-To adjust the relevance scoring weights, modify `_calculate_relevance_score()` in `gorgon/genai.py`:
+To adjust the relevance scoring weights, modify `_calculate_relevance_score()` in `archer/genai/engine.py`:
 
 ```python
 def _calculate_relevance_score(query_a: Dict, query_b: Dict) -> float:
@@ -384,13 +384,13 @@ def _calculate_relevance_score(query_a: Dict, query_b: Dict) -> float:
 
 ## Module Reference
 
-### Core Module: `gorgon.genai`
+### Core Module: `archer.genai`
 
-**Location**: `gorgon/genai/`
+**Location**: `archer/genai/`
 
 **Public API** (from `__init__.py`):
 ```python
-from gorgon.genai import (
+from archer.genai import (
     generate_correlations,      # Main correlation generator
     build_correlation_queries,  # Advanced correlation builder
     process_genai,              # Process wrapper
@@ -403,7 +403,7 @@ from gorgon.genai import (
 #### `engine.py` (1208 lines)
 Core correlation generation engine with multiple modes:
 - **Heuristic mode** (default): Fast, no external dependencies
-- **Advanced parsing**: Uses query parsers from `gorgon.parsers`
+- **Advanced parsing**: Uses query parsers from `archer.parsers`
 - **Semantic analysis**: Analyzes query structure and overlap
 - **AI integration**: Optional, lazy-loaded from `models.py`
 
@@ -426,10 +426,10 @@ AI provider implementations for enhanced query generation:
 
 ### Related Documentation
 
-- [LOCAL_LLAMA.md](LOCAL_LLAMA.md) - Setup guide for local AI models
-- [semantic-overlap.md](semantic-overlap.md) - Semantic overlap algorithm explained
-- [cli.py](../cli.py) - Command-line interface implementation
-- [correlations.py](../gorgon/parsers/correlations.py) - Standalone script
+- [MODELS.md](MODELS.md) - Setup guide for local AI models
+- [SEMANTICS.md](SEMANTICS.md) - Semantic overlap algorithm explained
+- [archer.py](../archer.py) - Command-line interface implementation
+- [correlations.py](../archer/parsers/correlations.py) - Standalone script
 
 ### Historical Documents
 

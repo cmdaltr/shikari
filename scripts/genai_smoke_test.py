@@ -10,7 +10,7 @@ Usage:
   export LLAMA_MODEL_PATH=/Users/you/models/ggml-7b-q4_0.bin
   python3 scripts/genai_smoke_test.py
 
-The script reads YAMLs from data/samples, runs gorgon.genai.generate_correlations
+The script reads YAMLs from data/samples, runs archer.genai.generate_correlations
 and writes data/correlations/smoke_test.json. If LLAMA_MODEL_PATH isn't set or
 llama-cpp-python isn't installed, the heuristic generator will be used.
 """
@@ -29,11 +29,11 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(ROOT))
 
 try:
-    from gorgon.genai import generate_correlations
+    from archer.genai import generate_correlations
 except Exception as e:
     # Print the raw error and helpful diagnostics so users can see which interpreter
     # is running and whether bs4 is available in that interpreter.
-    print("Failed to import gorgon.genai:", e)
+    print("Failed to import archer.genai:", e)
     print("Python executable:", sys.executable)
     # Common cause: 'python3' is aliased to a global interpreter even when venv prompt
     # shows activated. Show an exact pip install command for this interpreter.
@@ -42,7 +42,7 @@ except Exception as e:
 
         print("bs4 imports successfully in this interpreter.")
         print(
-            "If gorgon.genai still fails to import, try running:\n  {0} -c \"import importlib; importlib.import_module('gorgon.genai')\"".format(
+            "If archer.genai still fails to import, try running:\n  {0} -c \"import importlib; importlib.import_module('archer.genai')\"".format(
                 sys.executable
             )
         )

@@ -1,7 +1,7 @@
 import os
 import json
 from fastapi.testclient import TestClient
-import gorgon.app as app_module
+import archer.app as app_module
 
 client = TestClient(app_module.app)
 

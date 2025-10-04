@@ -77,26 +77,26 @@ Archer includes a powerful CLI for running core functionality without the web in
 1. View available commands:
 
 ```bash
-python3 cli.py --help
+python3 archer.py --help
 ```
 
 2. Example usage:
 
 ```bash
 # Generate detections for a threat group
-python3 cli.py process-group "Scattered Spider"
+python3 archer.py process-group "Scattered Spider"
 
 # Build correlation queries from YAML files
-python3 cli.py build-correlations --verbose
+python3 archer.py build-correlations --verbose
 
 # List all MITRE ATT&CK techniques
-python3 cli.py list-techniques
+python3 archer.py list-techniques
 
 # Generate detection for a specific technique
-python3 cli.py detect "PowerShell"
+python3 archer.py detect "PowerShell"
 
 # Run GenAI correlation processing
-python3 cli.py genai "APT29"
+python3 archer.py genai "APT29"
 ```
 
 **New: Correlation Query Builder**
@@ -110,14 +110,14 @@ The CLI now includes an intelligent correlation builder that:
 
 ```bash
 # Build correlations with custom settings
-python3 cli.py build-correlations \
+python3 archer.py build-correlations \
   --yaml-dir ./detections \
   --output ./correlations.json \
   --min-queries 3 \
   --verbose
 ```
 
-See [docs/CORRELATION_BUILDER.md](docs/CORRELATION_BUILDER.md) for detailed documentation.
+See [docs/CORRELATIONS.md](docs/CORRELATIONS.md) for detailed documentation.
 
 ---
 <br>

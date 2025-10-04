@@ -7,17 +7,17 @@ platforms, attack paths, and severity, then builds correlation searches combinin
 related queries. Results are saved to a JSON output file.
 
 Usage:
-    python gorgon/parsers/correlations.py [--yaml-dir PATH] [--output PATH] [--min-queries N]
+    python archer/parsers/correlations.py [--yaml-dir PATH] [--output PATH] [--min-queries N]
 
 Examples:
     # Use defaults (data/queries -> data/correlations/correlation_queries.json)
-    python gorgon/parsers/correlations.py
+    python archer/parsers/correlations.py
 
     # Specify custom paths
-    python gorgon/parsers/correlations.py --yaml-dir ./detections --output ./results.json
+    python archer/parsers/correlations.py --yaml-dir ./detections --output ./results.json
 
     # Require at least 3 queries per correlation
-    python gorgon/parsers/correlations.py --min-queries 3
+    python archer/parsers/correlations.py --min-queries 3
 """
 
 import argparse
@@ -29,7 +29,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from gorgon.genai import build_correlation_queries
+from archer.genai import build_correlation_queries
 
 
 def main():

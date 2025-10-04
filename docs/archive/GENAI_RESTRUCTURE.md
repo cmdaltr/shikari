@@ -92,7 +92,7 @@ from gorgon.genai import generate_correlations
 6. ✅ `scripts/genai_smoke_test.py` - Already using correct imports
 
 ### Documentation Files
-1. ✅ `docs/CORRELATION_BUILDER.md` - Updated file paths
+1. ✅ `docs/CORRELATIONS.md` - Updated file paths
 2. ✅ `docs/CLEANUP_REPORT.md` - Updated references
 3. ✅ `docs/GENAI_RESTRUCTURE.md` - This file (new)
 
@@ -240,7 +240,7 @@ All previous import statements continue to work thanks to `__init__.py`:
 
 ## Related Documentation
 
-- [CORRELATION_BUILDER.md](CORRELATION_BUILDER.md) - Correlation query builder guide
+- [CORRELATIONS.md](CORRELATIONS.md) - Correlation query builder guide
 - [CLEANUP_REPORT.md](CLEANUP_REPORT.md) - Full cleanup report
 - [Engine Source](../gorgon/genai/engine.py) - Core engine implementation
 - [Models Source](../gorgon/genai/models.py) - AI provider implementations

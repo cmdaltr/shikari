@@ -4,11 +4,11 @@ services:
   archer:
     build:
       context: .
-      dockerfile: gorgon/Dockerfile
+      dockerfile: archer/Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ./gorgon:/app/gorgon
+      - ./archer:/app/archer
       - ./templates:/app/templates
       - ./static:/app/static
       - ./data:/app/data
