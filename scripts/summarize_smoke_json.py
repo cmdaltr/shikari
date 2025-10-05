@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT = ROOT / "data" / "correlations" / "smoke_test.json"
+DEFAULT = ROOT / "data" / "correlate" / "smoke_test.json"
 SCHEMA = ROOT / "docs" / "genai_schema.json"
 
 

@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_DIR = ROOT / "data" / "samples"
-OUT_DIR = ROOT / "data" / "correlations"
+OUT_DIR = ROOT / "data" / "correlate"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Make project importable when running the script directly (no package install required)
