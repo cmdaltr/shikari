@@ -14,6 +14,7 @@ services:
       - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+      - GENAI_MODE=semantic
     restart: unless-stopped
 
   n8n:

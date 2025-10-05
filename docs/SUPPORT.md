@@ -131,6 +131,8 @@ docker-compose logs -f archer
 docker-compose exec archer /bin/bash
 ```
 
+**Note**: The Docker configuration uses `GENAI_MODE=semantic` by default for intelligent correlation generation. To change this, edit the `environment` section in [docker-compose.yml](../docker-compose.yml).
+
 ### Development
 
 ```bash
@@ -300,11 +302,12 @@ pytest
 
 Optional environment variables for advanced features:
 
+**For CLI/Local Development:**
 ```bash
 # GenAI Mode - Controls correlation intelligence level
-export GENAI_MODE=heuristic        # Default: basic correlation (recommended)
+export GENAI_MODE=semantic          # Semantic query understanding (BEST)
+# export GENAI_MODE=heuristic        # Default: basic correlation
 # export GENAI_MODE=advanced_parsing  # Structured query parsing
-# export GENAI_MODE=semantic          # Semantic query understanding (BEST)
 # export GENAI_MODE=ai_generators     # AI-powered (requires setup)
 # export GENAI_MODE=local_llm         # Local LLM (requires llama.cpp)
 
@@ -316,7 +319,20 @@ export OPENAI_API_KEY=sk-...
 
 # Draft retention (days)
 export DRAFT_MAX_AGE_DAYS=30
+
+# Then run the web server
+uvicorn archer.app:app --reload
 ```
+
+**For Docker:**
+Edit the `environment` section in [docker-compose.yml](../docker-compose.yml):
+```yaml
+environment:
+  - PYTHONUNBUFFERED=1
+  - GENAI_MODE=semantic  # Change this value to use different modes
+```
+
+Then restart: `docker-compose up --build`
 
 #### GENAI_MODE Options Explained
 
