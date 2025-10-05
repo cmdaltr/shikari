@@ -10,7 +10,7 @@ Usage:
     python archer/parsers/correlations.py [--yaml-dir PATH] [--output PATH] [--min-queries N]
 
 Examples:
-    # Use defaults (data/queries -> data/correlations/correlation_queries.json)
+    # Use defaults (data/generate -> data/correlate/correlation_queries.json)
     python archer/parsers/correlations.py
 
     # Specify custom paths
@@ -53,7 +53,7 @@ Examples:
         '--yaml-dir',
         type=str,
         default=None,
-        help='Directory containing YAML detection files (default: data/queries)'
+        help='Directory containing YAML detection files (default: data/generate)'
     )
 
     parser.add_argument(

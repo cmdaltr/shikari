@@ -168,7 +168,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
             new_yaml.write(yaml_content)
 
     # Inserting this to create a simple approach for the latest file having been created for the web application to provide progress
-    with open(os.path.join("data", "queries", "latest.yaml"), "w") as latest_yaml:
+    with open(os.path.join("data", "generate", "latest.yaml"), "w") as latest_yaml:
         latest_yaml.write(query_file)
 
 

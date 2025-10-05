@@ -36,7 +36,7 @@ app = FastAPI(title="Archer Threat Hunting Service")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Resetting latest.yaml to blank on startup
-with open(os.path.join("data", "queries", "latest.yaml"), "w") as latest_yaml:
+with open(os.path.join("data", "generate", "latest.yaml"), "w") as latest_yaml:
     latest_yaml.write("")
 
 
@@ -454,7 +454,7 @@ async def progress_status(group_name: str = "", include_latest_file: bool = Fals
     # Add latest file info if requested
     if include_latest_file:
         try:
-            latest_yaml_path = os.path.join("data", "queries", "latest.yaml")
+            latest_yaml_path = os.path.join("data", "generate", "latest.yaml")
             if os.path.exists(latest_yaml_path):
                 with open(latest_yaml_path, "r") as file:
                     latest_file = file.read().strip()
@@ -466,8 +466,8 @@ async def progress_status(group_name: str = "", include_latest_file: bool = Fals
                     else:
                         filename = latest_file
 
-                    # 2. Remove any path prefixes like "data/queries/"
-                    filename = filename.replace("data/queries/", "")
+                    # 2. Remove any path prefixes like "data/generate/"
+                    filename = filename.replace("data/generate/", "")
 
                     # 3. Format the display name like "DirectVolumeAccess (aws guardduty)"
                     name_parts = os.path.splitext(filename)[0].split("_")

@@ -517,7 +517,7 @@ def process_genai(group_name: str):
         group_name: The group name to process
     """
     print(f"process_genai called for group {group_name}")
-    yaml_dir = os.path.join("data", "queries")
+    yaml_dir = os.path.join("data", "generate")
     return generate_correlations(group_name, yaml_dir)
 
 
@@ -883,8 +883,8 @@ def build_correlation_queries(
     6. Saves all queries in a single JSON output file
 
     Args:
-        yaml_dir: Directory containing YAML files (default: data/queries)
-        output_file: Output JSON file path (default: data/correlations/correlation_queries.json)
+        yaml_dir: Directory containing YAML files (default: data/generate)
+        output_file: Output JSON file path (default: data/correlate/correlation_queries.json)
         min_queries: Minimum number of queries to include in a correlation (default: 2)
 
     Returns:
@@ -895,7 +895,7 @@ def build_correlation_queries(
 
     # Set defaults
     if yaml_dir is None:
-        yaml_dir = os.path.join("data", "queries")
+        yaml_dir = os.path.join("data", "generate")
     if output_file is None:
         output_file = os.path.join("data", "correlate", "correlation_queries.json")
 

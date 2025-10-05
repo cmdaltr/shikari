@@ -155,7 +155,7 @@ def main():
     )
     correlate_parser.add_argument(
         "--yaml-dir",
-        help="Directory containing YAML files (default: data/queries)"
+        help="Directory containing YAML files (default: data/generate)"
     )
     correlate_parser.add_argument(
         "--output",
