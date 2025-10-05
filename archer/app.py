@@ -157,9 +157,29 @@ import os
 
 
 @app.post("/generate")
-async def generate(request: Request, group_name: str = Form(...)):
+async def generate(
+    request: Request,
+    group_name: str = Form(...),
+    advanced_parsing: str = Form(None),
+    semantic: str = Form(None),
+    ai_generators: str = Form(None),
+    local_llm: str = Form(None),
+):
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
+
+    # Determine GENAI_MODE based on checkboxes (priority order)
+    genai_mode = None
+    if local_llm == "true":
+        genai_mode = "local_llm"
+    elif ai_generators == "true":
+        genai_mode = "ai_generators"
+    elif semantic == "true":
+        genai_mode = "semantic"
+    elif advanced_parsing == "true":
+        genai_mode = "advanced_parsing"
+    # If none selected, genai_mode remains None (uses default/heuristic)
+
     actor_found = check_group_in_mitre(app.state.bundle, group_name)
     if actor_found == "Y":
         # Known actor: kick off processing in a background thread and immediately return a JSON
@@ -169,7 +189,9 @@ async def generate(request: Request, group_name: str = Form(...)):
         def _bg():
             try:
                 # Use the modified wrapper instead of direct process_group
-                modified_process_group_wrapper(group_name, hypothesis, manual_data=None)
+                modified_process_group_wrapper(
+                    group_name, hypothesis, manual_data=None, genai_mode=genai_mode
+                )
             except Exception:
                 try:
                     write_progress(group_name, {"status": "failed"})
@@ -396,8 +418,9 @@ async def manual_submit(
     def _bg_manual():
         try:
             # Use the modified wrapper instead of direct process_group
+            # Note: manual submissions don't currently pass genai_mode from UI
             modified_process_group_wrapper(
-                group_name, hypothesis, manual_data=manual_data
+                group_name, hypothesis, manual_data=manual_data, genai_mode=None
             )
         except Exception:
             try:
@@ -600,8 +623,15 @@ def start_genai_processing(group_name):
 
 
 # Modify the orchestrator process to ensure completion
-def modified_process_group_wrapper(group_name, hypothesis, manual_data=None):
+def modified_process_group_wrapper(
+    group_name, hypothesis, manual_data=None, genai_mode=None
+):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
+
+    # Set GENAI_MODE environment variable if provided
+    if genai_mode:
+        os.environ["GENAI_MODE"] = genai_mode
+
     try:
         # Call the original process_group
         process_group(group_name, hypothesis, manual_data)

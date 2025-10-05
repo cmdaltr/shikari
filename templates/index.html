@@ -67,9 +67,38 @@
                   </div>
               </div>
               <div></div>
+              <!-- Advanced Options Row -->
+              <div style="text-align: right; padding-top: 20px;">
+                  <label>Advanced Options:</label>
+              </div>
+              <div style="text-align: left; padding-top: 20px;">
+                  <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9em;">
+                      <label class="advanced-option" title="Structured query parsing - Understands query structure (tables, fields, operators) for better query combination">
+                          <input type="checkbox" name="advanced_parsing" value="true">
+                          Advanced Query Parsing
+                          <span class="tooltip-icon">ⓘ</span>
+                      </label>
+                      <label class="advanced-option" title="Semantic query understanding - Categorizes queries by purpose (authentication, network, file activity, etc.) and groups by meaning">
+                          <input type="checkbox" name="semantic" value="true">
+                          Semantic Analysis (Recommended)
+                          <span class="tooltip-icon">ⓘ</span>
+                      </label>
+                      <label class="advanced-option" title="AI-powered generation - Uses OpenAI API for enhanced correlations (requires OPENAI_API_KEY environment variable)">
+                          <input type="checkbox" name="ai_generators" value="true">
+                          AI-Powered Correlations
+                          <span class="tooltip-icon">ⓘ</span>
+                      </label>
+                      <label class="advanced-option" title="Local LLM processing - Uses local language model via llama.cpp (requires LLAMA_MODEL_PATH environment variable)">
+                          <input type="checkbox" name="local_llm" value="true">
+                          Local LLM Processing
+                          <span class="tooltip-icon">ⓘ</span>
+                      </label>
+                  </div>
+              </div>
+              <div></div>
               <!-- Bottom row -->
               <div></div>
-              <div style="text-align: center;">
+              <div style="text-align: center; padding-top: 15px;">
                   <input type="submit" value="Generate" id="generate_btn" disabled>
               </div>
           </div>

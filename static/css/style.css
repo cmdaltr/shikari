@@ -192,3 +192,36 @@ h2.page-title {
   padding-top: var(--page-top) !important;
   margin-top: 0 !important;
 }
+
+/* Advanced options styling */
+.advanced-option {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  position: relative;
+}
+
+.advanced-option input[type="checkbox"] {
+  cursor: pointer;
+  width: auto;
+  min-width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.advanced-option .tooltip-icon {
+  color: #666;
+  font-size: 0.95em;
+  cursor: help;
+  user-select: none;
+}
+
+.advanced-option:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+  padding-left: 4px;
+  padding-right: 4px;
+}

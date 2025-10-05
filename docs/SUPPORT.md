@@ -298,41 +298,45 @@ pytest
 
 ## Configuration
 
+### Advanced Options
+
+**Web UI**: Advanced correlation options are available via checkboxes on the main page:
+- **Advanced Query Parsing** - Structured query parsing for better combinations
+- **Semantic Analysis** (Recommended) - Categorizes queries by purpose
+- **AI-Powered Correlations** - Uses OpenAI API (requires `OPENAI_API_KEY`)
+- **Local LLM Processing** - Uses local model (requires `LLAMA_MODEL_PATH`)
+
+**CLI**: Set environment variables before running commands:
+```bash
+# Semantic mode (recommended)
+export GENAI_MODE=semantic
+python3 archer.py correlate
+
+# AI-powered mode (requires API key)
+export OPENAI_API_KEY=sk-...
+export GENAI_MODE=ai_generators
+python3 archer.py correlate
+
+# Local LLM mode (requires model)
+export LLAMA_MODEL_PATH=/path/to/model.gguf
+export GENAI_MODE=local_llm
+python3 archer.py correlate
+```
+
 ### Environment Variables
 
-Optional environment variables for advanced features:
+Optional environment variables:
 
-**For CLI/Local Development:**
 ```bash
-# GenAI Mode - Controls correlation intelligence level
-export GENAI_MODE=semantic          # Semantic query understanding (BEST)
-# export GENAI_MODE=heuristic        # Default: basic correlation
-# export GENAI_MODE=advanced_parsing  # Structured query parsing
-# export GENAI_MODE=ai_generators     # AI-powered (requires setup)
-# export GENAI_MODE=local_llm         # Local LLM (requires llama.cpp)
-
-# Local LLM Path (only for local_llm mode)
-export LLAMA_MODEL_PATH=/path/to/model.gguf
-
-# OpenAI API Key (only for ai_generators mode)
+# OpenAI API Key (for AI-powered correlations)
 export OPENAI_API_KEY=sk-...
+
+# Local LLM Path (for local LLM processing)
+export LLAMA_MODEL_PATH=/path/to/model.gguf
 
 # Draft retention (days)
 export DRAFT_MAX_AGE_DAYS=30
-
-# Then run the web server
-uvicorn archer.app:app --reload
 ```
-
-**For Docker:**
-Edit the `environment` section in [docker-compose.yml](../docker-compose.yml):
-```yaml
-environment:
-  - PYTHONUNBUFFERED=1
-  - GENAI_MODE=semantic  # Change this value to use different modes
-```
-
-Then restart: `docker-compose up --build`
 
 #### GENAI_MODE Options Explained
 
