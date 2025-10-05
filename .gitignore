@@ -34,6 +34,14 @@ data/progress/
 archer/mappings/*.json
 *.log
 
+# Output directories - keep structure but exclude generated content
+data/generate/*.yaml
+!data/generate/*_example.yaml
+data/correlate/*.json
+!data/correlate/*_example*.json
+data/hunt/*.yaml
+!data/hunt/*_example.yaml
+
 # Test coverage
 .coverage
 htmlcov/
