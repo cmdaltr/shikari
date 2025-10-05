@@ -256,9 +256,7 @@ def compile_query(retrieved_data):
         # Print summary for this technique
         if not compatible_found:
             if yaml_files_created:
-                print(
-                    f"❌ No more compatible platforms found for {name} - skipping YAML generation\n"
-                )
+                print(f"❌ No more compatible platforms found for {name}\n")
             else:
                 print(
                     f"❌ No compatible platforms found for {name} - skipping YAML generation\n"
