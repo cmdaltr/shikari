@@ -502,7 +502,7 @@ async def progress_status(group_name: str = "", include_latest_file: bool = Fals
 
 @app.get("/correlations/{group_name}.json")
 async def correlations_json(group_name: str):
-    path = os.path.join("data", "correlations", f"{group_name}.json")
+    path = os.path.join("data", "correlate", f"{group_name}.json")
     if not os.path.exists(path):
         return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
     try:

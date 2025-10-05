@@ -654,7 +654,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         "cross_vendor_correlations": cross_corr,  # Empty list
     }
 
-    out_dir = os.path.join("data", "correlations")
+    out_dir = os.path.join("data", "correlate")
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f"{group_name}.json")
 
@@ -897,7 +897,7 @@ def build_correlation_queries(
     if yaml_dir is None:
         yaml_dir = os.path.join("data", "queries")
     if output_file is None:
-        output_file = os.path.join("data", "correlations", "correlation_queries.json")
+        output_file = os.path.join("data", "correlate", "correlation_queries.json")
 
     print(f"Scanning YAML files in {yaml_dir}...")
 
