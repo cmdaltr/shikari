@@ -63,6 +63,154 @@ document.addEventListener('DOMContentLoaded', function () {
   var btn = document.getElementById('generate_btn');
   var errorSpan = document.getElementById('group-name-error');
 
+  // Autocomplete functionality
+  var autocompleteList = null;
+  var selectedIndex = -1;
+  var autocompleteItems = [];
+  var fetchTimeout = null;
+
+  function createAutocompleteList() {
+    if (!autocompleteList) {
+      autocompleteList = document.createElement('div');
+      autocompleteList.className = 'autocomplete-list';
+      autocompleteList.style.display = 'none';
+      input.parentNode.appendChild(autocompleteList);
+    }
+  }
+
+  function hideAutocomplete() {
+    if (autocompleteList) {
+      autocompleteList.style.display = 'none';
+      selectedIndex = -1;
+      autocompleteItems = [];
+    }
+  }
+
+  function showAutocomplete(groups) {
+    createAutocompleteList();
+    autocompleteList.innerHTML = '';
+    autocompleteItems = groups;
+
+    if (groups.length === 0) {
+      hideAutocomplete();
+      return;
+    }
+
+    groups.forEach(function(group, index) {
+      var item = document.createElement('div');
+      item.className = 'autocomplete-item';
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'group-name';
+      nameSpan.textContent = group.name;
+      item.appendChild(nameSpan);
+
+      if (group.is_alias && group.primary) {
+        var aliasLabel = document.createElement('span');
+        aliasLabel.className = 'alias-label';
+        aliasLabel.textContent = ' (alias of ' + group.primary + ')';
+        item.appendChild(aliasLabel);
+      }
+
+      item.addEventListener('click', function() {
+        input.value = group.name;
+        hideAutocomplete();
+        validate();
+      });
+
+      item.addEventListener('mouseenter', function() {
+        selectedIndex = index;
+        updateSelection();
+      });
+
+      autocompleteList.appendChild(item);
+    });
+
+    autocompleteList.style.display = 'block';
+    updateSelection();
+  }
+
+  function updateSelection() {
+    var items = autocompleteList.querySelectorAll('.autocomplete-item');
+    items.forEach(function(item, index) {
+      if (index === selectedIndex) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+  }
+
+  function fetchGroups(query) {
+    if (query.length < 2) {
+      hideAutocomplete();
+      return;
+    }
+
+    fetch('/threat_groups?query=' + encodeURIComponent(query))
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.ok && data.groups) {
+          showAutocomplete(data.groups);
+        } else {
+          hideAutocomplete();
+        }
+      })
+      .catch(function(err) {
+        console.error('Autocomplete error:', err);
+        hideAutocomplete();
+      });
+  }
+
+  if (input) {
+    input.addEventListener('input', function() {
+      validate();
+
+      // Debounce API calls
+      if (fetchTimeout) clearTimeout(fetchTimeout);
+      fetchTimeout = setTimeout(function() {
+        fetchGroups(input.value);
+      }, 300);
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if (!autocompleteList || autocompleteList.style.display === 'none') return;
+
+      // Arrow Down
+      if (e.keyCode === 40) {
+        e.preventDefault();
+        selectedIndex = Math.min(selectedIndex + 1, autocompleteItems.length - 1);
+        updateSelection();
+      }
+      // Arrow Up
+      else if (e.keyCode === 38) {
+        e.preventDefault();
+        selectedIndex = Math.max(selectedIndex - 1, -1);
+        updateSelection();
+      }
+      // Enter
+      else if (e.keyCode === 13) {
+        if (selectedIndex >= 0 && selectedIndex < autocompleteItems.length) {
+          e.preventDefault();
+          input.value = autocompleteItems[selectedIndex].name;
+          hideAutocomplete();
+          validate();
+        }
+      }
+      // Escape
+      else if (e.keyCode === 27) {
+        hideAutocomplete();
+      }
+    });
+
+    // Hide autocomplete when clicking outside
+    document.addEventListener('click', function(e) {
+      if (e.target !== input && (!autocompleteList || !autocompleteList.contains(e.target))) {
+        hideAutocomplete();
+      }
+    });
+  }
+
   function validate() {
     var val = (input && input.value) || '';
     if (val.length > 30) {
@@ -76,7 +224,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btn) btn.disabled = (trimmed === '');
   }
 
-  if (input) input.addEventListener('input', validate);
   validate();
 
   if (form) {

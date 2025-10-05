@@ -559,6 +559,48 @@ async def list_drafts(user_id: str = ""):
     return JSONResponse({"ok": True, "drafts": results})
 
 
+@app.get("/threat_groups")
+async def get_threat_groups(query: str = ""):
+    """
+    Return a list of threat group names and aliases from MITRE ATT&CK
+    that match the provided query string.
+    """
+    bundle = getattr(app.state, "bundle", None)
+    if not bundle:
+        return JSONResponse({"ok": False, "groups": []})
+
+    groups = []
+    query_lower = query.lower()
+
+    for obj in bundle.objects:
+        if obj.get("type") == "intrusion-set":
+            name = obj.get("name", "")
+            aliases = obj.get("aliases", [])
+
+            # Add the primary name if it matches
+            if query_lower in name.lower():
+                groups.append({"name": name, "is_alias": False})
+
+            # Add matching aliases
+            for alias in aliases:
+                if alias != name and query_lower in alias.lower():
+                    groups.append({"name": alias, "is_alias": True, "primary": name})
+
+    # Remove duplicates and sort
+    seen = set()
+    unique_groups = []
+    for group in groups:
+        if group["name"] not in seen:
+            seen.add(group["name"])
+            unique_groups.append(group)
+
+    # Sort: primary names first, then aliases, alphabetically within each
+    unique_groups.sort(key=lambda x: (x.get("is_alias", False), x["name"].lower()))
+
+    # Limit results to 10 for performance
+    return JSONResponse({"ok": True, "groups": unique_groups[:10]})
+
+
 # Add this function to explicitly start the GenAI processing after YAML generation
 def start_genai_processing(group_name):
     """
