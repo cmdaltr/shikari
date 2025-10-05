@@ -135,6 +135,9 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
     author = getpass.getuser()
     team = get_team(author)
 
+    # Format the threat group tag with (Group) suffix
+    formatted_tag = f"{tag} (Group)" if tag else ""
+
     yaml_content = (
         template.replace("§id§", uid)
         .replace("§name§", name)
@@ -144,7 +147,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
         .replace("§connectorId§", connector_id)
         .replace("§dataTypes§", datatype)
         .replace("§tactic§", tactic)
-        .replace("§group§", tag)
+        .replace("§group§", formatted_tag)
         .replace("§query§", query)
         .replace("§ver§", "1.0")
         .replace("§source§", "Archer")
@@ -181,10 +184,13 @@ def update_yaml(yamlfile, tag):
     with open(yamlfile) as yfile:
         old_content = yfile.read()
 
-    if tag not in old_content:
+    # Format the threat group tag with (Group) suffix
+    formatted_tag = f"{tag} (Group)" if tag else ""
+
+    if formatted_tag not in old_content:
         # Insert new Threat Group
         prefix, suffix = old_content.split("tags:\n  - ")
-        added_tags = f"{prefix}tags:\n  - {tag}\n  - {suffix}"
+        added_tags = f"{prefix}tags:\n  - {formatted_tag}\n  - {suffix}"
 
         # Update version
         newver = re.sub(
