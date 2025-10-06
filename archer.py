@@ -115,7 +115,7 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=F
                 print(f"  Queries: {corr['query_count']}")
 
         print()
-        print(f"✓ Output saved to: {output_file or 'data/correlations/correlation_queries.json'}")
+        print(f"✓ Output saved to: {output_file or 'data/correlate/correlation_queries.json'}")
         print()
 
         return result
@@ -125,6 +125,105 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=F
         print("\nPlease ensure the YAML directory exists and contains detection files.", file=sys.stderr)
         return None
 
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        if verbose:
+            import traceback
+            traceback.print_exc()
+        return None
+
+
+def run_emulation(technique_id, framework="atomic", execute=False, enrich=False, verbose=False):
+    """Execute adversary emulation tests for a technique"""
+    from archer.config import EmulationConfig
+
+    if not EmulationConfig.enabled:
+        print("ERROR: Emulation module is not enabled.", file=sys.stderr)
+        print("Set ENABLE_EMULATION=true to use this feature.", file=sys.stderr)
+        return None
+
+    print("=" * 70)
+    print(f"Adversary Emulation - {framework.upper()}")
+    print("=" * 70)
+    print()
+
+    try:
+        if framework == "atomic":
+            from archer.emulation import AtomicRedTeam
+
+            if not EmulationConfig.is_atomic_configured():
+                print(f"ERROR: Atomic Red Team not found at {EmulationConfig.atomic_path}", file=sys.stderr)
+                print("\nInstall with:", file=sys.stderr)
+                print("  git clone https://github.com/redcanaryco/atomic-red-team.git", file=sys.stderr)
+                print(f"  export ATOMIC_REDTEAM_PATH=/path/to/atomic-red-team", file=sys.stderr)
+                return None
+
+            atomic = AtomicRedTeam()
+
+            # Set execution mode
+            if execute:
+                os.environ["EMULATION_EXECUTE_MODE"] = "live"
+                print("⚠️  LIVE EXECUTION MODE - Tests will actually run on this system!")
+                print()
+            else:
+                print("ℹ️  SIMULATION MODE - Tests will be simulated (set --execute to run live)")
+                print()
+
+            print(f"Executing Atomic Red Team tests for {technique_id}...")
+            print()
+
+            results = atomic.execute_technique(technique_id)
+
+            if results.get("status") == "no_tests":
+                print(f"No atomic tests available for {technique_id}")
+                return None
+
+            print()
+            print("=" * 70)
+            print("EXECUTION SUMMARY")
+            print("=" * 70)
+            print(f"Technique: {results['technique_name']} ({results['technique_id']})")
+            print(f"Tests executed: {len(results['tests_executed'])}")
+            print(f"Evidence collected: {len(results['evidence_collected'])}")
+            print()
+
+            if verbose:
+                print("Test Details:")
+                print("-" * 70)
+                for test in results['tests_executed']:
+                    status_icon = "✓" if test['status'] in ['success', 'simulated'] else "✗"
+                    print(f"\n{status_icon} Test #{test['test_number']}: {test['test_name']}")
+                    print(f"   Status: {test['status']}")
+                    if 'command' in test:
+                        cmd = test['command'][:100] + "..." if len(test['command']) > 100 else test['command']
+                        print(f"   Command: {cmd}")
+
+            # Enrich detections if requested
+            if enrich:
+                print()
+                print("Enriching detections with emulation evidence...")
+                from archer.emulation import enrich_detections_with_emulation
+
+                enrich_result = enrich_detections_with_emulation(technique_id)
+
+                if enrich_result['status'] == 'success':
+                    print(f"✓ Enriched {len(enrich_result['enriched_files'])} detection files")
+                    print(f"✓ Generated {enrich_result['additional_queries_generated']} additional queries")
+                    print(f"✓ Found indicators: {enrich_result['indicators_found']}")
+                else:
+                    print(f"⚠️  Enrichment status: {enrich_result['message']}")
+
+            print()
+            return results
+
+        else:
+            print(f"ERROR: Framework '{framework}' not yet implemented", file=sys.stderr)
+            print("Available: atomic (CALDERA and MACAT coming soon)", file=sys.stderr)
+            return None
+
+    except FileNotFoundError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return None
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)
         if verbose:
@@ -182,6 +281,37 @@ def main():
         "technique", help="Name of the technique (partial match supported, e.g., 'PowerShell')"
     )
 
+    # Optional: Emulation testing
+    emulate_parser = subparsers.add_parser(
+        "emulate",
+        help="Execute adversary emulation tests (requires ENABLE_EMULATION=true)"
+    )
+    emulate_parser.add_argument(
+        "technique_id",
+        help="MITRE ATT&CK technique ID (e.g., T1059.001)"
+    )
+    emulate_parser.add_argument(
+        "--framework",
+        choices=["atomic", "caldera", "macat"],
+        default="atomic",
+        help="Emulation framework to use (default: atomic)"
+    )
+    emulate_parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="Actually execute tests (default: simulate only)"
+    )
+    emulate_parser.add_argument(
+        "--enrich",
+        action="store_true",
+        help="Enrich existing detections with emulation evidence"
+    )
+    emulate_parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose output"
+    )
+
     args = parser.parse_args()
 
     if args.command == "generate":
@@ -195,6 +325,14 @@ def main():
         )
     elif args.command == "hunt":
         generate_detection(args.technique)
+    elif args.command == "emulate":
+        run_emulation(
+            technique_id=args.technique_id,
+            framework=args.framework,
+            execute=args.execute,
+            enrich=args.enrich,
+            verbose=args.verbose
+        )
     else:
         parser.print_help()
 

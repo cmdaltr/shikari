@@ -42,6 +42,20 @@ data/correlate/*.json
 data/hunt/*.yaml
 !data/hunt/*_example.yaml
 
+# Emulation output (optional feature)
+data/emulation/*.json
+!data/emulation/*_example.json
+data/emulation/evidence/*
+!data/emulation/evidence/.gitkeep
+
+# VECTR output (optional feature)
+data/vectr/*.json
+!data/vectr/*_example.json
+data/vectr/campaigns/*
+!data/vectr/campaigns/.gitkeep
+data/vectr/exports/*
+!data/vectr/exports/.gitkeep
+
 # Test coverage
 .coverage
 htmlcov/
