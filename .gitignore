@@ -39,7 +39,7 @@ data/hunt/*.yaml
 !data/hunt/*_example.yaml
 data/hunt/*.yaml
 !data/hunt/*_example.yaml
-data/progress/*.json
+#data/progress/*.json
 !data/progress/*_example.json
 
 # Emulation output (optional feature)
