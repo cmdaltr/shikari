@@ -191,6 +191,9 @@ def compile_query(retrieved_data):
         if existing_yamls:
             yaml_files_created = True
 
+        # Collect all compatible tables/indices (deduplicated)
+        compatible_sources = set()
+
         # Check each indicator type
         for indicator_type in identifiers:
             if indicator_type not in indicator_mappings:
@@ -208,21 +211,7 @@ def compile_query(retrieved_data):
                         procedure_platforms, software_platforms, clean_index_name
                     )
                     if is_compatible:
-                        compatible_found = True
-                        print(f" ✅ Query built for {name} ({tid}) on {index_name}")
-                        construct_yaml(
-                            name,
-                            tid,
-                            tdesc,
-                            tactic,
-                            tag,
-                            identifiers,
-                            log_sources,
-                            index_name,
-                            procedure_platforms,
-                            software_platforms,
-                        )
-                    # DO NOT call construct_yaml here if not compatible!
+                        compatible_sources.add(index_name)
 
             # MDE
             if "MDE" in indicator_mappings[indicator_type]:
@@ -231,21 +220,27 @@ def compile_query(retrieved_data):
                         procedure_platforms, software_platforms, table_name
                     )
                     if is_compatible:
-                        compatible_found = True
-                        print(f" ✅ Query built for {name} ({tid}) on {table_name}")
-                        construct_yaml(
-                            name,
-                            tid,
-                            tdesc,
-                            tactic,
-                            tag,
-                            identifiers,
-                            log_sources,
-                            table_name,
-                            procedure_platforms,
-                            software_platforms,
-                        )
-                    # DO NOT call construct_yaml here if not compatible!
+                        compatible_sources.add(table_name)
+
+        # Print grouped output and create YAMLs
+        if compatible_sources:
+            compatible_found = True
+            print(f" Queries built for {name} ({tid}) on:")
+            for source in sorted(compatible_sources):
+                print(f"  ✅ {source}")
+                construct_yaml(
+                    name,
+                    tid,
+                    tdesc,
+                    tactic,
+                    tag,
+                    identifiers,
+                    log_sources,
+                    source,
+                    procedure_platforms,
+                    software_platforms,
+                )
+            print()  # Empty line after technique
 
         # Print summary for this technique
         if not compatible_found:

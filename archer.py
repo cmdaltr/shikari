@@ -17,14 +17,14 @@ def process_group(group_name, hypothesis=None, manual_data=None, run_correlation
     """Run the process_group function to generate YAML files"""
     from archer.build.orchestrator import process_group
 
-    print(f"Starting process_group for: {group_name}")
+    print(f"Generating queries for for: {group_name}")
     if hypothesis:
-        print(f"Hypothesis: {hypothesis}")
+        print(f" Hypothesis: {hypothesis}")
     if manual_data:
-        print(f"Using manual data with {len(manual_data)} entries")
+        print(f" Using manual data with {len(manual_data)} entries")
 
     process_group(group_name, hypothesis, manual_data, run_correlation=run_correlation)
-    print(f"YAML generation complete for {group_name}")
+    print(f"Detection query generation complete for {group_name}\n\n")
 
 
 def generate_detection(technique_name):
@@ -90,9 +90,7 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=F
 
     try:
         result = build_correlation_queries(
-            yaml_dir=yaml_dir,
-            output_file=output_file,
-            min_queries=min_queries
+            yaml_dir=yaml_dir, output_file=output_file, min_queries=min_queries
         )
 
         print()
@@ -101,39 +99,57 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=F
         print("=" * 70)
         print(f"Total queries analyzed: {result['total_queries_analyzed']}")
         print(f"Correlations built: {result['total_correlations']}")
-        print(f"Minimum queries per correlation: {result['min_queries_per_correlation']}")
+        print(
+            f"Minimum queries per correlation: {result['min_queries_per_correlation']}"
+        )
         print()
 
-        if verbose and result['total_correlations'] > 0:
+        if verbose and result["total_correlations"] > 0:
             print("Correlation Details:")
             print("-" * 70)
-            for corr in result['correlations']:
+            for corr in result["correlations"]:
                 print(f"\n{corr['correlation_id']}: {corr['name']}")
                 print(f"  Platform: {corr['platform']}")
                 print(f"  Threat Groups: {', '.join(corr['threat_groups'])}")
-                print(f"  Tactics: {', '.join(corr['tactics'][:5])}{'...' if len(corr['tactics']) > 5 else ''}")
+                print(
+                    f"  Tactics: {', '.join(corr['tactics'][:5])}{'...' if len(corr['tactics']) > 5 else ''}"
+                )
                 print(f"  Queries: {corr['query_count']}")
 
         print()
-        print(f"✓ Output saved to: {output_file or 'data/correlate/correlation_queries.json'}")
+        print(
+            f"✓ Output saved to: {output_file or 'data/correlate/correlation_queries.json'}"
+        )
         print()
 
         return result
 
     except FileNotFoundError as e:
         print(f"ERROR: {e}", file=sys.stderr)
-        print("\nPlease ensure the YAML directory exists and contains detection files.", file=sys.stderr)
+        print(
+            "\nPlease ensure the YAML directory exists and contains detection files.",
+            file=sys.stderr,
+        )
         return None
 
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)
         if verbose:
             import traceback
+
             traceback.print_exc()
         return None
 
 
-def run_emulation(technique_id=None, threat_group=None, framework="atomic", execute=False, enrich=False, max_techniques=None, verbose=False):
+def run_emulation(
+    technique_id=None,
+    threat_group=None,
+    framework="atomic",
+    execute=False,
+    enrich=False,
+    max_techniques=None,
+    verbose=False,
+):
     """Execute adversary emulation tests for a technique or threat group"""
     from archer.config import EmulationConfig
 
@@ -143,7 +159,9 @@ def run_emulation(technique_id=None, threat_group=None, framework="atomic", exec
         return None
 
     if not technique_id and not threat_group:
-        print("ERROR: Either --technique-id or --threat-group required", file=sys.stderr)
+        print(
+            "ERROR: Either --technique-id or --threat-group required", file=sys.stderr
+        )
         return None
 
     print("=" * 70)
@@ -157,10 +175,19 @@ def run_emulation(technique_id=None, threat_group=None, framework="atomic", exec
             from archer.emulation.enrich import enrich_from_group_emulation
 
             if not EmulationConfig.is_atomic_configured():
-                print(f"ERROR: Atomic Red Team not found at {EmulationConfig.atomic_path}", file=sys.stderr)
+                print(
+                    f"ERROR: Atomic Red Team not found at {EmulationConfig.atomic_path}",
+                    file=sys.stderr,
+                )
                 print("\nInstall with:", file=sys.stderr)
-                print("  git clone https://github.com/redcanaryco/atomic-red-team.git", file=sys.stderr)
-                print(f"  export ATOMIC_REDTEAM_PATH=/path/to/atomic-red-team", file=sys.stderr)
+                print(
+                    "  git clone https://github.com/redcanaryco/atomic-red-team.git",
+                    file=sys.stderr,
+                )
+                print(
+                    f"  export ATOMIC_REDTEAM_PATH=/path/to/atomic-red-team",
+                    file=sys.stderr,
+                )
                 return None
 
             atomic = AtomicRedTeam()
@@ -168,20 +195,25 @@ def run_emulation(technique_id=None, threat_group=None, framework="atomic", exec
             # Set execution mode
             if execute:
                 os.environ["EMULATION_EXECUTE_MODE"] = "live"
-                print("⚠️  LIVE EXECUTION MODE - Tests will actually run on this system!")
+                print(
+                    "⚠️  LIVE EXECUTION MODE - Tests will actually run on this system!"
+                )
                 print()
             else:
-                print("ℹ️  SIMULATION MODE - Tests will be simulated (set --execute to run live)")
+                print(
+                    "ℹ️  SIMULATION MODE - Tests will be simulated (set --execute to run live)"
+                )
                 print()
 
             # Group emulation
             if threat_group:
-                print(f"Executing Atomic Red Team tests for threat group: {threat_group}...")
+                print(
+                    f"Executing Atomic Red Team tests for threat group: {threat_group}..."
+                )
                 print()
 
                 results = atomic.execute_threat_group(
-                    threat_group=threat_group,
-                    max_techniques=max_techniques
+                    threat_group=threat_group, max_techniques=max_techniques
                 )
 
                 if results.get("status") in ["no_techniques", "no_atomic_tests"]:
@@ -194,11 +226,17 @@ def run_emulation(technique_id=None, threat_group=None, framework="atomic", exec
                     print("Enriching detections with group emulation evidence...")
                     enrich_result = enrich_from_group_emulation(threat_group)
 
-                    if enrich_result['status'] == 'success':
-                        print(f"✓ Enriched {enrich_result['total_files_enriched']} detection files")
-                        print(f"✓ Generated {enrich_result['total_queries_generated']} additional queries")
+                    if enrich_result["status"] == "success":
+                        print(
+                            f"✓ Enriched {enrich_result['total_files_enriched']} detection files"
+                        )
+                        print(
+                            f"✓ Generated {enrich_result['total_queries_generated']} additional queries"
+                        )
                     else:
-                        print(f"⚠️  Enrichment status: {enrich_result.get('message', 'Unknown error')}")
+                        print(
+                            f"⚠️  Enrichment status: {enrich_result.get('message', 'Unknown error')}"
+                        )
 
                 print()
                 return results
@@ -218,7 +256,9 @@ def run_emulation(technique_id=None, threat_group=None, framework="atomic", exec
                 print("=" * 70)
                 print("EXECUTION SUMMARY")
                 print("=" * 70)
-                print(f"Technique: {results['technique_name']} ({results['technique_id']})")
+                print(
+                    f"Technique: {results['technique_name']} ({results['technique_id']})"
+                )
                 print(f"Tests executed: {len(results['tests_executed'])}")
                 print(f"Evidence collected: {len(results['evidence_collected'])}")
                 print()
@@ -226,12 +266,20 @@ def run_emulation(technique_id=None, threat_group=None, framework="atomic", exec
                 if verbose:
                     print("Test Details:")
                     print("-" * 70)
-                    for test in results['tests_executed']:
-                        status_icon = "✓" if test['status'] in ['success', 'simulated'] else "✗"
-                        print(f"\n{status_icon} Test #{test['test_number']}: {test['test_name']}")
+                    for test in results["tests_executed"]:
+                        status_icon = (
+                            "✓" if test["status"] in ["success", "simulated"] else "✗"
+                        )
+                        print(
+                            f"\n{status_icon} Test #{test['test_number']}: {test['test_name']}"
+                        )
                         print(f"   Status: {test['status']}")
-                        if 'command' in test:
-                            cmd = test['command'][:100] + "..." if len(test['command']) > 100 else test['command']
+                        if "command" in test:
+                            cmd = (
+                                test["command"][:100] + "..."
+                                if len(test["command"]) > 100
+                                else test["command"]
+                            )
                             print(f"   Command: {cmd}")
 
                 # Enrich detections if requested
@@ -242,10 +290,16 @@ def run_emulation(technique_id=None, threat_group=None, framework="atomic", exec
 
                     enrich_result = enrich_detections_with_emulation(technique_id)
 
-                    if enrich_result['status'] == 'success':
-                        print(f"✓ Enriched {len(enrich_result['enriched_files'])} detection files")
-                        print(f"✓ Generated {enrich_result['additional_queries_generated']} additional queries")
-                        print(f"✓ Found indicators: {enrich_result['indicators_found']}")
+                    if enrich_result["status"] == "success":
+                        print(
+                            f"✓ Enriched {len(enrich_result['enriched_files'])} detection files"
+                        )
+                        print(
+                            f"✓ Generated {enrich_result['additional_queries_generated']} additional queries"
+                        )
+                        print(
+                            f"✓ Found indicators: {enrich_result['indicators_found']}"
+                        )
                     else:
                         print(f"⚠️  Enrichment status: {enrich_result['message']}")
 
@@ -253,7 +307,9 @@ def run_emulation(technique_id=None, threat_group=None, framework="atomic", exec
                 return results
 
         else:
-            print(f"ERROR: Framework '{framework}' not yet implemented", file=sys.stderr)
+            print(
+                f"ERROR: Framework '{framework}' not yet implemented", file=sys.stderr
+            )
             print("Available: atomic (CALDERA and MACAT coming soon)", file=sys.stderr)
             return None
 
@@ -264,12 +320,18 @@ def run_emulation(technique_id=None, threat_group=None, framework="atomic", exec
         print(f"ERROR: {e}", file=sys.stderr)
         if verbose:
             import traceback
+
             traceback.print_exc()
         return None
 
 
 def run_vectr_command(
-    action, threat_group=None, campaign_id=None, campaign_name=None, update_yamls=False, verbose=False
+    action,
+    threat_group=None,
+    campaign_id=None,
+    campaign_name=None,
+    update_yamls=False,
+    verbose=False,
 ):
     """Execute VECTR integration commands"""
     from archer.config import VECTRConfig
@@ -379,6 +441,7 @@ def run_vectr_command(
         print(f"ERROR: {e}", file=sys.stderr)
         if verbose:
             import traceback
+
             traceback.print_exc()
         return None
 
@@ -386,124 +449,117 @@ def run_vectr_command(
 def main():
     parser = argparse.ArgumentParser(
         description="Archer CLI - Threat hunting detection generator",
-        epilog="Typical workflow: generate → correlate"
+        epilog="Typical workflow: generate → correlate",
     )
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 
     # Step 1: Generate detections for a threat group
     generate_parser = subparsers.add_parser(
-        "generate",
-        help="Generate detections for a threat group (Step 1)"
+        "generate", help="Generate detections for a threat group (Step 1)"
     )
-    generate_parser.add_argument("group_name", help="Name of the threat group (e.g., APT29)")
-    generate_parser.add_argument("--hypothesis", help="Optional hypothesis for the group")
-    generate_parser.add_argument("--correlate", action="store_true", help="Run correlation after generating detections")
+    generate_parser.add_argument(
+        "group_name", help="Name of the threat group (e.g., APT29)"
+    )
+    generate_parser.add_argument(
+        "--hypothesis", help="Optional hypothesis for the group"
+    )
+    generate_parser.add_argument(
+        "--correlate",
+        action="store_true",
+        help="Run correlation after generating detections",
+    )
 
     # Step 2: Correlate generated detections
     correlate_parser = subparsers.add_parser(
         "correlate",
-        help="Correlate generated detections into multi-query searches (Step 2)"
+        help="Correlate generated detections into multi-query searches (Step 2)",
     )
     correlate_parser.add_argument(
-        "--yaml-dir",
-        help="Directory containing YAML files (default: data/generate)"
+        "--yaml-dir", help="Directory containing YAML files (default: data/generate)"
     )
     correlate_parser.add_argument(
         "--output",
-        help="Output JSON file path (default: data/correlations/correlation_queries.json)"
+        help="Output JSON file path (default: data/correlations/correlation_queries.json)",
     )
     correlate_parser.add_argument(
         "--min-queries",
         type=int,
         default=2,
-        help="Minimum number of queries to include in a correlation (default: 2)"
+        help="Minimum number of queries to include in a correlation (default: 2)",
     )
     correlate_parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Enable verbose output"
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
     )
 
     # Alternative: Hunt for a specific technique
     hunt_parser = subparsers.add_parser(
-        "hunt",
-        help="Hunt for a specific MITRE ATT&CK technique"
+        "hunt", help="Hunt for a specific MITRE ATT&CK technique"
     )
     hunt_parser.add_argument(
-        "technique", help="Name of the technique (partial match supported, e.g., 'PowerShell')"
+        "technique",
+        help="Name of the technique (partial match supported, e.g., 'PowerShell')",
     )
 
     # Optional: Emulation testing
     emulate_parser = subparsers.add_parser(
         "emulate",
-        help="Execute adversary emulation tests (requires ENABLE_EMULATION=true)"
+        help="Execute adversary emulation tests (requires ENABLE_EMULATION=true)",
     )
     emulate_parser.add_argument(
-        "--technique-id",
-        help="MITRE ATT&CK technique ID (e.g., T1059.001)"
+        "--technique-id", help="MITRE ATT&CK technique ID (e.g., T1059.001)"
     )
     emulate_parser.add_argument(
         "--threat-group",
-        help="Threat group name (e.g., APT29) - runs all group techniques"
+        help="Threat group name (e.g., APT29) - runs all group techniques",
     )
     emulate_parser.add_argument(
         "--framework",
         choices=["atomic", "caldera", "macat"],
         default="atomic",
-        help="Emulation framework to use (default: atomic)"
+        help="Emulation framework to use (default: atomic)",
     )
     emulate_parser.add_argument(
         "--execute",
         action="store_true",
-        help="Actually execute tests (default: simulate only)"
+        help="Actually execute tests (default: simulate only)",
     )
     emulate_parser.add_argument(
         "--enrich",
         action="store_true",
-        help="Enrich existing detections with emulation evidence"
+        help="Enrich existing detections with emulation evidence",
     )
     emulate_parser.add_argument(
         "--max-techniques",
         type=int,
-        help="Maximum number of techniques to test (for threat groups)"
+        help="Maximum number of techniques to test (for threat groups)",
     )
     emulate_parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Enable verbose output"
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
     )
 
     # Optional: VECTR integration
     vectr_parser = subparsers.add_parser(
-        "vectr",
-        help="VECTR integration for hunt tracking (requires ENABLE_VECTR=true)"
+        "vectr", help="VECTR integration for hunt tracking (requires ENABLE_VECTR=true)"
     )
     vectr_parser.add_argument(
         "action",
         choices=["export", "import", "sync", "list", "coverage"],
-        help="VECTR action to perform"
+        help="VECTR action to perform",
     )
     vectr_parser.add_argument(
-        "--threat-group",
-        help="Threat group name (required for export)"
+        "--threat-group", help="Threat group name (required for export)"
     )
     vectr_parser.add_argument(
-        "--campaign-id",
-        help="VECTR campaign ID (required for import/sync/coverage)"
+        "--campaign-id", help="VECTR campaign ID (required for import/sync/coverage)"
     )
-    vectr_parser.add_argument(
-        "--campaign-name",
-        help="Custom campaign name for export"
-    )
+    vectr_parser.add_argument("--campaign-name", help="Custom campaign name for export")
     vectr_parser.add_argument(
         "--update-yamls",
         action="store_true",
-        help="Update YAML files with test results (for import)"
+        help="Update YAML files with test results (for import)",
     )
     vectr_parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Enable verbose output"
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
     )
 
     args = parser.parse_args()
@@ -515,7 +571,7 @@ def main():
             yaml_dir=args.yaml_dir,
             output_file=args.output,
             min_queries=args.min_queries,
-            verbose=args.verbose
+            verbose=args.verbose,
         )
     elif args.command == "hunt":
         generate_detection(args.technique)
@@ -527,7 +583,7 @@ def main():
             execute=args.execute,
             enrich=args.enrich,
             max_techniques=args.max_techniques,
-            verbose=args.verbose
+            verbose=args.verbose,
         )
     elif args.command == "vectr":
         run_vectr_command(
@@ -536,7 +592,7 @@ def main():
             campaign_id=args.campaign_id,
             campaign_name=args.campaign_name,
             update_yamls=args.update_yamls,
-            verbose=args.verbose
+            verbose=args.verbose,
         )
     else:
         parser.print_help()
