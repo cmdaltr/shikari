@@ -1,4 +1,5 @@
 from .yaml import construct_yaml
+from .queries import get_platforms_for_index
 from archer.mitre.enterprise import (
     get_stix_data,
     obtain_all_techniques,
