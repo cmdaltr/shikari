@@ -122,7 +122,7 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, max_queri
 
         print()
         print(
-            f"✓ Output saved to: {output_file or 'data/correlate/correlation_queries.json'}"
+            f"✓ Output saved to: {result.get('output_file', output_file or 'data/correlate/correlation_queries.json')}"
         )
         print()
 
@@ -480,8 +480,7 @@ def main():
     )
     correlate_parser.add_argument(
         "threat_group",
-        nargs="?",
-        help="Threat group name to correlate (e.g., 'Scattered Spider'). If not provided, correlates all queries.",
+        help="Threat group name to correlate (e.g., 'Scattered Spider')",
     )
     correlate_parser.add_argument(
         "--yaml-dir", help="Directory containing YAML files (default: data/generate)"

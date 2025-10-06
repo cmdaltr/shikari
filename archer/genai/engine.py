@@ -904,9 +904,16 @@ def build_correlation_queries(
     if yaml_dir is None:
         yaml_dir = os.path.join("data", "generate")
     if output_file is None:
-        output_file = os.path.join("data", "correlate", "correlation_queries.json")
+        # Use group name in output file if specified
+        if threat_group:
+            safe_group_name = threat_group.replace(" ", "_").replace("(", "").replace(")", "")
+            output_file = os.path.join("data", "correlate", f"{safe_group_name}.json")
+        else:
+            output_file = os.path.join("data", "correlate", "correlation_queries.json")
 
     print(f"Scanning YAML files in {yaml_dir}...")
+    import time
+    time.sleep(0.5)
 
     # Step 1: Read all YAML files and extract metadata
     yaml_files = [
@@ -916,6 +923,7 @@ def build_correlation_queries(
     ]
 
     print(f"Found {len(yaml_files)} YAML files")
+    time.sleep(0.5)
 
     queries_data = []
     for yaml_path in yaml_files:
@@ -947,6 +955,7 @@ def build_correlation_queries(
             continue
 
     print(f"Successfully parsed {len(queries_data)} queries")
+    time.sleep(0.5)
 
     # Filter by threat group if specified (case-insensitive partial match)
     if threat_group:
@@ -964,6 +973,7 @@ def build_correlation_queries(
                 'min_queries_per_correlation': min_queries,
                 'max_queries_per_correlation': max_queries,
                 'threat_group': threat_group,
+                'output_file': output_file,
                 'correlations': [],
                 'query_inventory': []
             }
@@ -976,18 +986,22 @@ def build_correlation_queries(
                 'min_queries_per_correlation': min_queries,
                 'max_queries_per_correlation': max_queries,
                 'threat_group': threat_group,
+                'output_file': output_file,
                 'correlations': [],
                 'query_inventory': filtered_queries
             }
         print(f"Filtered to {len(filtered_queries)} queries for threat group '{threat_group}'")
+        time.sleep(0.5)
         queries_data = filtered_queries
 
     # Step 2: Assess relevance and build correlation groups
     print("Assessing query relevance...")
+    time.sleep(0.5)
     correlation_groups = _build_correlation_groups(queries_data, min_queries, max_queries)
 
     # Step 3: Build correlation searches
     print(f"Building {len(correlation_groups)} correlation searches...")
+    time.sleep(0.5)
     correlations = []
 
     for idx, group in enumerate(correlation_groups, 1):
@@ -1000,6 +1014,7 @@ def build_correlation_queries(
         'total_queries_analyzed': len(queries_data),
         'total_correlations': len(correlations),
         'min_queries_per_correlation': min_queries,
+        'output_file': output_file,
         'correlations': correlations,
         'query_inventory': [
             {
@@ -1020,6 +1035,7 @@ def build_correlation_queries(
         json.dump(output_data, f, indent=2)
 
     print(f"Correlation queries saved to {output_file}")
+    time.sleep(0.5)
     return output_data
 
 
