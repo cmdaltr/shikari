@@ -12,9 +12,13 @@ Archer is a modular Python service for automated threat hunting with optional ad
 
 ### Optional Modules
 - 💥 **Adversary Emulation** - Atomic Red Team integration for evidence-based detections
-  - 🖥️ **Remote Execution** - SSH/WinRM support for cross-platform testing
+  - 🖥️ **Remote Execution** - SSH/WinRM support for cross-platform testing (Linux, macOS, Windows)
+  - 🔑 **SSH Key Authentication** - Secure passwordless authentication
+  - 🔒 **WinRM HTTPS** - Encrypted Windows remote management (default)
 - 📊 **VECTR Integration** - Hunt tracking, validation, and purple team collaboration
 - 🔍 **Query Execution** - Execute queries via MDE and Splunk APIs
+  - 🌐 **MDE Advanced Hunting** - KQL query execution with OAuth2
+  - 📊 **Splunk Search API** - SPL query execution with job management
 - 🔗 **n8n Workflow Automation** - API endpoints for workflow integration
 
 ---
@@ -81,7 +85,7 @@ pip install -r requirements.txt
 Start the FastAPI service:
 
 ```bash
-uvicorn archer.main:app --reload
+uvicorn archer.app:app --reload
 ```
 
 The service will be available at `http://localhost:8000`.
@@ -105,7 +109,7 @@ python3 archer.py generate "APT29"
 # Generate detections AND run correlation
 python3 archer.py generate "APT29" --correlate
 
-# Build correlations for specific threat group (required)
+# Build correlations for specific threat group
 python3 archer.py correlate "Scattered Spider"
 
 # Hunt for specific technique
@@ -215,7 +219,7 @@ python3 archer.py emulate "APT29" --enrich --max-techniques 10
 # 3. Build correlations
 python3 archer.py correlate "APT29"
 
-# 4. Export to VECTR for tracking
+# 4. (Optional) Export to VECTR for tracking
 python3 archer.py vectr export --threat-group "APT29"
 
 # 5. (After testing in VECTR) Import results
