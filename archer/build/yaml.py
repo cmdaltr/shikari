@@ -159,7 +159,9 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
     )
     yaml_content = re.sub(r"\n\n", r"\n  ", yaml_content)
     yaml_content = re.sub(r"(\(Citation: [^\)]+\))", r"", yaml_content)
-    yaml_content = yaml_content.replace(" | where ", "\n   | where ")
+    yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace(
+        "   | ", "  | "
+    )
 
     if "()" in query or "( OR )" in query or "\n  | where \n  | " in query:
         pass

@@ -5,7 +5,6 @@ from archer.mitre.enterprise import (
     obtain_technique_descriptions,
 )
 from archer.mitre.retrieve import retrieve_procedures
-import json
 import os
 from pathlib import Path
 
@@ -181,8 +180,6 @@ def compile_query(retrieved_data):
         compatible_found = False
         yaml_files_created = False
 
-        # Check if any YAML files already exist for this technique
-        import os
         name_clean = name.replace(" ", "").replace("/", "")
         existing_yamls = []
         if os.path.exists("data/generate"):
@@ -211,9 +208,7 @@ def compile_query(retrieved_data):
                     )
                     if is_compatible:
                         compatible_found = True
-                        print(
-                            f"✅ Query built for {name} ({tid}) on {index_name}"
-                        )
+                        print(f" ✅ Query built for {name} ({tid}) on {index_name}")
                         construct_yaml(
                             name,
                             tid,
@@ -236,9 +231,7 @@ def compile_query(retrieved_data):
                     )
                     if is_compatible:
                         compatible_found = True
-                        print(
-                            f"✅ Query built for {name} ({tid}) on {table_name}"
-                        )
+                        print(f" ✅ Query built for {name} ({tid}) on {table_name}")
                         construct_yaml(
                             name,
                             tid,
@@ -256,13 +249,13 @@ def compile_query(retrieved_data):
         # Print summary for this technique
         if not compatible_found:
             if yaml_files_created:
-                print(f"❌ No more compatible platforms found for {name}\n")
+                print(f" ❌ No more compatible platforms found for {name}\n")
             else:
                 print(
-                    f"❌ No compatible platforms found for {name} - skipping YAML generation\n"
+                    f" ❌ No compatible platforms found for {name}; no detections generated\n"
                 )
     else:
-        print(f"❌ No identifiers found for {name}; no detections generated")
+        print(f" ❌ No identifiers found for {name}; no detections generated\n")
 
 
 def main():
