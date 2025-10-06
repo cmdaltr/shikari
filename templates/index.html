@@ -96,6 +96,46 @@
                   </div>
               </div>
               <div></div>
+              <!-- Emulation Options Row -->
+              <div style="text-align: right; padding-top: 20px;">
+                  <label>Emulation:</label>
+              </div>
+              <div style="text-align: left; padding-top: 20px;">
+                  <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9em;">
+                      <label class="advanced-option" title="Run Atomic Red Team tests for threat group techniques and enrich detections with evidence (requires ENABLE_EMULATION=true and Atomic Red Team installed)">
+                          <input type="checkbox" name="run_emulation" value="true">
+                          Run Emulation Tests
+                          <span class="tooltip-icon">ⓘ</span>
+                      </label>
+                      <label class="advanced-option" title="Only simulate tests without actual execution - recommended for production systems" style="margin-left: 20px;">
+                          <input type="radio" name="emulation_mode" value="simulate" checked>
+                          Simulate Only (Safe)
+                      </label>
+                      <label class="advanced-option" title="Actually execute attack techniques - USE ONLY IN ISOLATED LAB ENVIRONMENTS" style="margin-left: 20px;">
+                          <input type="radio" name="emulation_mode" value="live">
+                          Live Execution (Lab Only!)
+                      </label>
+                  </div>
+              </div>
+              <div></div>
+              <!-- VECTR Options Row -->
+              <div style="text-align: right; padding-top: 20px;">
+                  <label>VECTR Integration:</label>
+              </div>
+              <div style="text-align: left; padding-top: 20px;">
+                  <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9em;">
+                      <label class="advanced-option" title="Export detections to VECTR for hunt tracking and validation (requires ENABLE_VECTR=true and VECTR_API_TOKEN)">
+                          <input type="checkbox" name="vectr_export" value="true">
+                          Export to VECTR
+                          <span class="tooltip-icon">ⓘ</span>
+                      </label>
+                      <div style="margin-left: 20px; display: flex; align-items: center; gap: 8px;">
+                          <label for="vectr_campaign_name" style="font-size: 0.9em;">Campaign Name:</label>
+                          <input type="text" name="vectr_campaign_name" id="vectr_campaign_name" placeholder="Optional - auto-generated if blank" style="flex: 1; max-width: 300px; padding: 4px 8px; font-size: 0.9em;">
+                      </div>
+                  </div>
+              </div>
+              <div></div>
               <!-- Bottom row -->
               <div></div>
               <div style="text-align: center; padding-top: 15px;">

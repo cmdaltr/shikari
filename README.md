@@ -1,14 +1,29 @@
-# 🏹 Archer: Threat Hunting Python Service
+# 🏹 Archer: Threat Hunting Detection Generator
 
-Archer is a modular Python package/service designed for automated threat hunting, integrating MITRE ATT&CK techniques, and workflow automation with n8n. It provides a FastAPI microservice that outputs structured hunt queries in YAML format, ready for correlation and enrichment.
+Archer is a modular Python service for automated threat hunting with optional adversary emulation and hunt tracking integrations. Generate detection queries, validate with real attack execution, and track hunts with VECTR integration.
+
+## ✨ Features
+
+### Core Capabilities
+- 🎯 **MITRE ATT&CK Integration** - Automated detection generation from threat group TTPs
+- 🔍 **Multi-Platform Support** - KQL (Microsoft Defender/Sentinel) and Splunk (SPL) queries
+- 🧠 **AI-Powered Correlations** - Semantic analysis and query correlation
+- 🌐 **Web UI & CLI** - FastAPI web interface plus command-line tools
+
+### Optional Modules
+- 💥 **Adversary Emulation** (NEW) - Atomic Red Team integration for evidence-based detections
+- 📊 **VECTR Integration** (NEW) - Hunt tracking, validation, and purple team collaboration
+- 🔗 **n8n Workflow Automation** - API endpoints for workflow integration
 
 ---
 <br>
 
 ## 1️⃣ Prerequisites
 
-- **Docker & Docker Compose** (for containerized setup)  
-- **Python 3.11+** (for local setup)  
+- **Docker & Docker Compose** (for containerized setup)
+- **Python 3.11+** (for local setup)
+- **Optional**: Atomic Red Team (for emulation module)
+- **Optional**: VECTR instance (for hunt tracking)
 
 ---
 <br>
@@ -74,44 +89,92 @@ The service will be available at `http://localhost:8000`.
 
 Archer includes a powerful CLI for running core functionality without the web interface.
 
-1. View available commands:
+#### Basic Commands
 
 ```bash
+# View all available commands
 python3 archer.py --help
-```
 
-2. Example usage:
+# Generate detections for a threat group
+python3 archer.py generate "APT29"
 
-```bash
-# Step 1: Generate detections for a threat group
-python3 archer.py generate "Scattered Spider"
-
-# Step 2: Correlate the generated detections
+# Build correlations
 python3 archer.py correlate --verbose
 
-# Alternative: Hunt for a specific technique
+# Hunt for specific technique
 python3 archer.py hunt "PowerShell"
 ```
 
-**New: Correlation Query Builder**
+#### Adversary Emulation (Optional)
 
-The CLI now includes an intelligent correlation builder that:
-- Analyzes YAML detection files
-- Assesses query relevance based on threat groups, platforms, attack paths, and severity
-- Builds correlation searches combining related queries
-- Generates both MDE (KQL) and Splunk correlation queries
-- Exports results to structured JSON
+Run Atomic Red Team tests and enrich detections with evidence:
 
 ```bash
-# Correlate with custom settings
-python3 archer.py correlate \
-  --yaml-dir ./detections \
-  --output ./correlations.json \
-  --min-queries 3 \
-  --verbose
+# Enable emulation module
+export ENABLE_EMULATION=true
+export ATOMIC_REDTEAM_PATH=/opt/atomic-red-team
+
+# Simulate tests for a single technique (safe)
+python3 archer.py emulate --technique-id T1059.001 --enrich
+
+# Simulate tests for entire threat group
+python3 archer.py emulate --threat-group "APT29" --enrich
+
+# Limit to first 10 techniques
+python3 archer.py emulate --threat-group "APT29" --max-techniques 10 --enrich
+
+# Live execution (LAB ONLY!)
+python3 archer.py emulate --threat-group "APT29" --execute --enrich
 ```
 
-See [docs/CORRELATIONS.md](docs/CORRELATIONS.md) for detailed documentation.
+See [docs/EMULATION.md](docs/EMULATION.md) for detailed emulation documentation.
+
+#### VECTR Integration (Optional)
+
+Track hunts and validate detections with VECTR:
+
+```bash
+# Enable VECTR module
+export ENABLE_VECTR=true
+export VECTR_URL=https://vectr.local:8081
+export VECTR_API_TOKEN=your-api-token
+
+# Export detections to VECTR campaign
+python3 archer.py vectr export --threat-group "APT29"
+
+# List campaigns
+python3 archer.py vectr list
+
+# Import test results
+python3 archer.py vectr import --campaign-id camp_123abc --update-yamls
+
+# Bidirectional sync
+python3 archer.py vectr sync --campaign-id camp_123abc --threat-group "APT29"
+
+# Generate coverage report
+python3 archer.py vectr coverage --campaign-id camp_123abc
+```
+
+See [docs/VECTR.md](docs/VECTR.md) for detailed VECTR documentation.
+
+#### Complete Workflow Example
+
+```bash
+# 1. Generate detections
+python3 archer.py generate "APT29"
+
+# 2. Run emulation and enrich
+python3 archer.py emulate --threat-group "APT29" --enrich
+
+# 3. Build correlations
+python3 archer.py correlate --verbose
+
+# 4. Export to VECTR for tracking
+python3 archer.py vectr export --threat-group "APT29"
+
+# 5. (After testing in VECTR) Import results
+python3 archer.py vectr import --campaign-id camp_123abc --update-yamls
+```
 
 ---
 <br>
@@ -154,12 +217,20 @@ Content-Type: application/json
 ---
 <br>
 
-## 📚 References & Resources
+## 📚 Documentation & Resources
 
-- [MITRE ATT&CK Framework](https://attack.mitre.org/)  
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)  
-- [n8n Workflow Automation](https://n8n.io/)  
-- [Docker Documentation](https://docs.docker.com/)  
+### Archer Documentation
+- [Architecture Overview](docs/ARCHITECTURE.md) - Complete system architecture
+- [Emulation Guide](docs/EMULATION.md) - Adversary emulation integration
+- [VECTR Guide](docs/VECTR.md) - Hunt tracking and validation
+- [Correlations](docs/CORRELATIONS.md) - Correlation query builder
+
+### External Resources
+- [MITRE ATT&CK Framework](https://attack.mitre.org/)
+- [Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)
+- [VECTR](https://vectr.io/)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [n8n Workflow Automation](https://n8n.io/)
 
 ---
 <br>

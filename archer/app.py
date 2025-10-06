@@ -164,6 +164,10 @@ async def generate(
     semantic: str = Form(None),
     ai_generators: str = Form(None),
     local_llm: str = Form(None),
+    run_emulation: str = Form(None),
+    emulation_mode: str = Form("simulate"),
+    vectr_export: str = Form(None),
+    vectr_campaign_name: str = Form(None),
 ):
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
@@ -192,6 +196,45 @@ async def generate(
                 modified_process_group_wrapper(
                     group_name, hypothesis, manual_data=None, genai_mode=genai_mode
                 )
+
+                # Run emulation if requested
+                if run_emulation == "true":
+                    try:
+                        from archer.config import EmulationConfig
+                        from archer.emulation import AtomicRedTeam
+                        from archer.emulation.enrich import enrich_from_group_emulation
+
+                        if EmulationConfig.is_atomic_configured():
+                            # Set execution mode
+                            if emulation_mode == "live":
+                                os.environ["EMULATION_EXECUTE_MODE"] = "live"
+                            else:
+                                os.environ["EMULATION_EXECUTE_MODE"] = "simulate"
+
+                            # Run group emulation
+                            atomic = AtomicRedTeam()
+                            atomic.execute_threat_group(group_name)
+
+                            # Enrich detections
+                            enrich_from_group_emulation(group_name)
+                    except Exception as e:
+                        print(f"Emulation error: {e}")
+
+                # Export to VECTR if requested
+                if vectr_export == "true":
+                    try:
+                        from archer.config import VECTRConfig
+                        from archer.vectr import export_to_vectr
+
+                        if VECTRConfig.is_configured():
+                            campaign_name = vectr_campaign_name if vectr_campaign_name else None
+                            export_to_vectr(
+                                threat_group=group_name,
+                                campaign_name=campaign_name
+                            )
+                    except Exception as e:
+                        print(f"VECTR export error: {e}")
+
             except Exception:
                 try:
                     write_progress(group_name, {"status": "failed"})

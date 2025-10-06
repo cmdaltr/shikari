@@ -44,11 +44,13 @@ export EMULATION_EVIDENCE_DIR=data/emulation/evidence
 
 ### CLI Commands
 
-#### Simulate Atomic Tests (Safe)
+#### 1. Single Technique Emulation
+
+Simulate Atomic Tests for a specific technique (Safe):
 
 ```bash
 # Simulate execution (doesn't actually run commands)
-python3 archer.py emulate T1059.001 --verbose
+python3 archer.py emulate --technique-id T1059.001 --verbose
 ```
 
 **Output:**
@@ -69,23 +71,11 @@ Tests executed: 15
 Evidence collected: 23
 ```
 
-#### Execute Live Tests (Use with Caution!)
-
-⚠️ **WARNING**: Live execution will actually run attack techniques on your system. Only use in isolated test environments.
-
-```bash
-# Enable emulation
-export ENABLE_EMULATION=true
-
-# Run live tests
-python3 archer.py emulate T1059.001 --execute --verbose
-```
-
-#### Enrich Detections with Evidence
+With automatic detection enrichment:
 
 ```bash
 # Run emulation and enrich existing detections
-python3 archer.py emulate T1059.001 --enrich --verbose
+python3 archer.py emulate --technique-id T1059.001 --enrich --verbose
 ```
 
 This will:
@@ -94,6 +84,78 @@ This will:
 3. Find existing YAML detection files for the technique
 4. Add `emulation_evidence` section to YAML files
 5. Generate additional KQL queries
+
+#### 2. Threat Group Emulation (NEW!)
+
+Run Atomic Red Team tests for ALL techniques used by a threat group:
+
+```bash
+# Simulate all APT29 techniques
+python3 archer.py emulate --threat-group "APT29" --enrich
+
+# Limit to first 10 techniques (for testing)
+python3 archer.py emulate --threat-group "APT29" --max-techniques 10 --enrich
+```
+
+**Output:**
+```
+======================================================================
+Adversary Emulation - ATOMIC
+======================================================================
+
+ℹ️  SIMULATION MODE - Tests will be simulated
+
+Fetching techniques for threat group: APT29
+Found group: APT29
+
+Found 12 techniques with Atomic Red Team tests:
+  - T1003.001
+  - T1027
+  - T1059.001
+  - T1071.001
+  ...
+
+[1/12] Testing T1003.001...
+[2/12] Testing T1027...
+...
+
+======================================================================
+GROUP EMULATION SUMMARY
+======================================================================
+Threat Group: APT29
+Total Techniques: 45
+Testable Techniques: 12
+Total Tests Executed: 87
+  Successful: 0
+  Failed: 0
+  Simulated: 87
+  Skipped: 15
+
+✅ Results saved to data/emulation/APT29_group_emulation_*.json
+
+Enriching detections with group emulation evidence...
+Techniques Enriched: 12
+Files Updated: 24
+Queries Generated: 36
+```
+
+Benefits of Group Emulation:
+- Test entire threat group attack chains
+- Bulk enrichment with single command
+- Comprehensive evidence collection
+- Realistic attack simulation
+
+#### 3. Execute Live Tests (Use with Caution!)
+
+⚠️ **WARNING**: Live execution will actually run attack techniques on your system. Only use in isolated test environments.
+
+```bash
+# Single technique - live execution
+python3 archer.py emulate --technique-id T1059.001 --execute --enrich
+
+# Threat group - live execution (LAB ONLY!)
+python3 archer.py emulate --threat-group "APT29" --execute --enrich
+```
 
 ### Programmatic Usage
 
