@@ -5,7 +5,10 @@ Comprehensive documentation for the Archer threat hunting application.
 ## Quick Start
 
 - **[SUPPORT.md](SUPPORT.md)** 🚀 - **START HERE**: Setup guide & troubleshooting
-- **[CORRELATIONS.md](CORRELATIONS.md)** - Main guide for correlation query builder
+- **[CORRELATIONS.md](CORRELATIONS.md)** - Main guide for correlation query builder (opt-in)
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, emulation & VECTR integration
+- **[EMULATION.md](EMULATION.md)** - Adversary emulation guide (Atomic Red Team)
+- **[VECTR.md](VECTR.md)** - VECTR integration guide for hunt tracking
 - **[MODELS.md](MODELS.md)** - Setup guide for local AI models
 - **[SEMANTICS.md](SEMANTICS.md)** - Technical reference for semantic overlap scoring
 
@@ -23,16 +26,44 @@ Comprehensive documentation for the Archer threat hunting application.
 - Quick reference tables
 
 ### CORRELATIONS.md
-**The complete guide to the correlation query builder system**
+**The complete guide to the correlation query builder system (opt-in)**
 
 - Overview and features
-- Usage examples (CLI, programmatic, standalone)
+- Usage examples (CLI with `--correlate` flag, programmatic, standalone)
 - Configuration options
 - Output structure and format
 - How the relevance scoring works
 - Platform-specific query generation (MDE/KQL and Splunk)
 - Advanced usage and customization
 - Module reference and API
+
+### ARCHITECTURE.md
+**System architecture and optional module integration**
+
+- Core architecture overview
+- Optional feature modules (emulation, VECTR)
+- Plugin-based design principles
+- Configuration management
+- Integration workflows (4 complete examples)
+- Security considerations
+
+### EMULATION.md
+**Adversary emulation with Atomic Red Team**
+
+- Setup and configuration
+- Single technique emulation
+- Threat group emulation (bulk testing)
+- Evidence collection and enrichment
+- Safety modes (simulate vs. live)
+
+### VECTR.md
+**VECTR integration for hunt tracking**
+
+- Setup and configuration
+- Export detections to campaigns
+- Import test results
+- Bidirectional sync
+- Coverage reporting
 
 ### MODELS.md
 **Setup guide for running local AI models with llama.cpp**
@@ -91,6 +122,9 @@ docs/
 - **Get Archer running** → [SUPPORT.md](SUPPORT.md) 🚀
 - **Troubleshoot setup issues** → [SUPPORT.md](SUPPORT.md)
 - **Build correlation queries** → [CORRELATIONS.md](CORRELATIONS.md)
+- **Understand the architecture** → [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Set up adversary emulation** → [EMULATION.md](EMULATION.md)
+- **Integrate with VECTR** → [VECTR.md](VECTR.md)
 - **Set up local AI models** → [MODELS.md](MODELS.md)
 - **Understand semantic overlap** → [SEMANTICS.md](SEMANTICS.md)
 - **See architecture diagrams** → [flow/](flow/)

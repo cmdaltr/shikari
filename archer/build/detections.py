@@ -252,9 +252,7 @@ def compile_query(retrieved_data):
             if yaml_files_created:
                 print(f" ❌ No more compatible platforms found for {name}\n")
             else:
-                print(
-                    f" ❌ No compatible platforms found for {name}; no detections generated\n"
-                )
+                print(f" ❌ No identifiers found for {name}; no detections generated\n")
     else:
         print(f" ❌ No identifiers found for {name}; no detections generated\n")
 

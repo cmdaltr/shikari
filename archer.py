@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 
-def process_group(group_name, hypothesis=None, manual_data=None):
+def process_group(group_name, hypothesis=None, manual_data=None, run_correlation=False):
     """Run the process_group function to generate YAML files"""
     from archer.build.orchestrator import process_group
 
@@ -23,7 +23,7 @@ def process_group(group_name, hypothesis=None, manual_data=None):
     if manual_data:
         print(f"Using manual data with {len(manual_data)} entries")
 
-    process_group(group_name, hypothesis, manual_data)
+    process_group(group_name, hypothesis, manual_data, run_correlation=run_correlation)
     print(f"YAML generation complete for {group_name}")
 
 
@@ -397,6 +397,7 @@ def main():
     )
     generate_parser.add_argument("group_name", help="Name of the threat group (e.g., APT29)")
     generate_parser.add_argument("--hypothesis", help="Optional hypothesis for the group")
+    generate_parser.add_argument("--correlate", action="store_true", help="Run correlation after generating detections")
 
     # Step 2: Correlate generated detections
     correlate_parser = subparsers.add_parser(
@@ -508,7 +509,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "generate":
-        process_group(args.group_name, args.hypothesis)
+        process_group(args.group_name, args.hypothesis, run_correlation=args.correlate)
     elif args.command == "correlate":
         build_correlations(
             yaml_dir=args.yaml_dir,

@@ -98,7 +98,10 @@ python3 archer.py --help
 # Generate detections for a threat group
 python3 archer.py generate "APT29"
 
-# Build correlations
+# Generate detections AND run correlation
+python3 archer.py generate "APT29" --correlate
+
+# Build correlations separately
 python3 archer.py correlate --verbose
 
 # Hunt for specific technique

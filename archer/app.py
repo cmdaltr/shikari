@@ -164,6 +164,7 @@ async def generate(
     semantic: str = Form(None),
     ai_generators: str = Form(None),
     local_llm: str = Form(None),
+    run_correlation: str = Form(None),
     run_emulation: str = Form(None),
     emulation_mode: str = Form("simulate"),
     vectr_export: str = Form(None),
@@ -194,7 +195,8 @@ async def generate(
             try:
                 # Use the modified wrapper instead of direct process_group
                 modified_process_group_wrapper(
-                    group_name, hypothesis, manual_data=None, genai_mode=genai_mode
+                    group_name, hypothesis, manual_data=None, genai_mode=genai_mode,
+                    run_correlation=(run_correlation == "true")
                 )
 
                 # Run emulation if requested
@@ -461,9 +463,9 @@ async def manual_submit(
     def _bg_manual():
         try:
             # Use the modified wrapper instead of direct process_group
-            # Note: manual submissions don't currently pass genai_mode from UI
+            # Note: manual submissions don't currently pass genai_mode or run_correlation from UI
             modified_process_group_wrapper(
-                group_name, hypothesis, manual_data=manual_data, genai_mode=None
+                group_name, hypothesis, manual_data=manual_data, genai_mode=None, run_correlation=False
             )
         except Exception:
             try:
@@ -709,7 +711,7 @@ def start_genai_processing(group_name):
 
 # Modify the orchestrator process to ensure completion
 def modified_process_group_wrapper(
-    group_name, hypothesis, manual_data=None, genai_mode=None
+    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
@@ -718,35 +720,26 @@ def modified_process_group_wrapper(
         os.environ["GENAI_MODE"] = genai_mode
 
     try:
-        # Call the original process_group
-        process_group(group_name, hypothesis, manual_data)
+        # Call the original process_group with run_correlation parameter
+        process_group(group_name, hypothesis, manual_data, run_correlation=run_correlation)
 
-        # After YAML generation completes, explicitly mark as 100% and start GenAI
-        # Read current progress to avoid overwriting other fields
+        # If correlation was requested and run via process_group, we're done
+        if run_correlation:
+            return
+
+        # Otherwise, just mark as complete
         progress_data = read_progress(group_name) or {}
-
-        # Ensure YAML progress shows as complete
         if "total_yaml" in progress_data:
             progress_data["created_yaml"] = progress_data["total_yaml"]
         else:
             progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
             progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
 
-        # Mark as ready for GenAI
-        progress_data["status"] = "genai_starting"
+        progress_data["status"] = "complete"
         write_progress(group_name, progress_data)
 
-        # Run GenAI correlation processing
-        try:
-            print(f"Starting GenAI correlation for {group_name}")
-            process_genai(group_name)
-        except Exception as e:
-            print(f"GenAI correlation failed: {e}")
-            import traceback
-            traceback.print_exc()
-
     except Exception as e:
-        print(f"Error in process group or GenAI processing: {e}")
+        print(f"Error in process group: {e}")
         try:
             write_progress(group_name, {"status": "failed"})
         except:

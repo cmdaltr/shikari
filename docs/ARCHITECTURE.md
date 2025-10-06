@@ -404,14 +404,20 @@ VECTR_DEFAULT_ENVIRONMENT=Production
 ```bash
 # Standard threat hunting workflow
 python3 archer.py generate "APT29"
+
+# Optionally run correlation
+python3 archer.py generate "APT29" --correlate
+# OR
 python3 archer.py correlate --verbose
 
 # Output:
 # - data/generate/*.yaml
-# - data/correlate/APT29.json
+# - data/correlate/APT29.json (if --correlate used)
 ```
 
 **Use Case**: Quick detection generation without validation
+
+> **Note**: Correlation is now **opt-in** via `--correlate` flag or separate `correlate` command.
 
 ---
 
@@ -429,7 +435,7 @@ python3 archer.py generate "APT29"
 python3 archer.py emulate T1059.001 --enrich
 python3 archer.py emulate T1071.001 --enrich
 
-# Build correlations (now with emulation evidence)
+# Optionally build correlations (now with emulation evidence)
 python3 archer.py correlate --verbose
 
 # Output:
@@ -494,7 +500,7 @@ python3 archer.py generate "APT29"
 python3 archer.py emulate T1059.001 --enrich --verbose
 python3 archer.py emulate T1071.001 --enrich --verbose
 
-# Step 3: Build correlations
+# Step 3: Optionally build correlations
 python3 archer.py correlate --verbose
 
 # Step 4: Export to VECTR (includes emulation evidence as operator guidance)

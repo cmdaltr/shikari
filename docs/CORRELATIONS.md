@@ -38,18 +38,20 @@ archer/genai/
 ### Via CLI (Recommended)
 
 ```bash
-# Basic usage with defaults
-python3 archer.py build-correlations
+# Generate detections and run correlation together
+python3 archer.py generate "APT29" --correlate
+
+# Or build correlations separately
+python3 archer.py correlate --verbose
 
 # Specify custom paths
-python3 archer.py build-correlations --yaml-dir ./my-detections --output ./results.json
+python3 archer.py correlate --yaml-dir ./my-detections --output ./results.json
 
 # Require at least 3 queries per correlation
-python3 archer.py build-correlations --min-queries 3
-
-# Enable verbose output
-python3 archer.py build-correlations --verbose
+python3 archer.py correlate --min-queries 3
 ```
+
+> **Note**: Correlation is now **opt-in**. Use `--correlate` flag with `generate` command or run `correlate` separately.
 
 ### Via Standalone Script
 
@@ -272,11 +274,12 @@ python3 archer.py build-correlations \
 ### Example 3: Integration with Existing Workflow
 
 ```bash
-# Generate detections for a threat group
-python3 archer.py process-group "Scattered Spider"
+# Option 1: Generate detections with correlation in one step
+python3 archer.py generate "Scattered Spider" --correlate
 
-# Build correlations from the generated queries
-python3 archer.py build-correlations --verbose
+# Option 2: Generate detections, then correlate separately
+python3 archer.py generate "Scattered Spider"
+python3 archer.py correlate --verbose
 ```
 
 ## Troubleshooting
