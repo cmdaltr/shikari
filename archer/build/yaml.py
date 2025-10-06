@@ -58,20 +58,40 @@ def additional_tactics(tid, tactic):
 
     tid_uri = tid.replace(".", "/")
     url = f"https://attack.mitre.org/techniques/{tid_uri}"
-    response = requests.get(url, timeout=5)
-    soup = BeautifulSoup(response.text, "html.parser")
-    text = soup.text
 
-    if "Tactics:\\n" in text:
-        extracted_tactics = extract_tactics(
-            text.split("Sub-technique of")[1][0:200]
-            .split("Platforms:")[0]
-            .split("Tactics:")[1],
-        )
-    else:
-        extracted_tactics = extract_tactics(tactic)
+    # Try to fetch from MITRE with retry logic and timeout handling
+    max_retries = 3
+    timeout = 10
 
-    return extracted_tactics
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, timeout=timeout)
+            soup = BeautifulSoup(response.text, "html.parser")
+            text = soup.text
+
+            if "Tactics:\\n" in text:
+                extracted_tactics = extract_tactics(
+                    text.split("Sub-technique of")[1][0:200]
+                    .split("Platforms:")[0]
+                    .split("Tactics:")[1],
+                )
+            else:
+                extracted_tactics = extract_tactics(tactic)
+
+            return extracted_tactics
+
+        except (requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            if attempt < max_retries - 1:
+                # Retry with exponential backoff
+                wait_time = 2 ** attempt
+                print(f"Warning: Failed to fetch tactics from MITRE (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+                import time
+                time.sleep(wait_time)
+            else:
+                # Final fallback: use the tactic provided
+                print(f"Warning: Could not fetch additional tactics from {url} after {max_retries} attempts, using provided tactic: {tactic}")
+                extracted_tactics = extract_tactics(tactic)
+                return extracted_tactics
 
 
 def find_nested_entity(field, entity_mappings):

@@ -865,7 +865,11 @@ union query_a, query_b
 
 
 def build_correlation_queries(
-    yaml_dir: str = None, output_file: str = None, min_queries: int = 2
+    yaml_dir: str = None,
+    output_file: str = None,
+    min_queries: int = 2,
+    max_queries: int = 5,
+    threat_group: str = None
 ) -> Dict:
     """
     Read YAML files, assess query relevance, build correlation searches, and save to JSON.
@@ -878,14 +882,17 @@ def build_correlation_queries(
        - Compatible platforms
        - Related attack paths (tactics)
        - Severity/likelihood scores
-    4. Builds correlation searches combining at least min_queries queries
-    5. Summarizes the correlation results
-    6. Saves all queries in a single JSON output file
+    4. Builds correlation searches combining min_queries to max_queries queries
+    5. Ensures no duplicate tactics in correlations
+    6. Summarizes the correlation results
+    7. Saves all queries in a single JSON output file
 
     Args:
         yaml_dir: Directory containing YAML files (default: data/generate)
         output_file: Output JSON file path (default: data/correlate/correlation_queries.json)
         min_queries: Minimum number of queries to include in a correlation (default: 2)
+        max_queries: Maximum number of queries to include in a correlation (default: 5)
+        threat_group: Filter to only correlate queries for specific threat group (optional)
 
     Returns:
         Dictionary containing all correlation queries and metadata
@@ -941,9 +948,43 @@ def build_correlation_queries(
 
     print(f"Successfully parsed {len(queries_data)} queries")
 
+    # Filter by threat group if specified (case-insensitive partial match)
+    if threat_group:
+        threat_group_lower = threat_group.lower()
+        filtered_queries = [
+            q for q in queries_data
+            if any(threat_group_lower in tag.lower() for tag in q.get('tags', []))
+        ]
+        if len(filtered_queries) == 0:
+            print(f"\n❌ No queries found for threat group '{threat_group}'")
+            return {
+                'generated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+                'total_queries_analyzed': 0,
+                'total_correlations': 0,
+                'min_queries_per_correlation': min_queries,
+                'max_queries_per_correlation': max_queries,
+                'threat_group': threat_group,
+                'correlations': [],
+                'query_inventory': []
+            }
+        elif len(filtered_queries) == 1:
+            print(f"\n❌ Only 1 query found for threat group '{threat_group}' - need at least {min_queries} for correlation")
+            return {
+                'generated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+                'total_queries_analyzed': 1,
+                'total_correlations': 0,
+                'min_queries_per_correlation': min_queries,
+                'max_queries_per_correlation': max_queries,
+                'threat_group': threat_group,
+                'correlations': [],
+                'query_inventory': filtered_queries
+            }
+        print(f"Filtered to {len(filtered_queries)} queries for threat group '{threat_group}'")
+        queries_data = filtered_queries
+
     # Step 2: Assess relevance and build correlation groups
     print("Assessing query relevance...")
-    correlation_groups = _build_correlation_groups(queries_data, min_queries)
+    correlation_groups = _build_correlation_groups(queries_data, min_queries, max_queries)
 
     # Step 3: Build correlation searches
     print(f"Building {len(correlation_groups)} correlation searches...")
@@ -1042,10 +1083,11 @@ def _calculate_relevance_score(query_a: Dict, query_b: Dict) -> float:
     return score
 
 
-def _build_correlation_groups(queries: List[Dict], min_queries: int) -> List[List[Dict]]:
+def _build_correlation_groups(queries: List[Dict], min_queries: int, max_queries: int = 5) -> List[List[Dict]]:
     """
     Group queries into correlation sets based on relevance scores.
     Each group contains queries that are highly related.
+    Ensures no duplicate tactics in a correlation.
     """
     from collections import defaultdict
 
@@ -1071,10 +1113,43 @@ def _build_correlation_groups(queries: List[Dict], min_queries: int) -> List[Lis
             if len(platform_queries) < min_queries:
                 continue
 
-            # Sort by tactics overlap and take top related queries
-            # For simplicity, group all queries with same tag+platform
-            if len(platform_queries) >= min_queries:
-                correlation_groups.append(platform_queries)
+            # Build correlations ensuring no duplicate tactics
+            # Group queries by unique tactics
+            used_queries = set()
+
+            while len(platform_queries) >= min_queries:
+                correlation_group = []
+                used_tactics = set()
+
+                for query in platform_queries:
+                    query_id = query.get('id')
+                    if query_id in used_queries:
+                        continue
+
+                    # Get tactics for this query
+                    query_tactics = query.get('tactics', [])
+
+                    # Check if this query's tactics overlap with already used tactics
+                    if any(tactic in used_tactics for tactic in query_tactics):
+                        continue
+
+                    # Add query to correlation group
+                    correlation_group.append(query)
+                    used_tactics.update(query_tactics)
+                    used_queries.add(query_id)
+
+                    # Stop if we hit max_queries
+                    if len(correlation_group) >= max_queries:
+                        break
+
+                # Only add if we meet minimum requirements
+                if len(correlation_group) >= min_queries:
+                    correlation_groups.append(correlation_group)
+                    # Remove used queries from pool
+                    platform_queries = [q for q in platform_queries if q.get('id') not in used_queries]
+                else:
+                    # Can't build more correlations
+                    break
 
     return correlation_groups
 
@@ -1110,13 +1185,17 @@ def _build_correlation_search(queries: List[Dict], correlation_id: int) -> Dict:
     # Generate summary
     summary = _generate_correlation_summary(queries, all_tags, all_tactics)
 
+    # Filter out None values before sorting
+    clean_tags = sorted([t for t in all_tags if t is not None])
+    clean_tactics = sorted([t for t in all_tactics if t is not None])
+
     return {
         'correlation_id': f"CORR-{correlation_id:04d}",
         'name': f"Correlation: {' + '.join(all_names[:3])}{'...' if len(all_names) > 3 else ''}",
         'summary': summary,
         'platform': platform,
-        'threat_groups': sorted(list(all_tags)),
-        'tactics': sorted(list(all_tactics)),
+        'threat_groups': clean_tags,
+        'tactics': clean_tactics,
         'query_count': len(queries),
         'queries_included': [
             {
@@ -1187,10 +1266,14 @@ def _combine_splunk_queries_simple(query_list: List[str]) -> str:
 
 def _generate_correlation_summary(queries: List[Dict], tags: set, tactics: set) -> str:
     """Generate a human-readable summary of the correlation search."""
+    # Filter out None values before sorting
+    clean_tags = sorted([t for t in tags if t is not None]) if tags else []
+    clean_tactics = sorted([t for t in tactics if t is not None]) if tactics else []
+
     summary_lines = [
         f"This correlation search combines {len(queries)} detection queries to identify coordinated attack patterns.",
-        f"\nThreat Groups: {', '.join(sorted(tags)) if tags else 'None'}",
-        f"Attack Tactics: {', '.join(sorted(tactics)) if tactics else 'None'}",
+        f"\nThreat Groups: {', '.join(clean_tags) if clean_tags else 'None'}",
+        f"Attack Tactics: {', '.join(clean_tactics) if clean_tactics else 'None'}",
         f"\nThe correlation fires when at least 2 of the following detection patterns are observed:",
     ]
 

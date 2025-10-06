@@ -17,7 +17,7 @@ def process_group(group_name, hypothesis=None, manual_data=None, run_correlation
     """Run the process_group function to generate YAML files"""
     from archer.build.orchestrator import process_group
 
-    print(f"Generating queries for for: {group_name}")
+    print(f"Generating queries for: {group_name}")
     if hypothesis:
         print(f" Hypothesis: {hypothesis}")
     if manual_data:
@@ -79,7 +79,7 @@ def generate_detection(technique_name):
     print("Detection generation complete.")
 
 
-def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=False):
+def build_correlations(yaml_dir=None, output_file=None, min_queries=2, max_queries=5, threat_group=None, verbose=False):
     """Build correlation queries from YAML detection files"""
     from archer.genai import build_correlation_queries
 
@@ -90,7 +90,11 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=F
 
     try:
         result = build_correlation_queries(
-            yaml_dir=yaml_dir, output_file=output_file, min_queries=min_queries
+            yaml_dir=yaml_dir,
+            output_file=output_file,
+            min_queries=min_queries,
+            max_queries=max_queries,
+            threat_group=threat_group
         )
 
         print()
@@ -475,6 +479,11 @@ def main():
         help="Correlate generated detections into multi-query searches (Step 2)",
     )
     correlate_parser.add_argument(
+        "threat_group",
+        nargs="?",
+        help="Threat group name to correlate (e.g., 'Scattered Spider'). If not provided, correlates all queries.",
+    )
+    correlate_parser.add_argument(
         "--yaml-dir", help="Directory containing YAML files (default: data/generate)"
     )
     correlate_parser.add_argument(
@@ -486,6 +495,12 @@ def main():
         type=int,
         default=2,
         help="Minimum number of queries to include in a correlation (default: 2)",
+    )
+    correlate_parser.add_argument(
+        "--max-queries",
+        type=int,
+        default=5,
+        help="Maximum number of queries to include in a correlation (default: 5)",
     )
     correlate_parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose output"
@@ -571,6 +586,8 @@ def main():
             yaml_dir=args.yaml_dir,
             output_file=args.output,
             min_queries=args.min_queries,
+            max_queries=args.max_queries,
+            threat_group=args.threat_group,
             verbose=args.verbose,
         )
     elif args.command == "hunt":
