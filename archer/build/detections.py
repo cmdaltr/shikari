@@ -212,7 +212,7 @@ def compile_query(retrieved_data):
                     if is_compatible:
                         compatible_found = True
                         print(
-                            f"✅ Found compatible platform for {name} on {index_name}"
+                            f"✅ Query built for {name} ({tid}) on {index_name}"
                         )
                         construct_yaml(
                             name,
@@ -237,7 +237,7 @@ def compile_query(retrieved_data):
                     if is_compatible:
                         compatible_found = True
                         print(
-                            f"✅ Found compatible platform for {name} on {table_name}"
+                            f"✅ Query built for {name} ({tid}) on {table_name}"
                         )
                         construct_yaml(
                             name,
