@@ -133,13 +133,17 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, verbose=F
         return None
 
 
-def run_emulation(technique_id, framework="atomic", execute=False, enrich=False, verbose=False):
-    """Execute adversary emulation tests for a technique"""
+def run_emulation(technique_id=None, threat_group=None, framework="atomic", execute=False, enrich=False, max_techniques=None, verbose=False):
+    """Execute adversary emulation tests for a technique or threat group"""
     from archer.config import EmulationConfig
 
     if not EmulationConfig.enabled:
         print("ERROR: Emulation module is not enabled.", file=sys.stderr)
         print("Set ENABLE_EMULATION=true to use this feature.", file=sys.stderr)
+        return None
+
+    if not technique_id and not threat_group:
+        print("ERROR: Either --technique-id or --threat-group required", file=sys.stderr)
         return None
 
     print("=" * 70)
@@ -150,6 +154,7 @@ def run_emulation(technique_id, framework="atomic", execute=False, enrich=False,
     try:
         if framework == "atomic":
             from archer.emulation import AtomicRedTeam
+            from archer.emulation.enrich import enrich_from_group_emulation
 
             if not EmulationConfig.is_atomic_configured():
                 print(f"ERROR: Atomic Red Team not found at {EmulationConfig.atomic_path}", file=sys.stderr)
@@ -169,52 +174,83 @@ def run_emulation(technique_id, framework="atomic", execute=False, enrich=False,
                 print("ℹ️  SIMULATION MODE - Tests will be simulated (set --execute to run live)")
                 print()
 
-            print(f"Executing Atomic Red Team tests for {technique_id}...")
-            print()
-
-            results = atomic.execute_technique(technique_id)
-
-            if results.get("status") == "no_tests":
-                print(f"No atomic tests available for {technique_id}")
-                return None
-
-            print()
-            print("=" * 70)
-            print("EXECUTION SUMMARY")
-            print("=" * 70)
-            print(f"Technique: {results['technique_name']} ({results['technique_id']})")
-            print(f"Tests executed: {len(results['tests_executed'])}")
-            print(f"Evidence collected: {len(results['evidence_collected'])}")
-            print()
-
-            if verbose:
-                print("Test Details:")
-                print("-" * 70)
-                for test in results['tests_executed']:
-                    status_icon = "✓" if test['status'] in ['success', 'simulated'] else "✗"
-                    print(f"\n{status_icon} Test #{test['test_number']}: {test['test_name']}")
-                    print(f"   Status: {test['status']}")
-                    if 'command' in test:
-                        cmd = test['command'][:100] + "..." if len(test['command']) > 100 else test['command']
-                        print(f"   Command: {cmd}")
-
-            # Enrich detections if requested
-            if enrich:
+            # Group emulation
+            if threat_group:
+                print(f"Executing Atomic Red Team tests for threat group: {threat_group}...")
                 print()
-                print("Enriching detections with emulation evidence...")
-                from archer.emulation import enrich_detections_with_emulation
 
-                enrich_result = enrich_detections_with_emulation(technique_id)
+                results = atomic.execute_threat_group(
+                    threat_group=threat_group,
+                    max_techniques=max_techniques
+                )
 
-                if enrich_result['status'] == 'success':
-                    print(f"✓ Enriched {len(enrich_result['enriched_files'])} detection files")
-                    print(f"✓ Generated {enrich_result['additional_queries_generated']} additional queries")
-                    print(f"✓ Found indicators: {enrich_result['indicators_found']}")
-                else:
-                    print(f"⚠️  Enrichment status: {enrich_result['message']}")
+                if results.get("status") in ["no_techniques", "no_atomic_tests"]:
+                    print(f"⚠️  {results['message']}")
+                    return None
 
-            print()
-            return results
+                # Enrich detections if requested
+                if enrich:
+                    print()
+                    print("Enriching detections with group emulation evidence...")
+                    enrich_result = enrich_from_group_emulation(threat_group)
+
+                    if enrich_result['status'] == 'success':
+                        print(f"✓ Enriched {enrich_result['total_files_enriched']} detection files")
+                        print(f"✓ Generated {enrich_result['total_queries_generated']} additional queries")
+                    else:
+                        print(f"⚠️  Enrichment status: {enrich_result.get('message', 'Unknown error')}")
+
+                print()
+                return results
+
+            # Single technique emulation
+            else:
+                print(f"Executing Atomic Red Team tests for {technique_id}...")
+                print()
+
+                results = atomic.execute_technique(technique_id)
+
+                if results.get("status") == "no_tests":
+                    print(f"No atomic tests available for {technique_id}")
+                    return None
+
+                print()
+                print("=" * 70)
+                print("EXECUTION SUMMARY")
+                print("=" * 70)
+                print(f"Technique: {results['technique_name']} ({results['technique_id']})")
+                print(f"Tests executed: {len(results['tests_executed'])}")
+                print(f"Evidence collected: {len(results['evidence_collected'])}")
+                print()
+
+                if verbose:
+                    print("Test Details:")
+                    print("-" * 70)
+                    for test in results['tests_executed']:
+                        status_icon = "✓" if test['status'] in ['success', 'simulated'] else "✗"
+                        print(f"\n{status_icon} Test #{test['test_number']}: {test['test_name']}")
+                        print(f"   Status: {test['status']}")
+                        if 'command' in test:
+                            cmd = test['command'][:100] + "..." if len(test['command']) > 100 else test['command']
+                            print(f"   Command: {cmd}")
+
+                # Enrich detections if requested
+                if enrich:
+                    print()
+                    print("Enriching detections with emulation evidence...")
+                    from archer.emulation import enrich_detections_with_emulation
+
+                    enrich_result = enrich_detections_with_emulation(technique_id)
+
+                    if enrich_result['status'] == 'success':
+                        print(f"✓ Enriched {len(enrich_result['enriched_files'])} detection files")
+                        print(f"✓ Generated {enrich_result['additional_queries_generated']} additional queries")
+                        print(f"✓ Found indicators: {enrich_result['indicators_found']}")
+                    else:
+                        print(f"⚠️  Enrichment status: {enrich_result['message']}")
+
+                print()
+                return results
 
         else:
             print(f"ERROR: Framework '{framework}' not yet implemented", file=sys.stderr)
@@ -402,8 +438,12 @@ def main():
         help="Execute adversary emulation tests (requires ENABLE_EMULATION=true)"
     )
     emulate_parser.add_argument(
-        "technique_id",
+        "--technique-id",
         help="MITRE ATT&CK technique ID (e.g., T1059.001)"
+    )
+    emulate_parser.add_argument(
+        "--threat-group",
+        help="Threat group name (e.g., APT29) - runs all group techniques"
     )
     emulate_parser.add_argument(
         "--framework",
@@ -420,6 +460,11 @@ def main():
         "--enrich",
         action="store_true",
         help="Enrich existing detections with emulation evidence"
+    )
+    emulate_parser.add_argument(
+        "--max-techniques",
+        type=int,
+        help="Maximum number of techniques to test (for threat groups)"
     )
     emulate_parser.add_argument(
         "--verbose", "-v",
@@ -476,9 +521,11 @@ def main():
     elif args.command == "emulate":
         run_emulation(
             technique_id=args.technique_id,
+            threat_group=args.threat_group,
             framework=args.framework,
             execute=args.execute,
             enrich=args.enrich,
+            max_techniques=args.max_techniques,
             verbose=args.verbose
         )
     elif args.command == "vectr":

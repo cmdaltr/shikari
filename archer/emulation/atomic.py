@@ -320,3 +320,184 @@ class AtomicRedTeam:
                 evidence.extend(data.get("evidence_collected", []))
 
         return evidence
+
+    def execute_threat_group(
+        self,
+        threat_group: str,
+        auto_cleanup: bool = True,
+        executor: str = "powershell",
+        max_techniques: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Execute Atomic Red Team tests for all techniques used by a threat group.
+
+        Args:
+            threat_group: MITRE ATT&CK threat group name (e.g., "APT29")
+            auto_cleanup: Run cleanup commands after tests
+            executor: Executor to use (powershell, bash, cmd, sh)
+            max_techniques: Maximum number of techniques to test (default: all)
+
+        Returns:
+            Dictionary containing all execution results
+        """
+        from archer.mitre import get_stix_data, obtain_all_techniques
+        from archer.mitre.retrieve import retrieve_procedures
+
+        print(f"Fetching techniques for threat group: {threat_group}")
+
+        # Get MITRE ATT&CK data
+        bundle = get_stix_data(
+            "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
+        )
+
+        # Find threat group and get techniques
+        group_techniques = set()
+        for obj in bundle.objects:
+            if obj.get("type") == "intrusion-set":
+                name = obj.get("name", "")
+                aliases = obj.get("aliases", [])
+
+                # Match by name or alias
+                if threat_group.lower() in name.lower() or any(
+                    threat_group.lower() in alias.lower() for alias in aliases
+                ):
+                    print(f"Found group: {name}")
+
+                    # Get all relationships for this group
+                    group_id = obj.get("id")
+                    for rel in bundle.objects:
+                        if rel.get("type") == "relationship":
+                            if (
+                                rel.get("source_ref") == group_id
+                                and rel.get("relationship_type") == "uses"
+                            ):
+                                target_ref = rel.get("target_ref")
+
+                                # Find the technique
+                                for tech_obj in bundle.objects:
+                                    if tech_obj.get("id") == target_ref:
+                                        if tech_obj.get("type") == "attack-pattern":
+                                            # Extract technique ID
+                                            external_refs = tech_obj.get(
+                                                "external_references", []
+                                            )
+                                            for ref in external_refs:
+                                                if ref.get("source_name") == "mitre-attack":
+                                                    technique_id = ref.get(
+                                                        "external_id"
+                                                    )
+                                                    if technique_id:
+                                                        group_techniques.add(
+                                                            technique_id
+                                                        )
+
+        if not group_techniques:
+            return {
+                "threat_group": threat_group,
+                "status": "no_techniques",
+                "message": f"No techniques found for {threat_group}",
+            }
+
+        # Filter to available atomic tests
+        available_atomics = self.list_techniques()
+        testable_techniques = sorted(
+            [t for t in group_techniques if t in available_atomics]
+        )
+
+        if not testable_techniques:
+            return {
+                "threat_group": threat_group,
+                "status": "no_atomic_tests",
+                "techniques_found": len(group_techniques),
+                "techniques_with_atomics": 0,
+                "message": f"Found {len(group_techniques)} techniques for {threat_group}, but none have Atomic Red Team tests",
+            }
+
+        # Limit if requested
+        if max_techniques and len(testable_techniques) > max_techniques:
+            print(
+                f"Limiting to {max_techniques} of {len(testable_techniques)} techniques"
+            )
+            testable_techniques = testable_techniques[:max_techniques]
+
+        print(
+            f"Found {len(testable_techniques)} techniques with Atomic Red Team tests:"
+        )
+        for tech_id in testable_techniques:
+            print(f"  - {tech_id}")
+        print()
+
+        # Execute tests for each technique
+        results = {
+            "threat_group": threat_group,
+            "timestamp": datetime.utcnow().isoformat(),
+            "total_techniques": len(group_techniques),
+            "testable_techniques": len(testable_techniques),
+            "technique_results": [],
+            "summary": {
+                "total_tests": 0,
+                "successful": 0,
+                "failed": 0,
+                "skipped": 0,
+                "simulated": 0,
+            },
+        }
+
+        for i, technique_id in enumerate(testable_techniques, start=1):
+            print(f"[{i}/{len(testable_techniques)}] Testing {technique_id}...")
+
+            try:
+                tech_result = self.execute_technique(
+                    technique_id, auto_cleanup=auto_cleanup, executor=executor
+                )
+
+                results["technique_results"].append(tech_result)
+
+                # Update summary
+                for test in tech_result.get("tests_executed", []):
+                    results["summary"]["total_tests"] += 1
+                    status = test.get("status")
+                    if status == "success":
+                        results["summary"]["successful"] += 1
+                    elif status == "failed":
+                        results["summary"]["failed"] += 1
+                    elif status == "skipped":
+                        results["summary"]["skipped"] += 1
+                    elif status == "simulated":
+                        results["summary"]["simulated"] += 1
+
+            except Exception as e:
+                print(f"  ⚠️  Error executing {technique_id}: {e}")
+                results["technique_results"].append(
+                    {
+                        "technique_id": technique_id,
+                        "status": "error",
+                        "message": str(e),
+                    }
+                )
+
+        # Save consolidated results
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        output_file = (
+            self.output_dir / f"{threat_group}_group_emulation_{timestamp}.json"
+        )
+
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2)
+
+        print()
+        print("=" * 70)
+        print("GROUP EMULATION SUMMARY")
+        print("=" * 70)
+        print(f"Threat Group: {threat_group}")
+        print(f"Total Techniques: {results['total_techniques']}")
+        print(f"Testable Techniques: {results['testable_techniques']}")
+        print(f"Total Tests Executed: {results['summary']['total_tests']}")
+        print(f"  Successful: {results['summary']['successful']}")
+        print(f"  Failed: {results['summary']['failed']}")
+        print(f"  Simulated: {results['summary']['simulated']}")
+        print(f"  Skipped: {results['summary']['skipped']}")
+        print()
+        print(f"✅ Results saved to {output_file}")
+
+        return results

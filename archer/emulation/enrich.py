@@ -7,6 +7,7 @@ Enhances Archer detection queries with evidence from adversary emulation executi
 import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from datetime import datetime
 from .parser import EmulationParser
 
 
@@ -148,3 +149,111 @@ def bulk_enrich_from_emulation(
         print(f"✅ Enrichment summary saved to {output_file}")
 
     return results
+
+
+def enrich_from_group_emulation(
+    threat_group: str,
+    yaml_dir: str = "data/generate",
+    emulation_dir: str = "data/emulation",
+) -> Dict[str, Any]:
+    """
+    Enrich detections using threat group emulation results.
+
+    Args:
+        threat_group: Threat group name
+        yaml_dir: Directory containing YAML detection files
+        emulation_dir: Directory containing emulation results
+
+    Returns:
+        Dictionary with enrichment summary
+    """
+    emulation_path = Path(emulation_dir)
+
+    # Find group emulation result file
+    group_files = list(emulation_path.glob(f"{threat_group}_group_emulation_*.json"))
+
+    if not group_files:
+        return {
+            "status": "no_group_emulation",
+            "message": f"No group emulation results found for {threat_group}",
+        }
+
+    # Use most recent result
+    latest_result = max(group_files, key=lambda p: p.stat().st_mtime)
+
+    print(f"Loading group emulation results from {latest_result}")
+
+    with open(latest_result, "r", encoding="utf-8") as f:
+        group_data = json.load(f)
+
+    # Get all techniques that were tested
+    technique_results = group_data.get("technique_results", [])
+
+    if not technique_results:
+        return {
+            "status": "no_techniques",
+            "message": "No technique results in group emulation data",
+        }
+
+    print(
+        f"Found {len(technique_results)} techniques from {threat_group} emulation\n"
+    )
+
+    # Enrich detections for each technique
+    enrichment_results = {
+        "threat_group": threat_group,
+        "timestamp": datetime.utcnow().isoformat(),
+        "techniques_enriched": [],
+        "total_files_enriched": 0,
+        "total_queries_generated": 0,
+    }
+
+    for tech_result in technique_results:
+        technique_id = tech_result.get("technique_id")
+
+        if not technique_id or tech_result.get("status") == "error":
+            continue
+
+        print(f"Enriching detections for {technique_id}...")
+
+        try:
+            result = enrich_detections_with_emulation(
+                technique_id, yaml_dir, emulation_dir
+            )
+
+            if result["status"] == "success":
+                enrichment_results["techniques_enriched"].append(
+                    {
+                        "technique_id": technique_id,
+                        "files_enriched": len(result["enriched_files"]),
+                        "queries_generated": result["additional_queries_generated"],
+                        "indicators": result["indicators_found"],
+                    }
+                )
+                enrichment_results["total_files_enriched"] += len(
+                    result["enriched_files"]
+                )
+                enrichment_results["total_queries_generated"] += result[
+                    "additional_queries_generated"
+                ]
+
+        except Exception as e:
+            print(f"  ⚠️  Error enriching {technique_id}: {e}")
+
+    # Save summary
+    summary_file = emulation_path / f"{threat_group}_enrichment_summary.json"
+    with open(summary_file, "w", encoding="utf-8") as f:
+        json.dump(enrichment_results, f, indent=2)
+
+    print()
+    print("=" * 70)
+    print("ENRICHMENT SUMMARY")
+    print("=" * 70)
+    print(f"Threat Group: {threat_group}")
+    print(f"Techniques Enriched: {len(enrichment_results['techniques_enriched'])}")
+    print(f"Files Updated: {enrichment_results['total_files_enriched']}")
+    print(f"Queries Generated: {enrichment_results['total_queries_generated']}")
+    print()
+    print(f"✅ Summary saved to {summary_file}")
+
+    return enrichment_results
