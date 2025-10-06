@@ -262,7 +262,7 @@ def compile_query(retrieved_data):
                     f"❌ No compatible platforms found for {name} - skipping YAML generation\n"
                 )
     else:
-        print(f"No identifiers found for {name} - skipping YAML generation")
+        print(f"❌ No identifiers found for {name}")
 
 
 def main():
