@@ -60,7 +60,12 @@ archer/
 │   ├── emulation/          # Adversary emulation
 │   │   ├── atomic.py       # Atomic Red Team
 │   │   ├── parser.py       # Evidence extraction
-│   │   └── enrich.py       # Detection enrichment
+│   │   ├── enrich.py       # Detection enrichment
+│   │   └── remote.py       # Remote execution (SSH/WinRM)
+│   │
+│   ├── query/              # Query execution
+│   │   ├── mde.py          # Microsoft Defender API
+│   │   └── splunk.py       # Splunk API
 │   │
 │   └── vectr/              # VECTR integration
 │       ├── client.py       # API client
@@ -97,16 +102,44 @@ archer/
 
 ### Emulation Module (`archer/emulation/`)
 
-**Purpose**: Execute real attack techniques and collect evidence to enhance detections.
+**Purpose**: Execute real attack techniques locally or remotely and collect evidence to enhance detections.
 
 **Components**:
 
 ```python
 # atomic.py
 class AtomicRedTeam:
-    - execute_technique()      # Run atomic tests
+    - execute_technique()      # Run atomic tests locally
     - collect_evidence()       # Capture artifacts
     - list_techniques()        # Available tests
+
+def execute_atomic_remote():   # Run tests on remote hosts
+    - SSH/WinRM execution
+    - Artifact collection
+    - Evidence enrichment
+
+# remote.py
+class RemoteExecutor:          # Base class
+    - execute_command()
+    - detect_platform()
+
+class SSHExecutor(RemoteExecutor):
+    - SSH key authentication
+    - Password authentication
+    - Linux/macOS support
+
+class WinRMExecutor(RemoteExecutor):
+    - HTTPS by default (port 5986)
+    - HTTP optional (port 5985)
+    - Windows support
+
+def create_remote_executor():  # Factory pattern
+    - Auto-selects SSH or WinRM
+
+def _collect_artifacts():      # Extract from remote output
+    - Commands
+    - Files
+    - Processes
 
 # parser.py
 class EmulationParser:
@@ -123,26 +156,114 @@ def enrich_detections_with_emulation():
 
 **Data Flow**:
 ```
-Atomic Red Team Tests
-         ↓
-    Execute (simulate or live)
-         ↓
-    Collect Evidence
-    (commands, processes, files, registry)
-         ↓
-    Parse Indicators
-         ↓
-    Enrich YAML Files
-    + Generate KQL Queries
+Local Execution:
+  Atomic Red Team Tests
+           ↓
+      Execute (simulate or live)
+           ↓
+      Collect Evidence
+           ↓
+      Parse Indicators
+           ↓
+      Enrich YAML Files
+      + Generate KQL Queries
+
+Remote Execution:
+  Atomic Red Team Tests
+           ↓
+      SSH/WinRM Connection
+           ↓
+      Execute on Remote Host
+           ↓
+      Capture Output
+           ↓
+      Extract Artifacts (regex patterns)
+           ↓
+      Save Locally (data/emulation/)
+           ↓
+      Enrich YAML Files
+      + Generate KQL Queries
 ```
 
 **Configuration**:
 ```python
 class EmulationConfig:
-    enabled = ENABLE_EMULATION
     atomic_path = ATOMIC_REDTEAM_PATH
     execution_mode = EMULATION_EXECUTE_MODE  # simulate or live
+    output_dir = "data/emulation"
+    evidence_dir = "data/emulation/evidence"
 ```
+
+---
+
+### Query Execution Module (`archer/query/`)
+
+**Purpose**: Execute detection queries directly against MDE and Splunk via APIs for validation.
+
+**Components**:
+
+```python
+# mde.py
+class MDEClient:
+    - _get_token()             # OAuth2 authentication
+    - execute_query()          # Execute KQL queries
+    - Advanced Hunting API     # MDE API endpoint
+
+    # Token caching (~1 hour)
+    # Timespan support (P1D, P7D, P30D)
+    # Stats and resource usage
+
+# splunk.py
+class SplunkClient:
+    - _login()                 # Session authentication
+    - execute_query()          # Execute SPL queries
+    - Job-based search API     # Create, poll, retrieve
+
+    # Session management
+    # Time range support (-15m, -1h, -7d, -30d)
+    # Result pagination
+    # HTTPS/HTTP support
+```
+
+**Data Flow**:
+```
+Detection Query (KQL/SPL)
+         ↓
+    API Client (MDE/Splunk)
+         ↓
+    Authentication (OAuth2/Session)
+         ↓
+    Execute Query
+         ↓
+    Poll for Results (Splunk)
+         ↓
+    Parse Response
+         ↓
+    Return Results
+    (status, results, stats/messages)
+```
+
+**Configuration**:
+```python
+# MDE
+class MDEConfig:
+    tenant_id = MDE_TENANT_ID
+    client_id = MDE_CLIENT_ID
+    client_secret = MDE_CLIENT_SECRET
+
+# Splunk
+class SplunkConfig:
+    host = SPLUNK_HOST
+    port = SPLUNK_PORT (default: 8089)
+    username = SPLUNK_USERNAME
+    password = SPLUNK_PASSWORD
+    use_https = SPLUNK_USE_HTTPS (default: true)
+```
+
+**Integration Status**:
+- ✅ Module implemented and tested
+- ⏳ CLI integration pending (`--execute-queries` flag)
+- ⏳ Web UI integration pending
 
 ---
 
@@ -309,10 +430,19 @@ data/
 │   └── *.yaml
 │
 ├── emulation/                   # Optional: Emulation data
-│   ├── T1059.001_atomic_*.json # Test results
-│   └── evidence/               # Captured artifacts
-│       ├── T1059.001_1_stdout.log
-│       └── .gitkeep
+│   ├── T1059.001_local_*.json  # Local test results
+│   ├── T1059.001_remote_*.json # Remote test results
+│   ├── APT29_group_emulation_*.json # Group emulation
+│   ├── evidence/               # Captured artifacts
+│   │   ├── T1059.001_1_stdout.log
+│   │   └── .gitkeep
+│   └── atomic-red-team/        # Local ART installation
+│
+├── results/                     # Optional: Query execution results
+│   ├── mde/                    # MDE query results
+│   │   └── *.json
+│   └── splunk/                 # Splunk query results
+│       └── *.json
 │
 └── vectr/                       # Optional: VECTR data
     ├── campaigns/               # Campaign exports
@@ -383,9 +513,21 @@ class VECTRConfig:
 GENAI_MODE=semantic
 
 # Emulation (Optional)
-ENABLE_EMULATION=true
 ATOMIC_REDTEAM_PATH=/opt/atomic-red-team
 EMULATION_EXECUTE_MODE=simulate  # or 'live'
+
+# Query Execution (Optional)
+# MDE
+MDE_TENANT_ID=your-tenant-id
+MDE_CLIENT_ID=your-client-id
+MDE_CLIENT_SECRET=your-client-secret
+
+# Splunk
+SPLUNK_HOST=splunk.example.com
+SPLUNK_PORT=8089
+SPLUNK_USERNAME=archer_api
+SPLUNK_PASSWORD=your-password
+SPLUNK_USE_HTTPS=true
 
 # VECTR (Optional)
 ENABLE_VECTR=true
@@ -421,13 +563,9 @@ python3 archer.py correlate --verbose
 
 ---
 
-### Workflow 2: With Emulation
+### Workflow 2: With Emulation (Local)
 
 ```bash
-# Enable emulation
-export ENABLE_EMULATION=true
-export ATOMIC_REDTEAM_PATH=/opt/atomic-red-team
-
 # Generate detections
 python3 archer.py generate "APT29"
 
@@ -436,15 +574,43 @@ python3 archer.py emulate T1059.001 --enrich
 python3 archer.py emulate T1071.001 --enrich
 
 # Optionally build correlations (now with emulation evidence)
-python3 archer.py correlate --verbose
+python3 archer.py correlate "APT29"
 
 # Output:
 # - data/generate/*.yaml (with emulation_evidence sections)
 # - data/correlate/APT29.json (higher confidence)
-# - data/emulation/T*.json (test results)
+# - data/emulation/T*_local_*.json (test results)
 ```
 
 **Use Case**: Evidence-based detections with validated indicators
+
+---
+
+### Workflow 2b: With Remote Emulation
+
+```bash
+# Generate detections
+python3 archer.py generate "APT29"
+
+# Run emulation on remote Windows VM
+python3 archer.py emulate "APT29" \
+  --remote-host 192.168.1.101 \
+  --remote-user Administrator \
+  --ssh-key ~/.ssh/lab_key \
+  --remote-platform windows \
+  --max-techniques 10 \
+  --enrich
+
+# Build correlations with remote evidence
+python3 archer.py correlate "APT29"
+
+# Output:
+# - data/generate/*.yaml (with emulation_evidence from remote execution)
+# - data/correlate/APT29.json
+# - data/emulation/T*_remote_*.json (test results with artifacts)
+```
+
+**Use Case**: Cross-platform testing and isolated environment validation
 
 ---
 
@@ -483,36 +649,78 @@ python3 archer.py vectr coverage --campaign-id camp_123abc
 
 ---
 
-### Workflow 4: Complete Integration (Emulation + VECTR)
+### Workflow 4: With Query Execution (Pending CLI Integration)
+
+```bash
+# Set up API credentials
+export MDE_TENANT_ID=your-tenant-id
+export MDE_CLIENT_ID=your-client-id
+export MDE_CLIENT_SECRET=your-client-secret
+
+export SPLUNK_HOST=splunk.example.com
+export SPLUNK_USERNAME=archer_api
+export SPLUNK_PASSWORD=your-password
+
+# Generate detections and execute queries (planned)
+# python3 archer.py generate "APT29" --execute-queries
+
+# Build correlations and execute queries (planned)
+# python3 archer.py correlate "APT29" --execute-queries
+
+# Output (when implemented):
+# - data/generate/*.yaml
+# - data/correlate/APT29.json
+# - data/results/mde/*.json (query results)
+# - data/results/splunk/*.json (query results)
+```
+
+**Use Case**: Automated query validation in production environments
+
+**Status**: Module implemented, CLI integration pending
+
+---
+
+### Workflow 5: Complete Integration (Emulation + VECTR + Query Execution)
 
 ```bash
 # Enable all features
-export ENABLE_EMULATION=true
 export ENABLE_VECTR=true
-export ATOMIC_REDTEAM_PATH=/opt/atomic-red-team
 export VECTR_URL=https://vectr.local:8081
 export VECTR_API_TOKEN=your-token
+
+# Set up query execution
+export MDE_TENANT_ID=your-tenant-id
+export MDE_CLIENT_ID=your-client-id
+export MDE_CLIENT_SECRET=your-client-secret
 
 # Step 1: Generate detections
 python3 archer.py generate "APT29"
 
-# Step 2: Run emulation and enrich
-python3 archer.py emulate T1059.001 --enrich --verbose
-python3 archer.py emulate T1071.001 --enrich --verbose
+# Step 2: Run emulation on remote host and enrich
+python3 archer.py emulate "APT29" \
+  --remote-host 192.168.1.101 \
+  --remote-user Administrator \
+  --ssh-key ~/.ssh/lab_key \
+  --remote-platform windows \
+  --max-techniques 10 \
+  --enrich
 
-# Step 3: Optionally build correlations
-python3 archer.py correlate --verbose
+# Step 3: Build correlations
+python3 archer.py correlate "APT29"
 
-# Step 4: Export to VECTR (includes emulation evidence as operator guidance)
+# Step 4: Execute queries in production (when implemented)
+# python3 archer.py generate "APT29" --execute-queries
+
+# Step 5: Export to VECTR (includes emulation evidence as operator guidance)
 python3 archer.py vectr export --threat-group "APT29"
 # Returns: Campaign ID: camp_123abc
 
-# Step 5: Purple team executes tests in VECTR
+# Step 6: Purple team executes tests in VECTR
 
-# Step 6: Continuous sync
+# Step 7: Continuous sync
 python3 archer.py vectr sync --campaign-id camp_123abc --threat-group "APT29"
 
-# Step 7: Generate final report
+# Step 8: Generate final report
 python3 archer.py vectr coverage --campaign-id camp_123abc > coverage.md
 ```
 
@@ -562,6 +770,7 @@ vectr_validation:
 - Live execution runs actual attack techniques
 - Could trigger real alerts
 - May cause system instability
+- Remote execution requires network access and credentials
 
 **Mitigations**:
 1. **Default Simulation Mode**: No commands execute by default
@@ -570,6 +779,8 @@ vectr_validation:
 4. **Isolated Environments**: Recommend lab-only execution
 5. **Cleanup Commands**: Automatic cleanup after tests
 6. **Timeout Protection**: 5-minute execution timeout
+7. **SSH Key Authentication**: Preferred over passwords
+8. **HTTPS for WinRM**: Default HTTPS (port 5986), HTTP requires explicit `--http` flag
 
 **Best Practices**:
 ```bash
@@ -578,7 +789,58 @@ python3 archer.py emulate T1059.001
 
 # DANGEROUS: Live execution (isolated lab only!)
 python3 archer.py emulate T1059.001 --execute
+
+# REMOTE: Use SSH keys for authentication
+python3 archer.py emulate T1059.001 \
+  --remote-host 192.168.1.100 \
+  --remote-user admin \
+  --ssh-key ~/.ssh/lab_key
+
+# REMOTE: Use HTTPS for WinRM (default)
+python3 archer.py emulate T1059.001 \
+  --remote-host 192.168.1.101 \
+  --remote-user Administrator \
+  --remote-password 'P@ssw0rd' \
+  --remote-platform windows
+  # HTTPS by default, no --http flag needed
 ```
+
+### Query Execution Module
+
+**Risks**:
+- API credentials in environment variables
+- Execution of queries in production environments
+- Potential data exposure from query results
+- Rate limiting and API abuse
+
+**Mitigations**:
+1. **Environment Variables**: No hardcoded credentials
+2. **OAuth2 for MDE**: Application permissions, not delegated
+3. **Token Caching**: Reduces authentication requests
+4. **HTTPS by Default**: Encrypted API communication
+5. **Result Limiting**: Default result caps to prevent memory issues
+6. **Read-Only Access**: No data modification capabilities
+
+**Best Practices**:
+```bash
+# Store credentials securely
+export MDE_TENANT_ID=$(cat ~/.archer/mde_tenant_id)
+export MDE_CLIENT_ID=$(cat ~/.archer/mde_client_id)
+export MDE_CLIENT_SECRET=$(cat ~/.archer/mde_client_secret)
+
+# Use HTTPS for Splunk
+export SPLUNK_USE_HTTPS=true
+
+# Rotate secrets regularly
+# MDE: Azure Portal > App Registration > Certificates & secrets
+# Splunk: Change user password regularly
+
+# Limit query scope
+# Use shorter timespans (P1D instead of P30D)
+# Add filters to reduce result size
+```
+
+---
 
 ### VECTR Module
 
@@ -612,6 +874,12 @@ export VECTR_URL=https://vectr.local:8081
 
 ### Emulation Module Roadmap
 
+- [x] **Remote Execution via SSH/WinRM** (Implemented)
+  - SSH key and password authentication
+  - WinRM HTTPS/HTTP support
+  - Cross-platform testing
+  - Remote artifact collection
+
 - [ ] **MITRE CALDERA Integration**
   - Autonomous adversary emulation
   - Multi-step attack chains
@@ -622,7 +890,7 @@ export VECTR_URL=https://vectr.local:8081
   - Automated correlation testing
 
 - [ ] **Network Capture**
-  - PCAP analysis from emulation
+  - PCAP analysis from remote emulation
   - Network indicator extraction
   - C2 pattern detection
 
@@ -635,6 +903,11 @@ export VECTR_URL=https://vectr.local:8081
   - Direct EDR telemetry correlation
   - Real-time detection validation
   - Alert tuning recommendations
+
+- [ ] **Multi-Host Orchestration**
+  - Execute across multiple targets simultaneously
+  - Coordinated attack chain testing
+  - Distributed emulation management
 
 ### VECTR Module Roadmap
 
@@ -663,6 +936,31 @@ export VECTR_URL=https://vectr.local:8081
   - Environment-specific tuning
   - Deployment tracking
 
+### Query Execution Module Roadmap
+
+- [x] **MDE and Splunk API Clients** (Implemented)
+  - OAuth2 authentication for MDE
+  - Session-based authentication for Splunk
+  - Token caching
+  - Comprehensive error handling
+
+- [ ] **CLI Integration**
+  - `--execute-queries` flag for generate command
+  - `--execute-queries` flag for correlate command
+  - Query result output to data/results/
+
+- [ ] **Web UI Integration**
+  - Query execution dashboard
+  - Result visualization
+  - API credential management
+
+- [ ] **Additional Features**
+  - Automated query validation
+  - Query performance analytics
+  - Result caching
+  - Scheduled query execution
+  - Alert generation from results
+
 ### Core Platform Enhancements
 
 - [ ] **Additional Query Platforms**
@@ -687,10 +985,20 @@ export VECTR_URL=https://vectr.local:8081
 Archer's plugin architecture provides:
 
 1. **Core Functionality**: Robust detection generation without dependencies
-2. **Optional Enhancements**: Emulation and VECTR when needed
+2. **Optional Enhancements**: Emulation, VECTR, and Query Execution when needed
 3. **Modular Design**: Clean separation of concerns
 4. **Flexible Workflows**: Use what you need, when you need it
-5. **Evidence-Based**: Real attack data enhances theoretical detections
-6. **Enterprise Ready**: Scalable, trackable, validated
+5. **Evidence-Based**: Real attack data from local or remote execution
+6. **Cross-Platform**: SSH/WinRM support for testing across environments
+7. **API Integration**: Direct query execution against MDE and Splunk
+8. **Enterprise Ready**: Scalable, trackable, validated
 
-The architecture supports both rapid detection prototyping and enterprise-grade validation workflows, making Archer suitable for organizations of any size.
+The architecture supports:
+- Rapid detection prototyping (core only)
+- Evidence-based validation (with emulation)
+- Cross-platform testing (remote execution)
+- Production validation (query execution)
+- Hunt tracking (VECTR integration)
+- Enterprise-grade workflows (all features combined)
+
+Making Archer suitable for organizations of any size and maturity level.

@@ -454,9 +454,9 @@ GENAI_MODE=semantic python3 archer.py correlate
 
 | Topic | Document |
 |-------|----------|
-| Correlation builder | [CORRELATIONS.md](CORRELATIONS.md) |
-| Local AI setup | [MODELS.md](MODELS.md) |
-| Semantic overlap | [SEMANTICS.md](SEMANTICS.md) |
+| Correlation builder | [CORRELATION_GUIDE.md](CORRELATION_GUIDE.md) |
+| Local AI setup | [CORRELATION_GUIDE.md - Appendix A](CORRELATION_GUIDE.md#appendix-a-local-ai-model-setup) |
+| Semantic overlap | [CORRELATION_GUIDE.md - Appendix B](CORRELATION_GUIDE.md#appendix-b-semantic-overlap-algorithm) |
 | All docs | [README.md](README.md) |
 
 ---
@@ -466,7 +466,7 @@ GENAI_MODE=semantic python3 archer.py correlate
 ### Check Documentation
 
 1. **[docs/README.md](README.md)** - Documentation index
-2. **[docs/CORRELATIONS.md](CORRELATIONS.md)** - Main guide
+2. **[CORRELATION_GUIDE.md](CORRELATION_GUIDE.md)** - Correlation guide
 3. **Project README** - `../README.md`
 
 ### Common Issues
@@ -509,8 +509,9 @@ Once Archer is running:
    - Open browser: http://localhost:8000
 
 4. **Read the guides**
-   - [CORRELATIONS.md](CORRELATIONS.md) - Detailed usage
-   - [MODELS.md](MODELS.md) - AI features
+   - [CORRELATION_GUIDE.md](CORRELATION_GUIDE.md) - Detailed usage
+   - [EMULATION_GUIDE.md](EMULATION_GUIDE.md) - Emulation features
+   - [QUERY_API_GUIDE.md](QUERY_API_GUIDE.md) - API integration
 
 5. **Hunt for specific techniques**
    ```bash
@@ -519,4 +520,4 @@ Once Archer is running:
 
 ---
 
-**Last Updated**: October 4, 2025
+**Last Updated**: October 6, 2025

@@ -45,6 +45,7 @@ data/emulation/*.json
 !data/emulation/*_example.json
 data/emulation/evidence/*
 !data/emulation/evidence/.gitkeep
+data/emulation/atomic-red-team/
 
 # VECTR output (optional feature)
 data/vectr/*.json

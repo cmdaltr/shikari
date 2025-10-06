@@ -79,7 +79,14 @@ def generate_detection(technique_name):
     print("Detection generation complete.")
 
 
-def build_correlations(yaml_dir=None, output_file=None, min_queries=2, max_queries=5, threat_group=None, verbose=False):
+def build_correlations(
+    yaml_dir=None,
+    output_file=None,
+    min_queries=2,
+    max_queries=5,
+    threat_group=None,
+    verbose=False,
+):
     """Build correlation queries from YAML detection files"""
     from archer.genai import build_correlation_queries
 
@@ -94,7 +101,7 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, max_queri
             output_file=output_file,
             min_queries=min_queries,
             max_queries=max_queries,
-            threat_group=threat_group
+            threat_group=threat_group,
         )
 
         print()
@@ -146,33 +153,95 @@ def build_correlations(yaml_dir=None, output_file=None, min_queries=2, max_queri
 
 
 def run_emulation(
-    technique_id=None,
-    threat_group=None,
+    target=None,
     framework="atomic",
     execute=False,
     enrich=False,
     max_techniques=None,
+    remote_host=None,
+    remote_user=None,
+    remote_password=None,
+    remote_platform=None,
+    ssh_key=None,
+    use_http=False,
     verbose=False,
 ):
     """Execute adversary emulation tests for a technique or threat group"""
+    # Automatically enable emulation
+    os.environ["ENABLE_EMULATION"] = "true"
+
     from archer.config import EmulationConfig
 
-    if not EmulationConfig.enabled:
-        print("ERROR: Emulation module is not enabled.", file=sys.stderr)
-        print("Set ENABLE_EMULATION=true to use this feature.", file=sys.stderr)
-        return None
-
-    if not technique_id and not threat_group:
+    if not target:
         print(
-            "ERROR: Either --technique-id or --threat-group required", file=sys.stderr
+            "ERROR: Target (technique ID or threat group) is required", file=sys.stderr
         )
         return None
 
+    # Determine if target is a technique ID (starts with T) or threat group name
+    # Technique format: T#### (5 chars) or T####.### (sub-technique with dot)
+    is_technique = target.startswith("T") and ("." in target or len(target) == 5)
+    technique_id = target if is_technique else None
+    threat_group = target if not is_technique else None
+
     print("=" * 70)
     print(f"Adversary Emulation - {framework.upper()}")
+    if remote_host:
+        print(f"Remote Host: {remote_host}")
     print("=" * 70)
     print()
 
+    # Handle remote execution
+    if remote_host:
+        from archer.emulation.remote import create_remote_executor, execute_atomic_remote
+
+        print(f"🌐 Remote execution mode - target: {remote_host}\n")
+
+        executor = create_remote_executor(
+            host=remote_host,
+            username=remote_user,
+            password=remote_password,
+            ssh_key=ssh_key,
+            platform=remote_platform,
+            use_http=use_http,
+        )
+
+        if technique_id:
+            result = execute_atomic_remote(executor, technique_id, execute=execute, enrich=enrich)
+
+            if result["status"] == "success":
+                print(f"\n✅ Successfully executed {technique_id} on {remote_host}")
+                if verbose:
+                    print(f"\nOutput:\n{result['output']}")
+
+                # Enrich local YAML files if artifacts collected
+                if enrich and "artifacts" in result:
+                    print("\nEnriching local detection YAMLs with remote artifacts...")
+                    from archer.emulation.enrich import enrich_detections_with_emulation
+                    # Save remote result locally for enrichment
+                    import json
+                    import time
+                    os.makedirs("data/emulation", exist_ok=True)
+                    result_file = f"data/emulation/{technique_id}_remote_{int(time.time())}.json"
+                    with open(result_file, 'w') as f:
+                        json.dump(result, f, indent=2)
+                    print(f"Saved remote execution results to: {result_file}")
+
+                    # Enrich YAMLs
+                    enriched = enrich_detections_with_emulation(technique_id, result_file)
+                    if enriched > 0:
+                        print(f"✅ Enriched {enriched} detection(s) with remote execution evidence")
+
+                return result
+            else:
+                print(f"\n❌ Failed to execute {technique_id}: {result.get('error')}")
+                return None
+        else:
+            print("❌ Remote execution currently only supports individual techniques, not threat groups")
+            print("Please specify a technique ID (e.g., T1059.001) when using --remote-host")
+            return None
+
+    # Local execution
     try:
         if framework == "atomic":
             from archer.emulation import AtomicRedTeam
@@ -180,19 +249,72 @@ def run_emulation(
 
             if not EmulationConfig.is_atomic_configured():
                 print(
-                    f"ERROR: Atomic Red Team not found at {EmulationConfig.atomic_path}",
-                    file=sys.stderr,
+                    f"⚠️  Atomic Red Team not found at {EmulationConfig.atomic_path}\n"
                 )
-                print("\nInstall with:", file=sys.stderr)
-                print(
-                    "  git clone https://github.com/redcanaryco/atomic-red-team.git",
-                    file=sys.stderr,
-                )
-                print(
-                    f"  export ATOMIC_REDTEAM_PATH=/path/to/atomic-red-team",
-                    file=sys.stderr,
-                )
-                return None
+                print("Would you like to install Atomic Red Team now?")
+                print("\nChoose installation location:")
+                print("  1. /opt/atomic-red-team (system-wide, requires sudo)")
+                print("  2. archer/data/emulation/atomic-red-team (local to project)")
+                print("  3. Cancel and install manually\n")
+
+                choice = input("Enter choice [1/2/3]: ").strip()
+
+                if choice == "1":
+                    install_path = "/opt/atomic-red-team"
+                    requires_sudo = True
+                elif choice == "2":
+                    install_path = os.path.join(os.getcwd(), "archer", "data", "emulation", "atomic-red-team")
+                    requires_sudo = False
+                else:
+                    print("\nManual installation instructions:")
+                    print("  git clone https://github.com/redcanaryco/atomic-red-team.git")
+                    print("  export ATOMIC_REDTEAM_PATH=/path/to/atomic-red-team")
+                    return None
+
+                print(f"\nInstalling Atomic Red Team to: {install_path}")
+                print("This may take a few minutes...\n")
+
+                # Create parent directory if needed
+                parent_dir = os.path.dirname(install_path)
+                if requires_sudo and not os.path.exists(parent_dir):
+                    import subprocess
+                    result = subprocess.run(
+                        ["sudo", "mkdir", "-p", parent_dir],
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode != 0:
+                        print(f"ERROR: Failed to create directory {parent_dir}", file=sys.stderr)
+                        print(f"Error: {result.stderr}", file=sys.stderr)
+                        return None
+                elif not requires_sudo:
+                    os.makedirs(parent_dir, exist_ok=True)
+
+                # Clone the repository
+                import subprocess
+                clone_cmd = ["git", "clone", "https://github.com/redcanaryco/atomic-red-team.git", install_path]
+                if requires_sudo:
+                    clone_cmd = ["sudo"] + clone_cmd
+
+                result = subprocess.run(clone_cmd, capture_output=True, text=True)
+
+                if result.returncode == 0:
+                    print(f"✅ Successfully installed Atomic Red Team to {install_path}\n")
+                    # Update environment variable for this session
+                    os.environ["ATOMIC_REDTEAM_PATH"] = install_path
+                    print(f"Set ATOMIC_REDTEAM_PATH={install_path} for this session")
+                    print(f"\nTo make this permanent, add to your ~/.bashrc or ~/.zshrc:")
+                    print(f"  export ATOMIC_REDTEAM_PATH={install_path}\n")
+
+                    # Reload config
+                    from importlib import reload
+                    import archer.config
+                    reload(archer.config)
+                    from archer.config import EmulationConfig
+                else:
+                    print(f"ERROR: Failed to clone Atomic Red Team", file=sys.stderr)
+                    print(f"Error: {result.stderr}", file=sys.stderr)
+                    return None
 
             atomic = AtomicRedTeam()
 
@@ -517,14 +639,11 @@ def main():
     # Optional: Emulation testing
     emulate_parser = subparsers.add_parser(
         "emulate",
-        help="Execute adversary emulation tests (requires ENABLE_EMULATION=true)",
+        help="Execute adversary emulation tests",
     )
     emulate_parser.add_argument(
-        "--technique-id", help="MITRE ATT&CK technique ID (e.g., T1059.001)"
-    )
-    emulate_parser.add_argument(
-        "--threat-group",
-        help="Threat group name (e.g., APT29) - runs all group techniques",
+        "target",
+        help="MITRE ATT&CK technique ID (e.g., T1059.001) OR threat group name (e.g., 'APT29')",
     )
     emulate_parser.add_argument(
         "--framework",
@@ -546,6 +665,32 @@ def main():
         "--max-techniques",
         type=int,
         help="Maximum number of techniques to test (for threat groups)",
+    )
+    emulate_parser.add_argument(
+        "--remote-host",
+        help="Remote host IP/hostname for execution (e.g., 192.168.1.100 or vm-windows-01)",
+    )
+    emulate_parser.add_argument(
+        "--remote-user",
+        help="Remote host username (default: current user)",
+    )
+    emulate_parser.add_argument(
+        "--remote-password",
+        help="Remote host password (prompted if not provided)",
+    )
+    emulate_parser.add_argument(
+        "--remote-platform",
+        choices=["windows", "linux", "macos"],
+        help="Remote platform type (auto-detected if not specified)",
+    )
+    emulate_parser.add_argument(
+        "--ssh-key",
+        help="Path to SSH private key file (for Linux/macOS targets)",
+    )
+    emulate_parser.add_argument(
+        "--http",
+        action="store_true",
+        help="Use HTTP for WinRM (default: HTTPS). Only use in lab environments!",
     )
     emulate_parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose output"
@@ -593,12 +738,17 @@ def main():
         generate_detection(args.technique)
     elif args.command == "emulate":
         run_emulation(
-            technique_id=args.technique_id,
-            threat_group=args.threat_group,
+            target=args.target,
             framework=args.framework,
             execute=args.execute,
             enrich=args.enrich,
             max_techniques=args.max_techniques,
+            remote_host=args.remote_host,
+            remote_user=args.remote_user,
+            remote_password=args.remote_password,
+            remote_platform=args.remote_platform,
+            ssh_key=args.ssh_key,
+            use_http=args.http,
             verbose=args.verbose,
         )
     elif args.command == "vectr":

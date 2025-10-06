@@ -429,8 +429,8 @@ AI provider implementations for enhanced query generation:
 
 ### Related Documentation
 
-- [MODELS.md](MODELS.md) - Setup guide for local AI models
-- [SEMANTICS.md](SEMANTICS.md) - Semantic overlap algorithm explained
+- [Appendix A: Local AI Model Setup](#appendix-a-local-ai-model-setup) - Local AI model configuration
+- [Appendix B: Semantic Overlap Algorithm](#appendix-b-semantic-overlap-algorithm) - Technical overlap details
 - [archer.py](../archer.py) - Command-line interface implementation
 - [correlations.py](../archer/parsers/correlations.py) - Standalone script
 
@@ -439,3 +439,138 @@ AI provider implementations for enhanced query generation:
 Archived documentation about past changes:
 - [archive/CLEANUP_REPORT.md](archive/CLEANUP_REPORT.md) - Codebase cleanup (Oct 2025)
 - [archive/GENAI_RESTRUCTURE.md](archive/GENAI_RESTRUCTURE.md) - Module restructure (Oct 2025)
+
+---
+
+## Appendix A: Local AI Model Setup
+
+This appendix explains how to run a local, quantized ggml model with llama.cpp and the python binding `llama-cpp-python` on macOS (Apple Silicon / M1/M2).
+
+### Overview
+
+- **Recommended model**: quantized GGML 7B (q4_0 or q4_1) for Mac M2 (16GB)
+- The repo contains a smoke test script `scripts/genai_smoke_test.py` that will call the local model when `LLAMA_MODEL_PATH` is set
+- The script is safe: if the env var is not set, it will fall back to the repo's heuristic generator
+
+### Prerequisites
+
+- Homebrew installed
+- Command-line tools (Xcode command line tools)
+
+### Install System Dependencies
+
+```bash
+brew install cmake libomp
+```
+
+### Install Python Dependencies
+
+```bash
+python3 -m pip install --upgrade pip setuptools wheel
+python3 -m pip install llama-cpp-python
+# Optional: install transformers if you plan to try transformers-based local models
+# python3 -m pip install transformers
+```
+
+### Obtain a GGML Quantized Model
+
+- Download a ggml quantized 7B model (for example: ggml-7b-q4_0.bin) from a trusted source (Hugging Face community repo or TheBloke conversions)
+- Respect model licensing (Llama 2 models require agreeing to the model license)
+- Place the model binary somewhere on disk, e.g. `~/models/ggml-7b-q4_0.bin`
+
+### Set Environment Variables and Run the Smoke Test
+
+```bash
+export GENAI_MODE=local_llm
+export LLAMA_MODEL_PATH=/Users/you/models/ggml-7b-q4_0.bin
+python3 scripts/genai_smoke_test.py
+```
+
+### What the Smoke Test Does
+
+- If `LLAMA_MODEL_PATH` is set and `llama-cpp-python` is available, the script will load the model, run a small prompt across `data/samples/` and produce `data/correlations/smoke_test.json`
+- If the model or binding are not available, the script will run the heuristic fallback (no external deps) and write the same `data/correlations/smoke_test.json`
+
+### Troubleshooting
+
+- **Memory errors**: Try a smaller quantized model or close other apps
+- **Installation fails**: Ensure you have cmake and libomp installed and try again. On macOS, you may need to set architecture flags
+
+### Notes
+
+- This approach keeps everything local and offline
+- If you later want to experiment with external APIs, the repo genai module supports adding an OpenAI/Anthropic adapter
+
+---
+
+## Appendix B: Semantic Overlap Algorithm
+
+This appendix provides technical details about the semantic overlap calculation used in KQL query combinations.
+
+### What Is Semantic Overlap?
+
+A quick heuristic that estimates how similar two KQL queries are, expressed as a percentage (0–100). It's not a count of matching fields but reflects shared meaningful tokens after removing common KQL noise.
+
+### How It's Computed (Heuristic)
+
+1. **Tokenize** each query into lowercase alphanumeric tokens with length ≥ 3
+2. **Remove common KQL operators** and very common columns (e.g., `where`, `summarize`, `project`, `DeviceName`, `Timestamp`, `ActionType`, etc.)
+3. **Compute Jaccard similarity** = `100 * |intersection(tokens)| / |union(tokens)|`, rounded to an integer and clamped to [0, 100]
+
+### What Typically Counts Toward Overlap
+
+- Uncommon columns and tables (e.g., `DeviceFileEvents`, `DeviceProcessEvents` when distinctive)
+- Specific function/verb names
+- Distinctive literals/strings (e.g., "Evilginx2", "gcloud", "NTDS.dit")
+- Specific filter terms in command lines or URLs
+
+### What's Ignored or Downweighted
+
+- Common KQL keywords and operators (`where`, `summarize`, `join`, `project`, etc.)
+- Very common schema/columns across detections (`DeviceName`, `DeviceId`, `Timestamp`, `ActionType`, `AccountName`, etc.)
+- This prevents inflating overlap just because both queries project typical fields
+
+### Displayed Headers
+
+- In heuristic mode for MDE/Sentinel/KQL, combined queries include:
+  ```kql
+  // {QueryAName} followed by {QueryBName}; {X}% semantic overlap.
+  ```
+- In non-heuristic mode, if a deeper semantic analyzer is available, its score is preferred; otherwise the heuristic is used. An extra line may appear:
+  ```kql
+  // Semantic: {X}% overlap via {strategy}
+  ```
+
+### Scope
+
+- Applied to KQL-family vendors: `mde`, `microsoft`, `sentinel`, `kql`
+- Splunk output is unaffected by this heuristic
+
+### Interpreting the Percentage (Rough Guide)
+
+| Percentage | Interpretation |
+|------------|----------------|
+| 0–10% | Essentially unrelated |
+| 10–30% | Low overlap |
+| 30–60% | Moderate overlap |
+| 60%+ | High overlap (likely similar concepts or shared indicators) |
+
+### Why It's Not "Matching Fields"
+
+- The heuristic doesn't count identical columns
+- It focuses on distinctive tokens so that common columns don't dominate the score
+- Two queries with the same projection list can still be low-overlap if their core filters and distinctive terms differ
+
+### Limitations
+
+- **Token-based and schema-agnostic**: No AST or operator semantics considered
+- **Rare tokens** can disproportionately affect the score
+- Use as a hint for conceptual proximity, not a measure of result-set equivalence or performance
+
+### FAQ
+
+**Q: Is it the number of fields that match?**
+A: No. It's a Jaccard-like similarity over meaningful tokens after stripping common KQL noise.
+
+**Q: Why do some pairs show high overlap?**
+A: They likely share distinctive strings (e.g., same tool names) and uncommon columns/tables.

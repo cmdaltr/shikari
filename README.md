@@ -11,8 +11,10 @@ Archer is a modular Python service for automated threat hunting with optional ad
 - 🌐 **Web UI & CLI** - FastAPI web interface plus command-line tools
 
 ### Optional Modules
-- 💥 **Adversary Emulation** (NEW) - Atomic Red Team integration for evidence-based detections
-- 📊 **VECTR Integration** (NEW) - Hunt tracking, validation, and purple team collaboration
+- 💥 **Adversary Emulation** - Atomic Red Team integration for evidence-based detections
+  - 🖥️ **Remote Execution** - SSH/WinRM support for cross-platform testing
+- 📊 **VECTR Integration** - Hunt tracking, validation, and purple team collaboration
+- 🔍 **Query Execution** - Execute queries via MDE and Splunk APIs
 - 🔗 **n8n Workflow Automation** - API endpoints for workflow integration
 
 ---
@@ -24,6 +26,8 @@ Archer is a modular Python service for automated threat hunting with optional ad
 - **Python 3.11+** (for local setup)
 - **Optional**: Atomic Red Team (for emulation module)
 - **Optional**: VECTR instance (for hunt tracking)
+- **Optional**: SSH access or WinRM (for remote emulation)
+- **Optional**: MDE or Splunk API credentials (for query execution)
 
 ---
 <br>
@@ -101,8 +105,8 @@ python3 archer.py generate "APT29"
 # Generate detections AND run correlation
 python3 archer.py generate "APT29" --correlate
 
-# Build correlations separately
-python3 archer.py correlate --verbose
+# Build correlations for specific threat group (required)
+python3 archer.py correlate "Scattered Spider"
 
 # Hunt for specific technique
 python3 archer.py hunt "PowerShell"
@@ -110,24 +114,41 @@ python3 archer.py hunt "PowerShell"
 
 #### Adversary Emulation (Optional)
 
-Run Atomic Red Team tests and enrich detections with evidence:
+Run Atomic Red Team tests locally or remotely and enrich detections with evidence:
 
 ```bash
-# Enable emulation module
-export ENABLE_EMULATION=true
-export ATOMIC_REDTEAM_PATH=/opt/atomic-red-team
+# Emulate specific technique locally (safe simulation)
+python3 archer.py emulate T1059.001 --enrich
 
-# Simulate tests for a single technique (safe)
-python3 archer.py emulate --technique-id T1059.001 --enrich
+# Emulate entire threat group locally
+python3 archer.py emulate "APT29" --enrich --max-techniques 10
 
-# Simulate tests for entire threat group
-python3 archer.py emulate --threat-group "APT29" --enrich
+# Live execution locally (LAB ONLY!)
+python3 archer.py emulate T1059.001 --execute --enrich
 
-# Limit to first 10 techniques
-python3 archer.py emulate --threat-group "APT29" --max-techniques 10 --enrich
+# Remote execution via SSH (Linux/macOS)
+python3 archer.py emulate T1059.001 \
+  --remote-host 192.168.1.100 \
+  --remote-user admin \
+  --ssh-key ~/.ssh/id_rsa \
+  --enrich
 
-# Live execution (LAB ONLY!)
-python3 archer.py emulate --threat-group "APT29" --execute --enrich
+# Remote execution via WinRM (Windows) - HTTPS default
+python3 archer.py emulate T1059.001 \
+  --remote-host 192.168.1.101 \
+  --remote-user Administrator \
+  --remote-password 'P@ssw0rd' \
+  --remote-platform windows \
+  --enrich
+
+# Remote execution via WinRM with HTTP (lab only)
+python3 archer.py emulate T1059.001 \
+  --remote-host 192.168.1.101 \
+  --remote-user Administrator \
+  --remote-password 'P@ssw0rd' \
+  --remote-platform windows \
+  --http \
+  --enrich
 ```
 
 See [docs/EMULATION.md](docs/EMULATION.md) for detailed emulation documentation.
@@ -160,17 +181,39 @@ python3 archer.py vectr coverage --campaign-id camp_123abc
 
 See [docs/VECTR.md](docs/VECTR.md) for detailed VECTR documentation.
 
+#### Query Execution (Optional)
+
+Execute queries directly against MDE or Splunk APIs:
+
+```bash
+# Set up MDE credentials
+export MDE_TENANT_ID=your-tenant-id
+export MDE_CLIENT_ID=your-client-id
+export MDE_CLIENT_SECRET=your-client-secret
+
+# Set up Splunk credentials
+export SPLUNK_HOST=splunk.example.com
+export SPLUNK_USERNAME=admin
+export SPLUNK_PASSWORD=your-password
+
+# Execute queries (coming soon - module ready, CLI integration pending)
+# python3 archer.py generate "APT29" --execute-queries
+# python3 archer.py correlate "Scattered Spider" --execute-queries
+```
+
+See [docs/QUERY_EXECUTION.md](docs/QUERY_EXECUTION.md) for detailed query execution documentation.
+
 #### Complete Workflow Example
 
 ```bash
 # 1. Generate detections
 python3 archer.py generate "APT29"
 
-# 2. Run emulation and enrich
-python3 archer.py emulate --threat-group "APT29" --enrich
+# 2. Run emulation and enrich (local or remote)
+python3 archer.py emulate "APT29" --enrich --max-techniques 10
 
 # 3. Build correlations
-python3 archer.py correlate --verbose
+python3 archer.py correlate "APT29"
 
 # 4. Export to VECTR for tracking
 python3 archer.py vectr export --threat-group "APT29"
@@ -223,10 +266,12 @@ Content-Type: application/json
 ## 📚 Documentation & Resources
 
 ### Archer Documentation
+- [Getting Started Guide](docs/GETTING_STARTED.md) - Setup and troubleshooting
 - [Architecture Overview](docs/ARCHITECTURE.md) - Complete system architecture
-- [Emulation Guide](docs/EMULATION.md) - Adversary emulation integration
-- [VECTR Guide](docs/VECTR.md) - Hunt tracking and validation
-- [Correlations](docs/CORRELATIONS.md) - Correlation query builder
+- [Emulation Guide](docs/EMULATION_GUIDE.md) - Adversary emulation and remote execution
+- [Query Execution Guide](docs/QUERY_API_GUIDE.md) - MDE and Splunk API integration
+- [VECTR Integration](docs/VECTR_INTEGRATION.md) - Hunt tracking and validation
+- [Correlation Guide](docs/CORRELATION_GUIDE.md) - Correlation query builder
 
 ### External Resources
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)
