@@ -27,19 +27,20 @@ dist/
 
 # Project specific
 .temp/
-data/ai_cache/
-data/drafts/
-data/progress/
-archer/mappings/*.json
 *.log
+archer/mappings/*.json
 
 # Output directories - keep structure but exclude generated content
-data/generate/*.yaml
-!data/generate/*_example.yaml
 data/correlate/*.json
 !data/correlate/*_example*.json
+data/generate/*.yaml
+!data/generate/*_example.yaml
 data/hunt/*.yaml
 !data/hunt/*_example.yaml
+data/hunt/*.yaml
+!data/hunt/*_example.yaml
+data/progress/*.json
+!data/progress/*_example.json
 
 # Emulation output (optional feature)
 data/emulation/*.json
