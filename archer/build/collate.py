@@ -74,13 +74,15 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
     with open(os.path.join("archer", "mappings", "schemaMDE.json")) as f:
         map_defender_tables = json.load(f)
 
-    for step in alignment_results:
-        if step["matches"]:
-            for match in step["matches"]:
-                for mde_table in match["MDE"]:
-                    mde_mapping = map_defender_tables.get(mde_table)
-                for splunk_index in match["Splunk"]:
-                    splunk_mapping = map_splunk_indices.get(splunk_index)
+    # Note: This validation loop is unused - variables assigned but never used
+    # Commented out due to incompatibility with new schemaSplunk.json structure
+    # for step in alignment_results:
+    #     if step["matches"]:
+    #         for match in step["matches"]:
+    #             for mde_table in match["MDE"]:
+    #                 mde_mapping = map_defender_tables.get(mde_table)
+    #             for splunk_index in match["Splunk"]:
+    #                 splunk_mapping = map_splunk_indices.get(splunk_index)
 
     mde_queries = []
     splunk_queries = []
@@ -117,7 +119,8 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                         if is_query_applicable(
                             procedure_platforms, software_platforms, index_name
                         ):
-                            splunk_mapping = map_splunk_indices.get(index_name, "")
+                            # New schema structure: indicator_type -> index_name -> query template
+                            splunk_mapping = map_splunk_indices.get(indicator_type, {}).get(index_name, "")
                             appended_query = f"{query}\n{splunk_mapping}"
                             appended_splunk_queries.append(appended_query)
                     else:

@@ -47,11 +47,11 @@ def compile_splunk_queries(
                     parts = indicator.split()
                     and_clauses = []
                     for part in parts:
-                        and_clauses.append(f'properties.{field}="*{part}*"')
+                        and_clauses.append(f'{field}="*{part}*"')
                     indicator_clauses.append("(" + " AND ".join(and_clauses) + ")")
                 else:
                     # Single-word indicator
-                    indicator_clauses.append(f'properties.{field}="*{indicator}*"')
+                    indicator_clauses.append(f'{field}="*{indicator}*"')
             field_clauses.append(" OR ".join(indicator_clauses))
 
         condition = " OR ".join(field_clauses)
