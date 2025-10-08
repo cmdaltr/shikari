@@ -6,9 +6,10 @@ Archer is a modular Python service for automated threat hunting with optional ad
 
 ### Core Capabilities
 - 🎯 **MITRE ATT&CK Integration** - Automated detection generation from threat group TTPs
+- 📤 **File Upload & Intelligence Extraction** - Upload threat intel files (PDF, TXT, JSON, CSV, YARA) for automatic TTP/IOC extraction
 - 🔍 **Multi-Platform Support** - KQL (Microsoft Defender/Sentinel) and Splunk (SPL) queries
 - 🧠 **AI-Powered Correlations** - Semantic analysis and query correlation
-- 🌐 **Web UI & CLI** - FastAPI web interface plus command-line tools
+- 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
 
 ### Optional Modules
 - 💥 **Adversary Emulation** - Atomic Red Team integration for evidence-based detections
@@ -272,6 +273,7 @@ Content-Type: application/json
 ### Archer Documentation
 - [Getting Started Guide](docs/GETTING_STARTED.md) - Setup and troubleshooting
 - [Architecture Overview](docs/ARCHITECTURE.md) - Complete system architecture
+- [File Upload Feature](docs/UPLOAD_FEATURE.md) - Upload threat intel files for TTP/IOC extraction
 - [Emulation Guide](docs/EMULATION_GUIDE.md) - Adversary emulation and remote execution
 - [Query Execution Guide](docs/QUERY_API_GUIDE.md) - MDE and Splunk API integration
 - [VECTR Integration](docs/VECTR_INTEGRATION.md) - Hunt tracking and validation
