@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -800,3 +800,171 @@ async def complete_yaml(request: Request, group_name: str = ""):
             print(f"Error starting GenAI: {e}")
 
     return JSONResponse({"ok": True})
+
+
+@app.post("/upload")
+async def upload_file(
+    request: Request,
+    file: UploadFile = File(...),
+    use_openai: str = Form(None),
+    auto_generate: str = Form(None),
+    run_correlation: str = Form(None),
+):
+    """
+    Handle file upload for TTP/IOC extraction.
+
+    Accepts threat intelligence files (PDF, TXT, JSON, CSV, YARA) and extracts
+    TTPs and IOCs using GenAI, then optionally generates detection queries.
+    """
+    try:
+        # Read file content
+        file_content = await file.read()
+
+        # Import the file intelligence parser
+        from archer.parsers.file_intelligence import parse_intelligence_file
+
+        # Parse the file to extract TTPs and IOCs
+        use_ai = use_openai == "true"
+        result = parse_intelligence_file(
+            file_path=file.filename,
+            file_content=file_content,
+            use_openai=use_ai,
+            use_local_llm=False
+        )
+
+        # Extract data
+        ttps = result.get("ttps", [])
+        iocs = result.get("iocs", {})
+
+        # Create a synthetic group name for tracking
+        import hashlib
+        file_hash = hashlib.md5(file_content).hexdigest()[:8]
+        synthetic_group_name = f"Upload_{file.filename.split('.')[0]}_{file_hash}"
+
+        # If auto-generate is enabled, create detections
+        if auto_generate == "true" and (ttps or any(iocs.values())):
+            # Build manual data structure for process_group
+            manual_data = {
+                "techniques": [],
+                "identifiers": iocs,  # Use extracted IOCs
+                "metadata": {
+                    "source": "file_upload",
+                    "filename": file.filename,
+                    "ttps_found": ttps
+                }
+            }
+
+            # Add technique data for each TTP
+            for ttp_id in ttps:
+                # Try to get technique info from MITRE
+                try:
+                    technique_info = _get_technique_info(ttp_id)
+                    if technique_info:
+                        manual_data["techniques"].append(technique_info)
+                except Exception:
+                    # If we can't find the technique, add minimal data
+                    manual_data["techniques"].append({
+                        "tid": ttp_id,
+                        "name": f"Technique {ttp_id}",
+                        "tactic": "Unknown",
+                        "description": f"Extracted from {file.filename}",
+                        "software_used": [],
+                        "platforms": ["windows", "linux", "macos"]
+                    })
+
+            # Save extraction results to file for reference
+            import json
+            upload_dir = os.path.join("data", "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
+
+            result_file = os.path.join(upload_dir, f"{synthetic_group_name}_extraction.json")
+            with open(result_file, "w") as f:
+                json.dump({
+                    "filename": file.filename,
+                    "ttps": ttps,
+                    "iocs": iocs,
+                    "manual_data": manual_data
+                }, f, indent=2)
+
+            # Process in background thread
+            def _bg():
+                try:
+                    modified_process_group_wrapper(
+                        synthetic_group_name,
+                        f"Generated from uploaded file: {file.filename}",
+                        manual_data=manual_data,
+                        genai_mode="semantic" if not use_ai else "ai_generators",
+                        run_correlation=(run_correlation == "true")
+                    )
+                except Exception as e:
+                    print(f"Error processing upload: {e}")
+                    try:
+                        write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
+                    except Exception:
+                        pass
+
+            threading.Thread(target=_bg, daemon=True).start()
+
+            # Initialize progress
+            try:
+                write_progress(synthetic_group_name, {
+                    "status": "processing",
+                    "current_step": "Generating detections from uploaded file",
+                    "ttps_found": len(ttps),
+                    "iocs_found": sum(len(v) for v in iocs.values())
+                })
+            except Exception:
+                pass
+
+            return JSONResponse({
+                "success": True,
+                "redirect": f"/progress?group_name={synthetic_group_name}",
+                "ttps_found": len(ttps),
+                "iocs_found": sum(len(v) for v in iocs.values())
+            })
+        else:
+            # Just return extraction results without generating
+            return JSONResponse({
+                "success": True,
+                "ttps": ttps,
+                "iocs": {k: v for k, v in iocs.items() if v},  # Only include non-empty
+                "message": "File processed successfully. Enable 'Auto-Generate Queries' to create detections."
+            })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
+
+def _get_technique_info(ttp_id: str) -> dict:
+    """Get technique information from MITRE ATT&CK bundle."""
+    bundle = getattr(app.state, "bundle", None)
+    if not bundle:
+        return None
+
+    # Search for technique in bundle
+    for obj in bundle.get("objects", []):
+        if obj.get("type") == "attack-pattern":
+            # Check external references for technique ID
+            for ref in obj.get("external_references", []):
+                if ref.get("external_id") == ttp_id:
+                    # Extract tactic
+                    tactics = []
+                    for phase in obj.get("kill_chain_phases", []):
+                        tactic_name = phase.get("phase_name", "").replace("-", " ").title()
+                        tactics.append(tactic_name)
+
+                    return {
+                        "tid": ttp_id,
+                        "name": obj.get("name", ttp_id),
+                        "tactic": tactics[0] if tactics else "Unknown",
+                        "description": obj.get("description", ""),
+                        "software_used": [],
+                        "platforms": obj.get("x_mitre_platforms", ["windows"])
+                    }
+
+    return None

@@ -3,10 +3,10 @@
 <head>
     <title>Archer Hunting Application</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
     {% block head %}
     <style>
-      :root { --page-top: 72px; }  /* index-only top spacing */
-      /* apply same top offset as other pages */
+      :root { --page-top: 72px; }
       #main-content.page-shell,
       #main-content.centered { padding-top: var(--page-top); margin-top: 0; }
     </style>
@@ -17,161 +17,253 @@
     <div id="main-content" class="page-shell page-container">
     <div class="page-container">
       <!-- Page title / app name -->
-      <h1 style="text-align:center; font-size:2.5em;">Archer Hunting Application</h1>
-      <!-- Description pop-up: brief explanation about what Archer does. The
-           popup supports 'hide' (temporary) and 'do not show again' (persist)
-           interactions which are stored in localStorage. -->
-      <div id="archer-desc-popup" style="
-          display: none;
-          position: fixed;
-          top: 40px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #f8f9fa;
-          color: #222;
-          border: 1px solid #bbb;
-          border-radius: 8px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-          padding: 1.2em 2em 2.5em 2em;
-          z-index: 2000;
-          font-size: .9em;
-          max-width: 600px;
-          text-align: left;
-      ">
-          Archer has been built to quickly build detection queries based on actionable intelligence attributed to a specific threat actor.<br><br>
-          The app will search ATT&CK for documentated instances and obtain the respective TTPs. If the actor (or it's alias) does not exist in ATT&CK, you will be subsequently prompted for information to provide the TTPs the invoke.<br><br>
-          Archer will produce detection queries for the respective TTPs for both MDE (KQL) and Splunk (SPL).<br>
-          Archer compiles queries based on the data provided in the mappings and enriches simple searches with Generative AI to increase the fidelity.
-          <div style="margin-top: 1.5em; display: flex; gap: 2em; align-items: center;">
-              <label style="font-size:0.98em;cursor:pointer;">
-                  <input type="checkbox" id="hide-desc-popup-checkbox" style="vertical-align:middle;"> Hide
-              </label>
-              <label style="font-size:0.98em;cursor:pointer;">
-                  <input type="checkbox" id="dont-show-desc-popup-checkbox" style="vertical-align:middle;"> Do not show again
-              </label>
-          </div>
-      </div>
-    <!-- Main form: enter an actor/group name and click Generate.
-        Submitted via AJAX (see the script at bottom) so we can either
-        redirect to progress or inject the manual form when not found. -->
-    <form id="main-form" action="/generate" method="post" autocomplete="off">
-          <div class="form-grid">
-              <!-- Top row -->
-              <div style="text-align: right;">
-                  <label for="group_name_input">Group Name:</label>
-              </div>
-              <div style="text-align: center;">
-                  <input type="text" name="group_name" id="group_name_input" maxlength="200">
-                  <div id="group-name-controls" style="margin-top:6px; font-size:0.9em; color:#666;">
-                      <span id="group-name-error" style="color:darkred; font-weight:600; margin-left:12px; display:none;">Name must be 30 characters or fewer.</span>
-                  </div>
-              </div>
-              <div></div>
-              <!-- Advanced Options Row -->
-              <div style="text-align: right; padding-top: 20px;">
-                  <label>Advanced Options:</label>
-              </div>
-              <div style="text-align: left; padding-top: 20px;">
-                  <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9em;">
-                      <label class="advanced-option" title="Run GenAI correlation after generating detections">
-                          <input type="checkbox" name="run_correlation" value="true">
-                          Run Correlation
-                          <span class="tooltip-icon">ⓘ</span>
-                      </label>
-                      <label class="advanced-option" title="Structured query parsing - Understands query structure (tables, fields, operators) for better query combination">
-                          <input type="checkbox" name="advanced_parsing" value="true">
-                          Advanced Query Parsing
-                          <span class="tooltip-icon">ⓘ</span>
-                      </label>
-                      <label class="advanced-option" title="Semantic query understanding - Categorizes queries by purpose (authentication, network, file activity, etc.) and groups by meaning">
-                          <input type="checkbox" name="semantic" value="true">
-                          Semantic Analysis (Recommended)
-                          <span class="tooltip-icon">ⓘ</span>
-                      </label>
-                      <label class="advanced-option" title="AI-powered generation - Uses OpenAI API for enhanced correlations (requires OPENAI_API_KEY environment variable)">
-                          <input type="checkbox" name="ai_generators" value="true">
-                          AI-Powered Correlations
-                          <span class="tooltip-icon">ⓘ</span>
-                      </label>
-                      <label class="advanced-option" title="Local LLM processing - Uses local language model via llama.cpp (requires LLAMA_MODEL_PATH environment variable)">
-                          <input type="checkbox" name="local_llm" value="true">
-                          Local LLM Processing
-                          <span class="tooltip-icon">ⓘ</span>
-                      </label>
-                  </div>
-              </div>
-              <div></div>
-              <!-- Emulation Options Row -->
-              <div style="text-align: right; padding-top: 20px;">
-                  <label>Emulation:</label>
-              </div>
-              <div style="text-align: left; padding-top: 20px;">
-                  <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9em;">
-                      <label class="advanced-option" title="Run Atomic Red Team tests for threat group techniques and enrich detections with evidence (requires ENABLE_EMULATION=true and Atomic Red Team installed)">
-                          <input type="checkbox" name="run_emulation" value="true">
-                          Run Emulation Tests
-                          <span class="tooltip-icon">ⓘ</span>
-                      </label>
-                      <label class="advanced-option" title="Only simulate tests without actual execution - recommended for production systems" style="margin-left: 20px;">
-                          <input type="radio" name="emulation_mode" value="simulate" checked>
-                          Simulate Only (Safe)
-                      </label>
-                      <label class="advanced-option" title="Actually execute attack techniques - USE ONLY IN ISOLATED LAB ENVIRONMENTS" style="margin-left: 20px;">
-                          <input type="radio" name="emulation_mode" value="live">
-                          Live Execution (Lab Only!)
-                      </label>
-                  </div>
-              </div>
-              <div></div>
-              <!-- VECTR Options Row -->
-              <div style="text-align: right; padding-top: 20px;">
-                  <label>VECTR Integration:</label>
-              </div>
-              <div style="text-align: left; padding-top: 20px;">
-                  <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9em;">
-                      <label class="advanced-option" title="Export detections to VECTR for hunt tracking and validation (requires ENABLE_VECTR=true and VECTR_API_TOKEN)">
-                          <input type="checkbox" name="vectr_export" value="true">
-                          Export to VECTR
-                          <span class="tooltip-icon">ⓘ</span>
-                      </label>
-                      <div style="margin-left: 20px; display: flex; align-items: center; gap: 8px;">
-                          <label for="vectr_campaign_name" style="font-size: 0.9em;">Campaign Name:</label>
-                          <input type="text" name="vectr_campaign_name" id="vectr_campaign_name" placeholder="Optional - auto-generated if blank" style="flex: 1; max-width: 300px; padding: 4px 8px; font-size: 0.9em;">
-                      </div>
-                  </div>
-              </div>
-              <div></div>
-              <!-- Bottom row -->
-              <div></div>
-              <div style="text-align: center; padding-top: 15px;">
-                  <input type="submit" value="Generate" id="generate_btn" disabled>
-              </div>
-          </div>
-      </form>
+      <h1 style="text-align:center; font-size:2.5em; margin-bottom: 0.5em;">Archer</h1>
+      <p style="text-align:center; color: #666; font-size: 1.1em; margin-top: 0; margin-bottom: 2em;">
+        Threat Hunting Detection Generator
+      </p>
 
-      <!-- Optional messages injected by the server (e.g. errors/status) -->
-      {% if message %}
-      <div style="margin-top: 1em; text-align: center; font-weight: bold; color: #333;">
-          {{ message }}
-      </div>
-      {% endif %}
-
-      {% if wait_message %}
-      <div style="margin-top: 0.5em; text-align: center; color: #666;">
-          {{ wait_message }}
-      </div>
-      {% endif %}
-
-    </div>
-    <div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.9);z-index:1000;align-items:center;justify-content:center;">
-        <div style="text-align:center;">
-            <h2 id="loading-message">
-                Searching <span id="loading-group"></span><span id="loading-dots" style="display:inline-block; width:1.5em; text-align:left;"></span>
-            </h2>
+      <!-- Tabbed interface inspired by VirusTotal -->
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <button class="tab-button active" data-tab="generate">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+            </svg>
+            <span>Generate</span>
+          </button>
+          <button class="tab-button" data-tab="upload">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"/>
+              <polyline points="9 15 12 12 15 15"/>
+              <path d="M12 12v9"/>
+            </svg>
+            <span>Upload</span>
+          </button>
+          <button class="tab-button" data-tab="emulate">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+            <span>Emulate</span>
+          </button>
         </div>
+
+        <div class="tabs-content">
+          <!-- GENERATE TAB -->
+          <div class="tab-pane active" id="tab-generate">
+            <div class="tab-description">
+              Generate detection queries based on MITRE ATT&CK threat intelligence
+            </div>
+            <form id="generate-form" action="/generate" method="post" autocomplete="off">
+              <div class="form-section">
+                <label for="group_name_input" class="form-label">Threat Group Name</label>
+                <input type="text" name="group_name" id="group_name_input" class="form-input"
+                       placeholder="e.g., APT29, Scattered Spider" maxlength="200">
+                <div id="group-name-error" class="error-message" style="display:none;">
+                  Name must be 30 characters or fewer.
+                </div>
+              </div>
+
+              <!-- Advanced Options -->
+              <details class="options-section">
+                <summary class="options-header">Advanced Options</summary>
+                <div class="options-grid">
+                  <label class="option-item">
+                    <input type="checkbox" name="run_correlation" value="true">
+                    <span class="option-label">Run Correlation</span>
+                    <span class="option-hint">GenAI-powered query correlation after detection generation</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="advanced_parsing" value="true">
+                    <span class="option-label">Advanced Query Parsing</span>
+                    <span class="option-hint">Structured query parsing for better combinations</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="semantic" value="true" checked>
+                    <span class="option-label">Semantic Analysis</span>
+                    <span class="option-hint">Categorize queries by purpose (Recommended)</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="ai_generators" value="true">
+                    <span class="option-label">AI-Powered Correlations</span>
+                    <span class="option-hint">Uses OpenAI API (requires OPENAI_API_KEY)</span>
+                  </label>
+                </div>
+              </details>
+
+              <!-- VECTR Integration -->
+              <details class="options-section">
+                <summary class="options-header">VECTR Integration</summary>
+                <div class="options-grid">
+                  <label class="option-item">
+                    <input type="checkbox" name="vectr_export" value="true">
+                    <span class="option-label">Export to VECTR</span>
+                    <span class="option-hint">Hunt tracking and validation</span>
+                  </label>
+                  <div class="form-section" style="margin-top: 0.5em;">
+                    <label for="vectr_campaign_name" class="form-label-small">Campaign Name (Optional)</label>
+                    <input type="text" name="vectr_campaign_name" id="vectr_campaign_name"
+                           class="form-input-small" placeholder="Auto-generated if blank">
+                  </div>
+                </div>
+              </details>
+
+              <button type="submit" class="btn-primary" id="generate_btn" disabled>
+                Generate Detections
+              </button>
+            </form>
+          </div>
+
+          <!-- UPLOAD TAB -->
+          <div class="tab-pane" id="tab-upload">
+            <div class="tab-description">
+              Upload threat intelligence files to extract TTPs and IOCs
+            </div>
+
+            <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+              <div class="upload-area" id="upload-dropzone">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"/>
+                  <polyline points="9 15 12 12 15 15"/>
+                  <path d="M12 12v9"/>
+                </svg>
+                <div class="upload-text">
+                  <strong>Choose file or drag it here</strong>
+                  <p>Supported formats: PDF, TXT, MD, JSON, CSV, YARA</p>
+                </div>
+                <input type="file" id="file-input" name="file" accept=".pdf,.txt,.md,.json,.csv,.yar,.yara" style="display: none;">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('file-input').click();">
+                  Select File
+                </button>
+              </div>
+
+              <div id="file-selected" class="file-info" style="display: none;">
+                <div class="file-name-display">
+                  <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <span id="file-name-text"></span>
+                  <button type="button" class="btn-remove" onclick="clearFileSelection()">✕</button>
+                </div>
+              </div>
+
+              <!-- Upload Options -->
+              <details class="options-section">
+                <summary class="options-header">Processing Options</summary>
+                <div class="options-grid">
+                  <label class="option-item">
+                    <input type="checkbox" name="use_openai" value="true">
+                    <span class="option-label">OpenAI Enhancement</span>
+                    <span class="option-hint">Use AI for better TTP/IOC extraction</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="auto_generate" value="true" checked>
+                    <span class="option-label">Auto-Generate Queries</span>
+                    <span class="option-hint">Automatically create detection queries</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="run_correlation" value="true">
+                    <span class="option-label">Run Correlation</span>
+                    <span class="option-hint">Correlate extracted indicators</span>
+                  </label>
+                </div>
+              </details>
+
+              <button type="submit" class="btn-primary" id="upload_btn" disabled>
+                Upload & Process
+              </button>
+            </form>
+          </div>
+
+          <!-- EMULATE TAB -->
+          <div class="tab-pane" id="tab-emulate">
+            <div class="tab-description">
+              Execute adversary emulation tests using Atomic Red Team
+            </div>
+
+            <form id="emulate-form" action="/emulate" method="post" autocomplete="off">
+              <div class="form-section">
+                <label for="emulate_technique" class="form-label">Technique or Threat Group</label>
+                <input type="text" name="technique" id="emulate_technique" class="form-input"
+                       placeholder="e.g., T1059.001, APT29" maxlength="100">
+              </div>
+
+              <div class="form-section">
+                <label class="form-label">Execution Mode</label>
+                <div class="radio-group">
+                  <label class="radio-item">
+                    <input type="radio" name="emulation_mode" value="simulate" checked>
+                    <span class="radio-label">
+                      <strong>Simulate Only</strong>
+                      <span class="radio-hint">Safe simulation without actual execution (Recommended)</span>
+                    </span>
+                  </label>
+                  <label class="radio-item">
+                    <input type="radio" name="emulation_mode" value="live">
+                    <span class="radio-label">
+                      <strong>Live Execution</strong>
+                      <span class="radio-hint">⚠️ Actually execute techniques (LAB ONLY!)</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Emulation Options -->
+              <details class="options-section">
+                <summary class="options-header">Emulation Options</summary>
+                <div class="options-grid">
+                  <label class="option-item">
+                    <input type="checkbox" name="enrich_detections" value="true" checked>
+                    <span class="option-label">Enrich Detections</span>
+                    <span class="option-hint">Update detection queries with test evidence</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="remote_execution" value="true">
+                    <span class="option-label">Remote Execution</span>
+                    <span class="option-hint">Execute on remote host (requires config)</span>
+                  </label>
+                </div>
+
+                <div id="remote-config" style="display: none; margin-top: 1em;">
+                  <div class="form-section">
+                    <label for="remote_host" class="form-label-small">Remote Host</label>
+                    <input type="text" name="remote_host" id="remote_host" class="form-input-small"
+                           placeholder="192.168.1.100">
+                  </div>
+                  <div class="form-section">
+                    <label for="remote_user" class="form-label-small">Username</label>
+                    <input type="text" name="remote_user" id="remote_user" class="form-input-small">
+                  </div>
+                  <div class="form-section">
+                    <label for="remote_platform" class="form-label-small">Platform</label>
+                    <select name="remote_platform" id="remote_platform" class="form-input-small">
+                      <option value="linux">Linux</option>
+                      <option value="macos">macOS</option>
+                      <option value="windows">Windows</option>
+                    </select>
+                  </div>
+                </div>
+              </details>
+
+              <button type="submit" class="btn-primary" id="emulate_btn" disabled>
+                Run Emulation
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading overlay -->
+      <div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.95);z-index:1000;align-items:center;justify-content:center;">
+        <div style="text-align:center;">
+          <div class="loading-spinner"></div>
+          <h2 id="loading-message" style="margin-top: 1em;">Processing...</h2>
+        </div>
+      </div>
     </div>
-    <!-- Client-side interactivity: handles the description popup, input
-        validation and the AJAX submit behavior for the Generate button. -->
+    </div>
+
+    <script src="{{ url_for('static', path='js/tabs.js') }}?v={{ request.app.state.asset_version }}" defer></script>
     <script src="{{ url_for('static', path='js/index.js') }}?v={{ request.app.state.asset_version }}" defer></script>
     {% endblock %}
 </body>
