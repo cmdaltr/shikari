@@ -68,3 +68,6 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Atomic Red Team (external repo)
+archer/data/emulation/atomic-red-team/

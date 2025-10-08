@@ -1,3 +1,5 @@
+<a href="https://github.com/cyberg3cko/archer"><img src="archer.jpg" alt="Logo" width="600" height="220"></a>
+
 # 🏹 Archer: Threat Hunting Detection Generator
 
 Archer is a modular Python service for automated threat hunting with optional adversary emulation and hunt tracking integrations. Generate detection queries, validate with real attack execution, and track hunts with VECTR integration.
