@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 API Endpoint Testing using pytest
 Tests all FastAPI endpoints for the Archer web application
@@ -154,7 +155,9 @@ query: |
             data={"yaml_content": test_yaml},
         )
         assert response.status_code == 200
-        assert "successfully" in response.text.lower() or "saved" in response.text.lower()
+        assert (
+            "successfully" in response.text.lower() or "saved" in response.text.lower()
+        )
 
     def test_manual_submit_invalid_yaml(self):
         """Test POST /manual-submit with invalid YAML"""

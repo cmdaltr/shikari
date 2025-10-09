@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Tests for query execution functionality (MDE/Splunk APIs).
 """
@@ -103,7 +104,10 @@ class TestMDEClient:
         """Test connection test success"""
         # Mock token
         token_response = Mock()
-        token_response.json.return_value = {"access_token": "test_token", "expires_in": 3600}
+        token_response.json.return_value = {
+            "access_token": "test_token",
+            "expires_in": 3600,
+        }
         token_response.raise_for_status = Mock()
 
         # Mock query
@@ -202,7 +206,9 @@ class TestSplunkClient:
         mock_response.raise_for_status = Mock()
         mock_post.return_value = mock_response
 
-        with patch.object(SplunkClient, "execute_query", return_value={"status": "success"}):
+        with patch.object(
+            SplunkClient, "execute_query", return_value={"status": "success"}
+        ):
             client = SplunkClient("splunk.local", username="admin", password="password")
             assert client.test_connection() is True
 

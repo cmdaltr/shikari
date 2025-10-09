@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Tests for remote execution functionality (SSH/WinRM).
 """
@@ -103,7 +104,9 @@ class TestArtifactCollection:
         """
         artifacts = _collect_artifacts(Mock(), "T1059.001", output)
         assert len(artifacts["commands_executed"]) >= 1
-        assert any("powershell" in cmd.lower() for cmd in artifacts["commands_executed"])
+        assert any(
+            "powershell" in cmd.lower() for cmd in artifacts["commands_executed"]
+        )
 
     def test_collect_files(self):
         """Test extracting file paths from output"""
@@ -187,7 +190,9 @@ class TestRemoteAtomicExecution:
             "",
         )
 
-        result = execute_atomic_remote(mock_executor, "T1059.001", execute=True, enrich=True)
+        result = execute_atomic_remote(
+            mock_executor, "T1059.001", execute=True, enrich=True
+        )
 
         assert result["status"] == "success"
         assert "artifacts" in result

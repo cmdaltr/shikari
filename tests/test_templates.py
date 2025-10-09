@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from pathlib import Path
 import pytest
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
