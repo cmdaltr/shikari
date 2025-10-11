@@ -252,17 +252,17 @@ class TestUploadOptions:
         options_section = page.locator('#tab-upload details.options-section')
         options_grid = page.locator('#tab-upload .options-grid')
 
-        # Initially closed
-        expect(options_section).not_to_have_attribute('open')
+        # Initially closed (check that 'open' attribute is not set)
+        expect(options_section).not_to_have_attribute('open', '')
 
         # Click to open
         options_section.locator('summary').click()
-        expect(options_section).to_have_attribute('open')
+        expect(options_section).to_have_attribute('open', '')
         expect(options_grid).to_be_visible()
 
         # Click to close
         options_section.locator('summary').click()
-        expect(options_section).not_to_have_attribute('open')
+        expect(options_section).not_to_have_attribute('open', '')
 
 
 class TestDragAndDrop:

@@ -178,12 +178,12 @@ class TestGenerateTab:
         # Find details element
         advanced_options = page.locator('details.options-section').first
 
-        # Initially closed
-        expect(advanced_options).not_to_have_attribute('open')
+        # Initially closed (check that 'open' attribute is not set)
+        expect(advanced_options).not_to_have_attribute('open', '')
 
         # Click to open
         advanced_options.locator('summary').click()
-        expect(advanced_options).to_have_attribute('open')
+        expect(advanced_options).to_have_attribute('open', '')
 
     def test_checkbox_options(self, page: Page, base_url: str):
         """Test checkbox options are present and functional"""
@@ -192,9 +192,9 @@ class TestGenerateTab:
         # Open advanced options
         page.locator('details.options-section').first.locator('summary').click()
 
-        # Check for checkboxes
-        correlation_cb = page.locator('input[name="run_correlation"]')
-        semantic_cb = page.locator('input[name="semantic"]')
+        # Check for checkboxes - use more specific selector to avoid duplicate names across tabs
+        correlation_cb = page.locator('#tab-generate input[name="run_correlation"]')
+        semantic_cb = page.locator('#tab-generate input[name="semantic"]')
 
         expect(correlation_cb).to_be_visible()
         expect(semantic_cb).to_be_visible()
@@ -321,11 +321,12 @@ class TestEmulateTab:
         page.goto(base_url)
         page.locator('[data-tab="emulate"]').click()
 
-        # Open emulation options
-        page.locator('details.options-section').first.locator('summary').click()
+        # Open emulation options - use force click since summary might be partially obscured
+        advanced_options = page.locator('#tab-emulate details.options-section')
+        advanced_options.locator('summary').click(force=True)
 
-        remote_cb = page.locator('input[name="remote_execution"]')
-        remote_config = page.locator('#remote-config')
+        remote_cb = page.locator('#tab-emulate input[name="remote_execution"]')
+        remote_config = page.locator('#tab-emulate #remote-config')
 
         # Remote config should be hidden initially
         expect(remote_config).not_to_be_visible()
