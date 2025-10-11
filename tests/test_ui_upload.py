@@ -4,6 +4,7 @@ Tests the file upload feature for TTP/IOC extraction
 """
 
 import pytest
+import re
 from pathlib import Path
 from playwright.sync_api import Page, expect
 
@@ -71,7 +72,7 @@ class TestFileUploadInterface:
 
         dropzone = page.locator('#upload-dropzone')
         expect(dropzone).to_be_visible()
-        expect(dropzone).to_have_class(/upload-area/)
+        expect(dropzone).to_have_class(re.compile(r"upload-area"))
 
     def test_upload_instructions_visible(self, page: Page, base_url: str):
         """Test that upload instructions are displayed"""

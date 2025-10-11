@@ -4,6 +4,7 @@ Tests the new VirusTotal-inspired tabbed interface
 """
 
 import pytest
+import re
 from playwright.sync_api import Page, expect
 
 
@@ -43,7 +44,7 @@ class TestTabbedInterface:
         page.goto(base_url)
 
         generate_tab = page.locator('[data-tab="generate"]')
-        expect(generate_tab).to_have_class(/active/)
+        expect(generate_tab).to_have_class(re.compile(r"active"))
 
         # Check that Generate tab pane is visible
         generate_pane = page.locator('#tab-generate')
@@ -58,7 +59,7 @@ class TestTabbedInterface:
         upload_tab.click()
 
         # Verify Upload tab is now active
-        expect(upload_tab).to_have_class(/active/)
+        expect(upload_tab).to_have_class(re.compile(r"active"))
 
         # Verify Upload pane is visible
         upload_pane = page.locator('#tab-upload')
@@ -73,7 +74,7 @@ class TestTabbedInterface:
         emulate_tab.click()
 
         # Verify Emulate tab is now active
-        expect(emulate_tab).to_have_class(/active/)
+        expect(emulate_tab).to_have_class(re.compile(r"active"))
         expect(page.locator('#tab-emulate')).to_be_visible()
 
     def test_tab_content_isolation(self, page: Page, base_url: str):
