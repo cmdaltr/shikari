@@ -44,12 +44,14 @@ data/progress/*.json
 archer/data/cache/*
 !archer/data/cache/.gitkeep
 
-# Emulation output (optional feature)
+# Emulation output (runtime generated files)
 data/emulation/*.json
 !data/emulation/*_example.json
 data/emulation/evidence/*
 !data/emulation/evidence/.gitkeep
-data/emulation/atomic-red-team/
+
+# Atomic Red Team (static data - git submodule in archer/data/emulation/)
+archer/data/emulation/atomic-red-team/
 
 # VECTR output (optional feature)
 data/vectr/*.json
