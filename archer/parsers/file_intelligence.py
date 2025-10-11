@@ -10,6 +10,8 @@ Supported file formats:
 - TXT/MD threat intelligence reports
 - JSON (STIX, MISP, custom formats)
 - CSV (IOC lists)
+- XLSX (Excel spreadsheets)
+- DOCX (Word documents)
 - YARA rules
 """
 
@@ -126,6 +128,10 @@ class FileIntelligenceParser:
                 return 'json'
             elif ext == '.csv':
                 return 'csv'
+            elif ext in ['.xlsx', '.xls']:
+                return 'xlsx'
+            elif ext in ['.docx', '.doc']:
+                return 'docx'
             elif ext in ['.yar', '.yara']:
                 return 'yara'
 
@@ -156,6 +162,10 @@ class FileIntelligenceParser:
                 return self._extract_text_from_json(data)
         elif file_type == 'csv':
             return self._extract_csv_text(file_path)
+        elif file_type == 'xlsx':
+            return self._extract_xlsx_text(file_path)
+        elif file_type == 'docx':
+            return self._extract_docx_text(file_path)
         else:
             # Try reading as text
             try:
@@ -175,6 +185,10 @@ class FileIntelligenceParser:
             return self._extract_text_from_json(data)
         elif file_type == 'csv':
             return content.decode('utf-8', errors='ignore')
+        elif file_type == 'xlsx':
+            return self._extract_xlsx_bytes(content)
+        elif file_type == 'docx':
+            return self._extract_docx_bytes(content)
         else:
             return content.decode('utf-8', errors='ignore')
 
@@ -253,6 +267,110 @@ class FileIntelligenceParser:
             return '\n'.join(text_parts)
         except Exception as e:
             print(f"Error reading CSV: {e}")
+            return ""
+
+    def _extract_xlsx_text(self, file_path: str) -> str:
+        """Extract text from XLSX/XLS file."""
+        try:
+            import openpyxl
+            workbook = openpyxl.load_workbook(file_path, data_only=True)
+            text_parts = []
+
+            for sheet_name in workbook.sheetnames:
+                sheet = workbook[sheet_name]
+                text_parts.append(f"Sheet: {sheet_name}")
+
+                for row in sheet.iter_rows(values_only=True):
+                    row_text = ' | '.join([str(cell) if cell is not None else '' for cell in row])
+                    if row_text.strip():
+                        text_parts.append(row_text)
+
+            return '\n'.join(text_parts)
+        except ImportError:
+            print("Warning: openpyxl not installed. Install with: pip install openpyxl")
+            return ""
+        except Exception as e:
+            print(f"Error reading XLSX: {e}")
+            return ""
+
+    def _extract_xlsx_bytes(self, content: bytes) -> str:
+        """Extract text from XLSX bytes."""
+        try:
+            import openpyxl
+            from io import BytesIO
+            workbook = openpyxl.load_workbook(BytesIO(content), data_only=True)
+            text_parts = []
+
+            for sheet_name in workbook.sheetnames:
+                sheet = workbook[sheet_name]
+                text_parts.append(f"Sheet: {sheet_name}")
+
+                for row in sheet.iter_rows(values_only=True):
+                    row_text = ' | '.join([str(cell) if cell is not None else '' for cell in row])
+                    if row_text.strip():
+                        text_parts.append(row_text)
+
+            return '\n'.join(text_parts)
+        except ImportError:
+            print("Warning: openpyxl not installed. Install with: pip install openpyxl")
+            return ""
+        except Exception as e:
+            print(f"Error reading XLSX bytes: {e}")
+            return ""
+
+    def _extract_docx_text(self, file_path: str) -> str:
+        """Extract text from DOCX file."""
+        try:
+            import docx
+            doc = docx.Document(file_path)
+            text_parts = []
+
+            # Extract paragraphs
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    text_parts.append(para.text)
+
+            # Extract tables
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = ' | '.join([cell.text for cell in row.cells])
+                    if row_text.strip():
+                        text_parts.append(row_text)
+
+            return '\n\n'.join(text_parts)
+        except ImportError:
+            print("Warning: python-docx not installed. Install with: pip install python-docx")
+            return ""
+        except Exception as e:
+            print(f"Error reading DOCX: {e}")
+            return ""
+
+    def _extract_docx_bytes(self, content: bytes) -> str:
+        """Extract text from DOCX bytes."""
+        try:
+            import docx
+            from io import BytesIO
+            doc = docx.Document(BytesIO(content))
+            text_parts = []
+
+            # Extract paragraphs
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    text_parts.append(para.text)
+
+            # Extract tables
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = ' | '.join([cell.text for cell in row.cells])
+                    if row_text.strip():
+                        text_parts.append(row_text)
+
+            return '\n\n'.join(text_parts)
+        except ImportError:
+            print("Warning: python-docx not installed. Install with: pip install python-docx")
+            return ""
+        except Exception as e:
+            print(f"Error reading DOCX bytes: {e}")
             return ""
 
     def _extract_ttps(self, text: str) -> List[str]:

@@ -940,6 +940,146 @@ async def upload_file(
         }, status_code=500)
 
 
+@app.post("/emulate")
+async def emulate_technique(
+    request: Request,
+    technique: str = Form(...),
+    emulation_mode: str = Form("simulate"),
+    remote_execution: str = Form(None),
+    remote_hosts: str = Form(None),
+):
+    """
+    Execute adversary emulation using Atomic Red Team.
+
+    Supports both local simulation and live execution modes.
+    Can execute on remote hosts if configured.
+    """
+    try:
+        from archer.emulation.atomic import AtomicRedTeam
+
+        # Parse technique or group name
+        technique = technique.strip()
+
+        # If it looks like a threat group, we need to map it to techniques
+        if not technique.startswith("T"):
+            # It's a group name - fetch techniques for the group
+            bundle = getattr(app.state, "bundle", None)
+            if bundle:
+                # Find the group in the bundle
+                group_obj = None
+                for obj in bundle.get("objects", []):
+                    if obj.get("type") == "intrusion-set":
+                        if (obj.get("name", "").lower() == technique.lower() or
+                            any(alias.lower() == technique.lower()
+                                for alias in obj.get("aliases", []))):
+                            group_obj = obj
+                            break
+
+                if group_obj:
+                    # Get techniques used by this group
+                    techniques = []
+                    group_id = group_obj.get("id")
+                    for obj in bundle.get("objects", []):
+                        if obj.get("type") == "relationship":
+                            if (obj.get("source_ref") == group_id and
+                                obj.get("relationship_type") == "uses"):
+                                target_id = obj.get("target_ref")
+                                # Find the technique
+                                for tech_obj in bundle.get("objects", []):
+                                    if tech_obj.get("id") == target_id:
+                                        if tech_obj.get("type") == "attack-pattern":
+                                            ext_refs = tech_obj.get("external_references", [])
+                                            for ref in ext_refs:
+                                                if ref.get("source_name") == "mitre-attack":
+                                                    techniques.append(ref.get("external_id"))
+                                                    break
+
+                    if not techniques:
+                        return JSONResponse({
+                            "success": False,
+                            "error": f"No techniques found for group '{technique}'"
+                        }, status_code=400)
+
+                    # Use the first technique for now
+                    technique = techniques[0]
+                else:
+                    return JSONResponse({
+                        "success": False,
+                        "error": f"Threat group '{technique}' not found in MITRE ATT&CK"
+                    }, status_code=400)
+            else:
+                return JSONResponse({
+                    "success": False,
+                    "error": "MITRE ATT&CK data not loaded"
+                }, status_code=500)
+
+        # Initialize Atomic Red Team
+        atomic = AtomicRedTeam()
+
+        # Check if in simulate mode
+        is_simulate = emulation_mode == "simulate"
+
+        if is_simulate:
+            # Simulate mode - just show what would be executed
+            try:
+                atomic_data = atomic.get_technique_atomics(technique)
+                atomic_tests = atomic_data.get("atomic_tests", [])
+
+                return JSONResponse({
+                    "success": True,
+                    "mode": "simulate",
+                    "technique": technique,
+                    "technique_name": atomic_data.get("display_name", ""),
+                    "test_count": len(atomic_tests),
+                    "tests": [
+                        {
+                            "name": test.get("name", ""),
+                            "description": test.get("description", ""),
+                            "executor": test.get("executor", {}).get("name", ""),
+                            "platforms": test.get("supported_platforms", [])
+                        }
+                        for test in atomic_tests
+                    ],
+                    "message": "Simulation complete. Enable 'Live Execution' to actually run these tests."
+                })
+            except FileNotFoundError as e:
+                return JSONResponse({
+                    "success": False,
+                    "error": str(e)
+                }, status_code=404)
+        else:
+            # Live execution mode - actually run the tests
+            # THIS IS DANGEROUS - only for controlled environments
+            try:
+                results = atomic.execute_technique(
+                    technique_id=technique,
+                    auto_cleanup=True
+                )
+
+                return JSONResponse({
+                    "success": True,
+                    "mode": "live",
+                    "technique": technique,
+                    "results": results,
+                    "message": "Emulation executed successfully"
+                })
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return JSONResponse({
+                    "success": False,
+                    "error": f"Emulation failed: {str(e)}"
+                }, status_code=500)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
+
 def _get_technique_info(ttp_id: str) -> dict:
     """Get technique information from MITRE ATT&CK bundle."""
     bundle = getattr(app.state, "bundle", None)

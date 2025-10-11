@@ -3,14 +3,75 @@ from .extract import extract_red, extract_blue
 import re
 import requests
 import stix2
+import json
+import os
+from pathlib import Path
+from datetime import datetime, timedelta
 
 
-def get_stix_data(url):
-    response = requests.get(url)
-    response.raise_for_status()  # raise error if download failed
+def get_stix_data(url, cache_days=7):
+    """
+    Fetch MITRE ATT&CK STIX data with local caching.
 
-    # Load the STIX bundle
-    return stix2.parse(response.text, allow_custom=True)
+    Args:
+        url: URL to fetch STIX data from
+        cache_days: Number of days to cache the data (default: 7)
+
+    Returns:
+        STIX bundle object
+    """
+    # Create cache directory
+    cache_dir = Path.home() / ".archer" / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create cache file path based on URL
+    cache_filename = url.split("/")[-1]
+    cache_path = cache_dir / cache_filename
+
+    # Check if cache exists and is fresh
+    if cache_path.exists():
+        cache_age = datetime.now() - datetime.fromtimestamp(cache_path.stat().st_mtime)
+        if cache_age < timedelta(days=cache_days):
+            try:
+                print(f"Loading MITRE ATT&CK data from cache ({cache_path})")
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    return stix2.parse(f.read(), allow_custom=True)
+            except Exception as e:
+                print(f"Cache read error: {e}, fetching fresh data...")
+
+    # Try to fetch from network
+    try:
+        print(f"Fetching MITRE ATT&CK data from {url}...")
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+
+        # Save to cache
+        try:
+            with open(cache_path, "w", encoding="utf-8") as f:
+                f.write(response.text)
+            print(f"Cached MITRE ATT&CK data to {cache_path}")
+        except Exception as e:
+            print(f"Warning: Could not cache data: {e}")
+
+        # Load the STIX bundle
+        return stix2.parse(response.text, allow_custom=True)
+
+    except (requests.RequestException, requests.exceptions.ConnectionError) as e:
+        # Network error - try to use stale cache if available
+        print(f"Network error fetching MITRE data: {e}")
+        if cache_path.exists():
+            print(f"Using stale cache from {cache_path}")
+            try:
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    return stix2.parse(f.read(), allow_custom=True)
+            except Exception as cache_err:
+                print(f"Error reading stale cache: {cache_err}")
+
+        # No cache available
+        raise ConnectionError(
+            f"Unable to fetch MITRE ATT&CK data and no cache available. "
+            f"Please check your internet connection or download the file manually to {cache_path}"
+        ) from e
 
 
 def obtain_all_techniques(bundle):

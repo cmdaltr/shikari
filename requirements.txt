@@ -166,3 +166,8 @@ yarl==1.20.1
 # Playwright for UI testing
 playwright>=1.40.0
 pytest-playwright>=0.4.3
+
+# Document parsing for file upload
+openpyxl>=3.1.0  # Excel XLSX files
+python-docx>=1.0.0  # Word DOCX files
+PyPDF2>=3.0.0  # PDF files
