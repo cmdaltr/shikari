@@ -40,6 +40,10 @@ data/hunt/*.yaml
 data/progress/*.json
 !data/progress/.gitkeep
 
+# Cache directory for MITRE ATT&CK data
+archer/data/cache/*
+!archer/data/cache/.gitkeep
+
 # Emulation output (optional feature)
 data/emulation/*.json
 !data/emulation/*_example.json

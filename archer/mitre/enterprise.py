@@ -20,8 +20,10 @@ def get_stix_data(url, cache_days=7):
     Returns:
         STIX bundle object
     """
-    # Create cache directory
-    cache_dir = Path.home() / ".archer" / "cache"
+    # Create cache directory inside the archer application
+    # Use __file__ to find the archer module directory, then go up to project root
+    archer_module_dir = Path(__file__).parent.parent
+    cache_dir = archer_module_dir / "data" / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     # Create cache file path based on URL

@@ -2,7 +2,10 @@
 # Download MITRE ATT&CK data to local cache
 # This is useful for offline use or when GitHub is unreachable
 
-CACHE_DIR="$HOME/.archer/cache"
+# Get the script directory and find the project root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+CACHE_DIR="$PROJECT_ROOT/archer/data/cache"
 MITRE_URL="https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
 CACHE_FILE="$CACHE_DIR/enterprise-attack.json"
 
