@@ -4,6 +4,41 @@ Comprehensive test suite for the Archer threat hunting application.
 
 ## Test Structure
 
+### UI Tests (Playwright) ⭐ NEW
+
+#### test_ui_tabs.py
+**Purpose**: Test tabbed interface functionality
+**Coverage**:
+- Tab switching and navigation
+- Tab content isolation
+- Generate tab form validation
+- Upload tab interface
+- Emulate tab functionality
+- Responsive design (mobile, tablet, desktop)
+
+**Run**:
+```bash
+pytest tests/test_ui_tabs.py -v
+
+# With browser visible
+HEADLESS=false pytest tests/test_ui_tabs.py -v
+```
+
+#### test_ui_upload.py
+**Purpose**: Test file upload functionality
+**Coverage**:
+- File selection (PDF, TXT, JSON, CSV, YARA)
+- Drag and drop interface
+- Upload options (OpenAI enhancement, auto-generate, correlation)
+- File clearing and replacement
+- Upload button state management
+- Accessibility features
+
+**Run**:
+```bash
+pytest tests/test_ui_upload.py -v
+```
+
 ### API and Backend Tests
 
 #### test_api_endpoints.py (381 lines)
@@ -91,6 +126,36 @@ pytest tests/test_remote_execution.py -v
 pytest tests/ -v
 ```
 
+### Run UI Tests Only (Playwright)
+```bash
+# All UI tests
+pytest tests/test_ui_*.py -v
+
+# Specific UI test
+pytest tests/test_ui_tabs.py -v
+
+# Run in headed mode (show browser)
+HEADLESS=false pytest tests/test_ui_*.py -v
+
+# Slow motion for debugging
+SLOW_MO=1000 pytest tests/test_ui_*.py -v
+```
+
+### Run by Test Markers
+```bash
+# Only UI tests
+pytest -m ui -v
+
+# Only API tests (fast)
+pytest -m api -v
+
+# Exclude slow tests
+pytest -m "not slow" -v
+
+# Only integration tests
+pytest -m integration -v
+```
+
 ### Run Specific Test File
 ```bash
 pytest tests/test_api_endpoints.py -v
@@ -108,124 +173,220 @@ pytest tests/ --cov=archer --cov-report=html
 
 Then open `htmlcov/index.html` in your browser.
 
-### Run with Markers
+### Parallel Execution
 ```bash
-# Run only fast tests
-pytest tests/ -m "not slow" -v
+# Install pytest-xdist
+pip install pytest-xdist
 
-# Run only integration tests
-pytest tests/ -m integration -v
+# Run tests in parallel (4 workers)
+pytest tests/ -n 4
 ```
 
 ## Test Requirements
 
-Install test dependencies:
+### Basic Requirements
 ```bash
 pip install pytest pytest-cov
 ```
 
-Optional dependencies:
+### For UI Testing (Playwright)
 ```bash
-pip install pytest-mock  # For mocking
-pip install httpx        # For async HTTP testing
+pip install playwright pytest-playwright
+playwright install  # Install browsers (Chromium, Firefox, WebKit)
+
+# Or just Chromium
+playwright install chromium
 ```
 
-## Archived Tests
+### Optional Dependencies
+```bash
+pip install pytest-mock      # For mocking
+pip install httpx            # For async HTTP testing
+pip install pytest-xdist     # For parallel test execution
+pip install pytest-timeout  # For test timeouts
+```
 
-The `archive/` directory contains outdated tests that are no longer maintained:
+## Modern UI Testing with Playwright
 
-### archive/jest/
-**Status**: Outdated - Tests old pre-tabbed UI
-**Reason**: UI was redesigned with tabbed interface
-**Future**: May be updated for new UI components
+Archer now uses **Playwright** for UI testing instead of Selenium.
 
-### archive/test_selenium_forms.py (477 lines)
-**Status**: Outdated - Tests old form structure
-**Reason**: Form structure changed with tabbed UI
-**Future**: Needs rewrite for new interface
+### Why Playwright?
+- ✅ **Faster and more reliable** - Auto-waits for elements, reducing flakiness
+- ✅ **Better for modern apps** - Seamlessly handles SPAs, AJAX, dynamic content
+- ✅ **Cross-browser** - Test on Chromium, Firefox, and WebKit
+- ✅ **Better debugging** - Screenshots, videos, and trace files on failure
+- ✅ **Cleaner API** - More intuitive and concise than Selenium
+- ✅ **Auto-installation** - Browsers installed automatically
 
-### archive/test_selenium_navigation.py (531 lines)
-**Status**: Outdated - Tests old navigation flow
-**Reason**: Navigation changed with tabbed UI
-**Future**: Needs rewrite for new interface
+### Quick Start
 
-See `archive/README.md` for more details.
+```bash
+# 1. Install Playwright
+pip install playwright pytest-playwright
+
+# 2. Install browsers
+playwright install chromium
+
+# 3. Run UI tests
+pytest tests/test_ui_*.py -v
+
+# 4. Debug with browser visible
+HEADLESS=false pytest tests/test_ui_tabs.py::test_tab_switching -v
+```
+
+### Comprehensive Documentation
+
+See **[Playwright Testing Guide](../docs/PLAYWRIGHT_TESTING.md)** for:
+- Complete API reference
+- Best practices
+- Debugging techniques
+- CI/CD integration
+- Migration from Selenium
 
 ## Writing New Tests
 
 ### Test File Naming
 - Prefix with `test_`
 - Use descriptive names: `test_feature_name.py`
+- UI tests: `test_ui_feature.py`
 
 ### Test Function Naming
 - Prefix with `test_`
 - Use descriptive names: `test_feature_does_something()`
 
-### Test Structure
+### Test Structure Example
+
 ```python
 import pytest
-from fastapi.testclient import TestClient
-from archer.app import app
-
-client = TestClient(app)
+from playwright.sync_api import Page, expect
 
 class TestFeatureName:
     """Test description"""
 
-    def test_specific_behavior(self):
+    def test_specific_behavior(self, page: Page, base_url: str):
         """Test that specific behavior works correctly"""
-        # Arrange
-        data = {"key": "value"}
+        # Navigate
+        page.goto(base_url)
 
-        # Act
-        response = client.post("/endpoint", json=data)
+        # Interact
+        button = page.locator('#submit-button')
+        button.click()
 
         # Assert
-        assert response.status_code == 200
-        assert response.json()["success"] == True
+        expect(page.locator('.success-message')).to_be_visible()
 ```
 
 ### Fixtures
-```python
-@pytest.fixture
-def sample_data():
-    return {"group_name": "APT29"}
 
-def test_with_fixture(sample_data):
-    assert "group_name" in sample_data
+Common fixtures available in `conftest.py`:
+
+```python
+def test_example(page, base_url, temp_text_file):
+    """
+    page: Fresh Page instance for each test
+    base_url: Application URL (http://localhost:8000)
+    temp_text_file: Temporary test file
+    """
+    page.goto(base_url)
+```
+
+## Test Markers
+
+Tests are automatically marked based on their location:
+
+- `@pytest.mark.ui` - UI tests (slow)
+- `@pytest.mark.api` - API tests (fast)
+- `@pytest.mark.integration` - Integration tests
+- `@pytest.mark.slow` - Slow-running tests
+- `@pytest.mark.requires_atomic` - Requires Atomic Red Team
+- `@pytest.mark.requires_vectr` - Requires VECTR
+- `@pytest.mark.requires_openai` - Requires OpenAI API key
+
+## Debugging
+
+### View Test Output
+```bash
+pytest tests/ -v -s  # -s shows print statements
+```
+
+### Run Specific Failing Test
+```bash
+pytest tests/test_ui_tabs.py::test_tab_switching -v
+```
+
+### Debug with Playwright Inspector
+```bash
+PWDEBUG=1 pytest tests/test_ui_tabs.py::test_tab_switching
+```
+
+### View Screenshots
+Failed tests automatically capture screenshots:
+```
+test-results/
+├── test-ui-tabs-py-test-page-loads-chromium/
+│   ├── test-failed-1.png
+│   └── trace.zip
+```
+
+### View Trace Files
+```bash
+playwright show-trace test-results/*/trace.zip
 ```
 
 ## Continuous Integration
 
-Tests can be run in CI/CD pipelines:
+Example GitHub Actions workflow:
 
 ```yaml
-# .github/workflows/test.yml
 name: Tests
 on: [push, pull_request]
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - run: pip install -r requirements.txt
-      - run: pip install pytest pytest-cov
-      - run: pytest tests/ --cov=archer
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run tests
+        run: |
+          pytest tests/ --cov=archer -v
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: test-results/
 ```
 
 ## Test Coverage Goals
 
-- **API Endpoints**: >80% coverage
+- **API Endpoints**: >80% coverage ✓
 - **Core Modules**: >70% coverage
 - **Utility Functions**: >60% coverage
+- **UI Critical Paths**: 100% coverage
 
 ## Contributing
 
 When adding new features:
-1. Write tests first (TDD approach)
-2. Ensure all tests pass: `pytest tests/ -v`
-3. Check coverage: `pytest tests/ --cov=archer`
-4. Update this README if adding new test categories
+
+1. **Write tests first** (TDD approach)
+2. **Ensure all tests pass**: `pytest tests/ -v`
+3. **Check coverage**: `pytest tests/ --cov=archer`
+4. **Update this README** if adding new test categories
+5. **Add test markers** for categorization
+
+## Resources
+
+- [Playwright Documentation](https://playwright.dev/python/)
+- [pytest Documentation](https://docs.pytest.org/)
+- [Archer Playwright Guide](../docs/PLAYWRIGHT_TESTING.md)
+- [pytest-playwright](https://github.com/microsoft/playwright-pytest)
