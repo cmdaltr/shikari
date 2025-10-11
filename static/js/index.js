@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Form validation and AJAX submit
-  var form = document.getElementById('main-form');
+  var form = document.getElementById('generate-form');
   var input = document.getElementById('group_name_input');
   var btn = document.getElementById('generate_btn');
   var errorSpan = document.getElementById('group-name-error');
