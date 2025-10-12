@@ -46,6 +46,11 @@ data/profiles/*.json
 archer/data/cache/*
 !archer/data/cache/.gitkeep
 
+# Query examples repository (downloaded from GitHub)
+archer/data/query_examples/*
+!archer/data/query_examples/.gitkeep
+!archer/data/query_examples/README.md
+
 # Emulation output (runtime generated files)
 data/emulation/*.json
 !data/emulation/*_example.json
