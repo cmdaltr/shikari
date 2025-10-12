@@ -2,6 +2,7 @@ from fastapi import FastAPI, Form, Request, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 # -----------------------------------------------------------------------------
 # Archer service - main FastAPI application
@@ -1070,6 +1071,110 @@ async def emulate_technique(
                     "success": False,
                     "error": f"Emulation failed: {str(e)}"
                 }, status_code=500)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
+
+@app.post("/profile")
+async def profile_company(
+    request: Request,
+    domain: str = Form(...),
+    include_industry: str = Form(None),
+    include_geography: str = Form(None),
+    include_tech_stack: str = Form(None),
+    include_supply_chain: str = Form(None),
+    use_openai: str = Form(None),
+    generate_detections: str = Form(None),
+):
+    """
+    Profile a company based on their domain and generate threat intelligence.
+
+    Analyzes:
+    - Industry sector and targeted threat groups
+    - Geographic location and nation-state threats
+    - Technology stack and CVEs
+    - Supply chain dependencies
+
+    Returns profile data and optionally generates detection queries.
+    """
+    try:
+        from archer.intelligence import profile_company as do_profile
+        from archer.build.orchestrator import process_group
+
+        # Clean domain input
+        domain = domain.strip().lower()
+        # Remove http:// or https:// if present
+        domain = domain.replace('http://', '').replace('https://', '').split('/')[0]
+
+        # Build options dict
+        options = {
+            'include_industry': include_industry == 'true',
+            'include_geography': include_geography == 'true',
+            'include_tech_stack': include_tech_stack == 'true',
+            'include_supply_chain': include_supply_chain == 'true',
+        }
+
+        use_ai = use_openai == 'true'
+        auto_generate = generate_detections == 'true'
+
+        # Profile the company
+        print(f"\nProfiling domain: {domain}")
+        profile = do_profile(domain, options, use_openai=use_ai)
+
+        # Save profile to data/profiles/
+        profile_dir = Path("data") / "profiles"
+        profile_dir.mkdir(parents=True, exist_ok=True)
+
+        # Use domain as filename (sanitized)
+        safe_domain = domain.replace('.', '_').replace('/', '_')
+        profile_path = profile_dir / f"{safe_domain}_profile.json"
+
+        with open(profile_path, 'w', encoding='utf-8') as f:
+            json.dump(profile, f, indent=2)
+
+        print(f"Profile saved to: {profile_path}")
+
+        # If auto-generate is enabled, generate detections for recommended groups
+        if auto_generate and profile.get('recommended_groups'):
+            print(f"\nGenerating detections for {len(profile['recommended_groups'])} threat groups...")
+
+            # Generate for the first recommended group (or combine multiple)
+            primary_group = profile['recommended_groups'][0]
+
+            # Start background generation
+            def _generate_bg():
+                try:
+                    result = process_group(primary_group, run_correlation=True)
+                    print(f"Generated detections for {primary_group}: {result}")
+                except Exception as e:
+                    print(f"Error generating detections: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            import threading
+            threading.Thread(target=_generate_bg, daemon=True).start()
+
+            # Redirect to progress page
+            return JSONResponse({
+                "success": True,
+                "redirect_url": f"/progress?group_name={primary_group}",
+                "profile": profile,
+                "message": f"Profile complete. Generating detections for {primary_group}..."
+            })
+        else:
+            # Just return the profile
+            return JSONResponse({
+                "success": True,
+                "profile": profile,
+                "message": "Company profile complete",
+                "profile_path": str(profile_path)
+            })
 
     except Exception as e:
         import traceback

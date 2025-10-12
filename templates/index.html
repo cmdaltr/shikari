@@ -39,6 +39,14 @@
             </svg>
             <span>Upload</span>
           </button>
+          <button class="tab-button" data-tab="profile">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              <path d="M2 12h20"/>
+            </svg>
+            <span>Profile</span>
+          </button>
           <button class="tab-button" data-tab="emulate">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
@@ -171,6 +179,65 @@
 
               <button type="submit" class="btn-primary" id="upload_btn" disabled>
                 Upload & Process
+              </button>
+            </form>
+          </div>
+
+          <!-- PROFILE TAB -->
+          <div class="tab-pane" id="tab-profile">
+            <div class="tab-description">
+              Profile an organization's threat landscape based on domain intelligence
+            </div>
+
+            <form id="profile-form" action="/profile" method="post" autocomplete="off">
+              <div class="form-section">
+                <label for="domain_input" class="form-label">Company Domain</label>
+                <input type="text" name="domain" id="domain_input" class="form-input"
+                       placeholder="e.g., acme-corp.com, example.org" maxlength="100">
+                <div class="form-hint">
+                  Enter a company's primary domain to analyze their threat profile
+                </div>
+              </div>
+
+              <!-- Profile Options -->
+              <details class="options-section">
+                <summary class="options-header">Profile Options</summary>
+                <div class="options-grid">
+                  <label class="option-item">
+                    <input type="checkbox" name="include_industry" value="true" checked>
+                    <span class="option-label">Industry Analysis</span>
+                    <span class="option-hint">Identify industry-specific threats</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="include_geography" value="true" checked>
+                    <span class="option-label">Geographic Threats</span>
+                    <span class="option-hint">Analyze location-based threat actors</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="include_tech_stack" value="true" checked>
+                    <span class="option-label">Technology Stack</span>
+                    <span class="option-hint">Detect technologies and CVEs</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="include_supply_chain" value="true">
+                    <span class="option-label">Supply Chain</span>
+                    <span class="option-hint">Identify vendor dependencies</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="use_openai" value="true">
+                    <span class="option-label">AI Enhancement</span>
+                    <span class="option-hint">Use AI for deeper analysis (requires API key)</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="generate_detections" value="true" checked>
+                    <span class="option-label">Auto-Generate Detections</span>
+                    <span class="option-hint">Create detection queries for identified threats</span>
+                  </label>
+                </div>
+              </details>
+
+              <button type="submit" class="btn-primary" id="profile_btn" disabled>
+                Profile Organization
               </button>
             </form>
           </div>

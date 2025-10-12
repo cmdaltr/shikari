@@ -275,3 +275,247 @@ window.addEventListener('pageshow', function () {
 window.addEventListener('popstate', function () {
   if (typeof hideLoading === 'function') hideLoading();
 });
+
+// Profile form validation
+document.addEventListener('DOMContentLoaded', function () {
+  var profileForm = document.getElementById('profile-form');
+  var domainInput = document.getElementById('domain_input');
+  var profileBtn = document.getElementById('profile_btn');
+
+  function validateDomain() {
+    var val = (domainInput && domainInput.value) || '';
+    var trimmed = val.trim();
+    // Basic domain regex: alphanumeric + hyphens, with TLD
+    var domainPattern = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?)*\.[a-zA-Z]{2,}$/;
+    if (profileBtn) {
+      profileBtn.disabled = !domainPattern.test(trimmed);
+    }
+  }
+
+  if (domainInput) {
+    domainInput.addEventListener('input', validateDomain);
+    validateDomain(); // Initial validation
+  }
+
+  if (profileForm) {
+    profileForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!domainInput || domainInput.value.trim() === '') {
+        if (profileBtn) profileBtn.disabled = true;
+        return false;
+      }
+      showLoading('company profile');
+
+      var formData = new FormData(profileForm);
+      fetch('/profile', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function (response) {
+        var contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) return response.json();
+        return response.text();
+      })
+      .then(function (data) {
+        if (typeof data === 'object' && data.redirect_url) {
+          window.location = data.redirect_url;
+          return;
+        }
+        if (typeof data === 'object' && data.success) {
+          alert('Profile created successfully! Saved to: ' + data.profile_path);
+          hideLoading();
+          return;
+        }
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(data, 'text/html');
+        var newContent = doc.getElementById('main-content');
+        var oldContent = document.getElementById('main-content');
+        if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
+        hideLoading();
+      })
+      .catch(function (err) {
+        hideLoading();
+        alert('Error: ' + err.message);
+      });
+    });
+  }
+});
+
+// Upload form validation
+document.addEventListener('DOMContentLoaded', function () {
+  var uploadForm = document.getElementById('upload-form');
+  var fileInput = document.getElementById('file-input');
+  var uploadBtn = document.getElementById('upload_btn');
+  var fileSelected = document.getElementById('file-selected');
+  var fileNameText = document.getElementById('file-name-text');
+  var dropzone = document.getElementById('upload-dropzone');
+
+  function validateUpload() {
+    if (uploadBtn && fileInput) {
+      uploadBtn.disabled = !fileInput.files || fileInput.files.length === 0;
+    }
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', function () {
+      if (this.files && this.files.length > 0) {
+        if (fileNameText) fileNameText.textContent = this.files[0].name;
+        if (fileSelected) fileSelected.style.display = 'block';
+      } else {
+        if (fileSelected) fileSelected.style.display = 'none';
+      }
+      validateUpload();
+    });
+    validateUpload(); // Initial validation
+  }
+
+  // Drag and drop support
+  if (dropzone) {
+    dropzone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.style.borderColor = '#0066cc';
+      this.style.backgroundColor = '#f0f8ff';
+    });
+
+    dropzone.addEventListener('dragleave', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.style.borderColor = '#ddd';
+      this.style.backgroundColor = '#f9f9f9';
+    });
+
+    dropzone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.style.borderColor = '#ddd';
+      this.style.backgroundColor = '#f9f9f9';
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        if (fileInput) {
+          fileInput.files = e.dataTransfer.files;
+          var event = new Event('change', { bubbles: true });
+          fileInput.dispatchEvent(event);
+        }
+      }
+    });
+  }
+
+  if (uploadForm) {
+    uploadForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (uploadBtn) uploadBtn.disabled = true;
+        return false;
+      }
+      showLoading('file upload');
+
+      var formData = new FormData(uploadForm);
+      fetch('/upload', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function (response) {
+        var contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) return response.json();
+        return response.text();
+      })
+      .then(function (data) {
+        if (typeof data === 'object' && data.redirect_url) {
+          window.location = data.redirect_url;
+          return;
+        }
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(data, 'text/html');
+        var newContent = doc.getElementById('main-content');
+        var oldContent = document.getElementById('main-content');
+        if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
+        hideLoading();
+      })
+      .catch(function (err) {
+        hideLoading();
+        alert('Error: ' + err.message);
+      });
+    });
+  }
+});
+
+// Emulate form validation
+document.addEventListener('DOMContentLoaded', function () {
+  var emulateForm = document.getElementById('emulate-form');
+  var techniqueInput = document.getElementById('emulate_technique');
+  var emulateBtn = document.getElementById('emulate_btn');
+  var remoteCheckbox = document.querySelector('input[name="remote_execution"]');
+  var remoteConfig = document.getElementById('remote-config');
+
+  function validateEmulate() {
+    var val = (techniqueInput && techniqueInput.value) || '';
+    var trimmed = val.trim();
+    if (emulateBtn) {
+      emulateBtn.disabled = trimmed === '';
+    }
+  }
+
+  if (techniqueInput) {
+    techniqueInput.addEventListener('input', validateEmulate);
+    validateEmulate(); // Initial validation
+  }
+
+  // Show/hide remote config
+  if (remoteCheckbox && remoteConfig) {
+    remoteCheckbox.addEventListener('change', function () {
+      remoteConfig.style.display = this.checked ? 'block' : 'none';
+    });
+  }
+
+  if (emulateForm) {
+    emulateForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!techniqueInput || techniqueInput.value.trim() === '') {
+        if (emulateBtn) emulateBtn.disabled = true;
+        return false;
+      }
+      showLoading('emulation');
+
+      var formData = new FormData(emulateForm);
+      fetch('/emulate', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function (response) {
+        var contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) return response.json();
+        return response.text();
+      })
+      .then(function (data) {
+        if (typeof data === 'object' && data.redirect_url) {
+          window.location = data.redirect_url;
+          return;
+        }
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(data, 'text/html');
+        var newContent = doc.getElementById('main-content');
+        var oldContent = document.getElementById('main-content');
+        if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
+        hideLoading();
+      })
+      .catch(function (err) {
+        hideLoading();
+        alert('Error: ' + err.message);
+      });
+    });
+  }
+});
+
+// Global function for clearing file selection
+window.clearFileSelection = function () {
+  var fileInput = document.getElementById('file-input');
+  var fileSelected = document.getElementById('file-selected');
+  if (fileInput) fileInput.value = '';
+  if (fileSelected) fileSelected.style.display = 'none';
+  var uploadBtn = document.getElementById('upload_btn');
+  if (uploadBtn) uploadBtn.disabled = true;
+};

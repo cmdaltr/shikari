@@ -39,6 +39,8 @@ data/hunt/*.yaml
 !data/hunt/*_example.yaml
 data/progress/*.json
 !data/progress/.gitkeep
+data/profiles/*.json
+!data/profiles/.gitkeep
 
 # Cache directory for MITRE ATT&CK data
 archer/data/cache/*
@@ -66,6 +68,7 @@ data/vectr/exports/*
 htmlcov/
 .pytest_cache/
 .tox/
+.hypothesis/
 
 # Jupyter
 .ipynb_checkpoints/
