@@ -133,11 +133,14 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
     if run_correlation and created > 0:
         try:
             safe_progress_update(group_name, {"status": "genai_starting"})
-            # assume YAMLs are under data/yamls/<group_name> or similar; compile_query should write them
-            yaml_dir = os.path.join("data", "yamls", group_name)
+            # YAMLs are written to data/generate/ directory
+            yaml_dir = os.path.join("data", "generate")
             generate_correlations(group_name, yaml_dir)
             safe_progress_update(group_name, {"status": "complete"})
-        except Exception:
+        except Exception as e:
+            print(f"Correlation error: {e}")
+            import traceback
+            traceback.print_exc()
             safe_progress_update(group_name, {"status": "genai_failed"})
     else:
         safe_progress_update(group_name, {"status": "complete"})
