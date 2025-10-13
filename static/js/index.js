@@ -21,6 +21,26 @@ function hideLoading() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+  // Mutual exclusivity: Advanced Parsing and Semantic Analysis
+  var semanticCheckbox = document.getElementById('semantic-checkbox');
+  var advancedParsingCheckbox = document.getElementById('advanced-parsing-checkbox');
+
+  if (semanticCheckbox && advancedParsingCheckbox) {
+    // When Advanced Parsing is checked, uncheck Semantic Analysis
+    advancedParsingCheckbox.addEventListener('change', function() {
+      if (this.checked) {
+        semanticCheckbox.checked = false;
+      }
+    });
+
+    // When Semantic Analysis is checked, uncheck Advanced Parsing
+    semanticCheckbox.addEventListener('change', function() {
+      if (this.checked) {
+        advancedParsingCheckbox.checked = false;
+      }
+    });
+  }
+
   // Description popup
   var popup = document.getElementById('archer-desc-popup');
   var hideCheckbox = document.getElementById('hide-desc-popup-checkbox');
