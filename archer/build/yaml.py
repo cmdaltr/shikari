@@ -1,12 +1,20 @@
 from archer.build.collate import collate_data
-from bs4 import BeautifulSoup
 
 import getpass
 import json
 import os
 import re
 import uuid
-import requests
+
+# BeautifulSoup and requests only needed for OLD slow additional_tactics function
+# This function is replaced by yaml_patch.py, so these imports are optional
+try:
+    from bs4 import BeautifulSoup
+    import requests
+    HAS_SCRAPING = True
+except ImportError:
+    HAS_SCRAPING = False
+    # Not needed if yaml_patch is applied (which it is in orchestrator.py)
 
 
 def create_id():
@@ -48,6 +56,13 @@ def get_team(author):
 
 
 def additional_tactics(tid, tactic):
+    """
+    DEPRECATED: This function is SLOW (10-30 seconds per call).
+    It is automatically replaced by yaml_patch.additional_tactics_fast() in orchestrator.py.
+
+    If you see this function being called, the patch was not applied.
+    Ensure: from archer.build import yaml_patch
+    """
     def extract_tactics(extract_from):
         extracted_tactics = re.findall(
             "Reconnaissance|Resource Development|Initial Access|Execution|Persistence|Privilege Escalation|Defense Evasion|Credential Access|Discovery|Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
@@ -55,6 +70,13 @@ def additional_tactics(tid, tactic):
         )
 
         return extracted_tactics
+
+    # Warn if scraping dependencies not available
+    if not HAS_SCRAPING:
+        print("WARNING: BeautifulSoup/requests not available. Using fallback regex extraction.")
+        print("         Install with: pip install beautifulsoup4 requests")
+        print("         Or apply yaml_patch for fast STIX-based extraction.")
+        return extract_tactics(tactic)
 
     tid_uri = tid.replace(".", "/")
     url = f"https://attack.mitre.org/techniques/{tid_uri}"
