@@ -323,18 +323,18 @@ async function refresh(){
     const j = await res.json();
     const p = j.progress || j.progress_state || j || {};
 
-    // YAML progress (monotonic + lock at 100% once complete)
+    // Detection generation progress (monotonic + lock at 100% once complete)
     const created = p.created_yaml || p.yaml_created || 0;
     const total = p.total_yaml || p.yaml_total || 10;
     const currentPct = Math.min(100, Math.round((total > 0 ? (created/total)*100 : 0)));
 
-    const serverMovedToGenAI = (p.status === 'genai_started' || p.status === 'genai_starting' || p.status === 'genai_complete');
-    if (!yamlComplete && (serverMovedToGenAI || (total > 0 && created >= total) || currentPct >= 100)) {
+    const serverMovedToCorrelation = (p.status === 'genai_started' || p.status === 'genai_starting' || p.status === 'genai_complete');
+    if (!yamlComplete && (serverMovedToCorrelation || (total > 0 && created >= total) || currentPct >= 100)) {
       yamlComplete = true;
-      console.debug('YAML generation complete, should transition to GenAI');
-      
-      // Force a final progress update to ensure backend knows YAML is complete
-      if (!serverMovedToGenAI) {
+      console.debug('Detection generation complete, transitioning to correlation');
+
+      // Force a final progress update to ensure backend knows detection generation is complete
+      if (!serverMovedToCorrelation) {
         try {
           // Signal completion to the backend via special endpoint
           await fetch(`/complete_yaml?group_name=${encodeURIComponent(group)}`, {
@@ -342,7 +342,7 @@ async function refresh(){
             headers: { 'Content-Type': 'application/json' }
           });
         } catch (err) {
-          console.debug('Error signaling YAML completion:', err);
+          console.debug('Error signaling detection completion:', err);
         }
       }
     }
@@ -457,34 +457,34 @@ async function refresh(){
       }
     }
 
-    // GenAI progress - update based on status and processed count
-    const genAIFill = document.getElementById('genai-progress');
-    if (genAIFill) {
-      let genAIPct = 0;
-      const genaiStatus = p.status || '';
-      const genaiProcessed = p.processed || p.genai_processed || 0;
-      const genaiTotal = p.total_pairs || p.genai_total || p.total_files || 0;
+    // Vendor-based correlation progress - update based on status and processed count
+    const correlationFill = document.getElementById('genai-progress');
+    if (correlationFill) {
+      let correlationPct = 0;
+      const correlationStatus = p.status || '';
+      const correlationProcessed = p.processed || p.genai_processed || 0;
+      const correlationTotal = p.total_pairs || p.genai_total || p.total_files || 0;
 
-      if (genaiStatus === 'genai_complete') {
-        genAIPct = 100;
-      } else if (genaiStatus === 'genai_processing' || genaiStatus === 'genai_started') {
+      if (correlationStatus === 'genai_complete') {
+        correlationPct = 100;
+      } else if (correlationStatus === 'genai_processing' || correlationStatus === 'genai_started') {
         // Calculate percentage if we have totals
-        if (genaiTotal > 0 && genaiProcessed > 0) {
-          genAIPct = Math.min(95, Math.round((genaiProcessed / genaiTotal) * 100));
-        } else if (genaiProcessed > 0) {
+        if (correlationTotal > 0 && correlationProcessed > 0) {
+          correlationPct = Math.min(95, Math.round((correlationProcessed / correlationTotal) * 100));
+        } else if (correlationProcessed > 0) {
           // If we don't have total, show progress based on processed count
           // Cap at 95% until complete
-          genAIPct = Math.min(95, Math.round(Math.log(genaiProcessed + 1) * 10));
-        } else if (genaiStatus === 'genai_started') {
-          genAIPct = 5; // Show minimal progress when started
+          correlationPct = Math.min(95, Math.round(Math.log(correlationProcessed + 1) * 10));
+        } else if (correlationStatus === 'genai_started') {
+          correlationPct = 5; // Show minimal progress when started
         }
-      } else if (yamlComplete && !serverMovedToGenAI) {
-        genAIPct = 2; // Show tiny progress when waiting to start
+      } else if (yamlComplete && !serverMovedToCorrelation) {
+        correlationPct = 2; // Show tiny progress when waiting to start
       }
 
-      genAIFill.style.width = genAIPct + '%';
-      if (genAIPct >= 100) {
-        genAIFill.classList.add('complete');
+      correlationFill.style.width = correlationPct + '%';
+      if (correlationPct >= 100) {
+        correlationFill.classList.add('complete');
       }
     }
 
