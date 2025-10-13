@@ -558,6 +558,18 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             max_files = int(math.sqrt(MAX_PAIRS_PER_VENDOR * 2)) + 1
             paths = paths[:max_files]
             print(f"GenAI: Limited to first {len(paths)} files")
+            potential_pairs = len(paths) * (len(paths) - 1) // 2
+
+        # Send total pairs for progress calculation
+        write_progress(
+            group_name,
+            {
+                "status": "genai_processing",
+                "vendor": v,
+                "total_pairs": potential_pairs,
+                "processed": 0,
+            },
+        )
 
         # Generate pairs using combinatorial approach
         count = 0

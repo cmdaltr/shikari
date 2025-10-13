@@ -20,7 +20,7 @@
            data-group-name="{{ group_name }}"
            data-progress-url="/progress_status?group_name={{ group_name }}"
            data-files-url=""> <!-- optional: e.g. /api/queries/list?group_name={{ group_name }} -->
-        <p class="lead">Building detection queries for <span id="group-name" style="color:#8B0000">{{ group_name }}</span> and assessing potential merging and correlation.</p>
+        <p class="lead">Building detection queries for <span id="group-name" style="color:#8B0000">{{ group_name }}</span> and assessing opportunities for merging and correlation.</p>
 
         <div class="section">
           <h3 class="subheading">YAML generation:</h3>
@@ -41,13 +41,9 @@
 
         <h3 class="subheading correlations-title">Correlations</h3>
         <div class="corr-grid">
-          <div class="corr-card">
-            <h4>Vendor-based</h4>
+          <div class="corr-card" style="grid-column: 1 / -1;">
+            <h4>Same-Vendor Correlations</h4>
             <ul id="vendor-corr-list"></ul>
-          </div>
-          <div class="corr-card">
-            <h4>Cross-Vendor</h4>
-            <ul id="cross-corr-list"></ul>
           </div>
         </div>
       </div>

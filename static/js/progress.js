@@ -457,16 +457,34 @@ async function refresh(){
       }
     }
 
-    // GenAI progress (start when YAML completes, if server hasn't started it yet)
-    if (yamlComplete && !serverMovedToGenAI) {
-      const genAIEl = document.getElementById('genai-progress');
-      if (genAIEl) {
-        genAIEl.style.display = 'block';
-        const statusEl = document.getElementById('genai-status');
-        if (statusEl) {
-          statusEl.textContent = 'Starting GenAI processing...';
-          statusEl.classList.add('loading');
+    // GenAI progress - update based on status and processed count
+    const genAIFill = document.getElementById('genai-progress');
+    if (genAIFill) {
+      let genAIPct = 0;
+      const genaiStatus = p.status || '';
+      const genaiProcessed = p.processed || p.genai_processed || 0;
+      const genaiTotal = p.total_pairs || p.genai_total || p.total_files || 0;
+
+      if (genaiStatus === 'genai_complete') {
+        genAIPct = 100;
+      } else if (genaiStatus === 'genai_processing' || genaiStatus === 'genai_started') {
+        // Calculate percentage if we have totals
+        if (genaiTotal > 0 && genaiProcessed > 0) {
+          genAIPct = Math.min(95, Math.round((genaiProcessed / genaiTotal) * 100));
+        } else if (genaiProcessed > 0) {
+          // If we don't have total, show progress based on processed count
+          // Cap at 95% until complete
+          genAIPct = Math.min(95, Math.round(Math.log(genaiProcessed + 1) * 10));
+        } else if (genaiStatus === 'genai_started') {
+          genAIPct = 5; // Show minimal progress when started
         }
+      } else if (yamlComplete && !serverMovedToGenAI) {
+        genAIPct = 2; // Show tiny progress when waiting to start
+      }
+
+      genAIFill.style.width = genAIPct + '%';
+      if (genAIPct >= 100) {
+        genAIFill.classList.add('complete');
       }
     }
 
