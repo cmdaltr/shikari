@@ -9,6 +9,9 @@ from archer.mitre import (
     retrieve_procedures,
 )
 
+# Apply performance patch for fast tactic lookups
+from archer.build import yaml_patch  # This patches yaml.additional_tactics()
+
 from archer.build.detections import compile_query
 from archer.build.progress import write_progress
 from archer.genai import generate_correlations
