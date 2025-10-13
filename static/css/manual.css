@@ -1,157 +1,339 @@
-/* Page-scoped styles */
-.manual-container { max-width: 960px; margin: 0 auto; padding: 0 24px; --subheading-size: 1.05rem; /* match progress .subheading */ }
+/* Manual Page - Matching index.html Design System */
 
-/* Ensure nothing on this page reintroduces top offset */
-#main-content.page-shell {
-  /* was forcing 0; match progress page spacing */
-  padding-top: var(--page-top) !important;
-  margin-top: 0 !important;
-}
-.manual-container,
-#manual-content { margin-top: 0 !important; padding-top: 0 !important; }
-
-/* Kill the base .centered top padding on this page */
-#main-content.centered { 
-  /* was 0; match progress page spacing */
-  padding-top: var(--page-top) !important; 
-  margin-top: 0 !important; 
-}
-
-/* Keep title identical to progress */
-.page-title { margin: 0; text-align: center; width: 100%; font-size: calc(1.5em + 2px); }
-
-/* Layout */
-#manual-content { max-width: 900px; margin: 0 auto; padding: 0 1rem 2rem; }
-.center-left { margin: 0 auto; max-width: 720px; text-align: left; }
-.nav-row { display: flex; align-items: center; margin: 8px 0 16px; }
-
-/* Buttons */
-.btn{background:#0366d6;color:#fff;border:none;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer}
-.btn.ghost{background:#f3f4f6;color:#111;border:1px solid #ddd;margin-left:0}
-
-/* Form controls */
-form { width:100%; display:flex; flex-direction:column; align-items:center; }
-label { font-size:1em !important; margin-bottom:0.5em; display:block; text-align:left; width:100%; }
-textarea, select, input[type="text"] { width:100%; margin-bottom:1.5em; font-size:1rem; padding:0.6em 0.75em; box-sizing:border-box; border:1px solid #e5e7eb; border-radius:6px; background:#fff }
-select { background:#f7f7f7 }
-
-.tactics-row { display:flex; gap:1rem; margin-bottom:1.5em; width:100%; max-width:700px; flex-wrap:nowrap; }
-.tactics-row > div { display:flex; flex-direction:column; align-items:flex-start; flex:1 1 0; min-width:140px; }
-.tactics-row .tactics-item { display:block !important; width:100% !important; }
-.tactics-row .tactics-item input[type="checkbox"] { margin-right:0.5rem; }
-
-.tactics-item { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0.25rem }
-.tactic-badge { display:inline-block; background:#eef6ff; color:#0366d6; border-radius:12px; padding:2px 8px; font-size:0.8rem; margin-right:0.25rem }
-
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:9999}
-.modal{background:#fff;padding:1.25rem;border-radius:8px;max-width:420px;width:90%;box-shadow:0 6px 18px rgba(0,0,0,0.15)}
-.modal .actions{display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem}
-
-.form-actions { display:flex; gap:0.75em; margin-bottom:1.5em; justify-content:flex-start }
-.form-actions .btn{ background:#efefef; color:#111; border:1px solid #ddd }
-
-#append-message { color:green; font-weight:600; margin-bottom:1em; display:none; text-align:center }
-.required { color:red }
-
-/* Align with progress page heading and layout */
-/* Match progress page layout */
-.manual-container {
-  max-width: 960px;
+/* Page Layout */
+.manual-group-container {
+  max-width: 800px;
   margin: 0 auto;
   padding: 0 24px;
 }
 
-.manual-container .page-title {
-  text-align: center !important;
-  width: 100%;
-  margin: 0;
-  font-size: calc(1.5em + 2px);
+#main-content.page-shell {
+  padding-top: var(--page-top) !important;
+  margin-top: 0 !important;
 }
 
-/* Match progress page top offset */
-#main-content.page-shell,
-#main-content.centered { padding-top: var(--page-top) !important; margin-top: 0 !important; }
-
-/* Match progress subheading on manual page */
-#manual-content .subheading {
-  font-size: var(--subheading-size);
-  font-weight: 600;
-  margin: 1rem 0 .4rem;
+.content-wrap {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 16px 32px;
 }
 
-/* Keep layout centered like progress */
-.manual-group-container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
-#manual-content { max-width: 900px; margin: 0 auto; padding: 0 1rem 2rem; }
-.center-left { margin: 0 auto; max-width: 720px; text-align: left; }
-.nav-row { display: flex; align-items: center; margin: 8px 0 16px; }
-
-/* Match manual section labels to progress h3.subheading */
-#manual-content label.section-label {
-  font-size: var(--subheading-size) !important;
-  font-weight: 600 !important;
-  margin-bottom: 0.5em !important;
-  display: block !important;
-  text-align: left !important;
-}
-
-/* Helper texts closer to their controls */
-.technique-help {
-  font-size: 0.95em;
-  color: #666;
-  margin-top: 0.25rem !important;   /* pull up toward dropdown */
-  margin-bottom: 0.5rem !important;
-  text-align: center;
-}
-
-.procedures-help {
-  font-size: 0.95em;
-  color: #666;
-  margin-top: 0.25rem !important;   /* closer to textarea above */
-}
-
-/* Tactics: smaller text and tighter vertical spacing */
-#manual-content .tactics-item { margin-bottom: 0.1rem !important; }
-#manual-content .tactics-item label {
-  margin: 0 !important;
-  font-size: 0.9rem !important;
-  line-height: 1.15;
-  display: inline-flex;
+/* Navigation */
+.nav-row {
+  display: flex;
   align-items: center;
-}
-.tactics-row { gap: 0.75rem; }
-.tactics-row .tactics-item input[type="checkbox"] {
-  margin-right: 0.4rem;
-  margin-top: 0;
-  vertical-align: middle;
-}
-
-/* Tighter spacing under Technique and Procedures */
-#manual-content select#technique { margin-bottom: 0 !important; }
-#manual-content .technique-help {
-  margin-top: 0.2rem !important;
-  line-height: 1.2;
-}
-
-#manual-content textarea#procedures { margin-bottom: 0 !important; }
-#manual-content .procedures-help {
-  margin-top: 0.2rem !important;
-  line-height: 1.2;
+  margin: 1em 0 1.5em;
 }
 
 .back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: #0a66c2;
+  gap: 8px;
+  color: #007bff;
   text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 0.5em 0;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  color: #0056b3;
+  text-decoration: none;
+  transform: translateX(-3px);
+}
+
+.back-btn .arrow {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* Page Title */
+.page-title {
+  text-align: center;
+  font-size: 2em;
+  margin: 0 0 0.5em 0;
+  color: #333;
   font-weight: 600;
+}
+
+#group-name {
+  color: #007bff;
+  font-size: 1.2em;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 2em;
+}
+
+/* Form Layout */
+#manual-content {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 2em 0;
+}
+
+.center-left {
+  width: 100%;
+}
+
+form {
+  width: 100%;
+}
+
+/* Form Sections - Match index.html styling */
+.form-section,
+#group_desc_block,
+#manual-content > div {
+  margin-bottom: 1.5em;
+}
+
+/* Labels - Match index.html form-label */
+label.section-label,
+label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5em;
+  color: #333;
   font-size: 0.95rem;
 }
 
-.back-btn .arrow { font-size: 1.1rem; line-height: 1; }
-.back-btn:hover, .back-btn:focus { text-decoration: underline; }
+/* Form Inputs - Match index.html form-input */
+textarea,
+select,
+input[type="text"] {
+  width: 100%;
+  padding: 0.75em 1em;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+  background: white;
+  margin-bottom: 0;
+}
 
-#group-name {
-  color: #8B0000; /* dark red */
-  font-size: calc(1em + 2px);
+textarea:focus,
+select:focus,
+input[type="text"]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1em center;
+  padding-right: 2.5em;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* Helper Text - Match index.html option-hint style */
+.technique-help,
+.procedures-help,
+.form-hint {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 0.5em;
+}
+
+/* Tactics Section */
+.tactics-item {
+  display: block;
+  margin-bottom: 0.5em;
+}
+
+.tactics-item label {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  cursor: pointer;
+  padding: 0.4em 0.5em;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+  font-size: 0.95rem;
+  font-weight: normal;
+}
+
+.tactics-item label:hover {
+  background: rgba(0, 123, 255, 0.05);
+}
+
+.tactics-item input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* Two Column Layout for Tactics */
+#manual-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#manual-content table td {
+  vertical-align: top;
+  padding: 0 0.5em;
+}
+
+#manual-content table td:first-child {
+  padding-left: 0;
+}
+
+#manual-content table td:last-child {
+  padding-right: 0;
+}
+
+/* Buttons - Match index.html btn-primary style */
+.btn {
+  padding: 0.875em 2em;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.btn.ghost {
+  background: white;
+  color: #007bff;
+  border: 2px solid #007bff;
+}
+
+.btn.ghost:hover {
+  background: #007bff;
+  color: white;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2em;
+  gap: 1em;
+}
+
+.form-actions > div:first-child,
+.form-actions > div:last-child {
+  flex: 1;
+}
+
+.form-actions > div:nth-child(2) {
+  flex: 0 0 auto;
+}
+
+/* Success Message */
+#append-message {
+  margin-top: 1em;
+  padding: 1em;
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 6px;
+  text-align: center;
+  display: none;
+  font-weight: 500;
+}
+
+/* Technique List */
+#technique-list {
+  margin-top: 3em;
+  padding-top: 2em;
+  border-top: 2px solid #e9ecef;
+}
+
+/* Modal - Match modern design */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal {
+  background: white;
+  padding: 2em;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.modal .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1em;
+  margin-top: 1.5em;
+}
+
+/* Tactic Badge */
+.tactic-badge {
+  display: inline-block;
+  background: #e7f3ff;
+  color: #007bff;
+  border-radius: 12px;
+  padding: 0.25em 0.75em;
+  font-size: 0.85rem;
+  margin-right: 0.5em;
+  margin-bottom: 0.5em;
+  font-weight: 500;
+}
+
+/* Required Field Indicator */
+.required {
+  color: #dc3545;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .manual-group-container {
+    padding: 0 16px;
+  }
+
+  .page-title {
+    font-size: 1.75em;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions > div:first-child,
+  .form-actions > div:last-child {
+    width: 100%;
+  }
+
+  .btn {
+    width: 100%;
+  }
 }

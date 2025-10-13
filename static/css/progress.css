@@ -1,145 +1,268 @@
-/* Ensure no extra top offset comes from page CSS */
+/* Progress Page - Matching index.html Design System */
+
+/* Page Layout */
 .progress-container {
-  max-width: 720px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 0 24px; /* keep same side padding as manual */
+  padding: 0 24px;
 }
-.center-left { margin: 0 auto; max-width: 720px; text-align: left; }
-.nav-row { display: flex; align-items: center; margin: 8px 0 16px; }
+
+#main-content.page-shell {
+  padding-top: var(--page-top) !important;
+  margin-top: 0 !important;
+}
+
+.content-wrap {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 16px 32px;
+}
+
+/* Navigation */
+.nav-row {
+  display: flex;
+  align-items: center;
+  margin: 1em 0 1.5em;
+}
 
 .back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: #0a66c2;
+  gap: 8px;
+  color: #007bff;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.95rem;
-}
-.back-btn .arrow { font-size: 1.1rem; line-height: 1; }
-.back-btn:hover, .back-btn:focus { text-decoration: underline; }
-
-.page-title { margin: 0 !important; text-align: center; width: 100%; font-size: calc(1.5em + 2px); }
-
-/* Extra space between the title and the lead line on Progress only */
-.progress-container h2.page-title { margin-bottom: 1.5rem !important; }
-
-/* Extra space between the title and the lead line */
-.page-title + .lead { margin-top: 5rem; }  /* tweak as needed */
-
-/* Extra space between the lead and "YAML generation progress" */
-.progress-container .lead { margin-bottom: 1.5rem !important; }
-
-/* If your subheading has a class or is an h3, this ensures the gap too */
-.progress-container .lead + .subheading,
-.progress-container .lead + h3 { margin-top: 1.5rem !important; }
-
-/* Buttons (shared look with manual page) */
-.btn{background:#0366d6;color:#fff;border:none;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer}
-.btn.ghost{background:#f3f4f6;color:#111;border:1px solid #ddd;margin-left: 0}
-
-/* Center container but left-align inner content */
-#progress-content {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 1rem 2rem;
-  box-sizing: border-box;
+  padding: 0.5em 0;
+  transition: all 0.2s ease;
 }
 
-/* Typography */
-.lead { margin: .5rem 0 1rem; }
-.subheading {
-  font-size: 1.05rem;
+.back-btn:hover {
+  color: #0056b3;
+  text-decoration: none;
+  transform: translateX(-3px);
+}
+
+.back-btn .arrow {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* Page Title */
+.page-title {
+  text-align: center;
+  font-size: 2em;
+  margin: 0 0 0.5em 0;
+  color: #333;
   font-weight: 600;
-  margin: 1rem 0 .4rem;
 }
-.section { margin: 2.5em 0; }
-.correlations-title { margin-top: 1.5rem; }
 
-/* Progress bars */
+/* Lead Text */
+.lead {
+  text-align: center;
+  color: #6c757d;
+  margin: 0 0 2em 0;
+  font-size: 1.05rem;
+}
+
+#group-name {
+  color: #007bff;
+  font-weight: 600;
+}
+
+/* Progress Content */
+#progress-content {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 2em 0;
+}
+
+/* Sections */
+.section {
+  margin-bottom: 2.5em;
+}
+
+/* Subheadings - Match form labels */
+.subheading,
+h3.subheading {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1em 0;
+  color: #333;
+}
+
+.correlations-title {
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+/* Progress Bars - Modern style matching index.html */
 .progress-bar {
   width: 100%;
-  background: #eee;
-  border-radius: 6px;
+  background: #e9ecef;
+  border-radius: 8px;
   overflow: hidden;
-  height: 18px;
+  height: 24px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
+
 .progress-fill {
   height: 100%;
   width: 0%;
-  transition: width .3s ease;
+  transition: width 0.5s ease;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.5em;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
-.progress-fill.yaml { background: #4caf50; }
-.progress-fill.genai { background: #2196F3; }
 
-/* Correlations grid */
+.progress-fill.yaml {
+  background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+}
+
+.progress-fill.genai {
+  background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+}
+
+.progress-fill.complete {
+  width: 100% !important;
+}
+
+/* Last YAML File Display */
+#last-yaml-file {
+  margin-top: 0.75em;
+  padding: 0.75em 1em;
+  background: #f8f9fa;
+  border-left: 4px solid #28a745;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #495057;
+  word-break: break-word;
+}
+
+/* Correlations Grid - Match index.html card style */
 .corr-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-top: .5rem;
+  gap: 1.5em;
+  margin-top: 1em;
 }
+
 @media (min-width: 700px) {
-  .corr-grid { grid-template-columns: 1fr 1fr; }
+  .corr-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
+
 .corr-card {
-  border: 1px solid #e9e9e9;
+  border: 2px solid #dee2e6;
   border-radius: 8px;
-  padding: .75rem;
-  background: #fafafa;
+  padding: 1.5em;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 }
+
+.corr-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #007bff;
+}
+
 .corr-card h4 {
-  font-size: 1rem; /* smaller than the subheading */
-  margin: 0 0 .5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1em 0;
+  color: #333;
+  padding-bottom: 0.5em;
+  border-bottom: 2px solid #e9ecef;
 }
 
-/* Match manual.html width (override .page-container) */
-#main-content .progress-container.page-container {
-  max-width: 720px !important;
-  margin: 0 auto;
-  padding-left: 24px;
-  padding-right: 24px;
+.corr-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-/* Match manual.html inner content width/padding */
-#progress-content {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 1rem 2rem;
-  box-sizing: border-box;
+.corr-card li {
+  padding: 0.5em 0;
+  color: #495057;
+  font-size: 0.95rem;
 }
 
-/* Keep existing spacing tweaks */
-.progress-container h2.page-title { margin-bottom: 1.5rem !important; }
-.progress-container .lead { margin-bottom: 1.5rem !important; }
-
-/* Remove debug outlines/borders */
-#main-content .page-container,
-.progress-container .content-wrap,
-#progress-content {
-  outline: none !important;
-  border: none !important;
+.corr-card li:before {
+  content: "→";
+  color: #007bff;
+  font-weight: bold;
+  margin-right: 0.5em;
 }
 
-#progress-content #group-name,
-.lead #group-name,
-#group-name,
-#loading-group {
-  color: #8B0000 !important;
+/* Buttons - Match index.html style */
+.btn {
+  padding: 0.875em 2em;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-#last-yaml-file {
-  margin-top: 6px;
-  font-size: 0.9em;
-  color: #666;
-  white-space: normal;
-  word-break: break-all;
+.btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
 }
 
-/* Keep YAML bar green after completion (apply 'complete' on wrapper or fill) */
-.progress-bar.complete .progress-fill.yaml,
-.progress-fill.yaml.complete {
-  width: 100% !important;
-  background: #4caf50 !important;
-  transition: none;
+.btn.ghost {
+  background: white;
+  color: #007bff;
+  border: 2px solid #007bff;
+}
+
+.btn.ghost:hover {
+  background: #007bff;
+  color: white;
+}
+
+/* Loading State */
+.section.loading {
+  opacity: 0.6;
+}
+
+/* Success State */
+.section.complete .subheading {
+  color: #28a745;
+}
+
+.section.complete .subheading:before {
+  content: "✓ ";
+  font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .progress-container {
+    padding: 0 16px;
+  }
+
+  .page-title {
+    font-size: 1.75em;
+  }
+
+  .lead {
+    font-size: 1rem;
+  }
+
+  .corr-card {
+    padding: 1em;
+  }
+
+  .progress-bar {
+    height: 20px;
+  }
 }
