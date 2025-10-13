@@ -87,12 +87,18 @@
                   </label>
                   <label class="option-item">
                     <input type="checkbox" name="advanced_parsing" value="true" id="advanced-parsing-checkbox">
-                    <span class="option-label">Advanced Query Parsing ⚠️</span>
-                    <span class="option-hint" style="color: #dc3545;">
-                      <strong>Expert mode:</strong> Syntax parsing only, without behavioral grouping.<br>
-                      <strong>Use when:</strong> You need faster processing and don't require semantic categorization.<br>
-                      <strong>Note:</strong> Checking this will disable Semantic Analysis (they are mutually exclusive).
+                    <span class="option-label">
+                      Advanced Query Parsing
+                      <span class="warning-tooltip">
+                        ⚠️
+                        <span class="warning-tooltip-text">
+                          <strong>Expert mode:</strong> Syntax parsing only, without behavioral grouping.<br><br>
+                          <strong>Use when:</strong> You need faster processing and don't require semantic categorization.<br><br>
+                          <strong>Note:</strong> Checking this will disable Semantic Analysis (they are mutually exclusive).
+                        </span>
+                      </span>
                     </span>
+                    <span class="option-hint">Deep analysis of query structure for intelligent merging</span>
                   </label>
                   <label class="option-item">
                     <input type="checkbox" name="ai_generators" value="true">

@@ -274,3 +274,51 @@ h2.page-title {
 form#main-form .form-grid > div:nth-child(2) {
   position: relative;
 }
+
+/* Warning Tooltip */
+.warning-tooltip {
+  position: relative;
+  display: inline-block;
+  margin-left: 0.5em;
+  cursor: help;
+  color: #dc3545;
+  font-size: 1.1em;
+  vertical-align: middle;
+}
+
+.warning-tooltip-text {
+  visibility: hidden;
+  width: 320px;
+  background-color: #fff;
+  color: #333;
+  text-align: left;
+  border-radius: 8px;
+  padding: 1em;
+  position: absolute;
+  z-index: 1000;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -160px;
+  opacity: 0;
+  transition: opacity 0.3s, visibility 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid #dc3545;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.warning-tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -8px;
+  border-width: 8px;
+  border-style: solid;
+  border-color: #dc3545 transparent transparent transparent;
+}
+
+.warning-tooltip:hover .warning-tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
