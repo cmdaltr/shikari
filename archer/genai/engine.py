@@ -591,6 +591,17 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             print(f"GenAI: Limited to first {len(paths)} files")
             potential_pairs = len(paths) * (len(paths) - 1) // 2
 
+        # Send progress update at start of each vendor
+        print(f"GenAI: Starting vendor '{v}' - {cumulative_count} pairs completed so far")
+        write_progress(
+            group_name,
+            {
+                "status": "genai_processing",
+                "total_pairs": total_pairs_all_vendors,
+                "processed": cumulative_count,
+            },
+        )
+
         # Generate pairs using combinatorial approach
         count = 0
         for i in range(len(paths)):
@@ -656,6 +667,17 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                     )
 
         print(f"GenAI: Generated {count} pairs for vendor '{v}'")
+
+    # Send final progress update with complete count
+    write_progress(
+        group_name,
+        {
+            "status": "genai_complete",
+            "total_pairs": total_pairs_all_vendors,
+            "processed": cumulative_count,
+        },
+    )
+    print(f"GenAI: Completed processing {cumulative_count} total pairs across all vendors")
 
     # No cross-vendor correlations - explicitly create an empty list
     cross_corr = []
