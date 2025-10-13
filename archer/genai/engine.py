@@ -528,8 +528,40 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         # No need for additional normalization since it's done in _parse_yaml_for_vendor
         by_vendor.setdefault(v, []).append(p["path"])
 
+    # Calculate total pairs across all vendors first for cumulative progress
+    total_pairs_all_vendors = 0
+    vendor_pair_counts = {}
+    MAX_PAIRS_PER_VENDOR = 10000
+
+    for v, paths in by_vendor.items():
+        if v.lower() not in ["mde", "splunk"] or len(paths) < 2:
+            continue
+
+        potential_pairs = len(paths) * (len(paths) - 1) // 2
+        if potential_pairs > MAX_PAIRS_PER_VENDOR:
+            max_files = int(math.sqrt(MAX_PAIRS_PER_VENDOR * 2)) + 1
+            paths_limited = paths[:max_files]
+            potential_pairs = len(paths_limited) * (len(paths_limited) - 1) // 2
+
+        vendor_pair_counts[v] = potential_pairs
+        total_pairs_all_vendors += potential_pairs
+
+    print(f"GenAI: Total pairs across all vendors: {total_pairs_all_vendors}")
+
+    # Send initial progress with total
+    write_progress(
+        group_name,
+        {
+            "status": "genai_processing",
+            "total_pairs": total_pairs_all_vendors,
+            "processed": 0,
+        },
+    )
+
     # Generate vendor correlations (files from same vendor)
     vendor_corr = []
+    cumulative_count = 0  # Track progress across all vendors
+
     for v, paths in by_vendor.items():
         # Only process MDE and Splunk vendors
         if v.lower() not in ["mde", "splunk"]:
@@ -549,7 +581,6 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         )
 
         # Limit the number of pairs to avoid performance issues
-        MAX_PAIRS_PER_VENDOR = 10000
         if potential_pairs > MAX_PAIRS_PER_VENDOR:
             print(
                 f"GenAI: Limiting {v} to {MAX_PAIRS_PER_VENDOR} pairs (from potential {potential_pairs})"
@@ -559,17 +590,6 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             paths = paths[:max_files]
             print(f"GenAI: Limited to first {len(paths)} files")
             potential_pairs = len(paths) * (len(paths) - 1) // 2
-
-        # Send total pairs for progress calculation
-        write_progress(
-            group_name,
-            {
-                "status": "genai_processing",
-                "vendor": v,
-                "total_pairs": potential_pairs,
-                "processed": 0,
-            },
-        )
 
         # Generate pairs using combinatorial approach
         count = 0
@@ -621,13 +641,18 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                     }
                 )
                 count += 1
+                cumulative_count += 1
 
-                # Update progress periodically
-                if count % 10 == 0:
-                    print(f"GenAI: Generated {count} pairs so far for vendor '{v}'")
+                # Update progress periodically with cumulative count
+                if cumulative_count % 10 == 0:
+                    print(f"GenAI: Generated {cumulative_count} pairs total ({count} for vendor '{v}')")
                     write_progress(
                         group_name,
-                        {"status": "genai_processing", "processed": count},
+                        {
+                            "status": "genai_processing",
+                            "total_pairs": total_pairs_all_vendors,
+                            "processed": cumulative_count,
+                        },
                     )
 
         print(f"GenAI: Generated {count} pairs for vendor '{v}'")

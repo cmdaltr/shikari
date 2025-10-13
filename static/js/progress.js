@@ -457,7 +457,7 @@ async function refresh(){
       }
     }
 
-    // Vendor-based correlation progress - update based on status and processed count
+    // Vendor-based correlation progress - only start after detection completes
     const correlationFill = document.getElementById('genai-progress');
     if (correlationFill) {
       let correlationPct = 0;
@@ -465,21 +465,23 @@ async function refresh(){
       const correlationProcessed = p.processed || p.genai_processed || 0;
       const correlationTotal = p.total_pairs || p.genai_total || p.total_files || 0;
 
-      if (correlationStatus === 'genai_complete') {
+      // Only show correlation progress if detection generation is complete
+      if (!yamlComplete) {
+        // Don't start correlation until detection is done
+        correlationPct = 0;
+      } else if (correlationStatus === 'genai_complete') {
         correlationPct = 100;
       } else if (correlationStatus === 'genai_processing' || correlationStatus === 'genai_started') {
         // Calculate percentage if we have totals
         if (correlationTotal > 0 && correlationProcessed > 0) {
-          correlationPct = Math.min(95, Math.round((correlationProcessed / correlationTotal) * 100));
+          correlationPct = Math.min(99, Math.round((correlationProcessed / correlationTotal) * 100));
         } else if (correlationProcessed > 0) {
           // If we don't have total, show progress based on processed count
-          // Cap at 95% until complete
-          correlationPct = Math.min(95, Math.round(Math.log(correlationProcessed + 1) * 10));
+          // Cap at 99% until complete
+          correlationPct = Math.min(99, Math.round(Math.log(correlationProcessed + 1) * 10));
         } else if (correlationStatus === 'genai_started') {
-          correlationPct = 5; // Show minimal progress when started
+          correlationPct = 1; // Show minimal progress when started
         }
-      } else if (yamlComplete && !serverMovedToCorrelation) {
-        correlationPct = 2; // Show tiny progress when waiting to start
       }
 
       correlationFill.style.width = correlationPct + '%';
