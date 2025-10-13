@@ -230,7 +230,7 @@ def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
             if (
                 op.name == "where"
                 and op.expression
-                and parsed.time_filter not in op.expression
+                and (not parsed.time_filter or parsed.time_filter not in op.expression)
             ):
                 where_conditions.append(op.expression)
 
@@ -318,7 +318,7 @@ def _extract_where_conditions(parsed: KQLQuery) -> str:
         if (
             op.name == "where"
             and op.expression
-            and parsed.time_filter not in op.expression
+            and (not parsed.time_filter or parsed.time_filter not in op.expression)
         ):
             conditions.append(f"| where {op.expression}")
 

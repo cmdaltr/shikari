@@ -135,18 +135,34 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
     # After YAMLs are created, run the GenAI correlation generator only if requested and YAMLs exist
     if run_correlation and created > 0:
         try:
-            safe_progress_update(group_name, {"status": "genai_starting"})
+            safe_progress_update(group_name, {
+                "status": "genai_starting",
+                "created_yaml": created,
+                "total_yaml": total,
+            })
             # YAMLs are written to data/generate/ directory
             yaml_dir = os.path.join("data", "generate")
             generate_correlations(group_name, yaml_dir)
-            safe_progress_update(group_name, {"status": "complete"})
+            safe_progress_update(group_name, {
+                "status": "complete",
+                "created_yaml": created,
+                "total_yaml": total,
+            })
         except Exception as e:
             print(f"Correlation error: {e}")
             import traceback
             traceback.print_exc()
-            safe_progress_update(group_name, {"status": "genai_failed"})
+            safe_progress_update(group_name, {
+                "status": "genai_failed",
+                "created_yaml": created,
+                "total_yaml": total,
+            })
     else:
-        safe_progress_update(group_name, {"status": "complete"})
+        safe_progress_update(group_name, {
+            "status": "complete",
+            "created_yaml": created,
+            "total_yaml": total,
+        })
 
 
 def write_splunk_files(

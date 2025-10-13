@@ -288,7 +288,7 @@ form#main-form .form-grid > div:nth-child(2) {
 
 .warning-tooltip-text {
   visibility: hidden;
-  width: 320px;
+  width: 450px;
   background-color: #fff;
   color: #333;
   text-align: left;
@@ -298,7 +298,7 @@ form#main-form .form-grid > div:nth-child(2) {
   z-index: 1000;
   bottom: 125%;
   left: 50%;
-  margin-left: -160px;
+  margin-left: -225px;
   opacity: 0;
   transition: opacity 0.3s, visibility 0.3s;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
