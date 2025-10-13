@@ -254,58 +254,34 @@ def _combine_queries(
 
     # Heuristic mode: skip AI and advanced parsers entirely
     if _GEN_MODE == "heuristic":
+        # Safely extract source names
+        source_a = (
+            os.path.basename(a)
+            .replace("_microsoft_defender.yaml", "")
+            .replace(".yaml", "")
+            if a and isinstance(a, str)
+            else "Query A"
+        )
+        source_b = (
+            os.path.basename(b)
+            .replace("_microsoft_defender.yaml", "")
+            .replace(".yaml", "")
+            if b and isinstance(b, str)
+            else "Query B"
+        )
+
         final_query = _basic_combine_queries(
             detected_vendor,
             query_a,
             query_b,
-            (
-                os.path.basename(a)
-                .replace("_microsoft_defender.yaml", "")
-                .replace(".yaml", "")
-                if a
-                else "Query A"
-            ),
-            (
-                os.path.basename(b)
-                .replace("_microsoft_defender.yaml", "")
-                .replace(".yaml", "")
-                if b
-                else "Query B"
-            ),
+            source_a,
+            source_b,
         )
         if detected_vendor == "splunk":
-            source_a = (
-                os.path.basename(a)
-                .replace("_microsoft_defender.yaml", "")
-                .replace(".yaml", "")
-                if a
-                else "Query A"
-            )
-            source_b = (
-                os.path.basename(b)
-                .replace("_microsoft_defender.yaml", "")
-                .replace(".yaml", "")
-                if b
-                else "Query B"
-            )
             out = f"""``` Combined Splunk Query ({source_a} followed by {source_b}) ```
 {final_query}"""
             return _collapse_double_newlines(out)
         elif detected_vendor in ["mde", "microsoft", "sentinel", "kql"]:
-            source_a = (
-                os.path.basename(a)
-                .replace("_microsoft_defender.yaml", "")
-                .replace(".yaml", "")
-                if a
-                else "Query A"
-            )
-            source_b = (
-                os.path.basename(b)
-                .replace("_microsoft_defender.yaml", "")
-                .replace(".yaml", "")
-                if b
-                else "Query B"
-            )
             # Heuristic semantic overlap percentage for KQL
             overlap_pct = _estimate_semantic_overlap_kql(query_a, query_b)
             header = f"// {source_a} followed by {source_b}" + (
@@ -390,15 +366,15 @@ def _combine_queries(
         final_query = _basic_combine_queries(detected_vendor, query_a, query_b)
         generation_method = "Basic"
 
-    # Format output
+    # Format output - safely extract source names
     source_a = (
         os.path.basename(a).replace("_microsoft_defender.yaml", "").replace(".yaml", "")
-        if a
+        if a and isinstance(a, str)
         else "Query A"
     )
     source_b = (
         os.path.basename(b).replace("_microsoft_defender.yaml", "").replace(".yaml", "")
-        if b
+        if b and isinstance(b, str)
         else "Query B"
     )
 
@@ -962,7 +938,7 @@ def build_correlation_queries(
         threat_group_lower = threat_group.lower()
         filtered_queries = [
             q for q in queries_data
-            if any(threat_group_lower in tag.lower() for tag in q.get('tags', []))
+            if any(threat_group_lower in tag.lower() for tag in q.get('tags', []) if tag and isinstance(tag, str))
         ]
         if len(filtered_queries) == 0:
             print(f"\n❌ No queries found for threat group '{threat_group}'")
