@@ -418,9 +418,11 @@ async function refresh(){
         completeText.style.fontWeight = 'bold';
         lastEl.appendChild(completeText);
 
-        // "36 detection files generated" in black (default), normal weight
+        // Show actual YAML file count (total_files) not procedure count (total_yaml)
+        // One procedure can generate multiple YAML files (one per data source/index)
+        const totalFiles = p.total_files || total;
         const countSpan = document.createElement('span');
-        countSpan.textContent = `${total} detection files generated`;
+        countSpan.textContent = `${totalFiles} detection files generated`;
         countSpan.style.color = '#495057'; // Default grey/black text
         lastEl.appendChild(countSpan);
 
@@ -476,7 +478,7 @@ async function refresh(){
       }
     }
 
-    // Vendor-based correlation progress - only start after detection completes
+    // Sole-vendor correlation progress - only start after detection completes
     const correlationFill = document.getElementById('genai-progress');
     if (correlationFill) {
       let correlationPct = 0;
