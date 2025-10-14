@@ -511,28 +511,34 @@ async function refresh(){
       const vendorCount = p.vendor_count || 0;
 
       if (correlationStatus === 'genai_complete' || correlationStatus === 'complete') {
-        // Correlation complete - styled like detection file display
+        // Correlation complete
         correlationInfoEl.innerHTML = '';
+
+        // "Complete: " in blue and bold
         const completeText = document.createElement('span');
         completeText.textContent = 'Complete: ';
+        completeText.style.color = '#007bff';
+        completeText.style.fontWeight = 'bold';
         correlationInfoEl.appendChild(completeText);
 
+        // "9979 correlations generated" in black (default), normal weight
         const countSpan = document.createElement('span');
         countSpan.textContent = `${vendorCount} correlations generated`;
-        countSpan.style.color = '#2e8b57';
-        countSpan.style.fontWeight = '500';
+        countSpan.style.color = '#495057'; // Default grey/black text
         correlationInfoEl.appendChild(countSpan);
       } else if (correlationStatus === 'genai_processing') {
-        // Show progress - styled like detection file display
+        // Show progress
         correlationInfoEl.innerHTML = '';
+
+        // "Correlating techniques: " in default color
         const prefixSpan = document.createElement('span');
         prefixSpan.textContent = 'Correlating techniques: ';
         correlationInfoEl.appendChild(prefixSpan);
 
+        // "X of Y pairs evaluated" in blue, not bold
         const progressSpan = document.createElement('span');
         progressSpan.textContent = `${correlationProcessed} of ${correlationTotal} pairs evaluated`;
         progressSpan.style.color = '#007bff';
-        progressSpan.style.fontWeight = '500';
         correlationInfoEl.appendChild(progressSpan);
       } else if (correlationStatus === 'genai_starting' || correlationStatus === 'genai_started') {
         // Just starting
