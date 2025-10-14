@@ -115,10 +115,10 @@ def parse_kql_query(query: str) -> KQLQuery:
     # Extract time filter if present
     for op in operators:
         if op.name == "where" and (
-            "ago(" in op.expression or "timestamp" in op.expression
+            "ago(" in op.expression or "timestamp" in op.expression.lower()
         ):
             time_filter_match = re.search(
-                r"(timestamp\s*[><]=?\s*ago\([^)]+\))", op.expression
+                r"(timestamp\s*[><]=?\s*ago\([^)]+\))", op.expression, re.IGNORECASE
             )
             if time_filter_match:
                 result.time_filter = time_filter_match.group(1)
