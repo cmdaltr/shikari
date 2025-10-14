@@ -143,6 +143,33 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             # YAMLs are written to data/generate/ directory
             yaml_dir = os.path.join("data", "generate")
             generate_correlations(group_name, yaml_dir)
+
+            # Generate attack flow visualizations
+            try:
+                from archer.visualization import generate_all_correlation_flows, generate_actor_flow
+
+                # Generate flows for each correlation
+                correlations_file = os.path.join("data", "correlate", f"{group_name}.json")
+                if os.path.exists(correlations_file):
+                    print(f"Generating attack flow diagrams for correlations...")
+                    generate_all_correlation_flows(group_name, correlations_file)
+
+                # Generate complete actor flow
+                all_techniques = [t.get("technique_id") for t in retrieved_data.get("techniques", []) if t.get("technique_id")]
+                tactics_map = {}
+                for tech in retrieved_data.get("techniques", []):
+                    tactic = tech.get("tactic", "unknown")
+                    tech_id = tech.get("technique_id")
+                    if tactic and tech_id:
+                        tactics_map.setdefault(tactic, []).append(tech_id)
+
+                if all_techniques:
+                    print(f"Generating complete actor attack flow with {len(all_techniques)} techniques...")
+                    generate_actor_flow(group_name, all_techniques, tactics_map)
+            except Exception as flow_error:
+                print(f"Attack flow generation warning: {flow_error}")
+                # Don't fail the entire process if attack flow generation fails
+
             safe_progress_update(group_name, {
                 "status": "complete",
                 "created_yaml": created,

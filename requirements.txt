@@ -171,3 +171,6 @@ pytest-playwright>=0.4.3
 openpyxl>=3.1.0  # Excel XLSX files
 python-docx>=1.0.0  # Word DOCX files
 PyPDF2>=3.0.0  # PDF files
+
+# Attack flow visualization
+attack-flow>=2.1.0  # MITRE ATT&CK Flow visualization
