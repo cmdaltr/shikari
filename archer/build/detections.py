@@ -215,6 +215,19 @@ def compile_query(retrieved_data):
             if not indicators:
                 continue
 
+            # Combine all indicator values into text for validation
+            if isinstance(indicators, list):
+                indicator_text = " ".join(str(i) for i in indicators)
+            elif isinstance(indicators, dict):
+                indicator_text = " ".join(str(v) for v in indicators.values())
+            else:
+                indicator_text = str(indicators)
+
+            # DEBUG: Show what indicators we're validating
+            print(f"  🔍 Checking indicator_type='{indicator_type}' with {len(indicators) if isinstance(indicators, (list, dict)) else 1} value(s)")
+            if indicator_text:
+                print(f"     Sample: {indicator_text[:150]}{'...' if len(indicator_text) > 150 else ''}")
+
             # SPLUNK
             if "Splunk" in indicator_mappings[indicator_type]:
                 for index_name in indicator_mappings[indicator_type]["Splunk"]:
@@ -226,8 +239,10 @@ def compile_query(retrieved_data):
                     )
 
                     # Check indicator-level platform compatibility (enhanced v2)
+                    # Use actual indicators, not just procedure text
+                    validation_text = f"{procedure_text} {indicator_text}"
                     indicator_compatible = validate_procedure_for_index(
-                        procedure_text,
+                        validation_text,
                         clean_index_name,
                         vendor="Splunk",
                         technique_desc=technique_description,
@@ -251,8 +266,10 @@ def compile_query(retrieved_data):
                     )
 
                     # Check indicator-level platform compatibility (enhanced v2)
+                    # Use actual indicators, not just procedure text
+                    validation_text = f"{procedure_text} {indicator_text}"
                     indicator_compatible = validate_procedure_for_index(
-                        procedure_text,
+                        validation_text,
                         table_name,
                         vendor="MDE",
                         technique_desc=technique_description,
