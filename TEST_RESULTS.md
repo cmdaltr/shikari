@@ -4,7 +4,7 @@
 October 14, 2025
 
 ## Problem Summary
-Progress bar for Vendor-based correlation was jumping backwards during processing:
+Progress bar for Sole-vendor correlation was jumping backwards during processing:
 - Pattern observed: `0 → 5 → 15 → 8 → 10 → 15 → 20 → 15 → 20 → 25...`
 - Progress would increase, then decrease, then catch up again
 - This indicated multiple processes writing conflicting progress values
@@ -144,7 +144,7 @@ When running Scattered Spider (or any group) with correlation enabled:
 
 3. **Progress Bar Display**:
    - Detection Generation: Smooth progress to 100%
-   - Vendor-based Correlation: Smooth progress to 100% (no resets, no backwards jumps)
+   - Sole-vendor Correlation: Smooth progress to 100% (no resets, no backwards jumps)
    - Both bars complete successfully
 
 ## Verification Steps

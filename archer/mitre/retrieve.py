@@ -250,6 +250,10 @@ def retrieve_procedures(bundle, retrieved_techniques):
                 except Exception:
                     detect_guidance = [[""]]
 
+                # Extract technique description and platforms for enhanced validation
+                technique_description = obj.get("description", "")
+                technique_platforms = obj.get("x_mitre_platforms", [])
+
                 procedures.append(
                     (
                         obj["external_references"][0]["external_id"],
@@ -261,6 +265,8 @@ def retrieve_procedures(bundle, retrieved_techniques):
                         detect_guidance,
                         procedure_platforms,
                         software_platforms,
+                        technique_description,
+                        technique_platforms,
                     )
                 )
 

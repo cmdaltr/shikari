@@ -115,10 +115,15 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             retrieved_data["red_tool"] = procedure[5]
             retrieved_data["detect_guidance"] = procedure[6][0]
 
-            # Add platform data if available (assuming it's in procedure[7] and procedure[8])
+            # Add platform data if available (in procedure[7] and procedure[8])
             if len(procedure) > 7:
                 retrieved_data["procedure_platforms"] = procedure[7]
                 retrieved_data["software_platforms"] = procedure[8]
+
+            # Add technique description and platforms for enhanced validation (procedure[9] and procedure[10])
+            if len(procedure) > 9:
+                retrieved_data["technique_description"] = procedure[9]
+                retrieved_data["technique_platforms"] = procedure[10]
 
             compile_query(retrieved_data)
             created += 1

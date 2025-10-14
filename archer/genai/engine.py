@@ -977,8 +977,12 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
     print(f"GenAI: Total correlations before filtering: {len(vendor_corr)}")
 
     # Score and filter correlations to keep only high-fidelity results
+    # Calculate 10% of detections with minimum of 10
     if vendor_corr:
-        vendor_corr = _score_and_filter_correlations(vendor_corr, file_info, max_results=20)
+        total_detections = len(files)
+        max_correlations = max(10, int(total_detections * 0.10))
+        print(f"GenAI: Setting max correlations to {max_correlations} (10% of {total_detections} detections)")
+        vendor_corr = _score_and_filter_correlations(vendor_corr, file_info, max_results=max_correlations)
         print(f"GenAI: Filtered to {len(vendor_corr)} high-fidelity correlations")
 
     # Send final progress update with complete count
