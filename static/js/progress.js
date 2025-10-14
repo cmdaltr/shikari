@@ -429,52 +429,14 @@ async function refresh(){
         // Stop ellipsis animation if it's still running
         stopEllipsis(true);
       }
-      // Still in progress, show file or waiting message
-      else if (detectedFile && detectedFile.trim() !== '') {
-        // We have a valid file path - display it
-        if (detectedFile !== lastYamlFileShown) {
-          lastYamlFileShown = String(detectedFile);
-        }
-
-        lastEl.innerHTML = ''; // Clear existing content
-
-        // "Detection file created: " in default color
-        const prefixSpan = document.createElement('span');
-        prefixSpan.textContent = 'Detection file created: ';
-        lastEl.appendChild(prefixSpan);
-
-        // Filename in green, not bold
-        const filenameSpan = document.createElement('span');
-        filenameSpan.textContent = displayFile;
-        filenameSpan.style.color = '#28a745'; // Green color matching detection bar
-        lastEl.appendChild(filenameSpan);
-
-        lastEl.title = detectedFile; // Keep full path in tooltip
-        stopEllipsis(true); // Stop ellipsis animation
-
-        console.debug('Displaying file:', displayFile);
-      } else if (created >= 5) {
-        // Have at least 5 files - show count (gives ellipsis more time to animate)
-        lastEl.innerHTML = ''; // Clear existing content
-
-        // "Processing: " in default color
-        const prefixSpan = document.createElement('span');
-        prefixSpan.textContent = 'Processing: ';
-        lastEl.appendChild(prefixSpan);
-
-        // "X of Y files" in green, not bold
-        const countSpan = document.createElement('span');
-        countSpan.textContent = `${created} of ${total} files`;
-        countSpan.style.color = '#28a745'; // Green color matching detection bar
-        lastEl.appendChild(countSpan);
-
-        stopEllipsis(true);
-      } else {
-        // No valid file yet or only 1-4 files - show waiting message with animated ellipsis
-        lastEl.textContent = 'Waiting for first file';
+      // Still in progress - just show "Generating detections" with ellipsis
+      // Don't show file count (confusing - shows procedure count not actual file count)
+      else {
+        // Show animated message during generation
+        lastEl.textContent = 'Generating detections';
         lastEl.style.color = '#666'; // Default gray for waiting text
         lastEl.removeAttribute('title');
-        startEllipsis(lastEl); // Keep ellipsis animating
+        startEllipsis(lastEl); // Keep ellipsis animating throughout
       }
     }
 
