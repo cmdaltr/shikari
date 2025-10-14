@@ -410,13 +410,13 @@ async function refresh(){
       // YAML generation is complete, show "Complete" message
       if (yamlComplete) {
         lastEl.innerHTML = ''; // Clear existing content
-        
+
         const completeText = document.createElement('span');
         completeText.textContent = 'Complete';
         completeText.style.color = '#2e8b57'; // Dark green color
-        completeText.style.fontWeight = 'bold'; 
+        completeText.style.fontWeight = 'bold';
         lastEl.appendChild(completeText);
-        
+
         // Stop ellipsis animation if it's still running
         stopEllipsis(true);
       }
@@ -426,28 +426,36 @@ async function refresh(){
         if (detectedFile !== lastYamlFileShown) {
           lastYamlFileShown = String(detectedFile);
         }
-        
+
         // Set up the content with a colored filename
         const prefixText = 'Detection file created: ';
         lastEl.innerHTML = ''; // Clear existing content
-        
+
         // Add the prefix text
         const prefixSpan = document.createElement('span');
         prefixSpan.textContent = prefixText;
         prefixSpan.style.color = '#666'; // Grey color for the prefix
         lastEl.appendChild(prefixSpan);
-        
+
         // Add the filename in dark green
         const filenameSpan = document.createElement('span');
         filenameSpan.textContent = displayFile;
         filenameSpan.style.color = '#2e8b57'; // Dark green color (SeaGreen)
         filenameSpan.style.fontWeight = '500'; // Slightly bolder
         lastEl.appendChild(filenameSpan);
-        
+
         lastEl.title = detectedFile; // Keep full path in tooltip
         stopEllipsis(true); // Stop ellipsis animation
-        
+
         console.debug('Displaying file:', displayFile);
+      } else if (created > 0) {
+        // Have some files but no specific file info yet - show count instead of waiting
+        lastEl.innerHTML = ''; // Clear existing content
+        const countText = document.createElement('span');
+        countText.textContent = `Processing: ${created} of ${total} files`;
+        countText.style.color = '#666';
+        lastEl.appendChild(countText);
+        stopEllipsis(true);
       } else {
         // No valid file yet - show waiting message with animated ellipsis
         lastEl.textContent = 'Waiting for first file';
@@ -491,6 +499,53 @@ async function refresh(){
       correlationFill.style.width = correlationPct + '%';
       if (correlationPct >= 100) {
         correlationFill.classList.add('complete');
+      }
+    }
+
+    // Display correlation techniques info below the correlation bar
+    const correlationInfoEl = document.getElementById('last-correlation');
+    if (correlationInfoEl && yamlComplete) {
+      const correlationStatus = p.status || '';
+      const correlationProcessed = p.processed || 0;
+      const correlationTotal = p.total_pairs || 0;
+      const vendorCount = p.vendor_count || 0;
+
+      if (correlationStatus === 'genai_complete' || correlationStatus === 'complete') {
+        // Correlation complete
+        correlationInfoEl.innerHTML = '';
+        const completeText = document.createElement('span');
+        completeText.textContent = `Complete: ${vendorCount} correlations generated`;
+        completeText.style.color = '#2e8b57';
+        completeText.style.fontWeight = 'bold';
+        correlationInfoEl.appendChild(completeText);
+      } else if (correlationStatus === 'genai_processing') {
+        // Show progress
+        correlationInfoEl.innerHTML = '';
+        const prefixSpan = document.createElement('span');
+        prefixSpan.textContent = 'Correlating techniques: ';
+        prefixSpan.style.color = '#666';
+        correlationInfoEl.appendChild(prefixSpan);
+
+        const progressSpan = document.createElement('span');
+        progressSpan.textContent = `${correlationProcessed} of ${correlationTotal} pairs evaluated`;
+        progressSpan.style.color = '#007bff';
+        progressSpan.style.fontWeight = '500';
+        correlationInfoEl.appendChild(progressSpan);
+      } else if (correlationStatus === 'genai_starting' || correlationStatus === 'genai_started') {
+        // Just starting
+        correlationInfoEl.innerHTML = '';
+        const startText = document.createElement('span');
+        startText.textContent = 'Starting correlation analysis';
+        startText.style.color = '#666';
+        correlationInfoEl.appendChild(startText);
+        startEllipsis(correlationInfoEl);
+      } else {
+        // Waiting
+        correlationInfoEl.innerHTML = '';
+        const waitText = document.createElement('span');
+        waitText.textContent = 'Waiting for detection generation to complete';
+        waitText.style.color = '#666';
+        correlationInfoEl.appendChild(waitText);
       }
     }
 
