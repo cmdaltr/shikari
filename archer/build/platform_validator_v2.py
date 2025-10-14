@@ -508,12 +508,21 @@ def validate_procedure_for_index(
     Returns:
         True if compatible, False to skip
     """
+    # DEBUG: Log what we're receiving
+    print(f"    🔍 VALIDATOR for {index_name}:")
+    print(f"      - technique_desc len: {len(technique_desc or '')}")
+    print(f"      - technique_platforms: {technique_platforms}")
+    print(f"      - procedure_text sample: {(procedure_text or '')[:80]}")
+
     is_valid, reason = validate_indicator_for_index(
         procedure_text,
         technique_desc or "",
         technique_platforms or [],
         index_name
     )
+
+    if not is_valid and reason:
+        print(f"      ❌ REJECTED: {reason}")
 
     return is_valid
 

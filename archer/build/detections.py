@@ -168,6 +168,12 @@ def compile_query(retrieved_data):
     technique_description = retrieved_data.get("technique_description", "") or tdesc or ""
     technique_platforms = retrieved_data.get("technique_platforms", [])
 
+    # DEBUG: Log technique metadata to verify it's being passed
+    print(f"\n🔍 DEBUG compile_query for {tid}:")
+    print(f"  - technique_description length: {len(technique_description)}")
+    print(f"  - technique_platforms: {technique_platforms}")
+    print(f"  - procedure_text length: {len(procedure_text)}")
+
     # Get all identifiers
     if isinstance(op_guidance, dict) and isinstance(red_tool, dict):
         identifiers = {**op_guidance, **red_tool}
@@ -227,6 +233,9 @@ def compile_query(retrieved_data):
                         technique_desc=technique_description,
                         technique_platforms=technique_platforms
                     )
+
+                    # DEBUG: Log validation results
+                    print(f"  🔍 {clean_index_name}: technique_compat={is_compatible}, indicator_compat={indicator_compatible}")
 
                     if is_compatible and indicator_compatible:
                         compatible_sources.add(index_name)
