@@ -469,7 +469,8 @@ async function refresh(){
       if (!yamlComplete) {
         // Don't start correlation until detection is done
         correlationPct = 0;
-      } else if (correlationStatus === 'genai_complete') {
+      } else if (correlationStatus === 'genai_complete' || correlationStatus === 'complete') {
+        // Both genai_complete and complete mean correlation finished
         correlationPct = 100;
       } else if (correlationStatus === 'genai_processing' || correlationStatus === 'genai_started') {
         // Calculate percentage if we have totals
@@ -482,6 +483,9 @@ async function refresh(){
         } else if (correlationStatus === 'genai_started') {
           correlationPct = 1; // Show minimal progress when started
         }
+      } else if (correlationStatus === 'genai_starting') {
+        // Just starting, show minimal progress
+        correlationPct = 1;
       }
 
       correlationFill.style.width = correlationPct + '%';
