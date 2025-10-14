@@ -149,7 +149,7 @@ def create_indicatorMappings():
 
 def compile_query(retrieved_data):
     from archer.build.queries import is_query_applicable
-    from archer.build.platform_validator import validate_procedure_for_index
+    from archer.build.platform_validator_v2 import validate_procedure_for_index
 
     # Load indicator mappings
     indicator_mappings = load_indicator_mappings()
@@ -163,8 +163,10 @@ def compile_query(retrieved_data):
     red_tool = retrieved_data.get("red_tool", {})
     log_sources = retrieved_data.get("detect_guidance", [])
 
-    # Get procedure text for platform validation
+    # Get procedure text and technique metadata for enhanced platform validation
     procedure_text = retrieved_data.get("procedure", "") or tdesc or ""
+    technique_description = retrieved_data.get("technique_description", "") or tdesc or ""
+    technique_platforms = retrieved_data.get("technique_platforms", [])
 
     # Get all identifiers
     if isinstance(op_guidance, dict) and isinstance(red_tool, dict):
@@ -217,9 +219,13 @@ def compile_query(retrieved_data):
                         procedure_platforms, software_platforms, clean_index_name
                     )
 
-                    # Check indicator-level platform compatibility
+                    # Check indicator-level platform compatibility (enhanced v2)
                     indicator_compatible = validate_procedure_for_index(
-                        procedure_text, clean_index_name, vendor="Splunk"
+                        procedure_text,
+                        clean_index_name,
+                        vendor="Splunk",
+                        technique_desc=technique_description,
+                        technique_platforms=technique_platforms
                     )
 
                     if is_compatible and indicator_compatible:
@@ -235,9 +241,13 @@ def compile_query(retrieved_data):
                         procedure_platforms, software_platforms, table_name
                     )
 
-                    # Check indicator-level platform compatibility
+                    # Check indicator-level platform compatibility (enhanced v2)
                     indicator_compatible = validate_procedure_for_index(
-                        procedure_text, table_name, vendor="MDE"
+                        procedure_text,
+                        table_name,
+                        vendor="MDE",
+                        technique_desc=technique_description,
+                        technique_platforms=technique_platforms
                     )
 
                     if is_compatible and indicator_compatible:
