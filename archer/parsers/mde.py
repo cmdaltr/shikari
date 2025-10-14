@@ -229,24 +229,49 @@ def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
     where_conditions_b = []
 
     for op in parsed_a.operators:
-        if (
-            op.name == "where"
-            and op.expression
-            and (not parsed_a.time_filter or parsed_a.time_filter not in op.expression)
-        ):
-            where_conditions_a.append(op.expression)
+        if op.name == "where" and op.expression:
+            # Remove time filter from expression if present
+            expr = op.expression
+            if parsed_a.time_filter and parsed_a.time_filter in expr:
+                # Remove the time filter and any leading "and" or "or"
+                expr = expr.replace(parsed_a.time_filter, "").strip()
+                expr = expr.lstrip("and").lstrip("or").strip()
+            if expr and expr != "true":
+                where_conditions_a.append(expr)
 
     for op in parsed_b.operators:
-        if (
-            op.name == "where"
-            and op.expression
-            and (not parsed_b.time_filter or parsed_b.time_filter not in op.expression)
-        ):
-            where_conditions_b.append(op.expression)
+        if op.name == "where" and op.expression:
+            # Remove time filter from expression if present
+            expr = op.expression
+            if parsed_b.time_filter and parsed_b.time_filter in expr:
+                # Remove the time filter and any leading "and" or "or"
+                expr = expr.replace(parsed_b.time_filter, "").strip()
+                expr = expr.lstrip("and").lstrip("or").strip()
+            if expr and expr != "true":
+                where_conditions_b.append(expr)
 
     # Build combined query using proper KQL join syntax for correlation
-    where_clause_a = " and ".join(where_conditions_a) if where_conditions_a else "true"
-    where_clause_b = " and ".join(where_conditions_b) if where_conditions_b else "true"
+    # Simplify has_any() with single values to use 'has', and remove duplicates
+    def simplify_where_clause(conditions):
+        if not conditions:
+            return "true"
+
+        # Join conditions
+        clause = " and ".join(conditions)
+
+        # Simplify has_any("value", "value") to has "value"
+        import re
+        # Pattern: has_any("X", "X") or has_any("X", "X", "X")
+        clause = re.sub(r'has_any\("([^"]+)",\s*"[^"]+"(?:,\s*"[^"]+")?\)', r'has "\1"', clause)
+
+        # Remove ProcessVersionInfo fields (metadata, not useful for detection)
+        clause = re.sub(r'\s*or\s*ProcessVersionInfoProductName\s+has[^)]*\)', '', clause)
+        clause = re.sub(r'\s*or\s*ProcessVersionInfoCompanyName\s+has[^)]*\)', '', clause)
+
+        return clause
+
+    where_clause_a = simplify_where_clause(where_conditions_a)
+    where_clause_b = simplify_where_clause(where_conditions_b)
 
     # Get common fields for projection
     all_fields = list(set(parsed_a.projected_fields + parsed_b.projected_fields))
