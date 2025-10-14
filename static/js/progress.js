@@ -453,8 +453,8 @@ async function refresh(){
         stopEllipsis(true); // Stop ellipsis animation
 
         console.debug('Displaying file:', displayFile);
-      } else if (created >= 3) {
-        // Have at least 3 files - show count (gives ellipsis more time to animate)
+      } else if (created >= 5) {
+        // Have at least 5 files - show count (gives ellipsis more time to animate)
         lastEl.innerHTML = ''; // Clear existing content
 
         // "Processing: " in default color
@@ -470,7 +470,7 @@ async function refresh(){
 
         stopEllipsis(true);
       } else {
-        // No valid file yet or only 1-2 files - show waiting message with animated ellipsis
+        // No valid file yet or only 1-4 files - show waiting message with animated ellipsis
         lastEl.textContent = 'Waiting for first file';
         lastEl.style.color = '#666'; // Default gray for waiting text
         lastEl.removeAttribute('title');
@@ -534,9 +534,9 @@ async function refresh(){
         completeText.style.fontWeight = 'bold';
         correlationInfoEl.appendChild(completeText);
 
-        // "9979 correlations generated" in black (default), normal weight
+        // "9979 high-fidelity correlations generated" in black (default), normal weight
         const countSpan = document.createElement('span');
-        countSpan.textContent = `${vendorCount} correlations generated`;
+        countSpan.textContent = `${vendorCount} high-fidelity correlations generated`;
         countSpan.style.color = '#495057'; // Default grey/black text
         correlationInfoEl.appendChild(countSpan);
       } else if (correlationStatus === 'genai_processing') {
@@ -630,9 +630,9 @@ async function refresh(){
         completeText.style.fontWeight = 'bold';
         crossVendorInfoEl.appendChild(completeText);
 
-        // "X correlations generated" in black (default), normal weight
+        // "X high-fidelity correlations generated" in black (default), normal weight
         const countSpan = document.createElement('span');
-        countSpan.textContent = `${crossCount} cross-vendor correlations generated`;
+        countSpan.textContent = `${crossCount} cross-vendor high-fidelity correlations generated`;
         countSpan.style.color = '#495057';
         crossVendorInfoEl.appendChild(countSpan);
       } else {
