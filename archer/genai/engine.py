@@ -12,11 +12,16 @@ import math
 import importlib.util
 import time
 import re
+import threading
 from typing import List, Dict, Tuple, Optional
 from ..build.progress import write_progress
 
 # Global generation mode; set in generate_correlations
 _GEN_MODE: str = "heuristic"
+
+# Lock to prevent duplicate correlation generation for the same group
+_CORRELATION_LOCKS: Dict[str, threading.Lock] = {}
+_LOCKS_LOCK = threading.Lock()  # Lock for the locks dictionary itself
 
 # Import our parser modules - use dynamic imports to handle potential missing modules
 _HAS_ADVANCED_PARSING = False
@@ -427,61 +432,79 @@ def generate_correlations(
 
     Progress updates are written using `write_progress` with keys under the
     provided `group_name` progress JSON.
+
+    Uses thread-safe locking to prevent duplicate processing of the same group.
     """
-    files = _list_yaml_files(group_name, yaml_dir)
-    print(f"GenAI: Found {len(files)} YAML files for {group_name}")
-    write_progress(
-        group_name,
-        {"status": "genai_started", "total_files": len(files), "processed": 0},
-    )
+    # Get or create a lock for this specific group
+    with _LOCKS_LOCK:
+        if group_name not in _CORRELATION_LOCKS:
+            _CORRELATION_LOCKS[group_name] = threading.Lock()
+        group_lock = _CORRELATION_LOCKS[group_name]
 
-    # If configured to use a local model, attempt it and gracefully fallback
-    mode = os.environ.get("GENAI_MODE", "heuristic").lower()
-    print(f"GenAI: Using mode '{mode}'")
+    # Try to acquire the lock - if another thread is processing, exit immediately
+    if not group_lock.acquire(blocking=False):
+        print(f"GenAI: Correlation generation already in progress for '{group_name}', skipping duplicate call")
+        return {"vendor_correlations": [], "cross_vendor_correlations": []}
 
-    # Track available capabilities for logging only
-    available_modes = ["heuristic"]
-    if _HAS_ADVANCED_PARSING:
-        available_modes.append("advanced_parsing")
-    if _HAS_SEMANTIC_ANALYSIS:
-        available_modes.append("semantic")
-    if _HAS_AI_GENERATORS:
-        available_modes.append("ai_generators")
-    if _HAS_LLAMA or _HAS_TRANSFORMERS:
-        available_modes.append("local_llm")
-    print(f"GenAI: Available capability modes: {', '.join(available_modes)}")
+    try:
+        files = _list_yaml_files(group_name, yaml_dir)
+        print(f"GenAI: Found {len(files)} YAML files for {group_name}")
+        write_progress(
+            group_name,
+            {"status": "genai_started", "total_files": len(files), "processed": 0},
+        )
 
-    # Set global generation mode to control downstream behavior
-    global _GEN_MODE
-    _GEN_MODE = mode if mode in available_modes else "heuristic"
+        # If configured to use a local model, attempt it and gracefully fallback
+        mode = os.environ.get("GENAI_MODE", "heuristic").lower()
+        print(f"GenAI: Using mode '{mode}'")
 
-    # Only run local LLM path if explicitly requested and supported
-    if _GEN_MODE == "local_llm" and (_HAS_LLAMA or _HAS_TRANSFORMERS):
-        try:
-            results = _generate_with_local_llm(group_name, files)
-            write_progress(
-                group_name,
-                {
-                    "status": "genai_complete",
-                    "vendor_count": len(results.get("vendor_correlations", [])),
-                    "cross_count": len(results.get("cross_vendor_correlations", [])),
-                },
-            )
-            return results
-        except Exception as e:
-            print(f"GenAI: Local LLM generation failed: {e}, falling back to heuristic")
-            _GEN_MODE = "heuristic"
-    # Default case - run the heuristic generation
-    results = _generate_with_heuristic(group_name, files)
-    write_progress(
-        group_name,
-        {
-            "status": "genai_complete",
-            "vendor_count": len(results.get("vendor_correlations", [])),
-            "cross_count": 0,  # Always 0 now
-        },
-    )
-    return results
+        # Track available capabilities for logging only
+        available_modes = ["heuristic"]
+        if _HAS_ADVANCED_PARSING:
+            available_modes.append("advanced_parsing")
+        if _HAS_SEMANTIC_ANALYSIS:
+            available_modes.append("semantic")
+        if _HAS_AI_GENERATORS:
+            available_modes.append("ai_generators")
+        if _HAS_LLAMA or _HAS_TRANSFORMERS:
+            available_modes.append("local_llm")
+        print(f"GenAI: Available capability modes: {', '.join(available_modes)}")
+
+        # Set global generation mode to control downstream behavior
+        global _GEN_MODE
+        _GEN_MODE = mode if mode in available_modes else "heuristic"
+
+        # Only run local LLM path if explicitly requested and supported
+        if _GEN_MODE == "local_llm" and (_HAS_LLAMA or _HAS_TRANSFORMERS):
+            try:
+                results = _generate_with_local_llm(group_name, files)
+                write_progress(
+                    group_name,
+                    {
+                        "status": "genai_complete",
+                        "vendor_count": len(results.get("vendor_correlations", [])),
+                        "cross_count": len(results.get("cross_vendor_correlations", [])),
+                    },
+                )
+                return results
+            except Exception as e:
+                print(f"GenAI: Local LLM generation failed: {e}, falling back to heuristic")
+                _GEN_MODE = "heuristic"
+        # Default case - run the heuristic generation
+        results = _generate_with_heuristic(group_name, files)
+        write_progress(
+            group_name,
+            {
+                "status": "genai_complete",
+                "vendor_count": len(results.get("vendor_correlations", [])),
+                "cross_count": 0,  # Always 0 now
+            },
+        )
+        return results
+    finally:
+        # Always release the lock when done
+        group_lock.release()
+        print(f"GenAI: Released correlation lock for '{group_name}'")
 
 
 def process_genai(group_name: str):
