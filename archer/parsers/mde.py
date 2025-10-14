@@ -217,35 +217,83 @@ def combine_kql_queries(query_a: str, query_b: str) -> str:
 
 
 def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
-    """Combine queries operating on the same table."""
+    """Combine queries operating on the same table using proper correlation join."""
     table = parsed_a.table_name
 
     # Get time filters from both queries, or use default
-    time_filter = parsed_a.time_filter or parsed_b.time_filter or "timestamp > ago(1d)"
+    time_filter_a = parsed_a.time_filter or "Timestamp > ago(1d)"
+    time_filter_b = parsed_b.time_filter or "Timestamp > ago(1d)"
 
     # Extract where conditions (excluding time filters)
-    where_conditions = []
-    for parsed in [parsed_a, parsed_b]:
-        for op in parsed.operators:
-            if (
-                op.name == "where"
-                and op.expression
-                and (not parsed.time_filter or parsed.time_filter not in op.expression)
-            ):
-                where_conditions.append(op.expression)
+    where_conditions_a = []
+    where_conditions_b = []
 
-    # Build combined query with union
-    combined = f"""
-// Combined query for table {table}
-{table}
-| where {time_filter}
-| where ({" or ".join(where_conditions) if where_conditions else "true"})
-"""
+    for op in parsed_a.operators:
+        if (
+            op.name == "where"
+            and op.expression
+            and (not parsed_a.time_filter or parsed_a.time_filter not in op.expression)
+        ):
+            where_conditions_a.append(op.expression)
 
-    # Add projection if we have fields
+    for op in parsed_b.operators:
+        if (
+            op.name == "where"
+            and op.expression
+            and (not parsed_b.time_filter or parsed_b.time_filter not in op.expression)
+        ):
+            where_conditions_b.append(op.expression)
+
+    # Build combined query using proper KQL join syntax for correlation
+    where_clause_a = " and ".join(where_conditions_a) if where_conditions_a else "true"
+    where_clause_b = " and ".join(where_conditions_b) if where_conditions_b else "true"
+
+    # Get common fields for projection
     all_fields = list(set(parsed_a.projected_fields + parsed_b.projected_fields))
-    if all_fields:
-        combined += f"| project {', '.join(all_fields)}\n"
+    common_fields = ["DeviceId", "DeviceName", "AccountName", "FileName", "ProcessCommandLine", "Timestamp"]
+    # Use common fields if no specific fields were projected
+    if not all_fields:
+        all_fields = [f for f in common_fields if f]
+
+    project_clause = f"| project {', '.join(all_fields)}" if all_fields else ""
+
+    combined = f"""// Correlation query for {table}
+// Query A
+let QueryA = materialize(
+    {table}
+    | where {time_filter_a}
+    | where {where_clause_a}
+    | extend CorrelationKey = strcat(DeviceId, "_", bin(Timestamp, 1h))
+    | extend QueryA_Match = "true"
+    {project_clause}
+    | project-rename QueryA_Timestamp = Timestamp, QueryA_FileName = FileName, QueryA_ProcessCommandLine = ProcessCommandLine
+    | project CorrelationKey, DeviceId, DeviceName, AccountName, QueryA_Match, QueryA_Timestamp, QueryA_FileName, QueryA_ProcessCommandLine
+);
+// Query B
+let QueryB = materialize(
+    {table}
+    | where {time_filter_b}
+    | where {where_clause_b}
+    | extend CorrelationKey = strcat(DeviceId, "_", bin(Timestamp, 1h))
+    | extend QueryB_Match = "true"
+    {project_clause}
+    | project-rename QueryB_Timestamp = Timestamp, QueryB_FileName = FileName, QueryB_ProcessCommandLine = ProcessCommandLine
+    | project CorrelationKey, DeviceId, DeviceName, AccountName, QueryB_Match, QueryB_Timestamp, QueryB_FileName, QueryB_ProcessCommandLine
+);
+// Correlate: Match events on same device within same hour
+QueryA
+| join kind=inner (QueryB) on CorrelationKey
+| project DeviceId, DeviceName, AccountName,
+          QueryA_Timestamp, QueryA_FileName, QueryA_ProcessCommandLine,
+          QueryB_Timestamp = QueryB_Timestamp1, QueryB_FileName = QueryB_FileName1, QueryB_ProcessCommandLine = QueryB_ProcessCommandLine1
+| summarize CorrelationCount = count(),
+            QueryA_FirstSeen = min(QueryA_Timestamp),
+            QueryB_FirstSeen = min(QueryB_Timestamp),
+            QueryA_Files = make_set(QueryA_FileName),
+            QueryB_Files = make_set(QueryB_FileName)
+            by DeviceId, DeviceName, AccountName
+| where CorrelationCount >= 1  // Both detection patterns observed
+"""
 
     return combined
 
