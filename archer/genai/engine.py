@@ -422,6 +422,280 @@ def _combine_queries(
         return _collapse_double_newlines(final_query)
 
 
+# ==============================================================================
+# Correlation Scoring and Filtering
+# ==============================================================================
+
+# High-impact MITRE techniques that indicate sophisticated attacks
+_HIGH_IMPACT_TECHNIQUES = {
+    # Persistence
+    "T1053", "T1136", "T1543", "T1547", "T1037", "T1098",
+    # Privilege Escalation
+    "T1068", "T1134", "T1078", "T1055", "T1548",
+    # Defense Evasion
+    "T1070", "T1027", "T1562", "T1218", "T1140",
+    # Credential Access
+    "T1003", "T1110", "T1555", "T1556", "T1558",
+    # Lateral Movement
+    "T1021", "T1091", "T1080", "T1550",
+    # Collection
+    "T1005", "T1039", "T1056", "T1074", "T1114",
+    # Exfiltration
+    "T1020", "T1041", "T1048", "T1567",
+    # Impact
+    "T1485", "T1486", "T1490", "T1491", "T1496",
+}
+
+# Logical attack progressions (tactic pairs that naturally follow each other)
+_ATTACK_PROGRESSIONS = [
+    ("initial-access", "execution"),
+    ("initial-access", "persistence"),
+    ("execution", "privilege-escalation"),
+    ("privilege-escalation", "defense-evasion"),
+    ("privilege-escalation", "credential-access"),
+    ("credential-access", "lateral-movement"),
+    ("lateral-movement", "collection"),
+    ("collection", "exfiltration"),
+    ("defense-evasion", "persistence"),
+]
+
+
+def _extract_technique_ids(file_path: str) -> List[str]:
+    """Extract MITRE technique IDs from YAML file path or content."""
+    technique_ids = []
+
+    # Extract from filename (e.g., T1003.001_splunk.yaml)
+    basename = os.path.basename(file_path)
+    matches = re.findall(r'T\d{4}(?:\.\d{3})?', basename)
+    technique_ids.extend(matches)
+
+    # Try to extract from file content if no matches
+    if not technique_ids and os.path.exists(file_path):
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read(500)  # Read first 500 chars
+                matches = re.findall(r'T\d{4}(?:\.\d{3})?', content)
+                technique_ids.extend(matches)
+        except:
+            pass
+
+    return list(set(technique_ids))
+
+
+def _extract_tactics(file_path: str) -> List[str]:
+    """Extract MITRE tactics from YAML file content."""
+    tactics = []
+
+    if not os.path.exists(file_path):
+        return tactics
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read(1000)  # Read first 1000 chars
+
+            # Look for tactic field in YAML
+            tactic_match = re.search(r'tactic:\s*["\']?([^"\'\n]+)["\']?', content, re.IGNORECASE)
+            if tactic_match:
+                tactics.append(tactic_match.group(1).lower().strip())
+
+            # Look for tactics array
+            tactics_match = re.search(r'tactics:\s*\n((?:\s*-\s*[^\n]+\n)+)', content, re.IGNORECASE)
+            if tactics_match:
+                tactic_lines = tactics_match.group(1)
+                for line in tactic_lines.split('\n'):
+                    line = line.strip().lstrip('- ').strip('"\'')
+                    if line:
+                        tactics.append(line.lower())
+    except:
+        pass
+
+    return [t.lower().replace(' ', '-') for t in tactics if t]
+
+
+def _calculate_query_specificity(query: str) -> float:
+    """
+    Calculate query specificity score (0-1).
+    Higher score = more specific query (less likely to have false positives).
+    """
+    if not query or not isinstance(query, str):
+        return 0.0
+
+    score = 0.5  # Base score
+
+    # Specific indicators increase score
+    specific_patterns = [
+        r'\bsha256\s*[=:~]',  # File hashes
+        r'\bmd5\s*[=:~]',
+        r'\bsha1\s*[=:~]',
+        r'\bip\s*[=:]\s*"\d+\.\d+\.\d+\.\d+"',  # Specific IPs
+        r'\bdomain\s*[=:]',  # Domain names
+        r'\burl\s*[=:]',  # URLs
+        r'\bregistry\s+key',  # Registry keys
+        r'\bprocess\s+name\s*[=:]',  # Process names
+        r'\bcommand\s*line.*[=:~].*"[^"]{20,}"',  # Long command lines
+    ]
+
+    for pattern in specific_patterns:
+        if re.search(pattern, query, re.IGNORECASE):
+            score += 0.1
+
+    # Generic wildcards decrease score
+    wildcard_count = query.count('*') + query.count('%')
+    score -= min(0.3, wildcard_count * 0.05)
+
+    # Multiple conditions increase score
+    condition_keywords = ['where', 'and', 'or', 'join', '|']
+    condition_count = sum(1 for kw in condition_keywords if kw in query.lower())
+    score += min(0.2, condition_count * 0.05)
+
+    return max(0.0, min(1.0, score))
+
+
+def _estimate_false_positive_rate(query: str, vendor: str) -> float:
+    """
+    Estimate false positive rate (0-1).
+    Lower score = less noisy (better).
+    """
+    if not query or not isinstance(query, str):
+        return 1.0
+
+    query_lower = query.lower()
+
+    # High false positive indicators (common operations)
+    noisy_patterns = [
+        r'\bprocess\s+name\s*[=:]\s*"svchost\.exe"',  # Very common
+        r'\bprocess\s+name\s*[=:]\s*"powershell\.exe"',  # Common but can be malicious
+        r'\bprocess\s+name\s*[=:]\s*"cmd\.exe"',
+        r'\bevent\s+id\s*[=:]\s*4624',  # Successful logon (very common)
+        r'\bevent\s+id\s*[=:]\s*4688',  # Process creation (very common)
+        r'\bwhere\s+.*[=~]\s*[*%]',  # Overly broad wildcards
+    ]
+
+    fp_score = 0.3  # Base false positive rate
+
+    for pattern in noisy_patterns:
+        if re.search(pattern, query_lower):
+            fp_score += 0.15
+
+    # Specific filters reduce false positives
+    specific_filters = [
+        r'\bwhere\s+.*rare',  # Explicit rarity filter
+        r'\bwhere\s+.*suspicious',
+        r'\bwhere\s+.*malicious',
+        r'\bcount\s*\([^)]+\)\s*[><]\s*\d+',  # Threshold counting
+        r'\bsummarize\s+.*count',
+    ]
+
+    for pattern in specific_filters:
+        if re.search(pattern, query_lower):
+            fp_score -= 0.1
+
+    return max(0.0, min(1.0, fp_score))
+
+
+def _score_correlation(corr: Dict, file_info: Dict) -> float:
+    """
+    Score a correlation based on multiple factors.
+    Returns score from 0-100 (higher is better).
+    """
+    path_a = corr.get("a", "")
+    path_b = corr.get("b", "")
+    query_a = corr.get("query_a", "")
+    query_b = corr.get("query_b", "")
+
+    # Extract metadata
+    techniques_a = _extract_technique_ids(path_a)
+    techniques_b = _extract_technique_ids(path_b)
+    tactics_a = _extract_tactics(path_a)
+    tactics_b = _extract_tactics(path_b)
+
+    score = 0.0
+
+    # 1. Technique Criticality (0-30 points)
+    high_impact_count = 0
+    for tech in techniques_a + techniques_b:
+        # Check both full ID and base ID (e.g., T1003.001 and T1003)
+        base_tech = tech.split('.')[0] if '.' in tech else tech
+        if tech in _HIGH_IMPACT_TECHNIQUES or base_tech in _HIGH_IMPACT_TECHNIQUES:
+            high_impact_count += 1
+
+    score += min(30, high_impact_count * 15)  # 15 points per high-impact technique
+
+    # 2. Query Specificity (0-20 points)
+    specificity_a = _calculate_query_specificity(query_a)
+    specificity_b = _calculate_query_specificity(query_b)
+    avg_specificity = (specificity_a + specificity_b) / 2
+    score += avg_specificity * 20
+
+    # 3. False Positive Rate (0-20 points) - inverse scoring
+    fp_rate_a = _estimate_false_positive_rate(query_a, corr.get("vendor", ""))
+    fp_rate_b = _estimate_false_positive_rate(query_b, corr.get("vendor", ""))
+    avg_fp_rate = (fp_rate_a + fp_rate_b) / 2
+    score += (1.0 - avg_fp_rate) * 20  # Lower FP rate = higher score
+
+    # 4. Semantic Overlap (0-15 points)
+    # Re-calculate semantic overlap for scoring
+    overlap = _estimate_semantic_overlap_kql(query_a, query_b)
+    if overlap > 50:  # Already filtered to >50%
+        # Normalize 50-100% to 0-15 points
+        score += ((overlap - 50) / 50) * 15
+
+    # 5. Attack Progression (0-15 points)
+    # Check if tactics form a logical progression
+    for tactic_a in tactics_a:
+        for tactic_b in tactics_b:
+            if (tactic_a, tactic_b) in _ATTACK_PROGRESSIONS:
+                score += 15
+                break
+            elif (tactic_b, tactic_a) in _ATTACK_PROGRESSIONS:
+                score += 15
+                break
+
+    return min(100.0, score)
+
+
+def _score_and_filter_correlations(
+    correlations: List[Dict], file_info: Dict, max_results: int = 20
+) -> List[Dict]:
+    """
+    Score all correlations and return only the top N highest-scoring ones.
+
+    Args:
+        correlations: List of correlation dictionaries
+        file_info: File metadata dictionary
+        max_results: Maximum number of correlations to return (default 20)
+
+    Returns:
+        Filtered list of top-scoring correlations with relevance_score added
+    """
+    print(f"GenAI: Scoring {len(correlations)} correlations...")
+
+    # Score each correlation
+    scored_correlations = []
+    for corr in correlations:
+        score = _score_correlation(corr, file_info)
+        corr["relevance_score"] = round(score / 100, 2)  # Normalize to 0-1
+        scored_correlations.append((score, corr))
+
+    # Sort by score (descending)
+    scored_correlations.sort(key=lambda x: x[0], reverse=True)
+
+    # Log score distribution
+    if scored_correlations:
+        scores = [s[0] for s in scored_correlations]
+        print(f"GenAI: Score distribution:")
+        print(f"  Top score: {scores[0]:.1f}")
+        print(f"  Median score: {scores[len(scores)//2]:.1f}")
+        print(f"  Lowest score: {scores[-1]:.1f}")
+
+    # Return top N correlations
+    top_correlations = [corr for _, corr in scored_correlations[:max_results]]
+
+    print(f"GenAI: Keeping top {len(top_correlations)} correlations (threshold: score >= {scored_correlations[min(max_results-1, len(scored_correlations)-1)][0]:.1f})")
+
+    return top_correlations
+
+
 def generate_correlations(
     group_name: str, yaml_dir: str, progress_prefix: str = "genai"
 ) -> Dict:
@@ -699,6 +973,13 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                 count += 1
 
         print(f"GenAI: Generated {count} pairs for vendor '{v}'")
+
+    print(f"GenAI: Total correlations before filtering: {len(vendor_corr)}")
+
+    # Score and filter correlations to keep only high-fidelity results
+    if vendor_corr:
+        vendor_corr = _score_and_filter_correlations(vendor_corr, file_info, max_results=20)
+        print(f"GenAI: Filtered to {len(vendor_corr)} high-fidelity correlations")
 
     # Send final progress update with complete count
     write_progress(
