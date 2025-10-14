@@ -500,7 +500,6 @@ def validate_indicator_for_index(
                 print(f"         → Windows index: has_strict_windows={has_strict}, checking indicator_text[:100]='{indicator_text[:100]}'")
                 if not has_strict:
                     # Check for Windows-suggestive patterns (less strict but more precise)
-                    import re
                     indicator_lower = indicator_text.lower()
                     windows_suggestive = (
                         # Windows file extensions
@@ -518,7 +517,6 @@ def validate_indicator_for_index(
                 print(f"         → Linux/Unix index: has_strict_linux={has_strict}, checking indicator_text[:100]='{indicator_text[:100]}'")
                 if not has_strict:
                     # Check for Linux-suggestive patterns (less strict but more precise)
-                    import re
                     indicator_lower = indicator_text.lower()
 
                     # Check paths
