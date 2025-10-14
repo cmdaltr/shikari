@@ -604,10 +604,15 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
         # Generate pairs using combinatorial approach
         count = 0
+        pairs_evaluated = 0  # Track all pairs evaluated (including filtered ones)
         for i in range(len(paths)):
             for j in range(i + 1, len(paths)):
                 path_a = paths[i]
                 path_b = paths[j]
+
+                # Increment pairs_evaluated for every pair we look at
+                pairs_evaluated += 1
+                cumulative_count += 1
 
                 # Get queries from our file_info lookup
                 query_a = file_info.get(path_a, {}).get("query", "")
@@ -631,10 +636,27 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                     detected_vendor = "mde"
 
                 # KQL-only filter: require semantic overlap > 50% to include result
+                skip_pair = False
                 if detected_vendor in ["mde", "microsoft", "sentinel", "kql"]:
                     ov = _estimate_semantic_overlap_kql(query_a, query_b)
                     if ov <= 50:
-                        continue
+                        skip_pair = True
+
+                # Update progress periodically with cumulative count (every 10 pairs evaluated)
+                if cumulative_count % 10 == 0:
+                    print(f"GenAI: Evaluated {cumulative_count} pairs total ({count} kept for vendor '{v}')")
+                    write_progress(
+                        group_name,
+                        {
+                            "status": "genai_processing",
+                            "total_pairs": total_pairs_all_vendors,
+                            "processed": cumulative_count,
+                        },
+                    )
+
+                # Skip pair if filtered out
+                if skip_pair:
+                    continue
 
                 # Generate combined query
                 combined_query = _combine_queries(
@@ -652,19 +674,6 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                     }
                 )
                 count += 1
-                cumulative_count += 1
-
-                # Update progress periodically with cumulative count
-                if cumulative_count % 10 == 0:
-                    print(f"GenAI: Generated {cumulative_count} pairs total ({count} for vendor '{v}')")
-                    write_progress(
-                        group_name,
-                        {
-                            "status": "genai_processing",
-                            "total_pairs": total_pairs_all_vendors,
-                            "processed": cumulative_count,
-                        },
-                    )
 
         print(f"GenAI: Generated {count} pairs for vendor '{v}'")
 
