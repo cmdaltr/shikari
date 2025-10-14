@@ -520,13 +520,23 @@ def validate_indicator_for_index(
                     # Check for Linux-suggestive patterns (less strict but more precise)
                     import re
                     indicator_lower = indicator_text.lower()
-                    linux_suggestive = (
-                        # Unix paths
-                        any(path in indicator_lower for path in ["/bin/", "/usr/", "/etc/", "/var/", "/home/", "/root/", "/tmp/"]) or
-                        # Linux commands with word boundaries
-                        bool(re.search(r'\b(bash|chmod|chown|sudo|apt|yum|systemctl|systemd|iptables|grep|sed|awk)\b', indicator_lower))
-                    )
-                    print(f"         → Linux-suggestive={linux_suggestive}")
+
+                    # Check paths
+                    path_patterns = ["/bin/", "/usr/", "/etc/", "/var/", "/home/", "/root/", "/tmp/"]
+                    matched_paths = [p for p in path_patterns if p in indicator_lower]
+
+                    # Check commands
+                    cmd_match = re.search(r'\b(bash|chmod|chown|sudo|apt|yum|systemctl|systemd|iptables|grep|sed|awk)\b', indicator_lower)
+
+                    linux_suggestive = bool(matched_paths or cmd_match)
+
+                    if matched_paths:
+                        print(f"         → Linux-suggestive=True (matched paths: {matched_paths})")
+                    elif cmd_match:
+                        print(f"         → Linux-suggestive=True (matched command: {cmd_match.group(0)})")
+                    else:
+                        print(f"         → Linux-suggestive=False (no matches)")
+
                     if not linux_suggestive:
                         return (False, f"Multi-OS technique ({technique_platforms}) requires Linux-specific indicators for Linux index, but none found")
 
