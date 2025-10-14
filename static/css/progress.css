@@ -144,6 +144,18 @@ h3.subheading {
   word-break: break-word;
 }
 
+/* Last Correlation Display - Same style as YAML file display */
+#last-correlation {
+  margin-top: 0.75em;
+  padding: 0.75em 1em;
+  background: #f8f9fa;
+  border-left: 4px solid #007bff;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #495057;
+  word-break: break-word;
+}
+
 /* Correlations Grid - Match index.html card style */
 .corr-grid {
   display: grid;

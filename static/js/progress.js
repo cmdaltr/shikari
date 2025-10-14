@@ -511,19 +511,22 @@ async function refresh(){
       const vendorCount = p.vendor_count || 0;
 
       if (correlationStatus === 'genai_complete' || correlationStatus === 'complete') {
-        // Correlation complete
+        // Correlation complete - styled like detection file display
         correlationInfoEl.innerHTML = '';
         const completeText = document.createElement('span');
-        completeText.textContent = `Complete: ${vendorCount} correlations generated`;
-        completeText.style.color = '#2e8b57';
-        completeText.style.fontWeight = 'bold';
+        completeText.textContent = 'Complete: ';
         correlationInfoEl.appendChild(completeText);
+
+        const countSpan = document.createElement('span');
+        countSpan.textContent = `${vendorCount} correlations generated`;
+        countSpan.style.color = '#2e8b57';
+        countSpan.style.fontWeight = '500';
+        correlationInfoEl.appendChild(countSpan);
       } else if (correlationStatus === 'genai_processing') {
-        // Show progress
+        // Show progress - styled like detection file display
         correlationInfoEl.innerHTML = '';
         const prefixSpan = document.createElement('span');
         prefixSpan.textContent = 'Correlating techniques: ';
-        prefixSpan.style.color = '#666';
         correlationInfoEl.appendChild(prefixSpan);
 
         const progressSpan = document.createElement('span');
@@ -533,19 +536,11 @@ async function refresh(){
         correlationInfoEl.appendChild(progressSpan);
       } else if (correlationStatus === 'genai_starting' || correlationStatus === 'genai_started') {
         // Just starting
-        correlationInfoEl.innerHTML = '';
-        const startText = document.createElement('span');
-        startText.textContent = 'Starting correlation analysis';
-        startText.style.color = '#666';
-        correlationInfoEl.appendChild(startText);
+        correlationInfoEl.textContent = 'Starting correlation analysis';
         startEllipsis(correlationInfoEl);
       } else {
         // Waiting
-        correlationInfoEl.innerHTML = '';
-        const waitText = document.createElement('span');
-        waitText.textContent = 'Waiting for detection generation to complete';
-        waitText.style.color = '#666';
-        correlationInfoEl.appendChild(waitText);
+        correlationInfoEl.textContent = 'Waiting for detection generation to complete';
       }
     }
 
