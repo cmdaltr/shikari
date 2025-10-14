@@ -93,6 +93,19 @@
             <div class="procedures-help">List one per line.</div>
           </div>
 
+          <!-- Blog/Link Analysis Section -->
+          <div style="width:100%; max-width:560px; margin-top:2em; margin-bottom:1.25em; border-top:2px solid #e0e0e0; padding-top:1.5em;">
+            <h3 style="font-size:1.1rem; margin-bottom:0.75em; color:#333;">Blog/Report Analysis</h3>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:1em;">Provide a URL to a blog post or threat report. Archer will analyze it and generate detections based on the findings.</p>
+
+            <label for="blog_url" class="section-label">Blog Post or Report URL</label>
+            <input type="url" name="blog_url" id="blog_url" placeholder="https://example.com/blog/threat-analysis" style="width:100%; padding:0.5rem; font-size:1rem; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+            <div style="font-size:0.85rem; color:#666; margin-top:0.5em;">Examples: Crowdstrike blog, The DFIR Report, security vendor threat intelligence</div>
+
+            <button type="button" id="analyze-blog-btn" class="btn" style="margin-top:1em; background:#6c63ff;">Analyze Blog Post</button>
+            <div id="blog-analysis-status" style="margin-top:0.75em; font-size:0.9rem;"></div>
+          </div>
+
           <div class="form-actions" style="margin-top:1em; display:flex; align-items:center; justify-content:space-between;">
             <div style="flex:1 1 0;"></div>
             <div style="flex:0 0 auto; text-align:center;">

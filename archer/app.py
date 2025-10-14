@@ -260,6 +260,26 @@ async def generate(
             pass
         return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
     else:
+        # Group not in ATT&CK - search blogs automatically
+        print(f"Group '{group_name}' not found in ATT&CK, searching security blogs...")
+
+        try:
+            from archer.parsers.blog_analyzer import auto_search_blogs
+            blog_result = auto_search_blogs(group_name)
+
+            if blog_result.get("success"):
+                # Found blog post - redirect to manual entry with pre-filled data
+                print(f"Found blog post from {blog_result.get('source')}: {blog_result.get('source_url')}")
+
+                # Store blog results in session or pass as query params
+                # For now, redirect to manual with a message
+                return JSONResponse({
+                    "redirect_url": f"/manual?group_name={group_name}&blog_found=true&source={blog_result.get('source', '')}"
+                })
+        except Exception as e:
+            print(f"Blog search failed: {e}")
+
+        # Fallback to manual entry
         return JSONResponse({"redirect_url": f"/manual?group_name={group_name}"})
 
 
@@ -945,6 +965,56 @@ async def upload_file(
         return JSONResponse({
             "success": False,
             "error": str(e)
+        }, status_code=500)
+
+
+@app.post("/analyze_blog")
+async def analyze_blog(request: Request):
+    """
+    Analyze a blog post or threat report URL and extract TTPs, procedures, and IOCs.
+
+    Accepts a JSON payload with a 'url' field pointing to a blog post.
+    Returns extracted threat intelligence that can be used to populate the manual entry form.
+    """
+    try:
+        # Parse JSON body
+        body = await request.json()
+        url = body.get("url", "").strip()
+
+        if not url:
+            return JSONResponse({
+                "success": False,
+                "message": "No URL provided"
+            }, status_code=400)
+
+        # Import the blog analyzer
+        from archer.parsers.blog_analyzer import analyze_blog_post
+
+        # Analyze the blog post
+        result = analyze_blog_post(url)
+
+        if result.get("success"):
+            return JSONResponse({
+                "success": True,
+                "message": f"Successfully analyzed blog post. Found {len(result.get('techniques', []))} techniques and {len(result.get('procedures', []))} procedures.",
+                "group_name": result.get("group_name", ""),
+                "group_desc": result.get("group_desc", ""),
+                "technique": result.get("techniques", [""])[0] if result.get("techniques") else "",
+                "tactics": result.get("tactics", []),
+                "procedures": "\n".join(result.get("procedures", []))
+            })
+        else:
+            return JSONResponse({
+                "success": False,
+                "message": result.get("error", "Failed to analyze blog post")
+            })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "message": f"Error analyzing blog: {str(e)}"
         }, status_code=500)
 
 
