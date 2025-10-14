@@ -232,6 +232,11 @@ def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
         if op.name == "where" and op.expression:
             # Remove time filter from expression if present
             expr = op.expression
+
+            # Skip this where clause entirely if it ONLY contains the time filter
+            if parsed_a.time_filter and expr.strip() == parsed_a.time_filter.strip():
+                continue  # Skip this operator entirely
+
             if parsed_a.time_filter and parsed_a.time_filter in expr:
                 # Remove the time filter and any leading "and" or "or"
                 expr = expr.replace(parsed_a.time_filter, "").strip()
@@ -243,6 +248,11 @@ def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
         if op.name == "where" and op.expression:
             # Remove time filter from expression if present
             expr = op.expression
+
+            # Skip this where clause entirely if it ONLY contains the time filter
+            if parsed_b.time_filter and expr.strip() == parsed_b.time_filter.strip():
+                continue  # Skip this operator entirely
+
             if parsed_b.time_filter and parsed_b.time_filter in expr:
                 # Remove the time filter and any leading "and" or "or"
                 expr = expr.replace(parsed_b.time_filter, "").strip()
