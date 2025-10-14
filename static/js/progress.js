@@ -411,37 +411,40 @@ async function refresh(){
       if (yamlComplete) {
         lastEl.innerHTML = ''; // Clear existing content
 
+        // "Complete: " in green and bold
         const completeText = document.createElement('span');
-        completeText.textContent = 'Complete';
-        completeText.style.color = '#2e8b57'; // Dark green color
+        completeText.textContent = 'Complete: ';
+        completeText.style.color = '#28a745'; // Green color matching detection bar
         completeText.style.fontWeight = 'bold';
         lastEl.appendChild(completeText);
+
+        // "36 detection files generated" in black (default), normal weight
+        const countSpan = document.createElement('span');
+        countSpan.textContent = `${total} detection files generated`;
+        countSpan.style.color = '#495057'; // Default grey/black text
+        lastEl.appendChild(countSpan);
 
         // Stop ellipsis animation if it's still running
         stopEllipsis(true);
       }
       // Still in progress, show file or waiting message
       else if (detectedFile && detectedFile.trim() !== '') {
-        // We have a valid file path - display it and stop the ellipsis
+        // We have a valid file path - display it
         if (detectedFile !== lastYamlFileShown) {
           lastYamlFileShown = String(detectedFile);
         }
 
-        // Set up the content with a colored filename
-        const prefixText = 'Detection file created: ';
         lastEl.innerHTML = ''; // Clear existing content
 
-        // Add the prefix text
+        // "Detection file created: " in default color
         const prefixSpan = document.createElement('span');
-        prefixSpan.textContent = prefixText;
-        prefixSpan.style.color = '#666'; // Grey color for the prefix
+        prefixSpan.textContent = 'Detection file created: ';
         lastEl.appendChild(prefixSpan);
 
-        // Add the filename in dark green
+        // Filename in green, not bold
         const filenameSpan = document.createElement('span');
         filenameSpan.textContent = displayFile;
-        filenameSpan.style.color = '#2e8b57'; // Dark green color (SeaGreen)
-        filenameSpan.style.fontWeight = '500'; // Slightly bolder
+        filenameSpan.style.color = '#28a745'; // Green color matching detection bar
         lastEl.appendChild(filenameSpan);
 
         lastEl.title = detectedFile; // Keep full path in tooltip
@@ -449,12 +452,20 @@ async function refresh(){
 
         console.debug('Displaying file:', displayFile);
       } else if (created > 0) {
-        // Have some files but no specific file info yet - show count instead of waiting
+        // Have some files but no specific file info yet - show count
         lastEl.innerHTML = ''; // Clear existing content
-        const countText = document.createElement('span');
-        countText.textContent = `Processing: ${created} of ${total} files`;
-        countText.style.color = '#666';
-        lastEl.appendChild(countText);
+
+        // "Processing: " in default color
+        const prefixSpan = document.createElement('span');
+        prefixSpan.textContent = 'Processing: ';
+        lastEl.appendChild(prefixSpan);
+
+        // "X of Y files" in green, not bold
+        const countSpan = document.createElement('span');
+        countSpan.textContent = `${created} of ${total} files`;
+        countSpan.style.color = '#28a745'; // Green color matching detection bar
+        lastEl.appendChild(countSpan);
+
         stopEllipsis(true);
       } else {
         // No valid file yet - show waiting message with animated ellipsis
