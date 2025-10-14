@@ -1,5 +1,7 @@
 import os
 import json
+import fcntl
+import time
 from typing import Dict, Any
 
 
@@ -18,29 +20,61 @@ def progress_path(group_name: str) -> str:
 
 def write_progress(group_name: str, data: Dict[str, Any]):
     """
-    Write progress data, merging with existing data to preserve all fields.
+    Write progress data with atomic read-merge-write using file locking.
     This prevents race conditions where different parts of the code
     update different fields and overwrite each other.
     """
     path = progress_path(group_name)
-    try:
-        # Read existing data first
-        existing = {}
-        if os.path.exists(path):
+    lock_path = path + ".lock"
+
+    max_retries = 10
+    retry_delay = 0.05  # 50ms
+
+    for attempt in range(max_retries):
+        try:
+            # Use lock file for synchronization
+            lock_file = open(lock_path, 'w')
             try:
-                with open(path, "r", encoding="utf-8") as fh:
-                    existing = json.load(fh)
-            except Exception:
+                # Acquire exclusive lock (blocks if another process holds it)
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+
+                # Read existing data
                 existing = {}
+                if os.path.exists(path):
+                    try:
+                        with open(path, "r", encoding="utf-8") as fh:
+                            existing = json.load(fh)
+                    except Exception:
+                        existing = {}
 
-        # Merge new data into existing (new data takes precedence)
-        merged = {**existing, **data}
+                # Merge new data into existing (new data takes precedence)
+                merged = {**existing, **data}
 
-        # Write merged data
-        with open(path, "w", encoding="utf-8") as fh:
-            json.dump(merged, fh, indent=2)
-    except Exception:
-        pass
+                # Write merged data atomically
+                temp_path = path + ".tmp"
+                with open(temp_path, "w", encoding="utf-8") as fh:
+                    json.dump(merged, fh, indent=2)
+
+                # Atomic replace
+                os.replace(temp_path, path)
+
+                # Success - release lock and return
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                return
+
+            finally:
+                lock_file.close()
+
+        except (IOError, OSError) as e:
+            # Lock acquisition failed, retry
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+            else:
+                # Last attempt failed, give up
+                pass
+        except Exception:
+            # Other error, give up
+            pass
 
 
 def read_progress(group_name: str) -> Dict[str, Any]:
