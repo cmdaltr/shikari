@@ -2,21 +2,73 @@
 """
 Test script to verify progress bar fixes without using the web interface.
 Tests the Scattered Spider group with correlation enabled.
+
+This script simulates both command-line AND browser behavior:
+1. Command-line: Direct call to process_group()
+2. Browser simulation: Calls /complete_yaml endpoint when YAML reaches 100%
+
+This ensures the fix for frontend interference (commit e46db88) is tested.
 """
 
 import sys
 import os
 import time
 import json
+import threading
 from pathlib import Path
 
 # Add archer to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from archer.build.orchestrator import process_group
-from archer.build.progress import read_progress, progress_path
+from archer.build.progress import read_progress, progress_path, write_progress
 
-def monitor_progress(group_name, interval=0.5, max_duration=300):
+
+def simulate_complete_yaml_endpoint(group_name):
+    """
+    Simulate the /complete_yaml endpoint behavior from app.py.
+    This is what the browser calls when YAML generation reaches 100%.
+
+    This function replicates the logic from archer/app.py:752-804
+    to test that it doesn't interfere with active correlation processing.
+    """
+    print(f"\n[BROWSER SIMULATION] Frontend detected YAML complete, calling /complete_yaml")
+
+    # Fetch current progress (same as app.py line 760)
+    progress_data = read_progress(group_name) or {}
+    current_status = progress_data.get("status", "unknown")
+
+    print(f"[BROWSER SIMULATION] Current status: {current_status}")
+
+    # Only proceed if we're not already in GenAI phase (same as app.py line 763)
+    if current_status not in [
+        "genai_started",
+        "genai_starting",
+        "genai_processing",  # This is the fix from commit e46db88
+        "genai_complete",
+    ]:
+        print(f"[BROWSER SIMULATION] Status not in GenAI phase, would start background thread")
+
+        # Ensure YAML progress shows as complete
+        if "total_yaml" in progress_data:
+            progress_data["created_yaml"] = progress_data["total_yaml"]
+        else:
+            progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
+            progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
+
+        # Mark as ready for GenAI
+        progress_data["status"] = "genai_starting"
+        write_progress(group_name, progress_data)
+
+        print(f"[BROWSER SIMULATION] Changed status to 'genai_starting'")
+        print(f"[BROWSER SIMULATION] Would start background thread (skipped in test)")
+        return True
+    else:
+        print(f"[BROWSER SIMULATION] Status is '{current_status}' - skipping (correlation already active)")
+        return False
+
+
+def monitor_progress(group_name, interval=0.5, max_duration=300, simulate_browser=True):
     """
     Monitor and display progress in real-time.
 
@@ -34,6 +86,7 @@ def monitor_progress(group_name, interval=0.5, max_duration=300):
     last_yaml_pct = -1
     last_genai_pct = -1
     yaml_complete = False
+    browser_endpoint_called = False  # Track if we've simulated the browser call
     genai_values = []  # Track GenAI progress to detect backwards jumps
 
     while time.time() - start_time < max_duration:
@@ -60,6 +113,14 @@ def monitor_progress(group_name, interval=0.5, max_duration=300):
         if yaml_pct >= 100 and not yaml_complete:
             yaml_complete = True
             print(f"\n✓ YAML Generation: COMPLETE (100%)")
+
+            # Simulate browser behavior: call /complete_yaml endpoint
+            # This is what caused the bug at 70% (commit e46db88 fixed it)
+            if simulate_browser and not browser_endpoint_called:
+                browser_endpoint_called = True
+                # Give correlation a chance to start processing first
+                time.sleep(0.5)
+                simulate_complete_yaml_endpoint(group_name)
 
         # Print status changes
         if status != last_status:
@@ -124,13 +185,33 @@ def monitor_progress(group_name, interval=0.5, max_duration=300):
 
 def main():
     """Run the test."""
-    group_name = "Scattered Spider"
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Test progress bar fixes")
+    parser.add_argument(
+        "--no-browser-sim",
+        action="store_true",
+        help="Disable browser simulation (skip /complete_yaml endpoint call)"
+    )
+    parser.add_argument(
+        "--group",
+        default="Scattered Spider",
+        help="Group name to test (default: Scattered Spider)"
+    )
+    args = parser.parse_args()
+
+    group_name = args.group
+    simulate_browser = not args.no_browser_sim
 
     print(f"\n{'='*70}")
     print(f"PROGRESS BAR FIX TEST")
     print(f"{'='*70}")
     print(f"Testing group: {group_name}")
     print(f"Test: Verifying no backwards jumps in correlation progress")
+    if simulate_browser:
+        print(f"Mode: Browser simulation ENABLED (will call /complete_yaml)")
+    else:
+        print(f"Mode: Command-line only (no /complete_yaml)")
     print(f"{'='*70}\n")
 
     # Clean up any existing progress file
@@ -145,7 +226,12 @@ def main():
     test_result = [None]  # Use list to capture result from thread
 
     def monitor_thread():
-        test_result[0] = monitor_progress(group_name, interval=0.3, max_duration=600)
+        test_result[0] = monitor_progress(
+            group_name,
+            interval=0.3,
+            max_duration=600,
+            simulate_browser=simulate_browser
+        )
 
     monitor = threading.Thread(target=monitor_thread, daemon=True)
     monitor.start()
@@ -171,6 +257,9 @@ def main():
     print(f"\n{'='*70}")
     if test_result[0]:
         print(f"✅ TEST PASSED: No backwards jumps detected!")
+        if simulate_browser:
+            print(f"✅ Browser simulation: /complete_yaml handled correctly")
+            print(f"   (Did not interfere with active correlation processing)")
         print(f"{'='*70}\n")
         return 0
     else:

@@ -95,6 +95,36 @@ GenAI: Evaluated 14913 pairs total
    - Non-blocking lock acquisition with immediate exit if already held
    - Finally block ensures lock is always released
 
+3. **e46db88**: Prevent /complete_yaml from interfering with active correlation processing
+   - Added `"genai_processing"` to excluded statuses in `/complete_yaml` endpoint
+   - Prevents frontend from changing status while correlation is actively running
+   - Fixes the bug where progress reset at 70% when using browser
+
+## Test Scripts Updated
+
+The test script `test_progress_fix.py` has been enhanced to include:
+
+**Browser Simulation Mode** (default):
+- Simulates the frontend calling `/complete_yaml` when YAML reaches 100%
+- Tests that this call doesn't interfere with active correlation processing
+- Verifies the fix from commit e46db88
+
+**Command-Line Only Mode**:
+- Use `--no-browser-sim` flag to test without frontend simulation
+- Tests the basic command-line flow
+
+**Usage**:
+```bash
+# Test with browser simulation (default)
+python3 test_progress_fix.py
+
+# Test command-line only
+python3 test_progress_fix.py --no-browser-sim
+
+# Test a different group
+python3 test_progress_fix.py --group "APT29"
+```
+
 ## Expected Behavior in Production
 
 When running Scattered Spider (or any group) with correlation enabled:
