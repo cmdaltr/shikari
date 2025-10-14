@@ -481,6 +481,49 @@ def validate_indicator_for_index(
             if not any(gp in technique_platform_set for gp in generic_platforms):
                 return (False, f"Technique platforms {technique_platforms} don't overlap with {index_platforms}")
 
+    # RULE 6: STRICT OS SEPARATION - If technique supports multiple OS platforms,
+    # require specific indicators for OS-specific indexes
+    if technique_platforms and len(technique_platforms) > 1:
+        # Check if technique supports BOTH Windows and Linux/Unix
+        supports_windows = any(p.lower() == "windows" for p in technique_platforms)
+        supports_linux = any(p.lower() in ["linux", "unix"] for p in technique_platforms)
+        supports_macos = any(p.lower() == "macos" for p in technique_platforms)
+
+        if supports_windows and (supports_linux or supports_macos):
+            # Multi-OS technique - REQUIRE specific indicators for OS-specific indexes
+            if "Windows" in index_platforms and "Linux" not in index_platforms and "macOS" not in index_platforms:
+                # Windows-only index - MUST have Windows-specific indicators
+                if not has_windows_only_indicators(indicator_text):
+                    # Check for Windows-suggestive patterns (less strict)
+                    windows_suggestive = any(pattern in indicator_text.lower() for pattern in [
+                        ".exe", ".dll", ".sys", ".bat", ".ps1", ".vbs", "powershell",
+                        "cmd.exe", "svchost", "lsass", "winlogon", "explorer.exe"
+                    ])
+                    if not windows_suggestive:
+                        return (False, f"Multi-OS technique ({technique_platforms}) requires Windows-specific indicators for Windows index, but none found")
+
+            elif ("Linux" in index_platforms or "Unix" in index_platforms) and "Windows" not in index_platforms:
+                # Linux/Unix-only index - MUST have Linux-specific indicators
+                if not has_linux_only_indicators(indicator_text):
+                    # Check for Linux-suggestive patterns (less strict)
+                    linux_suggestive = any(pattern in indicator_text.lower() for pattern in [
+                        "/bin/", "/usr/", "/etc/", "/var/", "/home/", "/root/", "/tmp/",
+                        "bash", "sh", "chmod", "chown", "sudo", "systemctl", "systemd"
+                    ])
+                    if not linux_suggestive:
+                        return (False, f"Multi-OS technique ({technique_platforms}) requires Linux-specific indicators for Linux index, but none found")
+
+            elif "macOS" in index_platforms and "Windows" not in index_platforms and "Linux" not in index_platforms:
+                # macOS-only index - MUST have macOS-specific indicators
+                if not has_macos_only_indicators(indicator_text):
+                    # Check for macOS-suggestive patterns (less strict)
+                    macos_suggestive = any(pattern in indicator_text.lower() for pattern in [
+                        "/library/", "/applications/", "/users/", "launchctl", "defaults",
+                        ".app", ".plist", "~/library"
+                    ])
+                    if not macos_suggestive:
+                        return (False, f"Multi-OS technique ({technique_platforms}) requires macOS-specific indicators for macOS index, but none found")
+
     return (True, None)
 
 
