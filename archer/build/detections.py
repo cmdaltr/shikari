@@ -239,11 +239,10 @@ def compile_query(retrieved_data):
                     )
 
                     # Check indicator-level platform compatibility (enhanced v2)
-                    # Use actual indicators, not just procedure text
-                    validation_text = f"{procedure_text} {indicator_text}"
-                    print(f"     → validation_text for {clean_index_name}: len={len(validation_text)}, has indicator_text={bool(indicator_text)}")
+                    # ONLY validate actual indicators, NOT procedure text (which has URLs and generic descriptions)
+                    print(f"     → validating indicator_text for {clean_index_name}: len={len(indicator_text)}, sample='{indicator_text[:80]}'")
                     indicator_compatible = validate_procedure_for_index(
-                        validation_text,
+                        indicator_text,  # CHANGED: Only validate actual indicators
                         clean_index_name,
                         vendor="Splunk",
                         technique_desc=technique_description,
@@ -267,10 +266,9 @@ def compile_query(retrieved_data):
                     )
 
                     # Check indicator-level platform compatibility (enhanced v2)
-                    # Use actual indicators, not just procedure text
-                    validation_text = f"{procedure_text} {indicator_text}"
+                    # ONLY validate actual indicators, NOT procedure text (which has URLs and generic descriptions)
                     indicator_compatible = validate_procedure_for_index(
-                        validation_text,
+                        indicator_text,  # CHANGED: Only validate actual indicators
                         table_name,
                         vendor="MDE",
                         technique_desc=technique_description,
