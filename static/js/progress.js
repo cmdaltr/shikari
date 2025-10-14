@@ -432,11 +432,15 @@ async function refresh(){
       // Still in progress - just show "Generating detections" with ellipsis
       // Don't show file count (confusing - shows procedure count not actual file count)
       else {
-        // Show animated message during generation
-        lastEl.textContent = 'Generating detections';
-        lastEl.style.color = '#666'; // Default gray for waiting text
-        lastEl.removeAttribute('title');
-        startEllipsis(lastEl); // Keep ellipsis animating throughout
+        // Only set text if not already set (to avoid destroying ellipsis span)
+        const currentText = lastEl.childNodes[0]?.textContent || '';
+        if (currentText !== 'Generating detections') {
+          lastEl.textContent = 'Generating detections';
+          lastEl.style.color = '#666'; // Default gray for waiting text
+          lastEl.removeAttribute('title');
+        }
+        // Start or continue ellipsis animation
+        startEllipsis(lastEl);
       }
     }
 
