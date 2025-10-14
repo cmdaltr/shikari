@@ -261,7 +261,6 @@ def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
                 where_conditions_b.append(expr)
 
     # Build combined query using proper KQL join syntax for correlation
-    # Simplify has_any() with single values to use 'has', and remove duplicates
     def simplify_where_clause(conditions):
         if not conditions:
             return "true"
@@ -269,14 +268,46 @@ def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
         # Join conditions
         clause = " and ".join(conditions)
 
-        # Simplify has_any("value", "value") to has "value"
         import re
-        # Pattern: has_any("X", "X") or has_any("X", "X", "X")
-        clause = re.sub(r'has_any\("([^"]+)",\s*"[^"]+"(?:,\s*"[^"]+")?\)', r'has "\1"', clause)
+
+        # Process each has_any() call
+        def replace_has_any(match):
+            full_match = match.group(0)
+            # Extract all quoted values
+            values = re.findall(r'"([^"]+)"', full_match)
+
+            # Remove duplicates while preserving order
+            unique_values = []
+            seen = set()
+            for v in values:
+                if v not in seen:
+                    unique_values.append(v)
+                    seen.add(v)
+
+            # Get the field name (e.g., "FileName", "ProcessCommandLine")
+            field_match = re.search(r'(\w+)\s+has_any', full_match)
+            field_name = field_match.group(1) if field_match else ""
+
+            if len(unique_values) == 0:
+                return "true"  # No values, shouldn't happen
+            elif len(unique_values) == 1:
+                value = unique_values[0]
+                # If value is very short (< 3 chars), use 'contains' instead of 'has'
+                if len(value) < 3:
+                    return f'{field_name} contains "{value}"'
+                else:
+                    return f'{field_name} has "{value}"'
+            else:
+                # Multiple distinct values - keep has_any
+                values_str = ", ".join([f'"{v}"' for v in unique_values])
+                return f'{field_name} has_any({values_str})'
+
+        # Replace all has_any() calls
+        clause = re.sub(r'\w+\s+has_any\([^)]+\)', replace_has_any, clause)
 
         # Remove ProcessVersionInfo fields (metadata, not useful for detection)
-        clause = re.sub(r'\s*or\s*ProcessVersionInfoProductName\s+has[^)]*\)', '', clause)
-        clause = re.sub(r'\s*or\s*ProcessVersionInfoCompanyName\s+has[^)]*\)', '', clause)
+        clause = re.sub(r'\s*or\s*ProcessVersionInfoProductName\s+(?:has|has_any|contains)[^)]*\)', '', clause)
+        clause = re.sub(r'\s*or\s*ProcessVersionInfoCompanyName\s+(?:has|has_any|contains)[^)]*\)', '', clause)
 
         return clause
 
