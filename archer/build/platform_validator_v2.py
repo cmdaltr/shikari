@@ -499,11 +499,15 @@ def validate_indicator_for_index(
                 has_strict = has_windows_only_indicators(indicator_text)
                 print(f"         → Windows index: has_strict_windows={has_strict}, checking indicator_text[:100]='{indicator_text[:100]}'")
                 if not has_strict:
-                    # Check for Windows-suggestive patterns (less strict)
-                    windows_suggestive = any(pattern in indicator_text.lower() for pattern in [
-                        ".exe", ".dll", ".sys", ".bat", ".ps1", ".vbs", "powershell",
-                        "cmd.exe", "svchost", "lsass", "winlogon", "explorer.exe"
-                    ])
+                    # Check for Windows-suggestive patterns (less strict but more precise)
+                    import re
+                    indicator_lower = indicator_text.lower()
+                    windows_suggestive = (
+                        # Windows file extensions
+                        any(ext in indicator_lower for ext in [".exe", ".dll", ".sys", ".bat", ".ps1", ".vbs", ".msi", ".scr"]) or
+                        # Windows processes/commands with word boundaries
+                        bool(re.search(r'\b(powershell|cmd\.exe|svchost|lsass|winlogon|explorer\.exe|rundll32|regsvr32|wmic|net\.exe)\b', indicator_lower))
+                    )
                     print(f"         → Windows-suggestive={windows_suggestive}")
                     if not windows_suggestive:
                         return (False, f"Multi-OS technique ({technique_platforms}) requires Windows-specific indicators for Windows index, but none found")
@@ -513,11 +517,15 @@ def validate_indicator_for_index(
                 has_strict = has_linux_only_indicators(indicator_text)
                 print(f"         → Linux/Unix index: has_strict_linux={has_strict}, checking indicator_text[:100]='{indicator_text[:100]}'")
                 if not has_strict:
-                    # Check for Linux-suggestive patterns (less strict)
-                    linux_suggestive = any(pattern in indicator_text.lower() for pattern in [
-                        "/bin/", "/usr/", "/etc/", "/var/", "/home/", "/root/", "/tmp/",
-                        "bash", "sh", "chmod", "chown", "sudo", "systemctl", "systemd"
-                    ])
+                    # Check for Linux-suggestive patterns (less strict but more precise)
+                    import re
+                    indicator_lower = indicator_text.lower()
+                    linux_suggestive = (
+                        # Unix paths
+                        any(path in indicator_lower for path in ["/bin/", "/usr/", "/etc/", "/var/", "/home/", "/root/", "/tmp/"]) or
+                        # Linux commands with word boundaries
+                        bool(re.search(r'\b(bash|chmod|chown|sudo|apt|yum|systemctl|systemd|iptables|grep|sed|awk)\b', indicator_lower))
+                    )
                     print(f"         → Linux-suggestive={linux_suggestive}")
                     if not linux_suggestive:
                         return (False, f"Multi-OS technique ({technique_platforms}) requires Linux-specific indicators for Linux index, but none found")
