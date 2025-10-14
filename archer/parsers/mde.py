@@ -276,11 +276,18 @@ def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
             # Extract all quoted values
             values = re.findall(r'"([^"]+)"', full_match)
 
-            # Remove duplicates while preserving order
+            # Filter out overly generic terms (common words unlikely to be useful indicators)
+            generic_terms = {
+                "condition", "access", "policy", "policies", "data", "file",
+                "process", "user", "system", "service", "event", "log",
+                "network", "security", "admin", "administrator", "account"
+            }
+
+            # Remove duplicates and filter generic terms
             unique_values = []
             seen = set()
             for v in values:
-                if v not in seen:
+                if v not in seen and v.lower() not in generic_terms:
                     unique_values.append(v)
                     seen.add(v)
 
@@ -289,7 +296,8 @@ def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
             field_name = field_match.group(1) if field_match else ""
 
             if len(unique_values) == 0:
-                return "true"  # No values, shouldn't happen
+                # All values were generic/filtered out - return empty string to signal removal
+                return ""
             elif len(unique_values) == 1:
                 value = unique_values[0]
                 # If value is very short (< 3 chars), use 'contains' instead of 'has'
@@ -308,6 +316,19 @@ def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
         # Remove ProcessVersionInfo fields (metadata, not useful for detection)
         clause = re.sub(r'\s*or\s*ProcessVersionInfoProductName\s+(?:has|has_any|contains)[^)]*\)', '', clause)
         clause = re.sub(r'\s*or\s*ProcessVersionInfoCompanyName\s+(?:has|has_any|contains)[^)]*\)', '', clause)
+
+        # Clean up empty conditions left by filtering
+        # Remove patterns like "condition1 or  or condition2"
+        clause = re.sub(r'\s+or\s+or\s+', ' or ', clause)
+        clause = re.sub(r'^\s*or\s+', '', clause)  # Remove leading "or"
+        clause = re.sub(r'\s+or\s*$', '', clause)  # Remove trailing "or"
+        clause = re.sub(r'\s+and\s+and\s+', ' and ', clause)
+        clause = re.sub(r'^\s*and\s+', '', clause)  # Remove leading "and"
+        clause = re.sub(r'\s+and\s*$', '', clause)  # Remove trailing "and"
+
+        # If clause is empty after cleanup, return "true" (matches nothing specific)
+        if not clause.strip():
+            return "true"
 
         return clause
 
