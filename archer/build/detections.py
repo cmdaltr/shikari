@@ -149,6 +149,7 @@ def create_indicatorMappings():
 
 def compile_query(retrieved_data):
     from archer.build.queries import is_query_applicable
+    from archer.build.platform_validator import validate_procedure_for_index
 
     # Load indicator mappings
     indicator_mappings = load_indicator_mappings()
@@ -161,6 +162,9 @@ def compile_query(retrieved_data):
     op_guidance = retrieved_data.get("op_guidance", {})
     red_tool = retrieved_data.get("red_tool", {})
     log_sources = retrieved_data.get("detect_guidance", [])
+
+    # Get procedure text for platform validation
+    procedure_text = retrieved_data.get("procedure", "") or tdesc or ""
 
     # Get all identifiers
     if isinstance(op_guidance, dict) and isinstance(red_tool, dict):
@@ -207,20 +211,39 @@ def compile_query(retrieved_data):
             if "Splunk" in indicator_mappings[indicator_type]:
                 for index_name in indicator_mappings[indicator_type]["Splunk"]:
                     clean_index_name = index_name.replace("index=", "")
+
+                    # Check technique-level platform compatibility
                     is_compatible = is_query_applicable(
                         procedure_platforms, software_platforms, clean_index_name
                     )
-                    if is_compatible:
+
+                    # Check indicator-level platform compatibility
+                    indicator_compatible = validate_procedure_for_index(
+                        procedure_text, clean_index_name, vendor="Splunk"
+                    )
+
+                    if is_compatible and indicator_compatible:
                         compatible_sources.add(index_name)
+                    elif is_compatible and not indicator_compatible:
+                        print(f"  ⚠️  Skipped {index_name}: Indicator incompatible with platform")
 
             # MDE
             if "MDE" in indicator_mappings[indicator_type]:
                 for table_name in indicator_mappings[indicator_type]["MDE"]:
+                    # Check technique-level platform compatibility
                     is_compatible = is_query_applicable(
                         procedure_platforms, software_platforms, table_name
                     )
-                    if is_compatible:
+
+                    # Check indicator-level platform compatibility
+                    indicator_compatible = validate_procedure_for_index(
+                        procedure_text, table_name, vendor="MDE"
+                    )
+
+                    if is_compatible and indicator_compatible:
                         compatible_sources.add(table_name)
+                    elif is_compatible and not indicator_compatible:
+                        print(f"  ⚠️  Skipped {table_name}: Indicator incompatible with platform")
 
         # Print grouped output and create YAMLs
         if compatible_sources:
