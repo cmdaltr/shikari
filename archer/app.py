@@ -763,6 +763,7 @@ async def complete_yaml(request: Request, group_name: str = ""):
     if progress_data.get("status") not in [
         "genai_started",
         "genai_starting",
+        "genai_processing",
         "genai_complete",
     ]:
         # Ensure YAML progress shows as complete
@@ -772,7 +773,7 @@ async def complete_yaml(request: Request, group_name: str = ""):
             progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
             progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
 
-        # Mark as ready for GenAI
+        # Mark as ready for GenAI (but preserve any existing GenAI progress fields)
         progress_data["status"] = "genai_starting"
         write_progress(group_name, progress_data)
 
