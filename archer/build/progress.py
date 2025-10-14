@@ -24,6 +24,8 @@ def write_progress(group_name: str, data: Dict[str, Any]):
     This prevents race conditions where different parts of the code
     update different fields and overwrite each other.
     """
+    import traceback
+
     path = progress_path(group_name)
     lock_path = path + ".lock"
 
@@ -49,6 +51,41 @@ def write_progress(group_name: str, data: Dict[str, Any]):
 
                 # Merge new data into existing (new data takes precedence)
                 merged = {**existing, **data}
+
+                # DEBUG LOGGING: Track what's being written
+                if "processed" in data or "processed" in existing:
+                    old_processed = existing.get("processed", 0)
+                    new_processed = merged.get("processed", 0)
+                    old_status = existing.get("status", "none")
+                    new_status = merged.get("status", "none")
+
+                    # Log if progress goes backwards
+                    if old_processed > 0 and new_processed < old_processed:
+                        caller_info = "".join(traceback.format_stack()[-3:-1])
+                        print(f"\n⚠️  PROGRESS WENT BACKWARDS!")
+                        print(f"   Old: processed={old_processed}, status={old_status}")
+                        print(f"   New: processed={new_processed}, status={new_status}")
+                        print(f"   Data being written: {data}")
+                        print(f"   Existing data: {existing}")
+                        print(f"   Called from:\n{caller_info}")
+
+                    # Log if processed field disappears
+                    if old_processed > 0 and "processed" not in data:
+                        caller_info = "".join(traceback.format_stack()[-3:-1])
+                        print(f"\n⚠️  'PROCESSED' FIELD NOT IN NEW DATA!")
+                        print(f"   Old processed: {old_processed}")
+                        print(f"   Data being written: {data}")
+                        print(f"   This will preserve old value: {new_processed}")
+                        print(f"   Called from:\n{caller_info}")
+
+                    # Log status changes during processing
+                    if old_status == "genai_processing" and new_status != "genai_processing" and new_status != "genai_complete":
+                        caller_info = "".join(traceback.format_stack()[-3:-1])
+                        print(f"\n⚠️  STATUS CHANGED DURING PROCESSING!")
+                        print(f"   Old status: {old_status}, processed={old_processed}")
+                        print(f"   New status: {new_status}, processed={new_processed}")
+                        print(f"   Data being written: {data}")
+                        print(f"   Called from:\n{caller_info}")
 
                 # Write merged data atomically
                 temp_path = path + ".tmp"
