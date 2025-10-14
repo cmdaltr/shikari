@@ -241,6 +241,7 @@ def compile_query(retrieved_data):
                     # Check indicator-level platform compatibility (enhanced v2)
                     # Use actual indicators, not just procedure text
                     validation_text = f"{procedure_text} {indicator_text}"
+                    print(f"     → validation_text for {clean_index_name}: len={len(validation_text)}, has indicator_text={bool(indicator_text)}")
                     indicator_compatible = validate_procedure_for_index(
                         validation_text,
                         clean_index_name,

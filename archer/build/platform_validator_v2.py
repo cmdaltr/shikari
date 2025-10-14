@@ -489,27 +489,36 @@ def validate_indicator_for_index(
         supports_linux = any(p.lower() in ["linux", "unix"] for p in technique_platforms)
         supports_macos = any(p.lower() == "macos" for p in technique_platforms)
 
+        # DEBUG: Log Rule 6 evaluation
+        print(f"      🔍 RULE 6: Multi-OS check - supports_win={supports_windows}, supports_linux={supports_linux}, index_platforms={index_platforms}")
+
         if supports_windows and (supports_linux or supports_macos):
             # Multi-OS technique - REQUIRE specific indicators for OS-specific indexes
             if "Windows" in index_platforms and "Linux" not in index_platforms and "macOS" not in index_platforms:
                 # Windows-only index - MUST have Windows-specific indicators
-                if not has_windows_only_indicators(indicator_text):
+                has_strict = has_windows_only_indicators(indicator_text)
+                print(f"         → Windows index: has_strict_windows={has_strict}, checking indicator_text[:100]='{indicator_text[:100]}'")
+                if not has_strict:
                     # Check for Windows-suggestive patterns (less strict)
                     windows_suggestive = any(pattern in indicator_text.lower() for pattern in [
                         ".exe", ".dll", ".sys", ".bat", ".ps1", ".vbs", "powershell",
                         "cmd.exe", "svchost", "lsass", "winlogon", "explorer.exe"
                     ])
+                    print(f"         → Windows-suggestive={windows_suggestive}")
                     if not windows_suggestive:
                         return (False, f"Multi-OS technique ({technique_platforms}) requires Windows-specific indicators for Windows index, but none found")
 
             elif ("Linux" in index_platforms or "Unix" in index_platforms) and "Windows" not in index_platforms:
                 # Linux/Unix-only index - MUST have Linux-specific indicators
-                if not has_linux_only_indicators(indicator_text):
+                has_strict = has_linux_only_indicators(indicator_text)
+                print(f"         → Linux/Unix index: has_strict_linux={has_strict}, checking indicator_text[:100]='{indicator_text[:100]}'")
+                if not has_strict:
                     # Check for Linux-suggestive patterns (less strict)
                     linux_suggestive = any(pattern in indicator_text.lower() for pattern in [
                         "/bin/", "/usr/", "/etc/", "/var/", "/home/", "/root/", "/tmp/",
                         "bash", "sh", "chmod", "chown", "sudo", "systemctl", "systemd"
                     ])
+                    print(f"         → Linux-suggestive={linux_suggestive}")
                     if not linux_suggestive:
                         return (False, f"Multi-OS technique ({technique_platforms}) requires Linux-specific indicators for Linux index, but none found")
 
