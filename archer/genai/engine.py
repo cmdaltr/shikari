@@ -1184,19 +1184,34 @@ def _basic_combine_queries(
         qa = _normalize_kql_spacing(query_a or "")
         qb = _normalize_kql_spacing(query_b or "")
 
-        # Use three spaces before pipes in the tail, too
-        combined_kql = f"""// {label_a}
-let query_a = (
+        # Proper KQL join syntax using inner join on common correlation keys
+        combined_kql = f"""// Correlation: {label_a} + {label_b}
+// Query A: {label_a}
+let QueryA = materialize(
     {qa}
+    | extend CorrelationKey = strcat(DeviceId, "_", bin(Timestamp, 1h))
+    | project Timestamp, DeviceId, DeviceName, AccountName, FileName, ProcessCommandLine, CorrelationKey, QueryA_Match = "true"
 );
-// {label_b}
-let query_b = (
+// Query B: {label_b}
+let QueryB = materialize(
     {qb}
+    | extend CorrelationKey = strcat(DeviceId, "_", bin(Timestamp, 1h))
+    | project Timestamp, DeviceId, DeviceName, AccountName, FileName, ProcessCommandLine, CorrelationKey, QueryB_Match = "true"
 );
-// Combined query
-union query_a, query_b
-   | where Timestamp > ago(1d)
-   | project DeviceId, DeviceName, Timestamp, ProcessId, FileName, AccountName
+// Join queries on same device within same hour window
+QueryA
+| join kind=inner (QueryB) on CorrelationKey
+| where Timestamp > ago(1d) and Timestamp1 > ago(1d)
+| project CorrelationTimestamp = Timestamp, DeviceId, DeviceName, AccountName,
+          QueryA_File = FileName, QueryA_Command = ProcessCommandLine,
+          QueryB_File = FileName1, QueryB_Command = ProcessCommandLine1
+| summarize CorrelationCount = count(),
+            QueryA_Files = make_set(QueryA_File),
+            QueryB_Files = make_set(QueryB_File),
+            FirstSeen = min(CorrelationTimestamp),
+            LastSeen = max(CorrelationTimestamp)
+            by DeviceId, DeviceName, AccountName
+| where CorrelationCount >= 1  // Both patterns observed on same device within 1 hour
 """
         return _collapse_double_newlines(_normalize_kql_spacing(combined_kql))
 
@@ -1586,24 +1601,45 @@ def _build_correlation_search(queries: List[Dict], correlation_id: int) -> Dict:
 
 
 def _combine_mde_queries(query_list: List[str]) -> str:
-    """Combine multiple MDE/KQL queries into a single correlation search."""
-    combined_parts = []
+    """Combine multiple MDE/KQL queries into a single correlation search using proper join syntax."""
+    if not query_list or len(query_list) < 2:
+        return "// Error: Need at least 2 queries to correlate"
 
+    # Build let statements for each query with correlation keys
+    let_statements = []
     for idx, query in enumerate(query_list, 1):
         query_clean = _normalize_kql_spacing(query.strip())
-        combined_parts.append(f"""// Query {idx}
-let query_{idx} = (
+        let_statements.append(f"""// Detection Query {idx}
+let Query{idx} = materialize(
     {query_clean}
+    | extend CorrelationKey = strcat(DeviceId, "_", bin(Timestamp, 1h))
+    | extend DetectionSource{idx} = "Query{idx}"
+    | project Timestamp, DeviceId, DeviceName, AccountName, FileName, ProcessCommandLine, CorrelationKey, DetectionSource{idx}
 );""")
 
-    # Union all queries
-    union_clause = "union " + ", ".join([f"query_{i}" for i in range(1, len(query_list) + 1)])
+    # Build progressive joins starting with Query1
+    join_chain = "Query1"
+    for idx in range(2, len(query_list) + 1):
+        # Use leftanti for "OR" logic - match if ANY query matches
+        # Use inner for "AND" logic - match if ALL queries match
+        # For correlation, we want "OR" to catch any combination
+        join_chain += f"\n| join kind=fullouter (Query{idx}) on CorrelationKey"
 
-    combined = "\n\n".join(combined_parts)
-    combined += f"\n\n// Correlation search combining {len(query_list)} queries\n{union_clause}"
-    combined += "\n   | where Timestamp > ago(1d)"
-    combined += "\n   | summarize CorrelationCount=count() by DeviceId, DeviceName, Timestamp, AccountName"
-    combined += "\n   | where CorrelationCount >= 2  // At least 2 different detection patterns matched"
+    # Complete correlation query
+    combined = "\n\n".join(let_statements)
+    combined += f"\n\n// Correlation: Match if 2+ detection patterns fire on same device within 1 hour\n{join_chain}"
+    combined += "\n| where Timestamp > ago(1d) or " + " or ".join([f"Timestamp{i} > ago(1d)" for i in range(1, len(query_list))])
+    combined += "\n| extend MatchCount = "
+    # Count how many detection sources matched
+    match_conditions = " + ".join([f"iff(isnotempty(DetectionSource{i}), 1, 0)" for i in range(1, len(query_list) + 1)])
+    combined += match_conditions
+    combined += "\n| where MatchCount >= 2  // At least 2 different detection patterns matched"
+    combined += "\n| project DeviceId, DeviceName, AccountName, MatchCount,"
+    combined += "\n          " + ", ".join([f"DetectionSource{i}" for i in range(1, len(query_list) + 1)])
+    combined += "\n| summarize DetectionCount = count(),"
+    combined += "\n            DetectionSources = make_set_if(strcat(" + ", ".join([f"DetectionSource{i}" for i in range(1, len(query_list) + 1)]) + "), isnotempty(strcat(" + ", ".join([f"DetectionSource{i}" for i in range(1, len(query_list) + 1)]) + ")))"
+    combined += "\n            by DeviceId, DeviceName, AccountName"
+    combined += "\n| order by DetectionCount desc"
 
     return combined
 
