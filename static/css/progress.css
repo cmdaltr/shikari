@@ -128,8 +128,30 @@ h3.subheading {
   background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
 }
 
+.progress-fill.cross-vendor {
+  background: linear-gradient(90deg, #e91e63 0%, #c2185b 100%);
+}
+
 .progress-fill.complete {
   width: 100% !important;
+}
+
+/* Cross-vendor section greyed out state */
+#cross-vendor-section.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#cross-vendor-section.disabled .subheading {
+  color: #999;
+}
+
+#cross-vendor-section.disabled .progress-bar {
+  background: #f0f0f0;
+}
+
+#cross-vendor-section.disabled .progress-fill {
+  background: #ccc !important;
 }
 
 /* Last YAML File Display */
@@ -150,6 +172,18 @@ h3.subheading {
   padding: 0.75em 1em;
   background: #f8f9fa;
   border-left: 4px solid #007bff;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #495057;
+  word-break: break-word;
+}
+
+/* Cross-Vendor Correlation Display - Pink theme */
+#last-cross-vendor {
+  margin-top: 0.75em;
+  padding: 0.75em 1em;
+  background: #f8f9fa;
+  border-left: 4px solid #e91e63;
   border-radius: 4px;
   font-size: 0.9rem;
   color: #495057;

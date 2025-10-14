@@ -166,6 +166,7 @@ async def generate(
     ai_generators: str = Form(None),
     local_llm: str = Form(None),
     run_correlation: str = Form(None),
+    cross_vendor_correlation: str = Form(None),
     run_emulation: str = Form(None),
     emulation_mode: str = Form("simulate"),
     vectr_export: str = Form(None),
@@ -248,7 +249,12 @@ async def generate(
         # Initialize a progress file so the front-end has something to poll
         try:
             write_progress(
-                group_name, {"status": "started", "stage": "queued", "created_yaml": 0}
+                group_name, {
+                    "status": "started",
+                    "stage": "queued",
+                    "created_yaml": 0,
+                    "cross_vendor_enabled": (cross_vendor_correlation == "true")
+                }
             )
         except Exception:
             pass

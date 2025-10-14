@@ -453,8 +453,8 @@ async function refresh(){
         stopEllipsis(true); // Stop ellipsis animation
 
         console.debug('Displaying file:', displayFile);
-      } else if (created > 0) {
-        // Have some files but no specific file info yet - show count
+      } else if (created >= 3) {
+        // Have at least 3 files - show count (gives ellipsis more time to animate)
         lastEl.innerHTML = ''; // Clear existing content
 
         // "Processing: " in default color
@@ -470,7 +470,7 @@ async function refresh(){
 
         stopEllipsis(true);
       } else {
-        // No valid file yet - show waiting message with animated ellipsis
+        // No valid file yet or only 1-2 files - show waiting message with animated ellipsis
         lastEl.textContent = 'Waiting for first file';
         lastEl.style.color = '#666'; // Default gray for waiting text
         lastEl.removeAttribute('title');
@@ -560,6 +560,85 @@ async function refresh(){
       } else {
         // Waiting
         correlationInfoEl.textContent = 'Waiting for detection generation to complete';
+      }
+    }
+
+    // Cross-vendor correlation progress - only start after sole-vendor correlation completes
+    const crossVendorFill = document.getElementById('cross-vendor-progress');
+    const crossVendorSection = document.getElementById('cross-vendor-section');
+    if (crossVendorFill && crossVendorSection) {
+      let crossVendorPct = 0;
+      const correlationStatus = p.status || '';
+      const crossCount = p.cross_count || 0;
+
+      // Check if cross-vendor correlation was enabled from backend
+      const isCrossVendorEnabled = p.cross_vendor_enabled === true;
+
+      // Only show cross-vendor progress if sole-vendor correlation is complete
+      const soleVendorComplete = (correlationStatus === 'genai_complete' || correlationStatus === 'complete');
+
+      if (!isCrossVendorEnabled) {
+        // Cross-vendor disabled - grey out the section
+        crossVendorPct = 0;
+        crossVendorSection.classList.add('disabled');
+      } else {
+        // Cross-vendor enabled - remove disabled class and show pink theme
+        crossVendorSection.classList.remove('disabled');
+
+        if (!soleVendorComplete) {
+          // Wait for sole-vendor to complete first
+          crossVendorPct = 0;
+        } else if (crossCount > 0) {
+          // Cross-vendor complete - show 100%
+          crossVendorPct = 100;
+        } else {
+          // Processing (if we add cross-vendor correlation tracking in the future)
+          crossVendorPct = 0;
+        }
+      }
+
+      crossVendorFill.style.width = crossVendorPct + '%';
+      if (crossVendorPct >= 100) {
+        crossVendorFill.classList.add('complete');
+      }
+    }
+
+    // Display cross-vendor correlation info below the cross-vendor bar
+    const crossVendorInfoEl = document.getElementById('last-cross-vendor');
+    if (crossVendorInfoEl && crossVendorSection) {
+      const correlationStatus = p.status || '';
+      const crossCount = p.cross_count || 0;
+      const isCrossVendorEnabled = p.cross_vendor_enabled === true;
+      const soleVendorComplete = (correlationStatus === 'genai_complete' || correlationStatus === 'complete');
+
+      if (!isCrossVendorEnabled) {
+        // Cross-vendor disabled
+        crossVendorInfoEl.textContent = 'Cross-vendor correlation not enabled for this analysis';
+        crossVendorInfoEl.style.color = '#999';
+      } else if (!soleVendorComplete) {
+        // Wait for sole-vendor to complete
+        crossVendorInfoEl.textContent = 'Waiting for sole-vendor correlation to complete';
+        crossVendorInfoEl.style.color = '#999';
+      } else if (crossCount > 0) {
+        // Cross-vendor complete
+        crossVendorInfoEl.innerHTML = '';
+
+        // "Complete: " in pink and bold
+        const completeText = document.createElement('span');
+        completeText.textContent = 'Complete: ';
+        completeText.style.color = '#e91e63';
+        completeText.style.fontWeight = 'bold';
+        crossVendorInfoEl.appendChild(completeText);
+
+        // "X correlations generated" in black (default), normal weight
+        const countSpan = document.createElement('span');
+        countSpan.textContent = `${crossCount} cross-vendor correlations generated`;
+        countSpan.style.color = '#495057';
+        crossVendorInfoEl.appendChild(countSpan);
+      } else {
+        // No cross-vendor correlations found (enabled but no results)
+        crossVendorInfoEl.textContent = 'No cross-vendor correlations identified';
+        crossVendorInfoEl.style.color = '#6c757d';
       }
     }
 

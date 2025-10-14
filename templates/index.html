@@ -77,8 +77,13 @@
                 <div class="options-grid">
                   <label class="option-item">
                     <input type="checkbox" name="run_correlation" value="true" checked>
-                    <span class="option-label">Run Correlation</span>
-                    <span class="option-hint">Combine similar queries into multi-stage detections (Recommended)</span>
+                    <span class="option-label">Sole-Vendor Correlation</span>
+                    <span class="option-hint">Combine similar queries from same vendor (Splunk or MDE) into multi-stage detections (Recommended)</span>
+                  </label>
+                  <label class="option-item">
+                    <input type="checkbox" name="cross_vendor_correlation" value="true" id="cross-vendor-checkbox">
+                    <span class="option-label">Cross-Vendor Correlation</span>
+                    <span class="option-hint">Experimental: Correlate queries across different vendors (Splunk + MDE)</span>
                   </label>
                   <label class="option-item">
                     <input type="checkbox" name="semantic" value="true" checked id="semantic-checkbox">
