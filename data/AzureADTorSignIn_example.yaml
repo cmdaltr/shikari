@@ -1,0 +1,34 @@
+id: f7d4c1a8-9e3b-4f2a-b5c6-d8e9f0a1b2c3
+name: Azure AD Sign-in from Tor Exit Node
+description: |
+  Detects sign-in attempts to Azure AD from known Tor exit nodes. Threat actors
+  commonly use anonymization services to hide their origin during initial access
+  and credential theft operations.
+severity: High
+requiredDataConnectors:
+  - connectorId: AzureActiveDirectory
+    dataTypes:
+      - SigninLogs
+tactics:
+  - Initial Access
+  - Defense Evasion
+tags:
+  - Scattered Spider (Group)
+  - Tor
+  - Anonymization
+  - CloudAccounts
+relevantTechniques:
+  - T1078.004
+  - T1090.003
+query: |
+  SigninLogs
+  | where TimeGenerated > ago(24h)
+  | where ResultType == "0" // Successful sign-ins
+  | extend IPAddressFromResourceTenantId = tostring(parse_json(IPAddress))
+  | where IPAddressFromResourceTenantId has_any (
+      "tor-exit-node", // This is a placeholder - use actual Tor IP list
+      "proxy"
+  )
+  | project TimeGenerated, UserPrincipalName, IPAddress, Location, AppDisplayName, ResultType, RiskLevelDuringSignIn
+  | summarize Count=count() by UserPrincipalName, IPAddress, Location, AppDisplayName
+  | where Count > 1
