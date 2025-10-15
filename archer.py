@@ -575,7 +575,23 @@ def run_vectr_command(
 def main():
     parser = argparse.ArgumentParser(
         description="Archer CLI - Threat hunting detection generator",
-        epilog="Typical workflow: generate → correlate",
+        epilog="""
+Typical workflow: generate → correlate
+
+Optional API Keys (for enhanced features):
+  Set these as environment variables for full OSINT capabilities:
+    SHODAN_API_KEY         - Internet-facing assets (shodan.io)
+    SECURITYTRAILS_API_KEY - DNS history (securitytrails.com)
+    GITHUB_TOKEN           - Secret scanning (github.com/settings/tokens)
+    OPENAI_API_KEY         - AI enhancement (platform.openai.com/api-keys)
+
+  Example:
+    export SHODAN_API_KEY="your_key_here"
+
+  Or add to .env file in project root:
+    SHODAN_API_KEY=your_key_here
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 

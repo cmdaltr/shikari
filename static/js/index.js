@@ -1,23 +1,51 @@
 var loadingInterval;
-function showLoading(groupName) {
+var progressPollInterval;
+function showLoading(groupName, enableProgressPolling) {
   var overlay = document.getElementById('loading-overlay');
-  var groupSpan = document.getElementById('loading-group');
-  var dots = document.getElementById('loading-dots');
-  if (groupSpan) groupSpan.textContent = groupName ? ("for '" + groupName + "'") : '';
+  var messageEl = document.getElementById('loading-message');
   overlay.style.display = 'flex';
-  if (dots) {
+
+  // If progress polling is enabled (for profiling), poll for progress messages
+  if (enableProgressPolling && groupName) {
+    var safeGroupName = groupName.replace(/\./g, '_').replace(/\//g, '_');
+    messageEl.textContent = 'Initializing...';
+
+    progressPollInterval = setInterval(function () {
+      fetch('/progress_status?group_name=' + encodeURIComponent(safeGroupName))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var p = data.progress || data.progress_state || data || {};
+          var message = p.message || 'Processing...';
+          var status = p.status || '';
+
+          // Update message if we have one
+          if (message && status === 'profiling') {
+            messageEl.textContent = message;
+          } else if (status === 'profile_complete') {
+            messageEl.textContent = 'Profile complete!';
+          }
+        })
+        .catch(function () {
+          // Silently fail - keep existing message
+        });
+    }, 1000); // Poll every second
+  } else {
+    // Standard loading with dots animation
+    messageEl.textContent = 'Processing...';
     var count = 0;
     loadingInterval = setInterval(function () {
       count = (count + 1) % 4;
-      dots.textContent = '.'.repeat(count);
+      var dots = '.'.repeat(count);
+      messageEl.textContent = (groupName ? ("Processing '" + groupName + "'") : 'Processing') + dots;
     }, 500);
   }
 }
 function hideLoading() {
   document.getElementById('loading-overlay').style.display = 'none';
   if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
-  var dots = document.getElementById('loading-dots'); if (dots) dots.textContent = '';
-  var groupSpan = document.getElementById('loading-group'); if (groupSpan) groupSpan.textContent = '';
+  if (progressPollInterval) { clearInterval(progressPollInterval); progressPollInterval = null; }
+  var messageEl = document.getElementById('loading-message');
+  if (messageEl) messageEl.textContent = 'Processing...';
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -324,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (profileBtn) profileBtn.disabled = true;
         return false;
       }
-      showLoading('company profile');
+      showLoading(domainInput.value.trim(), true); // Enable progress polling for profiling
 
       var formData = new FormData(profileForm);
       fetch('/profile', {
@@ -338,13 +366,19 @@ document.addEventListener('DOMContentLoaded', function () {
         return response.text();
       })
       .then(function (data) {
+        hideLoading();
+
         if (typeof data === 'object' && data.redirect_url) {
           window.location = data.redirect_url;
           return;
         }
         if (typeof data === 'object' && data.success) {
-          alert('Profile created successfully! Saved to: ' + data.profile_path);
-          hideLoading();
+          // Show threat group selection if auto-generate was checked
+          if (data.show_selection && data.recommended_groups && data.recommended_groups.length > 0) {
+            showThreatGroupSelection(domainInput.value.trim(), data.recommended_groups, data.profile);
+          } else {
+            alert('Profile created successfully! Saved to: ' + data.profile_path);
+          }
           return;
         }
         var parser = new DOMParser();
@@ -422,16 +456,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  if (uploadForm) {
-    uploadForm.addEventListener('submit', function (e) {
+  // Attach click handler to button instead of form submit
+  if (uploadBtn && uploadForm) {
+    console.log('[DEBUG] Upload button handler attached');
+    uploadBtn.addEventListener('click', function (e) {
+      console.log('[DEBUG] Upload button clicked');
       e.preventDefault();
+      e.stopPropagation();
+
       if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        if (uploadBtn) uploadBtn.disabled = true;
+        console.log('[DEBUG] No file selected');
+        uploadBtn.disabled = true;
         return false;
       }
+
+      console.log('[DEBUG] File selected:', fileInput.files[0].name);
+      console.log('[DEBUG] Starting AJAX upload...');
       showLoading('file upload');
 
       var formData = new FormData(uploadForm);
+      console.log('[DEBUG] FormData created, sending fetch request...');
+
       fetch('/upload', {
         method: 'POST',
         body: formData,
@@ -443,8 +488,27 @@ document.addEventListener('DOMContentLoaded', function () {
         return response.text();
       })
       .then(function (data) {
+        hideLoading();
+
+        // Debug logging
+        console.log('Upload response:', data);
+        console.log('show_extraction:', data.show_extraction);
+        console.log('Type check:', typeof data === 'object' && data.show_extraction);
+
+        if (typeof data === 'object' && data.show_extraction) {
+          // Show extraction results modal
+          console.log('Showing extraction results modal');
+          showExtractionResults(data);
+          return;
+        }
         if (typeof data === 'object' && data.redirect_url) {
+          console.log('Redirecting to:', data.redirect_url);
           window.location = data.redirect_url;
+          return;
+        }
+        if (typeof data === 'object' && data.redirect) {
+          console.log('Redirecting to:', data.redirect);
+          window.location = data.redirect;
           return;
         }
         var parser = new DOMParser();
@@ -452,7 +516,397 @@ document.addEventListener('DOMContentLoaded', function () {
         var newContent = doc.getElementById('main-content');
         var oldContent = document.getElementById('main-content');
         if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
+      })
+      .catch(function (err) {
         hideLoading();
+        alert('Error: ' + err.message);
+      });
+    });
+  }
+});
+
+// SECURITY: HTML escape function to prevent XSS
+function escapeHtml(text) {
+  var map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// Function to show extraction results modal
+function showExtractionResults(data) {
+  var modal = document.createElement('div');
+  modal.id = 'extraction-results-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;';
+
+  var modalContent = document.createElement('div');
+  modalContent.style.cssText = 'background:white;border-radius:8px;max-width:900px;max-height:85vh;overflow-y:auto;padding:2em;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+
+  var html = '<h2 style="margin-top:0;">Extraction Results - Select Items to Process</h2>';
+  html += '<p style="color:#666;margin-bottom:1.5em;">Filename: <strong>' + escapeHtml(data.filename || 'Unknown') + '</strong></p>';
+
+  // TTPs section with loading placeholder
+  html += '<h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:0.5em;">';
+  html += 'TTPs Found (' + data.ttps_count + ') ';
+  html += '<span style="font-size:0.8em;color:#666;font-weight:normal;">';
+  html += '<input type="checkbox" id="select-all-ttps" style="margin-left:1em;vertical-align:middle;"> <label for="select-all-ttps" style="cursor:pointer;">Select All</label>';
+  html += '</span></h3>';
+
+  if (data.ttps && data.ttps.length > 0) {
+    html += '<div id="ttps-container" style="background:#f8f9fa;padding:1em;border-radius:4px;margin-bottom:1.5em;max-height:250px;overflow-y:auto;">';
+    html += '<p style="color:#999;font-style:italic;">Loading technique names...</p>';
+    html += '</div>';
+  } else {
+    html += '<p style="color:#999;font-style:italic;margin-bottom:1.5em;">No TTPs extracted</p>';
+  }
+
+  // IOCs section with checkboxes
+  html += '<h3 style="color:#2c3e50;border-bottom:2px solid #27ae60;padding-bottom:0.5em;">';
+  html += 'IOCs Found (' + data.iocs_count + ') ';
+  html += '<span style="font-size:0.8em;color:#666;font-weight:normal;">';
+  html += '<input type="checkbox" id="select-all-iocs" style="margin-left:1em;vertical-align:middle;"> <label for="select-all-iocs" style="cursor:pointer;">Select All</label>';
+  html += '</span></h3>';
+
+  if (data.iocs && Object.keys(data.iocs).length > 0) {
+    html += '<div style="background:#f8f9fa;padding:1em;border-radius:4px;margin-bottom:1.5em;max-height:350px;overflow-y:auto;">';
+
+    // Display order: IP, Domain, Command, Hash, Registry, Event, Software, File
+    var iocOrder = ['ip', 'domain', 'cmd', 'hash', 'reg', 'evt', 'sw', 'file'];
+    var iocLabels = {
+      'ip': 'IP Addresses',
+      'domain': 'Domains',
+      'cmd': 'Commands',
+      'hash': 'File Hashes',
+      'reg': 'Registry Keys',
+      'evt': 'Event IDs',
+      'sw': 'Software',
+      'file': 'File Paths'
+    };
+
+    iocOrder.forEach(function(iocType) {
+      if (data.iocs[iocType] && data.iocs[iocType].length > 0) {
+        html += '<div style="margin-bottom:1em;"><strong style="color:#27ae60;">' + iocLabels[iocType] + ' (' + data.iocs[iocType].length + '):</strong>';
+        html += '<div id="ioc-container-' + iocType + '" style="margin:0.5em 0 0 0;padding-left:0.5em;">';
+
+        // Show first 10 IOCs
+        data.iocs[iocType].slice(0, 10).forEach(function(ioc, idx) {
+          var iocId = 'ioc-' + iocType + '-' + idx;
+          html += '<div style="margin-bottom:0.3em;">';
+          html += '<label style="cursor:pointer;display:flex;align-items:start;gap:0.5em;">';
+          html += '<input type="checkbox" class="ioc-checkbox" data-ioc-type="' + iocType + '" value="' + escapeHtml(ioc) + '" checked style="margin-top:0.2em;flex-shrink:0;">';
+          html += '<span style="font-family:monospace;font-size:0.9em;word-break:break-all;">' + escapeHtml(ioc) + '</span>';
+          html += '</label></div>';
+        });
+
+        // Hidden container for remaining IOCs
+        if (data.iocs[iocType].length > 10) {
+          html += '<div id="ioc-hidden-' + iocType + '" style="display:none;">';
+          data.iocs[iocType].slice(10).forEach(function(ioc, idx) {
+            var iocId = 'ioc-' + iocType + '-' + (idx + 10);
+            html += '<div style="margin-bottom:0.3em;">';
+            html += '<label style="cursor:pointer;display:flex;align-items:start;gap:0.5em;">';
+            html += '<input type="checkbox" class="ioc-checkbox" data-ioc-type="' + iocType + '" value="' + escapeHtml(ioc) + '" checked style="margin-top:0.2em;flex-shrink:0;">';
+            html += '<span style="font-family:monospace;font-size:0.9em;word-break:break-all;">' + escapeHtml(ioc) + '</span>';
+            html += '</label></div>';
+          });
+          html += '</div>';
+
+          // Clickable "show more" link
+          html += '<p style="margin:0.5em 0 0 1.5em;">';
+          html += '<a href="#" id="show-more-' + iocType + '" style="color:#007bff;text-decoration:none;cursor:pointer;font-style:italic;">';
+          html += '▼ Show ' + (data.iocs[iocType].length - 10) + ' more (all selected by default)';
+          html += '</a>';
+          html += '<a href="#" id="show-less-' + iocType + '" style="color:#007bff;text-decoration:none;cursor:pointer;font-style:italic;display:none;">';
+          html += '▲ Show less';
+          html += '</a>';
+          html += '</p>';
+        }
+
+        html += '</div></div>';
+      }
+    });
+    html += '</div>';
+  } else {
+    html += '<p style="color:#999;font-style:italic;margin-bottom:1.5em;">No IOCs extracted</p>';
+  }
+
+  // Buttons
+  html += '<div style="display:flex;gap:1em;justify-content:flex-end;margin-top:2em;border-top:1px solid #dee2e6;padding-top:1.5em;">';
+  html += '<button id="cancel-extraction" style="padding:0.75em 1.5em;border:1px solid #ced4da;background:white;color:#495057;border-radius:4px;cursor:pointer;font-size:1em;">Cancel</button>';
+
+  if (data.auto_generate_requested && (data.ttps_count > 0 || data.iocs_count > 0)) {
+    html += '<button id="proceed-generation" style="padding:0.75em 1.5em;border:none;background:#007bff;color:white;border-radius:4px;cursor:pointer;font-size:1em;font-weight:500;">Proceed with Selected Items</button>';
+  } else {
+    html += '<button id="close-extraction" style="padding:0.75em 1.5em;border:none;background:#28a745;color:white;border-radius:4px;cursor:pointer;font-size:1em;font-weight:500;">Close</button>';
+  }
+  html += '</div>';
+
+  modalContent.innerHTML = html;
+  modal.appendChild(modalContent);
+  document.body.appendChild(modal);
+
+  // Fetch technique names and populate TTPs
+  if (data.ttps && data.ttps.length > 0) {
+    fetch('/api/technique_names', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({ technique_ids: data.ttps })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(techniqueNames) {
+      var ttpsContainer = document.getElementById('ttps-container');
+      if (ttpsContainer) {
+        var ttpsHtml = '<div style="padding-left:0.5em;">';
+        data.ttps.forEach(function(ttp, idx) {
+          var techName = techniqueNames[ttp] || 'Unknown Technique';
+          var ttpId = 'ttp-' + idx;
+          var attackUrl = 'https://attack.mitre.org/techniques/' + ttp.replace('.', '/');
+
+          ttpsHtml += '<div style="margin-bottom:0.4em;">';
+          ttpsHtml += '<label style="cursor:pointer;display:flex;align-items:start;gap:0.5em;">';
+          ttpsHtml += '<input type="checkbox" class="ttp-checkbox" value="' + escapeHtml(ttp) + '" checked style="margin-top:0.2em;flex-shrink:0;">';
+          ttpsHtml += '<span><a href="' + attackUrl + '" target="_blank" style="color:#3498db;text-decoration:none;font-weight:500;" title="View on MITRE ATT&CK">';
+          ttpsHtml += escapeHtml(techName) + ' (<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;">' + escapeHtml(ttp) + '</code>)';
+          ttpsHtml += '</a></span>';
+          ttpsHtml += '</label></div>';
+        });
+        ttpsHtml += '</div>';
+        ttpsContainer.innerHTML = ttpsHtml;
+      }
+    })
+    .catch(function(err) {
+      console.error('Error fetching technique names:', err);
+      var ttpsContainer = document.getElementById('ttps-container');
+      if (ttpsContainer) {
+        var ttpsHtml = '<div style="padding-left:0.5em;">';
+        data.ttps.forEach(function(ttp, idx) {
+          var ttpId = 'ttp-' + idx;
+          var attackUrl = 'https://attack.mitre.org/techniques/' + ttp.replace('.', '/');
+
+          ttpsHtml += '<div style="margin-bottom:0.4em;">';
+          ttpsHtml += '<label style="cursor:pointer;display:flex;align-items:start;gap:0.5em;">';
+          ttpsHtml += '<input type="checkbox" class="ttp-checkbox" value="' + escapeHtml(ttp) + '" checked style="margin-top:0.2em;flex-shrink:0;">';
+          ttpsHtml += '<span><a href="' + attackUrl + '" target="_blank" style="color:#3498db;text-decoration:none;font-weight:500;">';
+          ttpsHtml += '<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;">' + escapeHtml(ttp) + '</code>';
+          ttpsHtml += '</a></span>';
+          ttpsHtml += '</label></div>';
+        });
+        ttpsHtml += '</div>';
+        ttpsContainer.innerHTML = ttpsHtml;
+      }
+    });
+  }
+
+  // Select all checkboxes functionality
+  var selectAllTtps = document.getElementById('select-all-ttps');
+  if (selectAllTtps) {
+    selectAllTtps.addEventListener('change', function() {
+      var checkboxes = document.querySelectorAll('.ttp-checkbox');
+      checkboxes.forEach(function(cb) { cb.checked = selectAllTtps.checked; });
+    });
+  }
+
+  var selectAllIocs = document.getElementById('select-all-iocs');
+  if (selectAllIocs) {
+    selectAllIocs.addEventListener('change', function() {
+      var checkboxes = document.querySelectorAll('.ioc-checkbox');
+      checkboxes.forEach(function(cb) { cb.checked = selectAllIocs.checked; });
+    });
+  }
+
+  // Show/Hide more IOCs functionality
+  var iocOrder = ['ip', 'domain', 'cmd', 'hash', 'reg', 'evt', 'sw', 'file'];
+  iocOrder.forEach(function(iocType) {
+    var showMoreLink = document.getElementById('show-more-' + iocType);
+    var showLessLink = document.getElementById('show-less-' + iocType);
+    var hiddenContainer = document.getElementById('ioc-hidden-' + iocType);
+
+    if (showMoreLink && hiddenContainer) {
+      showMoreLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        hiddenContainer.style.display = 'block';
+        showMoreLink.style.display = 'none';
+        if (showLessLink) showLessLink.style.display = 'inline';
+      });
+    }
+
+    if (showLessLink && hiddenContainer) {
+      showLessLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        hiddenContainer.style.display = 'none';
+        showLessLink.style.display = 'none';
+        if (showMoreLink) showMoreLink.style.display = 'inline';
+      });
+    }
+  });
+
+  // Event listeners
+  document.getElementById('cancel-extraction')?.addEventListener('click', function() {
+    document.body.removeChild(modal);
+  });
+
+  document.getElementById('close-extraction')?.addEventListener('click', function() {
+    document.body.removeChild(modal);
+  });
+
+  document.getElementById('proceed-generation')?.addEventListener('click', function() {
+    // Collect selected TTPs
+    var selectedTtps = [];
+    document.querySelectorAll('.ttp-checkbox:checked').forEach(function(cb) {
+      selectedTtps.push(cb.value);
+    });
+
+    // Collect selected IOCs (includes all IOCs, both visible and hidden)
+    var selectedIocs = {};
+    document.querySelectorAll('.ioc-checkbox:checked').forEach(function(cb) {
+      var iocType = cb.getAttribute('data-ioc-type');
+      if (!selectedIocs[iocType]) {
+        selectedIocs[iocType] = [];
+      }
+      selectedIocs[iocType].push(cb.value);
+    });
+
+    if (selectedTtps.length === 0 && Object.keys(selectedIocs).length === 0) {
+      alert('Please select at least one TTP or IOC to proceed.');
+      return;
+    }
+
+    document.body.removeChild(modal);
+    showLoading('generating detections');
+
+    var formData = new FormData();
+    formData.append('synthetic_group_name', data.synthetic_group_name);
+    formData.append('selected_ttps', JSON.stringify(selectedTtps));
+    formData.append('selected_iocs', JSON.stringify(selectedIocs));
+
+    // Determine endpoint based on whether filename starts with "Blog:"
+    var endpoint = (data.filename && data.filename.startsWith('Blog:')) ? '/blog/generate' : '/upload/generate';
+
+    fetch(endpoint, {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(response) {
+      return response.json();
+    })
+    .then(function(result) {
+      hideLoading();
+      if (result.success && result.redirect) {
+        window.location = result.redirect;
+      } else if (result.error) {
+        alert('Error: ' + result.error);
+      }
+    })
+    .catch(function(err) {
+      hideLoading();
+      alert('Error: ' + err.message);
+    });
+  });
+}
+
+// Blog analysis form validation and option syncing
+document.addEventListener('DOMContentLoaded', function () {
+  var blogForm = document.getElementById('blog-form');
+  var blogUrlInput = document.getElementById('blog_url_input');
+  var blogBtn = document.getElementById('blog_btn');
+
+  // Sync options from upload form to blog form
+  function syncOptions() {
+    var uploadUseOpenAI = document.getElementById('upload_use_openai');
+    var uploadAutoGenerate = document.getElementById('upload_auto_generate');
+    var uploadRunCorrelation = document.getElementById('upload_run_correlation');
+
+    var blogUseOpenAI = document.getElementById('blog_use_openai');
+    var blogAutoGenerate = document.getElementById('blog_auto_generate');
+    var blogRunCorrelation = document.getElementById('blog_run_correlation');
+
+    if (uploadUseOpenAI && blogUseOpenAI) {
+      blogUseOpenAI.value = uploadUseOpenAI.checked ? 'true' : 'false';
+    }
+    if (uploadAutoGenerate && blogAutoGenerate) {
+      blogAutoGenerate.value = uploadAutoGenerate.checked ? 'true' : 'false';
+    }
+    if (uploadRunCorrelation && blogRunCorrelation) {
+      blogRunCorrelation.value = uploadRunCorrelation.checked ? 'true' : 'false';
+    }
+  }
+
+  // Add listeners to upload checkboxes to sync options
+  var uploadCheckboxes = document.querySelectorAll('#upload-form input[type="checkbox"]');
+  uploadCheckboxes.forEach(function(checkbox) {
+    checkbox.addEventListener('change', syncOptions);
+  });
+
+  function validateBlogUrl() {
+    var url = (blogUrlInput && blogUrlInput.value) || '';
+    // Basic URL validation
+    var isValid = url.trim() !== '' && (url.startsWith('http://') || url.startsWith('https://'));
+    if (blogBtn) blogBtn.disabled = !isValid;
+  }
+
+  if (blogUrlInput) {
+    blogUrlInput.addEventListener('input', validateBlogUrl);
+    validateBlogUrl(); // Initial validation
+  }
+
+  if (blogForm) {
+    blogForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!blogUrlInput || blogUrlInput.value.trim() === '') {
+        if (blogBtn) blogBtn.disabled = true;
+        return false;
+      }
+
+      // Sync options before submitting
+      syncOptions();
+
+      showLoading('blog analysis');
+
+      var formData = new FormData(blogForm);
+      fetch('/analyze_blog', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function (response) {
+        var contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) return response.json();
+        return response.text();
+      })
+      .then(function (data) {
+        hideLoading();
+
+        if (typeof data === 'object' && data.show_extraction) {
+          // Show extraction results modal (same as file upload)
+          showExtractionResults(data);
+          return;
+        }
+        if (typeof data === 'object' && data.redirect) {
+          window.location = data.redirect;
+          return;
+        }
+        if (typeof data === 'object' && data.success) {
+          if (data.message) {
+            alert(data.message);
+          }
+          // Clear the form
+          blogForm.reset();
+          validateBlogUrl();
+          return;
+        }
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(data, 'text/html');
+        var newContent = doc.getElementById('main-content');
+        var oldContent = document.getElementById('main-content');
+        if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
       })
       .catch(function (err) {
         hideLoading();
@@ -539,3 +993,120 @@ window.clearFileSelection = function () {
   var uploadBtn = document.getElementById('upload_btn');
   if (uploadBtn) uploadBtn.disabled = true;
 };
+
+// Threat Group Selection Modal
+function showThreatGroupSelection(domain, recommendedGroups, profile) {
+  // Create modal overlay
+  var overlay = document.createElement('div');
+  overlay.id = 'threat-group-selection-overlay';
+  overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center;';
+
+  // Create modal
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background: white; border-radius: 8px; padding: 2em; max-width: 700px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+
+  // Modal content
+  var html = '<h2 style="margin-top: 0;">🎯 Select Threat Groups for Detection Generation</h2>';
+  html += '<p style="color: #666; margin-bottom: 1.5em;">Profile complete for <strong>' + domain + '</strong>. Select which threat groups you want to generate detections for:</p>';
+
+  // Profile summary
+  html += '<div style="background: #f8f9fa; padding: 1em; border-radius: 4px; margin-bottom: 1.5em;">';
+  html += '<h3 style="margin: 0 0 0.5em 0; font-size: 1em;">Profile Summary</h3>';
+
+  if (profile.threat_profile && profile.threat_profile.industry) {
+    html += '<p style="margin: 0.3em 0;"><strong>Industry:</strong> ' + (profile.threat_profile.industry.sector || 'Unknown') + '</p>';
+  }
+  if (profile.threat_profile && profile.threat_profile.geography) {
+    html += '<p style="margin: 0.3em 0;"><strong>Location:</strong> ' + (profile.threat_profile.geography.country || 'Unknown') + '</p>';
+  }
+  html += '<p style="margin: 0.3em 0;"><strong>Risk Score:</strong> ' + (profile.risk_score || 0) + '/100</p>';
+  html += '<p style="margin: 0.3em 0;"><strong>Recommended Groups:</strong> ' + recommendedGroups.length + '</p>';
+  html += '</div>';
+
+  // Threat group checkboxes
+  html += '<div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 1em;">';
+  html += '<label style="display: block; margin-bottom: 0.5em;"><input type="checkbox" id="select-all-groups" style="margin-right: 0.5em;"><strong>Select All</strong></label>';
+  html += '<hr style="margin: 0.5em 0;">';
+
+  recommendedGroups.forEach(function(group, index) {
+    html += '<label style="display: block; padding: 0.5em; margin: 0.3em 0; background: ' + (index % 2 === 0 ? '#f8f9fa' : 'white') + '; border-radius: 3px; cursor: pointer;">';
+    html += '<input type="checkbox" class="group-checkbox" value="' + group + '" checked style="margin-right: 0.5em;">';
+    html += '<span style="font-weight: 500;">' + group + '</span>';
+    html += '</label>';
+  });
+  html += '</div>';
+
+  // Correlation option
+  html += '<div style="margin-top: 1em;">';
+  html += '<label style="display: block;"><input type="checkbox" id="run-correlation" checked style="margin-right: 0.5em;"><strong>Generate correlations</strong> (recommended)</label>';
+  html += '</div>';
+
+  // Buttons
+  html += '<div style="margin-top: 1.5em; display: flex; gap: 1em; justify-content: flex-end;">';
+  html += '<button id="cancel-generation" style="padding: 0.7em 1.5em; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>';
+  html += '<button id="confirm-generation" style="padding: 0.7em 1.5em; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate Detections</button>';
+  html += '</div>';
+
+  modal.innerHTML = html;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Event handlers
+  document.getElementById('select-all-groups').addEventListener('change', function(e) {
+    var checkboxes = document.querySelectorAll('.group-checkbox');
+    checkboxes.forEach(function(cb) {
+      cb.checked = e.target.checked;
+    });
+  });
+
+  document.getElementById('cancel-generation').addEventListener('click', function() {
+    document.body.removeChild(overlay);
+  });
+
+  document.getElementById('confirm-generation').addEventListener('click', function() {
+    var selectedGroups = [];
+    document.querySelectorAll('.group-checkbox:checked').forEach(function(cb) {
+      selectedGroups.push(cb.value);
+    });
+
+    if (selectedGroups.length === 0) {
+      alert('Please select at least one threat group');
+      return;
+    }
+
+    var runCorrelation = document.getElementById('run-correlation').checked;
+
+    // Close modal
+    document.body.removeChild(overlay);
+
+    // Show loading
+    showLoading('generating detections for ' + selectedGroups.length + ' threat group(s)');
+
+    // Submit to new endpoint
+    var formData = new FormData();
+    formData.append('domain', domain);
+    formData.append('selected_groups', selectedGroups.join(','));
+    formData.append('run_correlation', runCorrelation ? 'true' : 'false');
+
+    fetch('/profile/generate-detections', {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(response) {
+      return response.json();
+    })
+    .then(function(data) {
+      if (data.success && data.redirect_url) {
+        window.location = data.redirect_url;
+      } else if (data.error) {
+        hideLoading();
+        alert('Error: ' + data.error);
+      }
+    })
+    .catch(function(error) {
+      hideLoading();
+      alert('Error generating detections: ' + error);
+    });
+  });
+}

@@ -1,0 +1,145 @@
+digraph ArcherWeb {
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fillcolor="#e8f0fe", fontname="Arial"];
+    edge [color="#5f6368", fontname="Arial", fontsize=10];
+
+    graph [bgcolor="transparent", pad="0.5", ranksep="0.8", nodesep="0.6"];
+
+    // Browser layer
+    subgraph cluster_browser {
+        label="Browser (Frontend)";
+        style=filled;
+        fillcolor="#fff9c4";
+        fontname="Arial Bold";
+
+        html [label="HTML Templates\nindex.html, progress.html\nhow_it_works.html\n\nJinja2 rendering"];
+        js [label="JavaScript\ntabs.js, index.js\nprogress.js\n\nAJAX, real-time updates"];
+        css [label="CSS Styling\nstyle.css, tabs.css\n\nArcher theme colors"];
+    }
+
+    // FastAPI application layer
+    subgraph cluster_fastapi {
+        label="FastAPI Application (Python)";
+        style=filled;
+        fillcolor="#c8e6c9";
+        fontname="Arial Bold";
+
+        app [label="app.py\nMain Application\n\n200+ routes\nAsync handlers"];
+
+        subgraph cluster_routes {
+            label="API Routes";
+            style=filled;
+            fillcolor="#e8f5e9";
+
+            route_gen [label="/generate\nStart detection\ngeneration"];
+            route_upload [label="/upload\nFile upload &\nextraction"];
+            route_blog [label="/analyze_blog\nBlog analysis"];
+            route_profile [label="/profile\nCompany profiling"];
+            route_progress [label="/progress\nReal-time status"];
+        }
+    }
+
+    // Processing layer (background)
+    subgraph cluster_processing {
+        label="Background Processing";
+        style=filled;
+        fillcolor="#e0e0e0";
+        fontname="Arial Bold";
+
+        orchestrator_web [label="Orchestrator\nAsync workflow\n\nNon-blocking execution"];
+        file_proc [label="File Processor\nPDF, DOCX, CSV\nYARA, JSON\n\nExtracts IOCs/TTPs"];
+        blog_proc [label="Blog Processor\nHTML cleaning\nContent extraction\n\nRemoves scripts/ads"];
+        profile_proc [label="Profiler\nShodan lookup\nDNS analysis\n\nThreat landscape"];
+    }
+
+    // Core engines
+    subgraph cluster_engines {
+        label="Detection Engines";
+        style=filled;
+        fillcolor="#b2dfdb";
+        fontname="Arial Bold";
+
+        gen_engine [label="Generation Engine\nTemplate → Query\n\n1000+ queries/min"];
+        corr_engine [label="Correlation Engine\nFind relationships\n\nMulti-stage attacks"];
+        sem_engine [label="Semantic Engine\nBehavior grouping\n\nAuth, network, file"];
+        flow_engine [label="Flow Engine\nAttack diagrams\n\nJSON + HTML"];
+    }
+
+    // Progress tracking
+    subgraph cluster_progress {
+        label="Real-Time Progress";
+        style=filled;
+        fillcolor="#f8bbd0";
+        fontname="Arial Bold";
+
+        progress_track [label="Progress Tracker\nprogress.json\n\nAtomic writes\nNo race conditions"];
+        websocket [label="WebSocket/Poll\nLive updates\n\n500ms refresh"];
+    }
+
+    // Storage layer
+    subgraph cluster_storage {
+        label="File Storage";
+        style=filled;
+        fillcolor="#ffccbc";
+        fontname="Arial Bold";
+
+        data_groups [label="data/<group>/\nDetection files\nYAML outputs"];
+        data_uploads [label="data/uploads/\nUser files\nExtraction results"];
+        data_flows [label="data/attack_flows/\nFlow diagrams\nJSON + HTML"];
+        data_cache [label="data/cache/\nTemplates\nMITRE data"];
+    }
+
+    // User interaction flow
+    html -> js [label="DOM events"];
+    css -> html [label="Styling"];
+    js -> app [label="Fetch API\nJSON requests", color="#4285f4", style=bold];
+
+    // Routing
+    app -> route_gen;
+    app -> route_upload;
+    app -> route_blog;
+    app -> route_profile;
+    app -> route_progress;
+
+    // Route to processing
+    route_gen -> orchestrator_web [label="Start workflow"];
+    route_upload -> file_proc [label="Process file"];
+    route_blog -> blog_proc [label="Analyze URL"];
+    route_profile -> profile_proc [label="Profile domain"];
+
+    // Processing to engines
+    orchestrator_web -> gen_engine [label="Generate"];
+    orchestrator_web -> corr_engine [label="Correlate"];
+    orchestrator_web -> sem_engine [label="Group"];
+    orchestrator_web -> flow_engine [label="Visualize"];
+
+    // Progress tracking
+    gen_engine -> progress_track [label="Update status"];
+    corr_engine -> progress_track [label="Update status"];
+    progress_track -> websocket [label="Broadcast"];
+    websocket -> js [label="Live updates", color="#4285f4", style=bold];
+
+    // Storage
+    gen_engine -> data_groups [label="Write YAMLs"];
+    corr_engine -> data_groups [label="Write JSONs"];
+    flow_engine -> data_flows [label="Write flows"];
+    file_proc -> data_uploads [label="Save uploads"];
+    orchestrator_web -> data_cache [label="Cache data"];
+
+    // Results back to user
+    data_groups -> route_progress [label="Serve files", style=dashed];
+    data_flows -> route_progress [label="Serve flows", style=dashed];
+    route_progress -> js [label="Download links", color="#4285f4"];
+
+    // Legend
+    legend [shape=plaintext, label=<
+        <table border="0" cellborder="0" cellspacing="0">
+        <tr><td align="left"><b>Web Architecture Features:</b></td></tr>
+        <tr><td align="left">• Async/await for non-blocking I/O</td></tr>
+        <tr><td align="left">• Real-time progress updates</td></tr>
+        <tr><td align="left">• Background task processing</td></tr>
+        <tr><td align="left">• RESTful API design</td></tr>
+        <tr><td align="left">• Responsive UI with Fetch API</td></tr>
+        </table>
+    >];
+}

@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     tabButtons.forEach(button => {
         button.addEventListener('click', function() {
+            // Don't switch tabs if button is disabled
+            if (this.disabled || this.hasAttribute('disabled')) {
+                return;
+            }
+
             const tabId = this.getAttribute('data-tab');
 
             // Remove active class from all buttons and panes

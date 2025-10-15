@@ -619,6 +619,23 @@ async function refresh(){
   } catch(e) {
     console.debug('progress poll err', e);
   }
+
+  // Check if all stages are complete and redirect to results page
+  try {
+    const p = data.progress || data.progress_state || data || {};
+    const yamlDone = yamlComplete || (p.created_yaml > 0 && p.created_yaml >= p.total_yaml);
+    const correlationDone = (p.status === 'genai_complete' || p.status === 'complete');
+
+    // If both detection and correlation are complete, redirect to results page
+    if (yamlDone && correlationDone) {
+      console.debug('All stages complete, redirecting to results page');
+      setTimeout(() => {
+        window.location.href = `/results?group_name=${encodeURIComponent(group)}`;
+      }, 2000); // Wait 2 seconds to show completion state
+    }
+  } catch (e) {
+    console.debug('redirect check error', e);
+  }
 }
 setInterval(refresh, 1500);
 refresh();

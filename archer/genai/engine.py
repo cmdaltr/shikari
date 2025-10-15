@@ -512,6 +512,82 @@ def _extract_tactics(file_path: str) -> List[str]:
     return [t.lower().replace(' ', '-') for t in tactics if t]
 
 
+def _has_only_generic_terms(query: str) -> bool:
+    """
+    Check if a query contains only generic terms that are too broad for effective detection.
+    Returns True if the query should be filtered out from correlation selection.
+    Handles both KQL (MDE) and Splunk query syntax.
+    """
+    if not query or not isinstance(query, str):
+        return True  # Empty query is low quality
+
+    # Define generic terms that are too broad to be useful as sole indicators
+    generic_terms = {
+        "condition", "access", "policy", "policies", "data", "file",
+        "process", "user", "system", "service", "event", "log",
+        "network", "security", "admin", "administrator", "account",
+        "information", "management", "configuration", "settings",
+        "application", "program", "software", "windows", "linux"
+    }
+
+    # Extract search terms from both KQL and Splunk queries
+    search_terms = []
+
+    # KQL patterns: has_any("term1", "term2"), has "term", contains "term"
+
+    # Extract from has_any(...)
+    has_any_pattern = r'has_any\s*\(\s*([^)]+)\s*\)'
+    for match in re.finditer(has_any_pattern, query, re.IGNORECASE):
+        values = re.findall(r'"([^"]+)"', match.group(1))
+        search_terms.extend(values)
+
+    # Extract from has "..."
+    has_pattern = r'\bhas\s+"([^"]+)"'
+    for match in re.finditer(has_pattern, query, re.IGNORECASE):
+        search_terms.append(match.group(1))
+
+    # Extract from contains "..."
+    contains_pattern = r'\bcontains\s+"([^"]+)"'
+    for match in re.finditer(contains_pattern, query, re.IGNORECASE):
+        search_terms.append(match.group(1))
+
+    # Splunk patterns: field=value, field="value", field IN ("value1", "value2")
+
+    # Extract from field="value" or field=value
+    splunk_equals_pattern = r'\b(\w+)\s*=\s*"?([^"\s|]+)"?'
+    for match in re.finditer(splunk_equals_pattern, query):
+        field = match.group(1).lower()
+        value = match.group(2).strip('"')
+        # Only consider search/filter fields, not metadata like index or sourcetype
+        if field not in ['index', 'sourcetype', 'source', 'host', 'earliest', 'latest']:
+            search_terms.append(value)
+
+    # Extract from IN ("value1", "value2")
+    splunk_in_pattern = r'\bIN\s*\(\s*([^)]+)\s*\)'
+    for match in re.finditer(splunk_in_pattern, query, re.IGNORECASE):
+        values = re.findall(r'"([^"]+)"', match.group(1))
+        search_terms.extend(values)
+
+    # Extract from search command with quoted strings
+    splunk_search_pattern = r'\bsearch\s+"([^"]+)"'
+    for match in re.finditer(splunk_search_pattern, query, re.IGNORECASE):
+        search_terms.append(match.group(1))
+
+    # If no search terms found, consider it low quality
+    if not search_terms:
+        return True
+
+    # Check if ALL search terms are generic
+    non_generic_count = 0
+    for term in search_terms:
+        term_lower = term.lower().strip()
+        if term_lower not in generic_terms:
+            non_generic_count += 1
+
+    # If there's at least one non-generic term, keep the query
+    return non_generic_count == 0
+
+
 def _calculate_query_specificity(query: str) -> float:
     """
     Calculate query specificity score (0-1).
@@ -932,9 +1008,21 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                 ) or query_b.lstrip().startswith("Device"):
                     detected_vendor = "mde"
 
-                # KQL-only filter: require semantic overlap > 50% to include result
+                # Filter out queries with only generic terms
                 skip_pair = False
-                if detected_vendor in ["mde", "microsoft", "sentinel", "kql"]:
+                if _has_only_generic_terms(query_a) or _has_only_generic_terms(query_b):
+                    skip_pair = True
+
+                # Filter out identical queries (normalizing whitespace for comparison)
+                if not skip_pair:
+                    # Normalize whitespace and compare
+                    normalized_a = " ".join(query_a.split())
+                    normalized_b = " ".join(query_b.split())
+                    if normalized_a == normalized_b:
+                        skip_pair = True
+
+                # KQL-only filter: require semantic overlap > 50% to include result
+                if not skip_pair and detected_vendor in ["mde", "microsoft", "sentinel", "kql"]:
                     ov = _estimate_semantic_overlap_kql(query_a, query_b)
                     if ov <= 50:
                         skip_pair = True
@@ -976,14 +1064,30 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
     print(f"GenAI: Total correlations before filtering: {len(vendor_corr)}")
 
-    # Score and filter correlations to keep only high-fidelity results
-    # Calculate 10% of detections with minimum of 10
+    # Score and filter correlations to keep 10% per vendor based on detection count
     if vendor_corr:
-        total_detections = len(files)
-        max_correlations = max(10, int(total_detections * 0.10))
-        print(f"GenAI: Setting max correlations to {max_correlations} (10% of {total_detections} detections)")
-        vendor_corr = _score_and_filter_correlations(vendor_corr, file_info, max_results=max_correlations)
-        print(f"GenAI: Filtered to {len(vendor_corr)} high-fidelity correlations")
+        # Separate correlations by vendor
+        by_vendor_corr = {}
+        for corr in vendor_corr:
+            vendor = corr.get("vendor", "unknown")
+            if vendor not in by_vendor_corr:
+                by_vendor_corr[vendor] = []
+            by_vendor_corr[vendor].append(corr)
+
+        # Filter each vendor separately to get top 10% (minimum 10)
+        filtered_corr = []
+        for vendor, corrs in by_vendor_corr.items():
+            # Count detection files for this vendor
+            vendor_detection_count = len(by_vendor.get(vendor, []))
+            max_correlations = max(10, int(vendor_detection_count * 0.10))
+
+            print(f"GenAI: Vendor '{vendor}' has {vendor_detection_count} detections, filtering {len(corrs)} correlations to top {max_correlations} (10%)")
+            top_vendor_corrs = _score_and_filter_correlations(corrs, file_info, max_results=max_correlations)
+            print(f"GenAI: Kept {len(top_vendor_corrs)} correlations for vendor '{vendor}'")
+            filtered_corr.extend(top_vendor_corrs)
+
+        vendor_corr = filtered_corr
+        print(f"GenAI: Total filtered correlations across all vendors: {len(vendor_corr)}")
 
     # Send final progress update with complete count
     write_progress(
@@ -1167,10 +1271,34 @@ def _basic_combine_queries(
             if table_index > 0:
                 search_b = search_b[:table_index].strip()
 
-        # Combine with simple OR
+        # Build proper correlation using transaction to find devices where BOTH patterns occur
+        def clean_duplicates(search_str):
+            """Remove duplicate OR conditions"""
+            if not search_str:
+                return search_str
+            parts = re.split(r'\s+OR\s+', search_str, flags=re.IGNORECASE)
+            seen = set()
+            unique = []
+            for p in parts:
+                normalized = " ".join(p.strip().strip('()').split())
+                if normalized and normalized not in seen:
+                    unique.append(p.strip().strip('()'))
+                    seen.add(normalized)
+            return unique[0] if len(unique) == 1 else " OR ".join(unique)
+
+        search_a_clean = clean_duplicates(search_a)
+        search_b_clean = clean_duplicates(search_b)
+
         combined = f"""index={index} earliest=-1d
-  (({search_a}) OR ({search_b}))
-  | stats count BY AccountName AccountUpn ActionType DeviceName FileName FolderPath ProcessCommandLine InitiatingProcessAccountName InitiatingProcessAccountUpn InitiatingProcessCommandLine InitiatingProcessFileName InitiatingProcessFolderPath InitiatingProcessParentFileName user user_HVT_Flags user_LanID user_active user_bunit user_category user_email user_employee_number user_first user_id user_identity user_last user_location user_locked_out user_managedBy user_nick user_org user_phone user_prefix user_startDate user_status user_supervisor_employee_number user_type user_watchlist user_work_city user_work_country"""
+  ({search_a_clean}) OR ({search_b_clean})
+  | eval pattern_a=if(({search_a_clean}), "true", "false")
+  | eval pattern_b=if(({search_b_clean}), "true", "false")
+  | transaction properties.DeviceName maxspan=1h
+  | search pattern_a="true" AND pattern_b="true"
+  | stats count AS event_count, min(_time) AS first_seen, max(_time) AS last_seen, values(properties.FileName) AS file_names, values(properties.ProcessCommandLine) AS command_lines, values(properties.AccountName) AS accounts BY properties.DeviceName
+  | eval first_seen=strftime(first_seen, "%Y-%m-%d %H:%M:%S"), last_seen=strftime(last_seen, "%Y-%m-%d %H:%M:%S")
+  | where event_count >= 2
+  | sort - event_count"""
 
         return _collapse_double_newlines(combined)
 
@@ -1645,25 +1773,49 @@ let Query{idx} = materialize(
 
 
 def _combine_splunk_queries_simple(query_list: List[str]) -> str:
-    """Combine multiple Splunk queries into a single correlation search."""
+    """Combine multiple Splunk queries into a proper correlation search using transaction."""
     # Extract index from first query
     index_match = re.search(r'index\s*=\s*(\w+)', query_list[0])
     index = index_match.group(1) if index_match else 'edr_events'
 
     search_conditions = []
+    eval_statements = []
+    search_filters = []
+
     for idx, query in enumerate(query_list, 1):
         # Extract search condition (remove index= and table commands)
         search = query.strip()
         search = re.sub(r'index\s*=\s*\w+\s*earliest=[^\n]*\n', '', search)
         search = re.sub(r'\|\s*table\s+.*$', '', search, flags=re.MULTILINE).strip()
-        if search:
-            search_conditions.append(f"({search})")
+        search = re.sub(r'\|\s*stats\s+.*$', '', search, flags=re.MULTILINE).strip()
+        search = re.sub(r'\|\s*eval\s+.*$', '', search, flags=re.MULTILINE).strip()
 
+        if search:
+            # Clean up duplicates and unnecessary parentheses
+            parts = re.split(r'\s+OR\s+', search, flags=re.IGNORECASE)
+            seen = set()
+            unique = []
+            for p in parts:
+                normalized = " ".join(p.strip().strip('()').split())
+                if normalized and normalized not in seen:
+                    unique.append(p.strip().strip('()'))
+                    seen.add(normalized)
+
+            clean_search = unique[0] if len(unique) == 1 else " OR ".join(unique)
+            search_conditions.append(f"({clean_search})")
+            eval_statements.append(f'  | eval pattern_{idx}=if(({clean_search}), "true", "false")')
+            search_filters.append(f'pattern_{idx}="true"')
+
+    # Build correlation using transaction to find devices where ALL patterns occur
     combined = f"""index={index} earliest=-1d
-  ({' OR '.join(search_conditions)})
-  | stats count as CorrelationCount, values(*) as * by AccountName, DeviceName, _time
-  | where CorrelationCount >= 2
-  | table _time, AccountName, DeviceName, CorrelationCount, ActionType, FileName, ProcessCommandLine"""
+  {' OR '.join(search_conditions)}
+{''.join(eval_statements)}
+  | transaction properties.DeviceName maxspan=1h
+  | search {' AND '.join(search_filters)}
+  | stats count AS event_count, min(_time) AS first_seen, max(_time) AS last_seen, values(properties.FileName) AS file_names, values(properties.ProcessCommandLine) AS command_lines, values(properties.AccountName) AS accounts BY properties.DeviceName
+  | eval first_seen=strftime(first_seen, "%Y-%m-%d %H:%M:%S"), last_seen=strftime(last_seen, "%Y-%m-%d %H:%M:%S")
+  | where event_count >= {len(query_list)}
+  | sort - event_count"""
 
     return combined
 

@@ -38,20 +38,104 @@ def analyze_blog_post(url: str) -> Dict:
         - error: str (if failed)
     """
     try:
+        # SECURITY: Validate URL to prevent SSRF attacks
+        from urllib.parse import urlparse
+
+        parsed_url = urlparse(url)
+
+        # Only allow HTTP/HTTPS schemes
+        if parsed_url.scheme not in ['http', 'https']:
+            return {
+                "success": False,
+                "error": "Invalid URL scheme. Only HTTP and HTTPS are allowed."
+            }
+
+        # Block internal/private IP addresses to prevent SSRF
+        hostname = parsed_url.hostname
+        if not hostname:
+            return {
+                "success": False,
+                "error": "Invalid URL: no hostname found."
+            }
+
+        # Block localhost, private IPs, and link-local addresses
+        import socket
+        try:
+            ip_addr = socket.gethostbyname(hostname)
+            # Check if IP is private/internal
+            octets = ip_addr.split('.')
+            if len(octets) == 4:
+                first_octet = int(octets[0])
+                second_octet = int(octets[1])
+
+                # Block private ranges
+                if first_octet == 10:  # 10.0.0.0/8
+                    return {"success": False, "error": "Access to private IP ranges is not allowed."}
+                if first_octet == 172 and 16 <= second_octet <= 31:  # 172.16.0.0/12
+                    return {"success": False, "error": "Access to private IP ranges is not allowed."}
+                if first_octet == 192 and second_octet == 168:  # 192.168.0.0/16
+                    return {"success": False, "error": "Access to private IP ranges is not allowed."}
+                if first_octet == 127:  # 127.0.0.0/8 (localhost)
+                    return {"success": False, "error": "Access to localhost is not allowed."}
+                if first_octet == 169 and second_octet == 254:  # 169.254.0.0/16 (link-local)
+                    return {"success": False, "error": "Access to link-local addresses is not allowed."}
+                if first_octet >= 224:  # Multicast and reserved
+                    return {"success": False, "error": "Access to multicast/reserved IP ranges is not allowed."}
+        except socket.gaierror:
+            return {
+                "success": False,
+                "error": "Unable to resolve hostname."
+            }
+
         # Fetch the blog post
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, timeout=30, allow_redirects=True, max_redirects=3)
+
+        # SECURITY: Limit response size to prevent DoS
+        if len(response.content) > 10 * 1024 * 1024:  # 10MB limit
+            return {
+                "success": False,
+                "error": "Response too large (max 10MB allowed)."
+            }
+
         response.raise_for_status()
 
         # Parse HTML
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Extract text content
-        # Remove script and style elements
-        for script in soup(["script", "style", "nav", "footer", "header"]):
-            script.decompose()
+        # Extract text content - remove ALL non-content elements
+        # This ensures we only analyze the blog post content, not HTML/CSS/JS/navigation
+        for element in soup([
+            "script",      # JavaScript code
+            "style",       # CSS code
+            "link",        # CSS links
+            "meta",        # Meta tags
+            "noscript",    # NoScript tags
+            "iframe",      # Embedded frames
+            "nav",         # Navigation menus
+            "footer",      # Page footer
+            "header",      # Page header
+            "aside",       # Sidebars
+            "form",        # Forms
+            "button",      # Buttons
+            "input",       # Input fields
+            "select",      # Select dropdowns
+            "textarea",    # Text areas
+            "svg",         # SVG graphics
+            "canvas",      # Canvas elements
+            "code",        # Inline code (may contain HTML examples)
+            "pre",         # Preformatted code blocks
+        ]):
+            element.decompose()
+
+        # Also remove common non-content class/id patterns
+        for element in soup.find_all(class_=re.compile(r'(nav|menu|sidebar|footer|header|banner|ad|advertisement|social|share|comment|related)', re.I)):
+            element.decompose()
+
+        for element in soup.find_all(id=re.compile(r'(nav|menu|sidebar|footer|header|banner|ad|advertisement|social|share|comment|related)', re.I)):
+            element.decompose()
 
         text = soup.get_text()
 
@@ -68,6 +152,7 @@ def analyze_blog_post(url: str) -> Dict:
             "techniques": _extract_techniques(text),
             "tactics": _extract_tactics(text),
             "procedures": _extract_procedures(text),
+            "iocs": _extract_iocs(text),
         }
 
         return result
@@ -225,6 +310,22 @@ def _extract_procedures(text: str) -> List[str]:
                 break
 
     return procedures
+
+
+def _extract_iocs(text: str) -> Dict[str, List[str]]:
+    """
+    Extract Indicators of Compromise (IOCs) from text using the improved FileIntelligenceExtractor.
+
+    Returns:
+        Dict with IOC types as keys (ip, domain, hash, cmd, reg, evt, sw, file)
+    """
+    from archer.parsers.file_intelligence import FileIntelligenceExtractor
+
+    # Use the improved extractor with all the enhancements
+    extractor = FileIntelligenceExtractor(use_openai=False, use_local_llm=False)
+    iocs = extractor.extract_iocs(text)
+
+    return iocs
 
 
 def search_crowdstrike_blog(group_name: str) -> Optional[str]:

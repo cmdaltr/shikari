@@ -7,13 +7,26 @@
 {% block content %}
 <div id="main-content" class="page-shell">
   <div class="progress-container page-container">
-    <div class="content-wrap">  <!-- single shared wrapper -->
-      <div class="nav-row">
-        <a href="/" class="back-btn" aria-label="Go back" onclick="if (history.length > 1) { history.back(); return false; }">
-          <span class="arrow" aria-hidden="true">←</span> Back
-        </a>
-      </div>
+    <!-- Back button - top left -->
+    <div class="nav-row">
+      <a href="/" class="back-btn" aria-label="Go back" onclick="if (history.length > 1) { history.back(); return false; }">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Back
+      </a>
+    </div>
 
+    <!-- How Archer Works link - top right -->
+    <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      How Archer Works
+    </a>
+
+    <div class="content-wrap">  <!-- single shared wrapper -->
       <h2 class="page-title">Query Correlation Progress</h2>
 
       <div id="progress-content"

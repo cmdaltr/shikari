@@ -151,7 +151,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
             # Generate attack flow visualizations
             try:
-                from archer.visualization import generate_all_correlation_flows, generate_actor_flow
+                from archer.visualization.attack_flow import generate_all_correlation_flows, generate_actor_flow
 
                 # Generate flows for each correlation
                 correlations_file = os.path.join("data", "correlate", f"{group_name}.json")
@@ -159,20 +159,42 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                     print(f"Generating attack flow diagrams for correlations...")
                     generate_all_correlation_flows(group_name, correlations_file)
 
-                # Generate complete actor flow
-                all_techniques = [t.get("technique_id") for t in retrieved_data.get("techniques", []) if t.get("technique_id")]
-                tactics_map = {}
-                for tech in retrieved_data.get("techniques", []):
-                    tactic = tech.get("tactic", "unknown")
-                    tech_id = tech.get("technique_id")
-                    if tactic and tech_id:
-                        tactics_map.setdefault(tactic, []).append(tech_id)
+                # Generate complete actor flow using techniques from procedures
+                if group_in_mitre == "Y" and 'procedures' in locals():
+                    # Extract technique IDs and tactics from procedures
+                    all_techniques = [proc[0] for proc in procedures if proc[0]]  # proc[0] is technique_id
+                    tactics_map = {}
+                    for proc in procedures:
+                        tech_id = proc[0]
+                        tactics = proc[2] if len(proc) > 2 else []  # proc[2] is tactics list
+                        for tactic in tactics:
+                            if tactic:
+                                tactics_map.setdefault(tactic, []).append(tech_id)
 
-                if all_techniques:
-                    print(f"Generating complete actor attack flow with {len(all_techniques)} techniques...")
-                    generate_actor_flow(group_name, all_techniques, tactics_map)
+                    if all_techniques:
+                        print(f"Generating complete actor attack flow with {len(all_techniques)} techniques...")
+                        generate_actor_flow(group_name, all_techniques, tactics_map)
+                elif manual_data:
+                    # For manual data, extract from manual_data structure
+                    all_techniques = []
+                    tactics_map = {}
+                    for entry in manual_data:
+                        tactic = entry.get("tactic")
+                        techniques = entry.get("techniques", [])
+                        for tech_info in techniques:
+                            tech_id = tech_info.get("technique")
+                            if tech_id:
+                                all_techniques.append(tech_id)
+                                if tactic:
+                                    tactics_map.setdefault(tactic, []).append(tech_id)
+
+                    if all_techniques:
+                        print(f"Generating complete actor attack flow with {len(all_techniques)} techniques (manual)...")
+                        generate_actor_flow(group_name, all_techniques, tactics_map)
             except Exception as flow_error:
                 print(f"Attack flow generation warning: {flow_error}")
+                import traceback
+                traceback.print_exc()
                 # Don't fail the entire process if attack flow generation fails
 
             safe_progress_update(group_name, {

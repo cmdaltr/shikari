@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+{% block content %}
+<div id="main-content" class="page-shell">
+  <div class="results-container page-container">
+    <!-- Header with navigation and actions -->
+    <div class="results-header">
+      <div class="header-left">
+        <a href="/" class="back-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Back
+        </a>
+      </div>
+      <div class="header-right">
+        <!-- How Archer Works link -->
+        <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          How Archer Works
+        </a>
+
+        <button class="btn-secondary" id="download-all-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          Download All
+        </button>
+        <button class="btn-primary" id="new-analysis-btn" onclick="window.location.href='/'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          New Analysis
+        </button>
+      </div>
+    </div>
+
+    <!-- Success banner -->
+    <div class="success-banner">
+      <div class="success-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+      <div class="success-content">
+        <h1>Generation Complete: {{ group_name }}</h1>
+        <p class="success-subtitle">
+          Generated <strong>{{ total_detections }}</strong> detections across <strong>{{ vendor_count }}</strong> vendors
+          {% if correlation_count > 0 %}• Discovered <strong>{{ correlation_count }}</strong> multi-stage correlations{% endif %}
+          • Duration: <strong>{{ duration }}</strong>
+        </p>
+      </div>
+    </div>
+
+    <!-- Executive Summary Cards -->
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="card-icon detection">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3>{{ total_detections }}</h3>
+          <p>Detection Rules</p>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="card-icon correlation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3"/>
+            <circle cx="6" cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3>{{ correlation_count }}</h3>
+          <p>Correlations</p>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="card-icon technique">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3>{{ technique_count }}</h3>
+          <p>MITRE Techniques</p>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="card-icon vendor">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3>{{ vendor_count }}</h3>
+          <p>Vendors</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detection Rules Section -->
+    <div class="results-section">
+      <div class="section-header">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          Detection Rules
+        </h2>
+        <button class="btn-text" onclick="toggleAllVendors()">
+          <span id="expand-collapse-text">Expand All</span>
+        </button>
+      </div>
+
+      <div class="vendors-container">
+        {% for vendor in detections %}
+        <div class="vendor-group" data-vendor="{{ vendor.name }}">
+          <div class="vendor-header" onclick="toggleVendor('{{ vendor.name }}')">
+            <div class="vendor-info">
+              <span class="vendor-icon">{{ vendor.icon }}</span>
+              <h3>{{ vendor.display_name }}</h3>
+              <span class="badge">{{ vendor.count }} rules</span>
+            </div>
+            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+
+          <div class="vendor-content" style="display: none;">
+            {% for detection in vendor.detections %}
+            <div class="detection-item">
+              <div class="detection-header">
+                <div class="detection-info">
+                  <h4>{{ detection.title }}</h4>
+                  <span class="technique-badge">{{ detection.technique }}</span>
+                </div>
+                <div class="detection-actions">
+                  <button class="btn-icon" onclick="copyDetection('{{ detection.file }}')" title="Copy to clipboard">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                  </button>
+                  <button class="btn-icon" onclick="viewDetection('{{ detection.file }}')" title="View detection">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </button>
+                  <button class="btn-icon" onclick="downloadDetection('{{ detection.file }}')" title="Download">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <p class="detection-description">{{ detection.description }}</p>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Correlations Section -->
+    {% if correlations and correlations|length > 0 %}
+    <div class="results-section">
+      <div class="section-header">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3"/>
+            <circle cx="6" cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Attack Correlations
+        </h2>
+        <span class="section-badge">{{ correlations|length }} multi-stage sequences</span>
+      </div>
+
+      <div class="correlations-container">
+        {% for corr in correlations %}
+        <div class="correlation-item">
+          <div class="correlation-header">
+            <span class="correlation-id">Correlation #{{ loop.index }}</span>
+            <span class="badge">{{ corr.techniques|length }} techniques</span>
+          </div>
+          <div class="correlation-flow">
+            {% for tech in corr.techniques %}
+            <div class="flow-step">
+              <span class="technique-tag">{{ tech.id }}</span>
+              <span class="technique-name">{{ tech.name }}</span>
+            </div>
+            {% if not loop.last %}
+            <svg class="flow-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+            {% endif %}
+            {% endfor %}
+          </div>
+          <p class="correlation-description">{{ corr.description }}</p>
+          <div class="correlation-actions">
+            <button class="btn-text" onclick="viewAttackFlow('{{ corr.flow_file }}')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              View Attack Flow
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Attack Flow Visualization Section -->
+    {% if attack_flow_exists %}
+    <div class="results-section">
+      <div class="section-header">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Complete Actor Attack Flow
+        </h2>
+      </div>
+
+      <div class="attack-flow-container">
+        <div class="attack-flow-preview">
+          <div class="preview-placeholder">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            <p>Interactive attack flow visualization showing all techniques and tactical routes</p>
+          </div>
+        </div>
+        <div class="attack-flow-actions">
+          <button class="btn-primary" onclick="viewCompleteFlow('{{ group_name }}')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            View Interactive Flow
+          </button>
+          <button class="btn-secondary" onclick="downloadFlow('{{ group_name }}')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+            Download JSON
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Footer Actions -->
+    <div class="results-footer">
+      <div class="footer-info">
+        <p>Generated: {{ timestamp }}</p>
+        <p>Group: {{ group_name }}{% if mitre_id %} ({{ mitre_id }}){% endif %}</p>
+      </div>
+      <div class="footer-actions">
+        <button class="btn-outline" disabled title="Coming soon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+          Export to VECTR
+        </button>
+        <button class="btn-outline" disabled title="Coming soon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="10 8 16 12 10 16 10 8"/>
+          </svg>
+          Run Emulation
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', path='js/results.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+{% endblock %}

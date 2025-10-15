@@ -167,14 +167,16 @@ def validate_splunk_query(query: str) -> Tuple[bool, str]:
 
 def combine_splunk_queries(query_a: str, query_b: str) -> str:
     """
-    Intelligently combine two Splunk queries.
+    Combine two Splunk queries into a proper correlation search using transaction.
+
+    Creates a correlation that finds devices where BOTH patterns occur within a 1-hour window.
 
     Args:
         query_a: First Splunk query
         query_b: Second Splunk query
 
     Returns:
-        Combined query string
+        Combined correlation query string
     """
     # Parse both queries
     parsed_a = parse_splunk_query(query_a)
@@ -198,34 +200,46 @@ def combine_splunk_queries(query_a: str, query_b: str) -> str:
     elif "earliest" in parsed_b.time_range:
         earliest = f"earliest={parsed_b.time_range['earliest']}"
 
-    # Combine search terms with OR
-    if parsed_a.search_terms and parsed_b.search_terms:
-        search_terms = f"(({parsed_a.search_terms}) OR ({parsed_b.search_terms}))"
-    else:
-        search_terms = parsed_a.search_terms or parsed_b.search_terms or ""
+    # Extract search terms and clean them up
+    import re
 
-    # Identify common fields for stats or table commands
-    common_fields = []
-    if parsed_a.fields and parsed_b.fields:
-        # Find intersection of fields used in both queries
-        common_fields = list(set(parsed_a.fields).intersection(set(parsed_b.fields)))
+    def clean_search_terms(terms):
+        """Remove duplicate conditions and unnecessary parentheses"""
+        if not terms:
+            return terms
 
-    # If few common fields, use all fields from both
-    all_fields = list(set((parsed_a.fields or []) + (parsed_b.fields or [])))
-    fields_to_use = common_fields if len(common_fields) >= 3 else all_fields
+        # Extract individual conditions
+        conditions = []
+        # Split by OR but keep quoted strings intact
+        parts = re.split(r'\s+OR\s+', terms, flags=re.IGNORECASE)
+        seen = set()
 
-    # Standard fields to always include in stats/table if not already there
-    standard_fields = ["_time", "host", "source", "sourcetype"]
-    for field in standard_fields:
-        if field not in fields_to_use:
-            fields_to_use.append(field)
+        for part in parts:
+            # Normalize whitespace
+            normalized = " ".join(part.strip().strip('()').split())
+            if normalized and normalized not in seen:
+                conditions.append(part.strip().strip('()'))
+                seen.add(normalized)
 
-    # Construct combined query
-    combined = f"index={index} {earliest}\n  {search_terms}"
+        if len(conditions) == 1:
+            return conditions[0]
+        else:
+            return " OR ".join(conditions)
 
-    # Add a stats command if not empty fields list
-    if fields_to_use:
-        fields_str = " ".join(fields_to_use)
-        combined += f"\n  | stats count BY {fields_str}"
+    search_a = clean_search_terms(parsed_a.search_terms)
+    search_b = clean_search_terms(parsed_b.search_terms)
+
+    # Build correlation query using transaction command
+    # This creates a proper correlation by finding devices where both patterns occur
+    combined = f"""index={index} {earliest}
+  ({search_a}) OR ({search_b})
+  | eval pattern_a=if(({search_a}), "true", "false")
+  | eval pattern_b=if(({search_b}), "true", "false")
+  | transaction properties.DeviceName maxspan=1h
+  | search pattern_a="true" AND pattern_b="true"
+  | stats count AS event_count, min(_time) AS first_seen, max(_time) AS last_seen, values(properties.FileName) AS file_names, values(properties.ProcessCommandLine) AS command_lines, values(properties.AccountName) AS accounts BY properties.DeviceName
+  | eval first_seen=strftime(first_seen, "%Y-%m-%d %H:%M:%S"), last_seen=strftime(last_seen, "%Y-%m-%d %H:%M:%S")
+  | where event_count >= 2
+  | sort - event_count"""
 
     return combined

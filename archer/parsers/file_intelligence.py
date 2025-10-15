@@ -409,13 +409,196 @@ class FileIntelligenceParser:
             "file": []      # File paths/names
         }
 
-        # Extract IP addresses
-        ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
-        iocs["ip"] = re.findall(ip_pattern, text)
+        # Extract IP addresses (including defanged with [.] or [[.]])
+        ip_pattern = r'\b(?:\d{1,3}(?:\[\[?\.\]\]?|\.)){3}\d{1,3}\b'
+        ip_matches = re.findall(ip_pattern, text)
+        for ip in ip_matches:
+            # Clean up to check validity (remove all bracket variations)
+            clean_ip = ip.replace('[[.]]', '.').replace('[.]', '.').replace('[', '').replace(']', '')
+            parts = clean_ip.split('.')
+            if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+                # Exclude common false positives
+                if not clean_ip.startswith(('127.', '0.0.0.', '192.168.', '10.', '169.254.')):
+                    # Keep original defanging format if already defanged, otherwise add [.]
+                    if '[[.]]' in ip or '[.]' in ip:
+                        normalized = ip  # Already defanged, keep as-is
+                    else:
+                        normalized = ip.replace('.', '[.]')
+                    iocs["ip"].append(normalized)
 
-        # Extract domain names
-        domain_pattern = r'\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b'
-        iocs["domain"] = re.findall(domain_pattern, text)
+        # Extract domain names with intelligent filtering
+        # Match domains but with stricter validation
+        domain_pattern = r'\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(?:\[\[?\.\]\]?|\.))+[a-zA-Z]{2,}\b'
+        potential_domains = re.findall(domain_pattern, text)
+
+        for domain in potential_domains:
+            domain_lower = domain.lower()
+
+            # Clean up for analysis (remove all bracket variations)
+            clean_domain = domain.replace('[[.]]', '.').replace('[.]', '.').replace('[', '').replace(']', '')
+            parts = clean_domain.split('.')
+
+            # CHECK FILES FIRST: File extensions and known file indicators
+            # Check against clean_domain since domain_lower might have [.] or [[.]]
+            clean_domain_lower = clean_domain.lower()
+            if any(clean_domain_lower.endswith(ext) for ext in [
+                '.exe', '.dll', '.sys', '.bat', '.ps1', '.vbs', '.js', '.jar', '.zip', '.rar',
+                '.7z', '.tar', '.gz', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.txt',
+                '.log', '.tmp', '.bak', '.old', '.cab', '.msi', '.dat', '.dit', '.db', '.xml'
+            ]):
+                # Known malicious file indicators like NTDS.dit should go to file IOCs
+                if clean_domain_lower in ['ntds.dit', 'sam.hive', 'system.hive', 'security.hive']:
+                    if clean_domain not in iocs["file"]:
+                        iocs["file"].append(clean_domain)
+                # Otherwise skip files completely
+                continue
+
+            # EXCLUDE: Property/field names (e.g., Object.Property, Item.Subject)
+            # These have PascalCase or camelCase and look like programming constructs
+            if len(parts) >= 2:
+                is_property_path = False
+
+                # Count how many parts have PascalCase or camelCase
+                mixed_case_parts = 0
+                programming_term_parts = 0
+
+                for part in parts:
+                    # PascalCase: starts with uppercase, has more uppercase inside (ItemName, ParentFolder)
+                    # camelCase: starts with lowercase, has uppercase inside (accessedProcess, commandLine)
+                    has_uppercase_in_middle = len(part) > 1 and any(c.isupper() for c in part[1:])
+
+                    if part and has_uppercase_in_middle:
+                        mixed_case_parts += 1
+
+                    # Check for programming/schema terms
+                    # Only include terms that are UNLIKELY to be in real domain names
+                    if part.lower() in [
+                        # Schema/Object terms
+                        'item', 'object', 'folder', 'parent', 'dest', 'accessed',
+                        # Property terms
+                        'path', 'name', 'id', 'type', 'value', 'size', 'subject',
+                        # Data structure terms
+                        'data', 'context', 'metadata', 'attachments', 'messages',
+                        # Event/Log terms
+                        'event', 'audit', 'evaluation', 'match',
+                        # System terms
+                        'system', 'process', 'command', 'image', 'line', 'full',
+                        # Schema-specific
+                        'copiloteventdata', 'dlpauditeventmetadata', 'appaccesscontext',
+                        'apphost', 'aiplugin', 'aistemplugin', 'modeltransparency',
+                        'transparency', 'clientappname', 'fullimage', 'commandline',
+                        'parentfolder', 'destfolder', 'accessedobject', 'accessedprocess'
+                    ]:
+                        programming_term_parts += 1
+
+                # Rule 1: If has mixed case AND programming terms, it's likely a property
+                # Example: ParentFolder.Path (has PascalCase + "path" term)
+                if mixed_case_parts >= 1 and programming_term_parts >= 1:
+                    is_property_path = True
+                # Rule 2: If ALL parts are programming terms (even without mixed case)
+                # Example: accessed.name, folder.path
+                elif programming_term_parts == len(parts):
+                    is_property_path = True
+                # Rule 3: Multiple parts with mixed case (likely object hierarchy)
+                # Example: Item.ParentFolder.Path
+                elif mixed_case_parts >= 2:
+                    is_property_path = True
+
+                if is_property_path:
+                    continue
+
+            # EXCLUDE: Version numbers (e.g., 3.1.rar, 1.0.0.0)
+            if all(part.isdigit() for part in parts):
+                continue
+            if len(parts) == 2 and parts[0].isdigit():
+                continue
+
+            # Must have valid TLD (at least 2 chars, all letters)
+            tld = parts[-1].lower()
+            if len(tld) < 2 or not tld.isalpha():
+                continue
+
+            # EXCLUDE: TLDs that are actually file extensions or should be filtered
+            file_extension_tlds = {
+                'exe', 'dll', 'sys', 'bat', 'ps1', 'vbs', 'js', 'jar', 'zip', 'rar',
+                'txt', 'log', 'tmp', 'bak', 'old', 'cab', 'msi', 'dat', 'dit', 'xml',
+                'pdf', 'doc', 'xls', 'ppt', 'docx', 'xlsx', 'pptx', 'rtf', 'csv', 'ini',
+                'sh', 'py', 'rb', 'pl', 'php',  # Script file extensions
+                'email', 'id'  # Additional TLDs to exclude
+            }
+            if tld in file_extension_tlds:
+                continue
+
+            # REQUIRE: TLD must be a known valid internet TLD
+            # Common valid TLDs (not exhaustive, but covers most real-world cases)
+            # Sources: https://en.wikipedia.org/wiki/List_of_Internet_top-level_domains
+            valid_tlds = {
+                # Generic TLDs (most common)
+                'com', 'org', 'net', 'edu', 'gov', 'mil', 'int',
+                'info', 'biz', 'pro', 'museum', 'coop', 'aero',
+                'xxx', 'tel', 'mobi', 'asia', 'cat', 'jobs', 'travel',
+                'post', 'arpa',
+                # New gTLDs (common ones)
+                'app', 'dev', 'blog', 'shop', 'store', 'tech', 'online',
+                'site', 'website', 'space', 'cloud', 'digital',
+                'top', 'xyz', 'club', 'live', 'news', 'media', 'today',
+                'world', 'earth', 'money', 'bank', 'insurance', 'finance',
+                'solutions', 'services', 'consulting', 'management', 'agency',
+                'company', 'business', 'enterprises', 'ventures', 'holdings',
+                'group', 'network', 'systems', 'software', 'technology',
+                'link', 'click', 'download', 'support', 'help', 'wiki',
+                # Country codes (common ones used by threat actors)
+                'ru', 'cn', 'us', 'uk', 'de', 'fr', 'jp', 'kr', 'in', 'br',
+                'au', 'ca', 'nl', 'pl', 'se', 'no', 'fi', 'dk', 'it', 'es',
+                'pt', 'ch', 'at', 'be', 'cz', 'ro', 'hu', 'bg', 'ua', 'sk',
+                'ie', 'nz', 'za', 'sg', 'hk', 'tw', 'th', 'my', 'ph', 'id',
+                'vn', 'pk', 'bd', 'ir', 'tr', 'il', 'sa', 'ae', 'eg', 'ng',
+                'ke', 'gh', 'tz', 'ug', 'mx', 'ar', 'cl', 'co', 've', 'pe',
+                # Infrastructure/hosting TLDs often used by threat actors
+                'xyz', 'top', 'tk', 'ml', 'ga', 'cf', 'gq', 'pw', 'cc', 'ws',
+                'to', 'io', 'sh', 'ac', 'im', 'gg', 'je', 'tv', 'fm', 'am',
+                # Other legitimate TLDs
+                'eu', 'gov', 'edu', 'ac', 'co', 'org', 'net', 'me'
+            }
+
+            # If TLD is not in valid list, it's probably not a domain
+            if tld not in valid_tlds:
+                continue
+
+            # Must have at least one letter in the domain name (not just numbers)
+            if not any(c.isalpha() for c in clean_domain.replace('.', '')):
+                continue
+
+            # EXCLUDE: Common legitimate domains and security vendor domains
+            # Check against clean_domain to handle defanged indicators
+            clean_check = clean_domain.lower().replace('[.]', '.').replace('[[.]]', '.')
+            exclude_domains = [
+                'microsoft.com', 'google.com', 'github.com', 'windows.com',
+                'apple.com', 'adobe.com', 'mozilla.org', 'kernel.org',
+                'example.com', 'test.com', 'localhost',
+                'crowdstrike.com', 'splunkcloud.com', 'file.io'
+            ]
+            if any(exclude in clean_check for exclude in exclude_domains):
+                continue
+            # Also check if it ends with these domains (for subdomains)
+            if any(clean_check.endswith(exclude) for exclude in exclude_domains):
+                continue
+
+            # REQUIRE: At least 2 parts (domain + TLD minimum)
+            if len(parts) < 2:
+                continue
+
+            # REQUIRE: Domain part should be at least 2 chars
+            if len(parts[-2]) < 2:
+                continue
+
+            # Keep original defanging format if already defanged, otherwise add [.]
+            if '[[.]]' in domain or '[.]' in domain:
+                normalized = domain  # Already defanged, keep as-is
+            else:
+                normalized = domain.replace('.', '[.]')
+
+            iocs["domain"].append(normalized)
 
         # Extract file hashes (MD5, SHA1, SHA256)
         hash_patterns = {
@@ -444,6 +627,74 @@ class FileIntelligenceParser:
         for pattern in file_patterns:
             iocs["file"].extend(re.findall(pattern, text))
 
+        # Extract command-line indicators
+        command_patterns = [
+            # FTP commands
+            r'ftp(?:\.[a-z]+)?\s+[^\s]+',
+            # SSH commands with keys
+            r'ssh\s+-i\s+[^\s]+\s+[^\s]+@[^\s]+',
+            # AWS CLI commands
+            r'aws\s+[a-z0-9-]+\s+[^\n]+',
+            # Azure CLI commands
+            r'az\s+[a-z0-9-]+\s+[^\n]+',
+            # Docker commands
+            r'docker\s+(?:run|exec|build|pull|push)[^\n]+',
+            # gcloud commands
+            r'gcloud\s+[a-z0-9-]+\s+[^\n]+',
+            # PowerShell commands
+            r'powershell(?:\.exe)?\s+-[^\n]+',
+            r'Invoke-[A-Za-z]+[^\n]*',
+            # CMD commands
+            r'cmd(?:\.exe)?\s+/[c|k][^\n]+',
+            # Curl/wget
+            r'(?:curl|wget)\s+[^\n]+',
+            # General command line with common executables
+            r'\b(?:rundll32|regsvr32|mshta|certutil|bitsadmin|wmic|net|sc)(?:\.exe)?\s+[^\n]+'
+        ]
+
+        for pattern in command_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
+            for match in matches:
+                # Strip description after ': ' separator (e.g., "command: description")
+                if ': ' in match:
+                    match = match.split(': ')[0]
+
+                # Clean up: strip whitespace and trailing dots
+                cleaned = match.strip().rstrip('.')
+
+                # Strip trailing punctuation patterns like ) or (.exe .dll dump)))
+                # Use regex to remove patterns like ") or (.xxx" and trailing parentheses
+                cleaned = re.sub(r'\)\s+or\s+\([^)]+\)+$', '', cleaned)
+
+                # Remove remaining trailing closing parentheses and spaces
+                while cleaned.endswith(')') or cleaned.endswith(' '):
+                    cleaned = cleaned.rstrip(') ')
+
+                # Strip trailing punctuation that might vary (: , ; etc)
+                cleaned = cleaned.rstrip(':,;')
+
+                # Smart quote stripping: only strip trailing quotes if there are no quotes in the command body
+                if cleaned:
+                    # Check for trailing single or double quotes
+                    if cleaned.endswith('"'):
+                        # Only strip if there are no other double quotes in the command
+                        if cleaned[:-1].count('"') == 0:
+                            cleaned = cleaned[:-1]
+                    elif cleaned.endswith("'"):
+                        # Only strip if there are no other single quotes in the command
+                        if cleaned[:-1].count("'") == 0:
+                            cleaned = cleaned[:-1]
+
+                # Defang URLs in commands: http -> hxxp, https -> hxxps
+                cleaned = re.sub(r'\bhttp://', 'hxxp://', cleaned, flags=re.IGNORECASE)
+                cleaned = re.sub(r'\bhttps://', 'hxxps://', cleaned, flags=re.IGNORECASE)
+
+                # Truncate if too long
+                cleaned = cleaned[:200]
+
+                if cleaned:
+                    iocs["cmd"].append(cleaned)
+
         # Extract command-line indicators using GenAI if available
         if self.use_openai or self.use_local_llm:
             ai_iocs = self._extract_iocs_with_ai(text)
@@ -451,9 +702,63 @@ class FileIntelligenceParser:
                 if key in iocs:
                     iocs[key].extend(ai_iocs[key])
 
-        # Remove duplicates
+        # Remove duplicates and convert ALL IOCs to lowercase
         for key in iocs:
-            iocs[key] = sorted(list(set(iocs[key])))
+            # Convert all to lowercase first
+            lowercase_items = [item.lower() for item in iocs[key]]
+            # Remove duplicates
+            unique_items = sorted(list(set(lowercase_items)))
+            iocs[key] = unique_items
+
+        # Special processing for commands: merge similar commands
+        if iocs["cmd"]:
+            merged_commands = []
+            skip_indices = set()
+
+            for i, cmd1 in enumerate(iocs["cmd"]):
+                if i in skip_indices:
+                    continue
+
+                # Check against all subsequent commands
+                for j in range(i + 1, len(iocs["cmd"])):
+                    if j in skip_indices:
+                        continue
+
+                    cmd2 = iocs["cmd"][j]
+
+                    # Normalize both commands for comparison (handle URL defanging variations)
+                    norm_cmd1 = cmd1.replace('hxxp://', 'http://').replace('hxxps://', 'https://')
+                    norm_cmd2 = cmd2.replace('hxxp://', 'http://').replace('hxxps://', 'https://')
+
+                    # Check if commands are identical after normalization
+                    if norm_cmd1 == norm_cmd2:
+                        # Keep the defanged version (with hxxp) if one exists
+                        if 'hxxp' in cmd1:
+                            skip_indices.add(j)  # cmd1 has hxxp, skip cmd2
+                        else:
+                            skip_indices.add(i)  # cmd2 has hxxp, skip cmd1 and use cmd2
+                            break
+                        continue
+
+                    # Calculate length difference
+                    len_diff = abs(len(cmd1) - len(cmd2))
+
+                    # If length difference is ≤5, check if they're similar
+                    if len_diff <= 5:
+                        # Get the shorter command for comparison
+                        shorter = cmd1 if len(cmd1) <= len(cmd2) else cmd2
+                        longer = cmd2 if len(cmd1) <= len(cmd2) else cmd1
+
+                        # Check if shorter command is a prefix of longer (allowing trailing punctuation)
+                        if longer.startswith(shorter):
+                            # They're similar enough, keep the shorter one and skip the longer
+                            skip_indices.add(j)
+
+                # Add the command if not skipped
+                if i not in skip_indices:
+                    merged_commands.append(cmd1)
+
+            iocs["cmd"] = sorted(merged_commands)
 
         return iocs
 

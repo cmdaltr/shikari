@@ -38,6 +38,7 @@ data/generate/*.yaml
 data/hunt/*.yaml
 !data/hunt/*_example.yaml
 data/progress/*.json
+data/progress/*.lock
 !data/progress/.gitkeep
 data/profiles/*.json
 !data/profiles/.gitkeep
@@ -50,6 +51,11 @@ archer/data/cache/*
 archer/data/query_examples/*
 !archer/data/query_examples/.gitkeep
 !archer/data/query_examples/README.md
+
+# Uploads directory (user-uploaded files and extractions)
+data/uploads/*
+!data/uploads/.gitkeep
+!data/uploads/*_template.json
 
 # Emulation output (runtime generated files)
 data/emulation/*.json

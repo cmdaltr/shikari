@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Form, Request, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from archer.security import sanitize_filename, sanitize_path_component, validate_safe_path, sanitize_group_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
@@ -148,6 +149,15 @@ def read_form(request: Request):
             "wait_message": None,
             "js_script": None,
         },
+    )
+
+
+@app.get("/how-it-works", response_class=HTMLResponse)
+def how_it_works(request: Request):
+    """Render the 'How Archer Works' documentation page."""
+    return templates.TemplateResponse(
+        "how_it_works.html",
+        {"request": request},
     )
 
 
@@ -845,8 +855,39 @@ async def upload_file(
     TTPs and IOCs using GenAI, then optionally generates detection queries.
     """
     try:
-        # Read file content
+        # SECURITY: Validate filename to prevent path traversal
+        import os
+        import re
+
+        if not file.filename:
+            return JSONResponse({
+                "success": False,
+                "error": "No filename provided"
+            }, status_code=400)
+
+        # Sanitize filename - remove path components and dangerous characters
+        safe_filename = os.path.basename(file.filename)
+        safe_filename = re.sub(r'[^\w\s\-\.]', '_', safe_filename)
+
+        # Check file extension whitelist
+        allowed_extensions = {'.pdf', '.txt', '.md', '.json', '.csv', '.xlsx', '.xls', '.docx', '.doc', '.yar', '.yara'}
+        file_ext = os.path.splitext(safe_filename)[1].lower()
+
+        if file_ext not in allowed_extensions:
+            return JSONResponse({
+                "success": False,
+                "error": f"File type '{file_ext}' not allowed. Allowed types: {', '.join(allowed_extensions)}"
+            }, status_code=400)
+
+        # SECURITY: Limit file size to 50MB
         file_content = await file.read()
+        max_size = 50 * 1024 * 1024  # 50MB
+
+        if len(file_content) > max_size:
+            return JSONResponse({
+                "success": False,
+                "error": f"File too large. Maximum size is {max_size // (1024*1024)}MB"
+            }, status_code=413)
 
         # Import the file intelligence parser
         from archer.parsers.file_intelligence import parse_intelligence_file
@@ -854,7 +895,7 @@ async def upload_file(
         # Parse the file to extract TTPs and IOCs
         use_ai = use_openai == "true"
         result = parse_intelligence_file(
-            file_path=file.filename,
+            file_path=safe_filename,
             file_content=file_content,
             use_openai=use_ai,
             use_local_llm=False
@@ -867,97 +908,179 @@ async def upload_file(
         # Create a synthetic group name for tracking
         import hashlib
         file_hash = hashlib.md5(file_content).hexdigest()[:8]
-        synthetic_group_name = f"Upload_{file.filename.split('.')[0]}_{file_hash}"
+        base_name = os.path.splitext(safe_filename)[0]
+        # SECURITY: Sanitize the group name to prevent path traversal
+        synthetic_group_name = sanitize_group_name(f"Upload_{base_name}_{file_hash}")
 
-        # If auto-generate is enabled, create detections
-        if auto_generate == "true" and (ttps or any(iocs.values())):
-            # Build manual data structure for process_group
-            manual_data = {
-                "techniques": [],
-                "identifiers": iocs,  # Use extracted IOCs
-                "metadata": {
-                    "source": "file_upload",
-                    "filename": file.filename,
-                    "ttps_found": ttps
-                }
-            }
+        # Save extraction results to file for later use
+        import json
+        upload_dir = os.path.join("data", "uploads")
+        os.makedirs(upload_dir, exist_ok=True)
 
-            # Add technique data for each TTP
-            for ttp_id in ttps:
-                # Try to get technique info from MITRE
-                try:
-                    technique_info = _get_technique_info(ttp_id)
-                    if technique_info:
-                        manual_data["techniques"].append(technique_info)
-                except Exception:
-                    # If we can't find the technique, add minimal data
-                    manual_data["techniques"].append({
-                        "tid": ttp_id,
-                        "name": f"Technique {ttp_id}",
-                        "tactic": "Unknown",
-                        "description": f"Extracted from {file.filename}",
-                        "software_used": [],
-                        "platforms": ["windows", "linux", "macos"]
-                    })
+        result_file = os.path.join(upload_dir, f"{synthetic_group_name}_extraction.json")
+        with open(result_file, "w") as f:
+            json.dump({
+                "filename": safe_filename,
+                "ttps": ttps,
+                "iocs": iocs,
+                "synthetic_group_name": synthetic_group_name,
+                "use_openai": use_ai,
+                "run_correlation": run_correlation == "true"
+            }, f, indent=2)
 
-            # Save extraction results to file for reference
-            import json
-            upload_dir = os.path.join("data", "uploads")
-            os.makedirs(upload_dir, exist_ok=True)
+        # Always return extraction results first for user review
+        # The frontend will display these and give user option to proceed
+        response_data = {
+            "success": True,
+            "show_extraction": True,
+            "filename": safe_filename,
+            "synthetic_group_name": synthetic_group_name,
+            "ttps": ttps,
+            "iocs": {k: v for k, v in iocs.items() if v},  # Only include non-empty
+            "ttps_count": len(ttps),
+            "iocs_count": sum(len(v) for v in iocs.values()),
+            "auto_generate_requested": auto_generate == "true"
+        }
 
-            result_file = os.path.join(upload_dir, f"{synthetic_group_name}_extraction.json")
-            with open(result_file, "w") as f:
-                json.dump({
-                    "filename": file.filename,
-                    "ttps": ttps,
-                    "iocs": iocs,
-                    "manual_data": manual_data
-                }, f, indent=2)
+        print(f"\n[DEBUG] Returning extraction results:")
+        print(f"  - show_extraction: {response_data['show_extraction']}")
+        print(f"  - filename: {response_data['filename']}")
+        print(f"  - ttps_count: {response_data['ttps_count']}")
+        print(f"  - iocs_count: {response_data['iocs_count']}")
+        print(f"  - auto_generate_requested: {response_data['auto_generate_requested']}")
 
-            # Process in background thread
-            def _bg():
-                try:
-                    modified_process_group_wrapper(
-                        synthetic_group_name,
-                        f"Generated from uploaded file: {file.filename}",
-                        manual_data=manual_data,
-                        genai_mode="semantic" if not use_ai else "ai_generators",
-                        run_correlation=(run_correlation == "true")
-                    )
-                except Exception as e:
-                    print(f"Error processing upload: {e}")
-                    try:
-                        write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
-                    except Exception:
-                        pass
+        return JSONResponse(response_data)
 
-            threading.Thread(target=_bg, daemon=True).start()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
 
-            # Initialize progress
-            try:
-                write_progress(synthetic_group_name, {
-                    "status": "processing",
-                    "current_step": "Generating detections from uploaded file",
-                    "ttps_found": len(ttps),
-                    "iocs_found": sum(len(v) for v in iocs.values())
-                })
-            except Exception:
-                pass
 
+@app.post("/upload/generate")
+async def generate_from_upload(
+    request: Request,
+    synthetic_group_name: str = Form(...),
+    selected_ttps: str = Form(None),
+    selected_iocs: str = Form(None)
+):
+    """
+    Generate detections from previously uploaded and extracted file.
+    Called after user reviews extraction results and chooses to proceed.
+    Now supports user-selected TTPs and IOCs.
+    """
+    try:
+        import json
+        import os
+
+        # SECURITY: Sanitize group name to prevent path traversal
+        safe_group_name = sanitize_group_name(synthetic_group_name)
+
+        # Load the extraction results
+        upload_dir = os.path.join("data", "uploads")
+        result_file = os.path.join(upload_dir, f"{safe_group_name}_extraction.json")
+
+        # SECURITY: Validate the path is within the expected directory
+        safe_path = validate_safe_path(upload_dir, result_file)
+        if not safe_path:
             return JSONResponse({
-                "success": True,
-                "redirect": f"/progress?group_name={synthetic_group_name}",
+                "success": False,
+                "error": "Invalid file path"
+            }, status_code=400)
+
+        result_file = safe_path
+
+        if not os.path.exists(result_file):
+            return JSONResponse({
+                "success": False,
+                "error": "Extraction results not found. Please upload the file again."
+            }, status_code=404)
+
+        with open(result_file, "r") as f:
+            extraction_data = json.load(f)
+
+        # Use selected TTPs/IOCs if provided, otherwise use all extracted data
+        if selected_ttps:
+            ttps = json.loads(selected_ttps)
+        else:
+            ttps = extraction_data.get("ttps", [])
+
+        if selected_iocs:
+            iocs = json.loads(selected_iocs)
+        else:
+            iocs = extraction_data.get("iocs", {})
+        filename = extraction_data.get("filename", "unknown")
+        use_ai = extraction_data.get("use_openai", False)
+        run_correlation = extraction_data.get("run_correlation", False)
+
+        # Build manual data structure for process_group
+        manual_data = {
+            "techniques": [],
+            "identifiers": iocs,  # Use extracted IOCs
+            "metadata": {
+                "source": "file_upload",
+                "filename": filename,
+                "ttps_found": ttps
+            }
+        }
+
+        # Add technique data for each TTP
+        for ttp_id in ttps:
+            # Try to get technique info from MITRE
+            try:
+                technique_info = _get_technique_info(ttp_id)
+                if technique_info:
+                    manual_data["techniques"].append(technique_info)
+            except Exception:
+                # If we can't find the technique, add minimal data
+                manual_data["techniques"].append({
+                    "tid": ttp_id,
+                    "name": f"Technique {ttp_id}",
+                    "tactic": "Unknown",
+                    "description": f"Extracted from {filename}",
+                    "software_used": [],
+                    "platforms": ["windows", "linux", "macos"]
+                })
+
+        # Process in background thread
+        def _bg():
+            try:
+                modified_process_group_wrapper(
+                    synthetic_group_name,
+                    f"Generated from uploaded file: {filename}",
+                    manual_data=manual_data,
+                    genai_mode="semantic" if not use_ai else "ai_generators",
+                    run_correlation=run_correlation
+                )
+            except Exception as e:
+                print(f"Error processing upload: {e}")
+                try:
+                    write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
+                except Exception:
+                    pass
+
+        threading.Thread(target=_bg, daemon=True).start()
+
+        # Initialize progress
+        try:
+            write_progress(synthetic_group_name, {
+                "status": "processing",
+                "current_step": "Generating detections from uploaded file",
                 "ttps_found": len(ttps),
                 "iocs_found": sum(len(v) for v in iocs.values())
             })
-        else:
-            # Just return extraction results without generating
-            return JSONResponse({
-                "success": True,
-                "ttps": ttps,
-                "iocs": {k: v for k, v in iocs.items() if v},  # Only include non-empty
-                "message": "File processed successfully. Enable 'Auto-Generate Queries' to create detections."
-            })
+        except Exception:
+            pass
+
+        return JSONResponse({
+            "success": True,
+            "redirect": f"/progress?group_name={synthetic_group_name}",
+            "ttps_found": len(ttps),
+            "iocs_found": sum(len(v) for v in iocs.values())
+        })
 
     except Exception as e:
         import traceback
@@ -969,17 +1092,20 @@ async def upload_file(
 
 
 @app.post("/analyze_blog")
-async def analyze_blog(request: Request):
+async def analyze_blog(
+    request: Request,
+    url: str = Form(...),
+    use_openai: str = Form(None),
+    auto_generate: str = Form(None),
+    run_correlation: str = Form(None),
+):
     """
     Analyze a blog post or threat report URL and extract TTPs, procedures, and IOCs.
 
-    Accepts a JSON payload with a 'url' field pointing to a blog post.
-    Returns extracted threat intelligence that can be used to populate the manual entry form.
+    Similar to file upload, can optionally auto-generate detection queries.
     """
     try:
-        # Parse JSON body
-        body = await request.json()
-        url = body.get("url", "").strip()
+        url = url.strip()
 
         if not url:
             return JSONResponse({
@@ -991,23 +1117,194 @@ async def analyze_blog(request: Request):
         from archer.parsers.blog_analyzer import analyze_blog_post
 
         # Analyze the blog post
+        print(f"\nAnalyzing blog post: {url}")
         result = analyze_blog_post(url)
 
-        if result.get("success"):
-            return JSONResponse({
-                "success": True,
-                "message": f"Successfully analyzed blog post. Found {len(result.get('techniques', []))} techniques and {len(result.get('procedures', []))} procedures.",
-                "group_name": result.get("group_name", ""),
-                "group_desc": result.get("group_desc", ""),
-                "technique": result.get("techniques", [""])[0] if result.get("techniques") else "",
-                "tactics": result.get("tactics", []),
-                "procedures": "\n".join(result.get("procedures", []))
-            })
-        else:
+        if not result.get("success"):
             return JSONResponse({
                 "success": False,
                 "message": result.get("error", "Failed to analyze blog post")
+            }, status_code=500)
+
+        # Extract data
+        ttps = result.get("techniques", [])
+        iocs = result.get("iocs", {})
+        group_name = result.get("group_name", "")
+        procedures = result.get("procedures", [])
+
+        # Create a synthetic group name for tracking if not found
+        import hashlib
+        import json
+        import os
+
+        url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
+        # SECURITY: Sanitize group name
+        raw_group_name = group_name or f"BlogAnalysis_{url_hash}"
+        synthetic_group_name = sanitize_group_name(raw_group_name)
+
+        # Save extraction results to file for later use (like file upload)
+        blog_dir = os.path.join("data", "blog_analysis")
+        os.makedirs(blog_dir, exist_ok=True)
+
+        result_file = os.path.join(blog_dir, f"{synthetic_group_name}_extraction.json")
+        with open(result_file, "w") as f:
+            json.dump({
+                "url": url,
+                "filename": url,  # Use URL as filename for consistency
+                "group_name": group_name,
+                "ttps": ttps,
+                "iocs": iocs,
+                "procedures": procedures,
+                "synthetic_group_name": synthetic_group_name,
+                "use_openai": use_openai == "true",
+                "run_correlation": run_correlation == "true"
+            }, f, indent=2)
+
+        # Always return extraction results first for user review (same as file upload)
+        return JSONResponse({
+            "success": True,
+            "show_extraction": True,
+            "filename": f"Blog: {url[:50]}..." if len(url) > 50 else f"Blog: {url}",
+            "synthetic_group_name": synthetic_group_name,
+            "ttps": ttps,
+            "iocs": {k: v for k, v in iocs.items() if v},  # Only include non-empty
+            "ttps_count": len(ttps),
+            "iocs_count": sum(len(v) for v in iocs.values()),
+            "auto_generate_requested": auto_generate == "true"
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "message": f"Error analyzing blog: {str(e)}"
+        }, status_code=500)
+
+
+@app.post("/blog/generate")
+async def generate_from_blog(
+    request: Request,
+    synthetic_group_name: str = Form(...),
+    selected_ttps: str = Form(None),
+    selected_iocs: str = Form(None)
+):
+    """
+    Generate detections from previously analyzed blog post.
+    Called after user reviews extraction results and chooses to proceed.
+    Now supports user-selected TTPs and IOCs.
+    """
+    try:
+        import json
+        import os
+
+        # SECURITY: Sanitize group name to prevent path traversal
+        safe_group_name = sanitize_group_name(synthetic_group_name)
+
+        # Load the extraction results
+        blog_dir = os.path.join("data", "blog_analysis")
+        result_file = os.path.join(blog_dir, f"{safe_group_name}_extraction.json")
+
+        # SECURITY: Validate the path is within the expected directory
+        safe_path = validate_safe_path(blog_dir, result_file)
+        if not safe_path:
+            return JSONResponse({
+                "success": False,
+                "error": "Invalid file path"
+            }, status_code=400)
+
+        result_file = safe_path
+
+        if not os.path.exists(result_file):
+            return JSONResponse({
+                "success": False,
+                "error": "Extraction results not found. Please analyze the blog post again."
+            }, status_code=404)
+
+        with open(result_file, "r") as f:
+            extraction_data = json.load(f)
+
+        # Use selected TTPs/IOCs if provided, otherwise use all extracted data
+        if selected_ttps:
+            ttps = json.loads(selected_ttps)
+        else:
+            ttps = extraction_data.get("ttps", [])
+
+        if selected_iocs:
+            iocs = json.loads(selected_iocs)
+        else:
+            iocs = extraction_data.get("iocs", {})
+        url = extraction_data.get("url", "unknown")
+        procedures = extraction_data.get("procedures", [])
+        use_ai = extraction_data.get("use_openai", False)
+        run_correlation = extraction_data.get("run_correlation", False)
+
+        # Build manual data structure for process_group
+        manual_data = {
+            "techniques": [],
+            "identifiers": iocs,  # Use extracted IOCs
+            "metadata": {
+                "source": "blog_analysis",
+                "url": url,
+                "ttps_found": ttps,
+                "procedures": procedures
+            }
+        }
+
+        # Add technique data for each TTP
+        for ttp_id in ttps:
+            # Try to get technique info from MITRE
+            try:
+                technique_info = _get_technique_info(ttp_id)
+                if technique_info:
+                    manual_data["techniques"].append(technique_info)
+            except Exception:
+                # If we can't find the technique, add minimal data
+                manual_data["techniques"].append({
+                    "tid": ttp_id,
+                    "name": f"Technique {ttp_id}",
+                    "tactic": "Unknown",
+                    "description": f"Extracted from {url}",
+                    "software_used": [],
+                    "platforms": ["windows", "linux", "macos"]
+                })
+
+        # Process in background thread
+        def _bg():
+            try:
+                modified_process_group_wrapper(
+                    synthetic_group_name,
+                    f"Generated from blog post: {url}",
+                    manual_data=manual_data,
+                    genai_mode="semantic" if not use_ai else "ai_generators",
+                    run_correlation=run_correlation
+                )
+            except Exception as e:
+                print(f"Error processing blog analysis: {e}")
+                try:
+                    write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
+                except Exception:
+                    pass
+
+        threading.Thread(target=_bg, daemon=True).start()
+
+        # Initialize progress
+        try:
+            write_progress(synthetic_group_name, {
+                "status": "processing",
+                "current_step": "Generating detections from blog post",
+                "ttps_found": len(ttps),
+                "iocs_found": sum(len(v) for v in iocs.values())
             })
+        except Exception:
+            pass
+
+        return JSONResponse({
+            "success": True,
+            "redirect": f"/progress?group_name={synthetic_group_name}",
+            "ttps_found": len(ttps),
+            "iocs_found": sum(len(v) for v in iocs.values())
+        })
 
     except Exception as e:
         import traceback
@@ -1200,9 +1497,12 @@ async def profile_company(
         use_ai = use_openai == 'true'
         auto_generate = generate_detections == 'true'
 
+        # Use domain as group_name for progress tracking
+        group_name = domain.replace('.', '_').replace('/', '_')
+
         # Profile the company
         print(f"\nProfiling domain: {domain}")
-        profile = do_profile(domain, options, use_openai=use_ai)
+        profile = do_profile(domain, options, use_openai=use_ai, group_name=group_name)
 
         # Save profile to data/profiles/
         profile_dir = Path("data") / "profiles"
@@ -1217,41 +1517,132 @@ async def profile_company(
 
         print(f"Profile saved to: {profile_path}")
 
-        # If auto-generate is enabled, generate detections for recommended groups
-        if auto_generate and profile.get('recommended_groups'):
-            print(f"\nGenerating detections for {len(profile['recommended_groups'])} threat groups...")
+        # Always return profile for user review first
+        # User can then select which threat groups to generate detections for
+        return JSONResponse({
+            "success": True,
+            "profile": profile,
+            "message": "Company profile complete",
+            "profile_path": str(profile_path),
+            "recommended_groups": profile.get('recommended_groups', []),
+            "show_selection": auto_generate  # Show selection UI if auto-generate was checked
+        })
 
-            # Generate for the first recommended group (or combine multiple)
-            primary_group = profile['recommended_groups'][0]
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
 
-            # Start background generation
-            def _generate_bg():
-                try:
-                    result = process_group(primary_group, run_correlation=True)
-                    print(f"Generated detections for {primary_group}: {result}")
-                except Exception as e:
-                    print(f"Error generating detections: {e}")
-                    import traceback
-                    traceback.print_exc()
 
-            import threading
-            threading.Thread(target=_generate_bg, daemon=True).start()
+@app.post("/api/technique_names")
+async def get_technique_names(request: Request):
+    """
+    Get technique names for given technique IDs.
 
-            # Redirect to progress page
+    Request body: {"technique_ids": ["T1059.001", "T1078", ...]}
+    Returns: {"T1059.001": "PowerShell", "T1078": "Valid Accounts", ...}
+    """
+    try:
+        import json
+        from pathlib import Path
+
+        body = await request.json()
+        technique_ids = body.get("technique_ids", [])
+
+        # Load MITRE ATT&CK data
+        mitre_path = Path(__file__).parent / "data" / "cache" / "enterprise-attack.json"
+        if not mitre_path.exists():
             return JSONResponse({
-                "success": True,
-                "redirect_url": f"/progress?group_name={primary_group}",
-                "profile": profile,
-                "message": f"Profile complete. Generating detections for {primary_group}..."
-            })
-        else:
-            # Just return the profile
+                "success": False,
+                "error": "MITRE ATT&CK data not found"
+            }, status_code=500)
+
+        with open(mitre_path) as f:
+            data = json.load(f)
+
+        # Build mapping
+        technique_names = {}
+        for obj in data['objects']:
+            if obj.get('type') == 'attack-pattern':
+                ext_refs = obj.get('external_references', [])
+                for ref in ext_refs:
+                    if ref.get('source_name') == 'mitre-attack':
+                        tech_id = ref.get('external_id')
+                        tech_name = obj.get('name')
+                        if tech_id in technique_ids:
+                            technique_names[tech_id] = tech_name
+
+        return JSONResponse(technique_names)
+
+    except Exception as e:
+        print(f"Error getting technique names: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
+
+@app.post("/profile/generate-detections")
+async def generate_detections_from_profile(
+    request: Request,
+    domain: str = Form(...),
+    selected_groups: str = Form(...),  # Comma-separated list
+    run_correlation: str = Form(None)
+):
+    """
+    Generate detections for user-selected threat groups from a profile.
+
+    This is called after the user reviews the profile and selects which
+    threat groups they want to generate detections for.
+    """
+    try:
+        from archer.build.orchestrator import process_group
+
+        # Parse selected groups
+        groups = [g.strip() for g in selected_groups.split(',') if g.strip()]
+
+        if not groups:
             return JSONResponse({
-                "success": True,
-                "profile": profile,
-                "message": "Company profile complete",
-                "profile_path": str(profile_path)
-            })
+                "success": False,
+                "error": "No threat groups selected"
+            }, status_code=400)
+
+        should_correlate = run_correlation == 'true'
+
+        print(f"\nGenerating detections for {len(groups)} selected threat groups from {domain} profile...")
+
+        # Use the first group as primary (for progress tracking)
+        primary_group = groups[0]
+
+        # Start background generation for all selected groups
+        def _generate_bg():
+            try:
+                for group in groups:
+                    print(f"Generating detections for: {group}")
+                    result = process_group(group, run_correlation=should_correlate)
+                    print(f"Generated detections for {group}: {result}")
+            except Exception as e:
+                print(f"Error generating detections: {e}")
+                import traceback
+                traceback.print_exc()
+
+        import threading
+        threading.Thread(target=_generate_bg, daemon=True).start()
+
+        # Return progress redirect
+        group_list = ', '.join(groups[:3])  # Show first 3 groups
+        if len(groups) > 3:
+            group_list += f" and {len(groups) - 3} more"
+
+        return JSONResponse({
+            "success": True,
+            "redirect_url": f"/progress?group_name={primary_group}",
+            "message": f"Generating detections for: {group_list}",
+            "groups": groups
+        })
 
     except Exception as e:
         import traceback
@@ -1290,3 +1681,283 @@ def _get_technique_info(ttp_id: str) -> dict:
                     }
 
     return None
+
+
+# =============================================================================
+# Results Page and Download API Routes
+# =============================================================================
+
+from fastapi.responses import FileResponse, StreamingResponse
+import glob
+import zipfile
+import io
+from datetime import timedelta
+
+
+@app.get("/results", response_class=HTMLResponse)
+def results_page(request: Request, group_name: str):
+    """
+    Render the results dashboard showing generated detections, correlations, and attack flows.
+    """
+    safe_group = sanitize_group_name(group_name)
+
+    # Collect detection files by vendor
+    generate_dir = os.path.join("data", "generate")
+    detection_files = {}
+    vendor_icons = {
+        "splunk": "🔍",
+        "mde": "🛡️",
+        "microsoft": "🛡️",
+        "elastic": "🔎",
+        "qradar": "🎯",
+        "sumo": "☁️",
+        "chronicle": "📊"
+    }
+
+    vendor_display_names = {
+        "splunk": "Splunk",
+        "mde": "Microsoft Defender",
+        "microsoft": "Microsoft Defender",
+        "elastic": "Elastic",
+        "qradar": "IBM QRadar",
+        "sumo": "Sumo Logic",
+        "chronicle": "Google Chronicle"
+    }
+
+    # Find all YAML files for this group
+    if os.path.exists(generate_dir):
+        for yaml_file in glob.glob(os.path.join(generate_dir, f"{safe_group}_*.yaml")):
+            filename = os.path.basename(yaml_file)
+
+            # Determine vendor from filename
+            vendor = None
+            for v in vendor_icons.keys():
+                if f"_{v}_" in filename.lower() or f"_{v}." in filename.lower():
+                    vendor = v
+                    break
+
+            if not vendor:
+                vendor = "unknown"
+
+            if vendor not in detection_files:
+                detection_files[vendor] = []
+
+            # Extract technique and title from filename
+            # Format: groupname_vendor_technique_description.yaml
+            parts = filename.replace(".yaml", "").split("_", 3)
+            technique = parts[2] if len(parts) > 2 else "Unknown"
+            title = parts[3].replace("_", " ").title() if len(parts) > 3 else filename
+
+            # Read first few lines for description
+            description = ""
+            try:
+                with open(yaml_file, 'r') as f:
+                    lines = f.readlines()[:10]
+                    for line in lines:
+                        if line.strip().startswith("description:"):
+                            description = line.split(":", 1)[1].strip().strip('"\'')
+                            break
+            except:
+                pass
+
+            detection_files[vendor].append({
+                "file": filename,
+                "title": title,
+                "technique": technique.upper(),
+                "description": description or f"Detection rule for {technique}"
+            })
+
+    # Build vendor list for template
+    detections = []
+    total_detections = 0
+    for vendor, files in detection_files.items():
+        detections.append({
+            "name": vendor,
+            "display_name": vendor_display_names.get(vendor, vendor.title()),
+            "icon": vendor_icons.get(vendor, "📋"),
+            "count": len(files),
+            "detections": sorted(files, key=lambda x: x['technique'])
+        })
+        total_detections += len(files)
+
+    detections.sort(key=lambda x: x['count'], reverse=True)
+
+    # Load correlations
+    correlations = []
+    correlation_file = os.path.join("data", "correlate", f"{safe_group}.json")
+    if os.path.exists(correlation_file):
+        try:
+            with open(correlation_file, 'r') as f:
+                corr_data = json.load(f)
+                for idx, corr in enumerate(corr_data.get("correlations", [])):
+                    techniques = []
+                    for tech in corr.get("techniques", []):
+                        tech_id = tech if isinstance(tech, str) else tech.get("id", "Unknown")
+                        tech_name = tech.get("name", "") if isinstance(tech, dict) else ""
+                        techniques.append({"id": tech_id, "name": tech_name or tech_id})
+
+                    correlations.append({
+                        "techniques": techniques,
+                        "description": corr.get("description", "Multi-stage attack sequence"),
+                        "flow_file": f"{safe_group}_corr_{idx+1}.html"
+                    })
+        except:
+            pass
+
+    # Check if attack flow exists
+    attack_flow_file = os.path.join("data", "attack_flows", f"{safe_group}_complete_flow.html")
+    attack_flow_exists = os.path.exists(attack_flow_file)
+
+    # Get unique technique count
+    technique_set = set()
+    for vendor_data in detections:
+        for detection in vendor_data['detections']:
+            technique_set.add(detection['technique'])
+
+    # Calculate duration (if progress file exists)
+    duration = "N/A"
+    progress_file = os.path.join("data", "progress", f"{safe_group}.json")
+    if os.path.exists(progress_file):
+        try:
+            with open(progress_file, 'r') as f:
+                progress_data = json.load(f)
+                # Estimate based on timestamps if available
+                duration = "~3min"  # Placeholder
+        except:
+            pass
+
+    # Get MITRE ID if available
+    mitre_id = None
+    if check_group_in_mitre(safe_group):
+        # Try to find MITRE ID from STIX data
+        mitre_id = safe_group  # Simplified
+
+    return templates.TemplateResponse(
+        "results.html",
+        {
+            "request": request,
+            "group_name": safe_group,
+            "mitre_id": mitre_id,
+            "total_detections": total_detections,
+            "vendor_count": len(detections),
+            "correlation_count": len(correlations),
+            "technique_count": len(technique_set),
+            "duration": duration,
+            "detections": detections,
+            "correlations": correlations,
+            "attack_flow_exists": attack_flow_exists,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+    )
+
+
+@app.get("/api/detection/{filename}")
+def get_detection_content(filename: str):
+    """
+    Return the content of a detection YAML file.
+    """
+    safe_filename = sanitize_filename(filename)
+    file_path = os.path.join("data", "generate", safe_filename)
+
+    if not os.path.exists(file_path):
+        return {"error": "File not found"}, 404
+
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        return content
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+
+@app.get("/api/download/detection/{filename}")
+def download_detection(filename: str):
+    """
+    Download a single detection YAML file.
+    """
+    safe_filename = sanitize_filename(filename)
+    file_path = os.path.join("data", "generate", safe_filename)
+
+    if not os.path.exists(file_path):
+        return {"error": "File not found"}, 404
+
+    return FileResponse(
+        file_path,
+        media_type="application/x-yaml",
+        filename=safe_filename
+    )
+
+
+@app.get("/api/download/all/{group_name}")
+def download_all_detections(group_name: str):
+    """
+    Download all detections, correlations, and attack flows for a group as a ZIP file.
+    """
+    safe_group = sanitize_group_name(group_name)
+
+    # Create in-memory ZIP file
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Add detection YAMLs
+        generate_dir = os.path.join("data", "generate")
+        if os.path.exists(generate_dir):
+            for yaml_file in glob.glob(os.path.join(generate_dir, f"{safe_group}_*.yaml")):
+                filename = os.path.basename(yaml_file)
+                zip_file.write(yaml_file, f"detections/{filename}")
+
+        # Add correlation JSON
+        corr_file = os.path.join("data", "correlate", f"{safe_group}.json")
+        if os.path.exists(corr_file):
+            zip_file.write(corr_file, f"correlations/{safe_group}.json")
+
+        # Add attack flows
+        flow_dir = os.path.join("data", "attack_flows")
+        if os.path.exists(flow_dir):
+            for flow_file in glob.glob(os.path.join(flow_dir, f"{safe_group}_*.json")):
+                filename = os.path.basename(flow_file)
+                zip_file.write(flow_file, f"attack_flows/{filename}")
+
+            for flow_file in glob.glob(os.path.join(flow_dir, f"{safe_group}_*.html")):
+                filename = os.path.basename(flow_file)
+                zip_file.write(flow_file, f"attack_flows/{filename}")
+
+    zip_buffer.seek(0)
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={safe_group}_results.zip"}
+    )
+
+
+@app.get("/api/attack-flow/{filename}")
+def view_attack_flow(filename: str):
+    """
+    Serve an attack flow HTML file for viewing.
+    """
+    safe_filename = sanitize_filename(filename)
+    file_path = os.path.join("data", "attack_flows", safe_filename)
+
+    if not os.path.exists(file_path):
+        return {"error": "Attack flow not found"}, 404
+
+    return FileResponse(file_path, media_type="text/html")
+
+
+@app.get("/api/download/flow/{filename}")
+def download_attack_flow(filename: str):
+    """
+    Download an attack flow JSON file.
+    """
+    safe_filename = sanitize_filename(filename)
+    file_path = os.path.join("data", "attack_flows", safe_filename)
+
+    if not os.path.exists(file_path):
+        return {"error": "File not found"}, 404
+
+    return FileResponse(
+        file_path,
+        media_type="application/json",
+        filename=safe_filename
+    )
