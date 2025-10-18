@@ -48,6 +48,49 @@ function hideLoading() {
   if (messageEl) messageEl.textContent = 'Processing...';
 }
 
+function showY2KWarning() {
+  // Create overlay
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;';
+
+  // Create content container
+  var content = document.createElement('div');
+  content.style.cssText = 'text-align: center; max-width: 600px; padding: 30px;';
+
+  // Add warning text
+  var title = document.createElement('h2');
+  title.style.cssText = 'color: #ff6b6b; font-size: 2.5em; margin: 0 0 20px 0; font-family: "Courier New", monospace; text-shadow: 0 0 10px rgba(255,107,107,0.5);';
+  title.textContent = '⚠️ Y2K WARNING ⚠️';
+
+  var message = document.createElement('p');
+  message.style.cssText = 'color: #fff; font-size: 1.3em; margin: 0 0 30px 0; line-height: 1.6;';
+  message.innerHTML = 'A CVE from the 1990s?!<br>You have <strong>MUCH BIGGER PROBLEMS</strong> to deal with!';
+
+  // Add GIF
+  var gif = document.createElement('img');
+  gif.src = 'https://media.giphy.com/media/HUkOv6BNWc1HO/giphy.gif'; // Fire/chaos GIF
+  gif.style.cssText = 'max-width: 100%; border-radius: 10px; box-shadow: 0 0 30px rgba(255,107,107,0.3);';
+  gif.alt = 'Chaos ensues';
+
+  // Add close instruction
+  var closeText = document.createElement('p');
+  closeText.style.cssText = 'color: #aaa; font-size: 0.9em; margin: 20px 0 0 0;';
+  closeText.textContent = '(Click anywhere to close)';
+
+  content.appendChild(title);
+  content.appendChild(message);
+  content.appendChild(gif);
+  content.appendChild(closeText);
+  overlay.appendChild(content);
+
+  // Close on click
+  overlay.addEventListener('click', function() {
+    document.body.removeChild(overlay);
+  });
+
+  document.body.appendChild(overlay);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   // Mutual exclusivity: Advanced Parsing and Semantic Analysis
   var semanticCheckbox = document.getElementById('semantic-checkbox');
@@ -261,6 +304,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function validate() {
     var val = (input && input.value) || '';
+    var cveVal = (cveInput && cveInput.value) || '';
+
     if (val.length > 30) {
       if (errorSpan) errorSpan.style.display = 'inline';
       if (btn) btn.disabled = true;
@@ -268,23 +313,102 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       if (errorSpan) errorSpan.style.display = 'none';
     }
+
     var trimmed = val.trim();
-    if (btn) btn.disabled = (trimmed === '');
+    var cveTrimmed = cveVal.trim();
+
+    // Enable button if either group name OR CVE input has a value
+    if (btn) btn.disabled = (trimmed === '' && cveTrimmed === '');
   }
 
+  // Get CVE input reference before validate is called
+  var cveInput = document.getElementById('cve_input');
+
   validate();
+
+  // Mutual exclusion between group name and CVE inputs
+  if (input && cveInput) {
+    input.addEventListener('input', function() {
+      if (this.value.trim()) {
+        cveInput.disabled = true;
+        cveInput.placeholder = 'Disabled (using Threat Group)';
+        cveInput.style.opacity = '0.5';
+      } else {
+        cveInput.disabled = false;
+        cveInput.placeholder = 'e.g., CVE-2024-1234 or CVE-2021-44228, CVE-2022-22965';
+        cveInput.style.opacity = '1';
+      }
+      validate(); // Re-validate when group name changes
+    });
+
+    cveInput.addEventListener('input', function() {
+      if (this.value.trim()) {
+        input.disabled = true;
+        input.placeholder = 'Disabled (using CVE)';
+        input.style.opacity = '0.5';
+      } else {
+        input.disabled = false;
+        input.placeholder = 'e.g., APT29, Scattered Spider';
+        input.style.opacity = '1';
+      }
+      validate(); // Re-validate when CVE input changes
+    });
+  }
 
   if (form) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      if (!input || input.value.trim() === '') {
-        if (btn) btn.disabled = true;
+
+      // Check if CVE input or group name is provided
+      var cveInput = document.getElementById('cve_input');
+      var groupName = input ? input.value.trim() : '';
+      var cveId = cveInput ? cveInput.value.trim() : '';
+
+      if (!groupName && !cveId) {
+        alert('Please enter either a Threat Group Name or CVE Identifier');
         return false;
       }
-      showLoading(input.value);
+
+      // Validate CVE format if CVE input is used
+      if (cveId) {
+        var cvePattern = /^CVE-20\d{2}-\d{4,}$/i;
+        var cve199Pattern = /^CVE-199\d-\d{4,}$/i;
+        var cves = cveId.split(',').map(function(c) { return c.trim(); });
+        var invalidCves = [];
+        var has199CVE = false;
+
+        for (var i = 0; i < cves.length; i++) {
+          // Check for CVE-199x (1990s CVEs) - fun Easter egg
+          if (cve199Pattern.test(cves[i])) {
+            has199CVE = true;
+            break;
+          }
+
+          if (!cvePattern.test(cves[i])) {
+            invalidCves.push(cves[i]);
+          }
+        }
+
+        // Show fun GIF for 1990s CVEs
+        if (has199CVE) {
+          showY2KWarning();
+          return false;
+        }
+
+        if (invalidCves.length > 0) {
+          alert('Invalid CVE format: ' + invalidCves.join(', ') + '\n\nCVE IDs must:\n- Start with "CVE-20" (case-insensitive)\n- Follow format: CVE-YYYY-NNNN (e.g., CVE-2021-44228)\n- Year must be 2000 or later');
+          return false;
+        }
+      }
+
+      // Determine endpoint based on input
+      var endpoint = cveId ? '/generate/cve' : '/generate';
+      var displayName = cveId || groupName;
+
+      showLoading(displayName);
 
       var formData = new FormData(form);
-      fetch('/generate', {
+      fetch(endpoint, {
         method: 'POST',
         body: formData,
         headers: { 'X-Requested-With': 'XMLHttpRequest' }

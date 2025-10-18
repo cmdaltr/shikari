@@ -1,16 +1,165 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="light">
 <head>
     <title>Archer App</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', path='images/icon.png') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='favicon-32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}?v={{ request.app.state.asset_version }}">
+    <style>
+        /* Ensure consistent positioning across all browsers */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
+            zoom: 1.0;
+        }
+
+        /* Dark mode CSS variables */
+        :root[data-theme="light"] {
+            --bg-primary: #f7fafc;
+            --bg-secondary: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-tertiary: #999999;
+            --border-color: #e2e8f0;
+            --shadow: rgba(0,0,0,0.08);
+            --accent: #C53030;
+        }
+
+        :root[data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #f0f0f0;
+            --text-secondary: #b0b0b0;
+            --text-tertiary: #808080;
+            --border-color: #404040;
+            --shadow: rgba(0,0,0,0.3);
+            --accent: #ff6b6b;
+        }
+
+        /* Global navigation buttons - positioned to the left of "Help" */
+        .global-nav-controls {
+            position: fixed;
+            top: 20px;
+            right: calc((100vw - 1200px) / 2 + 120px);
+            z-index: 10001;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Adjust on smaller screens */
+        @media (max-width: 1400px) {
+            .global-nav-controls {
+                right: auto;
+                left: 20px;
+                top: 70px;
+            }
+        }
+
+        .nav-icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            min-height: 40px;
+            padding: 8px;
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
+
+        [data-theme="dark"] .nav-icon-btn {
+            background: rgba(45, 45, 45, 0.95);
+        }
+
+        .nav-icon-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .nav-icon-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
     {% block head %}{% endblock %}
 </head>
 <body>
+    <!-- Global Navigation Controls (Dark Mode + Profile) -->
+    <div class="global-nav-controls">
+        <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        </button>
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        </a>
+    </div>
+
     <div id="container">
         <div id="main-content" class="{% block main_class %}centered{% endblock %}">
           {% block content %}{% endblock %}
         </div>
     </div>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
+        // Dark mode functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const sunIcon = darkModeToggle.querySelector('.sun-icon');
+        const moonIcon = darkModeToggle.querySelector('.moon-icon');
+        const html = document.documentElement;
+
+        // Check for saved theme preference or default to 'light'
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', currentTheme);
+        updateIcons(currentTheme);
+
+        darkModeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcons(newTheme);
+        });
+
+        function updateIcons(theme) {
+            if (theme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>

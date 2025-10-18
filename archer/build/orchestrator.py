@@ -71,9 +71,58 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             for tech_info in techniques:
                 technique = tech_info.get("technique")
                 retrieved_data["technique"] = technique
-                retrieved_data["op_guidance"] = tech_info.get("op_guidance", "")
-                retrieved_data["red_tool"] = tech_info.get("red_tool", "")
+                retrieved_data["technique_id"] = technique  # Add technique ID
+
+                # Handle op_guidance - can be dict (IOCs) or string (description)
+                op_guidance_val = tech_info.get("op_guidance", {})
+                if isinstance(op_guidance_val, str) and op_guidance_val == "":
+                    op_guidance_val = {}  # Empty string becomes empty dict
+                retrieved_data["op_guidance"] = op_guidance_val
+
+                # Handle red_tool - should be dict
+                red_tool_val = tech_info.get("red_tool", {})
+                if isinstance(red_tool_val, str) and red_tool_val == "":
+                    red_tool_val = {}  # Empty string becomes empty dict
+                retrieved_data["red_tool"] = red_tool_val
+
                 retrieved_data["detect_guidance"] = tech_info.get("detect_guidance", "")
+
+                # Extract procedure_platforms and software_platforms from tech_info (for CVE manual data)
+                retrieved_data["procedure_platforms"] = tech_info.get("procedure_platforms", [])
+                retrieved_data["software_platforms"] = tech_info.get("software_platforms", {})
+
+                # Get technique description and platforms from MITRE data for better detection generation
+                # technique_descriptions is a list of strings like ["T1059: Description...", ...]
+                # We need to find the matching technique and extract its description
+                tech_desc_str = None
+                for desc in technique_descriptions:
+                    if desc.startswith(f"{technique}:"):
+                        tech_desc_str = desc.split(":", 1)[1].strip() if ":" in desc else ""
+                        break
+
+                if tech_desc_str:
+                    retrieved_data["technique_description"] = tech_desc_str
+                else:
+                    # CVE-specific technique without MITRE data (synthetic technique)
+                    retrieved_data["technique_description"] = f"CVE exploitation technique: {technique}"
+
+                # Get platforms from STIX bundle directly
+                technique_platforms = []
+                for obj in bundle.objects:
+                    if obj.get("type") == "attack-pattern":
+                        external_refs = obj.get("external_references", [])
+                        for ref in external_refs:
+                            if ref.get("external_id") == technique:
+                                technique_platforms = obj.get("x_mitre_platforms", [])
+                                break
+                        if technique_platforms:
+                            break
+
+                retrieved_data["technique_platforms"] = technique_platforms if technique_platforms else ["Windows", "Linux", "macOS"]
+
+                # Add activity_desc - use detect_guidance (string) not op_guidance (dict)
+                # For CVEs, op_guidance is the IOC dict, detect_guidance is the description string
+                retrieved_data["activity_desc"] = tech_info.get("detect_guidance", "") or f"Detection for {technique}"
 
                 # Build detection queries and YAML
                 compile_query(retrieved_data)
@@ -249,6 +298,10 @@ def write_splunk_files(
                     continue
 
             # Safe to write
+            # Handle case where index_name might not be a string
+            if not isinstance(index_name, str):
+                print(f"⚠️ WARNING: index_name is type {type(index_name)}, skipping: {index_name}")
+                continue
             index_safe = index_name.replace("=", "").replace(" ", "_")
             file_name = f"splunk_{index_safe}.spl"
             file_path = output_path / file_name

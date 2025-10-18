@@ -3,62 +3,551 @@
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+/* Ensure consistent positioning across all browsers */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
+  zoom: 1.0;
+}
+
+/* Single background color throughout - matching How Archer Works page */
+body, html {
+  background: #f7fafc !important;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.page-shell {
+  background: #f7fafc !important;
+  min-height: 100vh;
+  padding-top: 0;
+  overflow-x: hidden;
+  max-width: 100%;
+  position: relative;
+}
+
+/* Navigation - aligned with 1200px content edge */
+.back-btn {
+  position: fixed !important;
+  top: 20px !important;
+  left: calc((100vw - 1200px) / 2) !important;
+  z-index: 10000 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #C53030;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95em;
+  padding: 8px 16px;
+  border: 2px solid #C53030;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background: #C53030;
+  color: white;
+}
+
+.how-archer-link {
+  position: fixed !important;
+  top: 20px !important;
+  right: calc((100vw - 1200px) / 2) !important;
+  z-index: 10000 !important;
+  color: #C53030;
+  text-decoration: none;
+  font-size: 0.95em;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 2px solid #C53030;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.2s;
+}
+
+.how-archer-link:hover {
+  background: #C53030 !important;
+  color: white !important;
+}
+
+/* Logo at top center - between Back and How Archer Works */
+.header-logo-container {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+.header-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.header-logo:hover {
+  opacity: 0.8;
+}
+
+.header-logo img {
+  width: auto;
+  height: 35px;
+  filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.2));
+}
+
+.header-logo h1 {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #1a1a1a;
+  margin: 0;
+  text-shadow: 0px 1px 3px rgba(0,0,0,0.15);
+}
+
+.results-container {
+  background: #f7fafc !important;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  padding-top: 80px;
+  padding-bottom: 2em;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Lead text styling - matching progress.html */
+.lead {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 2.5px;
+  color: #666666;
+  text-align: center;
+  margin: 0 0 32px 0;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+/* Summary cards - 4-column grid (one row) */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-icon.detection { background: #e8f5e9; }
+.card-icon.correlation { background: #e3f2fd; }
+.card-icon.technique { background: #fff3e0; }
+.card-icon.vendor { background: #f3e5f5; }
+
+.card-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.card-icon.detection svg { stroke: #4caf50; }
+.card-icon.correlation svg { stroke: #2196f3; }
+.card-icon.technique svg { stroke: #ff9800; }
+.card-icon.vendor svg { stroke: #9c27b0; }
+
+.card-content h3 {
+  font-size: 2.5em;
+  margin: 0;
+  color: #1a1a1a;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.card-content p {
+  margin: 8px 0 0 0;
+  color: #999;
+  font-size: 1em;
+  font-weight: 400;
+}
+
+/* Detection Rules Section */
+.detection-section {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+}
+
+.detection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.detection-header h2 {
+  font-size: 1.5em;
+  margin: 0;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.expand-btn {
+  color: #C53030;
+  text-decoration: none;
+  font-size: 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.expand-btn:hover {
+  background: rgba(197, 48, 48, 0.1);
+}
+
+/* Vendor sections */
+.vendor-section {
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.vendor-section:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.vendor-header {
+  background: #f8f9fa;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.vendor-header:hover {
+  background: #e9ecef;
+}
+
+.vendor-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 1.1em;
+  color: #1a1a1a;
+}
+
+.vendor-icon {
+  font-size: 1.3em;
+}
+
+.vendor-logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+
+.vendor-count {
+  background: #C53030;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.expand-icon {
+  transition: transform 0.3s;
+  color: #666;
+  width: 20px;
+  height: 20px;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.vendor-content {
+  max-height: 0;
+  overflow: hidden;
+  padding: 0;
+  background: white;
+  transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+
+.vendor-content.show {
+  max-height: 5000px;
+  padding: 8px 0;
+  transition: max-height 0.5s ease-in, padding 0.3s ease-in;
+}
+
+/* Correlation and cross-vendor collapsible content */
+.correlation-content,
+.cross-vendor-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.correlation-content.show,
+.cross-vendor-content.show {
+  max-height: 5000px;
+  transition: max-height 0.5s ease-in;
+}
+
+.detection-item {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+.detection-item:hover {
+  background: #fafafa;
+}
+
+.detection-item:last-child {
+  border-bottom: none;
+}
+
+.detection-title {
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+  font-size: 1em;
+}
+
+.detection-technique {
+  display: inline-block;
+  background: #fff3e0;
+  color: #ff9800;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.detection-description {
+  color: #666;
+  font-size: 0.9em;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+/* Action buttons - 4 horizontal buttons below Detection Rules */
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 24px 0 16px 0;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid #C53030;
+  text-decoration: none;
+  background: white;
+  color: #C53030;
+}
+
+.btn-action:hover {
+  background: #C53030;
+  color: white;
+}
+
+/* Footer - matching index.html - full width */
+.page-footer {
+  margin-top: 60px;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  padding: 30px 0;
+  background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+  border-top: 3px solid #C53030;
+  text-align: center;
+  width: 100vw;
+  box-sizing: border-box;
+}
+
+.page-footer .footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.page-footer .github-link {
+  flex: 1;
+  min-width: 200px;
+  text-align: left;
+}
+
+.page-footer .github-link a {
+  color: #8B9AA3;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95em;
+  transition: color 0.2s;
+}
+
+.page-footer .github-link a:hover {
+  color: #C53030;
+}
+
+.page-footer .timestamp {
+  color: #8B9AA3;
+  font-size: 0.85em;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(139, 154, 163, 0.2);
+}
+
+.page-footer .quote {
+  flex: 2;
+  min-width: 300px;
+  text-align: center;
+}
+
+.page-footer .quote p {
+  color: #a8b5bd;
+  font-style: italic;
+  font-size: 0.95em;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.page-footer .quote span {
+  font-size: 0.9em;
+  color: #8B9AA3;
+}
+
+.page-footer .spacer {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Hide timestamp display - moved to footer */
+.timestamp-display {
+  display: none;
+}
+
+/* Ensure page-shell doesn't restrict footer width but constrains content */
+#main-content.page-shell {
+  display: block;
+  padding: 0;
+  margin: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure content cards don't overflow */
+.summary-card,
+.detection-section,
+.success-banner,
+.action-buttons {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+</style>
 {% endblock %}
+
 {% block content %}
 <div id="main-content" class="page-shell">
-  <div class="results-container page-container">
-    <!-- Header with navigation and actions -->
-    <div class="results-header">
-      <div class="header-left">
-        <a href="/" class="back-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          Back
-        </a>
-      </div>
-      <div class="header-right">
-        <!-- How Archer Works link -->
-        <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-          How Archer Works
-        </a>
+  <!-- Home button - top left -->
+  <a href="/" class="back-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    Home
+  </a>
 
-        <button class="btn-secondary" id="download-all-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-          </svg>
-          Download All
-        </button>
-        <button class="btn-primary" id="new-analysis-btn" onclick="window.location.href='/'">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          New Analysis
-        </button>
-      </div>
-    </div>
+  <!-- Logo at top center - clickable to return home -->
+  <div class="header-logo-container">
+    <a href="/" class="header-logo">
+      <img src="{{ url_for('static', path='images/icon.png') }}" alt="Archer Logo">
+      <h1>RCHER</h1>
+    </a>
+  </div>
 
-    <!-- Success banner -->
-    <div class="success-banner">
-      <div class="success-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-      </div>
-      <div class="success-content">
-        <h1>Generation Complete: {{ group_name }}</h1>
-        <p class="success-subtitle">
-          Generated <strong>{{ total_detections }}</strong> detections across <strong>{{ vendor_count }}</strong> vendors
-          {% if correlation_count > 0 %}• Discovered <strong>{{ correlation_count }}</strong> multi-stage correlations{% endif %}
-          • Duration: <strong>{{ duration }}</strong>
-        </p>
-      </div>
-    </div>
+  <!-- How Archer Works link - top right -->
+  <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link" style="position: fixed !important; top: 20px !important; right: calc((100vw - 1200px) / 2) !important; z-index: 1000 !important; color: #C53030; text-decoration: none; font-size: 0.95em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; min-height: 40px; border: 2px solid #C53030; border-radius: 6px; background: rgba(255, 255, 255, 0.95); transition: all 0.2s; margin: 0 !important; box-sizing: border-box;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    Help
+  </a>
+
+  <div class="results-container">
+    <!-- Page heading -->
+    <p class="lead">
+      Results for<br><span style="color:#8B0000">{{ group_name.replace('_', ' ') }}</span>.
+    </p>
 
     <!-- Executive Summary Cards -->
     <div class="summary-cards">
@@ -70,7 +559,7 @@
         </div>
         <div class="card-content">
           <h3>{{ total_detections }}</h3>
-          <p>Detection Rules</p>
+          <p>Detections</p>
         </div>
       </div>
 
@@ -90,6 +579,21 @@
         </div>
       </div>
 
+      <div class="summary-card" style="opacity: 0.5;">
+        <div class="card-icon cross-vendor" style="background: #fce4ec;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 style="color: #999;">0</h3>
+          <p style="color: #999;">Cross-vendor</p>
+        </div>
+      </div>
+
       <div class="summary-card">
         <div class="card-icon technique">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -99,210 +603,333 @@
         </div>
         <div class="card-content">
           <h3>{{ technique_count }}</h3>
-          <p>MITRE Techniques</p>
+          <p>Techniques</p>
         </div>
       </div>
 
-      <div class="summary-card">
-        <div class="card-icon vendor">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
-          </svg>
-        </div>
-        <div class="card-content">
-          <h3>{{ vendor_count }}</h3>
-          <p>Vendors</p>
-        </div>
-      </div>
     </div>
 
     <!-- Detection Rules Section -->
-    <div class="results-section">
-      <div class="section-header">
+    <div class="detection-section">
+      <div class="detection-header">
         <h2>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-          Detection Rules
-        </h2>
-        <button class="btn-text" onclick="toggleAllVendors()">
-          <span id="expand-collapse-text">Expand All</span>
-        </button>
-      </div>
-
-      <div class="vendors-container">
-        {% for vendor in detections %}
-        <div class="vendor-group" data-vendor="{{ vendor.name }}">
-          <div class="vendor-header" onclick="toggleVendor('{{ vendor.name }}')">
-            <div class="vendor-info">
-              <span class="vendor-icon">{{ vendor.icon }}</span>
-              <h3>{{ vendor.display_name }}</h3>
-              <span class="badge">{{ vendor.count }} rules</span>
-            </div>
-            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="6 9 12 15 18 9"/>
+          <div class="card-icon detection" style="width: 40px; height: 40px; margin-right: 12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
             </svg>
           </div>
+          Detections
+        </h2>
+        <span class="expand-btn" onclick="toggleAllVendors()">Expand All</span>
+      </div>
 
-          <div class="vendor-content" style="display: none;">
+      {% if detections %}
+        {% for vendor in detections %}
+        <div class="vendor-section">
+          <div class="vendor-header" onclick="toggleVendor(this)">
+            <div class="vendor-title">
+              {% if vendor.name == 'splunk' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <!-- Gradient background circle -->
+                  <defs>
+                    <radialGradient id="splunkGradient" cx="30%" cy="30%">
+                      <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                      <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                    </radialGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
+                  <!-- White chevron > -->
+                  <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </span>
+              {% elif vendor.name == 'mde' or vendor.name == 'microsoft' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <!-- Gradient for shield -->
+                  <defs>
+                    <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                      <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <!-- Blue gradient shield -->
+                  <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
+                </svg>
+              </span>
+              {% elif vendor.name == 'elastic' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <!-- Elasticsearch logo - three stacked rounded bars with offset -->
+                  <defs>
+                    <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <!-- Three stacked elongated shapes with offset -->
+                  <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
+                  <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
+                  <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
+                </svg>
+              </span>
+              {% else %}
+              <span class="vendor-icon">{{ vendor.icon }}</span>
+              {% endif %}
+              <span>{{ vendor.display_name }}</span>
+              {% if vendor.get('coming_soon') %}
+              <span class="vendor-count" style="background: #666;">Coming Soon</span>
+              {% else %}
+              <span class="vendor-count">{{ vendor.count }} rules</span>
+              {% endif %}
+            </div>
+            {% if not vendor.get('coming_soon') %}
+            <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+            {% endif %}
+          </div>
+          <div class="vendor-content">
+            {% if vendor.get('coming_soon') %}
+            <div class="detection-item">
+              <div class="detection-description" style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+                Elastic detection generation coming soon
+              </div>
+            </div>
+            {% else %}
             {% for detection in vendor.detections %}
             <div class="detection-item">
-              <div class="detection-header">
-                <div class="detection-info">
-                  <h4>{{ detection.title }}</h4>
-                  <span class="technique-badge">{{ detection.technique }}</span>
-                </div>
-                <div class="detection-actions">
-                  <button class="btn-icon" onclick="copyDetection('{{ detection.file }}')" title="Copy to clipboard">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                    </svg>
-                  </button>
-                  <button class="btn-icon" onclick="viewDetection('{{ detection.file }}')" title="View detection">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                  </button>
-                  <button class="btn-icon" onclick="downloadDetection('{{ detection.file }}')" title="Download">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                    </svg>
-                  </button>
-                </div>
+              <div class="detection-title">
+                <span class="detection-technique">{{ detection.technique }}</span>
+                <span style="font-weight: 400;">{{ detection.title.replace(', ', ' | ') }}</span>
               </div>
-              <p class="detection-description">{{ detection.description }}</p>
+              <div class="detection-description" style="white-space: pre-line;">{{ detection.description }}</div>
             </div>
             {% endfor %}
+            {% endif %}
           </div>
         </div>
         {% endfor %}
-      </div>
+      {% else %}
+        <p style="text-align: center; color: #666; padding: 40px 0;">No detection rules generated yet.</p>
+      {% endif %}
     </div>
 
     <!-- Correlations Section -->
-    {% if correlations and correlations|length > 0 %}
-    <div class="results-section">
-      <div class="section-header">
+    <div class="detection-section">
+      <div class="detection-header">
         <h2>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="18" cy="5" r="3"/>
-            <circle cx="6" cy="12" r="3"/>
-            <circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-          </svg>
-          Attack Correlations
+          <div class="card-icon correlation" style="width: 40px; height: 40px; margin-right: 12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="18" cy="5" r="3"/>
+              <circle cx="6" cy="12" r="3"/>
+              <circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </div>
+          Correlations
         </h2>
-        <span class="section-badge">{{ correlations|length }} multi-stage sequences</span>
+        <span class="expand-btn" onclick="toggleAllCorrelations()">Expand All</span>
       </div>
 
-      <div class="correlations-container">
-        {% for corr in correlations %}
-        <div class="correlation-item">
-          <div class="correlation-header">
-            <span class="correlation-id">Correlation #{{ loop.index }}</span>
-            <span class="badge">{{ corr.techniques|length }} techniques</span>
-          </div>
-          <div class="correlation-flow">
-            {% for tech in corr.techniques %}
-            <div class="flow-step">
-              <span class="technique-tag">{{ tech.id }}</span>
-              <span class="technique-name">{{ tech.name }}</span>
+      {% if correlations %}
+        <div class="correlation-content">
+          {% for correlation in correlations %}
+          <div class="detection-item" style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
+            <div class="detection-title">
+              {% for tech in correlation.techniques %}
+              <span class="detection-technique">{{ tech.id }}</span>
+              {% endfor %}
             </div>
-            {% if not loop.last %}
-            <svg class="flow-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="5" y1="12" x2="19" y2="12"/>
-              <polyline points="12 5 19 12 12 19"/>
-            </svg>
-            {% endif %}
-            {% endfor %}
+            <div class="detection-description">{{ correlation.description }}</div>
           </div>
-          <p class="correlation-description">{{ corr.description }}</p>
-          <div class="correlation-actions">
-            <button class="btn-text" onclick="viewAttackFlow('{{ corr.flow_file }}')">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-              </svg>
-              View Attack Flow
-            </button>
-          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-      </div>
+      {% else %}
+        <p style="text-align: center; color: #666; padding: 40px 0;">No correlations detected.</p>
+      {% endif %}
     </div>
-    {% endif %}
 
-    <!-- Attack Flow Visualization Section -->
-    {% if attack_flow_exists %}
-    <div class="results-section">
-      <div class="section-header">
+    <!-- Cross-vendor Correlations Section - Coming Soon -->
+    <div class="detection-section" style="opacity: 0.5; pointer-events: none;">
+      <div class="detection-header">
         <h2>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </svg>
-          Complete Actor Attack Flow
-        </h2>
-      </div>
-
-      <div class="attack-flow-container">
-        <div class="attack-flow-preview">
-          <div class="preview-placeholder">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          <div class="card-icon cross-vendor" style="width: 40px; height: 40px; margin-right: 12px; background: #fce4ec;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
-            <p>Interactive attack flow visualization showing all techniques and tactical routes</p>
           </div>
-        </div>
-        <div class="attack-flow-actions">
-          <button class="btn-primary" onclick="viewCompleteFlow('{{ group_name }}')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-            View Interactive Flow
-          </button>
-          <button class="btn-secondary" onclick="downloadFlow('{{ group_name }}')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-            </svg>
-            Download JSON
-          </button>
-        </div>
+          Cross-vendor Correlations
+        </h2>
+        <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
       </div>
-    </div>
-    {% endif %}
 
-    <!-- Footer Actions -->
-    <div class="results-footer">
-      <div class="footer-info">
-        <p>Generated: {{ timestamp }}</p>
-        <p>Group: {{ group_name }}{% if mitre_id %} ({{ mitre_id }}){% endif %}</p>
-      </div>
-      <div class="footer-actions">
-        <button class="btn-outline" disabled title="Coming soon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-          </svg>
-          Export to VECTR
-        </button>
-        <button class="btn-outline" disabled title="Coming soon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polygon points="10 8 16 12 10 16 10 8"/>
-          </svg>
-          Run Emulation
-        </button>
+      <div class="cross-vendor-content">
+        <p style="text-align: center; color: #999; padding: 40px 0; font-style: italic;">Coming Soon</p>
       </div>
     </div>
+
+    <!-- Action Buttons - 4 horizontal buttons below Detection Rules -->
+    <div class="action-buttons">
+      <button class="btn-action" id="download-all-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+        </svg>
+        Download All
+      </button>
+      <button class="btn-action" disabled style="opacity: 0.5; cursor: not-allowed; background: #f5f5f5; color: #999; border-color: #ddd;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+        Export to VECTR
+        <span style="font-size: 0.75em; margin-left: 6px;">(Coming Soon)</span>
+      </button>
+      <button class="btn-action" disabled style="opacity: 0.5; cursor: not-allowed; background: #f5f5f5; color: #999; border-color: #ddd;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polygon points="10 8 16 12 10 16 10 8"/>
+        </svg>
+        Run Emulation
+        <span style="font-size: 0.75em; margin-left: 6px;">(Coming Soon)</span>
+      </button>
+      <button class="btn-action" id="new-analysis-btn" onclick="window.location.href='/'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        New Analysis
+      </button>
+    </div>
+
   </div>
+
+  <!-- Footer - matching index.html with timestamp -->
+  <footer class="page-footer">
+    <div class="footer-content">
+      <!-- GitHub Link -->
+      <div class="github-link">
+        <a href="https://github.com/cmdshiftd" target="_blank" rel="noopener noreferrer">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          <span style="font-weight: 500;">@cmdshiftd</span>
+        </a>
+      </div>
+
+      <!-- Quote -->
+      <div class="quote">
+        <p>
+          "Even if you can't see something, it doesn't mean it isn't there"<br>
+          <span>— Archer, Small Soldiers</span>
+        </p>
+      </div>
+
+      <!-- Spacer for balance -->
+      <div class="spacer"></div>
+    </div>
+
+    <!-- Timestamp and Attribution -->
+    <div class="timestamp">
+      {{ generated_time }}<br>
+      <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
+        Vendor logos are stylized representations. Splunk®, Microsoft®, and Elastic® are registered trademarks of their respective companies.
+      </span>
+    </div>
+  </footer>
 </div>
 
-<script src="{{ url_for('static', path='js/results.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+<script>
+// Toggle individual vendor
+function toggleVendor(header) {
+  const content = header.nextElementSibling;
+  const icon = header.querySelector('.expand-icon');
+
+  content.classList.toggle('show');
+  icon.classList.toggle('expanded');
+}
+
+// Toggle all vendors
+let allExpanded = false;
+function toggleAllVendors() {
+  const btn = event.target;
+  const contents = document.querySelectorAll('.vendor-content');
+  const icons = document.querySelectorAll('.expand-icon');
+
+  allExpanded = !allExpanded;
+
+  contents.forEach(content => {
+    if (allExpanded) {
+      content.classList.add('show');
+    } else {
+      content.classList.remove('show');
+    }
+  });
+
+  icons.forEach(icon => {
+    if (allExpanded) {
+      icon.classList.add('expanded');
+    } else {
+      icon.classList.remove('expanded');
+    }
+  });
+
+  btn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+}
+
+// Toggle correlations section
+let correlationsExpanded = false;
+function toggleAllCorrelations() {
+  const btn = event.target;
+  const content = document.querySelector('.correlation-content');
+
+  if (!content) return;
+
+  correlationsExpanded = !correlationsExpanded;
+
+  if (correlationsExpanded) {
+    content.classList.add('show');
+    btn.textContent = 'Collapse All';
+  } else {
+    content.classList.remove('show');
+    btn.textContent = 'Expand All';
+  }
+}
+
+// Toggle cross-vendor correlations section
+let crossVendorExpanded = false;
+function toggleAllCrossVendor() {
+  const btn = event.target;
+  const content = document.querySelector('.cross-vendor-content');
+
+  if (!content) return;
+
+  crossVendorExpanded = !crossVendorExpanded;
+
+  if (crossVendorExpanded) {
+    content.classList.add('show');
+    btn.textContent = 'Collapse All';
+  } else {
+    content.classList.remove('show');
+    btn.textContent = 'Expand All';
+  }
+}
+
+// Download all button
+document.getElementById('download-all-btn').addEventListener('click', function() {
+  window.location.href = `/api/download/all?group_name={{ group_name }}`;
+});
+</script>
 {% endblock %}

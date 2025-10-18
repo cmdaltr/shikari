@@ -1,8 +1,6 @@
 /* Tabbed Interface Styles - Themed with Archer logo colors */
 
 .tabs-container {
-  max-width: 800px;
-  margin: 0 auto;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(31, 45, 53, 0.15);
@@ -85,6 +83,27 @@
 /* Form Styles */
 .form-section {
   margin-bottom: 1.5em;
+}
+
+.form-separator {
+  display: flex;
+  align-items: center;
+  margin: 2em 0;
+  gap: 1em;
+}
+
+.separator-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #ddd, transparent);
+}
+
+.separator-text {
+  color: #999;
+  font-weight: 600;
+  font-size: 0.9em;
+  letter-spacing: 1px;
+  padding: 0 1em;
 }
 
 .form-label {

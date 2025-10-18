@@ -290,7 +290,16 @@ def construct_yaml(
             time.sleep(0.5)"""
         name = name.replace(" ", "").replace("/", "")
         # If index_name is provided, include it in the filename
-        filename = f"{name}_{index_name.replace('=', '').replace(' ', '')}.yaml"
+        # Handle case where index_name might be a dict or other non-string type
+        if isinstance(index_name, dict):
+            print(f"⚠️ WARNING: index_name is a dict, using 'unknown': {index_name}")
+            index_name_str = "unknown"
+        elif not isinstance(index_name, str):
+            print(f"⚠️ WARNING: index_name is type {type(index_name)}, converting to string: {index_name}")
+            index_name_str = str(index_name)
+        else:
+            index_name_str = index_name.replace('=', '').replace(' ', '')
+        filename = f"{name}_{index_name_str}.yaml"
         yamlfile = os.path.join("data", "generate", filename)
         if not os.path.exists(yamlfile):
             write_yaml(

@@ -1,19 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="light">
 <head>
     <title>How Archer Works - Architecture & Design</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}">
     <style>
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
+            zoom: 1.0;
+        }
+
+        /* Dark mode CSS variables */
+        :root[data-theme="light"] {
+            --bg-primary: #f7fafc;
+            --bg-secondary: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-tertiary: #999999;
+            --border-color: #e2e8f0;
+            --shadow: rgba(0,0,0,0.08);
+            --accent: #C53030;
+        }
+
+        :root[data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #f0f0f0;
+            --text-secondary: #b0b0b0;
+            --text-tertiary: #808080;
+            --border-color: #404040;
+            --shadow: rgba(0,0,0,0.3);
+            --accent: #ff6b6b;
+        }
+
         body {
             background: linear-gradient(to bottom, #f5f7f8 0%, #e8eef1 100%);
             background-attachment: fixed;
             min-height: 100vh;
             font-family: 'Roboto', Arial, sans-serif;
         }
+
+        [data-theme="dark"] body {
+            background: linear-gradient(to bottom, #1a1a1a 0%, #0f0f0f 100%);
+        }
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
             padding: 2em;
             padding-top: 80px; /* Consistent top spacing for logo */
             position: relative;
@@ -22,33 +62,89 @@
             text-align: center;
             margin-bottom: 3em;
         }
-        .back-link {
-            position: absolute;
+        /* Global navigation buttons */
+        .global-nav-controls {
+            position: fixed;
             top: 20px;
-            left: 30px;
-            color: #C53030;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.95em;
+            right: calc((100vw - 1200px) / 2 + 120px);
+            z-index: 10001;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        @media (max-width: 1400px) {
+            .global-nav-controls {
+                right: auto;
+                left: 20px;
+                top: 70px;
+            }
+        }
+
+        .nav-icon-btn {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            border: 2px solid #C53030;
+            justify-content: center;
+            width: 40px;
+            min-height: 40px;
+            padding: 8px;
+            border: 2px solid var(--accent);
             border-radius: 6px;
             background: rgba(255, 255, 255, 0.95);
+            color: var(--accent);
+            cursor: pointer;
             transition: all 0.2s;
-            z-index: 1000;
+            text-decoration: none;
+            box-sizing: border-box;
         }
-        .back-link:hover {
-            background: #C53030;
+
+        [data-theme="dark"] .nav-icon-btn {
+            background: rgba(45, 45, 45, 0.95);
+        }
+
+        .nav-icon-btn:hover {
+            background: var(--accent);
             color: white;
         }
-        .how-archer-link {
-            position: absolute;
+
+        .nav-icon-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .back-link {
+            position: fixed;
             top: 20px;
-            right: 30px;
-            color: #C53030;
+            left: calc((100vw - 1200px) / 2);
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.95);
+            transition: all 0.2s;
+            z-index: 1000;
+        }
+
+        [data-theme="dark"] .back-link {
+            background: rgba(45, 45, 45, 0.95);
+        }
+
+        .back-link:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .how-archer-link {
+            position: fixed;
+            top: 20px;
+            right: calc((100vw - 1200px) / 2);
+            color: var(--accent);
             text-decoration: none;
             font-size: 0.95em;
             font-weight: 600;
@@ -56,14 +152,21 @@
             align-items: center;
             gap: 6px;
             padding: 8px 16px;
-            border: 2px solid #C53030;
+            min-height: 40px;
+            border: 2px solid var(--accent);
             border-radius: 6px;
             background: rgba(255, 255, 255, 0.95);
             transition: all 0.2s;
             z-index: 1000;
+            box-sizing: border-box;
         }
+
+        [data-theme="dark"] .how-archer-link {
+            background: rgba(45, 45, 45, 0.95);
+        }
+
         .how-archer-link:hover {
-            background: #C53030;
+            background: var(--accent);
             color: white;
         }
         .section {
@@ -74,6 +177,12 @@
             margin-bottom: 2em;
             box-shadow: 0 4px 12px rgba(31, 45, 53, 0.15);
         }
+
+        [data-theme="dark"] .section {
+            background: rgba(45, 45, 45, 0.7);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
         .section h2 {
             color: #1f2d35;
             border-bottom: 3px solid #C53030;
@@ -81,16 +190,79 @@
             margin-top: 0;
             font-size: 1.8em;
         }
+
+        [data-theme="dark"] .section h2 {
+            color: var(--text-primary);
+            border-bottom-color: var(--accent);
+        }
+
         .section h3 {
             color: #2a3a44;
             margin-top: 1.5em;
             font-size: 1.4em;
         }
+
+        [data-theme="dark"] .section h3 {
+            color: var(--text-primary);
+        }
+
         .section h4 {
             color: #3a4a54;
             margin-top: 1.2em;
             font-size: 1.2em;
         }
+
+        [data-theme="dark"] .section h4 {
+            color: var(--text-secondary);
+        }
+
+        [data-theme="dark"] .section p,
+        [data-theme="dark"] .section li {
+            color: var(--text-secondary);
+        }
+
+        [data-theme="dark"] code {
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+        }
+
+        /* Table of Contents Styling */
+        .toc-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid rgba(197, 48, 48, 0.1);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .toc-item:hover {
+            border-color: var(--accent);
+            background: rgba(197, 48, 48, 0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(197, 48, 48, 0.15);
+        }
+
+        .toc-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        [data-theme="dark"] .toc-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 107, 107, 0.2);
+        }
+
+        [data-theme="dark"] .toc-item:hover {
+            border-color: var(--accent);
+            background: rgba(255, 107, 107, 0.1);
+        }
+
         .diagram {
             margin: 2em 0;
             text-align: center;
@@ -201,37 +373,180 @@
             background: #d1ecf1;
             border-left-color: #17a2b8;
         }
+
+        /* Footer Styling */
+        .page-footer {
+            margin-top: 60px;
+            margin-left: calc(-50vw + 50%);
+            margin-right: calc(-50vw + 50%);
+            padding: 30px 0;
+            background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+            border-top: 3px solid #C53030;
+            text-align: center;
+            width: 100vw;
+            box-sizing: border-box;
+        }
+
+        .page-footer .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .page-footer .github-link {
+            flex: 1;
+            min-width: 200px;
+            text-align: left;
+        }
+
+        .page-footer .github-link a {
+            color: #8B9AA3;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+            transition: color 0.2s;
+        }
+
+        .page-footer .github-link a:hover {
+            color: #C53030;
+        }
+
+        .page-footer .timestamp {
+            color: #8B9AA3;
+            font-size: 0.85em;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(139, 154, 163, 0.2);
+        }
+
+        .page-footer .quote {
+            flex: 2;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .page-footer .quote p {
+            color: #a8b5bd;
+            font-style: italic;
+            font-size: 0.95em;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .page-footer .quote span {
+            font-size: 0.9em;
+            color: #8B9AA3;
+        }
+
+        .page-footer .spacer {
+            flex: 1;
+            min-width: 200px;
+        }
     </style>
 </head>
 <body>
+    <a id="top"></a>
+    <!-- Global Navigation Controls (Dark Mode + Profile) -->
+    <div class="global-nav-controls">
+        <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        </button>
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        </a>
+    </div>
+
     <div class="container">
-        <!-- Back button - top left -->
+        <!-- Home button - top left -->
         <a href="/" class="back-link">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
-            Back
+            Home
         </a>
 
-        <!-- How Archer Works link - top right (self-reference, could be removed or made into different action) -->
-        <!-- For consistency, we'll leave it for navigation to other pages later -->
+        <!-- How Archer Works link - top right -->
+        <a href="/how-it-works" class="how-archer-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Help
+        </a>
 
         <div class="header">
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1em;">
                 <img src="{{ url_for('static', path='images/icon.png') }}" alt="Archer Logo" style="width: auto; height: auto; max-height: 120px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
-                <h1 style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 90px; font-weight: 700; letter-spacing: 10px; color: #1a1a1a; margin: 0; text-shadow: 0px 2px 4px rgba(0,0,0,0.2);">RCHER</h1>
+                <h1 style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 90px; font-weight: 700; letter-spacing: 10px; color: var(--text-primary); margin: 0; text-shadow: 0px 2px 4px rgba(0,0,0,0.2);">RCHER</h1>
             </div>
-            <h1 style="color: #1f2d35; font-size: 2.5em; margin: 0.5em 0 0.2em 0;">How Archer Works</h1>
-            <p style="color: #8B9AA3; font-size: 1.2em; margin: 0;">Architecture, Libraries, and AI-Powered Detection Generation</p>
+            <p style="color: var(--text-secondary); font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px; text-transform: uppercase; line-height: 1.8;">Architecture, Libraries, and AI-Powered Detection Generation<br>How Archer Works</p>
         </div>
 
-        <!-- Overview Section -->
-        <div class="section">
-            <h2>📋 Overview</h2>
+        <!-- Table of Contents -->
+        <div class="section" style="background: rgba(197, 48, 48, 0.05);">
+            <h2 style="border-bottom-color: var(--accent);">📑 Table of Contents</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 1.5em;">
+                <a href="#overview" class="toc-item">
+                    <span class="toc-icon">📋</span>
+                    <span>Overview & Summary</span>
+                </a>
+                <a href="#architecture" class="toc-item">
+                    <span class="toc-icon">🏗️</span>
+                    <span>Architecture</span>
+                </a>
+                <a href="#libraries" class="toc-item">
+                    <span class="toc-icon">📚</span>
+                    <span>Core Libraries</span>
+                </a>
+                <a href="#ai-component" class="toc-item">
+                    <span class="toc-icon">🤖</span>
+                    <span>AI Component</span>
+                </a>
+                <a href="#workflow" class="toc-item">
+                    <span class="toc-icon">⚙️</span>
+                    <span>Complete Workflow</span>
+                </a>
+                <a href="#visualization" class="toc-item">
+                    <span class="toc-icon">📊</span>
+                    <span>Attack Flow Visualization</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Overview & Summary Section -->
+        <div class="section" id="overview">
+            <h2>📋 Overview & Summary</h2>
             <p style="font-size: 1.1em; line-height: 1.8;">
                 Archer is an <strong>automated threat detection generator</strong> that transforms MITRE ATT&CK threat intelligence
-                into production-ready detection queries for Splunk and Microsoft Defender for Endpoint (MDE). It combines machine learning
-                from community query repositories with optional AI enhancement to create comprehensive, correlated detection coverage in minutes.
+                into production-ready detection queries for Splunk and Microsoft Defender for Endpoint (MDE). It combines <strong>machine learning from community queries</strong>, <strong>MITRE ATT&CK intelligence</strong>,
+                and <strong>optional AI enhancement</strong> to automatically generate comprehensive, correlated detection coverage in minutes.
+                Its architecture prioritizes speed through caching, parallel processing, and async operations, while maintaining
+                high accuracy through intelligent validation and correlation.
             </p>
 
             <div class="feature-grid">
@@ -263,10 +578,45 @@
                     </ul>
                 </div>
             </div>
+
+            <h3 style="margin-top: 2em;">Key Strengths & Use Cases</h3>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Key Strengths</h4>
+                    <ul>
+                        <li>✅ 10,000+ community queries learned</li>
+                        <li>✅ Multi-vendor support (Splunk, MDE)</li>
+                        <li>✅ Intelligent correlations</li>
+                        <li>✅ Attack flow visualizations</li>
+                        <li>✅ 90% faster with caching</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Use Cases</h4>
+                    <ul>
+                        <li>🎯 Threat hunting operations</li>
+                        <li>🎯 Incident response preparation</li>
+                        <li>🎯 Detection engineering</li>
+                        <li>🎯 Purple team exercises</li>
+                        <li>🎯 SIEM content development</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Future Enhancements</h4>
+                    <ul>
+                        <li>🔜 VECTR integration</li>
+                        <li>🔜 Atomic Red Team emulation</li>
+                        <li>🔜 Additional SIEM platforms</li>
+                        <li>🔜 Real-time threat feeds</li>
+                        <li>🔜 Custom query templates</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <!-- Architecture Section -->
-        <div class="section">
+        <div class="section" id="architecture">
             <h2>🏗️ Architecture</h2>
 
             <h3>CLI/Command-Line Architecture</h3>
@@ -322,7 +672,7 @@
         </div>
 
         <!-- Core Libraries Section -->
-        <div class="section">
+        <div class="section" id="libraries">
             <h2>📚 Core Libraries & Why We Use Them</h2>
 
             <table class="library-table">
@@ -425,7 +775,7 @@
         </div>
 
         <!-- AI Component Section -->
-        <div class="section">
+        <div class="section" id="ai-component">
             <h2>🤖 AI Component - How It Works</h2>
 
             <p style="font-size: 1.1em;">
@@ -546,7 +896,7 @@ AI recognizes this as:
         </div>
 
         <!-- Workflow Section -->
-        <div class="section">
+        <div class="section" id="workflow">
             <h2>⚙️ Complete Workflow</h2>
 
             <h3>Step-by-Step Process</h3>
@@ -659,7 +1009,7 @@ data/APT29/
         </div>
 
         <!-- Attack Flow Section -->
-        <div class="section">
+        <div class="section" id="visualization">
             <h2>📊 Attack Flow Visualization</h2>
 
             <p style="font-size: 1.1em;">
@@ -722,56 +1072,75 @@ data/APT29/
             </div>
         </div>
 
-        <!-- Summary Section -->
-        <div class="section">
-            <h2>🎯 Summary</h2>
+        <a href="#top" class="btn-primary" style="display: block; text-decoration: none; padding: 1em 3em; text-align: center; margin: 3em 0; width: auto;">
+            Back to Top
+        </a>
 
-            <p style="font-size: 1.1em; line-height: 1.8;">
-                Archer combines <strong>machine learning from community queries</strong>, <strong>MITRE ATT&CK intelligence</strong>,
-                and <strong>optional AI enhancement</strong> to automatically generate comprehensive threat detection coverage.
-                Its architecture prioritizes speed through caching, parallel processing, and async operations, while maintaining
-                high accuracy through intelligent validation and correlation.
-            </p>
+        <!-- Footer -->
+        <footer class="page-footer">
+            <div class="footer-content">
+                <!-- GitHub Link -->
+                <div class="github-link">
+                    <a href="https://github.com/cmdshiftd" target="_blank" rel="noopener noreferrer">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                        <span style="font-weight: 500;">@cmdshiftd</span>
+                    </a>
+                </div>
 
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <h4>Key Strengths</h4>
-                    <ul>
-                        <li>✅ 10,000+ community queries learned</li>
-                        <li>✅ Multi-vendor support (Splunk, MDE)</li>
-                        <li>✅ Intelligent correlations</li>
-                        <li>✅ Attack flow visualizations</li>
-                        <li>✅ 90% faster with caching</li>
-                    </ul>
+                <!-- Quote -->
+                <div class="quote">
+                    <p>
+                        "Even if you can't see something, it doesn't mean it isn't there"<br>
+                        <span>— Archer, Small Soldiers</span>
+                    </p>
                 </div>
-                <div class="feature-card">
-                    <h4>Use Cases</h4>
-                    <ul>
-                        <li>🎯 Threat hunting operations</li>
-                        <li>🎯 Incident response preparation</li>
-                        <li>🎯 Detection engineering</li>
-                        <li>🎯 Purple team exercises</li>
-                        <li>🎯 SIEM content development</li>
-                    </ul>
-                </div>
-                <div class="feature-card">
-                    <h4>Future Enhancements</h4>
-                    <ul>
-                        <li>🔜 VECTR integration</li>
-                        <li>🔜 Atomic Red Team emulation</li>
-                        <li>🔜 Additional SIEM platforms</li>
-                        <li>🔜 Real-time threat feeds</li>
-                        <li>🔜 Custom query templates</li>
-                    </ul>
-                </div>
+
+                <!-- Spacer for balance -->
+                <div class="spacer"></div>
             </div>
-        </div>
 
-        <div style="text-align: center; margin: 3em 0;">
-            <a href="/" class="btn-primary" style="display: inline-block; text-decoration: none; padding: 1em 3em;">
-                Back to Archer
-            </a>
-        </div>
+            <!-- Attribution -->
+            <div class="timestamp">
+                <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
+                    Vendor logos are stylized representations. Splunk®, Microsoft®, and Elastic® are registered trademarks of their respective companies.
+                </span>
+            </div>
+        </footer>
     </div>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
+        // Dark mode functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const sunIcon = darkModeToggle.querySelector('.sun-icon');
+        const moonIcon = darkModeToggle.querySelector('.moon-icon');
+        const html = document.documentElement;
+
+        // Check for saved theme preference or default to 'light'
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', currentTheme);
+        updateIcons(currentTheme);
+
+        darkModeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcons(newTheme);
+        });
+
+        function updateIcons(theme) {
+            if (theme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>

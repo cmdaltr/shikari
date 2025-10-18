@@ -175,6 +175,11 @@ def compile_query(retrieved_data):
     print(f"  - procedure_text length: {len(procedure_text)}")
 
     # Get all identifiers
+    print(f"  - op_guidance type: {type(op_guidance)}, is dict: {isinstance(op_guidance, dict)}")
+    if isinstance(op_guidance, dict):
+        print(f"    op_guidance keys: {list(op_guidance.keys())[:5]}")
+    print(f"  - red_tool type: {type(red_tool)}, is dict: {isinstance(red_tool, dict)}")
+
     if isinstance(op_guidance, dict) and isinstance(red_tool, dict):
         identifiers = {**op_guidance, **red_tool}
     elif isinstance(op_guidance, dict):
@@ -183,6 +188,8 @@ def compile_query(retrieved_data):
         identifiers = red_tool
     else:
         identifiers = {}
+
+    print(f"  - Final identifiers count: {len(identifiers)}")
 
     # Extract platform information if available
     procedure_platforms = retrieved_data.get("procedure_platforms", [])
@@ -237,6 +244,11 @@ def compile_query(retrieved_data):
                     is_compatible = is_query_applicable(
                         procedure_platforms, software_platforms, clean_index_name
                     )
+                    # DEBUG: Log what's being checked
+                    if not is_compatible:
+                        print(f"     ⚠️ is_query_applicable returned FALSE for {clean_index_name}")
+                        print(f"        procedure_platforms: {procedure_platforms}")
+                        print(f"        index_platforms: {get_platforms_for_index(clean_index_name)}")
 
                     # Check indicator-level platform compatibility (enhanced v2)
                     # ONLY validate actual indicators, NOT procedure text (which has URLs and generic descriptions)

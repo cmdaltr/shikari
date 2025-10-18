@@ -24,6 +24,11 @@ form#main-form .form-grid input[type="submit"] {
   max-width: 400px;
   min-width: 400px;
 }
+html {
+  /* Zoom out by 10% - makes all content appear slightly smaller */
+  zoom: 0.9;
+}
+
 html, body {
   height: 100%;
   margin: 0;
@@ -31,7 +36,7 @@ html, body {
 }
 
 body {
-  font-family: 'Roboto', Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 1.05rem;
   background: linear-gradient(to bottom, #f5f7f8 0%, #e8eef1 100%);
   min-height: 100vh;
@@ -124,8 +129,15 @@ html, body { margin: 0; padding: 0; }
   box-sizing: border-box;
 }
 
-/* Shared container */
-.page-container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+/* Shared container - standardized 1200px width */
+.page-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* Container variations */
+.container { max-width: 1200px; margin: 0 auto; }
+.tabs-container { width: 100%; margin: 0 auto; }
+.results-container { max-width: 1200px; margin: 0 auto; }
+.progress-container { max-width: 1200px; margin: 0 auto; }
+.manual-group-container { max-width: 1200px; margin: 0 auto; }
 
 /* Titles */
 .page-title,
@@ -141,15 +153,6 @@ h2.page-title {
 
 /* Single inner width used by both pages */
 .content-wrap { max-width: 720px; margin: 0 auto; text-align: left; }
-
-/* Inner content area */
-#manual-content,
-#progress-content {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 1rem 2rem;
-  box-sizing: border-box;
-}
 
 /* Normalize the page shell */
 #main-content.page-shell { display: block !important; }
@@ -187,8 +190,6 @@ h2.page-title {
   padding: 0 16px 32px; /* matches your computed padding */
 }
 
-/* Inner content blocks fill the wrapper */
-#manual-content, #progress-content { width: 100% !important; max-width: none !important; padding: 0; }
 #main-content.page-shell,
 #main-content.centered {
   padding-top: var(--page-top) !important;

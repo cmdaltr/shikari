@@ -3,14 +3,72 @@
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/manual.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+/* Ensure consistent positioning across all browsers */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
+  zoom: 1.0;
+}
+
+/* Small centered logo at top */
+.header-logo-container {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+.header-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.header-logo:hover {
+  opacity: 0.8;
+}
+
+.header-logo img {
+  width: auto;
+  height: 35px;
+  filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.2));
+}
+
+.header-logo h1 {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #1a1a1a;
+  margin: 0;
+  text-shadow: 0px 1px 3px rgba(0,0,0,0.15);
+}
+</style>
 {% endblock %}
 {% block content %}
 <div id="main-content" class="page-shell">
+  <!-- Small centered logo at top -->
+  <div class="header-logo-container">
+    <a href="/" class="header-logo">
+      <img src="{{ url_for('static', path='images/icon.png') }}" alt="Archer Logo">
+      <h1>RCHER</h1>
+    </a>
+  </div>
+
   <div class="manual-group-container page-container">
     <div class="content-wrap">  <!-- single shared wrapper -->
       <div class="nav-row">
-        <a href="/" class="back-btn" aria-label="Go back">
-          <span class="arrow" aria-hidden="true">←</span> Back
+        <a href="/" class="back-btn" aria-label="Go to home">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Home
         </a>
       </div>
 

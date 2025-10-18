@@ -483,7 +483,13 @@ def validate_indicator_for_index(
 
     # RULE 6: STRICT OS SEPARATION - If technique supports multiple OS platforms,
     # require specific indicators for OS-specific indexes
-    if technique_platforms and len(technique_platforms) > 1:
+    # EXCEPTION: Skip RULE 6 for CVE-based indicators since they are platform-agnostic
+    indicator_lower = indicator_text.lower()
+    is_cve_indicator = any(pattern in indicator_lower for pattern in ["jndi", "log4j", "cve-", "${", "exploit", "ldap://", "ldaps://", "rmi://", "dns://"])
+
+    if is_cve_indicator:
+        print(f"      ✅ RULE 6 BYPASSED: CVE indicator detected (platform-agnostic), skipping Multi-OS validation")
+    elif technique_platforms and len(technique_platforms) > 1:
         # Check if technique supports BOTH Windows and Linux/Unix
         supports_windows = any(p.lower() == "windows" for p in technique_platforms)
         supports_linux = any(p.lower() in ["linux", "unix"] for p in technique_platforms)
