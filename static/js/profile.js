@@ -5,25 +5,62 @@ function handleProfilePictureChange(event) {
   const file = event.target.files[0];
   if (file) {
     // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
       alert('File size must be less than 5MB');
+      event.target.value = ''; // Clear the input
       return;
     }
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+    // Validate file type - ONLY JPG and PNG
+    const allowedTypes = ['image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Only JPG and PNG images are allowed');
+      event.target.value = ''; // Clear the input
       return;
     }
 
+    // Validate file extension
+    const fileName = file.name.toLowerCase();
+    const validExtensions = ['.jpg', '.jpeg', '.png'];
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+
+    if (!hasValidExtension) {
+      alert('Invalid file extension. Only .jpg, .jpeg, and .png files are allowed');
+      event.target.value = ''; // Clear the input
+      return;
+    }
+
+    // Verify magic bytes (file signature) for extra security
     const reader = new FileReader();
     reader.onload = function(e) {
-      document.getElementById('profile-picture-preview').src = e.target.result;
+      const arr = new Uint8Array(e.target.result).subarray(0, 8);
 
-      // Upload to server
-      uploadProfilePicture(file);
+      // Check for JPEG magic bytes (FF D8 FF)
+      const isJPEG = arr[0] === 0xFF && arr[1] === 0xD8 && arr[2] === 0xFF;
+
+      // Check for PNG magic bytes (89 50 4E 47 0D 0A 1A 0A)
+      const isPNG = arr[0] === 0x89 && arr[1] === 0x50 && arr[2] === 0x4E &&
+                    arr[3] === 0x47 && arr[4] === 0x0D && arr[5] === 0x0A &&
+                    arr[6] === 0x1A && arr[7] === 0x0A;
+
+      if (!isJPEG && !isPNG) {
+        alert('Invalid image file. File content does not match a valid JPG or PNG image');
+        event.target.value = ''; // Clear the input
+        return;
+      }
+
+      // All client-side validation passed - preview and upload
+      const dataReader = new FileReader();
+      dataReader.onload = function(e) {
+        document.getElementById('profile-picture-preview').src = e.target.result;
+
+        // Upload to server (server will do additional validation)
+        uploadProfilePicture(file);
+      };
+      dataReader.readAsDataURL(file);
     };
-    reader.readAsDataURL(file);
+    reader.readAsArrayBuffer(file);
   }
 }
 
@@ -53,10 +90,22 @@ async function uploadProfilePicture(file) {
 document.getElementById('profile-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
 
+  const fullNameInput = document.getElementById('full_name');
+  const fullName = fullNameInput?.value;
+
+  // Validate full name using validation.js
+  const validation = validateFullName(fullName);
+  if (!validation.valid) {
+    showFieldError('full_name', validation.error);
+    showNotification(validation.error, 'error');
+    return;
+  }
+
+  // Clear any existing errors
+  removeFieldError('full_name');
+
   const formData = {
-    name: document.getElementById('name').value,
-    handle: document.getElementById('handle').value,
-    timezone: document.getElementById('timezone').value
+    full_name: validation.value  // Use the sanitized value
   };
 
   try {
@@ -68,16 +117,58 @@ document.getElementById('profile-form')?.addEventListener('submit', async functi
       body: JSON.stringify(formData)
     });
 
-    if (response.ok) {
-      showNotification('Profile updated successfully', 'success');
+    const data = await response.json();
+
+    if (data.success) {
+      showNotification(data.message || 'Profile updated successfully', 'success');
     } else {
-      showNotification('Failed to update profile', 'error');
+      showNotification(data.error || 'Failed to update profile', 'error');
     }
   } catch (error) {
     console.error('Error updating profile:', error);
     showNotification('An error occurred while saving', 'error');
   }
 });
+
+// Real-time validation for full name field
+const fullNameInput = document.getElementById('full_name');
+const fullNameCounter = document.getElementById('fullname-counter');
+
+if (fullNameInput) {
+  // Initialize counter with current value length
+  if (fullNameCounter) {
+    const currentLength = fullNameInput.value.length;
+    fullNameCounter.textContent = `${currentLength}/64 characters`;
+  }
+
+  // Update character counter as user types
+  fullNameInput.addEventListener('input', function() {
+    if (fullNameCounter) {
+      const length = this.value.length;
+      fullNameCounter.textContent = `${length}/64 characters`;
+
+      if (length > 64) {
+        fullNameCounter.style.color = 'var(--error, #C53030)';
+      } else if (length >= 60) {
+        fullNameCounter.style.color = '#ed8936';
+      } else {
+        fullNameCounter.style.color = 'var(--text-tertiary)';
+      }
+    }
+
+    removeFieldError('full_name');
+  });
+
+  // Validate on blur (when user leaves the field)
+  fullNameInput.addEventListener('blur', function() {
+    const validation = validateFullName(this.value);
+    if (!validation.valid) {
+      showFieldError('full_name', validation.error);
+    } else {
+      removeFieldError('full_name');
+    }
+  });
+}
 
 function resetForm() {
   if (confirm('Are you sure you want to discard your changes?')) {

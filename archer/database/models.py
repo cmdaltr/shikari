@@ -38,6 +38,11 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)  # bcrypt hash
     role = Column(Enum(UserRole), nullable=False, default=UserRole.STANDARD)
     is_active = Column(Boolean, default=True, nullable=False)
+
+    # Account lockout fields
+    failed_login_attempts = Column(Integer, default=0, nullable=False)
+    locked_until = Column(DateTime, nullable=True)  # None if not locked
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

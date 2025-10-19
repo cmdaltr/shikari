@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Form, Request, UploadFile, File
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from archer.security import sanitize_filename, sanitize_path_component, validate_safe_path, sanitize_group_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from typing import Optional
 
 # -----------------------------------------------------------------------------
 # Archer service - main FastAPI application
@@ -28,8 +29,19 @@ from archer.genai import process_genai
 from datetime import datetime
 import os
 import json
+import logging
 import threading
 from archer.build.progress import read_progress, write_progress
+
+# Configure logger
+logger = logging.getLogger(__name__)
+from archer.database.db import init_db, get_db
+from archer.auth import (
+    verify_password, create_session, get_current_user, get_user_from_session_id,
+    delete_session, encrypt_api_key, decrypt_api_key, create_password_reset_request,
+    validate_reset_token, reset_password_with_token, admin_reset_password, validate_password
+)
+from archer.database.models import User, UserRole, APIKey
 
 
 templates = Jinja2Templates(directory="templates")
@@ -96,6 +108,17 @@ def cleanup_old_drafts():
         pass
 
 
+# Initialize database on startup
+@app.on_event("startup")
+def initialize_database():
+    """
+    Initialize the authentication database.
+
+    Creates all tables if they don't exist. Database is stored at data/archer.db.
+    """
+    init_db()
+
+
 def get_mitre_lists():
     """
     Helper to return (tactics, techniques) used by templates.
@@ -151,14 +174,25 @@ def load_mitre_data():
 
 
 @app.get("/", response_class=HTMLResponse)
-def read_form(request: Request):
+def read_form(request: Request, archer_session: Optional[str] = Cookie(None)):
     # Render the index page where the user can enter a group name. The
     # template expects a `request` object and optionally lists of
     # techniques; other placeholders are provided for future features.
+
+    # Check if user is logged in (but don't require it)
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
+            "user": user,
             "techniques": getattr(app.state, "techniques_to_choose", []),
             "message": None,
             "actor_found": None,
@@ -169,11 +203,24 @@ def read_form(request: Request):
 
 
 @app.get("/how-it-works", response_class=HTMLResponse)
-def how_it_works(request: Request):
+def how_it_works(request: Request, archer_session: Optional[str] = Cookie(None)):
     """Render the 'How Archer Works' documentation page."""
+
+    # Check if user is logged in (but don't require it)
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+
     return templates.TemplateResponse(
         "how_it_works.html",
-        {"request": request},
+        {
+            "request": request,
+            "user": user
+        },
     )
 
 
@@ -2493,37 +2540,636 @@ def download_attack_flow(filename: str):
 
 
 # ============================================================================
-# Profile Management Routes
+# Authentication Helpers
 # ============================================================================
 
-@app.get("/profile", response_class=HTMLResponse)
-async def profile_page(request: Request):
+def require_auth(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
-    Render the profile page with user information and settings.
+    Helper function to require authentication.
+
+    Returns the authenticated user or redirects to login page.
+
+    Args:
+        request: FastAPI request object
+        archer_session: Session cookie value
+
+    Returns:
+        Tuple of (user, db) if authenticated, RedirectResponse to login if not
     """
-    # TODO: Add authentication check here
-    # For now, we'll render with empty user data
-    return templates.TemplateResponse(
-        "profile.html",
+    if not archer_session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    db = next(get_db())
+    user = get_user_from_session_id(archer_session, db)
+
+    if not user:
+        db.close()
+        return RedirectResponse(url="/login", status_code=303)
+
+    return user, db
+
+
+# ============================================================================
+# Authentication Routes
+# ============================================================================
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, response: Response):
+    """
+    Render the login page with CSRF protection.
+    """
+    from archer.security.csrf import generate_csrf_token
+    import secrets
+
+    # Generate a temporary session ID for CSRF (if user not logged in)
+    # This will be replaced with the real session ID after login
+    temp_session_id = secrets.token_urlsafe(16)
+    csrf_token = generate_csrf_token(temp_session_id)
+
+    # Store temp session ID in a cookie for CSRF validation
+    template_response = templates.TemplateResponse(
+        "login.html",
         {
             "request": request,
-            "user": None,  # Will be populated from session/database
-            "profile_picture_url": None
+            "error": None,
+            "csrf_token": csrf_token
+        }
+    )
+
+    template_response.set_cookie(
+        key="archer_csrf_session",
+        value=temp_session_id,
+        max_age=3600,  # 1 hour
+        httponly=True,
+        samesite="lax"
+    )
+
+    return template_response
+
+
+@app.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request):
+    """
+    Render the password reset page.
+    """
+    return templates.TemplateResponse(
+        "reset_password.html",
+        {
+            "request": request
         }
     )
 
 
+@app.post("/login")
+async def login(
+    request: Request,
+    response: Response,
+    email: str = Form(...),
+    password: str = Form(...),
+    remember_me: Optional[str] = Form(None),
+    csrf_token: str = Form(...),
+    archer_csrf_session: Optional[str] = Cookie(None)
+):
+    """
+    Authenticate user and create session.
+
+    Security features:
+    - CSRF protection
+    - Rate limiting (5 attempts per 5 minutes per IP)
+    - Account lockout (15 minutes after 5 failed attempts)
+    - Audit logging of all login attempts
+
+    Args:
+        email: User's email address
+        password: User's password
+        remember_me: "true" if Remember Me checkbox is checked
+        csrf_token: CSRF token from form
+        archer_csrf_session: CSRF session ID from cookie
+
+    Returns:
+        Redirect to home page on success, login page with error on failure
+    """
+    from archer.security.rate_limit import check_rate_limit, record_attempt, reset_rate_limit
+    from archer.database.audit import log_audit_event, EVENT_LOGIN_SUCCESS, EVENT_LOGIN_FAILURE
+    from archer.security.csrf import validate_csrf_token, consume_csrf_token
+    from datetime import datetime, timezone
+
+    db = next(get_db())
+    try:
+        # Get client IP and user agent for logging
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+
+        # Validate CSRF token
+        if not archer_csrf_session or not validate_csrf_token(csrf_token, archer_csrf_session):
+            log_audit_event(
+                db=db,
+                event_type=EVENT_LOGIN_FAILURE,
+                email=email,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                success=False,
+                details="Invalid CSRF token"
+            )
+            return templates.TemplateResponse(
+                "login.html",
+                {
+                    "request": request,
+                    "error": "Security validation failed. Please refresh the page and try again.",
+                    "csrf_token": ""  # Force page reload
+                },
+                status_code=403
+            )
+
+        # Consume CSRF token to prevent reuse
+        consume_csrf_token(csrf_token)
+
+        # Check rate limit by IP address
+        rate_limit_key = f"login:{client_ip}"
+        is_allowed, remaining = check_rate_limit(rate_limit_key, max_attempts=5, window_seconds=300)
+
+        if not is_allowed:
+            log_audit_event(
+                db=db,
+                event_type=EVENT_LOGIN_FAILURE,
+                email=email,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                success=False,
+                details="Rate limit exceeded"
+            )
+            return templates.TemplateResponse(
+                "login.html",
+                {
+                    "request": request,
+                    "error": "Too many login attempts. Please try again in 5 minutes."
+                },
+                status_code=429
+            )
+
+        # Find user by email
+        user = db.query(User).filter(User.email == email).first()
+
+        if not user:
+            record_attempt(rate_limit_key)
+            log_audit_event(
+                db=db,
+                event_type=EVENT_LOGIN_FAILURE,
+                email=email,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                success=False,
+                details="User not found"
+            )
+            return templates.TemplateResponse(
+                "login.html",
+                {
+                    "request": request,
+                    "error": "Invalid email or password"
+                },
+                status_code=401
+            )
+
+        # Check if account is locked
+        if user.locked_until and user.locked_until > datetime.now(timezone.utc).replace(tzinfo=None):
+            log_audit_event(
+                db=db,
+                event_type=EVENT_LOGIN_FAILURE,
+                user_id=user.id,
+                email=email,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                success=False,
+                details=f"Account locked until {user.locked_until}"
+            )
+            return templates.TemplateResponse(
+                "login.html",
+                {
+                    "request": request,
+                    "error": "Account is temporarily locked due to multiple failed login attempts. Please try again later."
+                },
+                status_code=403
+            )
+
+        # Verify password
+        if not verify_password(password, user.password_hash):
+            # Increment failed login attempts
+            user.failed_login_attempts += 1
+
+            # Lock account after 5 failed attempts
+            if user.failed_login_attempts >= 5:
+                from datetime import timedelta
+                user.locked_until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=15)
+                db.commit()
+
+                log_audit_event(
+                    db=db,
+                    event_type=EVENT_LOGIN_FAILURE,
+                    user_id=user.id,
+                    email=email,
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    success=False,
+                    details=f"Account locked after {user.failed_login_attempts} failed attempts"
+                )
+
+                return templates.TemplateResponse(
+                    "login.html",
+                    {
+                        "request": request,
+                        "error": "Account locked due to multiple failed login attempts. Please try again in 15 minutes."
+                    },
+                    status_code=403
+                )
+
+            db.commit()
+            record_attempt(rate_limit_key)
+
+            log_audit_event(
+                db=db,
+                event_type=EVENT_LOGIN_FAILURE,
+                user_id=user.id,
+                email=email,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                success=False,
+                details=f"Invalid password (attempt {user.failed_login_attempts}/5)"
+            )
+
+            return templates.TemplateResponse(
+                "login.html",
+                {
+                    "request": request,
+                    "error": "Invalid email or password"
+                },
+                status_code=401
+            )
+
+        # Check if user is active
+        if not user.is_active:
+            log_audit_event(
+                db=db,
+                event_type=EVENT_LOGIN_FAILURE,
+                user_id=user.id,
+                email=email,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                success=False,
+                details="Account disabled"
+            )
+            return templates.TemplateResponse(
+                "login.html",
+                {
+                    "request": request,
+                    "error": "Account is disabled. Please contact an administrator."
+                },
+                status_code=403
+            )
+
+        # Successful login - reset failed attempts and unlock account
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
+
+        # Reset rate limit for this IP
+        reset_rate_limit(rate_limit_key)
+
+        # Create session
+        remember = remember_me == "true"
+        session_id = create_session(user.id, remember_me=remember, db=db)
+
+        # Log successful login
+        log_audit_event(
+            db=db,
+            event_type=EVENT_LOGIN_SUCCESS,
+            user_id=user.id,
+            email=email,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            success=True,
+            details=f"Login successful (Remember Me: {remember})"
+        )
+
+        # Set session cookie
+        redirect_response = RedirectResponse(url="/", status_code=303)
+
+        # Set cookie with appropriate max_age
+        if remember:
+            max_age = 7 * 24 * 60 * 60  # 7 days in seconds
+        else:
+            max_age = 16 * 60 * 60  # 16 hours in seconds
+
+        redirect_response.set_cookie(
+            key="archer_session",
+            value=session_id,
+            max_age=max_age,
+            httponly=True,
+            samesite="lax"
+        )
+
+        return redirect_response
+
+    finally:
+        db.close()
+
+
+@app.get("/logout")
+async def logout(
+    request: Request,
+    response: Response,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Log out user by deleting their session.
+    """
+    if archer_session:
+        db = next(get_db())
+        try:
+            delete_session(archer_session, db)
+        finally:
+            db.close()
+
+    # Redirect to login page and clear cookie
+    redirect_response = RedirectResponse(url="/login", status_code=303)
+    redirect_response.delete_cookie(key="archer_session")
+    return redirect_response
+
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_page(request: Request, response: Response):
+    """
+    Render the registration page with CSRF protection.
+    """
+    from archer.security.csrf import generate_csrf_token
+    import secrets
+
+    # Generate a temporary session ID for CSRF (if user not logged in)
+    temp_session_id = secrets.token_urlsafe(16)
+    csrf_token = generate_csrf_token(temp_session_id)
+
+    # Store temp session ID in a cookie for CSRF validation
+    template_response = templates.TemplateResponse(
+        "register.html",
+        {
+            "request": request,
+            "error": None,
+            "csrf_token": csrf_token
+        }
+    )
+
+    template_response.set_cookie(
+        key="archer_csrf_session",
+        value=temp_session_id,
+        max_age=3600,  # 1 hour
+        httponly=True,
+        samesite="lax"
+    )
+
+    return template_response
+
+
+@app.post("/register")
+async def register(
+    request: Request,
+    response: Response,
+    email: str = Form(...),
+    full_name: str = Form(...),
+    password: str = Form(...),
+    password_confirm: str = Form(...),
+    csrf_token: str = Form(...),
+    archer_csrf_session: Optional[str] = Cookie(None)
+):
+    """
+    Register a new user account.
+
+    Security features:
+    - CSRF protection
+    - Password strength validation
+    - Email validation
+    - Rate limiting (5 attempts per 5 minutes per IP)
+    - Audit logging of all registration attempts
+
+    Args:
+        email: User's email address
+        full_name: User's full name
+        password: User's password
+        password_confirm: Password confirmation
+        csrf_token: CSRF token from form
+        archer_csrf_session: CSRF session ID from cookie
+
+    Returns:
+        Redirect to login page on success, registration page with error on failure
+    """
+    from archer.security.rate_limit import check_rate_limit, record_attempt
+    from archer.database.audit import log_audit_event, EVENT_USER_REGISTERED
+    from archer.security.csrf import validate_csrf_token, consume_csrf_token
+    from archer.auth.password import validate_password, hash_password
+    import re
+
+    db = next(get_db())
+    try:
+        # Get client IP and user agent for logging
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+
+        # Validate CSRF token
+        if not archer_csrf_session or not validate_csrf_token(csrf_token, archer_csrf_session):
+            return templates.TemplateResponse(
+                "register.html",
+                {
+                    "request": request,
+                    "error": "Security validation failed. Please refresh the page and try again.",
+                    "csrf_token": ""  # Force page reload
+                },
+                status_code=403
+            )
+
+        # Consume CSRF token to prevent reuse
+        consume_csrf_token(csrf_token)
+
+        # Check rate limit by IP address
+        rate_limit_key = f"register:{client_ip}"
+        is_allowed, remaining = check_rate_limit(rate_limit_key, max_attempts=5, window_seconds=300)
+
+        if not is_allowed:
+            return templates.TemplateResponse(
+                "register.html",
+                {
+                    "request": request,
+                    "error": "Too many registration attempts. Please try again in 5 minutes.",
+                    "csrf_token": csrf_token
+                },
+                status_code=429
+            )
+
+        # Validate email format
+        email = email.strip().lower()
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email) or len(email) > 64:
+            record_attempt(rate_limit_key)
+            return templates.TemplateResponse(
+                "register.html",
+                {
+                    "request": request,
+                    "error": "Invalid email address",
+                    "csrf_token": csrf_token
+                },
+                status_code=400
+            )
+
+        # Check if email already exists
+        existing_user = db.query(User).filter(User.email == email).first()
+        if existing_user:
+            record_attempt(rate_limit_key)
+            return templates.TemplateResponse(
+                "register.html",
+                {
+                    "request": request,
+                    "error": "An account with this email address already exists",
+                    "csrf_token": csrf_token
+                },
+                status_code=400
+            )
+
+        # Validate full name
+        full_name = full_name.strip()
+        if len(full_name) < 2 or len(full_name) > 64:
+            record_attempt(rate_limit_key)
+            return templates.TemplateResponse(
+                "register.html",
+                {
+                    "request": request,
+                    "error": "Full name must be between 2 and 64 characters",
+                    "csrf_token": csrf_token
+                },
+                status_code=400
+            )
+
+        # Validate passwords match
+        if password != password_confirm:
+            record_attempt(rate_limit_key)
+            return templates.TemplateResponse(
+                "register.html",
+                {
+                    "request": request,
+                    "error": "Passwords do not match",
+                    "csrf_token": csrf_token
+                },
+                status_code=400
+            )
+
+        # Validate password strength
+        is_valid, error_msg = validate_password(password)
+        if not is_valid:
+            record_attempt(rate_limit_key)
+            return templates.TemplateResponse(
+                "register.html",
+                {
+                    "request": request,
+                    "error": error_msg,
+                    "csrf_token": csrf_token
+                },
+                status_code=400
+            )
+
+        # Create new user
+        new_user = User(
+            email=email,
+            full_name=full_name,
+            password_hash=hash_password(password),
+            account_type="user",  # Default to regular user
+            is_active=True,
+            failed_login_attempts=0
+        )
+
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+
+        # Log successful registration
+        log_audit_event(
+            db=db,
+            event_type=EVENT_USER_REGISTERED,
+            user_id=new_user.id,
+            email=email,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            success=True,
+            details=f"User registered: {full_name}"
+        )
+
+        # Redirect to login page with success message
+        return RedirectResponse(url="/login?registered=true", status_code=303)
+
+    finally:
+        db.close()
+
+
+# ============================================================================
+# Profile Management Routes
+# ============================================================================
+
+@app.get("/profile", response_class=HTMLResponse)
+async def profile_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Render the profile page with user information and settings.
+
+    Requires authentication.
+    """
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+
+    user, db = auth_result
+
+    try:
+        return templates.TemplateResponse(
+            "profile.html",
+            {
+                "request": request,
+                "user": user,
+                "profile_picture_url": None
+            }
+        )
+    finally:
+        db.close()
+
+
 @app.post("/api/profile")
-async def update_profile(request: Request):
+async def update_profile(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Update user profile information.
-    """
-    # TODO: Add authentication check
-    data = await request.json()
 
-    # TODO: Save to database
-    # For now, return success
-    return {"success": True, "message": "Profile updated successfully"}
+    Requires authentication. Updates full_name in the database.
+    """
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"success": False, "error": "Not authenticated"}
+
+    user, db = auth_result
+
+    try:
+        data = await request.json()
+        full_name = data.get("full_name", "").strip()
+
+        if not full_name:
+            return {"success": False, "error": "Full name is required"}
+
+        # Update user's full name
+        user.full_name = full_name
+        db.commit()
+        db.refresh(user)
+
+        return {"success": True, "message": "Profile updated successfully"}
+
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": str(e)}
+
+    finally:
+        db.close()
 
 
 @app.post("/api/profile/picture")
@@ -2570,25 +3216,630 @@ async def get_timeline(request: Request):
 
 
 @app.get("/api/profile/apikeys")
-async def get_api_keys(request: Request):
+async def get_api_keys(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
-    Get user's API keys (masked for security).
-    """
-    # TODO: Add authentication check
-    # TODO: Load from secure storage
+    Get user's API keys (decrypted for display).
 
-    # For now, return empty
-    return {}
+    Requires authentication. Returns decrypted API keys for the logged-in user.
+    """
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"error": "Not authenticated"}
+
+    user, db = auth_result
+
+    try:
+        # Query all API keys for this user
+        api_keys = db.query(APIKey).filter(APIKey.user_id == user.id).all()
+
+        # Decrypt and return API keys
+        result = {}
+        for key in api_keys:
+            try:
+                decrypted_value = decrypt_api_key(key.encrypted_key)
+                result[key.key_name] = decrypted_value
+            except Exception as e:
+                logger.error(f"Failed to decrypt API key {key.key_name}: {e}")
+                result[key.key_name] = ""
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error loading API keys: {e}")
+        return {"error": str(e)}
+
+    finally:
+        db.close()
 
 
 @app.post("/api/profile/apikeys")
-async def save_api_keys(request: Request):
+async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Save user's API keys securely.
+
+    Requires authentication. Encrypts and stores API keys for the logged-in user.
     """
-    # TODO: Add authentication check
-    data = await request.json()
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"success": False, "error": "Not authenticated"}
 
-    # TODO: Encrypt and save to secure storage
+    user, db = auth_result
 
-    return {"success": True, "message": "API keys saved successfully"}
+    try:
+        data = await request.json()
+
+        # Map of frontend field names to database key names
+        key_mapping = {
+            "splunk": "splunk",
+            "mde": "mde",
+            "elastic": "elastic",
+            "openai": "openai",
+            "anthropic": "anthropic"
+        }
+
+        # Process each API key
+        for frontend_name, db_name in key_mapping.items():
+            key_value = data.get(frontend_name, "").strip()
+
+            # Skip empty keys
+            if not key_value:
+                continue
+
+            # Check if key already exists for this user
+            existing_key = db.query(APIKey).filter(
+                APIKey.user_id == user.id,
+                APIKey.key_name == db_name
+            ).first()
+
+            # Encrypt the API key
+            encrypted_value = encrypt_api_key(key_value)
+
+            if existing_key:
+                # Update existing key
+                existing_key.encrypted_key = encrypted_value
+                existing_key.updated_at = datetime.utcnow()
+            else:
+                # Create new key
+                new_key = APIKey(
+                    user_id=user.id,
+                    key_name=db_name,
+                    encrypted_key=encrypted_value
+                )
+                db.add(new_key)
+
+        db.commit()
+        return {"success": True, "message": "API keys saved successfully"}
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error saving API keys: {e}")
+        return {"success": False, "error": str(e)}
+
+    finally:
+        db.close()
+
+
+@app.get("/api/users")
+async def get_users(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Get list of all users (admin only).
+
+    Returns list of users with their email, full name, and account type.
+    """
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"success": False, "error": "Not authenticated"}
+
+    user, db = auth_result
+
+    # Check if user is admin
+    if not user or user.role.value != 'admin':
+        return {"success": False, "error": "Admin access required"}
+
+    try:
+        # Get all users
+        all_users = db.query(User).order_by(User.created_at.desc()).all()
+
+        users_list = []
+        for u in all_users:
+            users_list.append({
+                "id": u.id,
+                "email": u.email,
+                "full_name": u.full_name,
+                "role": u.role.value,
+                "is_active": u.is_active,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "is_current_user": u.id == user.id
+            })
+
+        return {"success": True, "users": users_list}
+
+    except Exception as e:
+        logger.error(f"Error fetching users: {e}")
+        return {"success": False, "error": str(e)}
+
+    finally:
+        db.close()
+
+
+# =============================================================================
+# Password Reset Endpoints
+# =============================================================================
+
+@app.post("/api/auth/request-reset")
+async def request_password_reset(request: Request):
+    """
+    Request a password reset. Generates a reset token and sends email (or logs in dev mode).
+    """
+    try:
+        data = await request.json()
+        email = data.get("email", "").strip().lower()
+
+        if not email:
+            return {"success": False, "error": "Email is required"}
+
+        db = next(get_db())
+        try:
+            # Get user to get their full name for personalization
+            user = db.query(User).filter(User.email == email, User.is_active == True).first()
+
+            # Create reset request
+            token = create_password_reset_request(email, db)
+
+            if not token:
+                # For security, don't reveal if email exists or not
+                return {
+                    "success": True,
+                    "message": "If an account exists with this email, a password reset link has been sent."
+                }
+
+            # Send password reset email
+            from archer.auth.email import send_password_reset_email, EMAIL_ENABLED
+            email_sent = send_password_reset_email(
+                email=email,
+                token=token,
+                full_name=user.full_name if user else None
+            )
+
+            # In development mode (EMAIL_ENABLED=false), also return the token for testing
+            response = {
+                "success": True,
+                "message": "Password reset link has been sent to your email."
+            }
+
+            if not EMAIL_ENABLED:
+                # Development mode - include token in response for testing
+                reset_url = f"http://localhost:8000/reset-password?token={token}"
+                response["reset_url"] = reset_url
+                response["token"] = token
+                response["dev_mode"] = True
+
+            return response
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"Error requesting password reset: {e}")
+        return {"success": False, "error": "An error occurred"}
+
+
+@app.post("/api/auth/reset-password")
+async def reset_password(request: Request):
+    """
+    Reset password using a valid reset token.
+    """
+    from archer.database.audit import log_audit_event, EVENT_PASSWORD_RESET_COMPLETED
+    from archer.auth.password_reset import validate_reset_token
+
+    try:
+        data = await request.json()
+        token = data.get("token", "").strip()
+        new_password = data.get("new_password", "")
+
+        # Get client IP and user agent for logging
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+
+        if not token:
+            return {"success": False, "error": "Reset token is required"}
+
+        if not new_password:
+            return {"success": False, "error": "New password is required"}
+
+        # Validate password
+        is_valid, error_message = validate_password(new_password)
+        if not is_valid:
+            return {"success": False, "error": error_message}
+
+        db = next(get_db())
+        try:
+            # Validate token and get user first
+            user = validate_reset_token(token, db)
+
+            if not user:
+                log_audit_event(
+                    db=db,
+                    event_type=EVENT_PASSWORD_RESET_COMPLETED,
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    success=False,
+                    details="Invalid or expired reset token"
+                )
+                return {
+                    "success": False,
+                    "error": "Invalid or expired reset token"
+                }
+
+            # Reset password
+            success = reset_password_with_token(token, new_password, db)
+
+            if not success:
+                log_audit_event(
+                    db=db,
+                    event_type=EVENT_PASSWORD_RESET_COMPLETED,
+                    user_id=user.id,
+                    email=user.email,
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    success=False,
+                    details="Failed to reset password"
+                )
+                return {
+                    "success": False,
+                    "error": "Invalid or expired reset token"
+                }
+
+            # Log successful password reset
+            log_audit_event(
+                db=db,
+                event_type=EVENT_PASSWORD_RESET_COMPLETED,
+                user_id=user.id,
+                email=user.email,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                success=True,
+                details="Password reset completed successfully"
+            )
+
+            return {
+                "success": True,
+                "message": "Password has been reset successfully. You can now log in with your new password."
+            }
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"Error resetting password: {e}")
+        return {"success": False, "error": "An error occurred"}
+
+
+@app.post("/api/admin/reset-password")
+async def admin_reset_user_password(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Admin-only endpoint to reset another user's password.
+    """
+    # Check authentication and admin role
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"success": False, "error": "Not authenticated"}
+
+    admin_user, db = auth_result
+
+    try:
+        # Verify admin role
+        if admin_user.role != UserRole.ADMIN:
+            return {"success": False, "error": "Unauthorized - Admin access required"}
+
+        data = await request.json()
+        user_id = data.get("user_id")
+        new_password = data.get("new_password", "")
+
+        if not user_id:
+            return {"success": False, "error": "User ID is required"}
+
+        if not new_password:
+            return {"success": False, "error": "New password is required"}
+
+        # Validate password
+        is_valid, error_message = validate_password(new_password)
+        if not is_valid:
+            return {"success": False, "error": error_message}
+
+        # Reset password
+        success = admin_reset_password(user_id, new_password, db)
+
+        if not success:
+            return {"success": False, "error": "User not found"}
+
+        return {
+            "success": True,
+            "message": "Password has been reset successfully"
+        }
+
+    except Exception as e:
+        logger.error(f"Error in admin password reset: {e}")
+        return {"success": False, "error": "An error occurred"}
+
+    finally:
+        db.close()
+
+
+# =============================================================================
+# Admin User Management Endpoints
+# =============================================================================
+
+@app.get("/api/admin/users")
+async def get_all_users(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Get list of all users (Admin only).
+
+    Returns user information excluding sensitive data like passwords.
+    """
+    # Check authentication and admin role
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"success": False, "error": "Not authenticated"}
+
+    admin_user, db = auth_result
+
+    try:
+        # Verify admin role
+        if admin_user.role != UserRole.ADMIN:
+            return {"success": False, "error": "Unauthorized - Admin access required"}
+
+        # Get all users
+        users = db.query(User).all()
+
+        # Format user data (exclude sensitive information)
+        users_data = []
+        for user in users:
+            users_data.append({
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "role": user.role.value,
+                "is_active": user.is_active,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "updated_at": user.updated_at.isoformat() if user.updated_at else None
+            })
+
+        return {
+            "success": True,
+            "users": users_data
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting users: {e}")
+        return {"success": False, "error": "An error occurred"}
+
+    finally:
+        db.close()
+
+
+@app.post("/api/admin/users")
+async def create_user(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Create a new user (Admin only).
+    """
+    # Check authentication and admin role
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"success": False, "error": "Not authenticated"}
+
+    admin_user, db = auth_result
+
+    try:
+        # Verify admin role
+        if admin_user.role != UserRole.ADMIN:
+            return {"success": False, "error": "Unauthorized - Admin access required"}
+
+        data = await request.json()
+        email = data.get("email", "").strip().lower()
+        full_name = data.get("full_name", "").strip()
+        password = data.get("password", "")
+        role = data.get("role", "standard").lower()
+
+        # Validate email
+        from archer.security import validate_email, sanitize_full_name
+        email_valid, email_result = validate_email(email)
+        if not email_valid:
+            return {"success": False, "error": email_result}
+        email = email_result
+
+        # Validate full name
+        name_valid, name_result = sanitize_full_name(full_name)
+        if not name_valid:
+            return {"success": False, "error": name_result}
+        full_name = name_result
+
+        # Validate password
+        is_valid, error_message = validate_password(password)
+        if not is_valid:
+            return {"success": False, "error": error_message}
+
+        # Validate role
+        if role not in ['admin', 'standard']:
+            return {"success": False, "error": "Invalid role. Must be 'admin' or 'standard'"}
+
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == email).first()
+        if existing_user:
+            return {"success": False, "error": "User with this email already exists"}
+
+        # Create new user
+        user_role = UserRole.ADMIN if role == 'admin' else UserRole.STANDARD
+        hashed_password = hash_password(password)
+
+        new_user = User(
+            email=email,
+            full_name=full_name,
+            hashed_password=hashed_password,
+            role=user_role,
+            is_active=True
+        )
+
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+
+        return {
+            "success": True,
+            "message": "User created successfully",
+            "user": {
+                "id": new_user.id,
+                "email": new_user.email,
+                "full_name": new_user.full_name,
+                "role": new_user.role.value
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating user: {e}")
+        return {"success": False, "error": "An error occurred"}
+
+    finally:
+        db.close()
+
+
+@app.put("/api/admin/users/{user_id}")
+async def update_user(request: Request, user_id: int, archer_session: Optional[str] = Cookie(None)):
+    """
+    Update user details (Admin only).
+
+    Can update: email, full_name, role, is_active
+    Cannot update: password (use reset password endpoint)
+    """
+    # Check authentication and admin role
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"success": False, "error": "Not authenticated"}
+
+    admin_user, db = auth_result
+
+    try:
+        # Verify admin role
+        if admin_user.role != UserRole.ADMIN:
+            return {"success": False, "error": "Unauthorized - Admin access required"}
+
+        # Get user to update
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return {"success": False, "error": "User not found"}
+
+        data = await request.json()
+
+        # Update email if provided
+        if "email" in data:
+            from archer.security import validate_email
+            email = data["email"].strip().lower()
+            email_valid, email_result = validate_email(email)
+            if not email_valid:
+                return {"success": False, "error": email_result}
+
+            # Check if email is already taken by another user
+            existing = db.query(User).filter(User.email == email_result, User.id != user_id).first()
+            if existing:
+                return {"success": False, "error": "Email already in use"}
+
+            user.email = email_result
+
+        # Update full name if provided
+        if "full_name" in data:
+            from archer.security import sanitize_full_name
+            name_valid, name_result = sanitize_full_name(data["full_name"])
+            if not name_valid:
+                return {"success": False, "error": name_result}
+            user.full_name = name_result
+
+        # Update role if provided
+        if "role" in data:
+            role = data["role"].lower()
+            if role not in ['admin', 'standard']:
+                return {"success": False, "error": "Invalid role"}
+            user.role = UserRole.ADMIN if role == 'admin' else UserRole.STANDARD
+
+        # Update active status if provided
+        if "is_active" in data:
+            user.is_active = bool(data["is_active"])
+
+        user.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(user)
+
+        return {
+            "success": True,
+            "message": "User updated successfully",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "role": user.role.value,
+                "is_active": user.is_active
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating user: {e}")
+        return {"success": False, "error": "An error occurred"}
+
+    finally:
+        db.close()
+
+
+@app.delete("/api/admin/users/{user_id}")
+async def deactivate_user(request: Request, user_id: int, archer_session: Optional[str] = Cookie(None)):
+    """
+    Deactivate a user (Admin only).
+
+    Soft delete - sets is_active to False instead of deleting the record.
+    """
+    # Check authentication and admin role
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"success": False, "error": "Not authenticated"}
+
+    admin_user, db = auth_result
+
+    try:
+        # Verify admin role
+        if admin_user.role != UserRole.ADMIN:
+            return {"success": False, "error": "Unauthorized - Admin access required"}
+
+        # Prevent admin from deactivating themselves
+        if admin_user.id == user_id:
+            return {"success": False, "error": "Cannot deactivate your own account"}
+
+        # Get user to deactivate
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return {"success": False, "error": "User not found"}
+
+        # Deactivate user
+        user.is_active = False
+        user.updated_at = datetime.utcnow()
+
+        # Invalidate all active sessions for this user
+        from archer.database.models import Session
+        db.query(Session).filter(Session.user_id == user_id, Session.is_active == True).update({"is_active": False})
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"User {user.email} has been deactivated"
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deactivating user: {e}")
+        return {"success": False, "error": "An error occurred"}
+
+    finally:
+        db.close()

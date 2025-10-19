@@ -29,6 +29,18 @@ dist/
 .temp/
 *.log
 archer/mappings/*.json
+prompt.txt
+
+# Sensitive data - NEVER commit these
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite
+.env
+*.key
+*.pem
+profile_pictures/
 
 # Output directories - keep structure but exclude generated content
 data/correlate/*.json
@@ -88,6 +100,3 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
-# Atomic Red Team (external repo)
-archer/data/emulation/atomic-red-team/

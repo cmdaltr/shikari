@@ -206,7 +206,7 @@ This logo now has:
      alt="Archer Logo"
      style="max-width: 800px; height: auto;">
 <p style="color: #e8eaed;">
-  Automated multi-vendor detection engineering framework
+  AUTOMATED MULTI-VENDOR THREAT HUNTING & DETECTION FRAMEWORK
 </p>
 ```
 

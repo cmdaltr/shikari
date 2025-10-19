@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/profile.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/validation.css') }}?v={{ request.app.state.asset_version }}">
     {% block head %}
     <style>
       /* Ensure consistent positioning across all browsers */
@@ -193,8 +194,27 @@
     {% endblock %}
 </head>
 <body>
-    <!-- Global Navigation Controls (Dark Mode + Profile) -->
+    <!-- Global Navigation Controls (Profile|Logout|Home|Dark) -->
     <div class="global-nav-controls">
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        </a>
+        <a href="/logout" class="nav-icon-btn" aria-label="Logout" title="Logout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+        </a>
+        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+        </a>
         <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
             <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"/>
@@ -211,24 +231,9 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>
         </button>
-        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-            </svg>
-        </a>
     </div>
     {% block content %}
     <div id="main-content" class="page-shell">
-      <!-- Home button - top left -->
-      <a href="/" class="back-link">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        Home
-      </a>
-
       <!-- How Archer Works link - top right - fixed positioning for consistency across all pages -->
       <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link" style="position: fixed !important; top: 20px !important; right: calc((100vw - 1200px) / 2) !important; z-index: 1000 !important; color: var(--accent); text-decoration: none; font-size: 0.95em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; min-height: 40px; border: 2px solid var(--accent); border-radius: 6px; background: rgba(255, 255, 255, 0.95); transition: all 0.2s; margin: 0 !important; box-sizing: border-box;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -276,6 +281,17 @@
             </svg>
             <span>API Keys</span>
           </button>
+          {% if user and user.role.value == 'admin' %}
+          <button class="tab-button" data-tab="users">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>Users</span>
+          </button>
+          {% endif %}
         </div>
 
         <div class="tabs-content">
@@ -288,21 +304,21 @@
             <div class="profile-container">
               <!-- Profile Picture Section -->
               <div class="profile-picture-section">
-                <div class="profile-picture-wrapper">
+                <div class="profile-picture-wrapper" onclick="document.getElementById('profile-picture-input').click()">
                   <img src="{{ profile_picture_url if profile_picture_url else url_for('static', path='images/default-avatar.svg') }}"
                        alt="Profile Picture"
                        class="profile-picture"
                        id="profile-picture-preview">
-                  <button class="change-picture-btn" onclick="document.getElementById('profile-picture-input').click()">
+                  <div class="change-picture-btn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                       <circle cx="12" cy="13" r="4"/>
                     </svg>
-                    Change Photo
-                  </button>
+                    Update
+                  </div>
                   <input type="file"
                          id="profile-picture-input"
-                         accept="image/*"
+                         accept="image/jpeg,image/png"
                          style="display: none;"
                          onchange="handleProfilePictureChange(event)">
                 </div>
@@ -310,30 +326,55 @@
 
               <!-- Profile Form -->
               <form id="profile-form" class="profile-form">
-                <!-- Full Name field - full width -->
-                <div class="form-section">
-                  <label for="name" class="form-label">Full Name</label>
-                  <input type="text"
-                         name="name"
-                         id="name"
-                         class="form-input"
-                         placeholder="Enter your full name"
-                         value="{{ user.name if user else '' }}">
-                </div>
-
-                <!-- Handle field + Save button row -->
-                <div style="display: flex; gap: 16px; margin-top: 16px;">
+                <!-- Email (75%) + Account Type (25%) row -->
+                <div style="display: flex; gap: 16px;">
+                  <!-- Email field (75%) -->
                   <div class="form-section" style="flex: 0 0 75%; margin: 0;">
-                    <label for="handle" class="form-label">Handle</label>
-                    <input type="text"
-                           name="handle"
-                           id="handle"
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email"
+                           name="email"
+                           id="email"
                            class="form-input"
-                           placeholder="@username"
-                           value="{{ user.handle if user else '' }}">
+                           placeholder="your.email@example.com"
+                           value="{{ user.email if user else '' }}"
+                           readonly
+                           style="background-color: var(--bg-primary); cursor: not-allowed;">
                   </div>
 
-                  <div style="flex: 0 0 calc(25% - 16px); display: flex; align-items: flex-end;">
+                  <!-- Account Type (25%) -->
+                  <div class="form-section" style="flex: 0 0 calc(25% - 16px); margin: 0;">
+                    <label for="user_type" class="form-label">Account Type</label>
+                    <input type="text"
+                           name="user_type"
+                           id="user_type"
+                           class="form-input"
+                           value="{{ user.role.value|capitalize if user else '' }}"
+                           readonly
+                           style="background-color: var(--bg-primary); cursor: not-allowed;">
+                  </div>
+                </div>
+
+                <!-- Full Name (75%) + Save Changes (25%) row -->
+                <div style="display: flex; gap: 16px; margin-top: 16px;">
+                  <!-- Full Name field (75%) -->
+                  <div class="form-section" style="flex: 0 0 75%; margin: 0;">
+                    <label for="full_name" class="form-label">Full Name</label>
+                    <input type="text"
+                           name="full_name"
+                           id="full_name"
+                           class="form-input"
+                           placeholder="Enter your full name"
+                           value="{{ user.full_name if user else '' }}"
+                           maxlength="64">
+                    <div class="char-counter">
+                      <span id="fullname-counter">0/64 characters</span>
+                    </div>
+                  </div>
+
+                  <!-- Save button (25%) -->
+                  <div style="flex: 0 0 calc(25% - 16px); display: flex; flex-direction: column;">
+                    <!-- Reduced spacer to raise button by 1.3px -->
+                    <div style="height: calc((0.95em * 1.2 + 8px) / 2 - 1.3px);"></div>
                     <button type="submit" class="btn-primary" style="width: 100%; white-space: nowrap;">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
@@ -384,9 +425,18 @@
                     <line x1="12" y1="8" x2="12" y2="12"/>
                     <line x1="12" y1="16" x2="12.01" y2="16"/>
                   </svg>
-                  <p>No activity yet. Start by generating some detections!</p>
-                  <a href="/" class="btn-primary">Go to Generate</a>
+                  <p>No activity yet.</p>
                 </div>
+              </div>
+
+              <!-- Generate Button -->
+              <div class="form-actions">
+                <button type="button" class="btn-primary" onclick="window.location.href='/'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                  </svg>
+                  Generate
+                </button>
               </div>
             </div>
           </div>
@@ -629,14 +679,142 @@
               </div>
             </div>
           </div>
+
+          <!-- USERS TAB (Admin Only) -->
+          {% if user and user.role.value == 'admin' %}
+          <div class="tab-pane" id="tab-users">
+            <div class="tab-description">
+              User account management
+            </div>
+
+            <div id="users-list" style="margin-top: 24px;">
+              <!-- Users will be loaded dynamically via JavaScript -->
+              <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
+                Loading users...
+              </p>
+            </div>
+          </div>
+
+          <script>
+          // Load users when the Users tab is clicked
+          async function loadUsers() {
+            try {
+              const response = await fetch('/api/users');
+              const data = await response.json();
+
+              if (data.success && data.users) {
+                displayUsers(data.users);
+              } else {
+                document.getElementById('users-list').innerHTML = `
+                  <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
+                    ${data.error || 'Failed to load users'}
+                  </p>
+                `;
+              }
+            } catch (error) {
+              console.error('Error loading users:', error);
+              document.getElementById('users-list').innerHTML = `
+                <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
+                  Error loading users
+                </p>
+              `;
+            }
+          }
+
+          function displayUsers(users) {
+            if (users.length === 0) {
+              document.getElementById('users-list').innerHTML = `
+                <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
+                  No users found
+                </p>
+              `;
+              return;
+            }
+
+            let html = '<div style="overflow-x: auto;">';
+            html += '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<thead><tr style="border-bottom: 2px solid var(--border-color);">';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Full Name</th>';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Email</th>';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Role</th>';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Status</th>';
+            html += '<th style="padding: 12px; text-align: center; font-weight: 600;">Actions</th>';
+            html += '</tr></thead>';
+            html += '<tbody>';
+
+            users.forEach(user => {
+              const youLabel = user.is_current_user ? ' <span style="color: var(--accent); font-weight: 600;">(You)</span>' : '';
+              const statusBadge = user.is_active
+                ? '<span style="color: #10b981;">Active</span>'
+                : '<span style="color: #ef4444;">Inactive</span>';
+
+              // Only show cog icon for users that are not the current user
+              const actionsCell = user.is_current_user
+                ? '<td style="padding: 12px; text-align: center;">—</td>'
+                : `<td style="padding: 12px; text-align: center;">
+                    <button onclick="manageUser(${user.id})" style="background: none; border: none; cursor: pointer; padding: 4px; display: inline-flex; align-items: center; justify-content: center;" title="Manage User">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" style="width: 20px; height: 20px;">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6m8.66-15L15 8.66M8.66 15 3.34 20.66M23 12h-6m-6 0H1m20.66 8.66L15.34 15M8.66 9 3.34 3.34"/>
+                      </svg>
+                    </button>
+                  </td>`;
+
+              html += '<tr style="border-bottom: 1px solid var(--border-color);">';
+              html += `<td style="padding: 12px;">${escapeHtml(user.full_name)}${youLabel}</td>`;
+              html += `<td style="padding: 12px;">${escapeHtml(user.email)}</td>`;
+              html += `<td style="padding: 12px; text-transform: capitalize;">${escapeHtml(user.role)}</td>`;
+              html += `<td style="padding: 12px;">${statusBadge}</td>`;
+              html += actionsCell;
+              html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            document.getElementById('users-list').innerHTML = html;
+          }
+
+          function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+          }
+
+          // Function to manage a user (placeholder for future functionality)
+          function manageUser(userId) {
+            // TODO: Implement user management modal
+            // This will allow admins to:
+            // - Reset password
+            // - Update email
+            // - Update name
+            // - Change role
+            // - Activate/deactivate user
+            console.log('Managing user ID:', userId);
+            alert('User management functionality coming soon!\n\nThis will allow you to:\n- Reset password\n- Update email and name\n- Change role\n- Activate/deactivate account');
+          }
+
+          // Load users when the Users tab is first shown
+          document.addEventListener('DOMContentLoaded', function() {
+            const usersTab = document.querySelector('[data-tab="users"]');
+            if (usersTab) {
+              usersTab.addEventListener('click', function() {
+                // Only load once
+                if (document.getElementById('users-list').querySelector('table') === null) {
+                  loadUsers();
+                }
+              });
+            }
+          });
+          </script>
+          {% endif %}
+
         </div>
       </div>
     </div>
     </div>
 
     <!-- Footer -->
-    <footer style="margin-top: 80px; padding: 30px 20px; background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%); border-top: 3px solid #C53030; text-align: center;">
-      <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+    <footer style="margin-top: 80px; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%); padding: 30px 0; background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%); border-top: 3px solid #C53030; text-align: center;">
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
         <!-- GitHub Link -->
         <div style="flex: 1; min-width: 200px; text-align: left;">
           <a href="https://github.com/cmdshiftd" target="_blank" rel="noopener noreferrer" style="color: #8B9AA3; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95em; transition: color 0.2s;">
@@ -661,6 +839,7 @@
     </footer>
 
     <script src="{{ url_for('static', path='js/tabs.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+    <script src="{{ url_for('static', path='js/validation.js') }}?v={{ request.app.state.asset_version }}"></script>
     <script src="{{ url_for('static', path='js/profile.js') }}?v={{ request.app.state.asset_version }}" defer></script>
 
     <!-- Dark Mode Toggle Script -->

@@ -70,6 +70,23 @@ docker-compose up --build
 # Open browser to http://localhost:8000
 ```
 
+### 6. Create Admin User (First Time Only)
+
+**Required for first-time setup** - Create your admin account:
+
+```bash
+# In a new terminal (while the app is running)
+source .venv/bin/activate
+python3 scripts/create_admin.py
+```
+
+You'll be prompted for:
+- **Email address** - Your admin email
+- **Full name** - Display name
+- **Password** - Secure password (min 12 chars, uppercase, lowercase, number, special char)
+
+> **Note**: The database (`data/archer.db`) is automatically created when you first start the application. This step only creates your admin user account.
+
 ---
 
 ## Common Commands

@@ -22,7 +22,7 @@ Updated all HTML templates to use the new logo design with the icon replacing th
 - Text reads: `[Logo]RCHER`
 - Added 10px gap between logo and text
 - Logo preserves original dimensions (width: auto, height: auto, max-height: 120px)
-- Tagline below: "AUTOMATED MULTI-VENDOR DETECTION ENGINEERING FRAMEWORK"
+- Tagline below: "AUTOMATED MULTI-VENDOR THREAT HUNTING & DETECTION FRAMEWORK"
 
 ### **2. how_it_works.html** ✅
 **Location**: Documentation/architecture page
@@ -71,7 +71,7 @@ Updated all HTML templates to use the new logo design with the icon replacing th
 All pages now display:
 ```
 [Your Logo]  R C H E R
-AUTOMATED MULTI-VENDOR DETECTION ENGINEERING FRAMEWORK
+AUTOMATED MULTI-VENDOR THREAT HUNTING & DETECTION FRAMEWORK
 ```
 
 With:

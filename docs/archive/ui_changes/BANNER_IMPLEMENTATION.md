@@ -38,7 +38,7 @@ Integrated the crosshair icon **as the letter "A"** in ARCHER, creating a cohesi
 - Subtle text shadow for depth
 
 #### **3. Integrated Tagline**
-- "AUTOMATED MULTI-VENDOR DETECTION ENGINEERING FRAMEWORK"
+- "AUTOMATED MULTI-VENDOR THREAT HUNTING & DETECTION FRAMEWORK"
 - 16px font size
 - Light gray (#666666)
 - Letter spacing: 3px
@@ -129,7 +129,7 @@ Integrated the crosshair icon **as the letter "A"** in ARCHER, creating a cohesi
 **Before**:
 ```html
 <img src="images/archer_logo.svg" alt="Archer Logo">
-<p>Automated multi-vendor detection engineering framework</p>
+<p>AUTOMATED MULTI-VENDOR THREAT HUNTING & DETECTION FRAMEWORK</p>
 ```
 
 **After**:

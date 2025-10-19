@@ -61,7 +61,18 @@ docker-compose up --build
 
 2. The FastAPI service will be available at `http://localhost:8000`.
 
-3. To stop the service, press `Ctrl+C` and then run:
+3. **Create your admin user** (required for first-time setup):
+
+```bash
+python3 scripts/create_admin.py
+```
+
+You'll be prompted for:
+- Email address
+- Full name
+- Password (with confirmation)
+
+4. To stop the service, press `Ctrl+C` and then run:
 
 ```bash
 docker-compose down
@@ -72,26 +83,42 @@ docker-compose down
 
 ### Option B: Run Locally with Python
 
-Create and activate a virtual environment:
+1. Create and activate a virtual environment:
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 ```
 
-Install dependencies:
+2. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Start the FastAPI service:
+3. Start the FastAPI service:
 
 ```bash
 uvicorn archer.app:app --reload
 ```
 
 The service will be available at `http://localhost:8000`.
+
+4. **Create your admin user** (required for first-time setup):
+
+In a new terminal window:
+
+```bash
+source venv/bin/activate  # Activate the virtual environment
+python3 scripts/create_admin.py
+```
+
+You'll be prompted for:
+- Email address
+- Full name
+- Password (with confirmation)
+
+> **Note**: The database (`data/archer.db`) is automatically created when you first start the application. No manual database setup is required.
 
 ---
 <br>

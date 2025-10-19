@@ -92,8 +92,24 @@
     color: var(--text-primary);
 }
 
-/* Forms */
+/* Forms - only apply to labels outside of tab content (which has white bg) */
+[data-theme="dark"] body > .form-label,
+[data-theme="dark"] body > .form-label-small,
+[data-theme="dark"] .page-shell > .form-label,
+[data-theme="dark"] .page-shell > .form-label-small {
+    color: var(--text-primary) !important;
+}
+
+/* Labels inside white tab content areas should remain dark for readability */
+[data-theme="dark"] .tab-pane .form-label,
+[data-theme="dark"] .tab-pane .form-label-small,
+[data-theme="dark"] .tab-pane label {
+    color: #333333 !important;
+}
+
 [data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
 [data-theme="dark"] input[type="file"],
 [data-theme="dark"] select,
 [data-theme="dark"] textarea {
@@ -103,6 +119,8 @@
 }
 
 [data-theme="dark"] input[type="text"]:focus,
+[data-theme="dark"] input[type="email"]:focus,
+[data-theme="dark"] input[type="password"]:focus,
 [data-theme="dark"] select:focus,
 [data-theme="dark"] textarea:focus {
     border-color: var(--accent);

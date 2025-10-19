@@ -1,5 +1,26 @@
 #!/bin/bash
 
+echo "======================================"
+echo "   ARCHER CLEAN START SCRIPT"
+echo "======================================"
+echo ""
+echo "This script will:"
+echo "  1. Kill all running Python/uvicorn processes"
+echo "  2. Clear Python cache (__pycache__ and .pyc files)"
+echo "  3. Start a fresh Archer server on port 8000"
+echo ""
+echo "WARNING: This will stop ALL Python processes!"
+echo ""
+read -p "Do you want to continue? (y/N): " -n 1 -r
+echo ""
+
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    echo "Aborted."
+    exit 1
+fi
+
+echo ""
 echo "=== ARCHER CLEAN START ==="
 echo "Killing all existing servers..."
 
