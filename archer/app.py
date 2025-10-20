@@ -364,11 +364,21 @@ async def generate_cve(
     semantic: str = Form(None),
     advanced_parsing: str = Form(None),
     ai_generators: str = Form(None),
-    local_llm: str = Form(None)
+    local_llm: str = Form(None),
+    archer_session: Optional[str] = Cookie(None)
 ):
     """Generate detection queries for CVE(s)."""
     import re
     from archer.intelligence.cve_hunter import research_and_hunt
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+
+    user, db = auth_result
+    user_id = user.id
+    db.close()  # Close the DB session as we'll be using threading
 
     # Support multiple CVEs (comma-separated)
     cve_ids = [c.strip().upper() for c in cve_id.split(',') if c.strip()]
@@ -622,7 +632,9 @@ async def generate_cve(
             "status": "started",
             "stage": "CVE Research",
             "created_yaml": 0,
-            "cve_ids": cve_ids
+            "cve_ids": cve_ids,
+            "user_id": user_id,
+            "source_type": "cve"
         })
     except Exception:
         pass
@@ -632,9 +644,18 @@ async def generate_cve(
 
 # Progress page endpoint
 @app.get("/progress", response_class=HTMLResponse)
-async def progress(request: Request, group_name: str = ""):
+async def progress(request: Request, group_name: str = "", archer_session: Optional[str] = Cookie(None)):
     # Simple progress page shown while the orchestrator runs. Currently
     # the template only needs the request and the group_name to display.
+
+    # Check if user is logged in (but don't require it)
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
 
     # Detect if this is a CVE hunt to set initial page state
     is_cve_hunt = group_name and (group_name.upper().startswith('CVE-'))
@@ -643,6 +664,7 @@ async def progress(request: Request, group_name: str = ""):
         "progress.html",
         {
             "request": request,
+            "user": user,
             "group_name": group_name,
             "is_cve_hunt": is_cve_hunt
         },
@@ -1121,8 +1143,48 @@ def modified_process_group_wrapper(
 
         print(f"DEBUG: process_group completed successfully")
 
-        # If correlation was requested and run via process_group, we're done
+        # If correlation was requested, log correlation activity
         if run_correlation:
+            progress_data = read_progress(group_name) or {}
+            user_id = progress_data.get("user_id")
+            if user_id:
+                try:
+                    # Count detections and correlations
+                    detection_count = progress_data.get("created_yaml", 0)
+
+                    # Count correlations from the JSON file
+                    correlation_count = 0
+                    correlation_file = os.path.join("data", "correlate", f"{group_name}.json")
+                    if os.path.exists(correlation_file):
+                        import json
+                        with open(correlation_file, 'r') as f:
+                            correlations = json.load(f)
+                            correlation_count = len(correlations.get("correlations", []))
+
+                    source_type = progress_data.get("source_type", "group")
+
+                    # Build title
+                    if source_type == "cve":
+                        cve_ids = progress_data.get("cve_ids", [])
+                        title = f"Built correlations for {', '.join(cve_ids) if cve_ids else 'CVE'}"
+                    else:
+                        title = f"Built correlations for {group_name}"
+
+                    # Log the activity
+                    log_activity(
+                        user_id=user_id,
+                        activity_type="correlate",
+                        title=title,
+                        description=f"Generated {detection_count} detections and {correlation_count} cross-vendor correlations",
+                        metadata={
+                            "detection_count": detection_count,
+                            "correlation_count": correlation_count,
+                            "group_name": group_name,
+                            "source_type": source_type
+                        }
+                    )
+                except Exception as log_error:
+                    print(f"Error logging correlation activity: {log_error}")
             return
 
         # Otherwise, just mark as complete
@@ -1135,6 +1197,36 @@ def modified_process_group_wrapper(
 
         progress_data["status"] = "complete"
         write_progress(group_name, progress_data)
+
+        # Log activity to timeline
+        user_id = progress_data.get("user_id")
+        if user_id:
+            try:
+                # Count detections generated
+                detection_count = progress_data.get("created_yaml", 0)
+                source_type = progress_data.get("source_type", "group")
+
+                # Build title based on source type
+                if source_type == "cve":
+                    cve_ids = progress_data.get("cve_ids", [])
+                    title = f"Generated detections for {', '.join(cve_ids) if cve_ids else 'CVE'}"
+                else:
+                    title = f"Generated detections for {group_name}"
+
+                # Log the activity
+                log_activity(
+                    user_id=user_id,
+                    activity_type="generate",
+                    title=title,
+                    description=f"Successfully generated {detection_count} detection rules",
+                    metadata={
+                        "detection_count": detection_count,
+                        "group_name": group_name,
+                        "source_type": source_type
+                    }
+                )
+            except Exception as log_error:
+                print(f"Error logging activity: {log_error}")
 
     except Exception as e:
         print(f"Error in process group: {e}")
@@ -1208,6 +1300,7 @@ async def upload_file(
     use_openai: str = Form(None),
     auto_generate: str = Form(None),
     run_correlation: str = Form(None),
+    archer_session: Optional[str] = Cookie(None)
 ):
     """
     Handle file upload for TTP/IOC extraction.
@@ -1215,6 +1308,15 @@ async def upload_file(
     Accepts threat intelligence files (PDF, TXT, JSON, CSV, YARA) and extracts
     TTPs and IOCs using GenAI, then optionally generates detection queries.
     """
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+
+    user, db = auth_result
+    user_id = user.id
+    db.close()  # Close DB session
+
     try:
         # SECURITY: Validate filename to prevent path traversal
         import os
@@ -1309,6 +1411,22 @@ async def upload_file(
         print(f"  - ttps_count: {response_data['ttps_count']}")
         print(f"  - iocs_count: {response_data['iocs_count']}")
         print(f"  - auto_generate_requested: {response_data['auto_generate_requested']}")
+
+        # Log upload activity
+        try:
+            log_activity(
+                user_id=user_id,
+                activity_type="upload",
+                title=f"Uploaded threat intelligence: {safe_filename}",
+                description=f"Extracted {len(ttps)} TTPs and {sum(len(v) for v in iocs.values())} IOCs",
+                metadata={
+                    "filename": safe_filename,
+                    "ttps_count": len(ttps),
+                    "iocs_count": sum(len(v) for v in iocs.values())
+                }
+            )
+        except Exception as log_error:
+            print(f"Error logging upload activity: {log_error}")
 
         return JSONResponse(response_data)
 
@@ -2056,10 +2174,19 @@ from datetime import timedelta
 
 
 @app.get("/results", response_class=HTMLResponse)
-def results_page(request: Request, group_name: str):
+def results_page(request: Request, group_name: str, archer_session: Optional[str] = Cookie(None)):
     """
     Render the results dashboard showing generated detections, correlations, and attack flows.
     """
+    # Check if user is logged in (but don't require it)
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+
     safe_group = sanitize_group_name(group_name)
 
     # Collect detection files by vendor
@@ -2246,7 +2373,7 @@ def results_page(request: Request, group_name: str):
     total_detections = 0
 
     for vendor, files in detection_files.items():
-        # Group files by technique + description
+        # Group files by technique + description for display
         grouped = {}
         for file_data in files:
             key = (file_data['technique'], file_data['description'])
@@ -2260,7 +2387,7 @@ def results_page(request: Request, group_name: str):
             grouped[key]['titles'].append(file_data['title'])
             total_detections += 1  # Count every detection individually
 
-        # Convert grouped data to list format
+        # Convert grouped data to list format for display
         detection_list = []
         for (technique, description), data in sorted(grouped.items(), key=lambda x: x[0][0]):
             # Sort titles alphabetically and join with commas
@@ -2272,12 +2399,22 @@ def results_page(request: Request, group_name: str):
                 "description": description
             })
 
+        # Keep ungrouped file list for saving to library
+        ungrouped_files = []
+        for file_data in files:
+            ungrouped_files.append({
+                "technique": file_data.get('technique_display', file_data['technique']),
+                "title": file_data['title'],
+                "description": file_data['description']
+            })
+
         detections.append({
             "name": vendor,
             "display_name": vendor_display_names.get(vendor, vendor.title()),
             "icon": vendor_icons.get(vendor, "📋"),
             "count": len(files),  # Original count for display
-            "detections": detection_list
+            "detections": detection_list,  # Grouped for display
+            "all_files": ungrouped_files  # Ungrouped for saving
         })
 
     # Add Elastic as "Coming Soon" placeholder
@@ -2412,6 +2549,7 @@ def results_page(request: Request, group_name: str):
         "results.html",
         {
             "request": request,
+            "user": user,
             "group_name": safe_group,
             "mitre_id": mitre_id,
             "total_detections": total_detections,
@@ -2543,6 +2681,49 @@ def download_attack_flow(filename: str):
 # Authentication Helpers
 # ============================================================================
 
+def log_activity(user_id: int, activity_type: str, title: str, description: str = None, metadata: dict = None):
+    """
+    Helper function to log user activity to the timeline.
+
+    Args:
+        user_id: User ID to log activity for
+        activity_type: Type of activity (generate, correlate, upload, library_save, library_export)
+        title: Activity title
+        description: Optional activity description
+        metadata: Optional metadata dict (will be JSON encoded)
+    """
+    from archer.database.models import ActivityLog, ActivityType
+    from archer.database.db import SessionLocal
+    import json
+
+    db = SessionLocal()
+    try:
+        # Convert string to ActivityType enum
+        try:
+            activity_enum = ActivityType(activity_type)
+        except ValueError:
+            logger.error(f"Invalid activity type: {activity_type}")
+            return
+
+        # Create activity log entry
+        activity = ActivityLog(
+            user_id=user_id,
+            activity_type=activity_enum,
+            title=title,
+            description=description,
+            metadata=json.dumps(metadata) if metadata else None
+        )
+
+        db.add(activity)
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error logging activity: {e}")
+    finally:
+        db.close()
+
+
 def require_auth(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Helper function to require authentication.
@@ -2574,7 +2755,7 @@ def require_auth(request: Request, archer_session: Optional[str] = Cookie(None))
 # ============================================================================
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request, response: Response):
+async def login_page(request: Request, response: Response, registered: Optional[str] = None):
     """
     Render the login page with CSRF protection.
     """
@@ -2586,12 +2767,18 @@ async def login_page(request: Request, response: Response):
     temp_session_id = secrets.token_urlsafe(16)
     csrf_token = generate_csrf_token(temp_session_id)
 
+    # Check if user just registered
+    success_message = None
+    if registered == "true":
+        success_message = "Registration successful! Please log in with your credentials."
+
     # Store temp session ID in a cookie for CSRF validation
     template_response = templates.TemplateResponse(
         "login.html",
         {
             "request": request,
             "error": None,
+            "success": success_message,
             "csrf_token": csrf_token
         }
     )
@@ -2961,7 +3148,7 @@ async def register(
         Redirect to login page on success, registration page with error on failure
     """
     from archer.security.rate_limit import check_rate_limit, record_attempt
-    from archer.database.audit import log_audit_event, EVENT_USER_REGISTERED
+    from archer.database.audit import log_audit_event, EVENT_USER_CREATED
     from archer.security.csrf import validate_csrf_token, consume_csrf_token
     from archer.auth.password import validate_password, hash_password
     import re
@@ -3077,7 +3264,7 @@ async def register(
             email=email,
             full_name=full_name,
             password_hash=hash_password(password),
-            account_type="user",  # Default to regular user
+            role=UserRole.STANDARD,  # Default to standard user
             is_active=True,
             failed_login_attempts=0
         )
@@ -3089,7 +3276,7 @@ async def register(
         # Log successful registration
         log_audit_event(
             db=db,
-            event_type=EVENT_USER_REGISTERED,
+            event_type=EVENT_USER_CREATED,
             user_id=new_user.id,
             email=email,
             ip_address=client_ip,
@@ -3132,6 +3319,552 @@ async def profile_page(request: Request, archer_session: Optional[str] = Cookie(
                 "profile_picture_url": None
             }
         )
+    finally:
+        db.close()
+
+
+@app.get("/library", response_class=HTMLResponse)
+async def library_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Render the Library page for managing saved detections.
+    """
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+
+    user, db = auth_result
+
+    try:
+        template_response = templates.TemplateResponse(
+            "library.html",
+            {
+                "request": request,
+                "user": user
+            }
+        )
+        return template_response
+    finally:
+        db.close()
+
+
+@app.get("/api/library/detections")
+async def get_library_detections(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Get all library detections accessible to the user.
+    Returns user's private detections + all shared detections.
+    """
+    from archer.database.models import LibraryDetection, VisibilityType
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        # Get user's private detections + all shared detections
+        detections = db.query(LibraryDetection).filter(
+            (LibraryDetection.user_id == user.id) |
+            (LibraryDetection.visibility == VisibilityType.SHARED)
+        ).order_by(LibraryDetection.created_at.desc()).all()
+
+        # Format response
+        result = []
+        for detection in detections:
+            creator = db.query(User).filter(User.id == detection.user_id).first()
+            result.append({
+                "id": detection.id,
+                "title": detection.title,
+                "detection_type": detection.detection_type.value,
+                "visibility": detection.visibility.value,
+                "creator": creator.full_name if creator else "Unknown",
+                "creator_email": creator.email if creator else "",
+                "platform": detection.platform,
+                "tags": detection.tags,
+                "created_at": detection.created_at.isoformat(),
+                "is_owner": detection.user_id == user.id
+            })
+
+        return {"success": True, "detections": result}
+
+    except Exception as e:
+        logger.error(f"Error fetching library detections: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch detections")
+    finally:
+        db.close()
+
+
+@app.post("/api/library/search")
+async def search_library(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Search library detections with filters.
+    """
+    from archer.database.models import LibraryDetection, VisibilityType, DetectionType
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        body = await request.json()
+        query_text = body.get("query", "").strip()
+        type_filter = body.get("type_filter", "all")
+        visibility_filter = body.get("visibility_filter", "all")
+        creator_filter = body.get("creator_filter", "all")
+
+        # Build base query
+        query = db.query(LibraryDetection).filter(
+            (LibraryDetection.user_id == user.id) |
+            (LibraryDetection.visibility == VisibilityType.SHARED)
+        )
+
+        # Apply search filter (search in title, content, AND tags)
+        if query_text:
+            query = query.filter(
+                (LibraryDetection.title.contains(query_text)) |
+                (LibraryDetection.content.contains(query_text)) |
+                (LibraryDetection.tags.contains(query_text))
+            )
+
+        # Apply type filter
+        if type_filter != "all":
+            query = query.filter(LibraryDetection.detection_type == DetectionType(type_filter))
+
+        # Apply visibility filter
+        if visibility_filter != "all":
+            query = query.filter(LibraryDetection.visibility == VisibilityType(visibility_filter))
+
+        detections = query.order_by(LibraryDetection.created_at.desc()).all()
+
+        # Format response and apply creator filter
+        result = []
+        for detection in detections:
+            creator = db.query(User).filter(User.id == detection.user_id).first()
+            creator_name = creator.username if creator else "Unknown"
+
+            # Apply creator filter
+            if creator_filter != "all" and creator_name != creator_filter:
+                continue
+            result.append({
+                "id": detection.id,
+                "title": detection.title,
+                "detection_type": detection.detection_type.value,
+                "visibility": detection.visibility.value,
+                "creator": creator.full_name if creator else "Unknown",
+                "creator_email": creator.email if creator else "",
+                "platform": detection.platform,
+                "tags": detection.tags,
+                "created_at": detection.created_at.isoformat(),
+                "is_owner": detection.user_id == user.id
+            })
+
+        return {"success": True, "detections": result}
+
+    except Exception as e:
+        logger.error(f"Error searching library: {e}")
+        raise HTTPException(status_code=500, detail="Failed to search library")
+    finally:
+        db.close()
+
+
+@app.post("/api/library/export")
+async def export_library(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Export selected detections in specified format (json, csv, xml).
+    """
+    from archer.database.models import LibraryDetection, VisibilityType
+    import json
+    import csv
+    import io
+    from fastapi.responses import StreamingResponse
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        body = await request.json()
+        detection_ids = body.get("ids", [])
+        export_format = body.get("format", "json")  # json, csv, xml
+
+        if not detection_ids:
+            raise HTTPException(status_code=400, detail="No detections selected")
+
+        # Get detections
+        detections = db.query(LibraryDetection).filter(
+            LibraryDetection.id.in_(detection_ids),
+            (LibraryDetection.user_id == user.id) |
+            (LibraryDetection.visibility == VisibilityType.SHARED)
+        ).all()
+
+        if not detections:
+            raise HTTPException(status_code=404, detail="No detections found")
+
+        # Prepare data
+        export_data = []
+        for detection in detections:
+            creator = db.query(User).filter(User.id == detection.user_id).first()
+            export_data.append({
+                "id": detection.id,
+                "title": detection.title,
+                "type": detection.detection_type.value,
+                "visibility": detection.visibility.value,
+                "creator": creator.full_name if creator else "Unknown",
+                "platform": detection.platform,
+                "content": json.loads(detection.content) if detection.content else {},
+                "created_at": detection.created_at.isoformat()
+            })
+
+        # Export based on format
+        if export_format == "json":
+            content = json.dumps(export_data, indent=2)
+            media_type = "application/json"
+            filename = "library_export.json"
+
+        elif export_format == "csv":
+            output = io.StringIO()
+            writer = csv.DictWriter(output, fieldnames=["id", "title", "type", "visibility", "creator", "platform", "created_at"])
+            writer.writeheader()
+            for item in export_data:
+                writer.writerow({
+                    "id": item["id"],
+                    "title": item["title"],
+                    "type": item["type"],
+                    "visibility": item["visibility"],
+                    "creator": item["creator"],
+                    "platform": item["platform"],
+                    "created_at": item["created_at"]
+                })
+            content = output.getvalue()
+            media_type = "text/csv"
+            filename = "library_export.csv"
+
+        elif export_format == "xml":
+            xml_lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<library>']
+            for item in export_data:
+                xml_lines.append('  <detection>')
+                xml_lines.append(f'    <id>{item["id"]}</id>')
+                xml_lines.append(f'    <title><![CDATA[{item["title"]}]]></title>')
+                xml_lines.append(f'    <type>{item["type"]}</type>')
+                xml_lines.append(f'    <visibility>{item["visibility"]}</visibility>')
+                xml_lines.append(f'    <creator><![CDATA[{item["creator"]}]]></creator>')
+                xml_lines.append(f'    <platform>{item["platform"]}</platform>')
+                xml_lines.append(f'    <created_at>{item["created_at"]}</created_at>')
+                xml_lines.append('  </detection>')
+            xml_lines.append('</library>')
+            content = '\n'.join(xml_lines)
+            media_type = "application/xml"
+            filename = "library_export.xml"
+
+        else:
+            raise HTTPException(status_code=400, detail="Invalid export format")
+
+        # Log library export activity
+        try:
+            log_activity(
+                user_id=user.id,
+                activity_type="library_export",
+                title=f"Exported {len(detections)} detections from library",
+                description=f"Exported detections in {export_format.upper()} format",
+                metadata={
+                    "count": len(detections),
+                    "format": export_format
+                }
+            )
+        except Exception as log_error:
+            print(f"Error logging library export activity: {log_error}")
+
+        return StreamingResponse(
+            io.BytesIO(content.encode()),
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting library: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export library")
+    finally:
+        db.close()
+
+
+@app.post("/api/library/save")
+async def save_to_library(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Save a new detection to the library.
+    """
+    from archer.database.models import LibraryDetection, DetectionType, VisibilityType
+    import json
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        body = await request.json()
+        title = body.get("title")
+        detection_type = body.get("detection_type")
+        visibility = body.get("visibility", "private")
+        content = body.get("content")
+        platform = body.get("platform")
+        tags = body.get("tags", [])  # Accept tags from frontend
+
+        # Extract group and cve from body for auto-tagging
+        group = body.get("group")
+        cve = body.get("cve")
+
+        if not title or not detection_type or not content:
+            raise HTTPException(status_code=400, detail="Missing required fields")
+
+        # Auto-tag with Group and CVE if provided
+        auto_tags = []
+        if group:
+            auto_tags.append(f"Group:{group}")
+        if cve:
+            auto_tags.append(f"CVE:{cve}")
+
+        # Combine provided tags with auto-tags
+        all_tags = list(set(tags + auto_tags))  # Remove duplicates
+        tags_json = json.dumps(all_tags) if all_tags else None
+
+        # Create new library detection
+        new_detection = LibraryDetection(
+            user_id=user.id,
+            title=title,
+            detection_type=DetectionType(detection_type),
+            visibility=VisibilityType(visibility),
+            content=json.dumps(content) if isinstance(content, dict) else content,
+            platform=platform,
+            tags=tags_json
+        )
+
+        db.add(new_detection)
+        db.commit()
+
+        # Log library save activity
+        try:
+            log_activity(
+                user_id=user.id,
+                activity_type="library_save",
+                title=f"Saved detection to library: {title}",
+                description=f"Added {detection_type} detection with {visibility} visibility",
+                metadata={
+                    "detection_id": new_detection.id,
+                    "detection_type": detection_type,
+                    "platform": platform,
+                    "visibility": visibility
+                }
+            )
+        except Exception as log_error:
+            print(f"Error logging library save activity: {log_error}")
+
+        return {
+            "success": True,
+            "message": "Detection saved to library",
+            "id": new_detection.id,
+            "tags": all_tags
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error saving to library: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save to library")
+    finally:
+        db.close()
+
+
+@app.post("/api/library/tags")
+async def update_library_tags(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Update tags for multiple detections in the library.
+    """
+    from archer.database.models import LibraryDetection
+    import json
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        body = await request.json()
+        detection_ids = body.get("ids", [])
+        tags = body.get("tags", [])
+
+        if not detection_ids:
+            raise HTTPException(status_code=400, detail="No detection IDs provided")
+
+        # Validate that all detections belong to the current user
+        detections = db.query(LibraryDetection).filter(
+            LibraryDetection.id.in_(detection_ids),
+            LibraryDetection.user_id == user.id
+        ).all()
+
+        if len(detections) != len(detection_ids):
+            raise HTTPException(status_code=403, detail="Some detections not found or unauthorized")
+
+        # Update tags for all selected detections
+        tags_json = json.dumps(tags) if tags else None
+        for detection in detections:
+            detection.tags = tags_json
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Tags updated for {len(detections)} detection(s)",
+            "count": len(detections)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating tags: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update tags")
+    finally:
+        db.close()
+
+
+@app.post("/api/library/visibility")
+async def update_library_visibility(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Update visibility for multiple detections in the library.
+    """
+    from archer.database.models import LibraryDetection, VisibilityType
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        body = await request.json()
+        detection_ids = body.get("ids", [])
+        visibility = body.get("visibility", "private")
+
+        if not detection_ids:
+            raise HTTPException(status_code=400, detail="No detection IDs provided")
+
+        # Validate that all detections belong to the current user
+        detections = db.query(LibraryDetection).filter(
+            LibraryDetection.id.in_(detection_ids),
+            LibraryDetection.user_id == user.id
+        ).all()
+
+        if len(detections) != len(detection_ids):
+            raise HTTPException(status_code=403, detail="Some detections not found or unauthorized")
+
+        # Update visibility for all selected detections
+        visibility_type = VisibilityType(visibility)
+        for detection in detections:
+            detection.visibility = visibility_type
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Visibility updated for {len(detections)} detection(s)",
+            "count": len(detections)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating visibility: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update visibility")
+    finally:
+        db.close()
+
+
+@app.post("/api/library/delete")
+async def delete_library_detections(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Delete multiple detections from the library.
+    """
+    from archer.database.models import LibraryDetection
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        body = await request.json()
+        detection_ids = body.get("ids", [])
+
+        if not detection_ids:
+            raise HTTPException(status_code=400, detail="No detection IDs provided")
+
+        # Validate that all detections belong to the current user
+        detections = db.query(LibraryDetection).filter(
+            LibraryDetection.id.in_(detection_ids),
+            LibraryDetection.user_id == user.id
+        ).all()
+
+        if len(detections) != len(detection_ids):
+            raise HTTPException(status_code=403, detail="Some detections not found or unauthorized")
+
+        # Delete all selected detections
+        for detection in detections:
+            db.delete(detection)
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Deleted {len(detections)} detection(s)",
+            "deleted_count": len(detections)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting detections: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete detections")
     finally:
         db.close()
 
@@ -3317,6 +4050,275 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
         logger.error(f"Error saving API keys: {e}")
         return {"success": False, "error": str(e)}
 
+    finally:
+        db.close()
+
+
+# ==========================================
+# SECURITY ENDPOINTS (Password, MFA, Backup Codes)
+# ==========================================
+
+@app.post("/api/change-password")
+async def change_password(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Change user's password.
+
+    Requires current password for verification.
+    """
+    from archer.auth.password import verify_password, hash_password
+    from archer.database.audit import log_audit_event, EVENT_PASSWORD_CHANGE
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        # Parse request body
+        body = await request.json()
+        current_password = body.get("current_password")
+        new_password = body.get("new_password")
+
+        if not current_password or not new_password:
+            raise HTTPException(status_code=400, detail="Both current and new password are required")
+
+        # Verify current password
+        if not verify_password(current_password, user.password_hash):
+            log_audit_event(
+                db=db,
+                event_type=EVENT_PASSWORD_CHANGE,
+                user_id=user.id,
+                email=user.email,
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get("user-agent"),
+                success=False,
+                details="Incorrect current password"
+            )
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+        # Validate new password (same rules as registration)
+        if len(new_password) < 16 or len(new_password) > 40:
+            raise HTTPException(status_code=400, detail="Password must be 16-40 characters")
+
+        # Update password
+        user.password_hash = hash_password(new_password)
+        user.updated_at = datetime.utcnow()
+        db.commit()
+
+        # Log successful password change
+        log_audit_event(
+            db=db,
+            event_type=EVENT_PASSWORD_CHANGE,
+            user_id=user.id,
+            email=user.email,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            success=True
+        )
+
+        return {"success": True, "message": "Password changed successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error changing password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to change password")
+    finally:
+        db.close()
+
+
+@app.get("/api/mfa/status")
+async def get_mfa_status(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Get MFA status for current user.
+    """
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        return {
+            "success": True,
+            "enabled": user.mfa_enabled if hasattr(user, 'mfa_enabled') else False
+        }
+    finally:
+        db.close()
+
+
+@app.post("/api/mfa/setup")
+async def setup_mfa(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Generate MFA secret and QR code for setup.
+
+    Does not enable MFA yet - user must verify first.
+    """
+    from archer.auth.mfa import generate_totp_secret, generate_qr_code
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        # Generate new secret
+        secret = generate_totp_secret()
+
+        # Store secret temporarily (not enabled yet)
+        user.mfa_secret = secret
+        user.mfa_enabled = False
+        db.commit()
+
+        # Generate QR code
+        qr_code = generate_qr_code(user.email, secret)
+
+        return {
+            "success": True,
+            "secret": secret,
+            "qr_code": qr_code
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error setting up MFA: {e}")
+        raise HTTPException(status_code=500, detail="Failed to setup MFA")
+    finally:
+        db.close()
+
+
+@app.post("/api/mfa/verify")
+async def verify_mfa(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Verify TOTP code and enable MFA.
+    """
+    from archer.auth.mfa import verify_totp_code
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        # Parse request body
+        body = await request.json()
+        code = body.get("code")
+
+        if not code:
+            raise HTTPException(status_code=400, detail="Verification code is required")
+
+        # Check if user has a secret
+        if not user.mfa_secret:
+            raise HTTPException(status_code=400, detail="MFA setup not started")
+
+        # Verify code
+        if not verify_totp_code(user.mfa_secret, code):
+            raise HTTPException(status_code=400, detail="Invalid verification code")
+
+        # Enable MFA
+        user.mfa_enabled = True
+        db.commit()
+
+        return {"success": True, "message": "MFA enabled successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error verifying MFA: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify MFA")
+    finally:
+        db.close()
+
+
+@app.post("/api/mfa/disable")
+async def disable_mfa(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Disable MFA for current user.
+    """
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        # Disable MFA
+        user.mfa_enabled = False
+        user.mfa_secret = None
+        user.backup_codes = None
+        db.commit()
+
+        return {"success": True, "message": "MFA disabled successfully"}
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error disabling MFA: {e}")
+        raise HTTPException(status_code=500, detail="Failed to disable MFA")
+    finally:
+        db.close()
+
+
+@app.post("/api/backup-codes/generate")
+async def generate_backup_codes(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Generate new backup recovery codes.
+
+    Invalidates any existing codes.
+    """
+    from archer.auth.mfa import generate_backup_codes
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        # Generate backup codes
+        plain_codes, hashed_codes_json = generate_backup_codes(count=10)
+
+        # Store hashed codes
+        user.backup_codes = hashed_codes_json
+        db.commit()
+
+        return {
+            "success": True,
+            "codes": plain_codes
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error generating backup codes: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate backup codes")
     finally:
         db.close()
 
@@ -3840,6 +4842,63 @@ async def deactivate_user(request: Request, user_id: int, archer_session: Option
         db.rollback()
         logger.error(f"Error deactivating user: {e}")
         return {"success": False, "error": "An error occurred"}
+
+    finally:
+        db.close()
+
+
+@app.get("/api/activities")
+async def get_activities(
+    request: Request,
+    archer_session: Optional[str] = Cookie(None)
+):
+    """
+    Get user's activity timeline.
+    """
+    from archer.database.models import ActivityLog, ActivityType
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user, db = auth_result
+
+    try:
+        # Get all activities for the current user, ordered by most recent
+        activities = db.query(ActivityLog).filter(
+            ActivityLog.user_id == user.id
+        ).order_by(ActivityLog.created_at.desc()).limit(100).all()
+
+        # Format activities for frontend
+        result = []
+        for activity in activities:
+            # Parse metadata if it exists
+            metadata_dict = {}
+            if activity.activity_metadata:
+                try:
+                    import json
+                    metadata_dict = json.loads(activity.activity_metadata)
+                except:
+                    pass
+
+            result.append({
+                "id": activity.id,
+                "type": activity.activity_type.value,
+                "title": activity.title,
+                "description": activity.description,
+                "metadata": metadata_dict,
+                "created_at": activity.created_at.isoformat()
+            })
+
+        return {
+            "success": True,
+            "activities": result
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching activities: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch activities")
 
     finally:
         db.close()

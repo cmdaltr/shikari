@@ -34,10 +34,14 @@ def init_db():
     Initialize database tables.
 
     Creates all tables defined in models if they don't exist.
+    Also creates a default admin account if no users exist.
     """
     Base.metadata.create_all(bind=engine)
     AuditBase.metadata.create_all(bind=engine)
     print(f"✓ Database initialized at {DB_PATH}")
+
+    # Create default admin account if no users exist
+    _create_default_admin()
 
 
 def get_db() -> SQLAlchemySession:
@@ -69,3 +73,52 @@ def get_db_session() -> SQLAlchemySession:
     Note: Caller is responsible for closing the session.
     """
     return SessionLocal()
+
+
+def _create_default_admin():
+    """
+    Create default admin account if no users exist.
+
+    Default credentials:
+    - Email: admin@archer.app
+    - Password: £missary_0f_the_G0rg0nite$
+    - Full Name: Admin User
+    - Role: Admin
+    """
+    from archer.database.models import User, UserRole
+    from archer.auth.password import hash_password
+
+    db = SessionLocal()
+    try:
+        # Check if any users exist
+        user_count = db.query(User).count()
+
+        if user_count == 0:
+            # Create default admin account
+            admin = User(
+                email="admin@archer.app",
+                full_name="Admin User",
+                password_hash=hash_password("£missary_0f_the_G0rg0nite$"),
+                role=UserRole.ADMIN,
+                is_active=True,
+                failed_login_attempts=0
+            )
+
+            db.add(admin)
+            db.commit()
+
+            print("=" * 60)
+            print("✓ Default admin account created")
+            print("=" * 60)
+            print("  Email: admin@archer.app")
+            print("  Password: £missary_0f_the_G0rg0nite$")
+            print("")
+            print("  ⚠️  WARNING: YOU MUST CHANGE THIS PASSWORD IMMEDIATELY!")
+            print("  This is a default password and is publicly known.")
+            print("  Change it through the Profile page after logging in.")
+            print("=" * 60)
+    except Exception as e:
+        print(f"Note: Could not create default admin account: {e}")
+        db.rollback()
+    finally:
+        db.close()

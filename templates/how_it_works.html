@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html data-theme="light">
 <head>
-    <title>How Archer Works - Architecture & Design</title>
+    <title>Help - Archer</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
     <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
@@ -66,7 +66,7 @@
         .global-nav-controls {
             position: fixed;
             top: 20px;
-            right: calc((100vw - 1200px) / 2 + 120px);
+            right: calc((100vw - 1200px) / 2 + 10px);
             z-index: 10001;
             display: flex;
             gap: 12px;
@@ -226,41 +226,110 @@
             color: var(--text-primary);
         }
 
-        /* Table of Contents Styling */
-        .toc-item {
+        /* Tab Navigation Styling */
+        .tabs-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(31, 45, 53, 0.15);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            margin-bottom: 2em;
+        }
+
+        .tabs-header {
+            display: flex;
+            background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+            border-bottom: 3px solid var(--accent);
+            padding: 0;
+        }
+
+        [data-theme="dark"] .tabs-header {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+        }
+
+        .tab-button {
+            flex: 1;
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid rgba(197, 48, 48, 0.1);
-            border-radius: 8px;
-            text-decoration: none;
-            color: var(--text-primary);
+            justify-content: center;
+            gap: 8px;
+            padding: 1.2em 1.5em;
+            border: none;
+            background: transparent;
+            color: #8B9AA3;
+            font-size: 1rem;
             font-weight: 500;
+            cursor: pointer;
             transition: all 0.2s ease;
+            position: relative;
+            border-bottom: 3px solid transparent;
         }
 
-        .toc-item:hover {
-            border-color: var(--accent);
-            background: rgba(197, 48, 48, 0.05);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(197, 48, 48, 0.15);
+        .tab-button:hover:not(.active) {
+            background: rgba(197, 48, 48, 0.15);
+            color: #a8b5bd;
         }
 
-        .toc-icon {
-            font-size: 1.5em;
-            flex-shrink: 0;
+        .tab-button.active {
+            background: var(--bg-secondary);
+            color: var(--accent);
+            border-bottom-color: var(--accent);
         }
 
-        [data-theme="dark"] .toc-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 107, 107, 0.2);
+        .tab-button.active:hover {
+            background: var(--bg-secondary);
         }
 
-        [data-theme="dark"] .toc-item:hover {
-            border-color: var(--accent);
-            background: rgba(255, 107, 107, 0.1);
+        .tab-icon {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
+        }
+
+        .tabs-content {
+            padding: 0;
+            min-height: 400px;
+        }
+
+        .tab-pane {
+            display: none;
+            animation: fadeIn 0.3s ease;
+            padding: 2.5em;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .tab-pane {
+                padding: 1.5em;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .tabs-header {
+                flex-direction: column;
+            }
+
+            .tab-button {
+                border-bottom: 1px solid var(--border-color);
+                border-left: 3px solid transparent;
+            }
+
+            .tab-button.active {
+                border-bottom: 1px solid var(--border-color);
+                border-left-color: var(--accent);
+            }
+
+            .tab-pane {
+                padding: 1.5em;
+            }
         }
 
         .diagram {
@@ -456,10 +525,16 @@
     <!-- Global Navigation Controls (Profile|Logout|Home|Dark for authenticated, Login|Home|Dark for guests) -->
     <div class="global-nav-controls">
         {% if user %}
-        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+        <a href="/library" class="nav-icon-btn" aria-label="Library" title="Library">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+        </a>
+        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
         </a>
         <a href="/logout" class="nav-icon-btn" aria-label="Logout" title="Logout">
@@ -469,10 +544,10 @@
                 <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
         </a>
-        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
             </svg>
         </a>
         {% else %}
@@ -506,18 +581,16 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>
         </button>
-    </div>
-
-    <div class="container">
-        <!-- How Archer Works link - top right -->
-        <a href="/how-it-works" class="how-archer-link">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <a href="/how-it-works" class="nav-icon-btn" aria-label="Help" title="Help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"/>
                 <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
                 <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
-            Help
         </a>
+    </div>
+
+    <div class="container">
 
         <div class="header">
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1em;">
@@ -527,40 +600,72 @@
             <p style="color: var(--text-secondary); font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px; text-transform: uppercase; line-height: 1.8;">Architecture, Libraries, and AI-Powered Detection Generation<br>How Archer Works</p>
         </div>
 
-        <!-- Table of Contents -->
-        <div class="section" style="background: rgba(197, 48, 48, 0.05);">
-            <h2 style="border-bottom-color: var(--accent);">📑 Table of Contents</h2>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 1.5em;">
-                <a href="#overview" class="toc-item">
-                    <span class="toc-icon">📋</span>
-                    <span>Overview & Summary</span>
-                </a>
-                <a href="#architecture" class="toc-item">
-                    <span class="toc-icon">🏗️</span>
+        <!-- Tab Navigation -->
+        <div class="tabs-container">
+            <div class="tabs-header">
+                <button class="tab-button active" data-tab="overview">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    <span>Overview</span>
+                </button>
+                <button class="tab-button" data-tab="architecture">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="4" y="4" width="6" height="6"/>
+                        <rect x="14" y="4" width="6" height="6"/>
+                        <rect x="4" y="14" width="6" height="6"/>
+                        <rect x="14" y="14" width="6" height="6"/>
+                    </svg>
                     <span>Architecture</span>
-                </a>
-                <a href="#libraries" class="toc-item">
-                    <span class="toc-icon">📚</span>
-                    <span>Core Libraries</span>
-                </a>
-                <a href="#ai-component" class="toc-item">
-                    <span class="toc-icon">🤖</span>
-                    <span>AI Component</span>
-                </a>
-                <a href="#workflow" class="toc-item">
-                    <span class="toc-icon">⚙️</span>
-                    <span>Complete Workflow</span>
-                </a>
-                <a href="#visualization" class="toc-item">
-                    <span class="toc-icon">📊</span>
-                    <span>Attack Flow Visualization</span>
-                </a>
+                </button>
+                <button class="tab-button" data-tab="libraries">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    <span>Libraries</span>
+                </button>
+                <button class="tab-button" data-tab="ai">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6"/>
+                        <path d="m4.93 4.93 4.24 4.24m5.66 5.66 4.24 4.24"/>
+                        <path d="M1 12h6m6 0h6"/>
+                        <path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24"/>
+                    </svg>
+                    <span>AI</span>
+                </button>
+                <button class="tab-button" data-tab="workflow">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6"/>
+                        <path d="m15.4 17.4 3.2 3.2"/>
+                        <path d="M6.4 20.6 3.2 17.4"/>
+                        <path d="M1 12h6"/>
+                        <path d="M17 12h6"/>
+                        <path d="m5.6 6.4-3.2-3.2"/>
+                        <path d="M20.6 3.2l-3.2 3.2"/>
+                    </svg>
+                    <span>Workflow</span>
+                </button>
+                <button class="tab-button" data-tab="attack-flow">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                    <span>Attack Flow</span>
+                </button>
             </div>
-        </div>
 
-        <!-- Overview & Summary Section -->
-        <div class="section" id="overview">
-            <h2>📋 Overview & Summary</h2>
+            <!-- Tab Content Panes -->
+            <div class="tabs-content">
+            <!-- Overview Tab -->
+            <div class="tab-pane active" id="tab-overview">
             <p style="font-size: 1.1em; line-height: 1.8;">
                 Archer is an <strong>automated threat detection generator</strong> that transforms MITRE ATT&CK threat intelligence
                 into production-ready detection queries for Splunk and Microsoft Defender for Endpoint (MDE). It combines <strong>machine learning from community queries</strong>, <strong>MITRE ATT&CK intelligence</strong>,
@@ -573,8 +678,8 @@
                 <div class="feature-card">
                     <h4>🎯 What It Does</h4>
                     <ul>
-                        <li>Generates vendor-specific detection queries</li>
-                        <li>Creates multi-stage attack correlations</li>
+                        <li>Vendor-specific queries</li>
+                        <li>Multi-stage attack correlations</li>
                         <li>Produces attack flow visualizations</li>
                         <li>Extracts IOCs from threat reports</li>
                     </ul>
@@ -584,34 +689,22 @@
                     <ul>
                         <li>Template caching (90% faster)</li>
                         <li>Parallel processing (4x speedup)</li>
-                        <li>Async I/O operations</li>
+                        <li>Asynchronous I/O operations</li>
                         <li>Pre-compiled patterns</li>
                     </ul>
                 </div>
                 <div class="feature-card">
                     <h4>🔧 How It Works</h4>
                     <ul>
-                        <li>Learns from 10,000+ community queries</li>
+                        <li>Trained on 10,000+ queries</li>
                         <li>Applies MITRE ATT&CK mappings</li>
-                        <li>Generates vendor-optimized syntax</li>
+                        <li>Vendor-optimized syntax</li>
                         <li>Validates and enriches outputs</li>
                     </ul>
                 </div>
             </div>
 
-            <h3 style="margin-top: 2em;">Key Strengths & Use Cases</h3>
-
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <h4>Key Strengths</h4>
-                    <ul>
-                        <li>✅ 10,000+ community queries learned</li>
-                        <li>✅ Multi-vendor support (Splunk, MDE)</li>
-                        <li>✅ Intelligent correlations</li>
-                        <li>✅ Attack flow visualizations</li>
-                        <li>✅ 90% faster with caching</li>
-                    </ul>
-                </div>
+            <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr);">
                 <div class="feature-card">
                     <h4>Use Cases</h4>
                     <ul>
@@ -633,11 +726,11 @@
                     </ul>
                 </div>
             </div>
-        </div>
+            </div>
+            <!-- End Overview Tab -->
 
-        <!-- Architecture Section -->
-        <div class="section" id="architecture">
-            <h2>🏗️ Architecture</h2>
+            <!-- Architecture Tab -->
+            <div class="tab-pane" id="tab-architecture">
 
             <h3>CLI/Command-Line Architecture</h3>
             <p>
@@ -689,11 +782,11 @@
                     <li><strong>Results Delivery:</strong> Download links served via /progress endpoint</li>
                 </ol>
             </div>
-        </div>
+            </div>
+            <!-- End Architecture Tab -->
 
-        <!-- Core Libraries Section -->
-        <div class="section" id="libraries">
-            <h2>📚 Core Libraries & Why We Use Them</h2>
+            <!-- Libraries Tab -->
+            <div class="tab-pane" id="tab-libraries">
 
             <table class="library-table">
                 <thead>
@@ -792,11 +885,11 @@
                 <strong>💡 Performance Benchmark:</strong> Generating 200 detection queries for APT29 takes approximately
                 <strong>30 seconds</strong> with caching enabled, compared to 4-5 minutes without optimization.
             </div>
-        </div>
+            </div>
+            <!-- End Libraries Tab -->
 
-        <!-- AI Component Section -->
-        <div class="section" id="ai-component">
-            <h2>🤖 AI Component - How It Works</h2>
+            <!-- AI Tab -->
+            <div class="tab-pane" id="tab-ai">
 
             <p style="font-size: 1.1em;">
                 Archer includes <strong>optional AI enhancement</strong> powered by OpenAI's GPT models. When enabled
@@ -913,11 +1006,11 @@ AI recognizes this as:
                     </tr>
                 </tbody>
             </table>
-        </div>
+            </div>
+            <!-- End AI Tab -->
 
-        <!-- Workflow Section -->
-        <div class="section" id="workflow">
-            <h2>⚙️ Complete Workflow</h2>
+            <!-- Workflow Tab -->
+            <div class="tab-pane" id="tab-workflow">
 
             <h3>Step-by-Step Process</h3>
 
@@ -1026,11 +1119,11 @@ data/APT29/
     ├── APT29_complete_flow.html
     └── correlation_flows/</code></pre>
             </div>
-        </div>
+            </div>
+            <!-- End Workflow Tab -->
 
-        <!-- Attack Flow Section -->
-        <div class="section" id="visualization">
-            <h2>📊 Attack Flow Visualization</h2>
+            <!-- Attack Flow Tab -->
+            <div class="tab-pane" id="tab-attack-flow">
 
             <p style="font-size: 1.1em;">
                 Archer generates <strong>attack flow diagrams</strong> following the
@@ -1090,11 +1183,12 @@ data/APT29/
                 <strong>💡 Interactive Visualization:</strong> Flow JSON files are automatically converted to interactive
                 HTML visualizations that can be viewed in any browser.
             </div>
+            </div>
+            <!-- End Attack Flow Tab -->
+            </div>
+            <!-- End Tab Content -->
         </div>
-
-        <a href="#top" class="btn-primary" style="display: block; text-decoration: none; padding: 1em 3em; text-align: center; margin: 3em 0; width: auto;">
-            Back to Top
-        </a>
+        <!-- End Tabs Container -->
 
         <!-- Footer -->
         <footer class="page-footer">
@@ -1161,6 +1255,24 @@ data/APT29/
                 moonIcon.style.display = 'none';
             }
         }
+
+        // Tab switching functionality
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                // Remove active class from all tabs and panes
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+                // Add active class to clicked tab and corresponding pane
+                button.classList.add('active');
+                document.getElementById('tab-' + tabName).classList.add('active');
+
+                // Scroll to top of content smoothly
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
     </script>
 </body>
 </html>

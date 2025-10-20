@@ -43,6 +43,11 @@ class User(Base):
     failed_login_attempts = Column(Integer, default=0, nullable=False)
     locked_until = Column(DateTime, nullable=True)  # None if not locked
 
+    # Multi-Factor Authentication fields
+    mfa_secret = Column(String(32), nullable=True)  # TOTP secret (base32 encoded)
+    mfa_enabled = Column(Boolean, default=False, nullable=False)
+    backup_codes = Column(Text, nullable=True)  # JSON array of hashed backup codes
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -153,3 +158,83 @@ class PasswordReset(Base):
 
     def __repr__(self):
         return f"<PasswordReset(id={self.id}, user_id={self.user_id}, used={self.used})>"
+
+
+class DetectionType(str, enum.Enum):
+    """Detection type enumeration"""
+    DETECTION = "detection"
+    SOLE_CORRELATION = "sole_correlation"
+    CROSS_VENDOR_CORRELATION = "cross_vendor_correlation"
+
+
+class VisibilityType(str, enum.Enum):
+    """Visibility type enumeration"""
+    PRIVATE = "private"
+    SHARED = "shared"
+
+
+class LibraryDetection(Base):
+    """
+    Library detection model for storing user-created queries.
+
+    Stores all detections and correlations created by users for sharing and reuse.
+    """
+    __tablename__ = "library_detections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(500), nullable=False)
+    detection_type = Column(Enum(DetectionType), nullable=False)
+    visibility = Column(Enum(VisibilityType), nullable=False, default=VisibilityType.PRIVATE)
+
+    # Store the actual detection/correlation content
+    content = Column(Text, nullable=False)  # JSON-encoded detection content
+    platform = Column(String(50), nullable=True)  # splunk, mde, elastic, etc.
+
+    # Custom tags for hunts/incidents (JSON array of strings)
+    tags = Column(Text, nullable=True)  # JSON-encoded array: ["Hunt-2024-01", "Incident-123"]
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    user = relationship("User", backref="library_detections")
+
+    def __repr__(self):
+        return f"<LibraryDetection(id={self.id}, title='{self.title}', user_id={self.user_id})>"
+
+
+class ActivityType(str, enum.Enum):
+    """Activity type enumeration"""
+    GENERATE = "generate"
+    CORRELATE = "correlate"
+    UPLOAD = "upload"
+    LIBRARY_SAVE = "library_save"
+    LIBRARY_EXPORT = "library_export"
+
+
+class ActivityLog(Base):
+    """
+    Activity log model for tracking user actions.
+
+    Records user activities such as detection generation, correlation building,
+    file uploads, and library operations for display in the Timeline tab.
+    """
+    __tablename__ = "activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    activity_type = Column(Enum(ActivityType), nullable=False)
+
+    # Activity details
+    title = Column(String(500), nullable=False)  # e.g., "Generated detections for APT29"
+    description = Column(Text, nullable=True)  # Additional details
+    activity_metadata = Column(Text, nullable=True)  # JSON-encoded metadata (detection count, file paths, etc.)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    user = relationship("User", backref="activity_logs")
+
+    def __repr__(self):
+        return f"<ActivityLog(id={self.id}, user_id={self.user_id}, activity_type='{self.activity_type}', title='{self.title}')>"

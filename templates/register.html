@@ -54,7 +54,7 @@
       .global-nav-controls {
         position: fixed;
         top: 20px;
-        right: calc((100vw - 1200px) / 2 + 120px);
+        right: calc((100vw - 1200px) / 2 + 10px);
         z-index: 10001;
         display: flex;
         gap: 12px;
@@ -135,7 +135,7 @@
       .how-archer-link {
         position: fixed !important;
         top: 20px !important;
-        right: calc((100vw - 1200px) / 2) !important;
+        right: calc((100vw - 1200px) / 2 + 52px) !important;
         z-index: 10000 !important;
       }
 
@@ -196,6 +196,12 @@
 <body>
     <!-- Global Navigation Controls (Dark Mode + Profile) -->
     <div class="global-nav-controls">
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        </a>
         <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
             <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"/>
@@ -212,10 +218,11 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>
         </button>
-        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+        <a href="/how-it-works" class="nav-icon-btn" aria-label="Help" title="Help">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
         </a>
     </div>
@@ -228,16 +235,6 @@
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
         Home
-      </a>
-
-      <!-- How Archer Works link - top right - fixed positioning for consistency across all pages -->
-      <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link" style="position: fixed !important; top: 20px !important; right: calc((100vw - 1200px) / 2) !important; z-index: 1000 !important; color: var(--accent); text-decoration: none; font-size: 0.95em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; min-height: 40px; border: 2px solid var(--accent); border-radius: 6px; background: rgba(255, 255, 255, 0.95); transition: all 0.2s; margin: 0 !important; box-sizing: border-box;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        Help
       </a>
 
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2em; padding-top: 80px; position: relative;">
@@ -314,12 +311,18 @@
                 <div style="width: 50%; margin-top: 16px;">
                   <div class="form-section" style="margin: 0;">
                     <label for="password" class="form-label">Password</label>
-                    <input type="password"
-                           name="password"
-                           id="password"
-                           class="form-input"
-                           placeholder="Create a strong password"
-                           required>
+                    <div style="position: relative;">
+                      <input type="password"
+                             name="password"
+                             id="password"
+                             class="form-input"
+                             placeholder="Create a strong password"
+                             required
+                             style="padding-right: 40px;">
+                      <svg id="password-valid-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #22c55e; display: none; pointer-events: none;">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
                     <p style="color: var(--text-tertiary); font-size: 0.85rem; margin-top: 0.5rem;">
                       Minimum 16 characters, including letters, numbers, and special characters
                     </p>
@@ -330,18 +333,24 @@
                 <div style="width: 50%; margin-top: 16px;">
                   <div class="form-section" style="margin: 0;">
                     <label for="password_confirm" class="form-label">Confirm Password</label>
-                    <input type="password"
-                           name="password_confirm"
-                           id="password_confirm"
-                           class="form-input"
-                           placeholder="Re-enter your password"
-                           required>
+                    <div style="position: relative;">
+                      <input type="password"
+                             name="password_confirm"
+                             id="password_confirm"
+                             class="form-input"
+                             placeholder="Re-enter your password"
+                             required
+                             style="padding-right: 40px;">
+                      <svg id="password-confirm-valid-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #22c55e; display: none; pointer-events: none;">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
                   </div>
                 </div>
 
                 <!-- Register button (10%) -->
                 <div style="width: 10%; margin-top: 24px;">
-                  <button type="submit" class="btn-primary" style="width: 100%;">
+                  <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                       <circle cx="8.5" cy="7" r="4"/>
@@ -409,6 +418,67 @@
                 sunIcon.style.display = 'block';
                 moonIcon.style.display = 'none';
             }
+        }
+    </script>
+
+    <!-- Password Validation Script -->
+    <script>
+        // Password validation with visual feedback
+        const passwordInput = document.getElementById('password');
+        const passwordConfirmInput = document.getElementById('password_confirm');
+        const validIcon = document.getElementById('password-valid-icon');
+        const confirmValidIcon = document.getElementById('password-confirm-valid-icon');
+
+        // Validate password strength
+        if (passwordInput && validIcon) {
+            passwordInput.addEventListener('input', function() {
+                const password = this.value;
+
+                // Validate password using the same logic from validation.js
+                const isValid = validatePasswordStrength(password);
+
+                // Show/hide tick mark based on validation
+                if (isValid) {
+                    validIcon.style.display = 'block';
+                } else {
+                    validIcon.style.display = 'none';
+                }
+
+                // Also check if passwords match when password is updated
+                checkPasswordMatch();
+            });
+        }
+
+        // Validate password confirmation
+        if (passwordConfirmInput && confirmValidIcon) {
+            passwordConfirmInput.addEventListener('input', function() {
+                checkPasswordMatch();
+            });
+        }
+
+        // Check if passwords match
+        function checkPasswordMatch() {
+            if (!passwordInput || !passwordConfirmInput || !confirmValidIcon) return;
+
+            const password = passwordInput.value;
+            const confirmPassword = passwordConfirmInput.value;
+
+            // Only show tick if both fields have content and they match
+            if (password && confirmPassword && password === confirmPassword) {
+                confirmValidIcon.style.display = 'block';
+            } else {
+                confirmValidIcon.style.display = 'none';
+            }
+        }
+
+        // Password validation function - minimum 16 characters
+        function validatePasswordStrength(password) {
+            if (!password || password.length < 16) return false;
+            if (password.length > 40) return false;
+            if (!/[a-zA-Z]/.test(password)) return false;
+            if (!/[0-9]/.test(password)) return false;
+            if (!/[!@£$%^&()\-_+=\[\]{}:|<>?]/.test(password)) return false;
+            return true;
         }
     </script>
 </body>

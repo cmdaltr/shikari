@@ -1,8 +1,82 @@
 # Scripts Directory
 
-Utility scripts for testing and analyzing Archer functionality.
+Utility scripts for managing, testing, and analyzing Archer functionality.
 
-## Available Scripts
+## Maintenance Scripts
+
+### cleanup.sh / cleanup.py
+
+Clean up temporary files, caches, and build artifacts from the repository.
+
+**Purpose**: Remove Python cache files, build artifacts, test caches, IDE files, and other temporary files.
+
+**Usage (Bash)**:
+```bash
+# Preview what will be deleted
+./scripts/cleanup.sh --dry-run
+
+# Actually clean up files
+./scripts/cleanup.sh
+```
+
+**Usage (Python - cross-platform)**:
+```bash
+# Preview what will be deleted
+python3 scripts/cleanup.py --dry-run
+
+# Actually clean up files
+python3 scripts/cleanup.py
+
+# Disable colored output
+python3 scripts/cleanup.py --no-color
+```
+
+**What gets cleaned**:
+- Python cache (`__pycache__`, `*.pyc`, `*.pyo`)
+- Build artifacts (`dist/`, `build/`, `*.egg-info`)
+- Test caches (`.pytest_cache`, `.coverage`)
+- IDE files (`.DS_Store`, `Thumbs.db`)
+- Log files (`*.log`)
+- Temporary files (`*.tmp`, `*.swp`, `*~`)
+- SQLite journal files
+
+**Note**: Both scripts do the same thing - use `.sh` on Unix/Mac or `.py` for cross-platform support.
+
+### create_admin.py
+
+Create a new admin user for Archer.
+
+**Usage**:
+```bash
+python3 scripts/create_admin.py
+```
+
+Prompts for:
+- Email address
+- Full name
+- Password (with confirmation)
+
+### reset_admin_password.py
+
+Reset an existing admin user's password.
+
+**Usage**:
+```bash
+python3 scripts/reset_admin_password.py
+```
+
+### start_clean.sh
+
+Start Archer with a clean environment (clears logs and caches).
+
+**Usage**:
+```bash
+./scripts/start_clean.sh
+```
+
+## Testing Scripts
+
+### Available Scripts
 
 ### genai_smoke_test.py
 

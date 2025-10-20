@@ -128,7 +128,9 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
 python-multipart==0.0.20
 python-slugify==8.0.4
+pyotp==2.9.0
 pytz==2025.2
+qrcode[pil]==8.0
 pyviz_comms==3.0.6
 PyYAML==6.0.2
 pyzmq==27.1.0

@@ -52,7 +52,7 @@
       .global-nav-controls {
         position: fixed;
         top: 20px;
-        right: calc((100vw - 1200px) / 2 + 120px);
+        right: calc((100vw - 1200px) / 2 + 10px);
         z-index: 10001;
         display: flex;
         gap: 12px;
@@ -102,7 +102,7 @@
       .how-archer-link {
         position: fixed !important;
         top: 20px !important;
-        right: calc((100vw - 1200px) / 2) !important;
+        right: calc((100vw - 1200px) / 2 + 52px) !important;
         z-index: 10000 !important;
       }
 
@@ -165,8 +165,7 @@
     {% if not user %}
     <div id="auth-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 9999; display: flex; align-items: center; justify-content: center;">
         <div style="background: var(--bg-secondary); border-radius: 12px; padding: 2.5rem; max-width: 500px; width: 90%; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); text-align: center;">
-            <h2 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin: 0 0 1rem 0;">Welcome to Archer</h2>
-            <p style="color: var(--text-secondary); margin: 0 0 2rem 0; font-size: 1rem;">Please choose how you'd like to proceed:</p>
+            <h2 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin: 0 0 1rem 0;">Welcome to Archer</h2></br>
 
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <a href="/login" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0.875rem 1.5rem; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; text-decoration: none; transition: opacity 0.2s;">
@@ -189,7 +188,7 @@
 
             <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(197, 48, 48, 0.1); border: 1px solid rgba(197, 48, 48, 0.3); border-radius: 6px;">
                 <p style="color: var(--text-secondary); font-size: 0.875rem; margin: 0;">
-                    <strong style="color: var(--accent);">Guest Mode:</strong> Your work will not be saved and will be lost when you close your browser.
+                    <strong style="color: var(--accent);">Guest:</strong> Your work will not be saved when you close your browser.
                 </p>
             </div>
         </div>
@@ -210,13 +209,19 @@
     </script>
     {% endif %}
 
-    <!-- Global Navigation Controls (Profile|Logout|Home|Dark for authenticated, Login|Home|Dark for guests) -->
+    <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help for authenticated, Login|Home|Dark|Help for guests) -->
     <div class="global-nav-controls">
         {% if user %}
-        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+        <a href="/library" class="nav-icon-btn" aria-label="Library" title="Library">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+        </a>
+        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
         </a>
         <a href="/logout" class="nav-icon-btn" aria-label="Logout" title="Logout">
@@ -226,10 +231,10 @@
                 <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
         </a>
-        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
             </svg>
         </a>
         {% else %}
@@ -263,19 +268,16 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>
         </button>
+        <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="nav-icon-btn" aria-label="Help" title="Help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        </a>
     </div>
     {% block content %}
     <div id="main-content" class="page-shell">
-      <!-- How Archer Works link - top right - fixed positioning for consistency across all pages -->
-      <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link" style="position: fixed !important; top: 20px !important; right: calc((100vw - 1200px) / 2) !important; z-index: 1000 !important; color: var(--accent); text-decoration: none; font-size: 0.95em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; min-height: 40px; border: 2px solid var(--accent); border-radius: 6px; background: rgba(255, 255, 255, 0.95); transition: all 0.2s; margin: 0 !important; box-sizing: border-box;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        Help
-      </a>
-
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2em; padding-top: 80px; position: relative;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">

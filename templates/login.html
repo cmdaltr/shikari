@@ -54,7 +54,7 @@
       .global-nav-controls {
         position: fixed;
         top: 20px;
-        right: calc((100vw - 1200px) / 2 + 120px);
+        right: calc((100vw - 1200px) / 2 + 10px);
         z-index: 10001;
         display: flex;
         gap: 12px;
@@ -135,7 +135,7 @@
       .how-archer-link {
         position: fixed !important;
         top: 20px !important;
-        right: calc((100vw - 1200px) / 2) !important;
+        right: calc((100vw - 1200px) / 2 + 52px) !important;
         z-index: 10000 !important;
       }
 
@@ -196,6 +196,12 @@
 <body>
     <!-- Global Navigation Controls (Dark Mode + Profile) -->
     <div class="global-nav-controls">
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        </a>
         <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
             <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"/>
@@ -212,25 +218,16 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>
         </button>
-        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+        <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="nav-icon-btn" aria-label="Help" title="Help">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
         </a>
     </div>
     {% block content %}
     <div id="main-content" class="page-shell">
-      <!-- How Archer Works link - top right - fixed positioning for consistency across all pages -->
-      <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link" style="position: fixed !important; top: 20px !important; right: calc((100vw - 1200px) / 2) !important; z-index: 1000 !important; color: var(--accent); text-decoration: none; font-size: 0.95em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; min-height: 40px; border: 2px solid var(--accent); border-radius: 6px; background: rgba(255, 255, 255, 0.95); transition: all 0.2s; margin: 0 !important; box-sizing: border-box;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        Help
-      </a>
-
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2em; padding-top: 80px; position: relative;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">
@@ -289,6 +286,12 @@
               <!-- Login Form -->
               <form method="post" action="/login" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                {% if success %}
+                <div style="background: #d1fae5; color: #065f46; padding: 0.875rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.95rem; border: 1px solid #6ee7b7; width: 50%;">
+                  {{ success }}
+                </div>
+                {% endif %}
 
                 {% if error %}
                 <div style="background: #fee; color: #c53030; padding: 0.875rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.95rem; border: 1px solid #fcc; width: 50%;">

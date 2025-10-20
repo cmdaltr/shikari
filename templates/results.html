@@ -28,53 +28,150 @@ body, html {
   position: relative;
 }
 
-/* Navigation - aligned with 1200px content edge */
-.back-btn {
-  position: fixed !important;
-  top: 20px !important;
-  left: calc((100vw - 1200px) / 2) !important;
-  z-index: 10000 !important;
+/* Global navigation buttons */
+.global-nav-controls {
+  position: fixed;
+  top: 20px;
+  right: calc((100vw - 1200px) / 2 + 10px);
+  z-index: 10001;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 1400px) {
+  .global-nav-controls {
+    right: auto;
+    left: 20px;
+    top: 70px;
+  }
+}
+
+.nav-icon-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: #C53030;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.95em;
-  padding: 8px 16px;
+  justify-content: center;
+  width: 40px;
+  min-height: 40px;
+  padding: 8px;
   border: 2px solid #C53030;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.95);
+  color: #C53030;
+  cursor: pointer;
   transition: all 0.2s;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
-.back-btn:hover {
+.nav-icon-btn:hover {
   background: #C53030;
   color: white;
 }
 
-.how-archer-link {
-  position: fixed !important;
-  top: 20px !important;
-  right: calc((100vw - 1200px) / 2) !important;
-  z-index: 10000 !important;
-  color: #C53030;
-  text-decoration: none;
-  font-size: 0.95em;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: 2px solid #C53030;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.95);
-  transition: all 0.2s;
+.nav-icon-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
-.how-archer-link:hover {
-  background: #C53030 !important;
-  color: white !important;
+/* Custom Modal Dialog */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(31, 45, 53, 0.8);
+  z-index: 10002;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+.modal-dialog {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  padding: 0;
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+  padding: 20px 24px;
+  border-bottom: 3px solid #C53030;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: white;
+  font-size: 1.25em;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 24px;
+  color: #333;
+  line-height: 1.6;
+}
+
+.modal-body p {
+  margin: 0 0 16px 0;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  background: #f7fafc;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  border-top: 1px solid #e2e8f0;
+}
+
+.modal-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid #C53030;
+  font-size: 0.95em;
+}
+
+.modal-btn-cancel {
+  background: white;
+  color: #C53030;
+}
+
+.modal-btn-cancel:hover {
+  background: #f7fafc;
+}
+
+.modal-btn-confirm {
+  background: #C53030;
+  color: white;
+}
+
+.modal-btn-confirm:hover {
+  background: #a02525;
 }
 
 /* Logo at top center - between Back and How Archer Works */
@@ -383,10 +480,10 @@ body, html {
   line-height: 1.5;
 }
 
-/* Action buttons - 4 horizontal buttons below Detection Rules */
+/* Action buttons - 5 horizontal buttons below Detection Rules */
 .action-buttons {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   margin: 24px 0 16px 0;
 }
@@ -516,32 +613,81 @@ body, html {
 
 {% block content %}
 <div id="main-content" class="page-shell">
-  <!-- Home button - top left -->
-  <a href="/" class="back-btn">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-      <polyline points="9 22 9 12 15 12 15 22"/>
-    </svg>
-    Home
-  </a>
+  <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help) -->
+  <div class="global-nav-controls">
+    {% if user %}
+    <a href="/library" class="nav-icon-btn" aria-label="Library" title="Library">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+    </a>
+    <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </a>
+    <a href="/logout" class="nav-icon-btn" aria-label="Logout" title="Logout">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </a>
+    <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </a>
+    {% else %}
+    <a href="/login" class="nav-icon-btn" aria-label="Login" title="Login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/>
+        <line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+    </a>
+    <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </a>
+    {% endif %}
+    <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+    <a href="/how-it-works" class="nav-icon-btn" aria-label="Help" title="Help">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </a>
+  </div>
 
-  <!-- Logo at top center - clickable to return home -->
+  <!-- Logo at top center -->
   <div class="header-logo-container">
     <a href="/" class="header-logo">
       <img src="{{ url_for('static', path='images/icon.png') }}" alt="Archer Logo">
       <h1>RCHER</h1>
     </a>
   </div>
-
-  <!-- How Archer Works link - top right -->
-  <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link" style="position: fixed !important; top: 20px !important; right: calc((100vw - 1200px) / 2) !important; z-index: 1000 !important; color: #C53030; text-decoration: none; font-size: 0.95em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; min-height: 40px; border: 2px solid #C53030; border-radius: 6px; background: rgba(255, 255, 255, 0.95); transition: all 0.2s; margin: 0 !important; box-sizing: border-box;">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-      <line x1="12" y1="17" x2="12.01" y2="17"/>
-    </svg>
-    Help
-  </a>
 
   <div class="results-container">
     <!-- Page heading -->
@@ -783,13 +929,20 @@ body, html {
       </div>
     </div>
 
-    <!-- Action Buttons - 4 horizontal buttons below Detection Rules -->
+    <!-- Action Buttons - 5 horizontal buttons below Detection Rules -->
     <div class="action-buttons">
       <button class="btn-action" id="download-all-btn">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
         </svg>
         Download All
+      </button>
+      <button class="btn-action" id="save-to-library-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        Save to Library
       </button>
       <button class="btn-action" disabled style="opacity: 0.5; cursor: not-allowed; background: #f5f5f5; color: #999; border-color: #ddd;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -849,6 +1002,23 @@ body, html {
       </span>
     </div>
   </footer>
+</div>
+
+<!-- Custom Modal Dialog -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 id="modal-title">Confirm Navigation</h3>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <p>Are you sure you want to leave this page?</p>
+      <p>You haven't downloaded or saved the results yet.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-cancel" id="modal-cancel">Stay on Page</button>
+      <button class="modal-btn modal-btn-confirm" id="modal-confirm">Leave Page</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -929,7 +1099,282 @@ function toggleAllCrossVendor() {
 
 // Download all button
 document.getElementById('download-all-btn').addEventListener('click', function() {
-  window.location.href = `/api/download/all?group_name={{ group_name }}`;
+  window.location.href = `/api/download/all/{{ group_name }}`;
+});
+
+// Save to Library button
+document.getElementById('save-to-library-btn').addEventListener('click', async function() {
+  const groupName = '{{ group_name }}';
+  const detections = {{ detections | tojson | safe }};
+  const correlations = {{ correlations | tojson | safe }};
+
+  // Log data for debugging
+  console.log('Total vendor groups:', detections.length);
+  let totalGroupedDetections = 0;
+  let totalUngroupedFiles = 0;
+  detections.forEach(vendor => {
+    const groupedCount = vendor.detections.length;
+    const ungroupedCount = vendor.all_files ? vendor.all_files.length : groupedCount;
+    console.log(`Vendor ${vendor.name}:`, groupedCount, 'grouped detections,', ungroupedCount, 'total files');
+    totalGroupedDetections += groupedCount;
+    totalUngroupedFiles += ungroupedCount;
+  });
+  console.log('Total grouped detections (display):', totalGroupedDetections);
+  console.log('Total ungrouped files (to save):', totalUngroupedFiles);
+  console.log('Total correlations:', correlations.length);
+
+  // Determine if this is a CVE or Group
+  const isCVE = groupName.toUpperCase().startsWith('CVE-');
+  const group = !isCVE ? groupName.replace(/_/g, ' ') : null;
+  const cve = isCVE ? groupName : null;
+
+  let savedCount = 0;
+  let errorCount = 0;
+
+  try {
+    // Save all detections (use all_files array which contains ungrouped individual files)
+    for (const vendor of detections) {
+      // Use all_files if available (ungrouped), otherwise fall back to detections (grouped)
+      const filesToSave = vendor.all_files || vendor.detections;
+
+      for (const detection of filesToSave) {
+        try {
+          const response = await fetch('/api/library/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              title: `${detection.technique} - ${detection.title}`,
+              detection_type: 'detection',
+              visibility: 'private',
+              content: detection,
+              platform: vendor.name,
+              group: group,
+              cve: cve,
+              tags: []
+            })
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            savedCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (error) {
+          console.error('Error saving detection:', error);
+          errorCount++;
+        }
+      }
+    }
+
+    // Save all correlations
+    for (const correlation of correlations) {
+      try {
+        const response = await fetch('/api/library/save', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            title: `Correlation: ${correlation.techniques.map(t => t.id).join(', ')}`,
+            detection_type: 'sole_correlation',
+            visibility: 'private',
+            content: correlation,
+            platform: 'multi',
+            group: group,
+            cve: cve,
+            tags: []
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          savedCount++;
+        } else {
+          errorCount++;
+        }
+      } catch (error) {
+        console.error('Error saving correlation:', error);
+        errorCount++;
+      }
+    }
+
+    // Show success message
+    console.log(`Save complete: ${savedCount} saved, ${errorCount} errors`);
+    if (savedCount > 0) {
+      const autoTagMsg = group ? ` (auto-tagged: <strong>Group:${group}</strong>)` : cve ? ` (auto-tagged: <strong>CVE:${cve}</strong>)` : '';
+      const errorMsg = errorCount > 0 ? `<p style="color: #C53030;">${errorCount} detection(s) failed to save.</p>` : '';
+      await showModal(
+        'Success!',
+        `<p>Successfully saved <strong>${savedCount} detection(s)</strong> to library${autoTagMsg}!</p>${errorMsg}`,
+        'OK'
+      );
+    } else {
+      await showModal(
+        'Error',
+        'No detections were saved. Please try again.',
+        'OK'
+      );
+    }
+  } catch (error) {
+    console.error('Error saving to library:', error);
+    await showModal(
+      'Error',
+      'Failed to save to library. Please try again.',
+      'OK'
+    );
+  }
+});
+
+// Dark mode functionality
+const darkModeToggle = document.getElementById('dark-mode-toggle');
+if (darkModeToggle) {
+  const sunIcon = darkModeToggle.querySelector('.sun-icon');
+  const moonIcon = darkModeToggle.querySelector('.moon-icon');
+  const html = document.documentElement;
+
+  // Check for saved theme preference or default to 'light'
+  const currentTheme = localStorage.getItem('theme') || 'light';
+  html.setAttribute('data-theme', currentTheme);
+  updateIcons(currentTheme);
+
+  darkModeToggle.addEventListener('click', () => {
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateIcons(newTheme);
+  });
+
+  function updateIcons(theme) {
+    if (theme === 'dark') {
+      sunIcon.style.display = 'none';
+      moonIcon.style.display = 'block';
+    } else {
+      sunIcon.style.display = 'block';
+      moonIcon.style.display = 'none';
+    }
+  }
+}
+
+// Custom Modal Helper Functions
+function showModal(title, message, confirmText = 'OK', cancelText = null) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const confirmBtn = document.getElementById('modal-confirm');
+    const cancelBtn = document.getElementById('modal-cancel');
+
+    modalTitle.textContent = title;
+
+    // Handle message as HTML or text
+    if (typeof message === 'string') {
+      modalBody.innerHTML = `<p>${message.replace(/\n/g, '</p><p>')}</p>`;
+    } else {
+      modalBody.innerHTML = message;
+    }
+
+    confirmBtn.textContent = confirmText;
+
+    if (cancelText) {
+      cancelBtn.textContent = cancelText;
+      cancelBtn.style.display = 'block';
+    } else {
+      cancelBtn.style.display = 'none';
+    }
+
+    modal.classList.add('show');
+
+    const handleConfirm = () => {
+      modal.classList.remove('show');
+      confirmBtn.removeEventListener('click', handleConfirm);
+      cancelBtn.removeEventListener('click', handleCancel);
+      resolve(true);
+    };
+
+    const handleCancel = () => {
+      modal.classList.remove('show');
+      confirmBtn.removeEventListener('click', handleConfirm);
+      cancelBtn.removeEventListener('click', handleCancel);
+      resolve(false);
+    };
+
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        handleCancel();
+      }
+    });
+  });
+}
+
+// Prevent accidental navigation away from results page
+let navigationConfirmed = false;
+let hasDownloadedOrSaved = false;
+
+// Track if user has downloaded or saved
+const downloadAllBtn = document.getElementById('download-all-btn');
+const saveToLibraryBtn = document.getElementById('save-to-library-btn');
+
+if (downloadAllBtn) {
+  downloadAllBtn.addEventListener('click', function() {
+    hasDownloadedOrSaved = true;
+  });
+}
+
+if (saveToLibraryBtn) {
+  saveToLibraryBtn.addEventListener('click', function() {
+    hasDownloadedOrSaved = true;
+  });
+}
+
+// Show confirmation dialog when navigating away
+window.addEventListener('beforeunload', function(e) {
+  // Don't show warning if user already downloaded/saved or confirmed navigation
+  if (navigationConfirmed || hasDownloadedOrSaved) {
+    return undefined;
+  }
+
+  // Show confirmation dialog
+  e.preventDefault();
+  e.returnValue = ''; // Required for Chrome
+  return ''; // For older browsers
+});
+
+// Allow internal navigation links to bypass confirmation if clicked deliberately
+document.addEventListener('click', function(e) {
+  const target = e.target.closest('a, button');
+  if (!target) return;
+
+  // Check if this is a navigation link (not download or save buttons)
+  const isNavLink = target.classList.contains('nav-icon-btn') ||
+                    target.classList.contains('header-logo') ||
+                    target === target.closest('.header-logo-container')?.querySelector('a');
+
+  if (isNavLink && !hasDownloadedOrSaved) {
+    // Show custom confirmation dialog
+    e.preventDefault();
+    e.stopPropagation();
+
+    showModal(
+      'Leave Page?',
+      'You haven\'t downloaded or saved the results yet.\n\nAre you sure you want to leave this page?',
+      'Leave Page',
+      'Stay on Page'
+    ).then(confirmed => {
+      if (confirmed) {
+        navigationConfirmed = true;
+        // Navigate to the href
+        window.location.href = target.href;
+      }
+    });
+  } else if (isNavLink) {
+    // User has downloaded/saved, allow navigation without confirmation
+    navigationConfirmed = true;
+  }
 });
 </script>
 {% endblock %}

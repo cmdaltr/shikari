@@ -32,30 +32,70 @@ archer/mappings/*.json
 prompt.txt
 
 # Sensitive data - NEVER commit these
-*.db
-*.sqlite
-*.sqlite3
-data/*.db
-data/*.sqlite
 .env
 *.key
 *.pem
 profile_pictures/
 
-# Output directories - keep structure but exclude generated content
-data/correlate/*.json
+# DATA DIRECTORY - Exclude dynamically generated files, keep structure
+# Database files (runtime generated)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Attack flows (dynamically generated)
+data/attack_flows/*
+!data/attack_flows/.gitkeep
+
+# Correlations (dynamically generated)
+data/correlate/*
+!data/correlate/.gitkeep
 !data/correlate/*_example*.json
-data/generate/*.yaml
-!data/generate/*_example.yaml
-data/hunt/*.yaml
-!data/hunt/*_example.yaml
-data/progress/*.json
-data/progress/*.lock
-!data/progress/.gitkeep
-data/profiles/*.json
+
+# CVE cache (runtime downloaded)
+data/cve_cache/*
+!data/cve_cache/.gitkeep
+
+# Generated detections (dynamically created)
+data/generate/*
+!data/generate/.gitkeep
+!data/generate/*_example*.yaml
+
+# Hunt queries (dynamically generated)
+data/hunt/*
+!data/hunt/.gitkeep
+!data/hunt/*_example*.yaml
+
+# User profiles (runtime generated)
+data/profiles/*
 !data/profiles/.gitkeep
 
-# Cache directory for MITRE ATT&CK data
+# Progress tracking (runtime generated)
+data/progress/*
+!data/progress/.gitkeep
+
+# Uploads (user-uploaded files)
+data/uploads/*
+!data/uploads/.gitkeep
+!data/uploads/*_template.*
+
+# Emulation results (runtime generated)
+data/emulation/*
+!data/emulation/evidence/
+data/emulation/evidence/*
+!data/emulation/evidence/.gitkeep
+
+# VECTR output (dynamically generated)
+data/vectr/*
+!data/vectr/.gitkeep
+!data/vectr/campaigns/
+!data/vectr/exports/
+data/vectr/campaigns/*
+!data/vectr/campaigns/.gitkeep
+data/vectr/exports/*
+!data/vectr/exports/.gitkeep
+
+# Cache directory for MITRE ATT&CK data - runtime generated
 archer/data/cache/*
 !archer/data/cache/.gitkeep
 
@@ -64,27 +104,8 @@ archer/data/query_examples/*
 !archer/data/query_examples/.gitkeep
 !archer/data/query_examples/README.md
 
-# Uploads directory (user-uploaded files and extractions)
-data/uploads/*
-!data/uploads/.gitkeep
-!data/uploads/*_template.json
-
-# Emulation output (runtime generated files)
-data/emulation/*.json
-!data/emulation/*_example.json
-data/emulation/evidence/*
-!data/emulation/evidence/.gitkeep
-
 # Atomic Red Team (static data - git submodule in archer/data/emulation/)
 archer/data/emulation/atomic-red-team/
-
-# VECTR output (optional feature)
-data/vectr/*.json
-!data/vectr/*_example.json
-data/vectr/campaigns/*
-!data/vectr/campaigns/.gitkeep
-data/vectr/exports/*
-!data/vectr/exports/.gitkeep
 
 # Test coverage
 .coverage

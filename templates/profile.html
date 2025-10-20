@@ -54,7 +54,7 @@
       .global-nav-controls {
         position: fixed;
         top: 20px;
-        right: calc((100vw - 1200px) / 2 + 120px);
+        right: calc((100vw - 1200px) / 2 + 10px);
         z-index: 10001;
         display: flex;
         gap: 12px;
@@ -135,7 +135,7 @@
       .how-archer-link {
         position: fixed !important;
         top: 20px !important;
-        right: calc((100vw - 1200px) / 2) !important;
+        right: calc((100vw - 1200px) / 2 + 52px) !important;
         z-index: 10000 !important;
       }
 
@@ -194,12 +194,18 @@
     {% endblock %}
 </head>
 <body>
-    <!-- Global Navigation Controls (Profile|Logout|Home|Dark) -->
+    <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help) -->
     <div class="global-nav-controls">
-        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+        <a href="/library" class="nav-icon-btn" aria-label="Library" title="Library">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+        </a>
+        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
         </a>
         <a href="/logout" class="nav-icon-btn" aria-label="Logout" title="Logout">
@@ -209,10 +215,10 @@
                 <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
         </a>
-        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
             </svg>
         </a>
         <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
@@ -231,19 +237,16 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>
         </button>
+        <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="nav-icon-btn" aria-label="Help" title="Help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        </a>
     </div>
     {% block content %}
     <div id="main-content" class="page-shell">
-      <!-- How Archer Works link - top right - fixed positioning for consistency across all pages -->
-      <a href="/how-it-works" target="_blank" rel="noopener noreferrer" class="how-archer-link" style="position: fixed !important; top: 20px !important; right: calc((100vw - 1200px) / 2) !important; z-index: 1000 !important; color: var(--accent); text-decoration: none; font-size: 0.95em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; min-height: 40px; border: 2px solid var(--accent); border-radius: 6px; background: rgba(255, 255, 255, 0.95); transition: all 0.2s; margin: 0 !important; box-sizing: border-box;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        Help
-      </a>
-
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2em; padding-top: 80px; position: relative;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">
@@ -267,6 +270,12 @@
               <circle cx="12" cy="7" r="4"/>
             </svg>
             <span>Profile</span>
+          </button>
+          <button class="tab-button" data-tab="security">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>Security</span>
           </button>
           <button class="tab-button" data-tab="timeline">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -398,14 +407,14 @@
             <div class="timeline-container">
               <div class="timeline-filters">
                 <button class="filter-btn active" data-filter="all">All Activity</button>
-                <button class="filter-btn" data-filter="actor">
+                <button class="filter-btn" data-filter="group">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                   </svg>
-                  Threat Actors
+                  Groups
                 </button>
                 <button class="filter-btn" data-filter="cve">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -680,6 +689,221 @@
             </div>
           </div>
 
+          <!-- SECURITY TAB -->
+          <div class="tab-pane" id="tab-security">
+            <div class="tab-description">
+              Manage your account security settings
+            </div>
+
+            <!-- Two-column layout for security sections -->
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 40px; margin-top: 24px;">
+
+              <!-- LEFT COLUMN: Change Password -->
+              <div class="security-section">
+                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
+                  Change Password
+                </h3>
+
+                <form id="password-change-form">
+                  <div class="form-section">
+                    <label for="current_password" class="form-label">Current Password</label>
+                    <input type="password" id="current_password" name="current_password" class="form-input" required>
+                  </div>
+
+                  <!-- Divider between Current Password and New Password -->
+                  <div style="height: 1px; background: var(--border-color); margin: 24px 0;"></div>
+
+                  <div class="form-section">
+                    <label for="new_password" class="form-label">New Password</label>
+                    <div style="position: relative;">
+                      <input type="password" id="new_password" name="new_password" class="form-input" required style="padding-right: 40px;">
+                      <svg id="new-password-valid-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #22c55e; display: none; pointer-events: none;">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
+                    <p style="color: var(--text-tertiary); font-size: 0.85rem; margin-top: 0.5rem;">
+                      Minimum 16 characters, including letters, numbers, and special characters
+                    </p>
+                  </div>
+
+                  <div class="form-section">
+                    <label for="confirm_new_password" class="form-label">Confirm New Password</label>
+                    <div style="position: relative;">
+                      <input type="password" id="confirm_new_password" name="confirm_new_password" class="form-input" required style="padding-right: 40px;">
+                      <svg id="confirm-password-valid-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #22c55e; display: none; pointer-events: none;">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div id="password-change-message" style="margin-top: 16px;"></div>
+
+                  <div class="form-actions" style="margin-top: -18px;">
+                    <button type="submit" class="btn-primary">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                      </svg>
+                      Change Password
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- VERTICAL DIVIDER -->
+              <div style="width: 1px; background: var(--border-color); align-self: stretch;"></div>
+
+              <!-- RIGHT COLUMN: MFA and Backup Codes -->
+              <div style="display: flex; flex-direction: column; gap: 40px;">
+
+                <!-- MFA Section -->
+                <div class="security-section">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
+                    Two-Factor Authentication (MFA)
+                  </h3>
+
+                  <div id="mfa-status-section">
+                    <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                      Add an extra layer of security to your account by enabling two-factor authentication.
+                    </p>
+
+                    <div id="mfa-disabled-state">
+                      <button type="button" id="enable-mfa-btn" class="btn-primary" onclick="showMfaSetup()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        Enable MFA
+                      </button>
+                    </div>
+
+                    <div id="mfa-enabled-state" style="display: none;">
+                      <div style="background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px;">
+                        <p style="color: #065f46; margin: 0; font-weight: 500;">
+                          ✓ Two-factor authentication is enabled
+                        </p>
+                      </div>
+                      <button type="button" id="disable-mfa-btn" class="btn-secondary" onclick="disableMfa()">
+                        Disable MFA
+                      </button>
+                    </div>
+
+                    <div id="mfa-setup-message" style="margin-top: 16px;"></div>
+                  </div>
+
+                  <!-- MFA Setup Modal -->
+                  <div id="mfa-setup-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: white; border-radius: 8px; padding: 32px; max-width: 500px; width: 90%;">
+                      <h3 style="margin-top: 0; margin-bottom: 24px;">Set Up Two-Factor Authentication</h3>
+
+                      <div style="text-align: center;">
+                        <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                          Scan this QR code with your authenticator app.
+                        </p>
+                        <div id="mfa-qr-code" style="display: inline-block; padding: 16px; background: white; border: 2px solid var(--border-color); border-radius: 8px; margin-bottom: 16px;">
+                          <!-- QR code will be inserted here -->
+                        </div>
+                        <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 24px;">
+                          Or enter this key manually: <code id="mfa-secret-key" style="background: #f5f5f5; padding: 4px 8px; border-radius: 4px; font-family: monospace;"></code>
+                        </p>
+                      </div>
+
+                      <div style="margin-bottom: 24px;">
+                        <label for="mfa-verification-code" class="form-label">Enter verification code</label>
+                        <input type="text" id="mfa-verification-code" class="form-input" placeholder="000000" maxlength="6" pattern="[0-9]{6}">
+                      </div>
+
+                      <div id="mfa-setup-message" style="margin-bottom: 16px;"></div>
+
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
+                        <button type="button" class="btn-primary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0; vertical-align: top;" onclick="verifyAndEnableMfa()">
+                          Verify & Enable
+                        </button>
+                        <button type="button" class="btn-secondary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0; vertical-align: top;" onclick="hideMfaSetup()">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Divider between MFA and Backup Codes -->
+                <div style="height: 1px; background: var(--border-color); margin: 20px 0;"></div>
+
+                <!-- Backup Codes Section -->
+                <div class="security-section">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
+                    Backup Codes
+                  </h3>
+
+                  <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                    Generate backup codes to access your account if you lose your MFA device. Each code can only be used once.
+                  </p>
+
+                  <div id="backup-codes-section">
+                    <button type="button" id="generate-backup-codes-btn" class="btn-primary" onclick="showBackupCodesModal()">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                      </svg>
+                      Generate New Backup Codes
+                    </button>
+
+                    <!-- Backup Codes Modal -->
+                    <div id="backup-codes-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+                      <div style="background: white; border-radius: 8px; padding: 32px; max-width: 600px; width: 90%;">
+                        <h3 style="margin-top: 0; margin-bottom: 24px;">Your Backup Recovery Codes</h3>
+
+                        <div style="background: #fef3c7; border: 2px solid #fbbf24; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                          <p style="color: #92400e; margin: 0; font-weight: 600;">
+                            ⚠️ Save these codes now! They will only be shown once.
+                          </p>
+                          <p style="color: #92400e; margin: 8px 0 0 0; font-size: 0.9rem;">
+                            Each code can only be used once. If you lose these codes, you'll need to generate new ones.
+                          </p>
+                        </div>
+
+                        <div id="backup-codes-list" style="background: #f5f5f5; border-radius: 6px; padding: 20px; font-family: monospace; font-size: 1.1rem; line-height: 1.8; white-space: pre-line; text-align: center; margin-bottom: 24px;">
+                          <!-- Backup codes will be inserted here -->
+                        </div>
+
+                        <div id="backup-codes-message" style="margin-bottom: 16px;"></div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
+                          <button type="button" class="btn-primary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0; vertical-align: top;" onclick="downloadBackupCodes()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                              <polyline points="7 10 12 15 17 10"/>
+                              <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Download Codes
+                          </button>
+                          <button type="button" class="btn-secondary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0; vertical-align: top;" onclick="copyBackupCodes()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                            </svg>
+                            Copy to Clipboard
+                          </button>
+                        </div>
+
+                        <div style="margin-top: 16px; text-align: center;">
+                          <button type="button" class="btn-secondary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0;" onclick="hideBackupCodesModal()">
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
           <!-- USERS TAB (Admin Only) -->
           {% if user and user.role.value == 'admin' %}
           <div class="tab-pane" id="tab-users">
@@ -753,9 +977,8 @@
                 ? '<td style="padding: 12px; text-align: center;">—</td>'
                 : `<td style="padding: 12px; text-align: center;">
                     <button onclick="manageUser(${user.id})" style="background: none; border: none; cursor: pointer; padding: 4px; display: inline-flex; align-items: center; justify-content: center;" title="Manage User">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" style="width: 20px; height: 20px;">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M12 1v6m0 6v6m8.66-15L15 8.66M8.66 15 3.34 20.66M23 12h-6m-6 0H1m20.66 8.66L15.34 15M8.66 9 3.34 3.34"/>
+                      <svg viewBox="0 0 512 512" fill="var(--text-secondary)" style="width: 20px; height: 20px;">
+                        <path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/>
                       </svg>
                     </button>
                   </td>`;
@@ -803,9 +1026,597 @@
                 }
               });
             }
+
+            // Load timeline when Timeline tab is clicked
+            const timelineTab = document.querySelector('[data-tab="timeline"]');
+            if (timelineTab) {
+              timelineTab.addEventListener('click', function() {
+                loadTimeline();
+              });
+            }
           });
           </script>
           {% endif %}
+
+          <!-- Security Tab JavaScript -->
+          <script>
+          // ========================================
+          // PASSWORD CHANGE FUNCTIONALITY
+          // ========================================
+
+          // Password validation
+          function validatePasswordStrengthSecurity(password) {
+            if (!password || password.length < 16) return false;
+            if (password.length > 40) return false;
+            if (!/[a-zA-Z]/.test(password)) return false;
+            if (!/[0-9]/.test(password)) return false;
+            if (!/[!@£$%^&()\-_+=\[\]{}:|<>?]/.test(password)) return false;
+            return true;
+          }
+
+          // Check if new passwords match
+          function checkNewPasswordMatch() {
+            const newPassword = document.getElementById('new_password');
+            const confirmPassword = document.getElementById('confirm_new_password');
+            const newValidIcon = document.getElementById('new-password-valid-icon');
+            const confirmValidIcon = document.getElementById('confirm-password-valid-icon');
+
+            if (!newPassword || !confirmPassword) return;
+
+            // Check new password strength
+            if (newPassword.value && validatePasswordStrengthSecurity(newPassword.value)) {
+              newValidIcon.style.display = 'block';
+            } else {
+              newValidIcon.style.display = 'none';
+            }
+
+            // Check if passwords match
+            if (newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value) {
+              confirmValidIcon.style.display = 'block';
+            } else {
+              confirmValidIcon.style.display = 'none';
+            }
+          }
+
+          // Handle password change form submission
+          async function handlePasswordChange(event) {
+            event.preventDefault();
+
+            const currentPassword = document.getElementById('current_password').value;
+            const newPassword = document.getElementById('new_password').value;
+            const confirmPassword = document.getElementById('confirm_new_password').value;
+            const messageDiv = document.getElementById('password-change-message');
+
+            // Validation
+            if (!currentPassword || !newPassword || !confirmPassword) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">All fields are required</div>';
+              return;
+            }
+
+            if (!validatePasswordStrengthSecurity(newPassword)) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">New password must be 16-40 characters and contain letters, numbers, and special characters</div>';
+              return;
+            }
+
+            if (newPassword !== confirmPassword) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">New passwords do not match</div>';
+              return;
+            }
+
+            if (currentPassword === newPassword) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">New password must be different from current password</div>';
+              return;
+            }
+
+            // Submit to server
+            try {
+              const response = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  current_password: currentPassword,
+                  new_password: newPassword
+                })
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                messageDiv.innerHTML = '<div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 6px;">Password changed successfully!</div>';
+                document.getElementById('password-change-form').reset();
+                document.getElementById('new-password-valid-icon').style.display = 'none';
+                document.getElementById('confirm-password-valid-icon').style.display = 'none';
+              } else {
+                messageDiv.innerHTML = `<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">${result.detail || 'Failed to change password'}</div>`;
+              }
+            } catch (error) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">An error occurred. Please try again.</div>';
+            }
+          }
+
+          // ========================================
+          // MFA FUNCTIONALITY
+          // ========================================
+
+          let mfaEnabled = false; // Will be loaded from server
+
+          // Show MFA setup modal
+          function showMfaSetup() {
+            document.getElementById('mfa-setup-modal').style.display = 'flex';
+            loadMfaQrCode();
+          }
+
+          // Hide MFA setup modal
+          function hideMfaSetup() {
+            document.getElementById('mfa-setup-modal').style.display = 'none';
+            document.getElementById('mfa-verification-code').value = '';
+            document.getElementById('mfa-setup-message').innerHTML = '';
+          }
+
+          // Load MFA QR code from server
+          async function loadMfaQrCode() {
+            const qrContainer = document.getElementById('mfa-qr-code');
+            const secretContainer = document.getElementById('mfa-secret-key');
+
+            qrContainer.innerHTML = '<p style="color: #8B9AA3;">Loading QR code...</p>';
+
+            try {
+              const response = await fetch('/api/mfa/setup', {
+                method: 'POST'
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                qrContainer.innerHTML = `<img src="${result.qr_code}" alt="MFA QR Code" style="max-width: 100%; height: auto; border-radius: 8px;">`;
+                secretContainer.textContent = result.secret;
+              } else {
+                qrContainer.innerHTML = `<p style="color: #C53030;">Failed to load QR code</p>`;
+              }
+            } catch (error) {
+              qrContainer.innerHTML = `<p style="color: #C53030;">Error loading QR code</p>`;
+            }
+          }
+
+          // Verify and enable MFA
+          async function verifyAndEnableMfa() {
+            const code = document.getElementById('mfa-verification-code').value;
+            const messageDiv = document.getElementById('mfa-setup-message');
+
+            if (!code || code.length !== 6) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">Please enter a 6-digit code</div>';
+              return;
+            }
+
+            try {
+              const response = await fetch('/api/mfa/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code: code })
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                messageDiv.innerHTML = '<div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 6px;">MFA enabled successfully!</div>';
+                mfaEnabled = true;
+                updateMfaButtons();
+                setTimeout(() => {
+                  hideMfaSetup();
+                }, 2000);
+              } else {
+                messageDiv.innerHTML = `<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">${result.detail || 'Invalid verification code'}</div>`;
+              }
+            } catch (error) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">An error occurred. Please try again.</div>';
+            }
+          }
+
+          // Disable MFA
+          async function disableMfa() {
+            if (!confirm('Are you sure you want to disable Multi-Factor Authentication?')) {
+              return;
+            }
+
+            try {
+              const response = await fetch('/api/mfa/disable', {
+                method: 'POST'
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                mfaEnabled = false;
+                updateMfaButtons();
+                alert('MFA has been disabled');
+              } else {
+                alert('Failed to disable MFA');
+              }
+            } catch (error) {
+              alert('An error occurred. Please try again.');
+            }
+          }
+
+          // Update MFA button states
+          function updateMfaButtons() {
+            const enableBtn = document.getElementById('enable-mfa-btn');
+            const disableBtn = document.getElementById('disable-mfa-btn');
+
+            if (mfaEnabled) {
+              enableBtn.style.display = 'none';
+              disableBtn.style.display = 'inline-flex';
+            } else {
+              enableBtn.style.display = 'inline-flex';
+              disableBtn.style.display = 'none';
+            }
+          }
+
+          // Load MFA status
+          async function loadMfaStatus() {
+            try {
+              const response = await fetch('/api/mfa/status');
+              const result = await response.json();
+
+              if (response.ok) {
+                mfaEnabled = result.enabled;
+                updateMfaButtons();
+              }
+            } catch (error) {
+              console.error('Failed to load MFA status:', error);
+            }
+          }
+
+          // ========================================
+          // BACKUP CODES FUNCTIONALITY
+          // ========================================
+
+          let currentBackupCodes = [];
+
+          // Show backup codes modal
+          function showBackupCodesModal() {
+            if (!confirm('Generating new backup codes will invalidate any existing codes. Continue?')) {
+              return;
+            }
+            document.getElementById('backup-codes-modal').style.display = 'flex';
+            generateBackupCodes();
+          }
+
+          // Hide backup codes modal
+          function hideBackupCodesModal() {
+            document.getElementById('backup-codes-modal').style.display = 'none';
+            document.getElementById('backup-codes-list').textContent = '';
+            document.getElementById('backup-codes-message').innerHTML = '';
+            currentBackupCodes = [];
+          }
+
+          // Generate backup codes
+          async function generateBackupCodes() {
+            const messageDiv = document.getElementById('backup-codes-message');
+            const codesArea = document.getElementById('backup-codes-list');
+
+            codesArea.textContent = 'Generating codes...';
+
+            try {
+              const response = await fetch('/api/backup-codes/generate', {
+                method: 'POST'
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                currentBackupCodes = result.codes;
+
+                // Display codes
+                codesArea.textContent = currentBackupCodes.join('\n');
+              } else {
+                messageDiv.innerHTML = `<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">${result.detail || 'Failed to generate backup codes'}</div>`;
+                codesArea.textContent = '';
+              }
+            } catch (error) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">An error occurred. Please try again.</div>';
+              codesArea.textContent = '';
+            }
+          }
+
+          // Download backup codes as text file
+          function downloadBackupCodes() {
+            if (currentBackupCodes.length === 0) return;
+
+            const text = 'Archer Account Backup Codes\n' +
+                        '================================\n\n' +
+                        'Each code can only be used once.\n' +
+                        'Store these codes in a secure location.\n\n' +
+                        currentBackupCodes.join('\n') + '\n';
+
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'archer-backup-codes.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          }
+
+          // Copy backup codes to clipboard
+          function copyBackupCodes() {
+            if (currentBackupCodes.length === 0) return;
+
+            const text = currentBackupCodes.join('\n');
+
+            navigator.clipboard.writeText(text).then(() => {
+              const copyBtn = document.getElementById('copy-codes-btn');
+              const originalText = copyBtn.innerHTML;
+              copyBtn.innerHTML = '<svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!';
+
+              setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+              }, 2000);
+            }).catch(err => {
+              alert('Failed to copy to clipboard');
+            });
+          }
+
+          // ========================================
+          // TIMELINE FUNCTIONALITY
+          // ========================================
+
+          let currentFilter = 'all';
+          let allActivities = [];
+
+          // Load timeline activities
+          async function loadTimeline() {
+            try {
+              const response = await fetch('/api/activities');
+              const result = await response.json();
+
+              if (response.ok && result.success) {
+                allActivities = result.activities;
+                renderTimeline(allActivities);
+              } else {
+                console.error('Failed to load activities:', result);
+              }
+            } catch (error) {
+              console.error('Error loading timeline:', error);
+            }
+          }
+
+          // Render timeline items
+          function renderTimeline(activities) {
+            const container = document.getElementById('timeline-items');
+
+            if (!activities || activities.length === 0) {
+              container.innerHTML = `
+                <div class="empty-state">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p>No activity yet.</p>
+                </div>
+              `;
+              return;
+            }
+
+            // Build timeline HTML
+            let html = '';
+            activities.forEach(activity => {
+              const icon = getActivityIcon(activity.type);
+              const timestamp = formatTimestamp(activity.created_at);
+              const metadata = activity.metadata || {};
+
+              html += `
+                <div class="timeline-item" data-type="${activity.type}">
+                  <div class="timeline-icon ${activity.type}">
+                    ${icon}
+                  </div>
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <span class="timeline-title">${escapeHtml(activity.title)}</span>
+                      <span class="timeline-time">${timestamp}</span>
+                    </div>
+                    ${activity.description ? `<p class="timeline-description">${escapeHtml(activity.description)}</p>` : ''}
+                    ${renderActivityMetadata(activity.type, metadata)}
+                  </div>
+                </div>
+              `;
+            });
+
+            container.innerHTML = html;
+          }
+
+          // Get activity icon based on type
+          function getActivityIcon(type) {
+            const icons = {
+              'generate': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>',
+              'correlate': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>',
+              'upload': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
+              'library_save': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+              'library_export': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>'
+            };
+            return icons[type] || icons['generate'];
+          }
+
+          // Render activity-specific metadata
+          function renderActivityMetadata(type, metadata) {
+            if (!metadata || Object.keys(metadata).length === 0) {
+              return '';
+            }
+
+            let html = '<div class="timeline-metadata">';
+
+            if (type === 'generate' || type === 'correlate') {
+              if (metadata.detection_count) {
+                html += `<span class="metadata-badge">📊  ${metadata.detection_count} detections</span>`;
+              }
+              if (metadata.correlation_count) {
+                html += `<span class="metadata-badge">🔗  ${metadata.correlation_count} correlations</span>`;
+              }
+              if (metadata.platform) {
+                // Use vendor icons for Splunk and MDE
+                let platformIcon = '';
+                const platform = metadata.platform.toLowerCase();
+
+                if (platform === 'splunk') {
+                  platformIcon = `<svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                    <defs>
+                      <radialGradient id="splunkGradient-${metadata.detection_count}" cx="30%" cy="30%">
+                        <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                        <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                      </radialGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="48" fill="url(#splunkGradient-${metadata.detection_count})"/>
+                    <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  </svg>`;
+                } else if (platform === 'microsoft defender' || platform === 'mde') {
+                  platformIcon = `<svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                    <defs>
+                      <linearGradient id="defenderGradient-${metadata.detection_count}" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                        <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient-${metadata.detection_count})"/>
+                  </svg>`;
+                } else {
+                  platformIcon = '🖥️  ';
+                }
+
+                html += `<span class="metadata-badge">${platformIcon}${metadata.platform}</span>`;
+              }
+            } else if (type === 'upload') {
+              if (metadata.filename) {
+                html += `<span class="metadata-badge">📄  ${escapeHtml(metadata.filename)}</span>`;
+              }
+            } else if (type === 'library_save' || type === 'library_export') {
+              if (metadata.count) {
+                html += `<span class="metadata-badge">📦  ${metadata.count} items</span>`;
+              }
+            }
+
+            html += '</div>';
+            return html;
+          }
+
+          // Format timestamp
+          function formatTimestamp(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+            if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          }
+
+          // Escape HTML to prevent XSS
+          function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+          }
+
+          // Filter timeline by activity type
+          function filterTimeline(filter) {
+            currentFilter = filter;
+
+            // Update active filter button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+              btn.classList.remove('active');
+            });
+            document.querySelector(`[data-filter="${filter}"]`)?.classList.add('active');
+
+            // Filter activities
+            let filtered = allActivities;
+            if (filter !== 'all') {
+              // Map filter types to activity types
+              const filterMap = {
+                'actor': 'generate',
+                'cve': 'generate'
+              };
+              // For now, just show all since we need to add more metadata to distinguish
+              // In the future, we can filter based on metadata.source_type or similar
+            }
+
+            renderTimeline(filtered);
+          }
+
+          // Setup timeline filter buttons
+          document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(btn => {
+              btn.addEventListener('click', function() {
+                const filter = this.getAttribute('data-filter');
+                filterTimeline(filter);
+              });
+            });
+          });
+
+          // ========================================
+          // INITIALIZATION
+          // ========================================
+
+          document.addEventListener('DOMContentLoaded', function() {
+            // Password change event listeners
+            const newPasswordInput = document.getElementById('new_password');
+            const confirmPasswordInput = document.getElementById('confirm_new_password');
+            const passwordForm = document.getElementById('password-change-form');
+
+            if (newPasswordInput) {
+              newPasswordInput.addEventListener('input', checkNewPasswordMatch);
+            }
+
+            if (confirmPasswordInput) {
+              confirmPasswordInput.addEventListener('input', checkNewPasswordMatch);
+            }
+
+            if (passwordForm) {
+              passwordForm.addEventListener('submit', handlePasswordChange);
+            }
+
+            // Load MFA status when Security tab is clicked
+            const securityTab = document.querySelector('[data-tab="security"]');
+            if (securityTab) {
+              securityTab.addEventListener('click', function() {
+                loadMfaStatus();
+              });
+            }
+
+            // Close MFA modal when clicking outside
+            const mfaModal = document.getElementById('mfa-setup-modal');
+            if (mfaModal) {
+              mfaModal.addEventListener('click', function(e) {
+                if (e.target === mfaModal) {
+                  hideMfaSetup();
+                }
+              });
+            }
+
+            // Close backup codes modal when clicking outside
+            const backupCodesModal = document.getElementById('backup-codes-modal');
+            if (backupCodesModal) {
+              backupCodesModal.addEventListener('click', function(e) {
+                if (e.target === backupCodesModal) {
+                  hideBackupCodesModal();
+                }
+              });
+            }
+          });
+          </script>
 
         </div>
       </div>

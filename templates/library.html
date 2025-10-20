@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+    <title>Library - Archer</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='favicon-32.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/profile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}">
+    <style>
+      /* Ensure consistent positioning across all browsers */
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-y: scroll !important;
+        zoom: 1.0;
+      }
+
+      /* Dark mode CSS variables */
+      :root[data-theme="light"] {
+        --bg-primary: #f7fafc;
+        --bg-secondary: #ffffff;
+        --text-primary: #1a1a1a;
+        --text-secondary: #666666;
+        --text-tertiary: #999999;
+        --border-color: #e2e8f0;
+        --shadow: rgba(0,0,0,0.08);
+        --accent: #C53030;
+      }
+
+      :root[data-theme="dark"] {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2d2d2d;
+        --text-primary: #f0f0f0;
+        --text-secondary: #b0b0b0;
+        --text-tertiary: #808080;
+        --border-color: #404040;
+        --shadow: rgba(0,0,0,0.3);
+        --accent: #ff6b6b;
+      }
+
+      #main-content.page-shell,
+      #main-content.centered { padding-top: 0 !important; margin-top: 0 !important; position: relative; }
+
+      /* Global navigation buttons */
+      .global-nav-controls {
+        position: fixed;
+        top: 20px;
+        right: calc((100vw - 1200px) / 2 + 10px);
+        z-index: 10001;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      @media (max-width: 1400px) {
+        .global-nav-controls {
+          right: auto;
+          left: 20px;
+          top: 70px;
+        }
+      }
+
+      .nav-icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        min-height: 40px;
+        padding: 8px;
+        border: 2px solid var(--accent);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.95);
+        color: var(--accent);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        box-sizing: border-box;
+      }
+
+      [data-theme="dark"] .nav-icon-btn {
+        background: rgba(45, 45, 45, 0.95);
+      }
+
+      .nav-icon-btn:hover {
+        background: var(--accent);
+        color: white;
+      }
+
+      .nav-icon-btn svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* Override inline styles for dark mode */
+      [data-theme="dark"] body,
+      [data-theme="dark"] .page-shell,
+      [data-theme="dark"] .container {
+        background: var(--bg-primary) !important;
+      }
+
+      [data-theme="dark"] h1 {
+        color: var(--text-primary) !important;
+      }
+
+      [data-theme="dark"] p,
+      [data-theme="dark"] .header p {
+        color: var(--text-secondary) !important;
+      }
+
+      /* Footer dark mode */
+      [data-theme="dark"] footer {
+        background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%) !important;
+        border-top-color: var(--accent) !important;
+      }
+
+      [data-theme="dark"] footer p,
+      [data-theme="dark"] footer span,
+      [data-theme="dark"] footer a {
+        color: var(--text-secondary) !important;
+      }
+
+      [data-theme="dark"] footer a:hover {
+        color: var(--accent) !important;
+      }
+
+      /* Library table styles */
+      .library-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+        font-family: 'Inter', sans-serif;
+      }
+
+      .library-table th {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 2px solid var(--border-color);
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .library-table th:first-child {
+        width: 40px;
+        text-align: center;
+      }
+
+      .library-table th:nth-child(3),
+      .library-table th:nth-child(5) {
+        text-align: center;
+        width: 100px;
+      }
+
+      .library-table th:nth-child(4) {
+        min-width: 140px;
+        white-space: nowrap;
+      }
+
+      .library-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+      }
+
+      .library-table td:first-child {
+        text-align: center;
+      }
+
+      .library-table td:nth-child(3),
+      .library-table td:nth-child(5) {
+        text-align: center;
+      }
+
+      .library-table tbody tr:hover {
+        background: var(--bg-primary);
+      }
+
+      /* Export buttons */
+      .export-buttons {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+        justify-content: flex-end;
+      }
+
+      .btn-export {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border: 2px solid var(--accent);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--accent);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-export:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-export:not(:disabled):hover {
+        background: var(--accent);
+        color: white;
+      }
+
+      .btn-export svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* Dropdown styling */
+      select, option {
+        font-family: 'Inter', sans-serif !important;
+      }
+
+      /* Checkbox styling */
+      .library-table input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+    </style>
+</head>
+<body>
+    <!-- Global Navigation Controls -->
+    <div class="global-nav-controls">
+        <a href="/library" class="nav-icon-btn" aria-label="Library" title="Library">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+        </a>
+        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+        </a>
+        <a href="/logout" class="nav-icon-btn" aria-label="Logout" title="Logout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+        </a>
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        </a>
+        <button id="dark-mode-toggle" class="nav-icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <svg id="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg id="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        </button>
+        <a href="/how-it-works" class="nav-icon-btn" aria-label="Help" title="Help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        </a>
+    </div>
+
+    {% block content %}
+    <div id="main-content" class="page-shell">
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2em; padding-top: 80px; position: relative;">
+      <!-- Page title / app name with banner -->
+      <div class="header" style="text-align: center; margin-bottom: 3em;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1em;">
+          <!-- Logo replacing "A" -->
+          <img src="{{ url_for('static', path='images/icon.png') }}" alt="Archer Logo" style="width: auto; height: auto; max-height: 120px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
+          <!-- "RCHER" text -->
+          <h1 style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 90px; font-weight: 700; letter-spacing: 10px; color: #1a1a1a; margin: 0; text-shadow: 0px 2px 4px rgba(0,0,0,0.2);">RCHER</h1>
+        </div>
+        <p style="color: #666666; font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px;">
+          DETECTION & CORRELATION LIBRARY
+        </p>
+      </div>
+
+      <!-- Library Content -->
+      <div class="tabs-container">
+        <div class="tabs-content">
+          <div class="tab-pane active">
+
+            <!-- Search and Filter Bar -->
+            <div style="background: transparent; padding: 0; margin-top: 24px; margin-bottom: 16px;">
+              <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <!-- Search Input -->
+                <div style="width: 628px; min-width: 300px;">
+                  <input
+                    type="text"
+                    id="library-search"
+                    placeholder="Search by title or creator..."
+                    style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 1em; background: var(--bg-primary); color: var(--text-primary);"
+                  >
+                </div>
+
+                <!-- Filter Dropdown -->
+                <select id="type-filter" style="padding: 12px 16px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 1em; font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s; min-width: 260px; margin-left: 30px; height: 48px;">
+                  <option value="all">All Types</option>
+                  <option value="detection">Detection</option>
+                  <option value="sole_correlation">Sole Correlation</option>
+                  <option value="cross_vendor_correlation">Cross-Vendor Correlation</option>
+                </select>
+
+                <select id="visibility-filter" style="padding: 12px 16px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 1em; font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s; min-width: 182px; height: 48px;">
+                  <option value="all">All Visibility</option>
+                  <option value="private">Private</option>
+                  <option value="shared">Shared</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Export and Edit Buttons -->
+            <div class="export-buttons">
+              <button id="tags-btn" class="btn-export" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                  <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+                Tags
+              </button>
+              <button id="toggle-visibility-btn" class="btn-export" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                Visibility
+              </button>
+              <button id="delete-btn" class="btn-export" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <line x1="10" y1="11" x2="10" y2="17"/>
+                  <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+                Delete
+              </button>
+              <button id="export-btn" class="btn-export" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Export
+              </button>
+            </div>
+
+            <!-- Library Table -->
+            <div id="library-table-container" style="background: transparent; padding: 0; overflow-x: auto;">
+              <table class="library-table" id="library-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="select-all" onchange="toggleSelectAll()"></th>
+                    <th onclick="sortTable('title')" style="cursor: pointer; user-select: none;">
+                      Title <span id="sort-title" style="opacity: 0.5;">↕</span>
+                    </th>
+                    <th onclick="sortTable('type')" style="cursor: pointer; user-select: none;">
+                      Type <span id="sort-type" style="opacity: 0.5;">↕</span>
+                    </th>
+                    <th onclick="sortTable('creator')" style="cursor: pointer; user-select: none;">
+                      Creator <span id="sort-creator" style="opacity: 0.5;">↕</span>
+                    </th>
+                    <th onclick="sortTable('visibility')" style="cursor: pointer; user-select: none;">
+                      Visibility <span id="sort-visibility" style="opacity: 0.5;">↕</span>
+                    </th>
+                    <th>Tags</th>
+                  </tr>
+                </thead>
+                <tbody id="library-table-body">
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 40px;">Loading library...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tags Action Selection Modal -->
+    <div id="tags-action-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+      <div style="background: var(--bg-secondary); border-radius: 8px; padding: 30px; max-width: 500px; width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        <h2 style="margin-top: 0; color: var(--text-primary); font-size: 1.5em;">Manage Tags</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+          Select an action for <span id="tags-action-count">0</span> selected item(s).
+        </p>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; background: var(--bg-primary);" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--border-color)'">
+            <input type="radio" name="tag-action" id="tag-action-add" value="add" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer; accent-color: var(--accent);">
+            <div>
+              <div style="font-weight: 600; color: var(--text-primary);">Add Tags</div>
+              <div style="font-size: 0.85em; color: var(--text-secondary);">Add new tags to selected items</div>
+            </div>
+          </label>
+
+          <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; background: var(--bg-primary);" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--border-color)'">
+            <input type="radio" name="tag-action" id="tag-action-edit" value="edit" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer; accent-color: var(--accent);">
+            <div>
+              <div style="font-weight: 600; color: var(--text-primary);">Edit Tags</div>
+              <div style="font-size: 0.85em; color: var(--text-secondary);">Modify existing tags</div>
+            </div>
+          </label>
+
+          <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: all 0.2s; background: var(--bg-primary);" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--border-color)'">
+            <input type="radio" name="tag-action" id="tag-action-remove" value="remove" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer; accent-color: var(--accent);">
+            <div>
+              <div style="font-weight: 600; color: var(--text-primary);">Remove All Tags</div>
+              <div style="font-size: 0.85em; color: var(--text-secondary);">Remove all tags from selected items</div>
+            </div>
+          </label>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: stretch;">
+          <button id="cancel-tags-action-btn" style="flex: 1; padding: 14px 20px; border: 2px solid var(--border-color); border-radius: 6px; background: transparent; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s; box-sizing: border-box; font-size: 1em; font-family: 'Inter', sans-serif; line-height: 1.2;">
+            Cancel
+          </button>
+          <button id="continue-tags-action-btn" style="flex: 1; padding: 14px 20px; border: 2px solid var(--accent); border-radius: 6px; background: var(--accent); color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; box-sizing: border-box; font-size: 1em; font-family: 'Inter', sans-serif; line-height: 1.2;">
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tags Input Modal (for Add/Edit) -->
+    <div id="tags-input-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+      <div style="background: var(--bg-secondary); border-radius: 8px; padding: 30px; max-width: 600px; width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        <h2 id="tags-input-title" style="margin-top: 0; color: var(--text-primary); font-size: 1.5em;">Edit Tags</h2>
+        <p id="tags-input-description" style="color: var(--text-secondary); margin-bottom: 20px;">
+          Add or modify tags for <span id="tags-input-count">0</span> selected item(s). Separate with commas.
+        </p>
+
+        <div style="margin-bottom: 20px;">
+          <textarea id="tags-input" rows="4" placeholder="Hunt-2024-01, Incident-123, APT-Campaign" style="width: calc(100% - 28px); padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 1em; font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); resize: vertical; box-sizing: border-box;"></textarea>
+          <p style="font-size: 0.9em; color: var(--text-secondary); margin-top: 8px; font-style: italic;">
+            💡 Be as descriptive as possible
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: stretch;">
+          <button id="cancel-tags-input-btn" style="flex: 1; padding: 14px 20px; border: 2px solid var(--border-color); border-radius: 6px; background: transparent; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s; box-sizing: border-box; font-size: 1em; font-family: 'Inter', sans-serif; line-height: 1.2;">
+            Cancel
+          </button>
+          <button id="save-tags-btn" style="flex: 1; padding: 14px 20px; border: 2px solid var(--accent); border-radius: 6px; background: var(--accent); color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; box-sizing: border-box; font-size: 1em; font-family: 'Inter', sans-serif; line-height: 1.2;">
+            Save Tags
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="export-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+      <div style="background: var(--bg-secondary); border-radius: 8px; padding: 30px; max-width: 500px; width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        <h2 style="margin-top: 0; color: var(--text-primary); font-size: 1.5em;">Export Library</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+          Select export format(s) for <span id="export-count">0</span> selected item(s).
+        </p>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; background: var(--bg-primary);" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--border-color)'">
+            <input type="checkbox" id="export-json" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer; accent-color: var(--accent);">
+            <div>
+              <div style="font-weight: 600; color: var(--text-primary);">JSON</div>
+              <div style="font-size: 0.85em; color: var(--text-secondary);">JavaScript Object Notation</div>
+            </div>
+          </label>
+
+          <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; background: var(--bg-primary);" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--border-color)'">
+            <input type="checkbox" id="export-csv" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer; accent-color: var(--accent);">
+            <div>
+              <div style="font-weight: 600; color: var(--text-primary);">CSV</div>
+              <div style="font-size: 0.85em; color: var(--text-secondary);">Comma-Separated Values</div>
+            </div>
+          </label>
+
+          <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: all 0.2s; background: var(--bg-primary);" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--border-color)'">
+            <input type="checkbox" id="export-xml" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer; accent-color: var(--accent);">
+            <div>
+              <div style="font-weight: 600; color: var(--text-primary);">XML</div>
+              <div style="font-size: 0.85em; color: var(--text-secondary);">Extensible Markup Language</div>
+            </div>
+          </label>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: stretch;">
+          <button id="cancel-export-btn" style="flex: 1; padding: 14px 20px; border: 2px solid var(--border-color); border-radius: 6px; background: transparent; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s; box-sizing: border-box; font-size: 1em; font-family: 'Inter', sans-serif; line-height: 1.2;">
+            Cancel
+          </button>
+          <button id="download-export-btn" style="flex: 1; padding: 14px 20px; border: 2px solid var(--accent); border-radius: 6px; background: var(--accent); color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; box-sizing: border-box; font-size: 1em; font-family: 'Inter', sans-serif; line-height: 1.2;">
+            Download
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; backdrop-filter: blur(4px);">
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-primary); padding: 36px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 550px; width: 90%; border: 2px solid var(--border-color);">
+        <div style="text-align: center; margin-bottom: 28px;">
+          <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; background: rgba(197, 48, 48, 0.1); border-radius: 50%; margin-bottom: 20px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C53030" stroke-width="2" style="width: 32px; height: 32px;">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <h2 style="margin: 0 0 16px 0; font-size: 1.5em; color: var(--text-primary); font-weight: 600;">Delete Items</h2>
+          <p style="margin: 0; color: var(--text-secondary); font-size: 1.05em; line-height: 1.6;">
+            This will permanently delete <strong id="delete-count" style="color: var(--accent);">0</strong> selected item(s).
+          </p>
+          <p style="margin: 12px 0 0 0; color: var(--text-secondary); font-size: 1.05em; line-height: 1.6;">
+            <strong style="color: #C53030;">This action cannot be undone.</strong>
+          </p>
+          <p style="margin: 16px 0 0 0; color: var(--text-primary); font-size: 1.05em; font-weight: 500;">
+            Are you sure you want to continue?
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: stretch;">
+          <button id="cancel-delete-btn" style="flex: 1; padding: 14px 20px; border: 2px solid var(--border-color); border-radius: 6px; background: transparent; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s; box-sizing: border-box; font-size: 1em; font-family: 'Inter', sans-serif; line-height: 1.2;">
+            Cancel
+          </button>
+          <button id="confirm-delete-btn" style="flex: 1; padding: 14px 20px; border: 2px solid #C53030; border-radius: 6px; background: #C53030; color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; box-sizing: border-box; font-size: 1em; font-family: 'Inter', sans-serif; line-height: 1.2;">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer style="margin-top: 80px; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%); padding: 30px 0; background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%); border-top: 3px solid #C53030; text-align: center;">
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+        <!-- GitHub Link -->
+        <div style="flex: 1; min-width: 200px; text-align: left;">
+          <a href="https://github.com/cmdshiftd" target="_blank" rel="noopener noreferrer" style="color: #8B9AA3; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95em; transition: color 0.2s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            <span style="font-weight: 500;">@cmdshiftd</span>
+          </a>
+        </div>
+
+        <!-- Quote -->
+        <div style="flex: 2; min-width: 300px; text-align: center;">
+          <p style="color: #a8b5bd; font-style: italic; font-size: 0.95em; margin: 0; line-height: 1.5;">
+            "Even if you can't see something, it doesn't mean it isn't there"<br>
+            <span style="font-size: 0.9em; color: #8B9AA3;">— Archer, Small Soldiers</span>
+          </p>
+        </div>
+
+        <!-- Spacer for balance -->
+        <div style="flex: 1; min-width: 200px;"></div>
+      </div>
+    </footer>
+
+    </div>
+    {% endblock %}
+
+    <!-- JavaScript -->
+    <script>
+        // Library state
+        let allDetections = [];
+        let selectedIds = new Set();
+        let currentSortColumn = null;
+        let sortDirection = 'asc';
+
+        // Sort table by column
+        function sortTable(column) {
+            // Toggle direction if same column, otherwise start with ascending
+            if (currentSortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                sortDirection = 'asc';
+            }
+
+            // Reset all sort indicators
+            ['title', 'type', 'creator', 'visibility'].forEach(col => {
+                const indicator = document.getElementById(`sort-${col}`);
+                if (indicator) {
+                    indicator.style.opacity = '0.5';
+                    indicator.textContent = '↕';
+                }
+            });
+
+            // Update current column indicator
+            const currentIndicator = document.getElementById(`sort-${column}`);
+            if (currentIndicator) {
+                currentIndicator.style.opacity = '1';
+                currentIndicator.textContent = sortDirection === 'asc' ? '↑' : '↓';
+            }
+
+            // Sort the detections array
+            allDetections.sort((a, b) => {
+                let aVal, bVal;
+
+                switch(column) {
+                    case 'title':
+                        aVal = a.detection_title?.toLowerCase() || '';
+                        bVal = b.detection_title?.toLowerCase() || '';
+                        break;
+                    case 'type':
+                        aVal = a.detection_type?.toLowerCase() || '';
+                        bVal = b.detection_type?.toLowerCase() || '';
+                        break;
+                    case 'creator':
+                        aVal = a.creator_name?.toLowerCase() || '';
+                        bVal = b.creator_name?.toLowerCase() || '';
+                        break;
+                    case 'visibility':
+                        aVal = a.visibility?.toLowerCase() || '';
+                        bVal = b.visibility?.toLowerCase() || '';
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (sortDirection === 'asc') {
+                    return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+                } else {
+                    return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+                }
+            });
+
+            // Re-render the table
+            renderTable(allDetections);
+        }
+
+        // Load detections on page load
+        async function loadLibrary() {
+            try {
+                const response = await fetch('/api/library/detections');
+                const result = await response.json();
+
+                if (result.success) {
+                    allDetections = result.detections;
+                    renderTable(allDetections);
+                } else {
+                    showError('Failed to load library');
+                }
+            } catch (error) {
+                console.error('Error loading library:', error);
+                showError('Error loading library');
+            }
+        }
+
+        // Render table
+        function renderTable(detections) {
+            const tbody = document.getElementById('library-table-body');
+
+            if (detections.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 40px;">No detections found in library.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            detections.forEach(detection => {
+                const typeIcon = getTypeIcon(detection.detection_type);
+                const visibilityIcon = getVisibilityIcon(detection.visibility);
+                const checked = selectedIds.has(detection.id) ? 'checked' : '';
+
+                // Remove "Detection - " and "Sole Correlation - " prefixes from title
+                let displayTitle = detection.title;
+                displayTitle = displayTitle.replace(/^Detection\s*-\s*/i, '');
+                displayTitle = displayTitle.replace(/^Sole\s+Correlation\s*-\s*/i, '');
+
+                // Parse and display tags
+                let tagsHTML = '<span style="color: var(--text-tertiary); font-style: italic;">No tags</span>';
+                if (detection.tags) {
+                    try {
+                        const tags = JSON.parse(detection.tags);
+                        if (tags && tags.length > 0) {
+                            tagsHTML = tags.map(tag => {
+                                // Determine tag type and color
+                                let displayTag = tag;
+                                let bgColor = 'rgba(197, 48, 48, 0.1)'; // Default red for Groups
+                                let textColor = '#C53030'; // Default red
+
+                                if (tag.startsWith('Group:')) {
+                                    // Group tag - red color, remove prefix
+                                    displayTag = tag.replace('Group:', '');
+                                    bgColor = 'rgba(197, 48, 48, 0.1)';
+                                    textColor = '#C53030';
+                                } else if (tag.startsWith('CVE-') || tag.startsWith('CVE:')) {
+                                    // CVE tag - orange color, remove 'CVE:' prefix if present but keep 'CVE-' in the ID
+                                    displayTag = tag.replace('CVE:', '');
+                                    bgColor = 'rgba(255, 152, 0, 0.1)';
+                                    textColor = '#FF9800';
+                                } else {
+                                    // Other tags - keep default red
+                                    bgColor = 'rgba(197, 48, 48, 0.1)';
+                                    textColor = '#C53030';
+                                }
+
+                                return `<span style="display: inline-block; background: ${bgColor}; color: ${textColor}; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; margin: 2px; font-weight: 500;">${escapeHtml(displayTag)}</span>`;
+                            }).join(' ');
+                        }
+                    } catch (e) {
+                        console.error('Error parsing tags:', e);
+                    }
+                }
+
+                html += '<tr>';
+                html += `<td><input type="checkbox" ${checked} onchange="toggleSelect(${detection.id})"></td>`;
+                html += `<td>${escapeHtml(displayTitle)}</td>`;
+                html += `<td>${typeIcon}</td>`;
+                html += `<td>${escapeHtml(detection.creator)}</td>`;
+                html += `<td>${visibilityIcon}</td>`;
+                html += `<td>${tagsHTML}</td>`;
+                html += '</tr>';
+            });
+
+            tbody.innerHTML = html;
+            updateExportButtons();
+        }
+
+        // Get type icon
+        function getTypeIcon(type) {
+            if (type === 'detection') {
+                return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px; color: #3b82f6;" title="Detection">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>`;
+            } else {
+                return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px; color: #8b5cf6;" title="Correlation">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>`;
+            }
+        }
+
+        // Get visibility icon
+        function getVisibilityIcon(visibility) {
+            if (visibility === 'private') {
+                return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px; color: #ef4444;" title="Private">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>`;
+            } else {
+                return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px; color: #10b981;" title="Shared">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 010 7.75"/>
+                </svg>`;
+            }
+        }
+
+        // Toggle selection
+        function toggleSelect(id) {
+            if (selectedIds.has(id)) {
+                selectedIds.delete(id);
+            } else {
+                selectedIds.add(id);
+            }
+            updateExportButtons();
+            updateSelectAllCheckbox();
+        }
+
+        // Toggle select all
+        function toggleSelectAll() {
+            const checkbox = document.getElementById('select-all');
+            if (checkbox.checked) {
+                allDetections.forEach(d => selectedIds.add(d.id));
+            } else {
+                selectedIds.clear();
+            }
+            renderTable(allDetections);
+        }
+
+        // Update select all checkbox state
+        function updateSelectAllCheckbox() {
+            const checkbox = document.getElementById('select-all');
+            if (allDetections.length === 0) {
+                checkbox.checked = false;
+                checkbox.indeterminate = false;
+            } else if (selectedIds.size === allDetections.length) {
+                checkbox.checked = true;
+                checkbox.indeterminate = false;
+            } else if (selectedIds.size > 0) {
+                checkbox.checked = false;
+                checkbox.indeterminate = true;
+            } else {
+                checkbox.checked = false;
+                checkbox.indeterminate = false;
+            }
+        }
+
+        // Update export buttons
+        function updateExportButtons() {
+            const hasSelection = selectedIds.size > 0;
+            document.getElementById('tags-btn').disabled = !hasSelection;
+            document.getElementById('toggle-visibility-btn').disabled = !hasSelection;
+            document.getElementById('delete-btn').disabled = !hasSelection;
+            document.getElementById('export-btn').disabled = !hasSelection;
+        }
+
+        // Export function
+        async function exportLibrary(format) {
+            if (selectedIds.size === 0) return;
+
+            try {
+                const response = await fetch('/api/library/export', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ids: Array.from(selectedIds),
+                        format: format
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `library_export.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    showError('Export failed');
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                showError('Export error');
+            }
+        }
+
+        // Search and filter
+        async function searchLibrary() {
+            const query = document.getElementById('library-search').value;
+            const typeFilter = document.getElementById('type-filter').value;
+            const visibilityFilter = document.getElementById('visibility-filter').value;
+
+            try {
+                const response = await fetch('/api/library/search', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        query: query,
+                        type_filter: typeFilter,
+                        visibility_filter: visibilityFilter
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    allDetections = result.detections;
+                    selectedIds.clear();
+                    renderTable(allDetections);
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        // Helper functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showError(message) {
+            alert(message);
+        }
+
+        // Debounce helper
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLibrary();
+
+            // Search input
+            const searchInput = document.getElementById('library-search');
+            searchInput.addEventListener('input', debounce(searchLibrary, 300));
+
+            // Filter dropdowns
+            document.getElementById('type-filter').addEventListener('change', searchLibrary);
+            document.getElementById('visibility-filter').addEventListener('change', searchLibrary);
+
+            // Action buttons
+            document.getElementById('toggle-visibility-btn').addEventListener('click', toggleVisibility);
+            document.getElementById('delete-btn').addEventListener('click', deleteSelected);
+            document.getElementById('export-btn').addEventListener('click', openExportModal);
+
+            // Export modal buttons
+            document.getElementById('cancel-export-btn').addEventListener('click', closeExportModal);
+            document.getElementById('download-export-btn').addEventListener('click', downloadExports);
+
+            // Delete modal
+            document.getElementById('cancel-delete-btn').addEventListener('click', closeDeleteModal);
+            document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
+
+            // Tags button
+            document.getElementById('tags-btn').addEventListener('click', openTagsActionModal);
+
+            // Tags action modal buttons
+            document.getElementById('cancel-tags-action-btn').addEventListener('click', closeTagsActionModal);
+            document.getElementById('continue-tags-action-btn').addEventListener('click', continueTagsAction);
+
+            // Tags input modal buttons
+            document.getElementById('cancel-tags-input-btn').addEventListener('click', closeTagsInputModal);
+            document.getElementById('save-tags-btn').addEventListener('click', saveTags);
+
+            // Close modal on background click
+            document.getElementById('tags-action-modal').addEventListener('click', function(e) {
+                if (e.target.id === 'tags-action-modal') {
+                    closeTagsActionModal();
+                }
+            });
+            document.getElementById('tags-input-modal').addEventListener('click', function(e) {
+                if (e.target.id === 'tags-input-modal') {
+                    closeTagsInputModal();
+                }
+            });
+
+            // Dark mode toggle
+            initDarkMode();
+        });
+
+        // Open tags action modal
+        function openTagsActionModal() {
+            if (selectedIds.size === 0) return;
+
+            document.getElementById('tags-action-count').textContent = selectedIds.size;
+
+            // Reset radio buttons
+            document.getElementById('tag-action-add').checked = false;
+            document.getElementById('tag-action-edit').checked = false;
+            document.getElementById('tag-action-remove').checked = false;
+
+            document.getElementById('tags-action-modal').style.display = 'flex';
+        }
+
+        // Close tags action modal
+        function closeTagsActionModal() {
+            document.getElementById('tags-action-modal').style.display = 'none';
+        }
+
+        // Continue with selected tag action
+        async function continueTagsAction() {
+            const addChecked = document.getElementById('tag-action-add').checked;
+            const editChecked = document.getElementById('tag-action-edit').checked;
+            const removeChecked = document.getElementById('tag-action-remove').checked;
+
+            if (!addChecked && !editChecked && !removeChecked) {
+                alert('Please select an action');
+                return;
+            }
+
+            closeTagsActionModal();
+
+            if (removeChecked) {
+                // Show warning and remove all tags
+                const confirmed = confirm(`⚠️ Warning: This will remove ALL tags from ${selectedIds.size} selected item(s).\n\nAre you sure you want to continue?`);
+                if (confirmed) {
+                    await removeTags();
+                }
+            } else if (addChecked) {
+                openTagsInputModal('add');
+            } else if (editChecked) {
+                openTagsInputModal('edit');
+            }
+        }
+
+        // Open tags input modal
+        function openTagsInputModal(mode) {
+            const modalTitle = document.getElementById('tags-input-title');
+            const modalDescription = document.getElementById('tags-input-description');
+            const inputCount = document.getElementById('tags-input-count');
+
+            inputCount.textContent = selectedIds.size;
+
+            if (mode === 'add') {
+                modalTitle.textContent = 'Add Tags';
+                modalDescription.innerHTML = `Add tags to <span id="tags-input-count">${selectedIds.size}</span> selected item(s). Separate with commas.`;
+                document.getElementById('tags-input').value = '';
+            } else {
+                modalTitle.textContent = 'Edit Tags';
+
+                // Get common tags from selected detections
+                const selectedDetections = allDetections.filter(d => selectedIds.has(d.id));
+                const commonTags = new Set();
+                const allTags = new Set();
+                let hasDifferentTags = false;
+
+                if (selectedDetections.length > 0) {
+                    try {
+                        const firstTags = selectedDetections[0].tags ? JSON.parse(selectedDetections[0].tags) : [];
+                        firstTags.forEach(tag => {
+                            commonTags.add(tag);
+                            allTags.add(tag);
+                        });
+
+                        for (let i = 1; i < selectedDetections.length; i++) {
+                            const tags = selectedDetections[i].tags ? JSON.parse(selectedDetections[i].tags) : [];
+                            const tagSet = new Set(tags);
+                            tags.forEach(tag => allTags.add(tag));
+                            commonTags.forEach(tag => {
+                                if (!tagSet.has(tag)) {
+                                    commonTags.delete(tag);
+                                    hasDifferentTags = true;
+                                }
+                            });
+                            if (tags.length !== commonTags.size || tags.some(tag => !commonTags.has(tag))) {
+                                hasDifferentTags = true;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing tags:', e);
+                    }
+                }
+
+                if (hasDifferentTags || allTags.size > commonTags.size) {
+                    modalDescription.innerHTML = `Modify tags for <span id="tags-input-count">${selectedIds.size}</span> selected item(s). Separate with commas.<br><span style="color: #C53030; font-weight: 600; margin-top: 8px; display: inline-block;">⚠️ Warning: All existing tags will be overwritten if you continue.</span>`;
+                } else {
+                    modalDescription.innerHTML = `Modify tags for <span id="tags-input-count">${selectedIds.size}</span> selected item(s). Separate with commas.`;
+                }
+
+                const displayTags = Array.from(commonTags).map(tag => {
+                    if (tag.startsWith('Group:')) return tag.replace('Group:', '');
+                    if (tag.startsWith('CVE:')) return tag.replace('CVE:', '');
+                    return tag;
+                });
+
+                document.getElementById('tags-input').value = displayTags.join(', ');
+            }
+
+            document.getElementById('tags-input-modal').style.display = 'flex';
+        }
+
+        // Close tags input modal
+        function closeTagsInputModal() {
+            document.getElementById('tags-input-modal').style.display = 'none';
+            document.getElementById('tags-input').value = '';
+        }
+
+        // Remove all tags
+        async function removeTags() {
+            try {
+                const response = await fetch('/api/library/tags', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ids: Array.from(selectedIds),
+                        tags: []  // Empty array removes all tags
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    await loadLibrary();
+                    alert(`Tags removed successfully from ${selectedIds.size} detection(s)`);
+                } else {
+                    alert('Failed to remove tags');
+                }
+            } catch (error) {
+                console.error('Error removing tags:', error);
+                alert('Failed to remove tags. Please try again.');
+            }
+        }
+
+        // Toggle visibility for selected items
+        async function toggleVisibility() {
+            if (selectedIds.size === 0) return;
+
+            const selectedDetections = allDetections.filter(d => selectedIds.has(d.id));
+            const privateCount = selectedDetections.filter(d => d.visibility === 'PRIVATE').length;
+            const sharedCount = selectedDetections.filter(d => d.visibility === 'SHARED').length;
+
+            let newVisibility;
+            let message;
+
+            if (privateCount > 0 && sharedCount === 0) {
+                // All private, switch to shared
+                newVisibility = 'shared';
+                message = `Change visibility to SHARED for ${selectedIds.size} item(s)?`;
+            } else if (sharedCount > 0 && privateCount === 0) {
+                // All shared, switch to private
+                newVisibility = 'private';
+                message = `Change visibility to PRIVATE for ${selectedIds.size} item(s)?`;
+            } else {
+                // Mixed, ask what to do
+                const action = confirm(`Selected items have mixed visibility.\n\nClick OK to make all SHARED, or Cancel to make all PRIVATE.`);
+                newVisibility = action ? 'shared' : 'private';
+                message = `Change all ${selectedIds.size} item(s) to ${newVisibility.toUpperCase()}?`;
+            }
+
+            if (!confirm(message)) return;
+
+            try {
+                const response = await fetch('/api/library/visibility', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ids: Array.from(selectedIds),
+                        visibility: newVisibility
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    await loadLibrary();
+                    alert(`Visibility updated successfully for ${selectedIds.size} detection(s)`);
+                } else {
+                    alert('Failed to update visibility');
+                }
+            } catch (error) {
+                console.error('Error updating visibility:', error);
+                alert('Failed to update visibility. Please try again.');
+            }
+        }
+
+        // Delete selected items
+        function deleteSelected() {
+            if (selectedIds.size === 0) return;
+
+            // Show modal
+            document.getElementById('delete-count').textContent = selectedIds.size;
+            document.getElementById('delete-confirm-modal').style.display = 'block';
+        }
+
+        // Close delete modal
+        function closeDeleteModal() {
+            document.getElementById('delete-confirm-modal').style.display = 'none';
+        }
+
+        // Confirm delete
+        async function confirmDelete() {
+            closeDeleteModal();
+
+            try {
+                const response = await fetch('/api/library/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ids: Array.from(selectedIds)
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    selectedIds.clear();
+                    await loadLibrary();
+                    alert(`Successfully deleted ${result.deleted_count} detection(s)`);
+                } else {
+                    alert('Failed to delete items');
+                }
+            } catch (error) {
+                console.error('Error deleting items:', error);
+                alert('Failed to delete items. Please try again.');
+            }
+        }
+
+        // Open export modal
+        function openExportModal() {
+            if (selectedIds.size === 0) return;
+
+            document.getElementById('export-count').textContent = selectedIds.size;
+
+            // Reset checkboxes
+            document.getElementById('export-json').checked = false;
+            document.getElementById('export-csv').checked = false;
+            document.getElementById('export-xml').checked = false;
+
+            document.getElementById('export-modal').style.display = 'flex';
+        }
+
+        // Close export modal
+        function closeExportModal() {
+            document.getElementById('export-modal').style.display = 'none';
+        }
+
+        // Download exports
+        async function downloadExports() {
+            const jsonChecked = document.getElementById('export-json').checked;
+            const csvChecked = document.getElementById('export-csv').checked;
+            const xmlChecked = document.getElementById('export-xml').checked;
+
+            if (!jsonChecked && !csvChecked && !xmlChecked) {
+                alert('Please select at least one export format');
+                return;
+            }
+
+            // Download each selected format
+            if (jsonChecked) await exportLibrary('json');
+            if (csvChecked) await exportLibrary('csv');
+            if (xmlChecked) await exportLibrary('xml');
+
+            closeExportModal();
+        }
+
+        // Save tags
+        async function saveTags() {
+            const tagsInput = document.getElementById('tags-input').value.trim();
+            const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
+
+            try {
+                const response = await fetch('/api/library/tags', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ids: Array.from(selectedIds),
+                        tags: tags
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    // Reload library to show updated tags
+                    await loadLibrary();
+                    closeTagsInputModal();
+                    alert(`Tags updated successfully for ${selectedIds.size} detection(s)`);
+                } else {
+                    showError('Failed to update tags: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving tags:', error);
+                showError('Error saving tags');
+            }
+        }
+
+        // Dark mode functionality
+        function initDarkMode() {
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            const sunIcon = document.getElementById('sun-icon');
+            const moonIcon = document.getElementById('moon-icon');
+            const html = document.documentElement;
+
+            // Check saved preference or default to light
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            html.setAttribute('data-theme', currentTheme);
+
+            if (currentTheme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+
+            darkModeToggle.addEventListener('click', () => {
+                const currentTheme = html.getAttribute('data-theme');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+                html.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+
+                if (newTheme === 'dark') {
+                    sunIcon.style.display = 'none';
+                    moonIcon.style.display = 'block';
+                } else {
+                    sunIcon.style.display = 'block';
+                    moonIcon.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

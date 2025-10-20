@@ -61,7 +61,18 @@ docker-compose up --build
 
 2. The FastAPI service will be available at `http://localhost:8000`.
 
-3. **Create your admin user** (required for first-time setup):
+3. **Access with default admin credentials**:
+
+On first startup, a default admin account is automatically created:
+
+```
+Email: admin@archer.app
+Password: £missary_0f_the_G0rg0nite$
+```
+
+> ⚠️ **SECURITY WARNING**: Change this password immediately after first login via Profile → Change Password
+
+Alternatively, you can create a custom admin user:
 
 ```bash
 python3 scripts/create_admin.py
@@ -104,9 +115,18 @@ uvicorn archer.app:app --reload
 
 The service will be available at `http://localhost:8000`.
 
-4. **Create your admin user** (required for first-time setup):
+4. **Access with default admin credentials**:
 
-In a new terminal window:
+On first startup, a default admin account is automatically created:
+
+```
+Email: admin@archer.app
+Password: £missary_0f_the_G0rg0nite$
+```
+
+> ⚠️ **SECURITY WARNING**: Change this password immediately after first login via Profile → Change Password
+
+Alternatively, you can create a custom admin user in a new terminal window:
 
 ```bash
 source venv/bin/activate  # Activate the virtual environment
