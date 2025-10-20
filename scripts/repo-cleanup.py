@@ -50,16 +50,42 @@ def find_items(root_dir: Path, pattern: str, is_dir: bool = False) -> List[Path]
     Returns:
         List of matching Path objects
     """
+    # Directories to exclude from cleanup
+    exclude_dirs = {'.venv', 'venv', 'env', 'ENV', 'node_modules', '.git'}
+    # Specific paths to exclude (archer/build is application code, archer/data is handled by .gitignore)
+    exclude_paths = {'archer/build', 'archer/data'}
     matches = []
+
+    def should_exclude(path: Path) -> bool:
+        """Check if path should be excluded from cleanup"""
+        # Check if path contains any excluded directory
+        if any(excluded in path.parts for excluded in exclude_dirs):
+            return True
+        # Check if path is under any excluded path
+        try:
+            for excluded_path in exclude_paths:
+                if path.is_relative_to(root_dir / excluded_path):
+                    return True
+        except (ValueError, AttributeError):
+            # is_relative_to not available in Python < 3.9, fallback
+            for excluded_path in exclude_paths:
+                try:
+                    path.relative_to(root_dir / excluded_path)
+                    return True
+                except ValueError:
+                    continue
+        return False
 
     if is_dir:
         # For directory patterns like __pycache__
         for path in root_dir.rglob(pattern):
-            if path.is_dir():
+            if path.is_dir() and not should_exclude(path):
                 matches.append(path)
     else:
         # For file patterns like *.pyc
-        matches = list(root_dir.rglob(pattern))
+        for path in root_dir.rglob(pattern):
+            if not should_exclude(path):
+                matches.append(path)
 
     return matches
 

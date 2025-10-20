@@ -29,10 +29,10 @@ remove_items() {
     echo -e "${BLUE}Searching for: ${description}${NC}"
 
     if [ "$DRY_RUN" = true ]; then
-        count=$(find . -name "$pattern" 2>/dev/null | wc -l | xargs)
+        count=$(find . -name "$pattern" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" -not -path "./ENV/*" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./archer/build" -not -path "./archer/data/*" 2>/dev/null | wc -l | xargs)
         if [ "$count" -gt 0 ]; then
             echo -e "${YELLOW}Would remove ${count} items matching '${pattern}'${NC}"
-            find . -name "$pattern" -print 2>/dev/null | head -5
+            find . -name "$pattern" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" -not -path "./ENV/*" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./archer/build" -not -path "./archer/data/*" 2>/dev/null | head -5
             if [ "$count" -gt 5 ]; then
                 echo "  ... and $((count - 5)) more"
             fi
@@ -41,10 +41,10 @@ remove_items() {
         fi
     else
         # Count before deletion
-        count=$(find . -name "$pattern" 2>/dev/null | wc -l | xargs)
+        count=$(find . -name "$pattern" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" -not -path "./ENV/*" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./archer/build" -not -path "./archer/data/*" 2>/dev/null | wc -l | xargs)
         if [ "$count" -gt 0 ]; then
-            find . -name "$pattern" -type f -delete 2>/dev/null || true
-            find . -name "$pattern" -type d -exec rm -rf {} + 2>/dev/null || true
+            find . -name "$pattern" -type f -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" -not -path "./ENV/*" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./archer/build" -not -path "./archer/data/*" -delete 2>/dev/null || true
+            find . -name "$pattern" -type d -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" -not -path "./ENV/*" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./archer/build" -not -path "./archer/data/*" -exec rm -rf {} + 2>/dev/null || true
             echo -e "${GREEN}✓ Removed ${count} items matching '${pattern}'${NC}"
         else
             echo -e "${GREEN}No items found matching '${pattern}'${NC}"
