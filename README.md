@@ -24,6 +24,15 @@ Archer is a modular Python service for automated threat hunting with optional ad
   - 📊 **Splunk Search API** - SPL query execution with job management
 - 🔗 **n8n Workflow Automation** - API endpoints for workflow integration
 
+### Security & User Management
+- 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)
+- 🛡️ **Security Features** - Rate limiting, CSRF protection, account lockout, audit logging
+- 👥 **Admin User Management** - Complete CRUD API for user accounts (create, read, update, deactivate)
+- 📧 **Email Integration** - SMTP-based password reset with secure token delivery
+- 🔑 **API Key Encryption** - Fernet encryption for stored SIEM/AI API credentials
+- 📊 **Comprehensive Audit Logs** - Track all authentication events and admin actions
+- 🔒 **Role-Based Access Control** - Admin and Standard user roles with granular permissions
+
 ---
 <br>
 
@@ -321,12 +330,12 @@ Content-Type: application/json
 
 ### Archer Documentation
 - [Getting Started Guide](docs/GETTING_STARTED.md) - Setup and troubleshooting
-- [Architecture Overview](docs/ARCHITECTURE.md) - Complete system architecture
+- [API Reference](docs/API_REFERENCE.md) - **NEW!** Complete REST API documentation for all endpoints
+- [Security Features Guide](docs/SECURITY_FEATURES.md) - **NEW!** Complete security documentation, authentication, user management, and best practices
 - [File Upload Feature](docs/UPLOAD_FEATURE.md) - Upload threat intel files for TTP/IOC extraction
-- [Emulation Guide](docs/EMULATION_GUIDE.md) - Adversary emulation and remote execution
-- [Query Execution Guide](docs/QUERY_API_GUIDE.md) - MDE and Splunk API integration
-- [VECTR Integration](docs/VECTR_INTEGRATION.md) - Hunt tracking and validation
-- [Correlation Guide](docs/CORRELATION_GUIDE.md) - Correlation query builder
+- [Emulation Guide](docs/guides/EMULATION_GUIDE.md) - Adversary emulation and remote execution
+- [Query Execution Guide](docs/guides/QUERY_API_GUIDE.md) - MDE and Splunk API integration
+- [Correlation Guide](docs/guides/CORRELATION_GUIDE.md) - Correlation query builder
 
 ### External Resources
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)
