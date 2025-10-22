@@ -869,3 +869,397 @@ Response:
 5. Which platform is priority? (Splunk vs MDE vs both)
 
 Let me know when you're ready to implement, and I'll help with the specific phase you want to start with!
+
+---
+
+## Installation & Setup
+
+### Prerequisites
+
+Choose your AI approach and install the required dependencies:
+
+#### Option 1: OpenAI API (Few-Shot Learning) - Recommended
+
+**Best for**: Quick start, small datasets, cloud-based solution
+
+**Requirements**:
+- OpenAI API key
+- Internet connection
+- No GPU needed
+
+**Installation**:
+```bash
+# No additional packages needed - uses requests (already in requirements.txt)
+# Just set your API key
+export OPENAI_API_KEY="sk-your-api-key-here"
+
+# Or add to .env file
+echo "OPENAI_API_KEY=sk-your-api-key-here" >> .env
+```
+
+**Cost**: ~$0.03 per query refinement (GPT-4)
+
+---
+
+#### Option 2: Local AI (Llama/Transformers) - Offline
+
+**Best for**: Privacy-focused, offline deployment, high query volume
+
+**Requirements**:
+- GPU recommended (8GB+ VRAM for 7B models, 16GB+ for 13B)
+- CPU-only possible but slower
+- 10-20 GB disk space for models
+
+**Installation**:
+
+##### Step 1: Install Local AI Dependencies
+
+```bash
+# Using pyproject.toml (recommended)
+pip install -e .[local-ai]
+
+# OR install packages directly
+pip install llama-cpp-python==0.3.16 transformers torch sentencepiece
+```
+
+**Note**: On macOS with Apple Silicon (M1/M2/M3), llama-cpp-python will automatically use Metal for GPU acceleration.
+
+##### Step 2: Download Model Files
+
+**Option A: Llama 2 (Recommended for Production)**
+
+```bash
+# Create models directory
+mkdir -p models
+
+# Download Llama-2-7B-Chat GGUF (quantized, ~4 GB)
+# From HuggingFace
+cd models
+wget https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGUF/resolve/main/llama-2-7b-chat.Q4_K_M.gguf
+
+# OR download via Python
+python3 << 'EOF'
+from huggingface_hub import hf_hub_download
+
+hf_hub_download(
+    repo_id="TheBloke/Llama-2-7B-Chat-GGUF",
+    filename="llama-2-7b-chat.Q4_K_M.gguf",
+    local_dir="models"
+)
+EOF
+```
+
+**Option B: Mistral 7B (Alternative, Good Performance)**
+
+```bash
+cd models
+wget https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf
+```
+
+**Option C: Smaller Models (For Limited Resources)**
+
+```bash
+# TinyLlama 1.1B (~600 MB) - Fast, lower quality
+cd models
+wget https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+```
+
+##### Step 3: Configure Model Path
+
+Create [config/ai_models.json](../config/ai_models.json):
+
+```json
+{
+  "local_llm": {
+    "enabled": true,
+    "model_type": "llama-cpp",
+    "model_path": "models/llama-2-7b-chat.Q4_K_M.gguf",
+    "n_ctx": 2048,
+    "n_gpu_layers": 35,
+    "temperature": 0.2,
+    "max_tokens": 500
+  },
+  "cache_dir": "data/ai_cache",
+  "cache_ttl": 86400
+}
+```
+
+**GPU Configuration**:
+- `n_gpu_layers`: Number of layers to offload to GPU
+  - CPU only: `0`
+  - 8GB VRAM: `20-25`
+  - 16GB VRAM: `35-40` (full model)
+  - Apple Silicon: `35-40` (Metal acceleration)
+
+##### Step 4: Test Installation
+
+```bash
+# Test llama-cpp installation
+python3 << 'EOF'
+import importlib.util
+
+if importlib.util.find_spec("llama_cpp"):
+    from llama_cpp import Llama
+
+    # Load model
+    llm = Llama(
+        model_path="models/llama-2-7b-chat.Q4_K_M.gguf",
+        n_ctx=2048,
+        n_gpu_layers=35,
+        verbose=False
+    )
+
+    # Test query
+    output = llm("Q: What is 2+2? A:", max_tokens=32)
+    print("✓ Llama model loaded successfully!")
+    print(f"Test output: {output['choices'][0]['text']}")
+else:
+    print("✗ llama-cpp-python not installed")
+EOF
+```
+
+Expected output:
+```
+✓ Llama model loaded successfully!
+Test output:  4
+```
+
+---
+
+#### Option 3: Hybrid Approach (Recommended)
+
+Use both OpenAI and local AI with automatic fallback:
+
+```bash
+# 1. Install local AI dependencies
+pip install -e .[local-ai]
+
+# 2. Download a model (as above)
+# 3. Set OpenAI API key
+export OPENAI_API_KEY="sk-your-key"
+
+# 4. Configure priority in config/ai_models.json
+```
+
+**Configuration**:
+```json
+{
+  "query_refinement": {
+    "primary": "openai",
+    "fallback": "local_llm",
+    "local_llm": {
+      "enabled": true,
+      "model_path": "models/llama-2-7b-chat.Q4_K_M.gguf"
+    },
+    "openai": {
+      "enabled": true,
+      "model": "gpt-4",
+      "use_if_available": true
+    }
+  }
+}
+```
+
+The application will:
+1. Try OpenAI first (if API key available)
+2. Fall back to local LLM (if installed)
+3. Fall back to heuristic mode (always available)
+
+---
+
+### Verify Installation
+
+Test that the AI system detects available backends:
+
+```bash
+# Run detection test
+python3 << 'EOF'
+from archer.genai.engine import _HAS_LLAMA, _HAS_TRANSFORMERS
+import os
+
+print("=== AI Backend Detection ===")
+print(f"Llama (llama-cpp): {'✓ Available' if _HAS_LLAMA else '✗ Not installed'}")
+print(f"Transformers: {'✓ Available' if _HAS_TRANSFORMERS else '✗ Not installed'}")
+print(f"OpenAI API Key: {'✓ Set' if os.getenv('OPENAI_API_KEY') else '✗ Not set'}")
+
+if _HAS_LLAMA:
+    print("\n→ Will use local LLM for query refinement")
+elif os.getenv('OPENAI_API_KEY'):
+    print("\n→ Will use OpenAI API for query refinement")
+else:
+    print("\n→ Will use heuristic mode (no AI)")
+EOF
+```
+
+---
+
+### Model Comparison
+
+| Model | Size | VRAM | Speed | Quality | Use Case |
+|-------|------|------|-------|---------|----------|
+| **TinyLlama 1.1B** | 600 MB | 2 GB | Very Fast | Good | Testing, CPU-only |
+| **Llama 2 7B (Q4)** | 4 GB | 6-8 GB | Fast | Excellent | Production |
+| **Mistral 7B (Q4)** | 4 GB | 6-8 GB | Fast | Excellent | Production |
+| **Llama 2 13B (Q4)** | 7 GB | 12-16 GB | Medium | Best | High accuracy |
+| **GPT-4 (OpenAI)** | N/A | N/A | Medium | Best | Cloud, no GPU |
+
+**Recommendation**:
+- **Development**: TinyLlama or OpenAI API
+- **Production (offline)**: Llama 2 7B or Mistral 7B
+- **Production (cloud)**: OpenAI GPT-4
+- **High accuracy**: Llama 2 13B or GPT-4
+
+---
+
+### Troubleshooting Installation
+
+#### Error: "No module named 'llama_cpp'"
+
+**Solution**: This is expected if you haven't installed local AI dependencies. The app will use heuristic mode.
+
+To fix:
+```bash
+pip install -e .[local-ai]
+```
+
+#### Error: "Failed to load model: cannot open file"
+
+**Solution**: Model file not found or path incorrect.
+
+```bash
+# Check model exists
+ls -lh models/*.gguf
+
+# Update path in config/ai_models.json
+```
+
+#### Error: "CUDA not available" or "Metal not available"
+
+**Solution**: GPU acceleration not detected.
+
+```bash
+# Test GPU
+python3 -c "import torch; print('CUDA:', torch.cuda.is_available())"
+
+# On macOS, llama-cpp-python uses Metal automatically
+# On Linux/Windows, ensure CUDA is installed
+```
+
+For CPU-only mode:
+```json
+{
+  "n_gpu_layers": 0  # Disable GPU
+}
+```
+
+#### Error: "Out of memory"
+
+**Solution**: Model too large for available VRAM.
+
+**Options**:
+1. Use smaller model (TinyLlama instead of Llama 2)
+2. Reduce `n_gpu_layers` in config
+3. Use quantized model (Q4_K_M instead of Q8)
+
+```bash
+# Switch to smaller model
+cd models
+rm llama-2-7b-chat.Q4_K_M.gguf
+wget https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+```
+
+#### Slow Generation (~1 token/second)
+
+**Causes**:
+- Running on CPU only
+- Model too large for hardware
+- Not using GPU acceleration
+
+**Solutions**:
+1. Check GPU configuration: `n_gpu_layers` should be > 0
+2. Use smaller/faster model
+3. Ensure Metal/CUDA is available
+
+---
+
+### Quick Start Examples
+
+#### Example 1: Test Few-Shot Learning with OpenAI
+
+```bash
+# 1. Set API key
+export OPENAI_API_KEY="sk-your-key"
+
+# 2. Start server
+uvicorn archer.app:app --reload
+
+# 3. Test refinement
+curl -X POST http://localhost:8000/api/query-refine \
+  -H "Cookie: session_id=your-session" \
+  -F "technique_id=T1003.001" \
+  -F "platform=splunk" \
+  -F "original_query=index=windows EventCode=4688" \
+  -F "use_ai=true"
+```
+
+#### Example 2: Test Local Llama Model
+
+```bash
+# 1. Install and download model (as above)
+
+# 2. Test model directly
+python3 << 'EOF'
+from llama_cpp import Llama
+
+llm = Llama(model_path="models/llama-2-7b-chat.Q4_K_M.gguf", n_gpu_layers=35)
+result = llm("Refine this Splunk query: index=windows EventCode=4688", max_tokens=200)
+print(result['choices'][0]['text'])
+EOF
+```
+
+---
+
+### Performance Optimization
+
+#### For Maximum Speed
+
+```json
+{
+  "local_llm": {
+    "n_ctx": 1024,           // Smaller context
+    "n_gpu_layers": 40,      // All layers on GPU
+    "n_threads": 8,          // CPU threads
+    "n_batch": 512,          // Larger batches
+    "temperature": 0.1,      // Lower = faster, more deterministic
+    "max_tokens": 300        // Limit output length
+  }
+}
+```
+
+#### For Maximum Quality
+
+```json
+{
+  "local_llm": {
+    "n_ctx": 4096,           // Larger context
+    "temperature": 0.3,      // Higher creativity
+    "top_p": 0.95,           // Nucleus sampling
+    "repeat_penalty": 1.1,   // Reduce repetition
+    "max_tokens": 1000       // Longer outputs
+  }
+}
+```
+
+---
+
+### Next Steps After Installation
+
+1. ✓ Dependencies installed
+2. ✓ Model downloaded (if using local AI)
+3. ✓ Configuration file created
+4. → Proceed to [Implementation Phases](#implementation-phases)
+5. → Start with Phase 1: Database migration
+6. → Implement feedback collection APIs
+7. → Test query refinement
+
+**Ready to implement?** Start with Phase 1 in the implementation guide above!
