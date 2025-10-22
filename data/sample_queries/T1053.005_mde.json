@@ -1,0 +1,12 @@
+{
+  "technique_id": "T1053.005",
+  "technique_name": "Scheduled Task/Job: Scheduled Task",
+  "platform": "mde",
+  "quality": "high",
+  "rating": 4.5,
+  "tags": ["persistence", "privilege-escalation", "windows"],
+  "query": "DeviceProcessEvents\n| where FileName =~ \"schtasks.exe\"\n| where ProcessCommandLine has_any (\"create\", \"/create\")\n| where ProcessCommandLine has_any (\"SYSTEM\", \"HIGHEST\", \"Administrator\")\n| extend TaskName = extract(@\"/TN\\s+([^\\s]+)\", 1, ProcessCommandLine)\n| extend Action = extract(@\"/TR\\s+([^/]+)\", 1, ProcessCommandLine)\n| project Timestamp, DeviceName, AccountName, TaskName, Action, ProcessCommandLine, InitiatingProcessFileName\n| where isnotempty(TaskName)",
+  "notes": "Detects creation of scheduled tasks with high privileges. Extracts task name and action for analysis. Reduces false positives by requiring privilege escalation indicators.",
+  "attack_scenario": "Attacker creates scheduled task for persistence or privilege escalation, often with SYSTEM or Administrator privileges",
+  "expected_detections": "Malicious scheduled tasks, persistence mechanisms, privilege escalation attempts"
+}

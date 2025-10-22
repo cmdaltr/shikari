@@ -1,0 +1,29 @@
+title: LSASS Memory Access Detection
+technique_id: T1003.001
+technique_name: LSASS Memory Dumping
+platform: splunk
+quality: high
+rating: 5.0
+tags:
+  - credential-access
+  - windows
+  - lsass
+detection:
+  search: |
+    index=windows EventCode=10 TargetImage="*\\lsass.exe"
+    GrantedAccess IN ("0x1010", "0x1410", "0x147a", "0x1438", "0x143a")
+    | eval suspicious_process=if(match(SourceImage, "(?i)(mimikatz|procdump|taskmgr|processhacker)"), 1, 0)
+    | stats count by Computer, SourceImage, TargetImage, GrantedAccess, suspicious_process
+    | where count > 1 OR suspicious_process=1
+notes: |
+  High-fidelity detection for LSASS memory access. Filters specific access rights
+  commonly used in credential dumping. Reduces false positives by checking for
+  known dumping tools and aggregating multiple attempts.
+attack_scenario: |
+  Attacker uses mimikatz, procdump, or similar tool to access LSASS process memory
+  to extract plaintext passwords, NTLM hashes, and Kerberos tickets.
+expected_detections: |
+  - Mimikatz execution
+  - ProcDump targeting LSASS
+  - Custom credential dumpers
+  - Task Manager LSASS dumps
