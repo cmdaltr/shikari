@@ -3,8 +3,6 @@ from .extract import extract_red, extract_blue
 import re
 import requests
 import stix2
-import json
-import os
 from pathlib import Path
 from datetime import datetime, timedelta
 

@@ -10,7 +10,6 @@ This module injects contextually relevant examples into prompts based on:
 - Organizational field schema (schemaSplunk.json, schemaMDE.json)
 """
 
-import os
 import json
 from pathlib import Path
 from typing import Dict, List, Optional

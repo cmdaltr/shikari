@@ -11,7 +11,7 @@ This module defines SQLAlchemy models for:
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime, timedelta
+from datetime import datetime
 import enum
 
 Base = declarative_base()

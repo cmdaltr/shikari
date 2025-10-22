@@ -6,10 +6,9 @@ Supports:
 - WinRM for Windows targets
 """
 
-import os
 import subprocess
 import getpass
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 
 class RemoteExecutor:

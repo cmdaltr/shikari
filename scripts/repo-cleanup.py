@@ -10,7 +10,6 @@ Usage:
     python scripts/cleanup.py --help       # Show help
 """
 
-import os
 import sys
 import shutil
 import argparse

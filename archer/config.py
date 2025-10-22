@@ -5,7 +5,6 @@ Centralized configuration for optional features and integrations.
 """
 
 import os
-from typing import Optional
 
 
 class EmulationConfig:

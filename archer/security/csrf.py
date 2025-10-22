@@ -5,10 +5,8 @@ Provides token-based CSRF protection for forms.
 """
 
 import secrets
-import hashlib
-import hmac
 from datetime import datetime, timedelta
-from typing import Optional, Dict
+from typing import Dict
 import threading
 
 # Secret key for signing CSRF tokens

@@ -11,7 +11,7 @@ Example problems this solves:
 """
 
 import re
-from typing import List, Set, Optional
+# Removed unused import: from typing import List, Set, Optional
 
 
 # Platform/Index classification

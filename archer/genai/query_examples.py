@@ -11,7 +11,6 @@ Supported repositories:
 - Microsoft Defender Hunting Queries
 """
 
-import os
 import json
 import yaml
 import subprocess

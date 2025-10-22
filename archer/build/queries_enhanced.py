@@ -12,8 +12,6 @@ To enable enhanced generation, set environment variable:
 """
 
 import os
-import json
-from pathlib import Path
 from typing import List, Dict, Optional
 
 # Import base query generation functions

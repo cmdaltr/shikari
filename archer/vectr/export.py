@@ -4,7 +4,6 @@ VECTR Export/Import Functionality
 Bidirectional sync between Archer detections and VECTR test cases.
 """
 
-import json
 import yaml
 from typing import Dict, List, Optional, Any
 from pathlib import Path

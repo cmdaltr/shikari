@@ -5,9 +5,7 @@ Provides HTTP client interface for VECTR REST API.
 """
 
 import requests
-import json
 from typing import Dict, List, Optional, Any
-from pathlib import Path
 
 
 class VECTRClient:

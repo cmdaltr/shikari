@@ -26,11 +26,8 @@ Uses multiple OSINT intelligence sources:
 """
 
 import os
-import re
-import json
 import socket
 import requests
-import time
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 from urllib.parse import urlparse, quote

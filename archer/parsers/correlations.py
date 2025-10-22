@@ -22,7 +22,6 @@ Examples:
 
 import argparse
 import sys
-import os
 from pathlib import Path
 
 # Add the project root to the path
