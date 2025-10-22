@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from archer.security import sanitize_filename, sanitize_path_component, validate_safe_path, sanitize_group_name
+from archer.security import sanitize_filename, validate_safe_path, sanitize_group_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from typing import Optional
@@ -37,7 +37,7 @@ from archer.build.progress import read_progress, write_progress
 logger = logging.getLogger(__name__)
 from archer.database.db import init_db, get_db
 from archer.auth import (
-    verify_password, create_session, get_current_user, get_user_from_session_id,
+    verify_password, create_session, get_user_from_session_id,
     delete_session, encrypt_api_key, decrypt_api_key, create_password_reset_request,
     validate_reset_token, reset_password_with_token, admin_reset_password, validate_password
 )
