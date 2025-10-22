@@ -15,6 +15,15 @@ Complete implementation guide for training the AI component to improve Splunk an
 7. [Training Approaches](#training-approaches)
 8. [Implementation Phases](#implementation-phases)
 9. [Code Examples](#code-examples)
+10. [Next Steps](#next-steps)
+11. [Installation & Setup](#installation--setup)
+    - [Option 1: OpenAI API](#option-1-openai-api-few-shot-learning---recommended)
+    - [Option 2: Local AI (Llama)](#option-2-local-ai-llamatransformers---offline)
+    - [Option 3: Hybrid Approach](#option-3-hybrid-approach-recommended)
+    - [Model Comparison](#model-comparison)
+    - [Troubleshooting](#troubleshooting-installation)
+    - [Quick Start Examples](#quick-start-examples)
+    - [Performance Optimization](#performance-optimization)
 
 ---
 
