@@ -1002,17 +1002,174 @@
             return div.innerHTML;
           }
 
-          // Function to manage a user (placeholder for future functionality)
-          function manageUser(userId) {
-            // TODO: Implement user management modal
-            // This will allow admins to:
-            // - Reset password
-            // - Update email
-            // - Update name
-            // - Change role
-            // - Activate/deactivate user
-            console.log('Managing user ID:', userId);
-            alert('User management functionality coming soon!\n\nThis will allow you to:\n- Reset password\n- Update email and name\n- Change role\n- Activate/deactivate account');
+          // Function to manage a user
+          async function manageUser(userId) {
+            // Fetch user details
+            const response = await fetch('/api/admin/users');
+            const data = await response.json();
+            const user = data.users.find(u => u.id === userId);
+
+            if (!user) {
+              alert('User not found');
+              return;
+            }
+
+            // Show user management modal
+            showUserManagementModal(user);
+          }
+
+          function showUserManagementModal(user) {
+            const modal = document.getElementById('user-management-modal');
+
+            // Populate form fields
+            document.getElementById('manage-user-id').value = user.id;
+            document.getElementById('manage-user-email').value = user.email;
+            document.getElementById('manage-user-name').value = user.full_name;
+            document.getElementById('manage-user-role').value = user.role.toLowerCase();
+            document.getElementById('manage-user-active').checked = user.is_active;
+            document.getElementById('manage-user-title').textContent = `Manage User: ${user.full_name}`;
+
+            // Update the state label
+            updateAccountStateLabel();
+
+            // Show modal
+            modal.style.display = 'flex';
+          }
+
+          function hideUserManagementModal() {
+            document.getElementById('user-management-modal').style.display = 'none';
+            document.getElementById('manage-user-form').reset();
+          }
+
+          function updateAccountStateLabel() {
+            const checkbox = document.getElementById('manage-user-active');
+            const label = document.getElementById('account-state-label');
+
+            if (checkbox.checked) {
+              label.textContent = 'Active';
+              label.style.color = '#10b981'; // Green color for active
+            } else {
+              label.textContent = 'Inactive';
+              label.style.color = '#ef4444'; // Red color for inactive
+            }
+          }
+
+          async function saveUserChanges() {
+            const userId = document.getElementById('manage-user-id').value;
+            const email = document.getElementById('manage-user-email').value.trim();
+            const fullName = document.getElementById('manage-user-name').value.trim();
+            const role = document.getElementById('manage-user-role').value;
+            const isActive = document.getElementById('manage-user-active').checked;
+
+            try {
+              const response = await fetch(`/api/admin/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  email: email,
+                  full_name: fullName,
+                  role: role,
+                  is_active: isActive
+                })
+              });
+
+              const data = await response.json();
+
+              if (data.success) {
+                alert('User updated successfully');
+                hideUserManagementModal();
+                loadUsers(); // Reload the user list
+              } else {
+                alert('Error: ' + (data.error || 'Failed to update user'));
+              }
+            } catch (error) {
+              console.error('Error updating user:', error);
+              alert('An error occurred while updating the user');
+            }
+          }
+
+          async function resetUserPassword() {
+            const userId = document.getElementById('manage-user-id').value;
+            const userName = document.getElementById('manage-user-name').value;
+
+            // Confirmation dialog
+            const confirmed = confirm(`⚠️ Reset Password\n\nAre you sure you want to reset the password for "${userName}"?\n\nThis action will require the user to set a new password.`);
+
+            if (!confirmed) {
+              return;
+            }
+
+            // Use password modal instead of prompt
+            showPasswordInputModal(
+              'Reset Password',
+              `Enter new password for ${userName}:`,
+              async function(newPassword) {
+                if (!newPassword) {
+                  return;
+                }
+
+                try {
+                  const response = await fetch('/api/admin/reset-password', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      user_id: parseInt(userId),
+                      new_password: newPassword
+                    })
+                  });
+
+                  const data = await response.json();
+
+                  if (data.success) {
+                    alert('Password reset successfully');
+                  } else {
+                    alert('Error: ' + (data.error || 'Failed to reset password'));
+                  }
+                } catch (error) {
+                  console.error('Error resetting password:', error);
+                  alert('An error occurred while resetting the password');
+                }
+              }
+            );
+          }
+
+          async function deleteUser() {
+            const userId = document.getElementById('manage-user-id').value;
+            const userName = document.getElementById('manage-user-name').value;
+            const userEmail = document.getElementById('manage-user-email').value;
+
+            // Confirmation dialog
+            const confirmed = confirm(`⚠️ Delete User\n\nAre you sure you want to delete the account: "${userName}"?\n\nThis action cannot be undone.`);
+
+            if (!confirmed) {
+              return;
+            }
+
+            try {
+              const response = await fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              const data = await response.json();
+
+              if (data.success) {
+                alert(`User "${userName}" has been permanently deleted.`);
+                hideUserManagementModal();
+                loadUsers();
+              } else {
+                alert('Error: ' + (data.error || 'Failed to delete user'));
+              }
+            } catch (error) {
+              console.error('Error deleting user:', error);
+              alert('An error occurred while deleting the user');
+            }
           }
 
           // Load users when the Users tab is first shown
@@ -1036,6 +1193,81 @@
             }
           });
           </script>
+
+          <!-- User Management Modal -->
+          <div id="user-management-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+            <div style="background: var(--bg-secondary); border-radius: 8px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+              <h3 id="manage-user-title" style="margin-top: 0; margin-bottom: 24px; color: var(--text-primary);">Manage User</h3>
+
+              <form id="manage-user-form" onsubmit="event.preventDefault();">
+                <input type="hidden" id="manage-user-id">
+
+                <div style="padding: 0 2px 0 0;">
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">Email Address</label>
+                    <input type="email" id="manage-user-email" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; background: var(--bg-primary); color: var(--text-primary); box-sizing: border-box;">
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">Full Name</label>
+                    <input type="text" id="manage-user-name" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; background: var(--bg-primary); color: var(--text-primary); box-sizing: border-box;">
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px; align-items: start; margin-bottom: 24px;">
+                  <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">Role</label>
+                    <select id="manage-user-role" class="dropdown-styled" style="width: 100%;">
+                      <option value="standard">Standard User</option>
+                      <option value="admin">Administrator</option>
+                    </select>
+                  </div>
+                  <div style="width: 1px; background: var(--border-color); height: 100%; align-self: stretch; margin: 0 10px;"></div>
+                  <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">State</label>
+                    <label style="display: flex; align-items: center; cursor: pointer; color: var(--text-primary); white-space: nowrap;">
+                      <input type="checkbox" id="manage-user-active" style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;" onchange="updateAccountStateLabel()">
+                      <span id="account-state-label" style="font-weight: 600;">Active</span>
+                    </label>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 4px 0 0 28px; white-space: nowrap;">Inactive accounts cannot log in</p>
+                  </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-bottom: 32px;"></div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; align-items: center;">
+                  <button type="button" class="btn-primary" onclick="saveUserChanges()" style="width: 100%; height: 56px; font-size: 1.1rem; font-weight: 600; padding: 0 24px; margin: 0;">
+                    Save Changes
+                  </button>
+                  <button type="button" class="btn-secondary" onclick="hideUserManagementModal()" style="width: 100%; height: 56px; font-size: 1.1rem; font-weight: 600; padding: 0 24px; margin: 0;">
+                    Cancel
+                  </button>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 20px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <button type="button" class="btn-secondary" onclick="resetUserPassword()" style="width: 100%;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0110 0v4"/>
+                      </svg>
+                      Reset Password
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="deleteUser()" style="width: 100%;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                      </svg>
+                      Delete User
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
           {% endif %}
 
           <!-- Security Tab JavaScript -->
@@ -1649,6 +1881,7 @@
       </div>
     </footer>
 
+    <script src="{{ url_for('static', path='js/common.js') }}?v={{ request.app.state.asset_version }}"></script>
     <script src="{{ url_for('static', path='js/tabs.js') }}?v={{ request.app.state.asset_version }}" defer></script>
     <script src="{{ url_for('static', path='js/validation.js') }}?v={{ request.app.state.asset_version }}"></script>
     <script src="{{ url_for('static', path='js/profile.js') }}?v={{ request.app.state.asset_version }}" defer></script>

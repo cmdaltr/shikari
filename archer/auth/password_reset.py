@@ -157,8 +157,8 @@ def admin_reset_password(user_id: int, new_password: str, db: SQLAlchemySession)
     # Hash new password
     hashed_password = hash_password(new_password)
 
-    # Update user's password
-    user.hashed_password = hashed_password
+    # Update user's password (correct field name is password_hash)
+    user.password_hash = hashed_password
 
     db.commit()
 

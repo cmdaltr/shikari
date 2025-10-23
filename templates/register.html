@@ -481,5 +481,6 @@
             return true;
         }
     </script>
+    <script src="{{ url_for('static', path='js/common.js') }}?v={{ request.app.state.asset_version }}"></script>
 </body>
 </html>

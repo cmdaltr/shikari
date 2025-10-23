@@ -309,7 +309,7 @@
             <div style="background: transparent; padding: 0; margin-top: 24px; margin-bottom: 16px;">
               <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
                 <!-- Search Input -->
-                <div style="width: 628px; min-width: 300px;">
+                <div style="width: 610px; min-width: 300px;">
                   <input
                     type="text"
                     id="library-search"
@@ -319,15 +319,15 @@
                 </div>
 
                 <!-- Filter Dropdown -->
-                <select id="type-filter" style="padding: 12px 16px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 1em; font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s; min-width: 260px; margin-left: 30px; height: 48px;">
-                  <option value="all">All Types</option>
+                <select id="type-filter" class="dropdown-styled" style="min-width: 275px; margin-left: 30px; height: 48px;">
+                  <option value="all">Query Types</option>
                   <option value="detection">Detection</option>
                   <option value="sole_correlation">Sole Correlation</option>
                   <option value="cross_vendor_correlation">Cross-Vendor Correlation</option>
                 </select>
 
-                <select id="visibility-filter" style="padding: 12px 16px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 1em; font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s; min-width: 182px; height: 48px;">
-                  <option value="all">All Visibility</option>
+                <select id="visibility-filter" class="dropdown-styled" style="min-width: 185px; height: 48px;">
+                  <option value="all">Visibility</option>
                   <option value="private">Private</option>
                   <option value="shared">Shared</option>
                 </select>

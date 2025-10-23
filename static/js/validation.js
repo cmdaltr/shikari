@@ -105,8 +105,8 @@ function validatePassword(password) {
     }
 
     // Check length
-    if (password.length < 8) {
-        return { valid: false, error: 'Password must be at least 8 characters' };
+    if (password.length < 16) {
+        return { valid: false, error: 'Password must be at least 16 characters' };
     }
 
     if (password.length > 40) {
