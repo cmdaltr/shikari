@@ -1,8 +1,16 @@
-<a href="https://github.com/cmdshiftd/archer"><img src="archer.png" alt="Logo" width="190" height="200"></a>
-
-# 🏹 Archer: Threat Hunting Detection Generator
-
-Archer is a modular Python service for automated threat hunting with optional adversary emulation and hunt tracking integrations. Generate detection queries, validate with real attack execution, and track hunts with VECTR integration.
+<table>
+<tr>
+<td width="190">
+<a href="https://github.com/cmdshiftd/archer">
+<img src="archer.png" alt="Archer Logo" width="190" height="200">
+</a>
+</td>
+<td>
+<h1>🏹 Archer: Threat Hunting Detection Generator</h1>
+<p>Archer is a modular Python service for automated threat hunting with optional adversary emulation and hunt tracking integrations. Generate detection queries, validate with real attack execution, and track hunts with VECTR integration.</p>
+</td>
+</tr>
+</table>
 
 ## ✨ Features
 
