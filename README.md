@@ -4,21 +4,11 @@
 </a>
 </div>
 
-<div align="center">
-<img src="static/images/output-onlinepngtools-5.png" alt="Archer Tagline">
-</div>
-
 <br>
 
 Archer is a modular Python service for automated threat hunting with optional adversary emulation and hunt tracking integrations. Generate detection queries, validate with real attack execution, and track hunts with VECTR integration.
 
 <br>
-
-<div align="center">
-<img src="static/images/image.png" alt="Archer Screenshot 1" width="32%">
-<img src="static/images/image-2.png" alt="Archer Screenshot 2" width="32%">
-<img src="static/images/image-3.png" alt="Archer Screenshot 3" width="32%">
-</div>
 
 ## ✨ Features
 
