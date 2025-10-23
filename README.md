@@ -1,4 +1,4 @@
-<a href="https://github.com/cmdshiftd/archer"><img src="archer.png" alt="Logo" width="600" height="220"></a>
+<a href="https://github.com/cmdshiftd/archer"><img src="archer.png" alt="Logo" width="400" height="400"></a>
 
 # 🏹 Archer: Threat Hunting Detection Generator
 
