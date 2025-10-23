@@ -8,16 +8,16 @@ This script can:
 
 Usage:
     # Extract from directory to JSON
-    python3 import_training_examples.py -file /path/to/queries
+    python3 import_training_queries.py -file /path/to/queries
 
     # Import from directory to database
-    python3 import_training_examples.py -db /path/to/queries
+    python3 import_training_queries.py -db /path/to/queries
 
     # Import from JSON file to database
-    python3 import_training_examples.py -db queries.json
+    python3 import_training_queries.py -db queries.json
 
     # Dry run (show what would be imported)
-    python3 import_training_examples.py -db /path/to/queries --dry-run
+    python3 import_training_queries.py -db /path/to/queries --dry-run
 """
 
 import argparse
@@ -34,12 +34,22 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from archer.database.db import get_db, init_db
 from archer.database.models import Base
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, Enum as SQLEnum, create_engine
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Float,
+    DateTime,
+    Enum as SQLEnum,
+    create_engine,
+)
 
 
 # Define QueryPlatform enum
 class QueryPlatform(enum.Enum):
     """Detection platform"""
+
     SPLUNK = "splunk"
     MDE = "mde"
     SENTINEL = "sentinel"
@@ -49,6 +59,7 @@ class QueryPlatform(enum.Enum):
 # Define QueryTrainingExample model
 class QueryTrainingExample(Base):
     """Training examples for query generation."""
+
     __tablename__ = "query_training_examples"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -122,7 +133,7 @@ class QueryExtractor:
     def _extract_from_yaml(self, yaml_file: Path):
         """Extract query from YAML file."""
         try:
-            with open(yaml_file, 'r', encoding='utf-8') as f:
+            with open(yaml_file, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             if not data:
@@ -133,7 +144,9 @@ class QueryExtractor:
 
             if query_data:
                 self.extracted.append(query_data)
-                self.log(f"  ✓ {yaml_file.name}: {query_data['technique_id']} ({query_data['platform']})")
+                self.log(
+                    f"  ✓ {yaml_file.name}: {query_data['technique_id']} ({query_data['platform']})"
+                )
 
         except Exception as e:
             self.errors.append({"file": str(yaml_file), "error": str(e)})
@@ -142,7 +155,7 @@ class QueryExtractor:
     def _extract_from_json(self, json_file: Path):
         """Extract query from JSON file."""
         try:
-            with open(json_file, 'r', encoding='utf-8') as f:
+            with open(json_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             # Handle array of queries
@@ -151,12 +164,16 @@ class QueryExtractor:
                     query_data = self._parse_query_data(item, json_file)
                     if query_data:
                         self.extracted.append(query_data)
-                        self.log(f"  ✓ {json_file.name}: {query_data['technique_id']} ({query_data['platform']})")
+                        self.log(
+                            f"  ✓ {json_file.name}: {query_data['technique_id']} ({query_data['platform']})"
+                        )
             else:
                 query_data = self._parse_query_data(data, json_file)
                 if query_data:
                     self.extracted.append(query_data)
-                    self.log(f"  ✓ {json_file.name}: {query_data['technique_id']} ({query_data['platform']})")
+                    self.log(
+                        f"  ✓ {json_file.name}: {query_data['technique_id']} ({query_data['platform']})"
+                    )
 
         except Exception as e:
             self.errors.append({"file": str(json_file), "error": str(e)})
@@ -176,10 +193,13 @@ class QueryExtractor:
 
         # Extract technique ID
         technique_id = (
-            data.get('technique_id') or
-            data.get('mitre_attack', {}).get('technique_id') if isinstance(data.get('mitre_attack'), dict) else None or
-            data.get('tags', {}).get('mitre_attack_id') if isinstance(data.get('tags'), dict) else None or
-            self._extract_technique_from_filename(source_file)
+            data.get("technique_id") or data.get("mitre_attack", {}).get("technique_id")
+            if isinstance(data.get("mitre_attack"), dict)
+            else (
+                None or data.get("tags", {}).get("mitre_attack_id")
+                if isinstance(data.get("tags"), dict)
+                else None or self._extract_technique_from_filename(source_file)
+            )
         )
 
         if not technique_id:
@@ -187,12 +207,20 @@ class QueryExtractor:
 
         # Extract query
         query = (
-            data.get('query') or
-            data.get('search') or
-            (data.get('detection', {}).get('search') if isinstance(data.get('detection'), dict) else None) or
-            (data.get('detection', {}).get('query') if isinstance(data.get('detection'), dict) else None) or
-            data.get('detection_query') or
-            data.get('spl')
+            data.get("query")
+            or data.get("search")
+            or (
+                data.get("detection", {}).get("search")
+                if isinstance(data.get("detection"), dict)
+                else None
+            )
+            or (
+                data.get("detection", {}).get("query")
+                if isinstance(data.get("detection"), dict)
+                else None
+            )
+            or data.get("detection_query")
+            or data.get("spl")
         )
 
         if not query or len(query) < 10:  # Skip trivial queries
@@ -203,75 +231,82 @@ class QueryExtractor:
 
         # Extract metadata
         technique_name = (
-            data.get('technique_name') or
-            data.get('title') or
-            data.get('name') or
-            data.get('description', '')[:100]
+            data.get("technique_name")
+            or data.get("title")
+            or data.get("name")
+            or data.get("description", "")[:100]
         )
 
-        quality_rating = data.get('quality_rating') or data.get('rating') or 4.0
+        quality_rating = data.get("quality_rating") or data.get("rating") or 4.0
         if isinstance(quality_rating, str):
-            quality_map = {'high': 5.0, 'medium': 4.0, 'low': 3.0}
+            quality_map = {"high": 5.0, "medium": 4.0, "low": 3.0}
             quality_rating = quality_map.get(quality_rating.lower(), 4.0)
 
-        tags = data.get('tags', [])
+        tags = data.get("tags", [])
         if isinstance(tags, dict):
             tags = [f"{k}:{v}" for k, v in tags.items()]
         elif not isinstance(tags, list):
             tags = []
 
         return {
-            'technique_id': technique_id,
-            'technique_name': technique_name,
-            'platform': platform,
-            'query': query.strip(),
-            'quality': 'high' if quality_rating >= 4.5 else 'medium',
-            'rating': quality_rating,
-            'notes': data.get('notes') or data.get('comment') or f"Imported from {source_file.name}",
-            'tags': tags,
-            'attack_scenario': data.get('attack_scenario') or data.get('scenario'),
-            'expected_detections': data.get('expected_detections')
+            "technique_id": technique_id,
+            "technique_name": technique_name,
+            "platform": platform,
+            "query": query.strip(),
+            "quality": "high" if quality_rating >= 4.5 else "medium",
+            "rating": quality_rating,
+            "notes": data.get("notes")
+            or data.get("comment")
+            or f"Imported from {source_file.name}",
+            "tags": tags,
+            "attack_scenario": data.get("attack_scenario") or data.get("scenario"),
+            "expected_detections": data.get("expected_detections"),
         }
 
     def _extract_technique_from_filename(self, file_path: Path) -> Optional[str]:
         """Extract technique ID from filename (e.g., T1003.001_splunk.yaml)."""
         import re
-        match = re.search(r'T\d{4}(?:\.\d{3})?', file_path.name)
+
+        match = re.search(r"T\d{4}(?:\.\d{3})?", file_path.name)
         return match.group(0) if match else None
 
     def _detect_platform(self, data: Dict, query: str, file_path: Path) -> str:
         """Detect platform from data, query content, or filename."""
         # Explicit platform field
-        platform = data.get('platform') or data.get('detection_platform')
+        platform = data.get("platform") or data.get("detection_platform")
         if platform:
             return platform.lower()
 
         # Detect from filename
         filename_lower = file_path.name.lower()
-        if 'splunk' in filename_lower or 'spl' in filename_lower:
-            return 'splunk'
-        if 'mde' in filename_lower or 'kql' in filename_lower or 'defender' in filename_lower:
-            return 'mde'
-        if 'sentinel' in filename_lower:
-            return 'sentinel'
-        if 'chronicle' in filename_lower:
-            return 'chronicle'
+        if "splunk" in filename_lower or "spl" in filename_lower:
+            return "splunk"
+        if "mde" in filename_lower or "kql" in filename_lower or "defender" in filename_lower:
+            return "mde"
+        if "sentinel" in filename_lower:
+            return "sentinel"
+        if "chronicle" in filename_lower:
+            return "chronicle"
 
         # Detect from query content
         query_lower = query.lower()
-        if 'index=' in query_lower or 'sourcetype=' in query_lower or '| stats' in query_lower:
-            return 'splunk'
-        if 'deviceprocessevents' in query_lower or 'devicefileevents' in query_lower or 'has_any' in query_lower:
-            return 'mde'
+        if "index=" in query_lower or "sourcetype=" in query_lower or "| stats" in query_lower:
+            return "splunk"
+        if (
+            "deviceprocessevents" in query_lower
+            or "devicefileevents" in query_lower
+            or "has_any" in query_lower
+        ):
+            return "mde"
 
         # Default
-        return 'splunk'
+        return "splunk"
 
     def save_to_json(self, output_file: Path):
         """Save extracted queries to JSON file."""
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_file, 'w') as f:
+        with open(output_file, "w") as f:
             json.dump(self.extracted, f, indent=2)
 
         self.log(f"\n💾 Saved to: {output_file}")
@@ -295,7 +330,7 @@ class QueryImporter:
 
     def import_from_file(self, input_file: Path):
         """Import queries from JSON file."""
-        with open(input_file, 'r') as f:
+        with open(input_file, "r") as f:
             queries = json.load(f)
 
         self._import_queries(queries)
@@ -319,16 +354,20 @@ class QueryImporter:
 
         for query_data in queries:
             try:
-                technique_id = query_data['technique_id']
-                platform = query_data['platform']
+                technique_id = query_data["technique_id"]
+                platform = query_data["platform"]
 
                 # Check if already exists
                 if not self.dry_run:
-                    existing = db.query(QueryTrainingExample).filter(
-                        QueryTrainingExample.technique_id == technique_id,
-                        QueryTrainingExample.platform == QueryPlatform[platform.upper()],
-                        QueryTrainingExample.query == query_data['query']
-                    ).first()
+                    existing = (
+                        db.query(QueryTrainingExample)
+                        .filter(
+                            QueryTrainingExample.technique_id == technique_id,
+                            QueryTrainingExample.platform == QueryPlatform[platform.upper()],
+                            QueryTrainingExample.query == query_data["query"],
+                        )
+                        .first()
+                    )
 
                     if existing:
                         self.log(f"  ⊘ {technique_id} ({platform}): Already exists")
@@ -342,13 +381,13 @@ class QueryImporter:
                     example = QueryTrainingExample(
                         technique_id=technique_id,
                         platform=QueryPlatform[platform.upper()],
-                        query=query_data['query'],
-                        technique_description=query_data.get('technique_name', ''),
-                        attack_scenario=query_data.get('notes', ''),
-                        expected_detections=query_data.get('expected_detections'),
-                        avg_rating=float(query_data.get('rating', 4.0)),
-                        source='manual_import',
-                        tags=json.dumps(query_data.get('tags', []))
+                        query=query_data["query"],
+                        technique_description=query_data.get("technique_name", ""),
+                        attack_scenario=query_data.get("notes", ""),
+                        expected_detections=query_data.get("expected_detections"),
+                        avg_rating=float(query_data.get("rating", 4.0)),
+                        source="manual_import",
+                        tags=json.dumps(query_data.get("tags", [])),
                     )
 
                     db.add(example)
@@ -357,7 +396,9 @@ class QueryImporter:
                 self.imported += 1
 
             except Exception as e:
-                self.errors.append({"query": query_data.get('technique_id', 'unknown'), "error": str(e)})
+                self.errors.append(
+                    {"query": query_data.get("technique_id", "unknown"), "error": str(e)}
+                )
                 self.log(f"  ✗ {query_data.get('technique_id', 'unknown')}: {e}")
 
         if not self.dry_run:
@@ -383,7 +424,7 @@ class QueryImporter:
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Import high-quality queries as training examples',
+        description="Import high-quality queries as training examples",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -420,28 +461,35 @@ Expected query structure (flexible):
     "tags": ["persistence", "windows"],
     "notes": "Reduces false positives..."
   }
-        """
+        """,
     )
 
     # Modes
     mode_group = parser.add_mutually_exclusive_group(required=True)
-    mode_group.add_argument('-file', '--extract-to-file',
-                           metavar='DIR',
-                           help='Extract queries from directory to JSON file')
-    mode_group.add_argument('-db', '--import-to-database',
-                           metavar='PATH',
-                           help='Import queries from directory or JSON file to database')
+    mode_group.add_argument(
+        "-file",
+        "--extract-to-file",
+        metavar="DIR",
+        help="Extract queries from directory to JSON file",
+    )
+    mode_group.add_argument(
+        "-db",
+        "--import-to-database",
+        metavar="PATH",
+        help="Import queries from directory or JSON file to database",
+    )
 
     # Options
-    parser.add_argument('-o', '--output',
-                       default='data/query_examples.json',
-                       help='Output JSON file (default: data/query_examples.json)')
-    parser.add_argument('--dry-run',
-                       action='store_true',
-                       help='Show what would be imported without making changes')
-    parser.add_argument('-q', '--quiet',
-                       action='store_true',
-                       help='Suppress verbose output')
+    parser.add_argument(
+        "-o",
+        "--output",
+        default="data/query_examples.json",
+        help="Output JSON file (default: data/query_examples.json)",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be imported without making changes"
+    )
+    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress verbose output")
 
     args = parser.parse_args()
 
@@ -468,7 +516,7 @@ Expected query structure (flexible):
             importer = QueryImporter(dry_run=args.dry_run, verbose=verbose)
 
             # Check if input is a file or directory
-            if input_path.is_file() and input_path.suffix == '.json':
+            if input_path.is_file() and input_path.suffix == ".json":
                 # Import from JSON file
                 importer.import_from_file(input_path)
             elif input_path.is_dir():
@@ -488,6 +536,7 @@ Expected query structure (flexible):
         print(f"\n❌ Error: {e}")
         if verbose:
             import traceback
+
             traceback.print_exc()
         sys.exit(1)
 

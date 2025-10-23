@@ -1,4 +1,4 @@
-<a href="https://github.com/cyberg3cko/archer"><img src="archer.jpg" alt="Logo" width="600" height="220"></a>
+<a href="https://github.com/cmdshiftd/archer"><img src="archer.png" alt="Logo" width="600" height="220"></a>
 
 # 🏹 Archer: Threat Hunting Detection Generator
 
@@ -13,16 +13,50 @@ Archer is a modular Python service for automated threat hunting with optional ad
 - 🧠 **AI-Powered Correlations** - Semantic analysis and query correlation
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
 
-### Optional Modules
-- 💥 **Adversary Emulation** - Atomic Red Team integration for evidence-based detections
+<details>
+<summary><h3 style="display:inline">🤷🏼‍♀️ Optional Modules</h3></summary>
+
+<br>
+
+> Code Exists - ⚠️ Untested, unless stated
+
+Can be enabled via environment variables:
+
+- 💥 **Adversary Emulation** - Atomic Red Team integration for evidence-based detections ✅ **Tested**
   - 🖥️ **Remote Execution** - SSH/WinRM support for cross-platform testing (Linux, macOS, Windows)
   - 🔑 **SSH Key Authentication** - Secure passwordless authentication
   - 🔒 **WinRM HTTPS** - Encrypted Windows remote management (default)
-- 📊 **VECTR Integration** - Hunt tracking, validation, and purple team collaboration
+  - Enable with: `ENABLE_EMULATION=true`
+  - Code implemented but not validated with live Atomic Red Team deployment
 - 🔍 **Query Execution** - Execute queries via MDE and Splunk APIs
   - 🌐 **MDE Advanced Hunting** - KQL query execution with OAuth2
   - 📊 **Splunk Search API** - SPL query execution with job management
+  - Available in web UI Settings
+  - Code implemented but not validated against live MDE/Splunk environments
 - 🔗 **n8n Workflow Automation** - API endpoints for workflow integration
+  - All API endpoints accessible for n8n HTTP Request nodes
+  - Endpoints available but not validated with live n8n workflows
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">🔜 Coming Soon</h3></summary>
+
+<br>
+
+> ⚠️ Not Functional
+
+- 📊 **VECTR Integration** - Hunt tracking and purple team collaboration
+  - CLI framework stub exists but not yet functional
+  - Requires VECTR instance integration and testing
+- 💥 **CALDERA Integration** - Automated adversary emulation platform
+  - Configuration exists but integration not implemented
+  - Enable with: `CALDERA_API_URL` and `CALDERA_API_KEY`
+- 💥 **MACAT Integration** - macOS adversary emulation framework
+  - Configuration exists but integration not implemented
+  - Enable with: `MACAT_PATH`
+
+</details>
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)
@@ -175,7 +209,9 @@ python3 archer.py correlate "Scattered Spider"
 python3 archer.py hunt "PowerShell"
 ```
 
-#### Adversary Emulation (Optional)
+#### Adversary Emulation (Optional - Untested)
+
+⚠️ **Status**: Code implemented but not validated with live Atomic Red Team deployment.
 
 Run Atomic Red Team tests locally or remotely and enrich detections with evidence:
 
@@ -214,37 +250,12 @@ python3 archer.py emulate T1059.001 \
   --enrich
 ```
 
-See [docs/EMULATION.md](docs/EMULATION.md) for detailed emulation documentation.
+See [docs/guides/EMULATION_GUIDE.md](docs/guides/EMULATION_GUIDE.md) for detailed emulation documentation.
 
-#### VECTR Integration (Optional)
 
-Track hunts and validate detections with VECTR:
+#### Query Execution (Optional - Untested)
 
-```bash
-# Enable VECTR module
-export ENABLE_VECTR=true
-export VECTR_URL=https://vectr.local:8081
-export VECTR_API_TOKEN=your-api-token
-
-# Export detections to VECTR campaign
-python3 archer.py vectr export --threat-group "APT29"
-
-# List campaigns
-python3 archer.py vectr list
-
-# Import test results
-python3 archer.py vectr import --campaign-id camp_123abc --update-yamls
-
-# Bidirectional sync
-python3 archer.py vectr sync --campaign-id camp_123abc --threat-group "APT29"
-
-# Generate coverage report
-python3 archer.py vectr coverage --campaign-id camp_123abc
-```
-
-See [docs/VECTR.md](docs/VECTR.md) for detailed VECTR documentation.
-
-#### Query Execution (Optional)
+⚠️ **Status**: Code implemented but not validated against live MDE/Splunk environments.
 
 Execute queries directly against MDE or Splunk APIs:
 
@@ -259,12 +270,11 @@ export SPLUNK_HOST=splunk.example.com
 export SPLUNK_USERNAME=admin
 export SPLUNK_PASSWORD=your-password
 
-# Execute queries (coming soon - module ready, CLI integration pending)
-# python3 archer.py generate "APT29" --execute-queries
-# python3 archer.py correlate "Scattered Spider" --execute-queries
+# Execute queries via web UI Settings → Query Execution
+# CLI integration for query execution is planned for future release
 ```
 
-See [docs/QUERY_EXECUTION.md](docs/QUERY_EXECUTION.md) for detailed query execution documentation.
+See [docs/guides/QUERY_API_GUIDE.md](docs/guides/QUERY_API_GUIDE.md) for detailed query execution documentation.
 
 #### Complete Workflow Example
 
@@ -278,19 +288,18 @@ python3 archer.py emulate "APT29" --enrich --max-techniques 10
 # 3. Build correlations
 python3 archer.py correlate "APT29"
 
-# 4. (Optional) Export to VECTR for tracking
-python3 archer.py vectr export --threat-group "APT29"
-
-# 5. (After testing in VECTR) Import results
-python3 archer.py vectr import --campaign-id camp_123abc --update-yamls
+# 4. Execute queries via web UI (Settings → Query Execution)
+#    Results can be exported and analyzed
 ```
 
 ---
 <br>
 
-## ⚙️ Using Archer with n8n
+## ⚙️ Using Archer with n8n (Untested)
 
-Archer integrates seamlessly with [n8n](https://n8n.io/) for workflow automation.
+⚠️ **Status**: API endpoints available but not validated with live n8n workflows.
+
+Archer provides API endpoints that can be integrated with [n8n](https://n8n.io/) for workflow automation.
 
 ### Example: Trigger Archer Hunt via HTTP Request Node
 
@@ -330,12 +339,13 @@ Content-Type: application/json
 
 ### Archer Documentation
 - [Getting Started Guide](docs/GETTING_STARTED.md) - Setup and troubleshooting
-- [API Reference](docs/API_REFERENCE.md) - **NEW!** Complete REST API documentation for all endpoints
-- [Security Features Guide](docs/SECURITY_FEATURES.md) - **NEW!** Complete security documentation, authentication, user management, and best practices
-- [File Upload Feature](docs/UPLOAD_FEATURE.md) - Upload threat intel files for TTP/IOC extraction
+- [API Reference](docs/API_REFERENCE.md) - Complete REST API documentation for all endpoints
+- [Security Features Guide](docs/SECURITY_FEATURES.md) - Complete security documentation, authentication, user management, and best practices
 - [Emulation Guide](docs/guides/EMULATION_GUIDE.md) - Adversary emulation and remote execution
 - [Query Execution Guide](docs/guides/QUERY_API_GUIDE.md) - MDE and Splunk API integration
 - [Correlation Guide](docs/guides/CORRELATION_GUIDE.md) - Correlation query builder
+- [CVE Hunting Guide](docs/guides/CVE_HUNTING_GUIDE.md) - CVE-based detection generation
+- [Testing Guide](docs/guides/TESTING_GUIDE.md) - Testing and validation workflows
 
 ### External Resources
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)

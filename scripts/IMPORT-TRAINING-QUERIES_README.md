@@ -6,13 +6,13 @@ Import high-quality detection queries as training examples for AI-powered query 
 
 ```bash
 # Extract queries from directory to JSON
-python3 scripts/import_training_examples.py -file /path/to/queries
+python3 scripts/import_training_queries.py -file /path/to/queries
 
 # Import queries directly to database
-python3 scripts/import_training_examples.py -db /path/to/queries
+python3 scripts/import_training_queries.py -db /path/to/queries
 
 # Dry run (see what would be imported)
-python3 scripts/import_training_examples.py -db /path/to/queries --dry-run
+python3 scripts/import_training_queries.py -db /path/to/queries --dry-run
 ```
 
 ## Usage
@@ -20,10 +20,10 @@ python3 scripts/import_training_examples.py -db /path/to/queries --dry-run
 ### Step 1: Extract Queries to JSON File
 
 ```bash
-python3 scripts/import_training_examples.py -file data/sample_queries
+python3 scripts/import_training_queries.py -file data/sample_queries
 
 # Custom output location
-python3 scripts/import_training_examples.py -file data/sample_queries -o my_queries.json
+python3 scripts/import_training_queries.py -file data/sample_queries -o my_queries.json
 ```
 
 This scans a directory for YAML/JSON files and extracts high-quality queries into a JSON file.
@@ -32,13 +32,13 @@ This scans a directory for YAML/JSON files and extracts high-quality queries int
 
 ```bash
 # From JSON file
-python3 scripts/import_training_examples.py -db data/query_examples.json
+python3 scripts/import_training_queries.py -db data/query_examples.json
 
 # Directly from directory (combines both steps)
-python3 scripts/import_training_examples.py -db data/sample_queries
+python3 scripts/import_training_queries.py -db data/sample_queries
 
 # Dry run first (recommended)
-python3 scripts/import_training_examples.py -db data/sample_queries --dry-run
+python3 scripts/import_training_queries.py -db data/sample_queries --dry-run
 ```
 
 ## Supported File Formats
@@ -124,32 +124,32 @@ The script automatically detects queries from various formats:
 
 ```bash
 # If you have a directory of Sigma rules or custom detections
-python3 scripts/import_training_examples.py -file data/detections -o training_data.json
-python3 scripts/import_training_examples.py -db training_data.json
+python3 scripts/import_training_queries.py -file data/detections -o training_data.json
+python3 scripts/import_training_queries.py -db training_data.json
 ```
 
 ### Example 2: Quick Import from Directory
 
 ```bash
 # Combine extraction and import in one command
-python3 scripts/import_training_examples.py -db /path/to/detection/library
+python3 scripts/import_training_queries.py -db /path/to/detection/library
 ```
 
 ### Example 3: Verify Before Import
 
 ```bash
 # Always use dry-run first
-python3 scripts/import_training_examples.py -db my_queries/ --dry-run
+python3 scripts/import_training_queries.py -db my_queries/ --dry-run
 
 # If looks good, run actual import
-python3 scripts/import_training_examples.py -db my_queries/
+python3 scripts/import_training_queries.py -db my_queries/
 ```
 
 ### Example 4: Quiet Mode for Automation
 
 ```bash
 # Suppress output (for cron jobs, scripts)
-python3 scripts/import_training_examples.py -db queries/ --quiet
+python3 scripts/import_training_queries.py -db queries/ --quiet
 ```
 
 ## Output
@@ -243,7 +243,7 @@ See [docs/AI_TRAINING_IMPLEMENTATION.md](../docs/AI_TRAINING_IMPLEMENTATION.md) 
 Modify `QueryExtractor._parse_query_data()` to handle your specific format:
 
 ```python
-# In scripts/import_training_examples.py
+# In scripts/import_training_queries.py
 def _parse_query_data(self, data: Dict, source_file: Path) -> Optional[Dict]:
     # Add custom parsing logic
     if 'my_custom_field' in data:
@@ -256,7 +256,7 @@ def _parse_query_data(self, data: Dict, source_file: Path) -> Optional[Dict]:
 ```bash
 # Process multiple directories
 for dir in detections/*; do
-    python3 scripts/import_training_examples.py -db "$dir" --quiet
+    python3 scripts/import_training_queries.py -db "$dir" --quiet
 done
 ```
 
