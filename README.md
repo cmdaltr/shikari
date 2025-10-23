@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-<img src="static/images/output-onlinepngtools-4.png" alt="Archer Tagline">
+<img src="static/images/output-onlinepngtools-5.png" alt="Archer Tagline">
 </div>
 
 <br>
