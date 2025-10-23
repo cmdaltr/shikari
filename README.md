@@ -1,6 +1,6 @@
 <div align="center">
 <a href="https://github.com/cmdshiftd/archer">
-<img src="static/images/archer_banner.png" alt="Archer - Automated Multi-Vendor Threat Hunting & Detection Framework" width="200px" height="400px">
+<img src="static/images/archer_banner.png" alt="Archer - Automated Multi-Vendor Threat Hunting & Detection Framework" width="400px" height="400px">
 </a>
 </div>
 
