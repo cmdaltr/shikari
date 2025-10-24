@@ -8,6 +8,7 @@ This module provides performance improvements to yaml.py:
 """
 
 from archer.build.collate import collate_data
+from archer.config import GENERATE_DIR
 from archer.mitre.enterprise import get_stix_data
 from stix2 import MemoryStore
 
@@ -93,20 +94,22 @@ def additional_tactics_cached(tid: str, tactic: str) -> List[str]:
         memory_store = MemoryStore(stix_data=bundle.objects)
 
         # Find the technique in STIX data
-        techniques = memory_store.query([
-            stix2.Filter('type', '=', 'attack-pattern'),
-            stix2.Filter('external_references.external_id', '=', tid)
-        ])
+        techniques = memory_store.query(
+            [
+                stix2.Filter("type", "=", "attack-pattern"),
+                stix2.Filter("external_references.external_id", "=", tid),
+            ]
+        )
 
         if techniques:
             technique = techniques[0]
             # Extract kill chain phases (tactics)
-            kill_chain = technique.get('kill_chain_phases', [])
+            kill_chain = technique.get("kill_chain_phases", [])
             for phase in kill_chain:
-                if phase.get('kill_chain_name') == 'mitre-attack':
-                    phase_name = phase.get('phase_name', '')
+                if phase.get("kill_chain_name") == "mitre-attack":
+                    phase_name = phase.get("phase_name", "")
                     # Convert from "credential-access" to "Credential Access"
-                    tactic_name = phase_name.replace('-', ' ').title()
+                    tactic_name = phase_name.replace("-", " ").title()
                     tactics.append(tactic_name)
 
     except Exception as e:
@@ -116,7 +119,7 @@ def additional_tactics_cached(tid: str, tactic: str) -> List[str]:
             r"Reconnaissance|Resource Development|Initial Access|Execution|Persistence|"
             r"Privilege Escalation|Defense Evasion|Credential Access|Discovery|"
             r"Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
-            tactic
+            tactic,
         )
 
     # Ensure we have at least something
@@ -125,7 +128,7 @@ def additional_tactics_cached(tid: str, tactic: str) -> List[str]:
             r"Reconnaissance|Resource Development|Initial Access|Execution|Persistence|"
             r"Privilege Escalation|Defense Evasion|Credential Access|Discovery|"
             r"Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
-            tactic
+            tactic,
         )
 
     # Cache the result
@@ -165,27 +168,25 @@ def batch_load_tactics(technique_ids: List[str]) -> Dict[str, List[str]]:
         memory_store = MemoryStore(stix_data=bundle.objects)
 
         # Get all attack patterns at once
-        all_techniques = memory_store.query([
-            stix2.Filter('type', '=', 'attack-pattern')
-        ])
+        all_techniques = memory_store.query([stix2.Filter("type", "=", "attack-pattern")])
 
         # Build lookup
         for technique in all_techniques:
-            ext_refs = technique.get('external_references', [])
+            ext_refs = technique.get("external_references", [])
             tech_id = None
 
             for ref in ext_refs:
-                if ref.get('source_name') == 'mitre-attack':
-                    tech_id = ref.get('external_id')
+                if ref.get("source_name") == "mitre-attack":
+                    tech_id = ref.get("external_id")
                     break
 
             if tech_id and tech_id in missing:
                 tactics = []
-                kill_chain = technique.get('kill_chain_phases', [])
+                kill_chain = technique.get("kill_chain_phases", [])
                 for phase in kill_chain:
-                    if phase.get('kill_chain_name') == 'mitre-attack':
-                        phase_name = phase.get('phase_name', '')
-                        tactic_name = phase_name.replace('-', ' ').title()
+                    if phase.get("kill_chain_name") == "mitre-attack":
+                        phase_name = phase.get("phase_name", "")
+                        tactic_name = phase_name.replace("-", " ").title()
                         tactics.append(tactic_name)
 
                 _TACTIC_CACHE[tech_id] = tactics
@@ -288,10 +289,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
     desc = tdesc.replace("\n  \n", "\n  ").replace("\n* ", "\n  * ")
     desc = re.sub(r"</?code>", r"`", desc)
     datatype = (
-        query.split("\n")[0]
-        .split(" earliest=")[0]
-        .replace("index=", "")
-        .replace("_prod", "")
+        query.split("\n")[0].split(" earliest=")[0].replace("index=", "").replace("_prod", "")
     )
     tactic = str(tactic)[2:-2].replace("', '", "\n  - ")
     query = query.replace("\n| ", "  | ")
@@ -322,19 +320,13 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
     )
     yaml_content = re.sub(r"\n\n", r"\n  ", yaml_content)
     yaml_content = re.sub(r"(\(Citation: [^\)]+\))", r"", yaml_content)
-    yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace(
-        "   | ", "  | "
-    )
+    yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace("   | ", "  | ")
 
     if "()" in query or "( OR )" in query or "\n  | where \n  | " in query:
         pass
     else:
         with open(query_file, "w") as new_yaml:
             new_yaml.write(yaml_content)
-
-    # Inserting this to create a simple approach for the latest file having been created for the web application to provide progress
-    with open(os.path.join("data", "generate", "latest.yaml"), "w") as latest_yaml:
-        latest_yaml.write(query_file)
 
 
 def update_yaml(yamlfile, tag):
@@ -358,9 +350,7 @@ def update_yaml(yamlfile, tag):
         added_tags = f"{prefix}tags:\n  - {formatted_tag}\n  - {suffix}"
 
         # Update version
-        newver = re.sub(
-            r"(version: \d+\.)(\d+)((\.\d+)?)", increment_version, added_tags
-        )
+        newver = re.sub(r"(version: \d+\.)(\d+)((\.\d+)?)", increment_version, added_tags)
         prefix = added_tags.split("version: ")[0]
         suffix = added_tags.split("kind:")[1]
 
@@ -410,7 +400,7 @@ def construct_yaml(
         name = name.replace(" ", "").replace("/", "")
         # If index_name is provided, include it in the filename
         filename = f"{name}_{index_name.replace('=', '').replace(' ', '')}.yaml"
-        yamlfile = os.path.join("data", "generate", filename)
+        yamlfile = os.path.join(GENERATE_DIR, filename)
         if not os.path.exists(yamlfile):
             write_yaml(
                 yamlfile,
@@ -427,14 +417,9 @@ def construct_yaml(
 
     # Writing Splunk YAML file
     for query in appended_splunk_queries:
-        index = (
-            query.split("\n")[0]
-            .split(" earliest=")[0]
-            .replace("index=", "")
-            .replace(" ", "")
-        )
+        index = query.split("\n")[0].split(" earliest=")[0].replace("index=", "").replace(" ", "")
         query = query.replace(" earliest=-1d\n", " earliest=-1d\n  ")
-        yamlfile = os.path.join("data", "generate", f"{name}_{index}.yaml")
+        yamlfile = os.path.join(GENERATE_DIR, f"{name}_{index}.yaml")
         if not os.path.exists(yamlfile):
             write_yaml(
                 yamlfile,

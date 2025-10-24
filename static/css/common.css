@@ -1,0 +1,165 @@
+/**
+ * Common Styles - Shared CSS across all pages
+ *
+ * This file contains reusable styles that are used across multiple pages
+ * to avoid duplication and maintain consistency.
+ */
+
+/* ========== Flexbox Footer Layout ========== */
+/* Ensures footer stays at bottom of viewport or content, whichever is lower */
+html, body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+}
+
+#main-content,
+.page-shell {
+    flex: 1;
+    width: 100%;
+}
+
+/* ========== Button Styles ========== */
+/* Primary button - accent color */
+.btn-primary {
+    flex: 1;
+    padding: 14px 20px;
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-sizing: border-box;
+    font-size: 1em;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.2;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+/* Secondary button - transparent with border */
+.btn-secondary {
+    flex: 1;
+    padding: 14px 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-sizing: border-box;
+    font-size: 1em;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.2;
+}
+
+.btn-secondary:hover {
+    background: var(--bg-secondary);
+    border-color: var(--text-secondary);
+}
+
+/* Danger button - red for destructive actions */
+.btn-danger {
+    flex: 1;
+    padding: 14px 20px;
+    border: 2px solid #C53030;
+    border-radius: 6px;
+    background: #C53030;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-sizing: border-box;
+    font-size: 1em;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.2;
+}
+
+.btn-danger:hover {
+    background: #9b2c2c;
+    border-color: #9b2c2c;
+    transform: translateY(-1px);
+}
+
+/* ========== Detection/Correlation Box Styles ========== */
+.detection-item {
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    border: 1px solid #C53030;
+    border-radius: 8px;
+    transition: background 0.2s;
+    background: var(--bg-primary);
+}
+
+.detection-item:hover {
+    background: var(--bg-hover);
+}
+
+.detection-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Unchecked/grayed out detection items */
+.detection-item.unchecked {
+    opacity: 0.5;
+    background: var(--bg-secondary);
+}
+
+/* ========== Badge Styles ========== */
+.needs-review-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #FEF3C7;
+    color: #92400E;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: help;
+    transition: all 0.2s;
+}
+
+.needs-review-badge:hover {
+    background: #FDE68A;
+}
+
+.needs-review-badge svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* ========== Utility Classes ========== */
+.flex-row {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+}
+
+.flex-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}

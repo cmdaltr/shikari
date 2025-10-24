@@ -185,9 +185,9 @@ function extractLastYamlFile(root, progress) {
   // direct fields (expanded)
   const candidates = [
     p.last_yaml_file, p.last_yaml, p.last_yaml_filename, p.last_yaml_path, p.last_yaml_filepath, p.last_yaml_fullpath, p.last_yaml_full_path,
-    p.last_written_file, p.last_output_file, p.latest_yaml, p.latest_yaml_file, p.latest_file, p.current_yaml_file, p.current_file, p.file,
+    p.last_written_file, p.last_output_file, p.current_yaml_file, p.current_file, p.file,
     j.last_yaml_file, j.last_yaml, j.last_yaml_filename, j.last_yaml_path, j.last_yaml_filepath, j.last_yaml_fullpath, j.last_yaml_full_path,
-    j.last_written_file, j.last_output_file, j.latest_yaml, j.latest_yaml_file, j.latest_file, j.current_yaml_file, j.current_file, j.file,
+    j.last_written_file, j.last_output_file, j.current_yaml_file, j.current_file, j.file,
     (p.output && p.output.last_yaml), (j.output && j.output.last_yaml)
   ].filter(Boolean);
   const direct = candidates.find(s => typeof s === 'string' && /\.(ya?ml)$/i.test(s));
@@ -346,7 +346,6 @@ async function fetchYamlFilesInDirectory(dirPath = 'data/queries') {
       ...dates.map(date => `${dirPath}/${date}-query.yaml`),
       ...dates.map(date => `${dirPath}/queries-${date}.yaml`),
       ...dates.map(date => `${dirPath}/${date}-queries.yaml`),
-      `${dirPath}/latest.yaml`,
       `${dirPath}/query.yaml`,
       `${dirPath}/queries.yaml`
     ];
@@ -375,39 +374,6 @@ async function fetchYamlFilesInDirectory(dirPath = 'data/queries') {
   }
 }
 
-// Add variables to track latest.yaml polling
-let lastYamlFileCheckTime = 0;
-const YAML_FILE_CHECK_INTERVAL = 20000; // 20 seconds in milliseconds
-
-// Simplified function to get the latest YAML file path from latest.yaml
-async function getMostRecentQueryYaml() {
-  try {
-    // Only check for the latest.yaml file every 10 seconds
-    const now = Date.now();
-    if (now - lastYamlFileCheckTime < YAML_FILE_CHECK_INTERVAL) {
-      return ''; // Skip checking if it's too soon
-    }
-    
-    lastYamlFileCheckTime = now;
-    
-    // Try to fetch the content of latest.yaml which contains the path to the latest file
-    const latestYamlRes = await fetch('/data/queries/latest.yaml');
-    
-    if (latestYamlRes.ok) {
-      // The content of latest.yaml is the path to the actual latest YAML file
-      const filePath = await latestYamlRes.text();
-      console.debug('Latest file from latest.yaml:', filePath.trim());
-      return filePath.trim();
-    } else {
-      console.debug('Could not access latest.yaml file:', latestYamlRes.status);
-    }
-    
-    return '';
-  } catch (err) {
-    console.debug('Error fetching latest YAML file info:', err);
-    return '';
-  }
-}
 
 // Fix the syntax error in the file
 async function refresh(){
@@ -451,52 +417,7 @@ async function refresh(){
 
     // Drive the "last file" line every tick
     const lastEl = getOrCreateLastFileEl(yamlFill);
-    
-    // Extract file path from the server response, or try to read the latest.yaml file
-    let detectedFile = extractLastYamlFile(j, p);
-    let displayFile = detectedFile; // Default to the same value
-    let validFileDetected = false; // Flag to track if we have a valid file
 
-    // If no file is detected through the standard method, we'll send a request to get the latest file
-    if (!detectedFile) {
-      try {
-        // Make a special request to the progress_status endpoint with a parameter to include the latest file
-        const latestFileRes = await fetch(`/progress_status?group_name=${encodeURIComponent(group)}&include_latest_file=true`);
-        if (latestFileRes.ok) {
-          const latestFileData = await latestFileRes.json();
-          console.debug('Latest file data:', latestFileData);
-          
-          // Check if we have actual content in the latest file (not empty)
-          const hasContent = latestFileData && 
-                            latestFileData.latest_file && 
-                            latestFileData.latest_file.trim() !== '';
-          
-          // Only use the file info if we have actual content
-          if (hasContent) {
-            // Use the prettified name if available, otherwise use whatever we can get
-            if (latestFileData.latest_file_pretty) {
-              detectedFile = latestFileData.latest_file; // Store full path
-              displayFile = latestFileData.latest_file_pretty; // Use pretty name for display
-              validFileDetected = true;
-            } else if (latestFileData.latest_filename) {
-              detectedFile = latestFileData.latest_file;
-              displayFile = latestFileData.latest_filename;
-              validFileDetected = true;
-            } else {
-              detectedFile = latestFileData.latest_file;
-              displayFile = detectedFile;
-              validFileDetected = true;
-            }
-          }
-        }
-      } catch (err) {
-        console.debug('Error fetching latest file info:', err);
-      }
-    } else {
-      // We already have a file from the first method
-      validFileDetected = detectedFile.trim() !== '';
-    }
-    
     const createdIncreased = created > lastYamlCreated;
     if (createdIncreased) lastYamlCreated = created;
 
@@ -504,6 +425,7 @@ async function refresh(){
       // YAML generation is complete, show "Complete" message
       if (yamlComplete) {
         lastEl.innerHTML = ''; // Clear existing content
+        lastEl.style.display = 'block'; // Show element again
 
         // "Complete: " in green and bold
         const completeText = document.createElement('span');
@@ -523,18 +445,11 @@ async function refresh(){
         // Stop ellipsis animation if it's still running
         stopEllipsis(true);
       }
-      // Still in progress - just show "Generating detections" with ellipsis
-      // Don't show file count (confusing - shows procedure count not actual file count)
+      // Still in progress - hide the text (spinner is sufficient)
       else {
-        // Only set text if not already set (to avoid destroying ellipsis span)
-        const currentText = lastEl.childNodes[0]?.textContent || '';
-        if (currentText !== 'Generating detections') {
-          lastEl.textContent = 'Generating detections';
-          lastEl.style.color = '#666'; // Default gray for waiting text
-          lastEl.removeAttribute('title');
-        }
-        // Start or continue ellipsis animation
-        startEllipsis(lastEl);
+        // Clear text and hide element during detection generation
+        lastEl.textContent = '';
+        lastEl.style.display = 'none';
       }
     }
 
@@ -555,7 +470,7 @@ async function refresh(){
         correlationPct = 100;
       } else if (correlationStatus === 'genai_processing' || correlationStatus === 'genai_started') {
         // Calculate percentage if we have totals
-        if (correlationTotal > 0 && correlationProcessed > 0) {
+        if (correlationTotal > 0 && correlationProcessed >= 0) {
           correlationPct = Math.min(99, Math.round((correlationProcessed / correlationTotal) * 100));
         } else if (correlationProcessed > 0) {
           // If we don't have total, show progress based on processed count
@@ -567,6 +482,17 @@ async function refresh(){
       } else if (correlationStatus === 'genai_starting') {
         // Just starting, show minimal progress
         correlationPct = 1;
+      } else if (yamlComplete && correlationProcessed > 0 && correlationTotal > 0) {
+        // Fallback: If YAML is complete and we have correlation data, calculate progress
+        // This handles edge cases where status might not match expected values
+        if (correlationProcessed >= correlationTotal) {
+          correlationPct = 100;
+        } else {
+          correlationPct = Math.min(99, Math.round((correlationProcessed / correlationTotal) * 100));
+        }
+      } else if (correlationStatus && correlationStatus !== 'yaml') {
+        // Log unexpected status for debugging
+        console.warn(`Unexpected correlation status: "${correlationStatus}"`);
       }
 
       correlationFill.style.width = correlationPct + '%';
@@ -717,14 +643,13 @@ async function refresh(){
     // If both detection and correlation are complete, redirect to results page
     if (yamlDone && correlationDone && !redirectInitiated) {
       redirectInitiated = true; // Prevent multiple redirects
-      console.debug('All stages complete, redirecting to results page in 1 second');
       setTimeout(() => {
         window.location.href = `/results?group_name=${encodeURIComponent(group)}`;
       }, 1000); // Wait 1 second to show completion state
     }
 
   } catch(e) {
-    console.debug('progress poll err', e);
+    console.error('Progress polling error:', e);
   }
 }
 setInterval(refresh, 1500);

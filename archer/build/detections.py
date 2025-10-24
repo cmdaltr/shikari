@@ -10,6 +10,54 @@ import os
 from pathlib import Path
 
 
+def filter_generic_indicators(identifiers):
+    """
+    Filter out overly generic terms from indicators.
+    Returns filtered identifiers dict and True if any real indicators remain.
+
+    Generic terms that are too common to be useful indicators:
+    - condition, value, data, file, process, command, user, system, event, log, etc.
+
+    Args:
+        identifiers: Dict with indicator types as keys (cmd, reg, file, etc.)
+
+    Returns:
+        Tuple of (filtered_identifiers, has_real_indicators)
+    """
+    generic_terms = {
+        'condition', 'conditions', 'value', 'values', 'data', 'file', 'files',
+        'process', 'processes', 'command', 'commands', 'user', 'users',
+        'system', 'event', 'events', 'log', 'logs', 'entry', 'entries',
+        'action', 'actions', 'type', 'types', 'name', 'names', 'path',
+        'paths', 'string', 'strings', 'text', 'info', 'information'
+    }
+
+    filtered_identifiers = {}
+    has_real_indicators = False
+
+    for indicator_type, indicator_list in identifiers.items():
+        filtered_list = []
+        for indicator in indicator_list:
+            indicator_str = str(indicator).strip().lower()
+
+            # Skip if too short
+            if len(indicator_str) < 3:
+                continue
+
+            # Skip if it's a generic term
+            if indicator_str in generic_terms:
+                continue
+
+            # This is a real indicator
+            filtered_list.append(indicator)
+            has_real_indicators = True
+
+        if filtered_list:
+            filtered_identifiers[indicator_type] = filtered_list
+
+    return filtered_identifiers, has_real_indicators
+
+
 def load_indicator_mappings():
     """Load indicator mappings from JSON files in the mappings directory"""
     import os
@@ -191,6 +239,16 @@ def compile_query(retrieved_data):
 
     print(f"  - Final identifiers count: {len(identifiers)}")
 
+    # Filter out generic terms from identifiers
+    filtered_identifiers, has_real_indicators = filter_generic_indicators(identifiers)
+
+    if not has_real_indicators and identifiers:
+        print(f" ⚠️  All indicators are generic terms (e.g., 'condition', 'value', 'data')")
+        print(f" 🔍 Treating as no indicators - will attempt OSINT enrichment")
+        identifiers = {}  # Clear identifiers to trigger OSINT path
+    else:
+        identifiers = filtered_identifiers  # Use filtered identifiers
+
     # Extract platform information if available
     procedure_platforms = retrieved_data.get("procedure_platforms", [])
     software_platforms = retrieved_data.get("software_platforms", {})
@@ -319,7 +377,110 @@ def compile_query(retrieved_data):
             else:
                 print(f" ❌ No identifiers found for {name}; no detections generated\n")
     else:
-        print(f" ❌ No identifiers found for {name}; no detections generated\n")
+        # No identifiers from MITRE - try OSINT enrichment
+        print(f" ⚠️  No identifiers found for {name} from MITRE ATT&CK data")
+        print(f" 🔍 Searching OSINT sources for additional detection methods...")
+
+        from archer.build.osint_enrichment import search_osint_for_technique, should_create_detection
+
+        # Search OSINT sources
+        osint_found, osint_data = search_osint_for_technique(
+            technique_id=tid,
+            technique_name=name,
+            technique_description=technique_description,
+            platforms=technique_platforms
+        )
+
+        # Determine if we should create the detection
+        if should_create_detection(has_mitre_indicators=False, osint_found=osint_found):
+            print(f" ✅ OSINT enrichment successful - creating detection with OSINT metadata")
+
+            # Create detection with OSINT data as identifiers
+            osint_identifiers = osint_data.get("osint_indicators", {})
+            if osint_identifiers:
+                print(f" 📝 Creating OSINT-enriched detection for {name}")
+
+                # Use OSINT indicators to create detections
+                # Re-run the platform compatibility checks with OSINT indicators
+                compatible_sources = set()
+
+                # Check each indicator type from OSINT
+                for indicator_type in osint_identifiers:
+                    if indicator_type not in indicator_mappings:
+                        continue
+
+                    indicators_list = osint_identifiers[indicator_type]
+                    if not indicators_list:
+                        continue
+
+                    # Combine indicators into text for validation
+                    indicator_text = " ".join(str(i) for i in indicators_list)
+
+                    # Check SPLUNK compatibility
+                    if "Splunk" in indicator_mappings[indicator_type]:
+                        for index_name in indicator_mappings[indicator_type]["Splunk"]:
+                            clean_index_name = index_name.replace("index=", "")
+
+                            is_compatible = is_query_applicable(
+                                procedure_platforms, software_platforms, clean_index_name
+                            )
+
+                            indicator_compatible = validate_procedure_for_index(
+                                indicator_text,
+                                clean_index_name,
+                                vendor="Splunk",
+                                technique_desc=technique_description,
+                                technique_platforms=technique_platforms
+                            )
+
+                            if is_compatible and indicator_compatible:
+                                compatible_sources.add(index_name)
+
+                    # Check MDE compatibility
+                    if "MDE" in indicator_mappings[indicator_type]:
+                        for table_name in indicator_mappings[indicator_type]["MDE"]:
+                            is_compatible = is_query_applicable(
+                                procedure_platforms, software_platforms, table_name
+                            )
+
+                            indicator_compatible = validate_procedure_for_index(
+                                indicator_text,
+                                table_name,
+                                vendor="MDE",
+                                technique_desc=technique_description,
+                                technique_platforms=technique_platforms
+                            )
+
+                            if is_compatible and indicator_compatible:
+                                compatible_sources.add(table_name)
+
+                # Create YAMLs for compatible sources
+                if compatible_sources:
+                    print(f" ✅ OSINT-enriched queries built for {name} ({tid}) on:")
+                    for source in sorted(compatible_sources):
+                        print(f"  ✅ {source}")
+                        construct_yaml(
+                            name,
+                            tid,
+                            tdesc,
+                            tactic,
+                            tag,
+                            osint_identifiers,
+                            log_sources,
+                            source,
+                            procedure_platforms,
+                            software_platforms,
+                            osint_enrichment=osint_data,  # Pass OSINT metadata
+                        )
+                    print()
+                else:
+                    print(f" ⚠️  No compatible platforms found for OSINT indicators")
+            else:
+                # No actual indicators but OSINT found relevant information
+                print(f" 📝 OSINT found relevant information but no specific indicators")
+                print(f" ⚠️  Detection creation skipped - manual review required")
+        else:
+            print(f" ❌ No OSINT sources found for {name}; detection NOT created\n")
 
 
 def main():

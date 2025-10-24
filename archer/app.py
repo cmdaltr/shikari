@@ -31,23 +31,505 @@ import os
 import json
 import logging
 import threading
+import re
+import yaml
 from archer.build.progress import read_progress, write_progress
+from archer.config import (
+    GENERATE_DIR,
+    CORRELATE_DIR,
+    DRAFTS_DIR,
+    UPLOADS_DIR,
+    BLOG_DIR,
+    ATTACK_FLOWS_DIR,
+    PROGRESS_DIR,
+    PROFILE_PICS_DIR,
+    SEVERITY_ORDER,
+)
 
 # Configure logger
 logger = logging.getLogger(__name__)
 from archer.database.db import init_db, get_db
 from archer.auth import (
-    verify_password, create_session, get_user_from_session_id,
-    delete_session, encrypt_api_key, decrypt_api_key, create_password_reset_request,
-    validate_reset_token, reset_password_with_token, admin_reset_password, validate_password
+    verify_password,
+    create_session,
+    get_user_from_session_id,
+    delete_session,
+    encrypt_api_key,
+    decrypt_api_key,
+    create_password_reset_request,
+    validate_reset_token,
+    reset_password_with_token,
+    admin_reset_password,
+    validate_password,
 )
 from archer.database.models import User, UserRole, APIKey
 
 
 templates = Jinja2Templates(directory="templates")
 
+# Data source display name mapping (used for detection titles and correlation displays)
+DATA_SOURCE_DISPLAY_NAMES = {
+    "aws cloudtrail": "AWS CloudTrail",
+    "aws guardduty": "AWS GuardDuty",
+    "aws_waf": "AWS WAF",
+    "azure activedirectory": "Entra ID",
+    "azure activitylog": "Azure",
+    "checkpoint_ips": "CheckPoint IPS",
+    "cisco_umbrella": "Cisco Umbrella",
+    "citrix_netscaler": "Citrix NetScaler",
+    "cloudflare_waf": "Cloudflare WAF",
+    "deviceevents": "DeviceEvents",
+    "devicefileevents": "DeviceFileEvents",
+    "deviceimageloadevents": "DeviceImageLoadEvents",
+    "devicenetworkevents": "DeviceNetworkEvents",
+    "deviceprocessevents": "DeviceProcessEvents",
+    "device_events": "DeviceEvents",
+    "device_file_events": "DeviceFileEvents",
+    "device_image_load_events": "DeviceImageLoadEvents",
+    "device_network_events": "DeviceNetworkEvents",
+    "device_process_events": "DeviceProcessEvents",
+    "gcp_audit": "GCP Audit Logs",
+    "imperva_waf": "Imperva WAF",
+    "incapsula_waf": "Incapsula WAF",
+    "mcafee epo": "McAfee ePO",
+    "mcafee_ips": "MacAfee IPS",
+    "mcafee_proxy": "McAfee Proxy",
+    "microsoft defender": "MDE",
+    "microsoft_defender": "MDE",
+    "edr_events": "MDE",
+    "mde": "MDE",
+    "microsoft windows": "Windows Event Logs",
+    "microsoft_cloudappsecurity": "MCAS",
+    "microsoft_o365": "M365",
+    "splunk": "Splunk",
+    "unix": "Unix",
+}
+
+
+def load_yaml_file(file_path: str) -> Optional[dict]:
+    """
+    Load and parse a YAML file safely.
+
+    Args:
+        file_path: Path to the YAML file
+
+    Returns:
+        Parsed YAML data as dictionary, or None if loading fails
+    """
+    try:
+        with open(file_path, 'r') as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"Failed to load YAML file {file_path}: {e}")
+        return None
+
+
+def extract_tables_indexes(query: str, vendor: str) -> list:
+    """
+    Extract table names (MDE) or index names (Splunk) from a correlation query.
+
+    Args:
+        query: The correlation query string
+        vendor: The platform (mde, splunk, etc.)
+
+    Returns:
+        List of unique table/index names
+    """
+    import re
+
+    tables_indexes = []
+
+    if vendor.lower() == 'mde':
+        # Extract MDE table names - pattern: TableName | where ...
+        # Common tables: DeviceProcessEvents, DeviceNetworkEvents, DeviceFileEvents, etc.
+        # Exclude column names like DeviceId, DeviceName
+        pattern = r'\b(Device\w+Events|Device\w+Info|Identity\w+Events|Identity\w+Info|Email\w+Events|CloudApp\w+|Alert\w+)\b'
+        matches = re.findall(pattern, query)
+
+        # Filter out common column names that aren't tables
+        column_names = {'DeviceId', 'DeviceName', 'DeviceType', 'IdentityName', 'EmailSender', 'EmailRecipient'}
+        tables_indexes = sorted([m for m in set(matches) if m not in column_names])
+
+    elif vendor.lower() == 'splunk':
+        # Extract Splunk index names - pattern: index=indexname or index="indexname"
+        pattern = r'index\s*=\s*["\']?([a-zA-Z0-9_\-]+)["\']?'
+        matches = re.findall(pattern, query, re.IGNORECASE)
+        tables_indexes = sorted(set(matches))
+
+    return tables_indexes
+
+
+def format_technique_name(name: str) -> str:
+    """
+    Format technique names by adding spaces to CamelCase names and fixing common issues.
+
+    Examples:
+        "CodeSigning" -> "Code Signing"
+        "MultiFactorAuthentication" -> "Multi-Factor Authentication"
+        "DatafromCloudStorage" -> "Data from Cloud Storage"
+        "Exfiltrationto Cloud Storage" -> "Exfiltration to Cloud Storage"
+        "TRUSTMODIFICATION" -> "Trust Modification"
+        "NTDS" -> "NTDS" (keep acronyms)
+        "Valid Accounts" -> "Valid Accounts" (already has spaces)
+
+    Args:
+        name: Technique name that may be in CamelCase
+
+    Returns:
+        Formatted technique name with spaces
+    """
+    if not name:
+        return name
+
+    # Keep short all-caps acronyms unchanged (like NTDS, LSASS, etc)
+    if name.isupper() and len(name) <= 5 and ' ' not in name:
+        return name
+
+    # Handle longer all-caps names (like "TRUSTMODIFICATION")
+    # Strategy: Use a simple English word list to detect boundaries
+    if name.isupper() and len(name) > 5:  # Process longer all-caps strings
+        # Common English words that might appear in technique names
+        common_words = [
+            'TRUST', 'MODIFICATION', 'DATA', 'ENCRYPTED', 'FOR', 'IMPACT',
+            'ACCESS', 'ACCOUNT', 'ADMIN', 'APPLICATION', 'AUTH', 'AUTHENTICATION',
+            'BACKUP', 'BOOT', 'BROWSER', 'CACHE', 'CERTIFICATE', 'CLOUD',
+            'CODE', 'COMMAND', 'COMMUNICATION', 'COMPROMISE', 'CONFIG', 'CONFIGURATION',
+            'CONTROL', 'CREDENTIAL', 'DEFENSE', 'DISCOVERY', 'DOMAIN',
+            'ELEVATION', 'ESCALATION', 'EVASION', 'EVENT', 'EXECUTION', 'EXPLOIT',
+            'FILE', 'FILTER', 'FIREWALL', 'GROUP', 'HIJACK', 'HOOK',
+            'INJECTION', 'LATERAL', 'LOG', 'LOGIN', 'MALWARE', 'MANAGEMENT',
+            'MEMORY', 'MOVEMENT', 'NETWORK', 'OBJECT', 'PASSWORD', 'PATH',
+            'PERMISSION', 'POLICY', 'PORT', 'PRIVILEGE', 'PROCESS', 'PROTOCOL',
+            'PROXY', 'REGISTRY', 'REMOTE', 'RESOURCE', 'ROOT', 'SCRIPT',
+            'SECURITY', 'SERVER', 'SERVICE', 'SESSION', 'SHELL', 'SOFTWARE',
+            'STORAGE', 'SYSTEM', 'TASK', 'TOKEN', 'USER', 'WEB', 'WINDOWS'
+        ]
+
+        # Try to split the all-caps string using word boundaries
+        words_found = []
+        remaining = name
+
+        while remaining:
+            found = False
+            # Try to match the longest possible word from the start
+            for word in sorted(common_words, key=len, reverse=True):
+                if remaining.startswith(word):
+                    words_found.append(word)
+                    remaining = remaining[len(word):]
+                    found = True
+                    break
+
+            # If no word matched, take the first character and continue
+            if not found:
+                if words_found:
+                    # Append to last word if it exists
+                    words_found[-1] += remaining[0]
+                else:
+                    words_found.append(remaining[0])
+                remaining = remaining[1:]
+
+        if len(words_found) > 1:
+            # Successfully split into multiple words
+            name = ' '.join(words_found).title()
+        else:
+            # Couldn't split - just title case it
+            name = name.title()
+
+    # If already has spaces, clean up extra spaces and fix known issues
+    if ' ' in name:
+        # Fix "Multi- Factor" -> "Multi-Factor"
+        result = re.sub(r'(\w+)-\s+(\w+)', r'\1-\2', name)
+        # Fix "Data Encryptedfor" -> "Data Encrypted for"
+        result = re.sub(r'([a-z])for\b', r'\1 for', result)
+        result = re.sub(r'([a-z])to\b', r'\1 to', result)
+        result = re.sub(r'([a-z])from\b', r'\1 from', result)
+        # Fix "N T D S" -> "NTDS"
+        result = re.sub(r'\b([A-Z])\s+([A-Z])\s+([A-Z])\s+([A-Z])\b', r'\1\2\3\4', result)
+        result = re.sub(r'\b([A-Z])\s+([A-Z])\s+([A-Z])\b', r'\1\2\3', result)
+        return result
+
+    # Insert space before uppercase letters (except at start)
+    result = re.sub(r'(?<!^)(?=[A-Z])', ' ', name)
+
+    # Special case: handle specific known lowercase words in the middle
+    # "Datafrom Cloud Storage" -> "Data from Cloud Storage"
+    # "Exfiltrationto Cloud Storage" -> "Exfiltration to Cloud Storage"
+    result = re.sub(r'([a-z])(from)(?=[A-Z\s]|$)', r'\1 \2', result)
+    result = re.sub(r'([a-z])(to)(?=[A-Z\s]|$)', r'\1 \2', result)
+    result = re.sub(r'([a-z])(for)(?=[A-Z\s]|$)', r'\1 \2', result)
+
+    # Fix hyphenated words: "Multi Factor" -> "Multi-Factor"
+    result = re.sub(r'\bMulti\s+Factor\b', 'Multi-Factor', result)
+    result = re.sub(r'\bTwo\s+Factor\b', 'Two-Factor', result)
+
+    return result
+
+
+def get_platform_from_data_source(data_source: str) -> str:
+    """
+    Map a data source to its platform/vendor.
+
+    Examples:
+        "microsoft_defender" -> "MDE"
+        "azure_activitylog" -> "Azure"
+        "aws_cloudtrail" -> "AWS"
+        "microsoft_windows" -> "Windows"
+
+    Args:
+        data_source: The data source identifier (e.g., "azure_activitylog")
+
+    Returns:
+        The platform/vendor name (e.g., "Azure")
+    """
+    data_source_lower = data_source.lower()
+
+    # Check for specific platform patterns
+    if "microsoft_defender" in data_source_lower or "device" in data_source_lower:
+        return "MDE"
+    elif "azure" in data_source_lower:
+        return "Azure"
+    elif "aws" in data_source_lower:
+        return "AWS"
+    elif "microsoft_windows" in data_source_lower or "windows" in data_source_lower:
+        return "Windows"
+    elif "microsoft_365" in data_source_lower or "office365" in data_source_lower:
+        return "Microsoft 365"
+    elif "gcp" in data_source_lower or "google" in data_source_lower:
+        return "GCP"
+    elif "okta" in data_source_lower:
+        return "Okta"
+    elif "crowdstrike" in data_source_lower:
+        return "CrowdStrike"
+    elif "sentinel" in data_source_lower:
+        return "Sentinel"
+    elif "mcafee" in data_source_lower:
+        return "McAfee"
+    else:
+        # Default: title case the data source
+        return DATA_SOURCE_DISPLAY_NAMES.get(data_source_lower, data_source.replace("_", " ").title())
+
+
+def markdown_links_to_html(text):
+    """
+    Convert markdown links to HTML anchor tags.
+    Example: [C0027](https://attack.mitre.org/campaigns/C0027) -> <a href="https://attack.mitre.org/campaigns/C0027" target="_blank">C0027</a>
+    """
+    pattern = r"\[([^\]]+)\]\(([^)]+)\)"
+    return re.sub(pattern, r'<a href="\2" target="_blank">\1</a>', text)
+
+
+def markdown_links_to_plain(text):
+    """
+    Remove markdown link syntax, keeping only the link text.
+    Example: [C0027](https://attack.mitre.org/campaigns/C0027) -> C0027
+    """
+    pattern = r"\[([^\]]+)\]\([^)]+\)"
+    return re.sub(pattern, r"\1", text)
+
+
+def check_osint_enriched(yaml_file):
+    """
+    Check if a YAML file has OSINT enrichment metadata.
+    Returns tuple: (is_enriched: bool, osint_data: dict)
+    """
+    try:
+        with open(yaml_file, "r") as f:
+            content = f.read()
+            # Check for osint_enriched flag
+            if "osint_enriched: true" in content:
+                osint_data = {}
+                # Extract enrichment date
+                date_match = re.search(r"enrichment_date:\s*(.+)", content)
+                if date_match:
+                    osint_data["enrichment_date"] = date_match.group(1).strip()
+                # Extract sources
+                sources = []
+                in_sources = False
+                for line in content.split("\n"):
+                    if "osint_sources:" in line:
+                        in_sources = True
+                        continue
+                    if in_sources:
+                        if line.strip().startswith("- "):
+                            sources.append(line.strip()[2:])
+                        elif not line.strip().startswith(" ") and line.strip():
+                            break
+                if sources:
+                    osint_data["sources"] = sources
+                return True, osint_data
+    except Exception as e:
+        logger.error(f"Error checking OSINT enrichment in {yaml_file}: {e}")
+    return False, {}
+
+
+def extract_indicators_from_query(yaml_file):
+    """
+    Extract key indicators from the YAML query field to display as backtick-wrapped indicators.
+    Returns a list of unique indicators found in the query.
+    """
+    indicators = []
+    try:
+        with open(yaml_file, "r") as f:
+            lines = f.readlines()
+            in_query = False
+            query_lines = []
+
+            for line in lines:
+                # Found query field
+                if line.strip().startswith("query:"):
+                    content = line.split(":", 1)[1].strip()
+                    if content in ("|", ">"):
+                        in_query = True
+                        continue
+                    elif content:
+                        query_lines.append(content)
+                        break
+                # Collect query content
+                elif in_query:
+                    # Stop if we hit a non-indented line
+                    if line.strip() and not line.startswith(" ") and not line.startswith("\t"):
+                        break
+                    if line.strip():
+                        query_lines.append(line.strip())
+
+            query_text = " ".join(query_lines)
+
+            # Extract common indicator patterns
+            # Specific file names (e.g., NTDS.dit, SAM, SYSTEM, lsass.exe)
+            important_files = re.findall(
+                r"\b([A-Z][A-Za-z0-9_]*\.(?:dit|exe|dll|bat|ps1|vbs|js|jar|sh|py|dmp|log))\b",
+                query_text,
+            )
+            indicators.extend(important_files)
+
+            # Process names (e.g., cmd.exe, powershell.exe, rundll32.exe)
+            process_pattern = r"\b(\w+\.(?:exe|dll|bat|ps1|vbs|js|jar|sh|py))\b"
+            processes = re.findall(process_pattern, query_text, re.IGNORECASE)
+            indicators.extend(processes)
+
+            # Windows paths with environment variables (e.g., %SystemRoot%\NTDS\Ntds.dit)
+            env_path_pattern = r'(%[A-Za-z]+%\\[^\s"\',)]+)'
+            env_paths = re.findall(env_path_pattern, query_text)
+            indicators.extend(env_paths)
+
+            # Cloud API operations (e.g., CreatePolicyVersion, AttachUserPolicy, PutBucketPolicy)
+            # Match patterns like *CreatePolicyVersion* or "CreatePolicyVersion"
+            api_pattern = r'["\*]([A-Z][a-zA-Z]+(?:Policy|Role|User|Group|Bucket|Key|Access|Permission|Instance|Volume|Secret|Token|Session|Account|Identity|Resource|Credential)[A-Za-z]*)["\*]'
+            api_calls = re.findall(api_pattern, query_text)
+            indicators.extend(api_calls)
+
+            # AWS/Azure/GCP operations - broader pattern for CamelCase API calls
+            cloud_ops_pattern = r'["\*]([A-Z][a-z]+[A-Z][a-zA-Z]+)["\*]'
+            cloud_ops = re.findall(cloud_ops_pattern, query_text)
+            for op in cloud_ops:
+                if len(op) > 4 and op not in indicators:
+                    indicators.append(op)
+
+            # Cloud service commands (e.g., Connect-AZAccount, Connect-MgGraph, gcloud)
+            # Match PowerShell cmdlets and CLI commands
+            cloud_cmd_pattern = r'["\*]+(Connect-[A-Z][A-Za-z]+|Set-[A-Z][A-Za-z]+|Get-[A-Z][A-Za-z]+|New-[A-Z][A-Za-z]+|Remove-[A-Z][A-Za-z]+|gcloud|aws\s+[a-z]+|az\s+[a-z]+)["\*]+'
+            cloud_cmds = re.findall(cloud_cmd_pattern, query_text)
+            indicators.extend(cloud_cmds)
+
+            # ActionType values (common in MDE queries)
+            action_pattern = r'ActionType\s*(?:==|=~|has|contains)\s*["\']([^"\']+)["\']'
+            actions = re.findall(action_pattern, query_text, re.IGNORECASE)
+            indicators.extend(actions)
+
+            # Command-line flags and switches (e.g., -enc, -encodedcommand, /c)
+            flag_pattern = r"(?:^|\s)([-/]\w+)\b"
+            flags = re.findall(flag_pattern, query_text)
+            indicators.extend(flags)
+
+            # Registry keys (e.g., HKLM\Software\...)
+            registry_pattern = r'(HK[A-Z_]+\\[^\s"\']+)'
+            registry = re.findall(registry_pattern, query_text, re.IGNORECASE)
+            indicators.extend(registry)
+
+            # File paths (e.g., C:\Windows\Temp\...)
+            path_pattern = r'([A-Z]:\\[^\s"\',)]+)'
+            paths = re.findall(path_pattern, query_text)
+            indicators.extend(paths)
+
+            # Event IDs (e.g., EventID 4624, EventCode=4688)
+            event_pattern = r"\b(?:EventID|EventCode|event_id)[=\s]+(\d{4,5})\b"
+            events = re.findall(event_pattern, query_text, re.IGNORECASE)
+            for event in events:
+                indicators.append(f"EventID {event}")
+
+            # has_any, contains, or other query operators with values
+            has_any_pattern = r'has_any\s*\(["\']([^"\']+)["\']'
+            has_any_vals = re.findall(has_any_pattern, query_text, re.IGNORECASE)
+            indicators.extend(has_any_vals)
+
+            # Splunk field comparisons with wildcards (e.g., file_name="*AADInternals*", service="*Pacu*")
+            # Matches patterns like field="*Value*" or field="Value"
+            splunk_field_pattern = r'\w+\s*=\s*["\*]+([A-Z][A-Za-z0-9]+)["\*]+'
+            splunk_fields = re.findall(splunk_field_pattern, query_text)
+            for field_val in splunk_fields:
+                # Only include if it looks like a tool/software name (CamelCase or all caps, length > 3)
+                if len(field_val) > 3 and (field_val[0].isupper() or field_val.isupper()):
+                    indicators.append(field_val)
+
+            # Common suspicious strings (base64, encoded, etc.)
+            suspicious_patterns = [
+                r"\b(base64)\b",
+                r"\b(encoded)\b",
+                r"\b(invoke-expression)\b",
+                r"\b(downloadstring)\b",
+                r"\b(webclient)\b",
+                r"\b(credential)\b",
+                r"\b(password)\b",
+            ]
+            for pattern in suspicious_patterns:
+                matches = re.findall(pattern, query_text, re.IGNORECASE)
+                indicators.extend(matches)
+
+            # Remove duplicates while preserving order, limit to first 10
+            # Also filter out overly generic terms and invalid indicators
+            seen = set()
+            unique_indicators = []
+
+            # Generic terms that are too common to be useful indicators
+            generic_terms = {
+                'condition', 'conditions', 'value', 'values', 'data', 'file',
+                'process', 'command', 'user', 'system', 'event', 'log', 'entry',
+                'action', 'type', 'name', 'path', 'string', 'text', 'info'
+            }
+
+            for item in indicators:
+                item_str = str(item).strip()
+                item_lower = item_str.lower()
+
+                # Skip if empty or too short
+                if len(item_str) < 3:
+                    continue
+
+                # Skip indicators that start with "index:"
+                if item_lower.startswith("index:"):
+                    continue
+
+                # Skip overly generic single words
+                if item_lower in generic_terms:
+                    continue
+
+                # Skip if already seen
+                if item_lower in seen:
+                    continue
+
+                # Add to unique list (max 10)
+                if len(unique_indicators) < 10:
+                    seen.add(item_lower)
+                    unique_indicators.append(item_str)
+
+            return unique_indicators
+    except:
+        return []
+
+
 app = FastAPI(title="Archer Threat Hunting Service")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 # Favicon route - ensure favicon is served from root with no-cache headers
 @app.get("/favicon.ico", include_in_schema=False)
@@ -60,14 +542,10 @@ async def favicon():
             headers={
                 "Cache-Control": "no-cache, no-store, must-revalidate",
                 "Pragma": "no-cache",
-                "Expires": "0"
-            }
+                "Expires": "0",
+            },
         )
     return HTMLResponse(status_code=404)
-
-# Resetting latest.yaml to blank on startup
-with open(os.path.join("data", "generate", "latest.yaml"), "w") as latest_yaml:
-    latest_yaml.write("")
 
 
 # Cache-busting token for static assets
@@ -86,7 +564,7 @@ def cleanup_old_drafts():
     drafts directory doesn't exist we simply return. Any exceptions are
     caught and ignored because cleanup is non-fatal.
     """
-    drafts_dir = os.path.join("data", "drafts")
+    drafts_dir = DRAFTS_DIR
     if not os.path.exists(drafts_dir):
         return
     try:
@@ -217,10 +695,7 @@ def how_it_works(request: Request, archer_session: Optional[str] = Cookie(None))
 
     return templates.TemplateResponse(
         "how_it_works.html",
-        {
-            "request": request,
-            "user": user
-        },
+        {"request": request, "user": user},
     )
 
 
@@ -270,8 +745,11 @@ async def generate(
             try:
                 # Use the modified wrapper instead of direct process_group
                 modified_process_group_wrapper(
-                    group_name, hypothesis, manual_data=None, genai_mode=genai_mode,
-                    run_correlation=(run_correlation == "true")
+                    group_name,
+                    hypothesis,
+                    manual_data=None,
+                    genai_mode=genai_mode,
+                    run_correlation=(run_correlation == "true"),
                 )
 
                 # Run emulation if requested
@@ -305,10 +783,7 @@ async def generate(
 
                         if VECTRConfig.is_configured():
                             campaign_name = vectr_campaign_name if vectr_campaign_name else None
-                            export_to_vectr(
-                                threat_group=group_name,
-                                campaign_name=campaign_name
-                            )
+                            export_to_vectr(threat_group=group_name, campaign_name=campaign_name)
                     except Exception as e:
                         print(f"VECTR export error: {e}")
 
@@ -322,12 +797,13 @@ async def generate(
         # Initialize a progress file so the front-end has something to poll
         try:
             write_progress(
-                group_name, {
+                group_name,
+                {
                     "status": "started",
                     "stage": "queued",
                     "created_yaml": 0,
-                    "cross_vendor_enabled": (cross_vendor_correlation == "true")
-                }
+                    "cross_vendor_enabled": (cross_vendor_correlation == "true"),
+                },
             )
         except Exception:
             pass
@@ -338,17 +814,22 @@ async def generate(
 
         try:
             from archer.parsers.blog_analyzer import auto_search_blogs
+
             blog_result = auto_search_blogs(group_name)
 
             if blog_result.get("success"):
                 # Found blog post - redirect to manual entry with pre-filled data
-                print(f"Found blog post from {blog_result.get('source')}: {blog_result.get('source_url')}")
+                print(
+                    f"Found blog post from {blog_result.get('source')}: {blog_result.get('source_url')}"
+                )
 
                 # Store blog results in session or pass as query params
                 # For now, redirect to manual with a message
-                return JSONResponse({
-                    "redirect_url": f"/manual?group_name={group_name}&blog_found=true&source={blog_result.get('source', '')}"
-                })
+                return JSONResponse(
+                    {
+                        "redirect_url": f"/manual?group_name={group_name}&blog_found=true&source={blog_result.get('source', '')}"
+                    }
+                )
         except Exception as e:
             print(f"Blog search failed: {e}")
 
@@ -365,7 +846,7 @@ async def generate_cve(
     advanced_parsing: str = Form(None),
     ai_generators: str = Form(None),
     local_llm: str = Form(None),
-    archer_session: Optional[str] = Cookie(None)
+    archer_session: Optional[str] = Cookie(None),
 ):
     """Generate detection queries for CVE(s)."""
     import re
@@ -381,19 +862,22 @@ async def generate_cve(
     db.close()  # Close the DB session as we'll be using threading
 
     # Support multiple CVEs (comma-separated)
-    cve_ids = [c.strip().upper() for c in cve_id.split(',') if c.strip()]
+    cve_ids = [c.strip().upper() for c in cve_id.split(",") if c.strip()]
 
     if not cve_ids:
         return JSONResponse({"error": "No CVE IDs provided"}, status_code=400)
 
     # Validate CVE format: CVE-20XX-NNNN (must start with CVE-20, year 2000+)
-    cve_pattern = re.compile(r'^CVE-20\d{2}-\d{4,}$', re.IGNORECASE)
+    cve_pattern = re.compile(r"^CVE-20\d{2}-\d{4,}$", re.IGNORECASE)
     invalid_cves = [cve for cve in cve_ids if not cve_pattern.match(cve)]
 
     if invalid_cves:
-        return JSONResponse({
-            "error": f"Invalid CVE format: {', '.join(invalid_cves)}. CVE IDs must follow format: CVE-20XX-NNNN (e.g., CVE-2021-44228)"
-        }, status_code=400)
+        return JSONResponse(
+            {
+                "error": f"Invalid CVE format: {', '.join(invalid_cves)}. CVE IDs must follow format: CVE-20XX-NNNN (e.g., CVE-2021-44228)"
+            },
+            status_code=400,
+        )
 
     # Use CVE ID directly as group name (no CVE_ prefix since it already starts with CVE-)
     if len(cve_ids) == 1:
@@ -420,16 +904,27 @@ async def generate_cve(
             print(f"CVE IDs: {cve_ids}", flush=True)
             print(f"========================================", flush=True)
 
-            write_progress(group_name, {
-                "status": "researching_cve",
-                "stage": "CVE Research",
-                "created_yaml": 0,
-                "total_yaml": len(cve_ids)
-            })
+            write_progress(
+                group_name,
+                {
+                    "status": "researching_cve",
+                    "stage": "CVE Research",
+                    "created_yaml": 0,
+                    "total_yaml": len(cve_ids),
+                },
+            )
 
             # Research each CVE
             all_techniques = []
-            all_iocs = {"cmd": [], "file": [], "reg": [], "network": [], "hash": [], "ip": [], "domain": []}
+            all_iocs = {
+                "cmd": [],
+                "file": [],
+                "reg": [],
+                "network": [],
+                "hash": [],
+                "ip": [],
+                "domain": [],
+            }
 
             for cve in cve_ids:
                 print(f"Researching {cve}...")
@@ -455,7 +950,9 @@ async def generate_cve(
             ioc_guidance = []
             for ioc_type, values in all_iocs.items():
                 if values:
-                    ioc_guidance.append(f"{ioc_type}: {', '.join(values[:5])}")  # Limit to 5 per type
+                    ioc_guidance.append(
+                        f"{ioc_type}: {', '.join(values[:5])}"
+                    )  # Limit to 5 per type
             ioc_detect_guidance = "; ".join(ioc_guidance) if ioc_guidance else ""
 
             # CVE-based detection generation strategy:
@@ -479,7 +976,7 @@ async def generate_cve(
             for tech_id in all_techniques:
                 try:
                     # Check if this is an ATT&CK technique ID or synthetic CVE technique
-                    if tech_id.startswith("T") and tech_id[1:].split('.')[0].isdigit():
+                    if tech_id.startswith("T") and tech_id[1:].split(".")[0].isdigit():
                         # Real ATT&CK technique - try to get info
                         print(f"DEBUG: Getting ATT&CK info for {tech_id}")
                         tech_info = _get_technique_info(tech_id)
@@ -510,19 +1007,21 @@ async def generate_cve(
                     if ioc_details:
                         comprehensive_guidance += "Key indicators: " + "; ".join(ioc_details)
                     else:
-                        comprehensive_guidance += "Monitor for CVE-specific indicators and exploit patterns."
+                        comprehensive_guidance += (
+                            "Monitor for CVE-specific indicators and exploit patterns."
+                        )
 
                     # Build IOC dictionary for detection engine
                     # The detection engine expects types: cmd, reg, evt, sw, network
                     # Map CVE IOC types to detection engine types
                     ioc_type_mapping = {
-                        "cmd": "cmd",          # Commands stay as cmd
-                        "file": "sw",          # Files map to software
+                        "cmd": "cmd",  # Commands stay as cmd
+                        "file": "sw",  # Files map to software
                         "network": "network",  # Network protocols (ldap://, rmi://, ldaps://) get network category
-                        "reg": "reg",          # Registry stays as reg
-                        "hash": "sw",          # Hashes map to software
-                        "ip": "network",       # IPs map to network
-                        "domain": "network"    # Domains map to network
+                        "reg": "reg",  # Registry stays as reg
+                        "hash": "sw",  # Hashes map to software
+                        "ip": "network",  # IPs map to network
+                        "domain": "network",  # Domains map to network
                     }
 
                     ioc_dict = {}
@@ -532,7 +1031,9 @@ async def generate_cve(
                             # Merge into existing mapped type or create new
                             if mapped_type not in ioc_dict:
                                 ioc_dict[mapped_type] = []
-                            ioc_dict[mapped_type].extend(values[:10])  # Limit to 10 per original type
+                            ioc_dict[mapped_type].extend(
+                                values[:10]
+                            )  # Limit to 10 per original type
 
                             # Network protocols (ldap://, rmi://, ldaps://) also go into cmd category
                             # since they appear in commands like ${jndi:ldap://attacker.com}
@@ -545,7 +1046,9 @@ async def generate_cve(
                     print(f"DEBUG [app.py]: Built ioc_dict for {tech_id}:")
                     print(f"  - ioc_dict keys: {list(ioc_dict.keys())}")
                     for key, vals in ioc_dict.items():
-                        print(f"  - {key}: type={type(vals)}, count={len(vals) if isinstance(vals, list) else 'N/A'}")
+                        print(
+                            f"  - {key}: type={type(vals)}, count={len(vals) if isinstance(vals, list) else 'N/A'}"
+                        )
 
                     # Get platforms for this technique (required for platform validation)
                     tech_platforms = []
@@ -561,36 +1064,42 @@ async def generate_cve(
                     if not tech_platforms:
                         tech_platforms = ["Windows", "Linux", "macOS", "Containers"]
 
-                    tactic_map[tactic].append({
-                        "technique": tech_id,
-                        "op_guidance": ioc_dict if ioc_dict else comprehensive_guidance,
-                        "red_tool": {},
-                        "detect_guidance": ioc_detect_guidance if ioc_detect_guidance else comprehensive_guidance,
-                        "iocs": all_iocs,  # Pass full IOCs for reference
-                        "procedure_platforms": tech_platforms,  # CRITICAL: Add platforms for validation
-                        "software_platforms": {}  # Empty dict for software (not used in CVE detection)
-                    })
+                    tactic_map[tactic].append(
+                        {
+                            "technique": tech_id,
+                            "op_guidance": ioc_dict if ioc_dict else comprehensive_guidance,
+                            "red_tool": {},
+                            "detect_guidance": (
+                                ioc_detect_guidance
+                                if ioc_detect_guidance
+                                else comprehensive_guidance
+                            ),
+                            "iocs": all_iocs,  # Pass full IOCs for reference
+                            "procedure_platforms": tech_platforms,  # CRITICAL: Add platforms for validation
+                            "software_platforms": {},  # Empty dict for software (not used in CVE detection)
+                        }
+                    )
                 except Exception as e:
                     print(f"Warning: Could not process technique {tech_id}: {e}")
                     import traceback
+
                     traceback.print_exc()
                     # Add to CVE Exploitation tactic
                     if "CVE Exploitation" not in tactic_map:
                         tactic_map["CVE Exploitation"] = []
-                    tactic_map["CVE Exploitation"].append({
-                        "technique": tech_id,
-                        "op_guidance": f"Exploitation of {', '.join(cve_ids)}",
-                        "red_tool": "",
-                        "detect_guidance": ioc_detect_guidance
-                    })
+                    tactic_map["CVE Exploitation"].append(
+                        {
+                            "technique": tech_id,
+                            "op_guidance": f"Exploitation of {', '.join(cve_ids)}",
+                            "red_tool": "",
+                            "detect_guidance": ioc_detect_guidance,
+                        }
+                    )
 
             # Build manual_data in the format process_group expects
             manual_data = []
             for tactic, techniques in tactic_map.items():
-                manual_data.append({
-                    "tactic": tactic,
-                    "techniques": techniques
-                })
+                manual_data.append({"tactic": tactic, "techniques": techniques})
 
             print(f"DEBUG: Built manual_data with {len(manual_data)} tactics")
             for entry in manual_data:
@@ -609,14 +1118,16 @@ async def generate_cve(
                 hypothesis=f"CVE Hunting: {', '.join(cve_ids)}",
                 manual_data=manual_data,
                 genai_mode=genai_mode,
-                run_correlation=(run_correlation == "true")
+                run_correlation=(run_correlation == "true"),
             )
 
         except Exception as e:
             print(f"CVE generation error: {e}", flush=True)
             import traceback
+
             traceback.print_exc()
             import sys
+
             sys.stderr.flush()
             sys.stdout.flush()
             try:
@@ -628,14 +1139,17 @@ async def generate_cve(
 
     # Initialize progress
     try:
-        write_progress(group_name, {
-            "status": "started",
-            "stage": "CVE Research",
-            "created_yaml": 0,
-            "cve_ids": cve_ids,
-            "user_id": user_id,
-            "source_type": "cve"
-        })
+        write_progress(
+            group_name,
+            {
+                "status": "started",
+                "stage": "CVE Research",
+                "created_yaml": 0,
+                "cve_ids": cve_ids,
+                "user_id": user_id,
+                "source_type": "cve",
+            },
+        )
     except Exception:
         pass
 
@@ -644,7 +1158,9 @@ async def generate_cve(
 
 # Progress page endpoint
 @app.get("/progress", response_class=HTMLResponse)
-async def progress(request: Request, group_name: str = "", archer_session: Optional[str] = Cookie(None)):
+async def progress(
+    request: Request, group_name: str = "", archer_session: Optional[str] = Cookie(None)
+):
     # Simple progress page shown while the orchestrator runs. Currently
     # the template only needs the request and the group_name to display.
 
@@ -658,16 +1174,11 @@ async def progress(request: Request, group_name: str = "", archer_session: Optio
             db.close()
 
     # Detect if this is a CVE hunt to set initial page state
-    is_cve_hunt = group_name and (group_name.upper().startswith('CVE-'))
+    is_cve_hunt = group_name and (group_name.upper().startswith("CVE-"))
 
     return templates.TemplateResponse(
         "progress.html",
-        {
-            "request": request,
-            "user": user,
-            "group_name": group_name,
-            "is_cve_hunt": is_cve_hunt
-        },
+        {"request": request, "user": user, "group_name": group_name, "is_cve_hunt": is_cve_hunt},
     )
 
 
@@ -708,10 +1219,8 @@ async def save_draft(request: Request):
     if user_id:
         header_uid = request.headers.get("X-USER-ID")
         if not header_uid or header_uid != str(user_id):
-            return JSONResponse(
-                {"ok": False, "error": "user_id header mismatch"}, status_code=403
-            )
-    drafts_dir = os.path.join("data", "drafts")
+            return JSONResponse({"ok": False, "error": "user_id header mismatch"}, status_code=403)
+    drafts_dir = DRAFTS_DIR
     if user_id:
         user_dir = os.path.join(drafts_dir, "users", user_id)
         os.makedirs(user_dir, exist_ok=True)
@@ -731,7 +1240,7 @@ async def load_draft(draft_id: str = "", user_id: str = ""):
 
     # If user_id provided, only look under that user's drafts
     if user_id:
-        user_path = os.path.join("data", "drafts", "users", user_id, f"{draft_id}.json")
+        user_path = os.path.join(DRAFTS_DIR, "users", user_id, f"{draft_id}.json")
         if not os.path.exists(user_path):
             # not found or access denied
             return JSONResponse({"ok": False, "entries": []}, status_code=403)
@@ -743,7 +1252,7 @@ async def load_draft(draft_id: str = "", user_id: str = ""):
             return JSONResponse({"ok": False}, status_code=500)
 
     # No user_id: only allow top-level drafts
-    path = os.path.join("data", "drafts", f"{draft_id}.json")
+    path = os.path.join(DRAFTS_DIR, f"{draft_id}.json")
     if not os.path.exists(path):
         return JSONResponse({"ok": True, "entries": []})
     try:
@@ -846,7 +1355,7 @@ async def manual_submit(
 
     # Persist draft to data/drafts/{group_name}.json for auditing/debugging
     try:
-        drafts_dir = os.path.join("data", "drafts")
+        drafts_dir = DRAFTS_DIR
         os.makedirs(drafts_dir, exist_ok=True)
         draft_path = os.path.join(drafts_dir, f"{group_name}.json")
         with open(draft_path, "w", encoding="utf-8") as fh:
@@ -869,7 +1378,11 @@ async def manual_submit(
             # Use the modified wrapper instead of direct process_group
             # Note: manual submissions don't currently pass genai_mode or run_correlation from UI
             modified_process_group_wrapper(
-                group_name, hypothesis, manual_data=manual_data, genai_mode=None, run_correlation=False
+                group_name,
+                hypothesis,
+                manual_data=manual_data,
+                genai_mode=None,
+                run_correlation=False,
             )
         except Exception:
             try:
@@ -879,9 +1392,7 @@ async def manual_submit(
 
     threading.Thread(target=_bg_manual, daemon=True).start()
     try:
-        write_progress(
-            group_name, {"status": "started", "stage": "queued", "created_yaml": 0}
-        )
+        write_progress(group_name, {"status": "started", "stage": "queued", "created_yaml": 0})
     except Exception:
         pass
 
@@ -890,68 +1401,19 @@ async def manual_submit(
 
 
 @app.get("/progress_status")
-async def progress_status(group_name: str = "", include_latest_file: bool = False):
+async def progress_status(group_name: str = ""):
     # Return the JSON progress status for the given group_name so the
     # front-end can poll and update progress bars.
     if not group_name:
-        return JSONResponse(
-            {"ok": False, "error": "group_name required"}, status_code=400
-        )
+        return JSONResponse({"ok": False, "error": "group_name required"}, status_code=400)
     data = read_progress(group_name)
     response = {"ok": True, "progress": data}
-
-    # Add latest file info if requested
-    if include_latest_file:
-        try:
-            latest_yaml_path = os.path.join("data", "generate", "latest.yaml")
-            if os.path.exists(latest_yaml_path):
-                with open(latest_yaml_path, "r") as file:
-                    latest_file = file.read().strip()
-
-                    # Format the path for cleaner display
-                    # 1. Extract just the filename if it's a full path
-                    if os.path.sep in latest_file:
-                        filename = os.path.basename(latest_file)
-                    else:
-                        filename = latest_file
-
-                    # 2. Remove any path prefixes like "data/generate/"
-                    filename = filename.replace("data/generate/", "")
-
-                    # 3. Format the display name like "DirectVolumeAccess (aws guardduty)"
-                    name_parts = os.path.splitext(filename)[0].split("_")
-                    if len(name_parts) > 1:
-                        # Assume format like "ActionName_platform.yaml"
-                        action_name = name_parts[0]
-                        platform = "_".join(name_parts[1:])  # Define platform variable
-
-                        # Convert CamelCase to spaced words if needed
-                        action_display = action_name  # Define action_display variable
-
-                        # Format platform - typically lowercase with spaces
-                        platform_display = platform.replace("_", " ")
-
-                        pretty_name = f"{action_display} ({platform_display})"
-                    else:
-                        # If no underscore, just use the filename without extension
-                        pretty_name = os.path.splitext(filename)[0]
-
-                    response["latest_file"] = latest_file  # Original path for reference
-                    response["latest_filename"] = filename  # Just the filename
-                    response["latest_file_pretty"] = (
-                        pretty_name  # Formatted display name
-                    )
-            else:
-                print(f"Latest YAML file not found at {latest_yaml_path}")
-        except Exception as e:
-            print(f"Error reading latest.yaml: {e}")
-
     return JSONResponse(response)
 
 
 @app.get("/correlations/{group_name}.json")
 async def correlations_json(group_name: str):
-    path = os.path.join("data", "correlate", f"{group_name}.json")
+    path = os.path.join(CORRELATE_DIR, f"{group_name}.json")
     if not os.path.exists(path):
         return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
     try:
@@ -964,7 +1426,7 @@ async def correlations_json(group_name: str):
 
 @app.get("/list_drafts")
 async def list_drafts(user_id: str = ""):
-    drafts_dir = os.path.join("data", "drafts")
+    drafts_dir = DRAFTS_DIR
     results = []
     if user_id:
         user_dir = os.path.join(drafts_dir, "users", user_id)
@@ -1091,9 +1553,7 @@ def start_genai_processing(group_name):
                         # Alternative entry point for GenAI processing
                         genai_module.process(group_name)
                     else:
-                        print(
-                            f"Warning: GenAI module loaded but no process function found"
-                        )
+                        print(f"Warning: GenAI module loaded but no process function found")
                         # Update progress to show GenAI is complete (fallback)
                         progress_data = read_progress(group_name) or {}
                         progress_data["status"] = "genai_complete"
@@ -1138,7 +1598,7 @@ def modified_process_group_wrapper(
             output_dir=None,
             hypothesis=hypothesis,
             manual_data=manual_data,
-            run_correlation=run_correlation
+            run_correlation=run_correlation,
         )
 
         print(f"DEBUG: process_group completed successfully")
@@ -1154,10 +1614,11 @@ def modified_process_group_wrapper(
 
                     # Count correlations from the JSON file
                     correlation_count = 0
-                    correlation_file = os.path.join("data", "correlate", f"{group_name}.json")
+                    correlation_file = os.path.join(CORRELATE_DIR, f"{group_name}.json")
                     if os.path.exists(correlation_file):
                         import json
-                        with open(correlation_file, 'r') as f:
+
+                        with open(correlation_file, "r") as f:
                             correlations = json.load(f)
                             correlation_count = len(correlations.get("correlations", []))
 
@@ -1180,11 +1641,24 @@ def modified_process_group_wrapper(
                             "detection_count": detection_count,
                             "correlation_count": correlation_count,
                             "group_name": group_name,
-                            "source_type": source_type
-                        }
+                            "source_type": source_type,
+                        },
                     )
                 except Exception as log_error:
                     print(f"Error logging correlation activity: {log_error}")
+
+            # Mark as complete (IMPORTANT: Set status to "complete" for correlations too)
+            progress_data = read_progress(group_name) or {}
+            if "total_yaml" in progress_data:
+                progress_data["created_yaml"] = progress_data["total_yaml"]
+            else:
+                progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
+                progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
+
+            progress_data["status"] = "complete"
+            print(f"✅ Setting progress status to 'complete' for {group_name} (correlations finished)")
+            print(f"   Progress data: created_yaml={progress_data.get('created_yaml')}, total_yaml={progress_data.get('total_yaml')}, processed={progress_data.get('processed')}, total_pairs={progress_data.get('total_pairs')}")
+            write_progress(group_name, progress_data)
             return
 
         # Otherwise, just mark as complete
@@ -1222,8 +1696,8 @@ def modified_process_group_wrapper(
                     metadata={
                         "detection_count": detection_count,
                         "group_name": group_name,
-                        "source_type": source_type
-                    }
+                        "source_type": source_type,
+                    },
                 )
             except Exception as log_error:
                 print(f"Error logging activity: {log_error}")
@@ -1241,9 +1715,7 @@ def modified_process_group_wrapper(
 async def complete_yaml(request: Request, group_name: str = ""):
     """Handle explicit completion signal from frontend when YAML progress reaches 100%."""
     if not group_name:
-        return JSONResponse(
-            {"ok": False, "error": "group_name required"}, status_code=400
-        )
+        return JSONResponse({"ok": False, "error": "group_name required"}, status_code=400)
 
     # Fetch current progress
     progress_data = read_progress(group_name) or {}
@@ -1268,11 +1740,10 @@ async def complete_yaml(request: Request, group_name: str = ""):
 
         # Start GenAI processing in a background thread
         try:
+
             def _bg_genai():
                 try:
-                    print(
-                        f"Starting GenAI correlation for {group_name} in background thread"
-                    )
+                    print(f"Starting GenAI correlation for {group_name} in background thread")
                     process_genai(group_name)
                     print(f"GenAI correlation for {group_name} completed")
                 except Exception as e:
@@ -1300,7 +1771,7 @@ async def upload_file(
     use_openai: str = Form(None),
     auto_generate: str = Form(None),
     run_correlation: str = Form(None),
-    archer_session: Optional[str] = Cookie(None)
+    archer_session: Optional[str] = Cookie(None),
 ):
     """
     Handle file upload for TTP/IOC extraction.
@@ -1323,34 +1794,51 @@ async def upload_file(
         import re
 
         if not file.filename:
-            return JSONResponse({
-                "success": False,
-                "error": "No filename provided"
-            }, status_code=400)
+            return JSONResponse(
+                {"success": False, "error": "No filename provided"}, status_code=400
+            )
 
         # Sanitize filename - remove path components and dangerous characters
         safe_filename = os.path.basename(file.filename)
-        safe_filename = re.sub(r'[^\w\s\-\.]', '_', safe_filename)
+        safe_filename = re.sub(r"[^\w\s\-\.]", "_", safe_filename)
 
         # Check file extension whitelist
-        allowed_extensions = {'.pdf', '.txt', '.md', '.json', '.csv', '.xlsx', '.xls', '.docx', '.doc', '.yar', '.yara'}
+        allowed_extensions = {
+            ".pdf",
+            ".txt",
+            ".md",
+            ".json",
+            ".csv",
+            ".xlsx",
+            ".xls",
+            ".docx",
+            ".doc",
+            ".yar",
+            ".yara",
+        }
         file_ext = os.path.splitext(safe_filename)[1].lower()
 
         if file_ext not in allowed_extensions:
-            return JSONResponse({
-                "success": False,
-                "error": f"File type '{file_ext}' not allowed. Allowed types: {', '.join(allowed_extensions)}"
-            }, status_code=400)
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": f"File type '{file_ext}' not allowed. Allowed types: {', '.join(allowed_extensions)}",
+                },
+                status_code=400,
+            )
 
         # SECURITY: Limit file size to 50MB
         file_content = await file.read()
         max_size = 50 * 1024 * 1024  # 50MB
 
         if len(file_content) > max_size:
-            return JSONResponse({
-                "success": False,
-                "error": f"File too large. Maximum size is {max_size // (1024*1024)}MB"
-            }, status_code=413)
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": f"File too large. Maximum size is {max_size // (1024*1024)}MB",
+                },
+                status_code=413,
+            )
 
         # Import the file intelligence parser
         from archer.parsers.file_intelligence import parse_intelligence_file
@@ -1361,7 +1849,7 @@ async def upload_file(
             file_path=safe_filename,
             file_content=file_content,
             use_openai=use_ai,
-            use_local_llm=False
+            use_local_llm=False,
         )
 
         # Extract data
@@ -1370,6 +1858,7 @@ async def upload_file(
 
         # Create a synthetic group name for tracking
         import hashlib
+
         file_hash = hashlib.md5(file_content).hexdigest()[:8]
         base_name = os.path.splitext(safe_filename)[0]
         # SECURITY: Sanitize the group name to prevent path traversal
@@ -1377,19 +1866,24 @@ async def upload_file(
 
         # Save extraction results to file for later use
         import json
-        upload_dir = os.path.join("data", "uploads")
+
+        upload_dir = UPLOADS_DIR
         os.makedirs(upload_dir, exist_ok=True)
 
         result_file = os.path.join(upload_dir, f"{synthetic_group_name}_extraction.json")
         with open(result_file, "w") as f:
-            json.dump({
-                "filename": safe_filename,
-                "ttps": ttps,
-                "iocs": iocs,
-                "synthetic_group_name": synthetic_group_name,
-                "use_openai": use_ai,
-                "run_correlation": run_correlation == "true"
-            }, f, indent=2)
+            json.dump(
+                {
+                    "filename": safe_filename,
+                    "ttps": ttps,
+                    "iocs": iocs,
+                    "synthetic_group_name": synthetic_group_name,
+                    "use_openai": use_ai,
+                    "run_correlation": run_correlation == "true",
+                },
+                f,
+                indent=2,
+            )
 
         # Always return extraction results first for user review
         # The frontend will display these and give user option to proceed
@@ -1402,7 +1896,7 @@ async def upload_file(
             "iocs": {k: v for k, v in iocs.items() if v},  # Only include non-empty
             "ttps_count": len(ttps),
             "iocs_count": sum(len(v) for v in iocs.values()),
-            "auto_generate_requested": auto_generate == "true"
+            "auto_generate_requested": auto_generate == "true",
         }
 
         print(f"\n[DEBUG] Returning extraction results:")
@@ -1422,8 +1916,8 @@ async def upload_file(
                 metadata={
                     "filename": safe_filename,
                     "ttps_count": len(ttps),
-                    "iocs_count": sum(len(v) for v in iocs.values())
-                }
+                    "iocs_count": sum(len(v) for v in iocs.values()),
+                },
             )
         except Exception as log_error:
             print(f"Error logging upload activity: {log_error}")
@@ -1432,11 +1926,9 @@ async def upload_file(
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        return JSONResponse({
-            "success": False,
-            "error": str(e)
-        }, status_code=500)
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 @app.post("/upload/generate")
@@ -1444,7 +1936,7 @@ async def generate_from_upload(
     request: Request,
     synthetic_group_name: str = Form(...),
     selected_ttps: str = Form(None),
-    selected_iocs: str = Form(None)
+    selected_iocs: str = Form(None),
 ):
     """
     Generate detections from previously uploaded and extracted file.
@@ -1459,24 +1951,24 @@ async def generate_from_upload(
         safe_group_name = sanitize_group_name(synthetic_group_name)
 
         # Load the extraction results
-        upload_dir = os.path.join("data", "uploads")
+        upload_dir = UPLOADS_DIR
         result_file = os.path.join(upload_dir, f"{safe_group_name}_extraction.json")
 
         # SECURITY: Validate the path is within the expected directory
         safe_path = validate_safe_path(upload_dir, result_file)
         if not safe_path:
-            return JSONResponse({
-                "success": False,
-                "error": "Invalid file path"
-            }, status_code=400)
+            return JSONResponse({"success": False, "error": "Invalid file path"}, status_code=400)
 
         result_file = safe_path
 
         if not os.path.exists(result_file):
-            return JSONResponse({
-                "success": False,
-                "error": "Extraction results not found. Please upload the file again."
-            }, status_code=404)
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": "Extraction results not found. Please upload the file again.",
+                },
+                status_code=404,
+            )
 
         with open(result_file, "r") as f:
             extraction_data = json.load(f)
@@ -1499,11 +1991,7 @@ async def generate_from_upload(
         manual_data = {
             "techniques": [],
             "identifiers": iocs,  # Use extracted IOCs
-            "metadata": {
-                "source": "file_upload",
-                "filename": filename,
-                "ttps_found": ttps
-            }
+            "metadata": {"source": "file_upload", "filename": filename, "ttps_found": ttps},
         }
 
         # Add technique data for each TTP
@@ -1515,14 +2003,16 @@ async def generate_from_upload(
                     manual_data["techniques"].append(technique_info)
             except Exception:
                 # If we can't find the technique, add minimal data
-                manual_data["techniques"].append({
-                    "tid": ttp_id,
-                    "name": f"Technique {ttp_id}",
-                    "tactic": "Unknown",
-                    "description": f"Extracted from {filename}",
-                    "software_used": [],
-                    "platforms": ["windows", "linux", "macos"]
-                })
+                manual_data["techniques"].append(
+                    {
+                        "tid": ttp_id,
+                        "name": f"Technique {ttp_id}",
+                        "tactic": "Unknown",
+                        "description": f"Extracted from {filename}",
+                        "software_used": [],
+                        "platforms": ["windows", "linux", "macos"],
+                    }
+                )
 
         # Process in background thread
         def _bg():
@@ -1532,7 +2022,7 @@ async def generate_from_upload(
                     f"Generated from uploaded file: {filename}",
                     manual_data=manual_data,
                     genai_mode="semantic" if not use_ai else "ai_generators",
-                    run_correlation=run_correlation
+                    run_correlation=run_correlation,
                 )
             except Exception as e:
                 print(f"Error processing upload: {e}")
@@ -1545,29 +2035,32 @@ async def generate_from_upload(
 
         # Initialize progress
         try:
-            write_progress(synthetic_group_name, {
-                "status": "processing",
-                "current_step": "Generating detections from uploaded file",
-                "ttps_found": len(ttps),
-                "iocs_found": sum(len(v) for v in iocs.values())
-            })
+            write_progress(
+                synthetic_group_name,
+                {
+                    "status": "processing",
+                    "current_step": "Generating detections from uploaded file",
+                    "ttps_found": len(ttps),
+                    "iocs_found": sum(len(v) for v in iocs.values()),
+                },
+            )
         except Exception:
             pass
 
-        return JSONResponse({
-            "success": True,
-            "redirect": f"/progress?group_name={synthetic_group_name}",
-            "ttps_found": len(ttps),
-            "iocs_found": sum(len(v) for v in iocs.values())
-        })
+        return JSONResponse(
+            {
+                "success": True,
+                "redirect": f"/progress?group_name={synthetic_group_name}",
+                "ttps_found": len(ttps),
+                "iocs_found": sum(len(v) for v in iocs.values()),
+            }
+        )
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        return JSONResponse({
-            "success": False,
-            "error": str(e)
-        }, status_code=500)
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 @app.post("/analyze_blog")
@@ -1587,10 +2080,7 @@ async def analyze_blog(
         url = url.strip()
 
         if not url:
-            return JSONResponse({
-                "success": False,
-                "message": "No URL provided"
-            }, status_code=400)
+            return JSONResponse({"success": False, "message": "No URL provided"}, status_code=400)
 
         # Import the blog analyzer
         from archer.parsers.blog_analyzer import analyze_blog_post
@@ -1600,10 +2090,10 @@ async def analyze_blog(
         result = analyze_blog_post(url)
 
         if not result.get("success"):
-            return JSONResponse({
-                "success": False,
-                "message": result.get("error", "Failed to analyze blog post")
-            }, status_code=500)
+            return JSONResponse(
+                {"success": False, "message": result.get("error", "Failed to analyze blog post")},
+                status_code=500,
+            )
 
         # Extract data
         ttps = result.get("techniques", [])
@@ -1622,43 +2112,49 @@ async def analyze_blog(
         synthetic_group_name = sanitize_group_name(raw_group_name)
 
         # Save extraction results to file for later use (like file upload)
-        blog_dir = os.path.join("data", "blog_analysis")
+        blog_dir = BLOG_DIR
         os.makedirs(blog_dir, exist_ok=True)
 
         result_file = os.path.join(blog_dir, f"{synthetic_group_name}_extraction.json")
         with open(result_file, "w") as f:
-            json.dump({
-                "url": url,
-                "filename": url,  # Use URL as filename for consistency
-                "group_name": group_name,
-                "ttps": ttps,
-                "iocs": iocs,
-                "procedures": procedures,
-                "synthetic_group_name": synthetic_group_name,
-                "use_openai": use_openai == "true",
-                "run_correlation": run_correlation == "true"
-            }, f, indent=2)
+            json.dump(
+                {
+                    "url": url,
+                    "filename": url,  # Use URL as filename for consistency
+                    "group_name": group_name,
+                    "ttps": ttps,
+                    "iocs": iocs,
+                    "procedures": procedures,
+                    "synthetic_group_name": synthetic_group_name,
+                    "use_openai": use_openai == "true",
+                    "run_correlation": run_correlation == "true",
+                },
+                f,
+                indent=2,
+            )
 
         # Always return extraction results first for user review (same as file upload)
-        return JSONResponse({
-            "success": True,
-            "show_extraction": True,
-            "filename": f"Blog: {url[:50]}..." if len(url) > 50 else f"Blog: {url}",
-            "synthetic_group_name": synthetic_group_name,
-            "ttps": ttps,
-            "iocs": {k: v for k, v in iocs.items() if v},  # Only include non-empty
-            "ttps_count": len(ttps),
-            "iocs_count": sum(len(v) for v in iocs.values()),
-            "auto_generate_requested": auto_generate == "true"
-        })
+        return JSONResponse(
+            {
+                "success": True,
+                "show_extraction": True,
+                "filename": f"Blog: {url[:50]}..." if len(url) > 50 else f"Blog: {url}",
+                "synthetic_group_name": synthetic_group_name,
+                "ttps": ttps,
+                "iocs": {k: v for k, v in iocs.items() if v},  # Only include non-empty
+                "ttps_count": len(ttps),
+                "iocs_count": sum(len(v) for v in iocs.values()),
+                "auto_generate_requested": auto_generate == "true",
+            }
+        )
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        return JSONResponse({
-            "success": False,
-            "message": f"Error analyzing blog: {str(e)}"
-        }, status_code=500)
+        return JSONResponse(
+            {"success": False, "message": f"Error analyzing blog: {str(e)}"}, status_code=500
+        )
 
 
 @app.post("/blog/generate")
@@ -1666,7 +2162,7 @@ async def generate_from_blog(
     request: Request,
     synthetic_group_name: str = Form(...),
     selected_ttps: str = Form(None),
-    selected_iocs: str = Form(None)
+    selected_iocs: str = Form(None),
 ):
     """
     Generate detections from previously analyzed blog post.
@@ -1681,24 +2177,24 @@ async def generate_from_blog(
         safe_group_name = sanitize_group_name(synthetic_group_name)
 
         # Load the extraction results
-        blog_dir = os.path.join("data", "blog_analysis")
+        blog_dir = BLOG_DIR
         result_file = os.path.join(blog_dir, f"{safe_group_name}_extraction.json")
 
         # SECURITY: Validate the path is within the expected directory
         safe_path = validate_safe_path(blog_dir, result_file)
         if not safe_path:
-            return JSONResponse({
-                "success": False,
-                "error": "Invalid file path"
-            }, status_code=400)
+            return JSONResponse({"success": False, "error": "Invalid file path"}, status_code=400)
 
         result_file = safe_path
 
         if not os.path.exists(result_file):
-            return JSONResponse({
-                "success": False,
-                "error": "Extraction results not found. Please analyze the blog post again."
-            }, status_code=404)
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": "Extraction results not found. Please analyze the blog post again.",
+                },
+                status_code=404,
+            )
 
         with open(result_file, "r") as f:
             extraction_data = json.load(f)
@@ -1726,8 +2222,8 @@ async def generate_from_blog(
                 "source": "blog_analysis",
                 "url": url,
                 "ttps_found": ttps,
-                "procedures": procedures
-            }
+                "procedures": procedures,
+            },
         }
 
         # Add technique data for each TTP
@@ -1739,14 +2235,16 @@ async def generate_from_blog(
                     manual_data["techniques"].append(technique_info)
             except Exception:
                 # If we can't find the technique, add minimal data
-                manual_data["techniques"].append({
-                    "tid": ttp_id,
-                    "name": f"Technique {ttp_id}",
-                    "tactic": "Unknown",
-                    "description": f"Extracted from {url}",
-                    "software_used": [],
-                    "platforms": ["windows", "linux", "macos"]
-                })
+                manual_data["techniques"].append(
+                    {
+                        "tid": ttp_id,
+                        "name": f"Technique {ttp_id}",
+                        "tactic": "Unknown",
+                        "description": f"Extracted from {url}",
+                        "software_used": [],
+                        "platforms": ["windows", "linux", "macos"],
+                    }
+                )
 
         # Process in background thread
         def _bg():
@@ -1756,7 +2254,7 @@ async def generate_from_blog(
                     f"Generated from blog post: {url}",
                     manual_data=manual_data,
                     genai_mode="semantic" if not use_ai else "ai_generators",
-                    run_correlation=run_correlation
+                    run_correlation=run_correlation,
                 )
             except Exception as e:
                 print(f"Error processing blog analysis: {e}")
@@ -1769,29 +2267,34 @@ async def generate_from_blog(
 
         # Initialize progress
         try:
-            write_progress(synthetic_group_name, {
-                "status": "processing",
-                "current_step": "Generating detections from blog post",
-                "ttps_found": len(ttps),
-                "iocs_found": sum(len(v) for v in iocs.values())
-            })
+            write_progress(
+                synthetic_group_name,
+                {
+                    "status": "processing",
+                    "current_step": "Generating detections from blog post",
+                    "ttps_found": len(ttps),
+                    "iocs_found": sum(len(v) for v in iocs.values()),
+                },
+            )
         except Exception:
             pass
 
-        return JSONResponse({
-            "success": True,
-            "redirect": f"/progress?group_name={synthetic_group_name}",
-            "ttps_found": len(ttps),
-            "iocs_found": sum(len(v) for v in iocs.values())
-        })
+        return JSONResponse(
+            {
+                "success": True,
+                "redirect": f"/progress?group_name={synthetic_group_name}",
+                "ttps_found": len(ttps),
+                "iocs_found": sum(len(v) for v in iocs.values()),
+            }
+        )
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        return JSONResponse({
-            "success": False,
-            "message": f"Error analyzing blog: {str(e)}"
-        }, status_code=500)
+        return JSONResponse(
+            {"success": False, "message": f"Error analyzing blog: {str(e)}"}, status_code=500
+        )
 
 
 @app.post("/emulate")
@@ -1823,9 +2326,9 @@ async def emulate_technique(
                 group_obj = None
                 for obj in bundle.get("objects", []):
                     if obj.get("type") == "intrusion-set":
-                        if (obj.get("name", "").lower() == technique.lower() or
-                            any(alias.lower() == technique.lower()
-                                for alias in obj.get("aliases", []))):
+                        if obj.get("name", "").lower() == technique.lower() or any(
+                            alias.lower() == technique.lower() for alias in obj.get("aliases", [])
+                        ):
                             group_obj = obj
                             break
 
@@ -1835,8 +2338,10 @@ async def emulate_technique(
                     group_id = group_obj.get("id")
                     for obj in bundle.get("objects", []):
                         if obj.get("type") == "relationship":
-                            if (obj.get("source_ref") == group_id and
-                                obj.get("relationship_type") == "uses"):
+                            if (
+                                obj.get("source_ref") == group_id
+                                and obj.get("relationship_type") == "uses"
+                            ):
                                 target_id = obj.get("target_ref")
                                 # Find the technique
                                 for tech_obj in bundle.get("objects", []):
@@ -1849,23 +2354,28 @@ async def emulate_technique(
                                                     break
 
                     if not techniques:
-                        return JSONResponse({
-                            "success": False,
-                            "error": f"No techniques found for group '{technique}'"
-                        }, status_code=400)
+                        return JSONResponse(
+                            {
+                                "success": False,
+                                "error": f"No techniques found for group '{technique}'",
+                            },
+                            status_code=400,
+                        )
 
                     # Use the first technique for now
                     technique = techniques[0]
                 else:
-                    return JSONResponse({
-                        "success": False,
-                        "error": f"Threat group '{technique}' not found in MITRE ATT&CK"
-                    }, status_code=400)
+                    return JSONResponse(
+                        {
+                            "success": False,
+                            "error": f"Threat group '{technique}' not found in MITRE ATT&CK",
+                        },
+                        status_code=400,
+                    )
             else:
-                return JSONResponse({
-                    "success": False,
-                    "error": "MITRE ATT&CK data not loaded"
-                }, status_code=500)
+                return JSONResponse(
+                    {"success": False, "error": "MITRE ATT&CK data not loaded"}, status_code=500
+                )
 
         # Initialize Atomic Red Team
         atomic = AtomicRedTeam()
@@ -1879,59 +2389,55 @@ async def emulate_technique(
                 atomic_data = atomic.get_technique_atomics(technique)
                 atomic_tests = atomic_data.get("atomic_tests", [])
 
-                return JSONResponse({
-                    "success": True,
-                    "mode": "simulate",
-                    "technique": technique,
-                    "technique_name": atomic_data.get("display_name", ""),
-                    "test_count": len(atomic_tests),
-                    "tests": [
-                        {
-                            "name": test.get("name", ""),
-                            "description": test.get("description", ""),
-                            "executor": test.get("executor", {}).get("name", ""),
-                            "platforms": test.get("supported_platforms", [])
-                        }
-                        for test in atomic_tests
-                    ],
-                    "message": "Simulation complete. Enable 'Live Execution' to actually run these tests."
-                })
+                return JSONResponse(
+                    {
+                        "success": True,
+                        "mode": "simulate",
+                        "technique": technique,
+                        "technique_name": atomic_data.get("display_name", ""),
+                        "test_count": len(atomic_tests),
+                        "tests": [
+                            {
+                                "name": test.get("name", ""),
+                                "description": test.get("description", ""),
+                                "executor": test.get("executor", {}).get("name", ""),
+                                "platforms": test.get("supported_platforms", []),
+                            }
+                            for test in atomic_tests
+                        ],
+                        "message": "Simulation complete. Enable 'Live Execution' to actually run these tests.",
+                    }
+                )
             except FileNotFoundError as e:
-                return JSONResponse({
-                    "success": False,
-                    "error": str(e)
-                }, status_code=404)
+                return JSONResponse({"success": False, "error": str(e)}, status_code=404)
         else:
             # Live execution mode - actually run the tests
             # THIS IS DANGEROUS - only for controlled environments
             try:
-                results = atomic.execute_technique(
-                    technique_id=technique,
-                    auto_cleanup=True
-                )
+                results = atomic.execute_technique(technique_id=technique, auto_cleanup=True)
 
-                return JSONResponse({
-                    "success": True,
-                    "mode": "live",
-                    "technique": technique,
-                    "results": results,
-                    "message": "Emulation executed successfully"
-                })
+                return JSONResponse(
+                    {
+                        "success": True,
+                        "mode": "live",
+                        "technique": technique,
+                        "results": results,
+                        "message": "Emulation executed successfully",
+                    }
+                )
             except Exception as e:
                 import traceback
+
                 traceback.print_exc()
-                return JSONResponse({
-                    "success": False,
-                    "error": f"Emulation failed: {str(e)}"
-                }, status_code=500)
+                return JSONResponse(
+                    {"success": False, "error": f"Emulation failed: {str(e)}"}, status_code=500
+                )
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        return JSONResponse({
-            "success": False,
-            "error": str(e)
-        }, status_code=500)
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 @app.post("/profile")
@@ -1963,21 +2469,21 @@ async def profile_company(
         # Clean domain input
         domain = domain.strip().lower()
         # Remove http:// or https:// if present
-        domain = domain.replace('http://', '').replace('https://', '').split('/')[0]
+        domain = domain.replace("http://", "").replace("https://", "").split("/")[0]
 
         # Build options dict
         options = {
-            'include_industry': include_industry == 'true',
-            'include_geography': include_geography == 'true',
-            'include_tech_stack': include_tech_stack == 'true',
-            'include_supply_chain': include_supply_chain == 'true',
+            "include_industry": include_industry == "true",
+            "include_geography": include_geography == "true",
+            "include_tech_stack": include_tech_stack == "true",
+            "include_supply_chain": include_supply_chain == "true",
         }
 
-        use_ai = use_openai == 'true'
-        auto_generate = generate_detections == 'true'
+        use_ai = use_openai == "true"
+        auto_generate = generate_detections == "true"
 
         # Use domain as group_name for progress tracking
-        group_name = domain.replace('.', '_').replace('/', '_')
+        group_name = domain.replace(".", "_").replace("/", "_")
 
         # Profile the company
         print(f"\nProfiling domain: {domain}")
@@ -1988,32 +2494,32 @@ async def profile_company(
         profile_dir.mkdir(parents=True, exist_ok=True)
 
         # Use domain as filename (sanitized)
-        safe_domain = domain.replace('.', '_').replace('/', '_')
+        safe_domain = domain.replace(".", "_").replace("/", "_")
         profile_path = profile_dir / f"{safe_domain}_profile.json"
 
-        with open(profile_path, 'w', encoding='utf-8') as f:
+        with open(profile_path, "w", encoding="utf-8") as f:
             json.dump(profile, f, indent=2)
 
         print(f"Profile saved to: {profile_path}")
 
         # Always return profile for user review first
         # User can then select which threat groups to generate detections for
-        return JSONResponse({
-            "success": True,
-            "profile": profile,
-            "message": "Company profile complete",
-            "profile_path": str(profile_path),
-            "recommended_groups": profile.get('recommended_groups', []),
-            "show_selection": auto_generate  # Show selection UI if auto-generate was checked
-        })
+        return JSONResponse(
+            {
+                "success": True,
+                "profile": profile,
+                "message": "Company profile complete",
+                "profile_path": str(profile_path),
+                "recommended_groups": profile.get("recommended_groups", []),
+                "show_selection": auto_generate,  # Show selection UI if auto-generate was checked
+            }
+        )
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        return JSONResponse({
-            "success": False,
-            "error": str(e)
-        }, status_code=500)
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 @app.post("/api/technique_names")
@@ -2034,23 +2540,22 @@ async def get_technique_names(request: Request):
         # Load MITRE ATT&CK data
         mitre_path = Path(__file__).parent / "data" / "cache" / "enterprise-attack.json"
         if not mitre_path.exists():
-            return JSONResponse({
-                "success": False,
-                "error": "MITRE ATT&CK data not found"
-            }, status_code=500)
+            return JSONResponse(
+                {"success": False, "error": "MITRE ATT&CK data not found"}, status_code=500
+            )
 
         with open(mitre_path) as f:
             data = json.load(f)
 
         # Build mapping
         technique_names = {}
-        for obj in data['objects']:
-            if obj.get('type') == 'attack-pattern':
-                ext_refs = obj.get('external_references', [])
+        for obj in data["objects"]:
+            if obj.get("type") == "attack-pattern":
+                ext_refs = obj.get("external_references", [])
                 for ref in ext_refs:
-                    if ref.get('source_name') == 'mitre-attack':
-                        tech_id = ref.get('external_id')
-                        tech_name = obj.get('name')
+                    if ref.get("source_name") == "mitre-attack":
+                        tech_id = ref.get("external_id")
+                        tech_name = obj.get("name")
                         if tech_id in technique_ids:
                             technique_names[tech_id] = tech_name
 
@@ -2058,10 +2563,7 @@ async def get_technique_names(request: Request):
 
     except Exception as e:
         print(f"Error getting technique names: {e}")
-        return JSONResponse({
-            "success": False,
-            "error": str(e)
-        }, status_code=500)
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 @app.post("/profile/generate-detections")
@@ -2069,7 +2571,7 @@ async def generate_detections_from_profile(
     request: Request,
     domain: str = Form(...),
     selected_groups: str = Form(...),  # Comma-separated list
-    run_correlation: str = Form(None)
+    run_correlation: str = Form(None),
 ):
     """
     Generate detections for user-selected threat groups from a profile.
@@ -2081,17 +2583,18 @@ async def generate_detections_from_profile(
         from archer.build.orchestrator import process_group
 
         # Parse selected groups
-        groups = [g.strip() for g in selected_groups.split(',') if g.strip()]
+        groups = [g.strip() for g in selected_groups.split(",") if g.strip()]
 
         if not groups:
-            return JSONResponse({
-                "success": False,
-                "error": "No threat groups selected"
-            }, status_code=400)
+            return JSONResponse(
+                {"success": False, "error": "No threat groups selected"}, status_code=400
+            )
 
-        should_correlate = run_correlation == 'true'
+        should_correlate = run_correlation == "true"
 
-        print(f"\nGenerating detections for {len(groups)} selected threat groups from {domain} profile...")
+        print(
+            f"\nGenerating detections for {len(groups)} selected threat groups from {domain} profile..."
+        )
 
         # Use the first group as primary (for progress tracking)
         primary_group = groups[0]
@@ -2106,30 +2609,32 @@ async def generate_detections_from_profile(
             except Exception as e:
                 print(f"Error generating detections: {e}")
                 import traceback
+
                 traceback.print_exc()
 
         import threading
+
         threading.Thread(target=_generate_bg, daemon=True).start()
 
         # Return progress redirect
-        group_list = ', '.join(groups[:3])  # Show first 3 groups
+        group_list = ", ".join(groups[:3])  # Show first 3 groups
         if len(groups) > 3:
             group_list += f" and {len(groups) - 3} more"
 
-        return JSONResponse({
-            "success": True,
-            "redirect_url": f"/progress?group_name={primary_group}",
-            "message": f"Generating detections for: {group_list}",
-            "groups": groups
-        })
+        return JSONResponse(
+            {
+                "success": True,
+                "redirect_url": f"/progress?group_name={primary_group}",
+                "message": f"Generating detections for: {group_list}",
+                "groups": groups,
+            }
+        )
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        return JSONResponse({
-            "success": False,
-            "error": str(e)
-        }, status_code=500)
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 def _get_technique_info(ttp_id: str) -> dict:
@@ -2156,7 +2661,7 @@ def _get_technique_info(ttp_id: str) -> dict:
                         "tactic": tactics[0] if tactics else "Unknown",
                         "description": obj.get("description", ""),
                         "software_used": [],
-                        "platforms": obj.get("x_mitre_platforms", ["windows"])
+                        "platforms": obj.get("x_mitre_platforms", ["windows"]),
                     }
 
     return None
@@ -2190,7 +2695,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
     safe_group = sanitize_group_name(group_name)
 
     # Collect detection files by vendor
-    generate_dir = os.path.join("data", "generate")
+    generate_dir = GENERATE_DIR
     detection_files = {}
     vendor_icons = {
         "splunk": "🔍",
@@ -2199,7 +2704,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         "elastic": "🔎",
         "qradar": "🎯",
         "sumo": "☁️",
-        "chronicle": "📊"
+        "chronicle": "📊",
     }
 
     vendor_display_names = {
@@ -2209,7 +2714,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         "elastic": "Elastic",
         "qradar": "IBM QRadar",
         "sumo": "Sumo Logic",
-        "chronicle": "Google Chronicle"
+        "chronicle": "Google Chronicle",
     }
 
     # Find all YAML files for this group
@@ -2218,7 +2723,11 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
     if os.path.exists(generate_dir):
         # Try both group name pattern and wildcard pattern for CVEs
         pattern1 = os.path.join(generate_dir, f"{safe_group}_*.yaml")
-        pattern2 = os.path.join(generate_dir, "T*_*.yaml") if safe_group.upper().startswith("CVE") else os.path.join(generate_dir, "*.yaml")
+        pattern2 = (
+            os.path.join(generate_dir, "T*_*.yaml")
+            if safe_group.upper().startswith("CVE")
+            else os.path.join(generate_dir, "*.yaml")
+        )
 
         yaml_files = glob.glob(pattern1)
         if not yaml_files and pattern2 != pattern1:
@@ -2227,7 +2736,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             filtered_files = []
             for yaml_file in yaml_files:
                 try:
-                    with open(yaml_file, 'r') as f:
+                    with open(yaml_file, "r") as f:
                         content = f.read()
                         # Check if group name is in tags (e.g., "Scattered Spider (Group)")
                         if f"{group_name} (Group)" in content or f"{safe_group} (Group)" in content:
@@ -2268,24 +2777,6 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             # First part is always the technique (T1234)
             technique = parts[0] if parts else "Unknown"
 
-            # Mapping for proper tool names
-            tool_name_map = {
-                "mcafee epo": "McAfee ePO",
-                "azure activitylog": "Azure Activity",
-                "azure activedirectory": "Entra ID",
-                "microsoft windows": "Windows Event Logs",
-                "aws directoryservicead": "AWS Directory Services",
-                "aws guardduty": "AWS GuardDuty",
-                "aws cloudtrail": "AWS CloudTrail",
-                "devicenetworkevents": "DeviceNetworkEvents",
-                "devicefileevents": "DeviceFileEvents",
-                "deviceimageloadevents": "DeviceImageLoadEvents",
-                "deviceevents": "DeviceEvents",
-                "deviceprocessevents": "DeviceProcessEvents",
-                "microsoft defender": "Microsoft Defender",
-                "unix": "Unix"
-            }
-
             # For title, use everything after technique, cleaned up
             if len(parts) > 1:
                 # Remove technique from parts
@@ -2296,15 +2787,15 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                 # Join and clean up
                 raw_title = " ".join(title_parts).replace("_", " ").lower()
 
-                # Apply mapping
-                title = tool_name_map.get(raw_title, raw_title.title())
+                # Apply mapping using the global constant
+                title = DATA_SOURCE_DISPLAY_NAMES.get(raw_title, raw_title.title())
             else:
                 title = filename
 
             # Read description from YAML (handling multiline descriptions)
             description = ""
             try:
-                with open(yaml_file, 'r') as f:
+                with open(yaml_file, "r") as f:
                     lines = f.readlines()
                     in_description = False
                     desc_lines = []
@@ -2314,17 +2805,17 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                         if line.strip().startswith("description:"):
                             content = line.split(":", 1)[1].strip()
                             # If it's a multiline indicator (| or >)
-                            if content in ('|', '>'):
+                            if content in ("|", ">"):
                                 in_description = True
                                 continue
                             # If content is on the same line
                             elif content:
-                                description = content.strip('"\'')
+                                description = content.strip("\"'")
                                 break
                         # Collect multiline description content
                         elif in_description:
                             # Stop if we hit a non-indented line or another field
-                            if line.strip() and not line.startswith(' '):
+                            if line.strip() and not line.startswith(" "):
                                 break
                             # Add the line (strip leading spaces)
                             if line.strip():
@@ -2332,12 +2823,12 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
                     # Join collected lines and format with newlines between indicator types
                     if desc_lines:
-                        raw_desc = ' '.join(desc_lines)
+                        raw_desc = " ".join(desc_lines)
                         # Replace "; " with newlines to separate indicator types
-                        formatted_desc = raw_desc.replace('; ', '\n')
+                        formatted_desc = raw_desc.replace("; ", "\n")
                         # Limit total length
                         if len(formatted_desc) > 300:
-                            formatted_desc = formatted_desc[:300] + '...'
+                            formatted_desc = formatted_desc[:300] + "..."
                         description = formatted_desc
             except:
                 pass
@@ -2345,10 +2836,12 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             # Get technique name from ATT&CK if available (only for actual technique IDs like T1234)
             technique_name = ""
             technique_upper = technique.upper()
-            if technique_upper.startswith('T') and hasattr(request.app.state, 'technique_descriptions'):
+            if technique_upper.startswith("T") and hasattr(
+                request.app.state, "technique_descriptions"
+            ):
                 try:
                     tech_desc = request.app.state.technique_descriptions.get(technique_upper, {})
-                    technique_name = tech_desc.get('name', '')
+                    technique_name = tech_desc.get("name", "")
                 except:
                     pass
 
@@ -2356,16 +2849,43 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             if technique_name:
                 technique_display = f"{technique_upper} - {technique_name}"
             else:
-                # For tactic names (non-T#### format), just use the name as-is
-                technique_display = technique_upper if technique_upper.startswith('T') else technique
+                # Check if it's an actual technique ID (T followed by digits) vs a technique name
+                import re
+                is_technique_id = bool(re.match(r'^T\d{4}', technique_upper))
 
-            detection_files[vendor].append({
-                "file": filename,
-                "title": title,
-                "technique": technique.upper(),
-                "technique_display": technique_display,
-                "description": description or f"Detection rule for {technique}"
-            })
+                if is_technique_id:
+                    # It's a technique ID like T1234 without a name - display as-is
+                    technique_display = technique_upper
+                else:
+                    # Format CamelCase technique names with spaces (including all-caps like TRUSTMODIFICATION)
+                    technique_display = format_technique_name(technique)
+
+            # Create both HTML and plain text versions of the description
+            desc_text = description or f"Detection rule for {technique}"
+            desc_html = markdown_links_to_html(desc_text)
+            desc_plain = markdown_links_to_plain(desc_text)
+
+            # Extract indicators from the query
+            indicators = extract_indicators_from_query(yaml_file)
+
+            # Check for OSINT enrichment
+            is_osint_enriched, osint_data = check_osint_enriched(yaml_file)
+
+            detection_files[vendor].append(
+                {
+                    "file": filename,
+                    "title": title,
+                    "technique": technique.upper(),
+                    "technique_display": technique_display,
+                    "description": desc_text,
+                    "description_html": desc_html,
+                    "description_plain": desc_plain,
+                    "indicators": indicators,
+                    "needs_review": len(indicators) == 0 and not is_osint_enriched,  # Normal needs review (yellow)
+                    "osint_enriched": is_osint_enriched,  # OSINT enriched flag (orange badge)
+                    "osint_data": osint_data if is_osint_enriched else {},
+                }
+            )
 
     # Build vendor list for template with grouping
     # Group detections by technique + description (same technique + same IOCs = group together)
@@ -2376,71 +2896,110 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         # Group files by technique + description for display
         grouped = {}
         for file_data in files:
-            key = (file_data['technique'], file_data['description'])
+            key = (file_data["technique"], file_data["description"])
             if key not in grouped:
                 grouped[key] = {
-                    "technique": file_data['technique'],
-                    "technique_display": file_data.get('technique_display', file_data['technique']),
+                    "technique": file_data["technique"],
+                    "technique_display": file_data.get("technique_display", file_data["technique"]),
                     "titles": [],
-                    "description": file_data['description']
+                    "description": file_data["description"],
+                    "description_html": file_data.get("description_html", file_data["description"]),
+                    "description_plain": file_data.get(
+                        "description_plain", file_data["description"]
+                    ),
+                    "indicators": file_data.get("indicators", []),
+                    "needs_review": file_data.get("needs_review", False),
+                    "osint_enriched": file_data.get("osint_enriched", False),
+                    "osint_data": file_data.get("osint_data", {}),
                 }
-            grouped[key]['titles'].append(file_data['title'])
+            else:
+                # Merge indicators from multiple detections in the same group
+                existing_indicators = set(grouped[key]["indicators"])
+                new_indicators = file_data.get("indicators", [])
+                for ind in new_indicators:
+                    if ind not in existing_indicators:
+                        grouped[key]["indicators"].append(ind)
+                        existing_indicators.add(ind)
+                # Preserve OSINT enrichment if any detection in the group is enriched
+                if file_data.get("osint_enriched"):
+                    grouped[key]["osint_enriched"] = True
+                    # Merge OSINT data
+                    if file_data.get("osint_data"):
+                        grouped[key]["osint_data"].update(file_data["osint_data"])
+            grouped[key]["titles"].append(file_data["title"])
             total_detections += 1  # Count every detection individually
 
         # Convert grouped data to list format for display
         detection_list = []
         for (technique, description), data in sorted(grouped.items(), key=lambda x: x[0][0]):
             # Sort titles alphabetically and join with commas
-            sorted_titles = sorted(data['titles'])
+            sorted_titles = sorted(data["titles"])
             combined_title = ", ".join(sorted_titles)
-            detection_list.append({
-                "technique": data['technique_display'],  # Use full display name
-                "title": combined_title,
-                "description": description
-            })
+            is_osint = data.get("osint_enriched", False)
+            has_indicators = len(data.get("indicators", [])) > 0
+            detection_list.append(
+                {
+                    "technique": data["technique_display"],  # Use full display name
+                    "title": combined_title,
+                    "description": description,
+                    "description_html": data.get("description_html", description),
+                    "description_plain": data.get("description_plain", description),
+                    "indicators": data.get("indicators", []),
+                    "needs_review": not has_indicators and not is_osint,  # Yellow badge
+                    "osint_enriched": is_osint,  # Orange badge
+                    "osint_data": data.get("osint_data", {}),
+                }
+            )
 
         # Keep ungrouped file list for saving to library
         ungrouped_files = []
         for file_data in files:
-            ungrouped_files.append({
-                "technique": file_data.get('technique_display', file_data['technique']),
-                "title": file_data['title'],
-                "description": file_data['description']
-            })
+            ungrouped_files.append(
+                {
+                    "technique": file_data.get("technique_display", file_data["technique"]),
+                    "title": file_data["title"],
+                    "description": file_data["description"],
+                }
+            )
 
-        detections.append({
-            "name": vendor,
-            "display_name": vendor_display_names.get(vendor, vendor.title()),
-            "icon": vendor_icons.get(vendor, "📋"),
-            "count": len(files),  # Original count for display
-            "detections": detection_list,  # Grouped for display
-            "all_files": ungrouped_files  # Ungrouped for saving
-        })
+        detections.append(
+            {
+                "name": vendor,
+                "display_name": vendor_display_names.get(vendor, vendor.title()),
+                "icon": vendor_icons.get(vendor, "📋"),
+                "count": len(files),  # Original count for display
+                "detections": detection_list,  # Grouped for display
+                "all_files": ungrouped_files,  # Ungrouped for saving
+            }
+        )
 
     # Add Elastic as "Coming Soon" placeholder
-    detections.append({
-        "name": "elastic",
-        "display_name": "Elastic",
-        "icon": "🔎",
-        "count": 0,
-        "detections": [],
-        "coming_soon": True
-    })
+    detections.append(
+        {
+            "name": "elastic",
+            "display_name": "Elastic",
+            "icon": "🔎",
+            "count": 0,
+            "detections": [],
+            "coming_soon": True,
+        }
+    )
 
-    detections.sort(key=lambda x: x['count'], reverse=True)
+    detections.sort(key=lambda x: x["count"], reverse=True)
 
     # Load correlations
     correlations = []
     # Try both sanitized name (with underscores) and original name (with spaces)
-    correlation_file = os.path.join("data", "correlate", f"{safe_group}.json")
+    correlation_file = os.path.join(CORRELATE_DIR, f"{safe_group}.json")
     if not os.path.exists(correlation_file):
         # Try with spaces instead of underscores
-        correlation_file = os.path.join("data", "correlate", f"{group_name}.json")
+        correlation_file = os.path.join(CORRELATE_DIR, f"{group_name}.json")
 
     if os.path.exists(correlation_file):
         try:
             import re
-            with open(correlation_file, 'r') as f:
+
+            with open(correlation_file, "r") as f:
                 corr_data = json.load(f)
                 # The file uses "vendor_correlations" not "correlations"
                 vendor_corrs = corr_data.get("vendor_correlations", [])
@@ -2450,82 +3009,147 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     vendor = corr.get("vendor", "unknown")
                     file_a = corr.get("a", "")
                     file_b = corr.get("b", "")
+                    relevance_score = corr.get("relevance_score", 0.0)
+                    combined_query = corr.get("combined_query", "")
 
                     # Parse filename format: "example_index.yaml"
                     # Example: "Multi-FactorAuthentication_edr_events.yaml"
                     techniques = []
+                    has_needs_review = False
+                    severities = []
+                    tactics_set = set()
+                    time_window = "1h"  # Default
+
+                    total_indicators = 0  # Track total indicators across both detections
 
                     for file_path in [file_a, file_b]:
                         if file_path:
+                            # Check if file exists before processing
+                            full_path = os.path.join(GENERATE_DIR, os.path.basename(file_path))
+                            if not os.path.exists(full_path):
+                                print(f"Skipping correlation {idx+1} - file not found: {file_path}")
+                                break  # Skip this entire correlation if either file is missing
+
                             filename = os.path.basename(file_path).replace(".yaml", "")
-                            # Split by underscore: ["Multi-FactorAuthentication", "microsoft", "defender", "prod"]
                             parts = filename.split("_")
 
                             if len(parts) >= 2:
-                                # First part is the technique name
-                                technique_name = parts[0].replace("-", " ")
+                                # First part is the technique ID (e.g., T1078)
+                                technique_id = parts[0].replace("-", " ")
 
-                                # Remaining parts (except last 'prod') form the data source
-                                # Join all middle parts: ["microsoft", "defender"] → "microsoft_defender"
-                                data_source_parts = parts[1:-1] if parts[-1] == "prod" else parts[1:]
-                                data_source = "_".join(data_source_parts)
+                                # Check if this file has indicators
+                                indicators = extract_indicators_from_query(full_path)
+                                total_indicators += len(indicators)
 
-                                # Map data source to friendly name
-                                source_map = {
-                                    "microsoft_defender": "Microsoft Defender",
-                                    "microsoft_windows": "Windows Event Logs",
-                                    "azure_activitylog": "Azure Activity",
-                                    "azure_activedirectory": "Entra ID",
-                                    "aws_directoryservicead": "AWS Directory Services",
-                                    "aws_cloudtrail": "AWS CloudTrail",
-                                    "aws_guardduty": "AWS GuardDuty",
-                                    "mcafee_epo": "McAfee ePO",
-                                    "unix": "Unix",
-                                    "deviceprocessevents": "DeviceProcessEvents",
-                                    "devicefileevents": "DeviceFileEvents",
-                                    "devicenetworkevents": "DeviceNetworkEvents",
-                                    "deviceevents": "DeviceEvents",
-                                    "deviceimageloadevents": "DeviceImageLoadEvents"
-                                }
+                                # Extract metadata from YAML file including actual technique name and data source
+                                yaml_data = load_yaml_file(full_path)
+                                technique_name = technique_id  # Default to ID if name not found
+                                data_source = "Unknown"  # Default
+                                friendly_source = "Unknown"
 
-                                friendly_source = source_map.get(data_source, data_source.replace("_", " ").title())
+                                if yaml_data:
+                                    # Get actual technique name from YAML and format it with spaces
+                                    raw_name = yaml_data.get('name', technique_id)
+                                    technique_name = format_technique_name(raw_name)
 
-                                techniques.append({
-                                    "id": technique_name,
-                                    "name": technique_name,
-                                    "source": friendly_source
-                                })
+                                    # Extract data source from YAML requiredDataConnectors or dataTypes
+                                    data_connectors = yaml_data.get('requiredDataConnectors', [])
+                                    if data_connectors and len(data_connectors) > 0:
+                                        # Get the first data type from first connector
+                                        first_connector = data_connectors[0]
+                                        data_types = first_connector.get('dataTypes', [])
+                                        if data_types and len(data_types) > 0:
+                                            data_source = data_types[0]
+                                            # Map to friendly name
+                                            friendly_source = DATA_SOURCE_DISPLAY_NAMES.get(
+                                                data_source.lower(), data_source
+                                            )
+
+                                    # Get severity
+                                    severity = yaml_data.get('severity', 'Medium')
+                                    severities.append(severity)
+
+                                    # Get tactics
+                                    tactics = yaml_data.get('tactics', [])
+                                    if isinstance(tactics, list):
+                                        tactics_set.update(tactics)
+
+                                    # Extract time window from combined query if available
+                                    if 'maxspan' in combined_query:
+                                        match = re.search(r'maxspan=(\d+[hmd])', combined_query)
+                                        if match:
+                                            time_window = match.group(1)
+
+                                techniques.append(
+                                    {
+                                        "id": technique_id,
+                                        "name": technique_name,
+                                        "source": friendly_source,
+                                    }
+                                )
 
                     if len(techniques) >= 2:
-                        # Create description showing technique + source for each step
-                        desc = f"{vendor.title()} correlation: {techniques[0]['name']} ({techniques[0]['source']}) → {techniques[1]['name']} ({techniques[1]['source']})"
+                        # Skip correlations with 0 total indicators across both detections
+                        # This indicates the correlation cannot be effectively used as both detections
+                        # require manual review and have no IOCs/patterns to search for
+                        if total_indicators == 0:
+                            print(f"Skipping correlation {idx+1} - 0 total indicators across both detections")
+                            continue
 
-                        correlations.append({
-                            "techniques": techniques,
-                            "description": desc,
-                            "flow_file": f"{safe_group}_corr_{idx+1}.html",
-                            "vendor": vendor
-                        })
+                        # Needs Review badge should NOT be shown if there are indicators
+                        # The correlation is usable as long as there are some indicators to search for
+                        # (even if one of the detections has 0 indicators, the other can still be correlated)
+                        has_needs_review = False
+
+                        # Determine highest severity
+                        highest_severity = "Medium"
+                        for sev in severities:
+                            if sev in SEVERITY_ORDER:
+                                if SEVERITY_ORDER.index(sev) < SEVERITY_ORDER.index(highest_severity):
+                                    highest_severity = sev
+
+                        # The vendor field indicates where the query runs (Splunk, MDE, etc.)
+                        # This is the query platform, NOT the data sources being queried
+                        # Map vendor to display name (splunk -> Splunk, mde -> MDE, etc.)
+                        vendor_display = DATA_SOURCE_DISPLAY_NAMES.get(vendor.lower(), vendor.title())
+
+                        # Extract tables (MDE) or indexes (Splunk) from the combined query
+                        tables_indexes = extract_tables_indexes(combined_query, vendor)
+
+                        correlations.append(
+                            {
+                                "techniques": techniques,
+                                "flow_file": f"{safe_group}_corr_{idx+1}.html",
+                                "vendor": vendor_display,
+                                "needs_review": has_needs_review,
+                                "relevance_score": int(relevance_score * 100),  # Convert to percentage
+                                "severity": highest_severity,
+                                "time_window": time_window,
+                                "tactics": list(tactics_set),
+                                "combined_query": combined_query,
+                                "tables_indexes": tables_indexes,  # Add tables/indexes
+                            }
+                        )
         except Exception as e:
             print(f"Error loading correlations: {e}")
             pass
 
     # Check if attack flow exists
-    attack_flow_file = os.path.join("data", "attack_flows", f"{safe_group}_complete_flow.html")
+    attack_flow_file = os.path.join(ATTACK_FLOWS_DIR, f"{safe_group}_complete_flow.html")
     attack_flow_exists = os.path.exists(attack_flow_file)
 
     # Get unique technique count
     technique_set = set()
     for vendor_data in detections:
-        for detection in vendor_data['detections']:
-            technique_set.add(detection['technique'])
+        for detection in vendor_data["detections"]:
+            technique_set.add(detection["technique"])
 
     # Calculate duration (if progress file exists)
     duration = "N/A"
-    progress_file = os.path.join("data", "progress", f"{safe_group}.json")
+    progress_file = os.path.join(PROGRESS_DIR, f"{safe_group}.json")
     if os.path.exists(progress_file):
         try:
-            with open(progress_file, 'r') as f:
+            with open(progress_file, "r") as f:
                 progress_data = json.load(f)
                 # Estimate based on timestamps if available
                 duration = "~3min"  # Placeholder
@@ -2538,7 +3162,10 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
     if not safe_group.upper().startswith("CVE-"):
         try:
             from archer.mitre.enterprise import get_stix_data
-            bundle = get_stix_data("https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json")
+
+            bundle = get_stix_data(
+                "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
+            )
             if check_group_in_mitre(bundle, safe_group):
                 # Try to find MITRE ID from STIX data
                 mitre_id = safe_group  # Simplified
@@ -2560,8 +3187,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             "detections": detections,
             "correlations": correlations,
             "attack_flow_exists": attack_flow_exists,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        },
     )
 
 
@@ -2571,13 +3198,13 @@ def get_detection_content(filename: str):
     Return the content of a detection YAML file.
     """
     safe_filename = sanitize_filename(filename)
-    file_path = os.path.join("data", "generate", safe_filename)
+    file_path = os.path.join(GENERATE_DIR, safe_filename)
 
     if not os.path.exists(file_path):
         return {"error": "File not found"}, 404
 
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             content = f.read()
         return content
     except Exception as e:
@@ -2590,16 +3217,12 @@ def download_detection(filename: str):
     Download a single detection YAML file.
     """
     safe_filename = sanitize_filename(filename)
-    file_path = os.path.join("data", "generate", safe_filename)
+    file_path = os.path.join(GENERATE_DIR, safe_filename)
 
     if not os.path.exists(file_path):
         return {"error": "File not found"}, 404
 
-    return FileResponse(
-        file_path,
-        media_type="application/x-yaml",
-        filename=safe_filename
-    )
+    return FileResponse(file_path, media_type="application/x-yaml", filename=safe_filename)
 
 
 @app.get("/api/download/all/{group_name}")
@@ -2612,21 +3235,21 @@ def download_all_detections(group_name: str):
     # Create in-memory ZIP file
     zip_buffer = io.BytesIO()
 
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         # Add detection YAMLs
-        generate_dir = os.path.join("data", "generate")
+        generate_dir = GENERATE_DIR
         if os.path.exists(generate_dir):
             for yaml_file in glob.glob(os.path.join(generate_dir, f"{safe_group}_*.yaml")):
                 filename = os.path.basename(yaml_file)
                 zip_file.write(yaml_file, f"detections/{filename}")
 
         # Add correlation JSON
-        corr_file = os.path.join("data", "correlate", f"{safe_group}.json")
+        corr_file = os.path.join(CORRELATE_DIR, f"{safe_group}.json")
         if os.path.exists(corr_file):
             zip_file.write(corr_file, f"correlations/{safe_group}.json")
 
         # Add attack flows
-        flow_dir = os.path.join("data", "attack_flows")
+        flow_dir = ATTACK_FLOWS_DIR
         if os.path.exists(flow_dir):
             for flow_file in glob.glob(os.path.join(flow_dir, f"{safe_group}_*.json")):
                 filename = os.path.basename(flow_file)
@@ -2641,7 +3264,7 @@ def download_all_detections(group_name: str):
     return StreamingResponse(
         zip_buffer,
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename={safe_group}_results.zip"}
+        headers={"Content-Disposition": f"attachment; filename={safe_group}_results.zip"},
     )
 
 
@@ -2651,7 +3274,7 @@ def view_attack_flow(filename: str):
     Serve an attack flow HTML file for viewing.
     """
     safe_filename = sanitize_filename(filename)
-    file_path = os.path.join("data", "attack_flows", safe_filename)
+    file_path = os.path.join(ATTACK_FLOWS_DIR, safe_filename)
 
     if not os.path.exists(file_path):
         return {"error": "Attack flow not found"}, 404
@@ -2665,23 +3288,22 @@ def download_attack_flow(filename: str):
     Download an attack flow JSON file.
     """
     safe_filename = sanitize_filename(filename)
-    file_path = os.path.join("data", "attack_flows", safe_filename)
+    file_path = os.path.join(ATTACK_FLOWS_DIR, safe_filename)
 
     if not os.path.exists(file_path):
         return {"error": "File not found"}, 404
 
-    return FileResponse(
-        file_path,
-        media_type="application/json",
-        filename=safe_filename
-    )
+    return FileResponse(file_path, media_type="application/json", filename=safe_filename)
 
 
 # ============================================================================
 # Authentication Helpers
 # ============================================================================
 
-def log_activity(user_id: int, activity_type: str, title: str, description: str = None, metadata: dict = None):
+
+def log_activity(
+    user_id: int, activity_type: str, title: str, description: str = None, metadata: dict = None
+):
     """
     Helper function to log user activity to the timeline.
 
@@ -2711,7 +3333,7 @@ def log_activity(user_id: int, activity_type: str, title: str, description: str 
             activity_type=activity_enum,
             title=title,
             description=description,
-            metadata=json.dumps(metadata) if metadata else None
+            metadata=json.dumps(metadata) if metadata else None,
         )
 
         db.add(activity)
@@ -2754,6 +3376,7 @@ def require_auth(request: Request, archer_session: Optional[str] = Cookie(None))
 # Authentication Routes
 # ============================================================================
 
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, response: Response, registered: Optional[str] = None):
     """
@@ -2775,12 +3398,7 @@ async def login_page(request: Request, response: Response, registered: Optional[
     # Store temp session ID in a cookie for CSRF validation
     template_response = templates.TemplateResponse(
         "login.html",
-        {
-            "request": request,
-            "error": None,
-            "success": success_message,
-            "csrf_token": csrf_token
-        }
+        {"request": request, "error": None, "success": success_message, "csrf_token": csrf_token},
     )
 
     template_response.set_cookie(
@@ -2788,7 +3406,7 @@ async def login_page(request: Request, response: Response, registered: Optional[
         value=temp_session_id,
         max_age=3600,  # 1 hour
         httponly=True,
-        samesite="lax"
+        samesite="lax",
     )
 
     return template_response
@@ -2799,12 +3417,7 @@ async def reset_password_page(request: Request):
     """
     Render the password reset page.
     """
-    return templates.TemplateResponse(
-        "reset_password.html",
-        {
-            "request": request
-        }
-    )
+    return templates.TemplateResponse("reset_password.html", {"request": request})
 
 
 @app.post("/login")
@@ -2815,7 +3428,7 @@ async def login(
     password: str = Form(...),
     remember_me: Optional[str] = Form(None),
     csrf_token: str = Form(...),
-    archer_csrf_session: Optional[str] = Cookie(None)
+    archer_csrf_session: Optional[str] = Cookie(None),
 ):
     """
     Authenticate user and create session.
@@ -2856,16 +3469,16 @@ async def login(
                 ip_address=client_ip,
                 user_agent=user_agent,
                 success=False,
-                details="Invalid CSRF token"
+                details="Invalid CSRF token",
             )
             return templates.TemplateResponse(
                 "login.html",
                 {
                     "request": request,
                     "error": "Security validation failed. Please refresh the page and try again.",
-                    "csrf_token": ""  # Force page reload
+                    "csrf_token": "",  # Force page reload
                 },
-                status_code=403
+                status_code=403,
             )
 
         # Consume CSRF token to prevent reuse
@@ -2883,15 +3496,15 @@ async def login(
                 ip_address=client_ip,
                 user_agent=user_agent,
                 success=False,
-                details="Rate limit exceeded"
+                details="Rate limit exceeded",
             )
             return templates.TemplateResponse(
                 "login.html",
                 {
                     "request": request,
-                    "error": "Too many login attempts. Please try again in 5 minutes."
+                    "error": "Too many login attempts. Please try again in 5 minutes.",
                 },
-                status_code=429
+                status_code=429,
             )
 
         # Find user by email
@@ -2906,19 +3519,18 @@ async def login(
                 ip_address=client_ip,
                 user_agent=user_agent,
                 success=False,
-                details="User not found"
+                details="User not found",
             )
             return templates.TemplateResponse(
                 "login.html",
-                {
-                    "request": request,
-                    "error": "Invalid email or password"
-                },
-                status_code=401
+                {"request": request, "error": "Invalid email or password"},
+                status_code=401,
             )
 
         # Check if account is locked
-        if user.locked_until and user.locked_until > datetime.now(timezone.utc).replace(tzinfo=None):
+        if user.locked_until and user.locked_until > datetime.now(timezone.utc).replace(
+            tzinfo=None
+        ):
             log_audit_event(
                 db=db,
                 event_type=EVENT_LOGIN_FAILURE,
@@ -2927,15 +3539,15 @@ async def login(
                 ip_address=client_ip,
                 user_agent=user_agent,
                 success=False,
-                details=f"Account locked until {user.locked_until}"
+                details=f"Account locked until {user.locked_until}",
             )
             return templates.TemplateResponse(
                 "login.html",
                 {
                     "request": request,
-                    "error": "Account is temporarily locked due to multiple failed login attempts. Please try again later."
+                    "error": "Account is temporarily locked due to multiple failed login attempts. Please try again later.",
                 },
-                status_code=403
+                status_code=403,
             )
 
         # Verify password
@@ -2946,7 +3558,10 @@ async def login(
             # Lock account after 5 failed attempts
             if user.failed_login_attempts >= 5:
                 from datetime import timedelta
-                user.locked_until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=15)
+
+                user.locked_until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+                    minutes=15
+                )
                 db.commit()
 
                 log_audit_event(
@@ -2957,16 +3572,16 @@ async def login(
                     ip_address=client_ip,
                     user_agent=user_agent,
                     success=False,
-                    details=f"Account locked after {user.failed_login_attempts} failed attempts"
+                    details=f"Account locked after {user.failed_login_attempts} failed attempts",
                 )
 
                 return templates.TemplateResponse(
                     "login.html",
                     {
                         "request": request,
-                        "error": "Account locked due to multiple failed login attempts. Please try again in 15 minutes."
+                        "error": "Account locked due to multiple failed login attempts. Please try again in 15 minutes.",
                     },
-                    status_code=403
+                    status_code=403,
                 )
 
             db.commit()
@@ -2980,16 +3595,13 @@ async def login(
                 ip_address=client_ip,
                 user_agent=user_agent,
                 success=False,
-                details=f"Invalid password (attempt {user.failed_login_attempts}/5)"
+                details=f"Invalid password (attempt {user.failed_login_attempts}/5)",
             )
 
             return templates.TemplateResponse(
                 "login.html",
-                {
-                    "request": request,
-                    "error": "Invalid email or password"
-                },
-                status_code=401
+                {"request": request, "error": "Invalid email or password"},
+                status_code=401,
             )
 
         # Check if user is active
@@ -3002,15 +3614,15 @@ async def login(
                 ip_address=client_ip,
                 user_agent=user_agent,
                 success=False,
-                details="Account disabled"
+                details="Account disabled",
             )
             return templates.TemplateResponse(
                 "login.html",
                 {
                     "request": request,
-                    "error": "Account is disabled. Please contact an administrator."
+                    "error": "Account is disabled. Please contact an administrator.",
                 },
-                status_code=403
+                status_code=403,
             )
 
         # Successful login - reset failed attempts and unlock account
@@ -3034,7 +3646,7 @@ async def login(
             ip_address=client_ip,
             user_agent=user_agent,
             success=True,
-            details=f"Login successful (Remember Me: {remember})"
+            details=f"Login successful (Remember Me: {remember})",
         )
 
         # Set session cookie
@@ -3047,11 +3659,7 @@ async def login(
             max_age = 16 * 60 * 60  # 16 hours in seconds
 
         redirect_response.set_cookie(
-            key="archer_session",
-            value=session_id,
-            max_age=max_age,
-            httponly=True,
-            samesite="lax"
+            key="archer_session", value=session_id, max_age=max_age, httponly=True, samesite="lax"
         )
 
         return redirect_response
@@ -3062,9 +3670,7 @@ async def login(
 
 @app.get("/logout")
 async def logout(
-    request: Request,
-    response: Response,
-    archer_session: Optional[str] = Cookie(None)
+    request: Request, response: Response, archer_session: Optional[str] = Cookie(None)
 ):
     """
     Log out user by deleting their session.
@@ -3096,12 +3702,7 @@ async def register_page(request: Request, response: Response):
 
     # Store temp session ID in a cookie for CSRF validation
     template_response = templates.TemplateResponse(
-        "register.html",
-        {
-            "request": request,
-            "error": None,
-            "csrf_token": csrf_token
-        }
+        "register.html", {"request": request, "error": None, "csrf_token": csrf_token}
     )
 
     template_response.set_cookie(
@@ -3109,7 +3710,7 @@ async def register_page(request: Request, response: Response):
         value=temp_session_id,
         max_age=3600,  # 1 hour
         httponly=True,
-        samesite="lax"
+        samesite="lax",
     )
 
     return template_response
@@ -3124,7 +3725,7 @@ async def register(
     password: str = Form(...),
     password_confirm: str = Form(...),
     csrf_token: str = Form(...),
-    archer_csrf_session: Optional[str] = Cookie(None)
+    archer_csrf_session: Optional[str] = Cookie(None),
 ):
     """
     Register a new user account.
@@ -3166,9 +3767,9 @@ async def register(
                 {
                     "request": request,
                     "error": "Security validation failed. Please refresh the page and try again.",
-                    "csrf_token": ""  # Force page reload
+                    "csrf_token": "",  # Force page reload
                 },
-                status_code=403
+                status_code=403,
             )
 
         # Consume CSRF token to prevent reuse
@@ -3184,24 +3785,20 @@ async def register(
                 {
                     "request": request,
                     "error": "Too many registration attempts. Please try again in 5 minutes.",
-                    "csrf_token": csrf_token
+                    "csrf_token": csrf_token,
                 },
-                status_code=429
+                status_code=429,
             )
 
         # Validate email format
         email = email.strip().lower()
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if not re.match(email_pattern, email) or len(email) > 64:
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
                 "register.html",
-                {
-                    "request": request,
-                    "error": "Invalid email address",
-                    "csrf_token": csrf_token
-                },
-                status_code=400
+                {"request": request, "error": "Invalid email address", "csrf_token": csrf_token},
+                status_code=400,
             )
 
         # Check if email already exists
@@ -3213,9 +3810,9 @@ async def register(
                 {
                     "request": request,
                     "error": "An account with this email address already exists",
-                    "csrf_token": csrf_token
+                    "csrf_token": csrf_token,
                 },
-                status_code=400
+                status_code=400,
             )
 
         # Validate full name
@@ -3227,9 +3824,9 @@ async def register(
                 {
                     "request": request,
                     "error": "Full name must be between 2 and 64 characters",
-                    "csrf_token": csrf_token
+                    "csrf_token": csrf_token,
                 },
-                status_code=400
+                status_code=400,
             )
 
         # Validate passwords match
@@ -3237,12 +3834,8 @@ async def register(
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
                 "register.html",
-                {
-                    "request": request,
-                    "error": "Passwords do not match",
-                    "csrf_token": csrf_token
-                },
-                status_code=400
+                {"request": request, "error": "Passwords do not match", "csrf_token": csrf_token},
+                status_code=400,
             )
 
         # Validate password strength
@@ -3251,12 +3844,8 @@ async def register(
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
                 "register.html",
-                {
-                    "request": request,
-                    "error": error_msg,
-                    "csrf_token": csrf_token
-                },
-                status_code=400
+                {"request": request, "error": error_msg, "csrf_token": csrf_token},
+                status_code=400,
             )
 
         # Create new user
@@ -3266,7 +3855,7 @@ async def register(
             password_hash=hash_password(password),
             role=UserRole.STANDARD,  # Default to standard user
             is_active=True,
-            failed_login_attempts=0
+            failed_login_attempts=0,
         )
 
         db.add(new_user)
@@ -3282,7 +3871,7 @@ async def register(
             ip_address=client_ip,
             user_agent=user_agent,
             success=True,
-            details=f"User registered: {full_name}"
+            details=f"User registered: {full_name}",
         )
 
         # Redirect to login page with success message
@@ -3295,6 +3884,7 @@ async def register(
 # ============================================================================
 # Profile Management Routes
 # ============================================================================
+
 
 @app.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request, archer_session: Optional[str] = Cookie(None)):
@@ -3312,12 +3902,7 @@ async def profile_page(request: Request, archer_session: Optional[str] = Cookie(
 
     try:
         return templates.TemplateResponse(
-            "profile.html",
-            {
-                "request": request,
-                "user": user,
-                "profile_picture_url": None
-            }
+            "profile.html", {"request": request, "user": user, "profile_picture_url": None}
         )
     finally:
         db.close()
@@ -3337,11 +3922,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
 
     try:
         template_response = templates.TemplateResponse(
-            "library.html",
-            {
-                "request": request,
-                "user": user
-            }
+            "library.html", {"request": request, "user": user}
         )
         return template_response
     finally:
@@ -3349,10 +3930,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
 
 
 @app.get("/api/library/detections")
-async def get_library_detections(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def get_library_detections(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Get all library detections accessible to the user.
     Returns user's private detections + all shared detections.
@@ -3368,27 +3946,34 @@ async def get_library_detections(
 
     try:
         # Get user's private detections + all shared detections
-        detections = db.query(LibraryDetection).filter(
-            (LibraryDetection.user_id == user.id) |
-            (LibraryDetection.visibility == VisibilityType.SHARED)
-        ).order_by(LibraryDetection.created_at.desc()).all()
+        detections = (
+            db.query(LibraryDetection)
+            .filter(
+                (LibraryDetection.user_id == user.id)
+                | (LibraryDetection.visibility == VisibilityType.SHARED)
+            )
+            .order_by(LibraryDetection.created_at.desc())
+            .all()
+        )
 
         # Format response
         result = []
         for detection in detections:
             creator = db.query(User).filter(User.id == detection.user_id).first()
-            result.append({
-                "id": detection.id,
-                "title": detection.title,
-                "detection_type": detection.detection_type.value,
-                "visibility": detection.visibility.value,
-                "creator": creator.full_name if creator else "Unknown",
-                "creator_email": creator.email if creator else "",
-                "platform": detection.platform,
-                "tags": detection.tags,
-                "created_at": detection.created_at.isoformat(),
-                "is_owner": detection.user_id == user.id
-            })
+            result.append(
+                {
+                    "id": detection.id,
+                    "title": detection.title,
+                    "detection_type": detection.detection_type.value,
+                    "visibility": detection.visibility.value,
+                    "creator": creator.full_name if creator else "Unknown",
+                    "creator_email": creator.email if creator else "",
+                    "platform": detection.platform,
+                    "tags": detection.tags,
+                    "created_at": detection.created_at.isoformat(),
+                    "is_owner": detection.user_id == user.id,
+                }
+            )
 
         return {"success": True, "detections": result}
 
@@ -3400,10 +3985,7 @@ async def get_library_detections(
 
 
 @app.post("/api/library/search")
-async def search_library(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def search_library(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Search library detections with filters.
     """
@@ -3425,16 +4007,16 @@ async def search_library(
 
         # Build base query
         query = db.query(LibraryDetection).filter(
-            (LibraryDetection.user_id == user.id) |
-            (LibraryDetection.visibility == VisibilityType.SHARED)
+            (LibraryDetection.user_id == user.id)
+            | (LibraryDetection.visibility == VisibilityType.SHARED)
         )
 
         # Apply search filter (search in title, content, AND tags)
         if query_text:
             query = query.filter(
-                (LibraryDetection.title.contains(query_text)) |
-                (LibraryDetection.content.contains(query_text)) |
-                (LibraryDetection.tags.contains(query_text))
+                (LibraryDetection.title.contains(query_text))
+                | (LibraryDetection.content.contains(query_text))
+                | (LibraryDetection.tags.contains(query_text))
             )
 
         # Apply type filter
@@ -3456,18 +4038,20 @@ async def search_library(
             # Apply creator filter
             if creator_filter != "all" and creator_name != creator_filter:
                 continue
-            result.append({
-                "id": detection.id,
-                "title": detection.title,
-                "detection_type": detection.detection_type.value,
-                "visibility": detection.visibility.value,
-                "creator": creator.full_name if creator else "Unknown",
-                "creator_email": creator.email if creator else "",
-                "platform": detection.platform,
-                "tags": detection.tags,
-                "created_at": detection.created_at.isoformat(),
-                "is_owner": detection.user_id == user.id
-            })
+            result.append(
+                {
+                    "id": detection.id,
+                    "title": detection.title,
+                    "detection_type": detection.detection_type.value,
+                    "visibility": detection.visibility.value,
+                    "creator": creator.full_name if creator else "Unknown",
+                    "creator_email": creator.email if creator else "",
+                    "platform": detection.platform,
+                    "tags": detection.tags,
+                    "created_at": detection.created_at.isoformat(),
+                    "is_owner": detection.user_id == user.id,
+                }
+            )
 
         return {"success": True, "detections": result}
 
@@ -3479,10 +4063,7 @@ async def search_library(
 
 
 @app.post("/api/library/export")
-async def export_library(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def export_library(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Export selected detections in specified format (json, csv, xml).
     """
@@ -3508,11 +4089,15 @@ async def export_library(
             raise HTTPException(status_code=400, detail="No detections selected")
 
         # Get detections
-        detections = db.query(LibraryDetection).filter(
-            LibraryDetection.id.in_(detection_ids),
-            (LibraryDetection.user_id == user.id) |
-            (LibraryDetection.visibility == VisibilityType.SHARED)
-        ).all()
+        detections = (
+            db.query(LibraryDetection)
+            .filter(
+                LibraryDetection.id.in_(detection_ids),
+                (LibraryDetection.user_id == user.id)
+                | (LibraryDetection.visibility == VisibilityType.SHARED),
+            )
+            .all()
+        )
 
         if not detections:
             raise HTTPException(status_code=404, detail="No detections found")
@@ -3521,16 +4106,18 @@ async def export_library(
         export_data = []
         for detection in detections:
             creator = db.query(User).filter(User.id == detection.user_id).first()
-            export_data.append({
-                "id": detection.id,
-                "title": detection.title,
-                "type": detection.detection_type.value,
-                "visibility": detection.visibility.value,
-                "creator": creator.full_name if creator else "Unknown",
-                "platform": detection.platform,
-                "content": json.loads(detection.content) if detection.content else {},
-                "created_at": detection.created_at.isoformat()
-            })
+            export_data.append(
+                {
+                    "id": detection.id,
+                    "title": detection.title,
+                    "type": detection.detection_type.value,
+                    "visibility": detection.visibility.value,
+                    "creator": creator.full_name if creator else "Unknown",
+                    "platform": detection.platform,
+                    "content": json.loads(detection.content) if detection.content else {},
+                    "created_at": detection.created_at.isoformat(),
+                }
+            )
 
         # Export based on format
         if export_format == "json":
@@ -3540,26 +4127,39 @@ async def export_library(
 
         elif export_format == "csv":
             output = io.StringIO()
-            writer = csv.DictWriter(output, fieldnames=["id", "title", "type", "visibility", "creator", "platform", "created_at"])
+            writer = csv.DictWriter(
+                output,
+                fieldnames=[
+                    "id",
+                    "title",
+                    "type",
+                    "visibility",
+                    "creator",
+                    "platform",
+                    "created_at",
+                ],
+            )
             writer.writeheader()
             for item in export_data:
-                writer.writerow({
-                    "id": item["id"],
-                    "title": item["title"],
-                    "type": item["type"],
-                    "visibility": item["visibility"],
-                    "creator": item["creator"],
-                    "platform": item["platform"],
-                    "created_at": item["created_at"]
-                })
+                writer.writerow(
+                    {
+                        "id": item["id"],
+                        "title": item["title"],
+                        "type": item["type"],
+                        "visibility": item["visibility"],
+                        "creator": item["creator"],
+                        "platform": item["platform"],
+                        "created_at": item["created_at"],
+                    }
+                )
             content = output.getvalue()
             media_type = "text/csv"
             filename = "library_export.csv"
 
         elif export_format == "xml":
-            xml_lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<library>']
+            xml_lines = ['<?xml version="1.0" encoding="UTF-8"?>', "<library>"]
             for item in export_data:
-                xml_lines.append('  <detection>')
+                xml_lines.append("  <detection>")
                 xml_lines.append(f'    <id>{item["id"]}</id>')
                 xml_lines.append(f'    <title><![CDATA[{item["title"]}]]></title>')
                 xml_lines.append(f'    <type>{item["type"]}</type>')
@@ -3567,9 +4167,9 @@ async def export_library(
                 xml_lines.append(f'    <creator><![CDATA[{item["creator"]}]]></creator>')
                 xml_lines.append(f'    <platform>{item["platform"]}</platform>')
                 xml_lines.append(f'    <created_at>{item["created_at"]}</created_at>')
-                xml_lines.append('  </detection>')
-            xml_lines.append('</library>')
-            content = '\n'.join(xml_lines)
+                xml_lines.append("  </detection>")
+            xml_lines.append("</library>")
+            content = "\n".join(xml_lines)
             media_type = "application/xml"
             filename = "library_export.xml"
 
@@ -3583,10 +4183,7 @@ async def export_library(
                 activity_type="library_export",
                 title=f"Exported {len(detections)} detections from library",
                 description=f"Exported detections in {export_format.upper()} format",
-                metadata={
-                    "count": len(detections),
-                    "format": export_format
-                }
+                metadata={"count": len(detections), "format": export_format},
             )
         except Exception as log_error:
             print(f"Error logging library export activity: {log_error}")
@@ -3594,7 +4191,7 @@ async def export_library(
         return StreamingResponse(
             io.BytesIO(content.encode()),
             media_type=media_type,
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
 
     except HTTPException:
@@ -3607,10 +4204,7 @@ async def export_library(
 
 
 @app.post("/api/library/save")
-async def save_to_library(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def save_to_library(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Save a new detection to the library.
     """
@@ -3659,7 +4253,7 @@ async def save_to_library(
             visibility=VisibilityType(visibility),
             content=json.dumps(content) if isinstance(content, dict) else content,
             platform=platform,
-            tags=tags_json
+            tags=tags_json,
         )
 
         db.add(new_detection)
@@ -3676,8 +4270,8 @@ async def save_to_library(
                     "detection_id": new_detection.id,
                     "detection_type": detection_type,
                     "platform": platform,
-                    "visibility": visibility
-                }
+                    "visibility": visibility,
+                },
             )
         except Exception as log_error:
             print(f"Error logging library save activity: {log_error}")
@@ -3686,7 +4280,7 @@ async def save_to_library(
             "success": True,
             "message": "Detection saved to library",
             "id": new_detection.id,
-            "tags": all_tags
+            "tags": all_tags,
         }
 
     except HTTPException:
@@ -3700,10 +4294,7 @@ async def save_to_library(
 
 
 @app.post("/api/library/tags")
-async def update_library_tags(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def update_library_tags(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Update tags for multiple detections in the library.
     """
@@ -3726,10 +4317,11 @@ async def update_library_tags(
             raise HTTPException(status_code=400, detail="No detection IDs provided")
 
         # Validate that all detections belong to the current user
-        detections = db.query(LibraryDetection).filter(
-            LibraryDetection.id.in_(detection_ids),
-            LibraryDetection.user_id == user.id
-        ).all()
+        detections = (
+            db.query(LibraryDetection)
+            .filter(LibraryDetection.id.in_(detection_ids), LibraryDetection.user_id == user.id)
+            .all()
+        )
 
         if len(detections) != len(detection_ids):
             raise HTTPException(status_code=403, detail="Some detections not found or unauthorized")
@@ -3744,7 +4336,7 @@ async def update_library_tags(
         return {
             "success": True,
             "message": f"Tags updated for {len(detections)} detection(s)",
-            "count": len(detections)
+            "count": len(detections),
         }
 
     except HTTPException:
@@ -3758,10 +4350,7 @@ async def update_library_tags(
 
 
 @app.post("/api/library/visibility")
-async def update_library_visibility(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def update_library_visibility(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Update visibility for multiple detections in the library.
     """
@@ -3783,10 +4372,11 @@ async def update_library_visibility(
             raise HTTPException(status_code=400, detail="No detection IDs provided")
 
         # Validate that all detections belong to the current user
-        detections = db.query(LibraryDetection).filter(
-            LibraryDetection.id.in_(detection_ids),
-            LibraryDetection.user_id == user.id
-        ).all()
+        detections = (
+            db.query(LibraryDetection)
+            .filter(LibraryDetection.id.in_(detection_ids), LibraryDetection.user_id == user.id)
+            .all()
+        )
 
         if len(detections) != len(detection_ids):
             raise HTTPException(status_code=403, detail="Some detections not found or unauthorized")
@@ -3801,7 +4391,7 @@ async def update_library_visibility(
         return {
             "success": True,
             "message": f"Visibility updated for {len(detections)} detection(s)",
-            "count": len(detections)
+            "count": len(detections),
         }
 
     except HTTPException:
@@ -3815,10 +4405,7 @@ async def update_library_visibility(
 
 
 @app.post("/api/library/delete")
-async def delete_library_detections(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def delete_library_detections(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Delete multiple detections from the library.
     """
@@ -3839,10 +4426,11 @@ async def delete_library_detections(
             raise HTTPException(status_code=400, detail="No detection IDs provided")
 
         # Validate that all detections belong to the current user
-        detections = db.query(LibraryDetection).filter(
-            LibraryDetection.id.in_(detection_ids),
-            LibraryDetection.user_id == user.id
-        ).all()
+        detections = (
+            db.query(LibraryDetection)
+            .filter(LibraryDetection.id.in_(detection_ids), LibraryDetection.user_id == user.id)
+            .all()
+        )
 
         if len(detections) != len(detection_ids):
             raise HTTPException(status_code=403, detail="Some detections not found or unauthorized")
@@ -3856,7 +4444,7 @@ async def delete_library_detections(
         return {
             "success": True,
             "message": f"Deleted {len(detections)} detection(s)",
-            "deleted_count": len(detections)
+            "deleted_count": len(detections),
         }
 
     except HTTPException:
@@ -3917,7 +4505,7 @@ async def upload_profile_picture(profile_picture: UploadFile = File(...)):
         return {"success": False, "error": "File must be an image"}
 
     # Create profile pictures directory if it doesn't exist
-    pics_dir = os.path.join("data", "profile_pictures")
+    pics_dir = PROFILE_PICS_DIR
     os.makedirs(pics_dir, exist_ok=True)
 
     # Generate unique filename
@@ -3930,10 +4518,7 @@ async def upload_profile_picture(profile_picture: UploadFile = File(...)):
         content = await profile_picture.read()
         f.write(content)
 
-    return {
-        "success": True,
-        "url": f"/static/profile_pictures/{filename}"
-    }
+    return {"success": True, "url": f"/static/profile_pictures/{filename}"}
 
 
 @app.get("/api/profile/timeline")
@@ -4009,7 +4594,7 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
             "mde": "mde",
             "elastic": "elastic",
             "openai": "openai",
-            "anthropic": "anthropic"
+            "anthropic": "anthropic",
         }
 
         # Process each API key
@@ -4021,10 +4606,11 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
                 continue
 
             # Check if key already exists for this user
-            existing_key = db.query(APIKey).filter(
-                APIKey.user_id == user.id,
-                APIKey.key_name == db_name
-            ).first()
+            existing_key = (
+                db.query(APIKey)
+                .filter(APIKey.user_id == user.id, APIKey.key_name == db_name)
+                .first()
+            )
 
             # Encrypt the API key
             encrypted_value = encrypt_api_key(key_value)
@@ -4035,11 +4621,7 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
                 existing_key.updated_at = datetime.utcnow()
             else:
                 # Create new key
-                new_key = APIKey(
-                    user_id=user.id,
-                    key_name=db_name,
-                    encrypted_key=encrypted_value
-                )
+                new_key = APIKey(user_id=user.id, key_name=db_name, encrypted_key=encrypted_value)
                 db.add(new_key)
 
         db.commit()
@@ -4058,11 +4640,9 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
 # SECURITY ENDPOINTS (Password, MFA, Backup Codes)
 # ==========================================
 
+
 @app.post("/api/change-password")
-async def change_password(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def change_password(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Change user's password.
 
@@ -4085,7 +4665,9 @@ async def change_password(
         new_password = body.get("new_password")
 
         if not current_password or not new_password:
-            raise HTTPException(status_code=400, detail="Both current and new password are required")
+            raise HTTPException(
+                status_code=400, detail="Both current and new password are required"
+            )
 
         # Verify current password
         if not verify_password(current_password, user.password_hash):
@@ -4097,7 +4679,7 @@ async def change_password(
                 ip_address=request.client.host if request.client else None,
                 user_agent=request.headers.get("user-agent"),
                 success=False,
-                details="Incorrect current password"
+                details="Incorrect current password",
             )
             raise HTTPException(status_code=400, detail="Current password is incorrect")
 
@@ -4118,7 +4700,7 @@ async def change_password(
             email=user.email,
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
-            success=True
+            success=True,
         )
 
         return {"success": True, "message": "Password changed successfully"}
@@ -4134,10 +4716,7 @@ async def change_password(
 
 
 @app.get("/api/mfa/status")
-async def get_mfa_status(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def get_mfa_status(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Get MFA status for current user.
     """
@@ -4151,17 +4730,14 @@ async def get_mfa_status(
     try:
         return {
             "success": True,
-            "enabled": user.mfa_enabled if hasattr(user, 'mfa_enabled') else False
+            "enabled": user.mfa_enabled if hasattr(user, "mfa_enabled") else False,
         }
     finally:
         db.close()
 
 
 @app.post("/api/mfa/setup")
-async def setup_mfa(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def setup_mfa(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Generate MFA secret and QR code for setup.
 
@@ -4188,11 +4764,7 @@ async def setup_mfa(
         # Generate QR code
         qr_code = generate_qr_code(user.email, secret)
 
-        return {
-            "success": True,
-            "secret": secret,
-            "qr_code": qr_code
-        }
+        return {"success": True, "secret": secret, "qr_code": qr_code}
 
     except Exception as e:
         db.rollback()
@@ -4203,10 +4775,7 @@ async def setup_mfa(
 
 
 @app.post("/api/mfa/verify")
-async def verify_mfa(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def verify_mfa(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Verify TOTP code and enable MFA.
     """
@@ -4252,10 +4821,7 @@ async def verify_mfa(
 
 
 @app.post("/api/mfa/disable")
-async def disable_mfa(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def disable_mfa(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Disable MFA for current user.
     """
@@ -4284,10 +4850,7 @@ async def disable_mfa(
 
 
 @app.post("/api/backup-codes/generate")
-async def generate_backup_codes(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def generate_backup_codes(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Generate new backup recovery codes.
 
@@ -4310,10 +4873,7 @@ async def generate_backup_codes(
         user.backup_codes = hashed_codes_json
         db.commit()
 
-        return {
-            "success": True,
-            "codes": plain_codes
-        }
+        return {"success": True, "codes": plain_codes}
 
     except Exception as e:
         db.rollback()
@@ -4338,7 +4898,7 @@ async def get_users(request: Request, archer_session: Optional[str] = Cookie(Non
     user, db = auth_result
 
     # Check if user is admin
-    if not user or user.role.value != 'admin':
+    if not user or user.role.value != "admin":
         return {"success": False, "error": "Admin access required"}
 
     try:
@@ -4347,15 +4907,17 @@ async def get_users(request: Request, archer_session: Optional[str] = Cookie(Non
 
         users_list = []
         for u in all_users:
-            users_list.append({
-                "id": u.id,
-                "email": u.email,
-                "full_name": u.full_name,
-                "role": u.role.value,
-                "is_active": u.is_active,
-                "created_at": u.created_at.isoformat() if u.created_at else None,
-                "is_current_user": u.id == user.id
-            })
+            users_list.append(
+                {
+                    "id": u.id,
+                    "email": u.email,
+                    "full_name": u.full_name,
+                    "role": u.role.value,
+                    "is_active": u.is_active,
+                    "created_at": u.created_at.isoformat() if u.created_at else None,
+                    "is_current_user": u.id == user.id,
+                }
+            )
 
         return {"success": True, "users": users_list}
 
@@ -4370,6 +4932,7 @@ async def get_users(request: Request, archer_session: Optional[str] = Cookie(Non
 # =============================================================================
 # Password Reset Endpoints
 # =============================================================================
+
 
 @app.post("/api/auth/request-reset")
 async def request_password_reset(request: Request):
@@ -4395,21 +4958,20 @@ async def request_password_reset(request: Request):
                 # For security, don't reveal if email exists or not
                 return {
                     "success": True,
-                    "message": "If an account exists with this email, a password reset link has been sent."
+                    "message": "If an account exists with this email, a password reset link has been sent.",
                 }
 
             # Send password reset email
             from archer.auth.email import send_password_reset_email, EMAIL_ENABLED
+
             email_sent = send_password_reset_email(
-                email=email,
-                token=token,
-                full_name=user.full_name if user else None
+                email=email, token=token, full_name=user.full_name if user else None
             )
 
             # In development mode (EMAIL_ENABLED=false), also return the token for testing
             response = {
                 "success": True,
-                "message": "Password reset link has been sent to your email."
+                "message": "Password reset link has been sent to your email.",
             }
 
             if not EMAIL_ENABLED:
@@ -4469,12 +5031,9 @@ async def reset_password(request: Request):
                     ip_address=client_ip,
                     user_agent=user_agent,
                     success=False,
-                    details="Invalid or expired reset token"
+                    details="Invalid or expired reset token",
                 )
-                return {
-                    "success": False,
-                    "error": "Invalid or expired reset token"
-                }
+                return {"success": False, "error": "Invalid or expired reset token"}
 
             # Reset password
             success = reset_password_with_token(token, new_password, db)
@@ -4488,12 +5047,9 @@ async def reset_password(request: Request):
                     ip_address=client_ip,
                     user_agent=user_agent,
                     success=False,
-                    details="Failed to reset password"
+                    details="Failed to reset password",
                 )
-                return {
-                    "success": False,
-                    "error": "Invalid or expired reset token"
-                }
+                return {"success": False, "error": "Invalid or expired reset token"}
 
             # Log successful password reset
             log_audit_event(
@@ -4504,12 +5060,12 @@ async def reset_password(request: Request):
                 ip_address=client_ip,
                 user_agent=user_agent,
                 success=True,
-                details="Password reset completed successfully"
+                details="Password reset completed successfully",
             )
 
             return {
                 "success": True,
-                "message": "Password has been reset successfully. You can now log in with your new password."
+                "message": "Password has been reset successfully. You can now log in with your new password.",
             }
 
         finally:
@@ -4558,10 +5114,7 @@ async def admin_reset_user_password(request: Request, archer_session: Optional[s
         if not success:
             return {"success": False, "error": "User not found"}
 
-        return {
-            "success": True,
-            "message": "Password has been reset successfully"
-        }
+        return {"success": True, "message": "Password has been reset successfully"}
 
     except Exception as e:
         logger.error(f"Error in admin password reset: {e}")
@@ -4574,6 +5127,7 @@ async def admin_reset_user_password(request: Request, archer_session: Optional[s
 # =============================================================================
 # Admin User Management Endpoints
 # =============================================================================
+
 
 @app.get("/api/admin/users")
 async def get_all_users(request: Request, archer_session: Optional[str] = Cookie(None)):
@@ -4600,20 +5154,19 @@ async def get_all_users(request: Request, archer_session: Optional[str] = Cookie
         # Format user data (exclude sensitive information)
         users_data = []
         for user in users:
-            users_data.append({
-                "id": user.id,
-                "email": user.email,
-                "full_name": user.full_name,
-                "role": user.role.value,
-                "is_active": user.is_active,
-                "created_at": user.created_at.isoformat() if user.created_at else None,
-                "updated_at": user.updated_at.isoformat() if user.updated_at else None
-            })
+            users_data.append(
+                {
+                    "id": user.id,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "role": user.role.value,
+                    "is_active": user.is_active,
+                    "created_at": user.created_at.isoformat() if user.created_at else None,
+                    "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+                }
+            )
 
-        return {
-            "success": True,
-            "users": users_data
-        }
+        return {"success": True, "users": users_data}
 
     except Exception as e:
         logger.error(f"Error getting users: {e}")
@@ -4648,6 +5201,7 @@ async def create_user(request: Request, archer_session: Optional[str] = Cookie(N
 
         # Validate email
         from archer.security import validate_email, sanitize_full_name
+
         email_valid, email_result = validate_email(email)
         if not email_valid:
             return {"success": False, "error": email_result}
@@ -4665,7 +5219,7 @@ async def create_user(request: Request, archer_session: Optional[str] = Cookie(N
             return {"success": False, "error": error_message}
 
         # Validate role
-        if role not in ['admin', 'standard']:
+        if role not in ["admin", "standard"]:
             return {"success": False, "error": "Invalid role. Must be 'admin' or 'standard'"}
 
         # Check if user already exists
@@ -4674,7 +5228,7 @@ async def create_user(request: Request, archer_session: Optional[str] = Cookie(N
             return {"success": False, "error": "User with this email already exists"}
 
         # Create new user
-        user_role = UserRole.ADMIN if role == 'admin' else UserRole.STANDARD
+        user_role = UserRole.ADMIN if role == "admin" else UserRole.STANDARD
         hashed_password = hash_password(password)
 
         new_user = User(
@@ -4682,7 +5236,7 @@ async def create_user(request: Request, archer_session: Optional[str] = Cookie(N
             full_name=full_name,
             hashed_password=hashed_password,
             role=user_role,
-            is_active=True
+            is_active=True,
         )
 
         db.add(new_user)
@@ -4696,8 +5250,8 @@ async def create_user(request: Request, archer_session: Optional[str] = Cookie(N
                 "id": new_user.id,
                 "email": new_user.email,
                 "full_name": new_user.full_name,
-                "role": new_user.role.value
-            }
+                "role": new_user.role.value,
+            },
         }
 
     except Exception as e:
@@ -4739,6 +5293,7 @@ async def update_user(request: Request, user_id: int, archer_session: Optional[s
         # Update email if provided
         if "email" in data:
             from archer.security import validate_email
+
             email = data["email"].strip().lower()
             email_valid, email_result = validate_email(email)
             if not email_valid:
@@ -4754,6 +5309,7 @@ async def update_user(request: Request, user_id: int, archer_session: Optional[s
         # Update full name if provided
         if "full_name" in data:
             from archer.security import sanitize_full_name
+
             name_valid, name_result = sanitize_full_name(data["full_name"])
             if not name_valid:
                 return {"success": False, "error": name_result}
@@ -4762,9 +5318,9 @@ async def update_user(request: Request, user_id: int, archer_session: Optional[s
         # Update role if provided
         if "role" in data:
             role = data["role"].lower()
-            if role not in ['admin', 'standard']:
+            if role not in ["admin", "standard"]:
                 return {"success": False, "error": "Invalid role"}
-            user.role = UserRole.ADMIN if role == 'admin' else UserRole.STANDARD
+            user.role = UserRole.ADMIN if role == "admin" else UserRole.STANDARD
 
         # Update active status if provided
         if "is_active" in data:
@@ -4782,8 +5338,8 @@ async def update_user(request: Request, user_id: int, archer_session: Optional[s
                 "email": user.email,
                 "full_name": user.full_name,
                 "role": user.role.value,
-                "is_active": user.is_active
-            }
+                "is_active": user.is_active,
+            },
         }
 
     except Exception as e:
@@ -4796,7 +5352,9 @@ async def update_user(request: Request, user_id: int, archer_session: Optional[s
 
 
 @app.delete("/api/admin/users/{user_id}")
-async def deactivate_user(request: Request, user_id: int, archer_session: Optional[str] = Cookie(None)):
+async def deactivate_user(
+    request: Request, user_id: int, archer_session: Optional[str] = Cookie(None)
+):
     """
     Deactivate a user (Admin only).
 
@@ -4829,14 +5387,14 @@ async def deactivate_user(request: Request, user_id: int, archer_session: Option
 
         # Invalidate all active sessions for this user
         from archer.database.models import Session
-        db.query(Session).filter(Session.user_id == user_id, Session.is_active == True).update({"is_active": False})
+
+        db.query(Session).filter(Session.user_id == user_id, Session.is_active == True).update(
+            {"is_active": False}
+        )
 
         db.commit()
 
-        return {
-            "success": True,
-            "message": f"User {user.email} has been deactivated"
-        }
+        return {"success": True, "message": f"User {user.email} has been deactivated"}
 
     except Exception as e:
         db.rollback()
@@ -4848,10 +5406,7 @@ async def deactivate_user(request: Request, user_id: int, archer_session: Option
 
 
 @app.get("/api/activities")
-async def get_activities(
-    request: Request,
-    archer_session: Optional[str] = Cookie(None)
-):
+async def get_activities(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
     Get user's activity timeline.
     """
@@ -4866,9 +5421,13 @@ async def get_activities(
 
     try:
         # Get all activities for the current user, ordered by most recent
-        activities = db.query(ActivityLog).filter(
-            ActivityLog.user_id == user.id
-        ).order_by(ActivityLog.created_at.desc()).limit(100).all()
+        activities = (
+            db.query(ActivityLog)
+            .filter(ActivityLog.user_id == user.id)
+            .order_by(ActivityLog.created_at.desc())
+            .limit(100)
+            .all()
+        )
 
         # Format activities for frontend
         result = []
@@ -4878,23 +5437,23 @@ async def get_activities(
             if activity.activity_metadata:
                 try:
                     import json
+
                     metadata_dict = json.loads(activity.activity_metadata)
                 except:
                     pass
 
-            result.append({
-                "id": activity.id,
-                "type": activity.activity_type.value,
-                "title": activity.title,
-                "description": activity.description,
-                "metadata": metadata_dict,
-                "created_at": activity.created_at.isoformat()
-            })
+            result.append(
+                {
+                    "id": activity.id,
+                    "type": activity.activity_type.value,
+                    "title": activity.title,
+                    "description": activity.description,
+                    "metadata": metadata_dict,
+                    "created_at": activity.created_at.isoformat(),
+                }
+            )
 
-        return {
-            "success": True,
-            "activities": result
-        }
+        return {"success": True, "activities": result}
 
     except Exception as e:
         logger.error(f"Error fetching activities: {e}")

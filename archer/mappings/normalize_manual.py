@@ -37,11 +37,7 @@ class SplunkSchemaNormalizer:
         'ClientIP': 'src_ip',
         'ClientIPAddress': 'src_ip',
         'callerIpAddress': 'src_ip',
-        'sourceIP': 'src_ip',
-
-        # Keep these separate to avoid conflicts
         'src_ip': 'src_ip',  # Already normalized
-        'sourceIP': 'src_ip',
 
         # Destination IP fields
         'dest_ip': 'dest_ip',  # Already normalized
@@ -52,10 +48,13 @@ class SplunkSchemaNormalizer:
         'dest_host': 'dest_host',
         'dhost': 'dest_host',
 
-        # Device fields
+        # Device fields - ALL variations map to 'device' for consistency
         'dvc': 'device',
         'device': 'device',
-        'DeviceName': 'device_name',
+        'DeviceName': 'device',
+        'ComputerName': 'device',
+        'device_name': 'device',
+        'computer_name': 'device',
         'DeviceDisplayName': 'device_display_name',
 
         # User fields - keep separate to avoid conflicts
@@ -107,15 +106,113 @@ class SplunkSchemaNormalizer:
         'lat': 'latitude',
         'lon': 'longitude',
 
-        # Computer/Host fields
-        'ComputerName': 'computer_name',
+        # Event code fields
         'EventCode': 'event_code',
 
         # CEF/Rule fields
         'Rule_name': 'rule_name',
         'RuleID': 'rule_id',
         'ClientCountry': 'src_country',
-        'source_ip': 'src_ip',
+
+        # HTTP Request fields (from aws_waf and similar)
+        'httpRequest.uri': 'uri_path',
+        'httpRequest.country': 'request_country',
+        'httpRequest.headers{}.name': 'header_name',
+        'httpRequest.headers{}.value': 'header_value',
+        'httpRequest.host': 'request_host',
+        'httpRequest.httpVersion': 'http_version',
+        'httpRequest.requestId': 'request_id',
+        'httpRequest.scheme': 'request_scheme',
+
+        # AWS CloudTrail fields
+        'eventTime': 'event_time',
+        'recipientAccountId': 'account_id',
+        'requestParameters.instanceType': 'instance_type',
+        'requestParameters.availabilityZone': 'availability_zone',
+
+        # AWS GuardDuty resource fields
+        'resource.accessKeyDetails.userName': 'access_key_user',
+        'resource.accessKeyDetails.accessKeyId': 'access_key_id',
+        'resource.accessKeyDetails.principalId': 'principal_id',
+        'resource.accessKeyDetails.userType': 'user_type',
+        'resource.instanceDetails.availabilityZone': 'availability_zone',
+        'resource.instanceDetails.instanceId': 'instance_id',
+        'resource.instanceDetails.instanceState': 'instance_state',
+        'resource.instanceDetails.instanceType': 'instance_type',
+        'resource.resourceType': 'resource_type',
+
+        # AWS GuardDuty service fields
+        'service.action.dnsRequestAction.domain': 'dns_domain',
+        'service.action.actionType': 'action_type',
+        'service.action.awsApiCallAction.api': 'api_call',
+        'service.action.awsApiCallAction.serviceName': 'service_name',
+        'service.additionalInfo.threatListName': 'threat_list',
+        'service.additionalInfo.threatName': 'threat_name',
+        'service.serviceName': 'service_name_alt',
+
+        # Azure Active Directory properties fields
+        'properties.resultType': 'result_type',
+        'properties.userAgent': 'http_user_agent',
+        'properties.userDisplayName': 'user_display_name',
+        'properties.userPrincipalName': 'user_principal_name',
+        'properties.activityDateTime': 'activity_time',
+        'properties.category': 'event_category',
+        'properties.correlationId': 'correlation_id',
+        'properties.location.city': 'city',
+        'properties.location.countryOrRegion': 'country',
+        'properties.location.geoCoordinates.latitude': 'latitude',
+        'properties.location.geoCoordinates.longitude': 'longitude',
+
+        # Azure Activity Log identity fields
+        'identity.authorization.action': 'authorization_action',
+        'identity.claims.appid': 'claim_app_id',
+        'identity.claims.aud': 'claim_audience',
+
+        # GCP Audit protoPayload fields
+        'protoPayload.@type': 'proto_type',
+        'protoPayload.authenticationInfo.principalEmail': 'principal_email',
+        'protoPayload.authenticationInfo.principalSubject': 'principal_subject',
+        'protoPayload.authorizationInfo{}.granted': 'auth_granted',
+        'protoPayload.authorizationInfo{}.permission': 'permission',
+        'protoPayload.authorizationInfo{}.permissionType': 'permission_type',
+        'protoPayload.resourceName': 'resource_name_full',
+
+        # Microsoft Defender properties fields
+        'properties.DeviceName': 'device',
+        'properties.FileName': 'file_name',
+        'properties.ProcessCommandLine': 'process_command_line',
+        'properties.InitiatingProcessFileName': 'parent_process_name',
+        'properties.InitiatingProcessCommandLine': 'parent_process_command_line',
+        'properties.AccountName': 'account_name',
+        'properties.InitiatingProcessAccountName': 'parent_account_name',
+        'properties.InitiatingProcessParentFileName': 'grandparent_process_name',
+        'properties.LocalIP': 'local_ip',
+        'properties.RemoteIP': 'remote_ip',
+        'properties.RemoteUrl': 'remote_url',
+        'properties.RegistryKey': 'registry_key',
+        'properties.RegistryValueData': 'registry_value_data',
+        'properties.PreviousRegistryKey': 'previous_registry_key',
+        'properties.PreviousRegistryValueData': 'previous_registry_value_data',
+
+        # Microsoft O365 fields with nested objects
+        'AffectedItems{}.Attachments': 'affected_attachments',
+        'AffectedItems{}.ParentFolder.Path': 'affected_parent_folder',
+        'AffectedItems{}.Subject': 'affected_subject',
+        'AppAccessContext.ClientAppName': 'client_app_name',
+        'CopilotEventData.AISystemPlugin{}.Id': 'ai_plugin_id',
+        'CopilotEventData.AISystemPlugin{}.Name': 'ai_plugin_name',
+        'Item.Attachments': 'item_attachments',
+        'Item.ParentFolder.Path': 'item_parent_folder_path',
+        'Item.Subject': 'item_subject',
+
+        # WAF rule fields
+        'ruleGroupList{}.excludedRules{}.ruleId': 'excluded_rule_id',
+        'ruleGroupList{}.excludedRules{}.ruleMatchDetails': 'rule_match_details',
+        'ruleGroupList{}.excludedRules{}.ruleMatchDetails{}.conditionType': 'condition_type',
+        'ruleGroupList{}.excludedRules{}.ruleMatchDetails{}.location': 'match_location',
+        'ruleGroupList{}.excludedRules{}.ruleMatchDetails{}.matchedData{}': 'matched_data',
+        'ruleGroupList{}.ruleGroupId': 'rule_group_id',
+        'labels{}.name': 'label_name',
     }
 
     # Fields to exclude (non-security, HR, organizational, UI, asset management)

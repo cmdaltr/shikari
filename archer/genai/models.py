@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple
 import importlib.util
 import time
 import hashlib
+from ..config import AI_CACHE_DIR
 
 
 class QueryGeneratorBase:
@@ -22,13 +23,13 @@ class QueryGeneratorBase:
             config_file: Path to configuration file (optional)
         """
         self.config = self._load_config(config_file)
-        self.cache_dir = self.config.get("cache_dir", os.path.join("data", "ai_cache"))
+        self.cache_dir = self.config.get("cache_dir", AI_CACHE_DIR)
         os.makedirs(self.cache_dir, exist_ok=True)
     
     def _load_config(self, config_file: str = None) -> Dict:
         """Load configuration from file or use defaults."""
         default_config = {
-            "cache_dir": os.path.join("data", "ai_cache"),
+            "cache_dir": AI_CACHE_DIR,
             "cache_ttl": 86400,  # 1 day in seconds
             "model": "default",
             "temperature": 0.2,

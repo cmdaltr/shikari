@@ -7,6 +7,26 @@ Centralized configuration for optional features and integrations.
 import os
 
 
+# ========== Directory Path Constants ==========
+# These constants are used throughout Archer to maintain consistent paths
+DATA_DIR = "data"
+GENERATE_DIR = os.path.join(DATA_DIR, "generate")
+CORRELATE_DIR = os.path.join(DATA_DIR, "correlate")
+DRAFTS_DIR = os.path.join(DATA_DIR, "drafts")
+UPLOADS_DIR = os.path.join(DATA_DIR, "uploads")
+BLOG_DIR = os.path.join(DATA_DIR, "blog_analysis")
+ATTACK_FLOWS_DIR = os.path.join(DATA_DIR, "attack_flows")
+PROGRESS_DIR = os.path.join(DATA_DIR, "progress")
+PROFILE_PICS_DIR = os.path.join(DATA_DIR, "profile_pictures")
+VALIDATION_CACHE_DIR = os.path.join(DATA_DIR, "validation_cache")
+AI_CACHE_DIR = os.path.join(DATA_DIR, "ai_cache")
+CVE_CACHE_DIR = os.path.join(DATA_DIR, "cve_cache")
+
+# ========== Common Constants ==========
+# Severity order for comparison (highest to lowest priority)
+SEVERITY_ORDER = ["Critical", "High", "Medium", "Low", "Informational"]
+
+
 class EmulationConfig:
     """Configuration for adversary emulation integrations."""
 

@@ -15,13 +15,12 @@ html, body {
 /* Single background color throughout - matching How Archer Works page */
 body, html {
   background: #f7fafc !important;
-  min-height: 100vh;
   overflow-x: hidden;
 }
 
 .page-shell {
   background: #f7fafc !important;
-  min-height: 100vh;
+  flex: 1;
   padding-top: 0;
   overflow-x: hidden;
   max-width: 100%;
@@ -177,7 +176,7 @@ body, html {
 /* Logo at top center - between Back and How Archer Works */
 .header-logo-container {
   position: absolute;
-  top: 15px;
+  top: 22px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
@@ -197,13 +196,13 @@ body, html {
 
 .header-logo img {
   width: auto;
-  height: 35px;
+  height: 42px;
   filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.2));
 }
 
 .header-logo h1 {
   font-family: 'Helvetica Neue', Arial, sans-serif;
-  font-size: 28px;
+  font-size: 33.6px;
   font-weight: 700;
   letter-spacing: 3px;
   color: #1a1a1a;
@@ -344,6 +343,30 @@ body, html {
   background: rgba(197, 48, 48, 0.1);
 }
 
+.btn-selection {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #C53030;
+  border-radius: 4px;
+  background: white;
+  color: #C53030;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-selection:hover {
+  background: #C53030;
+  color: white;
+}
+
+.btn-selection svg {
+  flex-shrink: 0;
+}
+
 /* Vendor sections */
 .vendor-section {
   margin-bottom: 16px;
@@ -441,18 +464,10 @@ body, html {
   transition: max-height 0.5s ease-in;
 }
 
-.detection-item {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
-  transition: background 0.2s;
-}
+/* detection-item base styles now in common.css */
 
 .detection-item:hover {
   background: #fafafa;
-}
-
-.detection-item:last-child {
-  border-bottom: none;
 }
 
 .detection-title {
@@ -460,6 +475,23 @@ body, html {
   color: #1a1a1a;
   margin-bottom: 6px;
   font-size: 1em;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;  /* Allow wrapping to prevent stretching */
+  gap: 8px;
+}
+
+.detection-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* detection-item.unchecked styles now in common.css */
+
+.detection-item.unchecked {
+  background-color: #f9f9f9;
 }
 
 .detection-technique {
@@ -471,6 +503,60 @@ body, html {
   font-size: 0.85em;
   font-weight: 600;
   margin-right: 8px;
+  flex-shrink: 0;  /* Prevent badge from growing */
+  width: fit-content;  /* Only as wide as content */
+}
+
+.detection-indicators {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detection-indicators-placeholder {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.indicator-tag {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 0.85em;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  color: #d63384;
+  white-space: nowrap;
+}
+
+/* needs-review-badge base styles now in common.css */
+
+.needs-review-badge {
+  border: 1px solid #ffc107;
+  padding: 2px 8px;
+  font-size: 0.75em;
+  margin-left: 8px;
+}
+
+/* OSINT enriched badge - orange color */
+.osint-enriched-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ff9800;
+  color: white;
+  border: 1px solid #f57c00;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.75em;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.osint-enriched-badge svg {
+  flex-shrink: 0;
 }
 
 .detection-description {
@@ -478,6 +564,15 @@ body, html {
   font-size: 0.9em;
   margin-top: 6px;
   line-height: 1.5;
+}
+
+.detection-description a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.detection-description a:hover {
+  text-decoration: underline;
 }
 
 /* Action buttons - 5 horizontal buttons below Detection Rules */
@@ -515,7 +610,8 @@ body, html {
   margin-top: 60px;
   margin-left: calc(-50vw + 50%);
   margin-right: calc(-50vw + 50%);
-  padding: 30px 0;
+  margin-bottom: 0 !important;
+  padding: 30px 0 30px 0;
   background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
   border-top: 3px solid #C53030;
   text-align: center;
@@ -611,8 +707,9 @@ body, html {
 </style>
 {% endblock %}
 
+{% block main_class %}page-shell{% endblock %}
+
 {% block content %}
-<div id="main-content" class="page-shell">
   <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help) -->
   <div class="global-nav-controls">
     {% if user %}
@@ -766,7 +863,22 @@ body, html {
           </div>
           Detections
         </h2>
-        <span class="expand-btn" onclick="toggleAllVendors()">Expand All</span>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button class="btn-selection" onclick="selectAllDetections()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 11 12 14 22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            Select All
+          </button>
+          <button class="btn-selection" onclick="deselectAllDetections()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            </svg>
+            Deselect All
+          </button>
+          <span class="expand-btn" onclick="toggleAllVendors()">Expand All</span>
+        </div>
       </div>
 
       {% if detections %}
@@ -854,12 +966,40 @@ body, html {
             </div>
             {% else %}
             {% for detection in vendor.detections %}
-            <div class="detection-item">
+            <div class="detection-item{% if detection.needs_review %} unchecked{% endif %}" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}">
               <div class="detection-title">
+                <input type="checkbox" class="detection-checkbox" {% if not detection.needs_review %}checked{% endif %} data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
                 <span class="detection-technique">{{ detection.technique }}</span>
-                <span style="font-weight: 400;">{{ detection.title.replace(', ', ' | ') }}</span>
+                {% if detection.osint_enriched %}
+                <span class="osint-enriched-badge" title="This detection was enriched with additional open-source intelligence (OSINT) research beyond MITRE ATT&CK. Review recommended to validate detection logic and sources.">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                  </svg>
+                  Needs Review - enriched with additional OSINT
+                </span>
+                {% elif detection.needs_review %}
+                <span class="needs-review-badge" title="No threat indicators extracted automatically. This detection may use complex logic, behavioral patterns, or aggregations. Review the query to validate effectiveness.">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  Needs Review - no indicators extracted
+                </span>
+                {% endif %}
               </div>
-              <div class="detection-description" style="white-space: pre-line;">{{ detection.description }}</div>
+              <div style="margin-left: 26px; margin-top: 4px; margin-bottom: 6px;">
+                <span style="font-weight: 400; color: #666;">{{ detection.title.replace(', ', ' | ') }}</span>
+              </div>
+              {% if detection.indicators %}
+              <div class="detection-indicators">
+                {% for indicator in detection.indicators %}
+                <code class="indicator-tag">{{ indicator }}</code>
+                {% endfor %}
+              </div>
+              {% endif %}
+              <div class="detection-description" style="white-space: pre-line; font-style: italic;">{{ detection.description_html | safe }}</div>
             </div>
             {% endfor %}
             {% endif %}
@@ -892,13 +1032,65 @@ body, html {
       {% if correlations %}
         <div class="correlation-content">
           {% for correlation in correlations %}
-          <div class="detection-item" style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
+          <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}" data-correlation-id="corr-{{ loop.index }}">
             <div class="detection-title">
+              <!-- Vendor Badge -->
+              <span style="background: #e3f2fd; color: #1976d2; padding: 4px 12px; border-radius: 4px; font-size: 0.85em; font-weight: 600; margin-right: 8px;">{{ correlation.vendor }}</span>
+
+              <!-- Technique Flow -->
               {% for tech in correlation.techniques %}
-              <span class="detection-technique">{{ tech.id }}</span>
+              <span class="detection-technique">{{ tech.name }}</span>
+              {% if not loop.last %}
+              <span style="margin: 0 8px; color: #999;">→</span>
+              {% endif %}
+              {% endfor %}
+
+              <!-- Severity Badge -->
+              {% if correlation.severity == 'Critical' %}
+              <span style="background: #d32f2f; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🔴 Critical</span>
+              {% elif correlation.severity == 'High' %}
+              <span style="background: #f57c00; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🟠 High</span>
+              {% endif %}
+
+              <!-- Needs Review Badge -->
+              {% if correlation.needs_review %}
+              <span class="needs-review-badge" title="At least one detection in this correlation has no threat indicators extracted automatically. Review the queries to validate effectiveness.">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                Needs Review - no indicators extracted
+              </span>
+              {% endif %}
+            </div>
+
+            <!-- Correlation Metadata -->
+            <div style="display: flex; gap: 20px; margin-top: 8px; margin-bottom: 8px; font-size: 0.9em; color: #666; flex-wrap: wrap; align-items: center;">
+              <span title="Relevance Score"><strong>Relevance:</strong> {{ correlation.relevance_score }}%</span>
+              <span title="Time Window"><strong>Time Window:</strong> {{ correlation.time_window }}</span>
+              {% if correlation.tactics %}
+              <span title="MITRE ATT&CK Tactics"><strong>Tactics:</strong> {{ correlation.tactics|join(', ') }}</span>
+              {% endif %}
+            </div>
+
+            <!-- Tables/Indexes Display (if available) -->
+            {% if correlation.tables_indexes %}
+            <div style="margin-top: 8px; margin-bottom: 8px; font-size: 0.85em;">
+              <strong style="color: #555;">{% if correlation.vendor == 'MDE' %}Tables:{% else %}Indexes:{% endif %}</strong>
+              {% for table_idx in correlation.tables_indexes %}
+              <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
               {% endfor %}
             </div>
-            <div class="detection-description">{{ correlation.description }}</div>
+            {% endif %}
+
+            <!-- Combined Query Preview (Collapsible) -->
+            <div style="margin-top: 10px;">
+              <button onclick="toggleQuery('corr-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
+                <span id="corr-{{ loop.index }}-toggle">▶ View Combined Query</span>
+              </button>
+              <div id="corr-{{ loop.index }}-query" style="display: none; margin-top: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}</div>
+            </div>
           </div>
           {% endfor %}
         </div>
@@ -1002,7 +1194,6 @@ body, html {
       </span>
     </div>
   </footer>
-</div>
 
 <!-- Custom Modal Dialog -->
 <div class="modal-overlay" id="modal-overlay">
@@ -1022,6 +1213,7 @@ body, html {
 </div>
 
 <script>
+// @ts-nocheck
 // Toggle individual vendor
 function toggleVendor(header) {
   const content = header.nextElementSibling;
@@ -1029,6 +1221,20 @@ function toggleVendor(header) {
 
   content.classList.toggle('show');
   icon.classList.toggle('expanded');
+}
+
+// Toggle correlation combined query display
+function toggleQuery(corrId) {
+  const queryDiv = document.getElementById(corrId + '-query');
+  const toggleSpan = document.getElementById(corrId + '-toggle');
+
+  if (queryDiv.style.display === 'none') {
+    queryDiv.style.display = 'block';
+    toggleSpan.textContent = '▼ Hide Combined Query';
+  } else {
+    queryDiv.style.display = 'none';
+    toggleSpan.textContent = '▶ View Combined Query';
+  }
 }
 
 // Toggle all vendors
@@ -1078,6 +1284,47 @@ function toggleAllCorrelations() {
   }
 }
 
+// Select/Deselect all detections
+function selectAllDetections() {
+  document.querySelectorAll('.detection-checkbox').forEach(cb => {
+    cb.checked = true;
+    cb.closest('.detection-item').classList.remove('unchecked');
+  });
+}
+
+function deselectAllDetections() {
+  document.querySelectorAll('.detection-checkbox').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.detection-item').classList.add('unchecked');
+  });
+}
+
+// Handle individual checkbox changes
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.detection-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      const item = this.closest('.detection-item');
+      if (this.checked) {
+        item.classList.remove('unchecked');
+      } else {
+        item.classList.add('unchecked');
+      }
+    });
+  });
+});
+
+// Get list of selected detections (technique + vendor pairs)
+function getSelectedDetections() {
+  const selected = [];
+  document.querySelectorAll('.detection-checkbox:checked').forEach(cb => {
+    selected.push({
+      technique: cb.dataset.technique,
+      vendor: cb.dataset.vendor
+    });
+  });
+  return selected;
+}
+
 // Toggle cross-vendor correlations section
 let crossVendorExpanded = false;
 function toggleAllCrossVendor() {
@@ -1097,15 +1344,26 @@ function toggleAllCrossVendor() {
   }
 }
 
-// Download all button
+// Download all button - only download selected detections
 document.getElementById('download-all-btn').addEventListener('click', function() {
-  window.location.href = `/api/download/all/{{ group_name }}`;
+  const selected = getSelectedDetections();
+  if (selected.length === 0) {
+    alert('Please select at least one detection to download');
+    return;
+  }
+
+  // Build URL with selected techniques
+  const techniques = [...new Set(selected.map(s => s.technique))].join(',');
+  const url = `/api/download/all/{{ group_name }}?techniques=${encodeURIComponent(techniques)}`;
+  window.location.href = url;
 });
 
 // Save to Library button
 document.getElementById('save-to-library-btn').addEventListener('click', async function() {
   const groupName = '{{ group_name }}';
+  // eslint-disable-next-line no-undef
   const detections = {{ detections | tojson | safe }};
+  // eslint-disable-next-line no-undef
   const correlations = {{ correlations | tojson | safe }};
 
   // Log data for debugging
@@ -1131,6 +1389,16 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
   let savedCount = 0;
   let errorCount = 0;
 
+  // Get selected detections
+  const selected = getSelectedDetections();
+  if (selected.length === 0) {
+    alert('Please select at least one detection to save');
+    return;
+  }
+
+  // Create a Set of selected technique+vendor pairs for quick lookup
+  const selectedSet = new Set(selected.map(s => `${s.technique}:${s.vendor}`));
+
   try {
     // Save all detections (use all_files array which contains ungrouped individual files)
     for (const vendor of detections) {
@@ -1138,7 +1406,14 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
       const filesToSave = vendor.all_files || vendor.detections;
 
       for (const detection of filesToSave) {
-        try {
+        // Check if this detection is selected
+        const key = `${detection.technique}:${vendor.name}`;
+        if (!selectedSet.has(key)) {
+          console.log(`Skipping unselected detection: ${key}`);
+          continue;
+        }
+
+        try{
           const response = await fetch('/api/library/save', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},

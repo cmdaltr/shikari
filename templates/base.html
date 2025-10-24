@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}?v={{ request.app.state.asset_version }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}?v={{ request.app.state.asset_version }}">
     <style>
         /* Ensure consistent positioning across all browsers */
@@ -18,6 +19,25 @@
             padding: 0 !important;
             overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
             zoom: 1.0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        #container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #main-content {
+            flex: 1;
         }
 
         /* Dark mode CSS variables */

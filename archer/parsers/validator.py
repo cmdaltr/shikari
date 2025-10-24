@@ -11,6 +11,7 @@ from typing import Dict, Tuple, List, Optional
 
 from .splunk import validate_splunk_query
 from .mde import validate_kql_query
+from ..config import VALIDATION_CACHE_DIR
 
 
 class QueryValidator:
@@ -23,7 +24,7 @@ class QueryValidator:
         Args:
             cache_dir: Directory to store validation cache
         """
-        self.cache_dir = cache_dir or os.path.join("data", "validation_cache")
+        self.cache_dir = cache_dir or VALIDATION_CACHE_DIR
         os.makedirs(self.cache_dir, exist_ok=True)
         self._load_field_mappings()
     

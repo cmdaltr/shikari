@@ -1,4 +1,5 @@
 from archer.build.collate import collate_data
+from archer.config import GENERATE_DIR
 
 import getpass
 import json
@@ -11,6 +12,7 @@ import uuid
 try:
     from bs4 import BeautifulSoup
     import requests
+
     HAS_SCRAPING = True
 except ImportError:
     HAS_SCRAPING = False
@@ -63,6 +65,7 @@ def additional_tactics(tid, tactic):
     If you see this function being called, the patch was not applied.
     Ensure: from archer.build import yaml_patch
     """
+
     def extract_tactics(extract_from):
         extracted_tactics = re.findall(
             "Reconnaissance|Resource Development|Initial Access|Execution|Persistence|Privilege Escalation|Defense Evasion|Credential Access|Discovery|Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
@@ -105,13 +108,18 @@ def additional_tactics(tid, tactic):
         except (requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             if attempt < max_retries - 1:
                 # Retry with exponential backoff
-                wait_time = 2 ** attempt
-                print(f"Warning: Failed to fetch tactics from MITRE (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+                wait_time = 2**attempt
+                print(
+                    f"Warning: Failed to fetch tactics from MITRE (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s..."
+                )
                 import time
+
                 time.sleep(wait_time)
             else:
                 # Final fallback: use the tactic provided
-                print(f"Warning: Could not fetch additional tactics from {url} after {max_retries} attempts, using provided tactic: {tactic}")
+                print(
+                    f"Warning: Could not fetch additional tactics from {url} after {max_retries} attempts, using provided tactic: {tactic}"
+                )
                 extracted_tactics = extract_tactics(tactic)
                 return extracted_tactics
 
@@ -159,7 +167,7 @@ def map_entities(query):
     return f"{query}{entities}"
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, osint_enrichment=None):
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
@@ -167,10 +175,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
     desc = tdesc.replace("\n  \n", "\n  ").replace("\n* ", "\n  * ")
     desc = re.sub(r"</?code>", r"`", desc)
     datatype = (
-        query.split("\n")[0]
-        .split(" earliest=")[0]
-        .replace("index=", "")
-        .replace("_prod", "")
+        query.split("\n")[0].split(" earliest=")[0].replace("index=", "").replace("_prod", "")
     )
     tactic = str(tactic)[2:-2].replace("', '", "\n  - ")
     query = query.replace("\n| ", "  | ")
@@ -201,19 +206,30 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query):
     )
     yaml_content = re.sub(r"\n\n", r"\n  ", yaml_content)
     yaml_content = re.sub(r"(\(Citation: [^\)]+\))", r"", yaml_content)
-    yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace(
-        "   | ", "  | "
-    )
+    yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace("   | ", "  | ")
+
+    # Add OSINT enrichment metadata if provided
+    if osint_enrichment and osint_enrichment.get("osint_enriched"):
+        osint_section = "\n# OSINT Enrichment Metadata\n"
+        osint_section += f"osint_enriched: true\n"
+        osint_section += f"enrichment_date: {osint_enrichment.get('enrichment_date', '')}\n"
+
+        if osint_enrichment.get("osint_sources"):
+            osint_section += "osint_sources:\n"
+            for source in osint_enrichment["osint_sources"]:
+                osint_section += f"  - {source}\n"
+
+        if osint_enrichment.get("enrichment_notes"):
+            notes = osint_enrichment["enrichment_notes"].replace("\n", "\n  ")
+            osint_section += f"enrichment_notes: |\n  {notes}\n"
+
+        yaml_content += osint_section
 
     if "()" in query or "( OR )" in query or "\n  | where \n  | " in query:
         pass
     else:
         with open(query_file, "w") as new_yaml:
             new_yaml.write(yaml_content)
-
-    # Inserting this to create a simple approach for the latest file having been created for the web application to provide progress
-    with open(os.path.join("data", "generate", "latest.yaml"), "w") as latest_yaml:
-        latest_yaml.write(query_file)
 
 
 def update_yaml(yamlfile, tag):
@@ -237,9 +253,7 @@ def update_yaml(yamlfile, tag):
         added_tags = f"{prefix}tags:\n  - {formatted_tag}\n  - {suffix}"
 
         # Update version
-        newver = re.sub(
-            r"(version: \d+\.)(\d+)((\.\d+)?)", increment_version, added_tags
-        )
+        newver = re.sub(r"(version: \d+\.)(\d+)((\.\d+)?)", increment_version, added_tags)
         prefix = added_tags.split("version: ")[0]
         suffix = added_tags.split("kind:")[1]
 
@@ -258,6 +272,7 @@ def construct_yaml(
     index_name,
     procedure_platforms,
     software_platforms,
+    osint_enrichment=None,
 ):
     """
     Construct a YAML file for a detection
@@ -271,6 +286,7 @@ def construct_yaml(
         identifiers: Dictionary of identifiers
         log_sources: List of log sources
         index_name: Optional index name to include in the filename
+        osint_enrichment: Optional OSINT enrichment metadata dict
     """
     appended_mde_queries, appended_splunk_queries = collate_data(
         identifiers, log_sources, procedure_platforms, software_platforms
@@ -295,12 +311,14 @@ def construct_yaml(
             print(f"⚠️ WARNING: index_name is a dict, using 'unknown': {index_name}")
             index_name_str = "unknown"
         elif not isinstance(index_name, str):
-            print(f"⚠️ WARNING: index_name is type {type(index_name)}, converting to string: {index_name}")
+            print(
+                f"⚠️ WARNING: index_name is type {type(index_name)}, converting to string: {index_name}"
+            )
             index_name_str = str(index_name)
         else:
-            index_name_str = index_name.replace('=', '').replace(' ', '')
+            index_name_str = index_name.replace("=", "").replace(" ", "")
         filename = f"{name}_{index_name_str}.yaml"
-        yamlfile = os.path.join("data", "generate", filename)
+        yamlfile = os.path.join(GENERATE_DIR, filename)
         if not os.path.exists(yamlfile):
             write_yaml(
                 yamlfile,
@@ -311,20 +329,16 @@ def construct_yaml(
                 all_tactics,
                 tag,
                 query_with_entities,
+                osint_enrichment,
             )
         else:
             update_yaml(yamlfile, tag)
 
     # Writing Splunk YAML file
     for query in appended_splunk_queries:
-        index = (
-            query.split("\n")[0]
-            .split(" earliest=")[0]
-            .replace("index=", "")
-            .replace(" ", "")
-        )
+        index = query.split("\n")[0].split(" earliest=")[0].replace("index=", "").replace(" ", "")
         query = query.replace(" earliest=-1d\n", " earliest=-1d\n  ")
-        yamlfile = os.path.join("data", "generate", f"{name}_{index}.yaml")
+        yamlfile = os.path.join(GENERATE_DIR, f"{name}_{index}.yaml")
         if not os.path.exists(yamlfile):
             write_yaml(
                 yamlfile,
@@ -335,6 +349,7 @@ def construct_yaml(
                 all_tactics,
                 tag,
                 query,
+                osint_enrichment,
             )
         else:
             update_yaml(yamlfile, tag)

@@ -3,9 +3,7 @@ import json
 import fcntl
 import time
 from typing import Dict, Any
-
-
-PROGRESS_DIR = os.path.join("data", "progress")
+from ..config import PROGRESS_DIR
 
 
 def ensure_progress_dir():

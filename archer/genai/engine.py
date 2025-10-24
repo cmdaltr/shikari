@@ -15,6 +15,7 @@ import re
 import threading
 from typing import List, Dict, Tuple, Optional
 from ..build.progress import write_progress
+from ..config import GENERATE_DIR, CORRELATE_DIR
 
 # Global generation mode; set in generate_correlations
 _GEN_MODE: str = "heuristic"
@@ -198,9 +199,7 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
         name = os.path.basename(path).lower()
         if "splunk" in name:
             vendor = "splunk"
-        elif (
-            "kql" in name or "mde" in name or "microsoft" in name or "sentinel" in name
-        ):
+        elif "kql" in name or "mde" in name or "microsoft" in name or "sentinel" in name:
             vendor = "mde"
 
     # Normalize vendor names to ensure consistency
@@ -218,9 +217,7 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
     return {"path": path, "vendor": vendor, "query": query}
 
 
-def _combine_queries(
-    vendor: str, query_a: str, query_b: str, a: str = None, b: str = None
-) -> str:
+def _combine_queries(vendor: str, query_a: str, query_b: str, a: str = None, b: str = None) -> str:
     """
     Combine two queries based on the vendor's query language using all available methods.
 
@@ -261,16 +258,12 @@ def _combine_queries(
     if _GEN_MODE == "heuristic":
         # Safely extract source names
         source_a = (
-            os.path.basename(a)
-            .replace("_microsoft_defender.yaml", "")
-            .replace(".yaml", "")
+            os.path.basename(a).replace("_microsoft_defender.yaml", "").replace(".yaml", "")
             if a and isinstance(a, str)
             else "Query A"
         )
         source_b = (
-            os.path.basename(b)
-            .replace("_microsoft_defender.yaml", "")
-            .replace(".yaml", "")
+            os.path.basename(b).replace("_microsoft_defender.yaml", "").replace(".yaml", "")
             if b and isinstance(b, str)
             else "Query B"
         )
@@ -429,21 +422,52 @@ def _combine_queries(
 # High-impact MITRE techniques that indicate sophisticated attacks
 _HIGH_IMPACT_TECHNIQUES = {
     # Persistence
-    "T1053", "T1136", "T1543", "T1547", "T1037", "T1098",
+    "T1053",
+    "T1136",
+    "T1543",
+    "T1547",
+    "T1037",
+    "T1098",
     # Privilege Escalation
-    "T1068", "T1134", "T1078", "T1055", "T1548",
+    "T1068",
+    "T1134",
+    "T1078",
+    "T1055",
+    "T1548",
     # Defense Evasion
-    "T1070", "T1027", "T1562", "T1218", "T1140",
+    "T1070",
+    "T1027",
+    "T1562",
+    "T1218",
+    "T1140",
     # Credential Access
-    "T1003", "T1110", "T1555", "T1556", "T1558",
+    "T1003",
+    "T1110",
+    "T1555",
+    "T1556",
+    "T1558",
     # Lateral Movement
-    "T1021", "T1091", "T1080", "T1550",
+    "T1021",
+    "T1091",
+    "T1080",
+    "T1550",
     # Collection
-    "T1005", "T1039", "T1056", "T1074", "T1114",
+    "T1005",
+    "T1039",
+    "T1056",
+    "T1074",
+    "T1114",
     # Exfiltration
-    "T1020", "T1041", "T1048", "T1567",
+    "T1020",
+    "T1041",
+    "T1048",
+    "T1567",
     # Impact
-    "T1485", "T1486", "T1490", "T1491", "T1496",
+    "T1485",
+    "T1486",
+    "T1490",
+    "T1491",
+    "T1496",
 }
 
 # Logical attack progressions (tactic pairs that naturally follow each other)
@@ -466,15 +490,15 @@ def _extract_technique_ids(file_path: str) -> List[str]:
 
     # Extract from filename (e.g., T1003.001_splunk.yaml)
     basename = os.path.basename(file_path)
-    matches = re.findall(r'T\d{4}(?:\.\d{3})?', basename)
+    matches = re.findall(r"T\d{4}(?:\.\d{3})?", basename)
     technique_ids.extend(matches)
 
     # Try to extract from file content if no matches
     if not technique_ids and os.path.exists(file_path):
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read(500)  # Read first 500 chars
-                matches = re.findall(r'T\d{4}(?:\.\d{3})?', content)
+                matches = re.findall(r"T\d{4}(?:\.\d{3})?", content)
                 technique_ids.extend(matches)
         except:
             pass
@@ -490,7 +514,7 @@ def _extract_tactics(file_path: str) -> List[str]:
         return tactics
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read(1000)  # Read first 1000 chars
 
             # Look for tactic field in YAML
@@ -499,17 +523,19 @@ def _extract_tactics(file_path: str) -> List[str]:
                 tactics.append(tactic_match.group(1).lower().strip())
 
             # Look for tactics array
-            tactics_match = re.search(r'tactics:\s*\n((?:\s*-\s*[^\n]+\n)+)', content, re.IGNORECASE)
+            tactics_match = re.search(
+                r"tactics:\s*\n((?:\s*-\s*[^\n]+\n)+)", content, re.IGNORECASE
+            )
             if tactics_match:
                 tactic_lines = tactics_match.group(1)
-                for line in tactic_lines.split('\n'):
-                    line = line.strip().lstrip('- ').strip('"\'')
+                for line in tactic_lines.split("\n"):
+                    line = line.strip().lstrip("- ").strip("\"'")
                     if line:
                         tactics.append(line.lower())
     except:
         pass
 
-    return [t.lower().replace(' ', '-') for t in tactics if t]
+    return [t.lower().replace(" ", "-") for t in tactics if t]
 
 
 def _has_only_generic_terms(query: str) -> bool:
@@ -523,11 +549,32 @@ def _has_only_generic_terms(query: str) -> bool:
 
     # Define generic terms that are too broad to be useful as sole indicators
     generic_terms = {
-        "condition", "access", "policy", "policies", "data", "file",
-        "process", "user", "system", "service", "event", "log",
-        "network", "security", "admin", "administrator", "account",
-        "information", "management", "configuration", "settings",
-        "application", "program", "software", "windows", "linux"
+        "condition",
+        "access",
+        "policy",
+        "policies",
+        "data",
+        "file",
+        "process",
+        "user",
+        "system",
+        "service",
+        "event",
+        "log",
+        "network",
+        "security",
+        "admin",
+        "administrator",
+        "account",
+        "information",
+        "management",
+        "configuration",
+        "settings",
+        "application",
+        "program",
+        "software",
+        "windows",
+        "linux",
     }
 
     # Extract search terms from both KQL and Splunk queries
@@ -536,7 +583,7 @@ def _has_only_generic_terms(query: str) -> bool:
     # KQL patterns: has_any("term1", "term2"), has "term", contains "term"
 
     # Extract from has_any(...)
-    has_any_pattern = r'has_any\s*\(\s*([^)]+)\s*\)'
+    has_any_pattern = r"has_any\s*\(\s*([^)]+)\s*\)"
     for match in re.finditer(has_any_pattern, query, re.IGNORECASE):
         values = re.findall(r'"([^"]+)"', match.group(1))
         search_terms.extend(values)
@@ -559,11 +606,11 @@ def _has_only_generic_terms(query: str) -> bool:
         field = match.group(1).lower()
         value = match.group(2).strip('"')
         # Only consider search/filter fields, not metadata like index or sourcetype
-        if field not in ['index', 'sourcetype', 'source', 'host', 'earliest', 'latest']:
+        if field not in ["index", "sourcetype", "source", "host", "earliest", "latest"]:
             search_terms.append(value)
 
     # Extract from IN ("value1", "value2")
-    splunk_in_pattern = r'\bIN\s*\(\s*([^)]+)\s*\)'
+    splunk_in_pattern = r"\bIN\s*\(\s*([^)]+)\s*\)"
     for match in re.finditer(splunk_in_pattern, query, re.IGNORECASE):
         values = re.findall(r'"([^"]+)"', match.group(1))
         search_terms.extend(values)
@@ -600,14 +647,14 @@ def _calculate_query_specificity(query: str) -> float:
 
     # Specific indicators increase score
     specific_patterns = [
-        r'\bsha256\s*[=:~]',  # File hashes
-        r'\bmd5\s*[=:~]',
-        r'\bsha1\s*[=:~]',
+        r"\bsha256\s*[=:~]",  # File hashes
+        r"\bmd5\s*[=:~]",
+        r"\bsha1\s*[=:~]",
         r'\bip\s*[=:]\s*"\d+\.\d+\.\d+\.\d+"',  # Specific IPs
-        r'\bdomain\s*[=:]',  # Domain names
-        r'\burl\s*[=:]',  # URLs
-        r'\bregistry\s+key',  # Registry keys
-        r'\bprocess\s+name\s*[=:]',  # Process names
+        r"\bdomain\s*[=:]",  # Domain names
+        r"\burl\s*[=:]",  # URLs
+        r"\bregistry\s+key",  # Registry keys
+        r"\bprocess\s+name\s*[=:]",  # Process names
         r'\bcommand\s*line.*[=:~].*"[^"]{20,}"',  # Long command lines
     ]
 
@@ -616,11 +663,11 @@ def _calculate_query_specificity(query: str) -> float:
             score += 0.1
 
     # Generic wildcards decrease score
-    wildcard_count = query.count('*') + query.count('%')
+    wildcard_count = query.count("*") + query.count("%")
     score -= min(0.3, wildcard_count * 0.05)
 
     # Multiple conditions increase score
-    condition_keywords = ['where', 'and', 'or', 'join', '|']
+    condition_keywords = ["where", "and", "or", "join", "|"]
     condition_count = sum(1 for kw in condition_keywords if kw in query.lower())
     score += min(0.2, condition_count * 0.05)
 
@@ -642,9 +689,9 @@ def _estimate_false_positive_rate(query: str, vendor: str) -> float:
         r'\bprocess\s+name\s*[=:]\s*"svchost\.exe"',  # Very common
         r'\bprocess\s+name\s*[=:]\s*"powershell\.exe"',  # Common but can be malicious
         r'\bprocess\s+name\s*[=:]\s*"cmd\.exe"',
-        r'\bevent\s+id\s*[=:]\s*4624',  # Successful logon (very common)
-        r'\bevent\s+id\s*[=:]\s*4688',  # Process creation (very common)
-        r'\bwhere\s+.*[=~]\s*[*%]',  # Overly broad wildcards
+        r"\bevent\s+id\s*[=:]\s*4624",  # Successful logon (very common)
+        r"\bevent\s+id\s*[=:]\s*4688",  # Process creation (very common)
+        r"\bwhere\s+.*[=~]\s*[*%]",  # Overly broad wildcards
     ]
 
     fp_score = 0.3  # Base false positive rate
@@ -655,11 +702,11 @@ def _estimate_false_positive_rate(query: str, vendor: str) -> float:
 
     # Specific filters reduce false positives
     specific_filters = [
-        r'\bwhere\s+.*rare',  # Explicit rarity filter
-        r'\bwhere\s+.*suspicious',
-        r'\bwhere\s+.*malicious',
-        r'\bcount\s*\([^)]+\)\s*[><]\s*\d+',  # Threshold counting
-        r'\bsummarize\s+.*count',
+        r"\bwhere\s+.*rare",  # Explicit rarity filter
+        r"\bwhere\s+.*suspicious",
+        r"\bwhere\s+.*malicious",
+        r"\bcount\s*\([^)]+\)\s*[><]\s*\d+",  # Threshold counting
+        r"\bsummarize\s+.*count",
     ]
 
     for pattern in specific_filters:
@@ -691,7 +738,7 @@ def _score_correlation(corr: Dict, file_info: Dict) -> float:
     high_impact_count = 0
     for tech in techniques_a + techniques_b:
         # Check both full ID and base ID (e.g., T1003.001 and T1003)
-        base_tech = tech.split('.')[0] if '.' in tech else tech
+        base_tech = tech.split(".")[0] if "." in tech else tech
         if tech in _HIGH_IMPACT_TECHNIQUES or base_tech in _HIGH_IMPACT_TECHNIQUES:
             high_impact_count += 1
 
@@ -767,14 +814,14 @@ def _score_and_filter_correlations(
     # Return top N correlations
     top_correlations = [corr for _, corr in scored_correlations[:max_results]]
 
-    print(f"GenAI: Keeping top {len(top_correlations)} correlations (threshold: score >= {scored_correlations[min(max_results-1, len(scored_correlations)-1)][0]:.1f})")
+    print(
+        f"GenAI: Keeping top {len(top_correlations)} correlations (threshold: score >= {scored_correlations[min(max_results-1, len(scored_correlations)-1)][0]:.1f})"
+    )
 
     return top_correlations
 
 
-def generate_correlations(
-    group_name: str, yaml_dir: str, progress_prefix: str = "genai"
-) -> Dict:
+def generate_correlations(group_name: str, yaml_dir: str, progress_prefix: str = "genai") -> Dict:
     """
     Scan YAMLs and produce vendor correlations (cross-vendor correlations disabled).
     - vendor_correlations: list of dicts where multiple queries from same vendor are paired
@@ -793,7 +840,9 @@ def generate_correlations(
 
     # Try to acquire the lock - if another thread is processing, exit immediately
     if not group_lock.acquire(blocking=False):
-        print(f"GenAI: Correlation generation already in progress for '{group_name}', skipping duplicate call")
+        print(
+            f"GenAI: Correlation generation already in progress for '{group_name}', skipping duplicate call"
+        )
         return {"vendor_correlations": [], "cross_vendor_correlations": []}
 
     try:
@@ -866,7 +915,7 @@ def process_genai(group_name: str):
         group_name: The group name to process
     """
     print(f"process_genai called for group {group_name}")
-    yaml_dir = os.path.join("data", "generate")
+    yaml_dir = GENERATE_DIR
     return generate_correlations(group_name, yaml_dir)
 
 
@@ -949,9 +998,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
         # Calculate potential number of pairs
         potential_pairs = len(paths) * (len(paths) - 1) // 2
-        print(
-            f"GenAI: Vendor '{v}' has {len(paths)} files, potentially {potential_pairs} pairs"
-        )
+        print(f"GenAI: Vendor '{v}' has {len(paths)} files, potentially {potential_pairs} pairs")
 
         # Limit the number of pairs to avoid performance issues
         if potential_pairs > MAX_PAIRS_PER_VENDOR:
@@ -999,13 +1046,9 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
                 # Detect if these are Splunk queries by checking for index=
                 detected_vendor = v.lower()
-                if query_a.lstrip().startswith("index=") or query_b.lstrip().startswith(
-                    "index="
-                ):
+                if query_a.lstrip().startswith("index=") or query_b.lstrip().startswith("index="):
                     detected_vendor = "splunk"
-                elif query_a.lstrip().startswith(
-                    "Device"
-                ) or query_b.lstrip().startswith("Device"):
+                elif query_a.lstrip().startswith("Device") or query_b.lstrip().startswith("Device"):
                     detected_vendor = "mde"
 
                 # Filter out queries with only generic terms
@@ -1029,7 +1072,9 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
                 # Update progress periodically with cumulative count (every 10 pairs evaluated)
                 if cumulative_count % 10 == 0:
-                    print(f"GenAI: Evaluated {cumulative_count} pairs total ({count} kept for vendor '{v}')")
+                    print(
+                        f"GenAI: Evaluated {cumulative_count} pairs total ({count} kept for vendor '{v}')"
+                    )
                     write_progress(
                         group_name,
                         {
@@ -1044,9 +1089,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                     continue
 
                 # Generate combined query
-                combined_query = _combine_queries(
-                    detected_vendor, query_a, query_b, path_a, path_b
-                )
+                combined_query = _combine_queries(detected_vendor, query_a, query_b, path_a, path_b)
 
                 vendor_corr.append(
                     {
@@ -1081,8 +1124,12 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             vendor_detection_count = len(by_vendor.get(vendor, []))
             max_correlations = max(10, int(vendor_detection_count * 0.10))
 
-            print(f"GenAI: Vendor '{vendor}' has {vendor_detection_count} detections, filtering {len(corrs)} correlations to top {max_correlations} (10%)")
-            top_vendor_corrs = _score_and_filter_correlations(corrs, file_info, max_results=max_correlations)
+            print(
+                f"GenAI: Vendor '{vendor}' has {vendor_detection_count} detections, filtering {len(corrs)} correlations to top {max_correlations} (10%)"
+            )
+            top_vendor_corrs = _score_and_filter_correlations(
+                corrs, file_info, max_results=max_correlations
+            )
             print(f"GenAI: Kept {len(top_vendor_corrs)} correlations for vendor '{vendor}'")
             filtered_corr.extend(top_vendor_corrs)
 
@@ -1110,7 +1157,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         "cross_vendor_correlations": cross_corr,  # Empty list
     }
 
-    out_dir = os.path.join("data", "correlate")
+    out_dir = CORRELATE_DIR
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f"{group_name}.json")
 
@@ -1276,13 +1323,13 @@ def _basic_combine_queries(
             """Remove duplicate OR conditions"""
             if not search_str:
                 return search_str
-            parts = re.split(r'\s+OR\s+', search_str, flags=re.IGNORECASE)
+            parts = re.split(r"\s+OR\s+", search_str, flags=re.IGNORECASE)
             seen = set()
             unique = []
             for p in parts:
-                normalized = " ".join(p.strip().strip('()').split())
+                normalized = " ".join(p.strip().strip("()").split())
                 if normalized and normalized not in seen:
-                    unique.append(p.strip().strip('()'))
+                    unique.append(p.strip().strip("()"))
                     seen.add(normalized)
             return unique[0] if len(unique) == 1 else " OR ".join(unique)
 
@@ -1364,7 +1411,7 @@ def build_correlation_queries(
     output_file: str = None,
     min_queries: int = 2,
     max_queries: int = 5,
-    threat_group: str = None
+    threat_group: str = None,
 ) -> Dict:
     """
     Read YAML files, assess query relevance, build correlation searches, and save to JSON.
@@ -1397,24 +1444,23 @@ def build_correlation_queries(
 
     # Set defaults
     if yaml_dir is None:
-        yaml_dir = os.path.join("data", "generate")
+        yaml_dir = GENERATE_DIR
     if output_file is None:
         # Use group name in output file if specified
         if threat_group:
             safe_group_name = threat_group.replace(" ", "_").replace("(", "").replace(")", "")
-            output_file = os.path.join("data", "correlate", f"{safe_group_name}.json")
+            output_file = os.path.join(CORRELATE_DIR, f"{safe_group_name}.json")
         else:
-            output_file = os.path.join("data", "correlate", "correlation_queries.json")
+            output_file = os.path.join(CORRELATE_DIR, "correlation_queries.json")
 
     print(f"Scanning YAML files in {yaml_dir}...")
     import time
+
     time.sleep(0.5)
 
     # Step 1: Read all YAML files and extract metadata
     yaml_files = [
-        os.path.join(yaml_dir, f)
-        for f in os.listdir(yaml_dir)
-        if f.endswith(('.yaml', '.yml')) and f != 'latest.yaml'
+        os.path.join(yaml_dir, f) for f in os.listdir(yaml_dir) if f.endswith((".yaml", ".yml"))
     ]
 
     print(f"Found {len(yaml_files)} YAML files")
@@ -1423,25 +1469,27 @@ def build_correlation_queries(
     queries_data = []
     for yaml_path in yaml_files:
         try:
-            with open(yaml_path, 'r', encoding='utf-8') as f:
+            with open(yaml_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
-            if not data or 'query' not in data:
+            if not data or "query" not in data:
                 continue
 
             # Extract metadata
             query_info = {
-                'id': data.get('id', os.path.basename(yaml_path)),
-                'name': data.get('name', 'Unknown'),
-                'description': data.get('description', ''),
-                'severity': data.get('severity', 'Medium'),
-                'tactics': data.get('tactics', []),
-                'tags': data.get('tags', []),
-                'platform': _detect_platform(data),
-                'connector_id': data.get('requiredDataConnectors', [{}])[0].get('connectorId', 'Unknown'),
-                'query': data.get('query', ''),
-                'file_path': yaml_path,
-                'metadata': data.get('metadata', {}),
+                "id": data.get("id", os.path.basename(yaml_path)),
+                "name": data.get("name", "Unknown"),
+                "description": data.get("description", ""),
+                "severity": data.get("severity", "Medium"),
+                "tactics": data.get("tactics", []),
+                "tags": data.get("tags", []),
+                "platform": _detect_platform(data),
+                "connector_id": data.get("requiredDataConnectors", [{}])[0].get(
+                    "connectorId", "Unknown"
+                ),
+                "query": data.get("query", ""),
+                "file_path": yaml_path,
+                "metadata": data.get("metadata", {}),
             }
             queries_data.append(query_info)
 
@@ -1456,34 +1504,41 @@ def build_correlation_queries(
     if threat_group:
         threat_group_lower = threat_group.lower()
         filtered_queries = [
-            q for q in queries_data
-            if any(threat_group_lower in tag.lower() for tag in q.get('tags', []) if tag and isinstance(tag, str))
+            q
+            for q in queries_data
+            if any(
+                threat_group_lower in tag.lower()
+                for tag in q.get("tags", [])
+                if tag and isinstance(tag, str)
+            )
         ]
         if len(filtered_queries) == 0:
             print(f"\n❌ No queries found for threat group '{threat_group}'")
             return {
-                'generated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
-                'total_queries_analyzed': 0,
-                'total_correlations': 0,
-                'min_queries_per_correlation': min_queries,
-                'max_queries_per_correlation': max_queries,
-                'threat_group': threat_group,
-                'output_file': output_file,
-                'correlations': [],
-                'query_inventory': []
+                "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "total_queries_analyzed": 0,
+                "total_correlations": 0,
+                "min_queries_per_correlation": min_queries,
+                "max_queries_per_correlation": max_queries,
+                "threat_group": threat_group,
+                "output_file": output_file,
+                "correlations": [],
+                "query_inventory": [],
             }
         elif len(filtered_queries) == 1:
-            print(f"\n❌ Only 1 query found for threat group '{threat_group}' - need at least {min_queries} for correlation")
+            print(
+                f"\n❌ Only 1 query found for threat group '{threat_group}' - need at least {min_queries} for correlation"
+            )
             return {
-                'generated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
-                'total_queries_analyzed': 1,
-                'total_correlations': 0,
-                'min_queries_per_correlation': min_queries,
-                'max_queries_per_correlation': max_queries,
-                'threat_group': threat_group,
-                'output_file': output_file,
-                'correlations': [],
-                'query_inventory': filtered_queries
+                "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "total_queries_analyzed": 1,
+                "total_correlations": 0,
+                "min_queries_per_correlation": min_queries,
+                "max_queries_per_correlation": max_queries,
+                "threat_group": threat_group,
+                "output_file": output_file,
+                "correlations": [],
+                "query_inventory": filtered_queries,
             }
         print(f"Filtered to {len(filtered_queries)} queries for threat group '{threat_group}'")
         time.sleep(0.5)
@@ -1505,28 +1560,28 @@ def build_correlation_queries(
 
     # Step 4: Prepare output structure
     output_data = {
-        'generated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
-        'total_queries_analyzed': len(queries_data),
-        'total_correlations': len(correlations),
-        'min_queries_per_correlation': min_queries,
-        'output_file': output_file,
-        'correlations': correlations,
-        'query_inventory': [
+        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "total_queries_analyzed": len(queries_data),
+        "total_correlations": len(correlations),
+        "min_queries_per_correlation": min_queries,
+        "output_file": output_file,
+        "correlations": correlations,
+        "query_inventory": [
             {
-                'id': q['id'],
-                'name': q['name'],
-                'platform': q['platform'],
-                'tags': q['tags'],
-                'tactics': q['tactics'],
-                'severity': q['severity'],
+                "id": q["id"],
+                "name": q["name"],
+                "platform": q["platform"],
+                "tags": q["tags"],
+                "tactics": q["tactics"],
+                "severity": q["severity"],
             }
             for q in queries_data
-        ]
+        ],
     }
 
     # Step 5: Save to JSON file
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2)
 
     print(f"Correlation queries saved to {output_file}")
@@ -1536,21 +1591,21 @@ def build_correlation_queries(
 
 def _detect_platform(yaml_data: Dict) -> str:
     """Detect the platform/vendor from YAML data."""
-    connector_id = yaml_data.get('requiredDataConnectors', [{}])[0].get('connectorId', '')
+    connector_id = yaml_data.get("requiredDataConnectors", [{}])[0].get("connectorId", "")
 
-    if connector_id == 'MicrosoftThreatProtection':
-        return 'mde'
-    elif connector_id == 'Splunk':
-        return 'splunk'
+    if connector_id == "MicrosoftThreatProtection":
+        return "mde"
+    elif connector_id == "Splunk":
+        return "splunk"
 
     # Fallback: check query content
-    query = yaml_data.get('query', '')
-    if query.lstrip().startswith('index='):
-        return 'splunk'
-    elif query.lstrip().startswith('Device'):
-        return 'mde'
+    query = yaml_data.get("query", "")
+    if query.lstrip().startswith("index="):
+        return "splunk"
+    elif query.lstrip().startswith("Device"):
+        return "mde"
 
-    return 'unknown'
+    return "unknown"
 
 
 def _calculate_relevance_score(query_a: Dict, query_b: Dict) -> float:
@@ -1566,27 +1621,27 @@ def _calculate_relevance_score(query_a: Dict, query_b: Dict) -> float:
     score = 0.0
 
     # 1. Shared threat groups (40% weight)
-    tags_a = set(query_a.get('tags', []))
-    tags_b = set(query_b.get('tags', []))
+    tags_a = set(query_a.get("tags", []))
+    tags_b = set(query_b.get("tags", []))
     if tags_a and tags_b:
         tag_overlap = len(tags_a & tags_b) / len(tags_a | tags_b)
         score += tag_overlap * 0.4
 
     # 2. Platform compatibility (20% weight)
-    if query_a.get('platform') == query_b.get('platform'):
+    if query_a.get("platform") == query_b.get("platform"):
         score += 0.2
 
     # 3. Related attack paths/tactics (30% weight)
-    tactics_a = set(query_a.get('tactics', []))
-    tactics_b = set(query_b.get('tactics', []))
+    tactics_a = set(query_a.get("tactics", []))
+    tactics_b = set(query_b.get("tactics", []))
     if tactics_a and tactics_b:
         tactic_overlap = len(tactics_a & tactics_b) / len(tactics_a | tactics_b)
         score += tactic_overlap * 0.3
 
     # 4. Severity alignment (10% weight)
-    severity_map = {'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4}
-    sev_a = severity_map.get(query_a.get('severity', 'Medium'), 2)
-    sev_b = severity_map.get(query_b.get('severity', 'Medium'), 2)
+    severity_map = {"Low": 1, "Medium": 2, "High": 3, "Critical": 4}
+    sev_a = severity_map.get(query_a.get("severity", "Medium"), 2)
+    sev_b = severity_map.get(query_b.get("severity", "Medium"), 2)
     severity_diff = abs(sev_a - sev_b)
     severity_score = max(0, 1 - (severity_diff / 3))  # Normalize 0-1
     score += severity_score * 0.1
@@ -1594,7 +1649,9 @@ def _calculate_relevance_score(query_a: Dict, query_b: Dict) -> float:
     return score
 
 
-def _build_correlation_groups(queries: List[Dict], min_queries: int, max_queries: int = 5) -> List[List[Dict]]:
+def _build_correlation_groups(
+    queries: List[Dict], min_queries: int, max_queries: int = 5
+) -> List[List[Dict]]:
     """
     Group queries into correlation sets based on relevance scores.
     Each group contains queries that are highly related.
@@ -1605,7 +1662,7 @@ def _build_correlation_groups(queries: List[Dict], min_queries: int, max_queries
     # Group by shared tags (threat groups)
     groups_by_tag = defaultdict(list)
     for query in queries:
-        for tag in query.get('tags', []):
+        for tag in query.get("tags", []):
             groups_by_tag[tag].append(query)
 
     # Build correlation groups
@@ -1618,7 +1675,7 @@ def _build_correlation_groups(queries: List[Dict], min_queries: int, max_queries
         # Further group by platform within each tag
         platform_groups = defaultdict(list)
         for query in tag_queries:
-            platform_groups[query['platform']].append(query)
+            platform_groups[query["platform"]].append(query)
 
         for platform, platform_queries in platform_groups.items():
             if len(platform_queries) < min_queries:
@@ -1633,12 +1690,12 @@ def _build_correlation_groups(queries: List[Dict], min_queries: int, max_queries
                 used_tactics = set()
 
                 for query in platform_queries:
-                    query_id = query.get('id')
+                    query_id = query.get("id")
                     if query_id in used_queries:
                         continue
 
                     # Get tactics for this query
-                    query_tactics = query.get('tactics', [])
+                    query_tactics = query.get("tactics", [])
 
                     # Check if this query's tactics overlap with already used tactics
                     if any(tactic in used_tactics for tactic in query_tactics):
@@ -1657,7 +1714,9 @@ def _build_correlation_groups(queries: List[Dict], min_queries: int, max_queries
                 if len(correlation_group) >= min_queries:
                     correlation_groups.append(correlation_group)
                     # Remove used queries from pool
-                    platform_queries = [q for q in platform_queries if q.get('id') not in used_queries]
+                    platform_queries = [
+                        q for q in platform_queries if q.get("id") not in used_queries
+                    ]
                 else:
                     # Can't build more correlations
                     break
@@ -1673,7 +1732,7 @@ def _build_correlation_search(queries: List[Dict], correlation_id: int) -> Dict:
         return {}
 
     # Determine platform
-    platform = queries[0].get('platform', 'unknown')
+    platform = queries[0].get("platform", "unknown")
 
     # Collect metadata
     all_tags = set()
@@ -1681,15 +1740,15 @@ def _build_correlation_search(queries: List[Dict], correlation_id: int) -> Dict:
     all_names = []
 
     for q in queries:
-        all_tags.update(q.get('tags', []))
-        all_tactics.update(q.get('tactics', []))
-        all_names.append(q.get('name', 'Unknown'))
+        all_tags.update(q.get("tags", []))
+        all_tactics.update(q.get("tactics", []))
+        all_names.append(q.get("name", "Unknown"))
 
     # Build combined query based on platform
-    if platform == 'mde':
-        combined_query = _combine_mde_queries([q['query'] for q in queries])
-    elif platform == 'splunk':
-        combined_query = _combine_splunk_queries_simple([q['query'] for q in queries])
+    if platform == "mde":
+        combined_query = _combine_mde_queries([q["query"] for q in queries])
+    elif platform == "splunk":
+        combined_query = _combine_splunk_queries_simple([q["query"] for q in queries])
     else:
         combined_query = "// Unsupported platform for correlation"
 
@@ -1701,30 +1760,26 @@ def _build_correlation_search(queries: List[Dict], correlation_id: int) -> Dict:
     clean_tactics = sorted([t for t in all_tactics if t is not None])
 
     return {
-        'correlation_id': f"CORR-{correlation_id:04d}",
-        'name': f"Correlation: {' + '.join(all_names[:3])}{'...' if len(all_names) > 3 else ''}",
-        'summary': summary,
-        'platform': platform,
-        'threat_groups': clean_tags,
-        'tactics': clean_tactics,
-        'query_count': len(queries),
-        'queries_included': [
-            {
-                'id': q['id'],
-                'name': q['name'],
-                'file': os.path.basename(q['file_path'])
-            }
+        "correlation_id": f"CORR-{correlation_id:04d}",
+        "name": f"Correlation: {' + '.join(all_names[:3])}{'...' if len(all_names) > 3 else ''}",
+        "summary": summary,
+        "platform": platform,
+        "threat_groups": clean_tags,
+        "tactics": clean_tactics,
+        "query_count": len(queries),
+        "queries_included": [
+            {"id": q["id"], "name": q["name"], "file": os.path.basename(q["file_path"])}
             for q in queries
         ],
-        'combined_query': combined_query,
-        'relevance_scores': [
+        "combined_query": combined_query,
+        "relevance_scores": [
             {
-                'query_pair': f"{queries[i]['name']} <-> {queries[j]['name']}",
-                'score': round(_calculate_relevance_score(queries[i], queries[j]), 3)
+                "query_pair": f"{queries[i]['name']} <-> {queries[j]['name']}",
+                "score": round(_calculate_relevance_score(queries[i], queries[j]), 3),
             }
             for i in range(len(queries))
             for j in range(i + 1, min(i + 3, len(queries)))  # Limit pairs for readability
-        ]
+        ],
     }
 
 
@@ -1737,13 +1792,15 @@ def _combine_mde_queries(query_list: List[str]) -> str:
     let_statements = []
     for idx, query in enumerate(query_list, 1):
         query_clean = _normalize_kql_spacing(query.strip())
-        let_statements.append(f"""// Detection Query {idx}
+        let_statements.append(
+            f"""// Detection Query {idx}
 let Query{idx} = materialize(
     {query_clean}
     | extend CorrelationKey = strcat(DeviceId, "_", bin(Timestamp, 1h))
     | extend DetectionSource{idx} = "Query{idx}"
     | project Timestamp, DeviceId, DeviceName, AccountName, FileName, ProcessCommandLine, CorrelationKey, DetectionSource{idx}
-);""")
+);"""
+        )
 
     # Build progressive joins starting with Query1
     join_chain = "Query1"
@@ -1756,16 +1813,28 @@ let Query{idx} = materialize(
     # Complete correlation query
     combined = "\n\n".join(let_statements)
     combined += f"\n\n// Correlation: Match if 2+ detection patterns fire on same device within 1 hour\n{join_chain}"
-    combined += "\n| where Timestamp > ago(1d) or " + " or ".join([f"Timestamp{i} > ago(1d)" for i in range(1, len(query_list))])
+    combined += "\n| where Timestamp > ago(1d) or " + " or ".join(
+        [f"Timestamp{i} > ago(1d)" for i in range(1, len(query_list))]
+    )
     combined += "\n| extend MatchCount = "
     # Count how many detection sources matched
-    match_conditions = " + ".join([f"iff(isnotempty(DetectionSource{i}), 1, 0)" for i in range(1, len(query_list) + 1)])
+    match_conditions = " + ".join(
+        [f"iff(isnotempty(DetectionSource{i}), 1, 0)" for i in range(1, len(query_list) + 1)]
+    )
     combined += match_conditions
     combined += "\n| where MatchCount >= 2  // At least 2 different detection patterns matched"
     combined += "\n| project DeviceId, DeviceName, AccountName, MatchCount,"
-    combined += "\n          " + ", ".join([f"DetectionSource{i}" for i in range(1, len(query_list) + 1)])
+    combined += "\n          " + ", ".join(
+        [f"DetectionSource{i}" for i in range(1, len(query_list) + 1)]
+    )
     combined += "\n| summarize DetectionCount = count(),"
-    combined += "\n            DetectionSources = make_set_if(strcat(" + ", ".join([f"DetectionSource{i}" for i in range(1, len(query_list) + 1)]) + "), isnotempty(strcat(" + ", ".join([f"DetectionSource{i}" for i in range(1, len(query_list) + 1)]) + ")))"
+    combined += (
+        "\n            DetectionSources = make_set_if(strcat("
+        + ", ".join([f"DetectionSource{i}" for i in range(1, len(query_list) + 1)])
+        + "), isnotempty(strcat("
+        + ", ".join([f"DetectionSource{i}" for i in range(1, len(query_list) + 1)])
+        + ")))"
+    )
     combined += "\n            by DeviceId, DeviceName, AccountName"
     combined += "\n| order by DetectionCount desc"
 
@@ -1775,8 +1844,8 @@ let Query{idx} = materialize(
 def _combine_splunk_queries_simple(query_list: List[str]) -> str:
     """Combine multiple Splunk queries into a proper correlation search using transaction."""
     # Extract index from first query
-    index_match = re.search(r'index\s*=\s*(\w+)', query_list[0])
-    index = index_match.group(1) if index_match else 'edr_events'
+    index_match = re.search(r"index\s*=\s*(\w+)", query_list[0])
+    index = index_match.group(1) if index_match else "edr_events"
 
     search_conditions = []
     eval_statements = []
@@ -1785,20 +1854,20 @@ def _combine_splunk_queries_simple(query_list: List[str]) -> str:
     for idx, query in enumerate(query_list, 1):
         # Extract search condition (remove index= and table commands)
         search = query.strip()
-        search = re.sub(r'index\s*=\s*\w+\s*earliest=[^\n]*\n', '', search)
-        search = re.sub(r'\|\s*table\s+.*$', '', search, flags=re.MULTILINE).strip()
-        search = re.sub(r'\|\s*stats\s+.*$', '', search, flags=re.MULTILINE).strip()
-        search = re.sub(r'\|\s*eval\s+.*$', '', search, flags=re.MULTILINE).strip()
+        search = re.sub(r"index\s*=\s*\w+\s*earliest=[^\n]*\n", "", search)
+        search = re.sub(r"\|\s*table\s+.*$", "", search, flags=re.MULTILINE).strip()
+        search = re.sub(r"\|\s*stats\s+.*$", "", search, flags=re.MULTILINE).strip()
+        search = re.sub(r"\|\s*eval\s+.*$", "", search, flags=re.MULTILINE).strip()
 
         if search:
             # Clean up duplicates and unnecessary parentheses
-            parts = re.split(r'\s+OR\s+', search, flags=re.IGNORECASE)
+            parts = re.split(r"\s+OR\s+", search, flags=re.IGNORECASE)
             seen = set()
             unique = []
             for p in parts:
-                normalized = " ".join(p.strip().strip('()').split())
+                normalized = " ".join(p.strip().strip("()").split())
                 if normalized and normalized not in seen:
-                    unique.append(p.strip().strip('()'))
+                    unique.append(p.strip().strip("()"))
                     seen.add(normalized)
 
             clean_search = unique[0] if len(unique) == 1 else " OR ".join(unique)

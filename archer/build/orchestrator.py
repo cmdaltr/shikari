@@ -15,6 +15,7 @@ from archer.build import yaml_patch  # This patches yaml.additional_tactics()
 from archer.build.detections import compile_query
 from archer.build.progress import write_progress
 from archer.genai import generate_correlations
+from archer.config import GENERATE_DIR, CORRELATE_DIR
 import os
 from pathlib import Path
 
@@ -195,7 +196,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 "total_yaml": total,
             })
             # YAMLs are written to data/generate/ directory
-            yaml_dir = os.path.join("data", "generate")
+            yaml_dir = GENERATE_DIR
             generate_correlations(group_name, yaml_dir)
 
             # Generate attack flow visualizations
@@ -203,7 +204,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 from archer.visualization.attack_flow import generate_all_correlation_flows, generate_actor_flow
 
                 # Generate flows for each correlation
-                correlations_file = os.path.join("data", "correlate", f"{group_name}.json")
+                correlations_file = os.path.join(CORRELATE_DIR, f"{group_name}.json")
                 if os.path.exists(correlations_file):
                     print(f"Generating attack flow diagrams for correlations...")
                     generate_all_correlation_flows(group_name, correlations_file)
