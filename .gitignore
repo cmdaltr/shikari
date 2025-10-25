@@ -121,4 +121,7 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# OSINT enrichment - local repo clones and cache
 data/osint_cache/
+data/osint_repos/

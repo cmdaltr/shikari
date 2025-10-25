@@ -651,6 +651,25 @@ def load_mitre_data():
     app.state.technique_descriptions = obtain_technique_descriptions(bundle)
 
 
+@app.on_event("startup")
+def initialize_osint_repos():
+    """
+    Initialize OSINT detection repositories on startup.
+
+    Clones or updates Sigma and Elastic detection rule repositories locally
+    for fast, offline searching without API rate limits. Repos are updated
+    every hour automatically when searches are performed.
+    """
+    from archer.build.osint_repos import ensure_repos_ready
+
+    print("🔍 Initializing OSINT detection repositories...")
+    try:
+        ensure_repos_ready()
+        print("✓ OSINT repositories initialized successfully")
+    except Exception as e:
+        print(f"⚠️  Failed to initialize OSINT repos (will retry on first use): {e}")
+
+
 @app.get("/", response_class=HTMLResponse)
 def read_form(request: Request, archer_session: Optional[str] = Cookie(None)):
     # Render the index page where the user can enter a group name. The
@@ -2871,6 +2890,10 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             # Check for OSINT enrichment
             is_osint_enriched, osint_data = check_osint_enriched(yaml_file)
 
+            # Extract the query from YAML for preview
+            yaml_data = load_yaml_file(yaml_file)
+            query_text = yaml_data.get("query", "") if yaml_data else ""
+
             detection_files[vendor].append(
                 {
                     "file": filename,
@@ -2884,6 +2907,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "needs_review": len(indicators) == 0 and not is_osint_enriched,  # Normal needs review (yellow)
                     "osint_enriched": is_osint_enriched,  # OSINT enriched flag (orange badge)
                     "osint_data": osint_data if is_osint_enriched else {},
+                    "query": query_text,  # Add query for preview
                 }
             )
 
@@ -2911,6 +2935,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "needs_review": file_data.get("needs_review", False),
                     "osint_enriched": file_data.get("osint_enriched", False),
                     "osint_data": file_data.get("osint_data", {}),
+                    "queries": [],  # Store all queries for this group
                 }
             else:
                 # Merge indicators from multiple detections in the same group
@@ -2927,6 +2952,10 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     if file_data.get("osint_data"):
                         grouped[key]["osint_data"].update(file_data["osint_data"])
             grouped[key]["titles"].append(file_data["title"])
+            # Add query if it exists and isn't already in the list
+            query_text = file_data.get("query", "")
+            if query_text and query_text not in grouped[key]["queries"]:
+                grouped[key]["queries"].append(query_text)
             total_detections += 1  # Count every detection individually
 
         # Convert grouped data to list format for display
@@ -2948,6 +2977,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "needs_review": not has_indicators and not is_osint,  # Yellow badge
                     "osint_enriched": is_osint,  # Orange badge
                     "osint_data": data.get("osint_data", {}),
+                    "queries": data.get("queries", []),  # Pass queries for preview
                 }
             )
 

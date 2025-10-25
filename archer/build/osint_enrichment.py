@@ -40,6 +40,7 @@ import time
 import os
 import hashlib
 from pathlib import Path
+import yaml as yaml_lib
 
 
 # Cache directory for OSINT results
@@ -97,60 +98,77 @@ def save_to_cache(technique_id: str, data: Dict):
 
 def search_sigma_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
     """
-    Search Sigma rules repository for detections related to a technique.
+    Search Sigma rules repository (LOCAL) for detections related to a technique.
 
     Returns: (sources: List[str], indicators: List[Dict])
     """
+    from archer.build.osint_repos import search_repo_for_technique
+
     sources = []
     indicators = []
 
     try:
-        # Search GitHub Sigma repository
-        url = f"https://api.github.com/search/code?q={technique_id}+in:file+repo:SigmaHQ/sigma+path:rules"
-        headers = {"Accept": "application/vnd.github.v3+json"}
+        # Search local Sigma repository
+        files = search_repo_for_technique("sigma", technique_id)
 
-        response = requests.get(url, headers=headers, timeout=10)
+        if files:
+            print(f"  ✓ Found {len(files)} Sigma rules for {technique_id}")
 
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("total_count", 0) > 0:
-                print(f"  ✓ Found {data['total_count']} Sigma rules for {technique_id}")
+            # Process first few files to extract indicators
+            for file_path in files[:5]:  # Limit to first 5 rules
+                try:
+                    with open(file_path, 'r') as f:
+                        rule_content = f.read()
+                        rule_data = yaml_lib.safe_load(rule_content)
 
-                # Get first few results
-                for item in data.get("items", [])[:3]:
-                    sources.append(item["html_url"])
+                    # Convert to GitHub URL
+                    relative_path = file_path.replace(str(Path("data/osint_repos/sigma")), "")
+                    github_url = f"https://github.com/SigmaHQ/sigma/blob/master{relative_path}"
+                    sources.append(github_url)
 
-                    # Try to fetch the file content to extract indicators
-                    try:
-                        file_url = item["url"]
-                        file_resp = requests.get(file_url, headers=headers, timeout=10)
-                        if file_resp.status_code == 200:
-                            content = file_resp.json().get("content", "")
-                            # Decode base64 content
-                            import base64
-                            decoded = base64.b64decode(content).decode('utf-8')
+                    # Extract indicators from Sigma rule
+                    detection = rule_data.get("detection", {})
+                    if detection:
+                        # Extract command line patterns
+                        cmd_patterns = []
+                        image_patterns = []
 
-                            # Extract selection patterns from Sigma rules
-                            if "selection:" in decoded or "CommandLine:" in decoded or "Image:" in decoded:
-                                # Found potential indicators
-                                indicators.append({
-                                    "source": "Sigma",
-                                    "rule_name": item["name"],
-                                    "content": decoded[:500]  # First 500 chars
-                                })
-                    except Exception as e:
-                        print(f"    Warning: Could not fetch Sigma rule content: {e}")
-                        continue
+                        for key, value in detection.items():
+                            if isinstance(value, dict):
+                                if "CommandLine" in value or "cmd" in str(value).lower():
+                                    cmd_patterns.extend(extract_sigma_patterns(value))
+                                if "Image" in value or "process" in str(value).lower():
+                                    image_patterns.extend(extract_sigma_patterns(value))
 
-        elif response.status_code == 403:
-            print(f"  ⚠ GitHub API rate limit reached - skipping Sigma search")
+                        if cmd_patterns or image_patterns:
+                            indicators.append({
+                                "source": "Sigma",
+                                "rule_name": rule_data.get("title", file_path.split("/")[-1]),
+                                "cmd": cmd_patterns[:3],  # Limit to 3
+                                "file": image_patterns[:3]
+                            })
 
-        time.sleep(0.5)  # Rate limiting
+                except Exception as e:
+                    # Silent failure for individual files
+                    continue
 
     except Exception as e:
         print(f"  ⚠ Error searching Sigma rules: {e}")
 
     return sources, indicators
+
+
+def extract_sigma_patterns(detection_dict: dict) -> list:
+    """Extract patterns from Sigma detection dict."""
+    patterns = []
+
+    for key, value in detection_dict.items():
+        if isinstance(value, list):
+            patterns.extend([str(v) for v in value if v])
+        elif isinstance(value, str) and value:
+            patterns.append(value)
+
+    return patterns
 
 
 def search_mitre_car(technique_id: str) -> Tuple[List[str], List[Dict]]:
@@ -200,40 +218,160 @@ def search_mitre_car(technique_id: str) -> Tuple[List[str], List[Dict]]:
 
 def search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
     """
-    Search Elastic Detection Rules repository.
+    Search Elastic Detection Rules repository (LOCAL).
 
     Returns: (sources: List[str], indicators: List[Dict])
     """
+    from archer.build.osint_repos import search_repo_for_technique
+    import toml
+
     sources = []
     indicators = []
 
     try:
-        # Search GitHub Elastic detection-rules repository
-        url = f"https://api.github.com/search/code?q={technique_id}+in:file+repo:elastic/detection-rules+path:rules"
-        headers = {"Accept": "application/vnd.github.v3+json"}
+        # Search local Elastic repository
+        files = search_repo_for_technique("elastic", technique_id)
 
-        response = requests.get(url, headers=headers, timeout=10)
+        if files:
+            print(f"  ✓ Found {len(files)} Elastic rules for {technique_id}")
 
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("total_count", 0) > 0:
-                print(f"  ✓ Found {data['total_count']} Elastic rules for {technique_id}")
+            # Process first few files
+            for file_path in files[:5]:  # Limit to first 5
+                try:
+                    # Elastic rules are in TOML format
+                    with open(file_path, 'r') as f:
+                        if file_path.endswith('.toml'):
+                            rule_data = toml.load(f)
+                        else:
+                            continue
 
-                # Get first few results
-                for item in data.get("items", [])[:2]:
-                    sources.append(item["html_url"])
-                    indicators.append({
-                        "source": "Elastic",
-                        "rule_name": item["name"]
-                    })
+                    # Convert to GitHub URL
+                    relative_path = file_path.replace(str(Path("data/osint_repos/elastic")), "")
+                    github_url = f"https://github.com/elastic/detection-rules/blob/main{relative_path}"
+                    sources.append(github_url)
 
-        elif response.status_code == 403:
-            print(f"  ⚠ GitHub API rate limit reached - skipping Elastic search")
+                    # Extract query/indicators
+                    rule_metadata = rule_data.get("rule", rule_data.get("metadata", {}))
+                    query = rule_data.get("query", "")
 
-        time.sleep(0.5)  # Rate limiting
+                    if query:
+                        indicators.append({
+                            "source": "Elastic",
+                            "rule_name": rule_metadata.get("name", file_path.split("/")[-1]),
+                            "query_snippet": query[:200]  # First 200 chars
+                        })
+
+                except Exception as e:
+                    # Silent failure for individual files
+                    continue
 
     except Exception as e:
         print(f"  ⚠ Error searching Elastic rules: {e}")
+
+    return sources, indicators
+
+
+def search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
+    """
+    Search Splunk Security Content repository (LOCAL).
+
+    Returns: (sources: List[str], indicators: List[Dict])
+    """
+    from archer.build.osint_repos import search_repo_for_technique
+
+    sources = []
+    indicators = []
+
+    try:
+        # Search local Splunk repository
+        files = search_repo_for_technique("splunk", technique_id)
+
+        if files:
+            print(f"  ✓ Found {len(files)} Splunk detections for {technique_id}")
+
+            # Process first few files
+            for file_path in files[:5]:  # Limit to first 5
+                try:
+                    with open(file_path, 'r') as f:
+                        content = f.read()
+                        detection_data = yaml_lib.safe_load(content)
+
+                    # Convert to GitHub URL
+                    relative_path = file_path.replace(str(Path("data/osint_repos/splunk")), "")
+                    github_url = f"https://github.com/splunk/security_content/blob/develop{relative_path}"
+                    sources.append(github_url)
+
+                    # Extract search query
+                    search_query = detection_data.get("search", "")
+                    if search_query:
+                        indicators.append({
+                            "source": "Splunk",
+                            "detection_name": detection_data.get("name", file_path.split("/")[-1]),
+                            "search_snippet": search_query[:200]
+                        })
+
+                except Exception as e:
+                    # Silent failure for individual files
+                    continue
+
+    except Exception as e:
+        print(f"  ⚠ Error searching Splunk content: {e}")
+
+    return sources, indicators
+
+
+def search_azure_sentinel(technique_id: str) -> Tuple[List[str], List[Dict]]:
+    """
+    Search Azure Sentinel repository (LOCAL).
+
+    Returns: (sources: List[str], indicators: List[Dict])
+    """
+    from archer.build.osint_repos import search_repo_for_technique
+
+    sources = []
+    indicators = []
+
+    try:
+        # Search local Azure Sentinel repository
+        files = search_repo_for_technique("azure_sentinel", technique_id)
+
+        if files:
+            print(f"  ✓ Found {len(files)} Azure Sentinel rules for {technique_id}")
+
+            # Process first few files
+            for file_path in files[:5]:  # Limit to first 5
+                try:
+                    # Azure Sentinel rules can be in YAML or JSON
+                    with open(file_path, 'r') as f:
+                        content = f.read()
+
+                    # Try YAML first, then JSON
+                    try:
+                        rule_data = yaml_lib.safe_load(content)
+                    except:
+                        import json
+                        rule_data = json.loads(content)
+
+                    # Convert to GitHub URL
+                    relative_path = file_path.replace(str(Path("data/osint_repos/azure_sentinel")), "")
+                    github_url = f"https://github.com/Azure/Azure-Sentinel/blob/master{relative_path}"
+                    sources.append(github_url)
+
+                    # Extract query
+                    query = rule_data.get("query", rule_data.get("Query", ""))
+                    if query:
+                        indicators.append({
+                            "source": "Azure Sentinel",
+                            "rule_name": rule_data.get("name", rule_data.get("displayName", file_path.split("/")[-1])),
+                            "query_snippet": query[:200]
+                        })
+
+                except Exception as e:
+                    # Silent failure for individual files
+                    continue
+
+    except Exception as e:
+        print(f"  ⚠ Error searching Azure Sentinel: {e}")
 
     return sources, indicators
 
@@ -298,6 +436,10 @@ def search_osint_for_technique(
     """
     print(f"🔍 OSINT Enrichment: Searching for detection methods for {technique_id} ({technique_name})")
 
+    # Ensure OSINT repos are ready (will update if > 1 hour old)
+    from archer.build.osint_repos import ensure_repos_ready
+    ensure_repos_ready()
+
     # Check cache first
     cached_result = load_from_cache(technique_id)
     if cached_result:
@@ -340,6 +482,22 @@ def search_osint_for_technique(
         all_sources.extend(elastic_sources)
         all_indicators_data.extend(elastic_indicators)
         notes.append(f"Found {len(elastic_sources)} Elastic rule(s)")
+
+    # 4. Search Splunk Security Content
+    print(f"  Searching Splunk Security Content...")
+    splunk_sources, splunk_indicators = search_splunk_content(technique_id)
+    if splunk_sources:
+        all_sources.extend(splunk_sources)
+        all_indicators_data.extend(splunk_indicators)
+        notes.append(f"Found {len(splunk_sources)} Splunk detection(s)")
+
+    # 5. Search Azure Sentinel
+    print(f"  Searching Azure Sentinel...")
+    sentinel_sources, sentinel_indicators = search_azure_sentinel(technique_id)
+    if sentinel_sources:
+        all_sources.extend(sentinel_sources)
+        all_indicators_data.extend(sentinel_indicators)
+        notes.append(f"Found {len(sentinel_sources)} Azure Sentinel rule(s)")
 
     # Extract actual indicators from found sources
     if all_indicators_data:

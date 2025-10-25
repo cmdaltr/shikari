@@ -2,76 +2,116 @@
 
 ## Overview
 
-The OSINT (Open Source Intelligence) Enrichment system automatically searches external threat intelligence sources when MITRE ATT&CK data doesn't provide sufficient indicators for detection creation.
+The OSINT (Open Source Intelligence) Enrichment system automatically searches external threat intelligence sources to enhance detection quality:
+
+1. **When NO indicators are found**: Search OSINT to find indicators for detection creation
+2. **When indicators ARE found**: Enrich with OSINT to increase detection fidelity
+
+This dual approach ensures all detections benefit from the latest threat intelligence beyond MITRE ATT&CK.
 
 ## Architecture
 
 ### Detection Generation Flow
 
 ```
-┌─────────────────────────────────────┐
-│  Parse MITRE ATT&CK Technique Data  │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-      ┌────────────────┐
-      │ Extract IOCs?  │
-      └────┬───────┬───┘
-           │ YES   │ NO
-           │       │
-           ▼       │
-   ┌───────────────────────┐
-   │ Filter Generic Terms  │ ← NEW: Remove "condition", "value", "data", etc.
-   │ - condition, value    │
-   │ - data, file, process │
-   │ - command, user, etc. │
-   └───┬───────────────┬───┘
-       │ Real IOCs     │ Only Generic
-       │               │
-       │               ▼
-       │          ┌─────────────────────┐
-       │          │  Search OSINT       │
-       │          │  - Sigma Rules      │
-       │          │  - MITRE CAR        │
-       │          │  - Elastic Rules    │
-       │          └──────┬──────────────┘
-       │                 │
-       │                 ▼
-       │            ┌────────────┐
-       │            │ Found IOCs?│
-       │            └─┬────────┬─┘
-       │              │ YES    │ NO
-       │        ┌---──┘        │
-       ▼        ▼              ▼
-    ┌────────────-──┐   ┌──────────────┐
-    │ Create        │   │ Skip         │
-    │ Detection     │   │ Detection    │
-    │ (Normal)      │   │ Creation     │
-    └────────────-──┘   └──────────────┘
-           │
-           ▼
-    ┌──────────────┐
-    │ YAML File    │
-    │ with Badge   │
-    │ - None       │ ← Has MITRE indicators (real IOCs)
-    │ - Orange     │ ← OSINT-enriched (no MITRE, has OSINT)
-    └──────────────┘
+                    ┌─────────────────────────────────────┐
+                    │  Parse MITRE ATT&CK Technique Data  │
+                    └──────────────┬──────────────────────┘
+                                   │
+                                   ▼
+                          ┌────────────────┐
+                          │ Extract IOCs   │
+                          └────────┬───────┘
+                                   │
+                                   ▼
+                       ┌───────────────────────┐
+                       │ Filter Generic Terms  │
+                       │ Remove: condition,    │
+                       │ value, data, file,    │
+                       │ process, command, etc │
+                       └───────────┬───────────┘
+                                   │
+                   ┌───────────────┴────────────────┐
+                   │                                │
+            Has Real IOCs                    No Real IOCs
+                   │                                │
+                   │                                │
+                   ▼                                ▼
+    ┏━━━━━━━━━━━━━━━━━━━━━━━━┓     ┏━━━━━━━━━━━━━━━━━━━━━━━━━┓
+    ┃  PATH 1: ENRICHMENT    ┃     ┃  PATH 2: FIND           ┃
+    ┃  Search OSINT to       ┃     ┃  Search OSINT to        ┃
+    ┃  INCREASE fidelity     ┃     ┃  FIND indicators        ┃
+    ┗━━━━━━━━━┬━━━━━━━━━━━━━━┛     ┗━━━━━━━━━┬━━━━━━━━━━━━━━━┛
+              │                              │
+              ▼                              ▼
+    ┌──────────────────┐          ┌──────────────────┐
+    │ Search Sources:  │          │ Search Sources:  │
+    │ • Sigma Rules    │          │ • Sigma Rules    │
+    │ • MITRE CAR      │          │ • MITRE CAR      │
+    │ • Elastic Rules  │          │ • Elastic Rules  │
+    └─────────┬────────┘          └─────────┬────────┘
+              │                              │
+              ▼                              ▼
+    ┌──────────────────┐          ┌──────────────────┐
+    │ OSINT Found?     │          │ OSINT Found?     │
+    └───┬──────────┬───┘          └───┬──────────┬───┘
+        │ YES  NO  │                  │ YES  NO  │
+        │      │   │                  │      │   │
+        ▼      │   │                  ▼      │   │
+    ┌──────────────┐ │          ┌──────────────┐ │
+    │ Merge MITRE  │ │          │ Use OSINT as │ │
+    │ + OSINT IOCs │ │          │ Primary IOCs │ │
+    │ (dedupe)     │ │          └──────┬───────┘ │
+    └──────┬───────┘ │                 │         │
+           │         │                 │         │
+           └─────────┼─────────────────┘         │
+                     │                           │
+                     ▼                           ▼
+            ┌──────────────────┐      ┌──────────────────┐
+            │ Create Detection │      │ Skip Detection   │
+            │ with IOCs        │      │ Creation         │
+            └─────────┬────────┘      └──────────────────┘
+                      │
+                      ▼
+               ┌──────────────┐
+               │  YAML File   │
+               └──────┬───────┘
+                      │
+          ┌───────────┴────────────┐
+          │                        │
+          ▼                        ▼
+    ┌──────────┐            ┌──────────┐
+    │ No Badge │            │  Orange  │
+    │ (Normal) │            │  Badge   │
+    └──────────┘            └──────────┘
+    MITRE IOCs              OSINT-only
+    + OSINT enrichment      (no MITRE IOCs)
+    ✓ Checked               ✗ Unchecked
 
-    Note: Yellow badge removed - detections with no indicators are not created
+KEY CONCEPTS:
+• Generic term filtering ensures quality before OSINT search
+• OSINT ALWAYS runs (both paths) to maximize detection fidelity
+• PATH 1: Has indicators → Enrich with OSINT for higher fidelity
+• PATH 2: No indicators → Find indicators through OSINT
+• Orange badge = OSINT-only detections (need review)
+• No badge = MITRE-based detections (may include OSINT enrichment)
 ```
 
 ## Badge System
 
-### No Badge (Normal Detection)
+### No Badge (Normal Detection - OSINT Enriched)
 - **Condition**: Detection has real indicators extracted from MITRE ATT&CK (after filtering generic terms)
 - **Display**: No badge shown
 - **Checkbox**: Checked by default
 - **Examples**: AADInternals, powershell.exe, Connect-AZAccount
+- **OSINT Enrichment**: YES - All detections with indicators are automatically enriched with OSINT to increase fidelity
+- **Metadata**: OSINT sources and enrichment date included in YAML (if OSINT found)
 
 ### Orange Badge ("Needs Review - enriched with additional OSINT")
-- **Condition**: Detection created from OSINT research (no MITRE indicators or only generic MITRE terms)
+- **Condition**: Detection created ONLY from OSINT research (no MITRE indicators or only generic MITRE terms)
 - **Display**: Orange badge with sun/sparkle icon
 - **Checkbox**: Unchecked by default
+- **OSINT Enrichment**: YES - OSINT was the primary source of indicators
 - **Metadata**: OSINT sources and enrichment date included in YAML
 
 ### No Detection Created
@@ -161,23 +201,85 @@ This ensures cloud-related detections properly show indicators even when they us
 
 ## OSINT Sources Searched
 
-### 1. Sigma Rules (SigmaHQ/sigma)
-- **API**: GitHub Code Search
-- **Query**: `{technique_id} in:file repo:SigmaHQ/sigma path:rules`
-- **Extraction**: CommandLine, Image, TargetFilename patterns
-- **Rate Limit**: 10 requests/minute (GitHub authenticated)
+### 1. Sigma Rules (SigmaHQ/sigma) - LOCAL REPO
+- **Method**: Local repository clone + grep search
+- **Repository**: https://github.com/SigmaHQ/sigma
+- **Size**: ~30MB, 3,065 detection rules
+- **Clone Time**: ~3 seconds (one-time)
+- **Update Frequency**: Every 1 hour (automatic)
+- **Search Time**: <1 second per technique
+- **Extraction**: CommandLine, Image, TargetFilename patterns from Sigma YAML
+- **No API limits**: Completely offline after initial clone
 
-### 2. MITRE CAR (Cyber Analytics Repository)
-- **API**: GitHub Raw Content
-- **File**: `analytics.json`
-- **Extraction**: Analytics with matching technique coverage
-- **Rate Limit**: No limit (raw file fetch)
+### 2. Elastic Detection Rules - LOCAL REPO
+- **Method**: Local repository clone + grep search
+- **Repository**: https://github.com/elastic/detection-rules
+- **Size**: ~106MB, 1,504 detection rules
+- **Clone Time**: ~10 seconds (one-time)
+- **Update Frequency**: Every 1 hour (automatic)
+- **Search Time**: <1 second per technique
+- **Extraction**: Queries and metadata from TOML files
+- **No API limits**: Completely offline after initial clone
 
-### 3. Elastic Detection Rules
-- **API**: GitHub Code Search
-- **Query**: `{technique_id} in:file repo:elastic/detection-rules path:rules`
-- **Extraction**: Rule metadata
-- **Rate Limit**: 10 requests/minute (GitHub authenticated)
+### 3. MITRE CAR (Cyber Analytics Repository) - LOCAL REPO
+- **Method**: Local repository clone + grep search
+- **Repository**: https://github.com/mitre-attack/car
+- **Size**: ~5MB, 200+ analytics
+- **Clone Time**: ~1 second (one-time)
+- **Update Frequency**: Every 1 hour (automatic)
+- **Search Time**: <1 second per technique
+- **Extraction**: Analytics and pseudocode implementations
+- **No API limits**: Completely offline after initial clone
+
+### 4. Splunk Security Content - LOCAL REPO
+- **Method**: Local repository clone + grep search
+- **Repository**: https://github.com/splunk/security_content
+- **Size**: ~58MB, 1,800+ detections
+- **Clone Time**: ~5 seconds (one-time)
+- **Update Frequency**: Every 1 hour (automatic)
+- **Search Time**: ~1 second per technique
+- **Extraction**: SPL search queries and detection metadata from YAML
+- **No API limits**: Completely offline after initial clone
+
+### 5. Azure Sentinel - LOCAL REPO
+- **Method**: Local repository clone + grep search
+- **Repository**: https://github.com/Azure/Azure-Sentinel
+- **Size**: ~256MB, 1,000+ detection rules
+- **Clone Time**: ~60 seconds (one-time)
+- **Update Frequency**: Every 1 hour (automatic)
+- **Search Time**: ~2 seconds per technique
+- **Extraction**: KQL queries and rule metadata from YAML/JSON
+- **No API limits**: Completely offline after initial clone
+
+## Local Repository Management
+
+### Repository Storage
+`data/osint_repos/`
+- **sigma/**: Sigma rules repository (30MB, 3,065 rules)
+- **elastic/**: Elastic detection rules repository (106MB, 1,504 rules)
+- **mitre_car/**: MITRE CAR analytics (5MB, 200+ analytics)
+- **splunk/**: Splunk Security Content (58MB, 1,800+ detections)
+- **azure_sentinel/**: Azure Sentinel rules (256MB, 1,000+ rules)
+- **Total**: ~455MB for all 5 repositories
+
+### Automatic Updates
+- **Trigger**: Web app startup + every OSINT search
+- **Frequency**: Repos updated if >1 hour old
+- **Method**: `git pull --depth 1` for existing repos, `git clone --depth 1` for new
+- **Fallback**: If update fails, uses existing local copy
+
+### Initialization
+Repos are automatically cloned/updated when:
+1. **App Startup**: FastAPI `@app.on_event("startup")` hook
+2. **Docker Start**: Dockerfile can include initialization
+3. **First OSINT Search**: Fallback if startup failed
+
+### Benefits Over API
+- **No Rate Limits**: GitHub API limits (60/hour unauthenticated, 5000/hour authenticated) eliminated
+- **Fast Searches**: Local grep is <1 second vs 5-10 seconds per API call
+- **Offline Capable**: Works without internet after initial clone
+- **More Results**: Can process all matching files vs API's limited results
+- **Reliable**: No network errors or timeouts during searches
 
 ## Caching System
 
@@ -245,24 +347,76 @@ enrichment_notes: |
 
 ## Configuration
 
-### Environment Variables
+### No Environment Variables Required!
+The new local repository approach **does not require a GitHub token** or any environment variables. All OSINT searches are performed against local clones of the repositories.
+
+### Directories Created Automatically
 
 ```bash
-# Optional: GitHub personal access token for higher rate limits
-export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
-```
+# OSINT repository clones (updated hourly)
+data/osint_repos/
+  ├── sigma/           # 30MB, 3,065 rules
+  ├── elastic/         # 106MB, 1,504 rules
+  ├── mitre_car/       # 5MB, 200+ analytics
+  ├── splunk/          # 58MB, 1,800+ detections
+  └── azure_sentinel/  # 256MB, 1,000+ rules
+  Total: ~455MB
 
-### Cache Directory
-
-```bash
-# Created automatically
+# OSINT search result cache (24 hours)
 data/osint_cache/
 ```
 
-Add to `.gitignore`:
+### Add to `.gitignore`
+
 ```
+data/osint_repos/
 data/osint_cache/
 ```
+
+## Air-Gapped Deployment
+
+### Using the Update Script
+
+For air-gapped environments, use the standalone update script:
+
+**On an internet-connected machine:**
+```bash
+# Update all OSINT repositories
+python scripts/update_osint_repos.py
+
+# Force update even if recently updated
+python scripts/update_osint_repos.py --force
+```
+
+**Transfer to air-gapped environment:**
+```bash
+# 1. On internet-connected machine, create archive
+cd /path/to/archer
+tar -czf osint_repos.tar.gz data/osint_repos/
+
+# 2. Transfer osint_repos.tar.gz to air-gapped machine
+
+# 3. On air-gapped machine, extract
+cd /path/to/archer
+tar -xzf osint_repos.tar.gz
+```
+
+The script will:
+- Clone all 5 OSINT repositories (~455MB total)
+- Update existing repositories if needed
+- Show progress and statistics
+- Respect the 1-hour update interval (unless --force is used)
+
+### Update Frequency
+
+On internet-connected systems, repositories are automatically updated:
+- **Hourly check**: Repos update if >1 hour old
+- **Startup check**: Verified on application startup
+- **Manual update**: Run `python scripts/update_osint_repos.py --force`
+
+For air-gapped systems, update as needed:
+- Weekly updates recommended for latest detections
+- Monthly updates minimum for active threats
 
 ## Usage
 
@@ -463,23 +617,32 @@ python -m archer.build.orchestrator process_group "Test Group"
 
 ---
 
-## Summary of Recent Changes (2024-10-24)
+## Summary of Recent Changes
 
-### Generic Term Filtering ✅
+### 2024-10-24: Universal OSINT Enrichment ✅
+- **Enhancement**: ALL detections with indicators are now enriched with OSINT
+- **Previous Behavior**: OSINT only searched when NO indicators found
+- **New Behavior**:
+  1. **No indicators** → Search OSINT to FIND indicators
+  2. **Has indicators** → Enrich with OSINT to INCREASE fidelity
+- **Impact**: Higher detection quality across ALL detections, not just OSINT-only ones
+- **Implementation**: OSINT indicators merged with MITRE indicators, duplicates removed
+
+### 2024-10-24: Generic Term Filtering ✅
 - **Problem**: Low-quality detections created with generic indicators like "condition", "value", "data"
 - **Solution**: Filter out 33 generic terms during detection generation and results display
 - **Impact**: Higher quality detections, fewer false positives, automatic OSINT fallback
 
-### OSINT Enrichment Integration ✅
-- **Trigger**: When no real indicators exist (after filtering generic terms)
+### 2024-10-24: OSINT Enrichment Integration ✅
+- **Trigger**: ALWAYS - for both finding and enriching indicators
 - **Sources**: Sigma Rules, MITRE CAR, Elastic Detection Rules
 - **Caching**: 24-hour cache to optimize performance
-- **Badge**: Orange badge for OSINT-enriched detections
+- **Badge**: Orange badge ONLY for OSINT-only detections (no MITRE indicators)
 
 ### Detection Quality Improvements ✅
-1. **Generic-only indicators** → OSINT enrichment attempted
+1. **Generic-only indicators** → OSINT enrichment attempted to find real indicators
 2. **No indicators + No OSINT** → Detection NOT created
-3. **Real indicators** → Normal detection created
+3. **Real indicators** → OSINT enrichment adds additional indicators for fidelity
 4. **Cloud commands extracted** → Connect-AZAccount, gcloud, aws, az
 
 ### UI/UX Enhancements ✅
@@ -502,3 +665,95 @@ python -m archer.build.orchestrator process_group "Test Group"
    - Created with orange badge (if OSINT found)
 3. **Check** cloud service detections show indicators (Connect-AZAccount, gcloud, etc.)
 4. **Confirm** technique names display with spaces in results page
+
+## Troubleshooting
+
+### Script Hangs During Repository Clone
+
+**Problem**: Azure Sentinel clone takes >30 minutes or appears to hang
+
+**Solution**:
+```bash
+# Kill the process
+pkill -f "update_osint_repos"
+
+# Try again with better network connection
+python scripts/update_osint_repos.py --force
+```
+
+**Note**: Azure Sentinel is ~256MB and can take 10-20 minutes on slower connections. This is normal.
+
+### Permission Denied Errors
+
+**Problem**: Cannot create `data/osint_repos/` directory
+
+**Solution**:
+```bash
+# Check permissions
+ls -ld data/
+
+# Fix permissions if needed
+chmod 755 data/
+mkdir -p data/osint_repos
+```
+
+### Git Not Installed
+
+**Problem**: `git: command not found`
+
+**Solution**:
+```bash
+# macOS
+xcode-select --install
+
+# Linux (Ubuntu/Debian)
+sudo apt-get install git
+
+# Linux (RHEL/CentOS)
+sudo yum install git
+```
+
+### Disk Space Issues
+
+**Problem**: Not enough space for repositories (~455MB required)
+
+**Solution**:
+```bash
+# Check available space
+df -h .
+
+# Clean up old cache if needed
+python scripts/cleanup.py
+rm -rf data/osint_cache/*
+
+# Minimum required: 1GB free space
+```
+
+### OSINT Enrichment Not Working
+
+**Problem**: Detections generated but no OSINT enrichment applied
+
+**Checklist**:
+1. Verify repositories are cloned: `ls -lh data/osint_repos/`
+2. Check repository sizes are reasonable (not empty)
+3. Test OSINT functionality: `python scripts/test_osint.py`
+4. Check logs for errors during detection generation
+5. Verify network connectivity (for initial clone)
+
+**Force re-clone**:
+```bash
+# Remove existing repos
+rm -rf data/osint_repos/
+
+# Re-clone fresh
+python scripts/update_osint_repos.py --force
+```
+
+### Rate Limit Errors (Legacy API Method)
+
+**Problem**: GitHub API rate limit exceeded
+
+**Solution**: This should not occur with the local repository method. If you see rate limit errors:
+1. Verify you're using the latest version of Archer
+2. Check that `archer/build/osint_enrichment.py` uses local repo searches, not API calls
+3. Update to the latest code if using old API-based method

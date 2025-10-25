@@ -1000,6 +1000,20 @@ body, html {
               </div>
               {% endif %}
               <div class="detection-description" style="white-space: pre-line; font-style: italic;">{{ detection.description_html | safe }}</div>
+
+              <!-- Query Preview (Collapsible) -->
+              {% if detection.queries and detection.queries|length > 0 %}
+              <div style="margin-top: 10px;">
+                <button onclick="toggleDetectionQuery('det-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
+                  <span id="det-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Query</span>
+                </button>
+                <div id="det-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{% for query in detection.queries %}{{ query }}{% if not loop.last %}
+
+---
+
+{% endif %}{% endfor %}</div>
+              </div>
+              {% endif %}
             </div>
             {% endfor %}
             {% endif %}
@@ -1234,6 +1248,20 @@ function toggleQuery(corrId) {
   } else {
     queryDiv.style.display = 'none';
     toggleSpan.textContent = '▶ View Combined Query';
+  }
+}
+
+// Toggle detection query display
+function toggleDetectionQuery(detId) {
+  const queryDiv = document.getElementById(detId + '-query');
+  const toggleSpan = document.getElementById(detId + '-toggle');
+
+  if (queryDiv.style.display === 'none') {
+    queryDiv.style.display = 'block';
+    toggleSpan.textContent = '▼ Hide Query';
+  } else {
+    queryDiv.style.display = 'none';
+    toggleSpan.textContent = '▶ View Query';
   }
 }
 

@@ -253,8 +253,43 @@ def compile_query(retrieved_data):
     procedure_platforms = retrieved_data.get("procedure_platforms", [])
     software_platforms = retrieved_data.get("software_platforms", {})
 
+    # OSINT enrichment data (will be populated if indicators exist or if no indicators)
+    osint_enrichment_data = None
+
     # Only construct YAML if there are identifiers for detection
     if identifiers:
+        # Enrich with OSINT to increase detection fidelity
+        print(f" 📊 Indicators found - enriching with OSINT to increase fidelity...")
+
+        from archer.build.osint_enrichment import search_osint_for_technique
+
+        osint_found, osint_data = search_osint_for_technique(
+            technique_id=tid,
+            technique_name=name,
+            technique_description=technique_description,
+            platforms=technique_platforms
+        )
+
+        if osint_found:
+            print(f" ✅ OSINT enrichment successful - additional context added")
+            osint_enrichment_data = osint_data
+
+            # Merge OSINT indicators with existing indicators
+            osint_indicators = osint_data.get("osint_indicators", {})
+            for indicator_type, osint_values in osint_indicators.items():
+                if indicator_type in identifiers:
+                    # Merge with existing indicators
+                    if isinstance(identifiers[indicator_type], list):
+                        identifiers[indicator_type].extend(osint_values)
+                        # Remove duplicates
+                        identifiers[indicator_type] = list(set(identifiers[indicator_type]))
+                else:
+                    # Add new indicator type
+                    identifiers[indicator_type] = osint_values
+            print(f" 📈 Enriched indicator count: {sum(len(v) if isinstance(v, list) else 1 for v in identifiers.values())}")
+        else:
+            print(f" ℹ️  No additional OSINT enrichment found")
+
         compatible_found = False
         yaml_files_created = False
 
@@ -367,6 +402,7 @@ def compile_query(retrieved_data):
                     source,
                     procedure_platforms,
                     software_platforms,
+                    osint_enrichment=osint_enrichment_data,  # Pass OSINT enrichment data
                 )
             print()  # Empty line after technique
 
