@@ -383,6 +383,30 @@
               </button>
             </div>
 
+            <!-- OSINT Repository Status Indicator (Toggleable) -->
+            <div id="osint-status-panel" style="margin: 24px 0 16px 0; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+              <!-- Toggle Header -->
+              <div onclick="toggleOsintStatus()" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; background: var(--bg-primary); user-select: none;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg id="osint-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" stroke-width="2" style="width: 20px; height: 20px; transition: transform 0.3s;">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                  <span style="font-weight: 600; color: var(--text-primary); font-size: 0.95em;">OSINT Repository Status</span>
+                </div>
+                <div id="osint-status-indicator" style="display: flex; align-items: center; gap: 8px;">
+                  <div id="status-light" style="width: 12px; height: 12px; border-radius: 50%; background: #999;"></div>
+                  <span id="status-text" style="font-size: 0.9em; color: var(--text-secondary);">Checking...</span>
+                </div>
+              </div>
+
+              <!-- Status Details (Hidden by default) -->
+              <div id="osint-status-details" style="display: none; padding: 16px; border-top: 1px solid var(--border-color);">
+                <div id="repo-statuses" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                  <!-- Repo statuses will be inserted here -->
+                </div>
+              </div>
+            </div>
+
             <!-- Library Table -->
             <div id="library-table-container" style="background: transparent; padding: 0; overflow-x: auto;">
               <table class="library-table" id="library-table">
@@ -915,9 +939,284 @@
             };
         }
 
+        // OSINT Repository Status Functions
+        const REPO_DISPLAY_NAMES = {
+            'sigma': 'Sigma',
+            'elastic': 'Elastic',
+            'mitre_car': 'CAR',
+            'splunk': 'Splunk',
+            'azure_sentinel': 'Sentinel'
+        };
+
+        // Order for displaying repos: Splunk | Azure | Elastic | Sigma | MITRE CAR
+        const REPO_ORDER = ['splunk', 'azure_sentinel', 'elastic', 'sigma', 'mitre_car'];
+
+        // Track selected OSINT repo filters
+        let selectedOsintRepos = new Set();
+
+        // Get logo SVG for a repository
+        function getRepoLogo(repoName) {
+            const size = 24;
+
+            if (repoName === 'splunk') {
+                return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                    <defs>
+                        <radialGradient id="splunkGradient-${repoName}" cx="30%" cy="30%">
+                            <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                        </radialGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="48" fill="url(#splunkGradient-${repoName})"/>
+                    <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>`;
+            } else if (repoName === 'azure_sentinel') {
+                return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                    <defs>
+                        <linearGradient id="azureGradient-${repoName}" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#azureGradient-${repoName})"/>
+                </svg>`;
+            } else if (repoName === 'elastic') {
+                return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                    <defs>
+                        <linearGradient id="elasticYellow-${repoName}" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="elasticTeal-${repoName}" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="elasticBlue-${repoName}" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="10" y="25" width="70" height="10" rx="5" fill="url(#elasticYellow-${repoName})"/>
+                    <rect x="15" y="47" width="70" height="10" rx="5" fill="url(#elasticTeal-${repoName})"/>
+                    <rect x="20" y="69" width="70" height="10" rx="5" fill="url(#elasticBlue-${repoName})"/>
+                </svg>`;
+            } else if (repoName === 'sigma') {
+                // Sigma logo - Greek letter Sigma (Σ)
+                return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                    <defs>
+                        <linearGradient id="sigmaGradient-${repoName}" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#00A4EF;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0078D4;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="48" fill="url(#sigmaGradient-${repoName})"/>
+                    <text x="50" y="70" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="white" text-anchor="middle">Σ</text>
+                </svg>`;
+            } else if (repoName === 'mitre_car') {
+                // MITRE CAR logo - Shield with "CAR"
+                return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                    <defs>
+                        <linearGradient id="carGradient-${repoName}" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#E31837;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#B71C1C;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="48" fill="url(#carGradient-${repoName})"/>
+                    <text x="50" y="65" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" text-anchor="middle">CAR</text>
+                </svg>`;
+            }
+
+            return '';
+        }
+
+        // Toggle OSINT status panel
+        function toggleOsintStatus() {
+            const details = document.getElementById('osint-status-details');
+            const icon = document.getElementById('osint-toggle-icon');
+
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                icon.style.transform = 'rotate(90deg)';
+            } else {
+                details.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Toggle OSINT repo filter
+        function toggleRepoFilter(repoName) {
+            if (selectedOsintRepos.has(repoName)) {
+                selectedOsintRepos.delete(repoName);
+            } else {
+                selectedOsintRepos.add(repoName);
+            }
+
+            // Update visual state of repo cards
+            const card = document.querySelector(`[data-repo="${repoName}"]`);
+            if (card) {
+                if (selectedOsintRepos.has(repoName)) {
+                    card.style.borderColor = 'var(--accent)';
+                    card.style.borderWidth = '2px';
+                    card.style.background = 'rgba(197, 48, 48, 0.05)';
+                } else {
+                    card.style.borderColor = 'var(--border-color)';
+                    card.style.borderWidth = '1px';
+                    card.style.background = 'var(--bg-primary)';
+                }
+            }
+
+            // Filter detections
+            filterByOsintRepos();
+        }
+
+        // Filter detections by selected OSINT repos
+        function filterByOsintRepos() {
+            if (selectedOsintRepos.size === 0) {
+                // No filters active, show all detections (apply search/type/visibility filters)
+                searchLibrary();
+            } else {
+                // Filter detections that have at least one of the selected OSINT repos
+                const filteredDetections = allDetections.filter(detection => {
+                    if (!detection.osint_sources || detection.osint_sources.length === 0) {
+                        return false; // No OSINT sources, don't show
+                    }
+
+                    // Show if detection has ANY of the selected repos
+                    return detection.osint_sources.some(source => selectedOsintRepos.has(source));
+                });
+
+                renderTable(filteredDetections);
+            }
+        }
+
+        // Check OSINT repository status
+        async function checkOsintStatus() {
+            try {
+                const response = await fetch('/api/status/osint');
+                const data = await response.json();
+
+                const statusLight = document.getElementById('status-light');
+                const statusText = document.getElementById('status-text');
+                const repoStatuses = document.getElementById('repo-statuses');
+
+                // Determine overall status
+                const repos = data.repos || {};
+                const repoNames = Object.keys(repos);
+                const readyCount = repoNames.filter(name => repos[name].status === 'ready').length;
+                const failedCount = repoNames.filter(name => repos[name].status === 'failed').length;
+                const totalCount = repoNames.length;
+
+                // Update overall indicator
+                if (readyCount === totalCount && totalCount > 0) {
+                    // All ready - green
+                    statusLight.style.background = '#4ade80';
+                    statusText.textContent = `All Available (${totalCount}/${totalCount})`;
+                    statusText.style.color = '#4ade80';
+                } else if (failedCount === totalCount || totalCount === 0) {
+                    // All failed or none - red
+                    statusLight.style.background = '#ef4444';
+                    statusText.textContent = failedCount > 0 ? `Unavailable (0/${totalCount})` : 'No repositories';
+                    statusText.style.color = '#ef4444';
+                } else {
+                    // Partial - orange
+                    statusLight.style.background = '#fb923c';
+                    statusText.textContent = `Partial (${readyCount}/${totalCount})`;
+                    statusText.style.color = '#fb923c';
+                }
+
+                // Build individual repo status cards in specified order
+                let html = '';
+                for (const repoName of REPO_ORDER) {
+                    // Skip repos that don't exist in the response
+                    if (!repos[repoName]) continue;
+
+                    const repoData = repos[repoName];
+                    const displayName = REPO_DISPLAY_NAMES[repoName] || repoName;
+                    const status = repoData.status || 'unknown';
+                    const error = repoData.error || '';
+                    const logo = getRepoLogo(repoName);
+
+                    let statusColor, statusIcon, statusLabel, errorTooltip;
+
+                    if (status === 'ready') {
+                        statusColor = '#4ade80';
+                        statusIcon = '✓';
+                        statusLabel = 'Available';
+                        errorTooltip = '';
+                    } else if (status === 'failed') {
+                        statusColor = '#ef4444';
+                        statusIcon = '✗';
+                        statusLabel = 'Failed';
+                        errorTooltip = error || 'Failed';
+                    } else if (status === 'cloning') {
+                        statusColor = '#fb923c';
+                        statusIcon = '⟳';
+                        statusLabel = 'Cloning...';
+                        errorTooltip = '';
+                    } else {
+                        statusColor = '#999';
+                        statusIcon = '•';
+                        statusLabel = 'Pending';
+                        errorTooltip = '';
+                    }
+
+                    html += `
+                        <div
+                            data-repo="${repoName}"
+                            onclick="toggleRepoFilter('${repoName}')"
+                            style="padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s;"
+                            onmouseover="if(!this.style.borderWidth || this.style.borderWidth === '1px') { this.style.borderColor = 'var(--text-tertiary)'; }"
+                            onmouseout="if(!this.style.borderWidth || this.style.borderWidth === '1px') { this.style.borderColor = 'var(--border-color)'; }">
+                            <div style="display: flex; align-items: center;">
+                                ${logo}
+                                <span style="font-weight: 500; color: var(--text-primary); font-size: 0.9em;">${displayName}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="color: ${statusColor}; font-weight: 600; font-size: 1.1em; cursor: help;" title="${errorTooltip}">${statusIcon}</span>
+                                <span style="color: ${statusColor}; font-size: 0.85em;">${statusLabel}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                repoStatuses.innerHTML = html || '<p style="color: var(--text-secondary); margin: 0; text-align: center;">No repositories configured</p>';
+
+                // Check if any repos failed and add error message outside the grid
+                const hasFailed = Object.values(repos).some(repo => repo.status === 'failed');
+                const statusDetails = document.getElementById('osint-status-details');
+
+                // Remove existing error message if present
+                const existingError = statusDetails.querySelector('.osint-error-message');
+                if (existingError) {
+                    existingError.remove();
+                }
+
+                // Add error message if any repos failed
+                if (hasFailed) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'osint-error-message';
+                    errorDiv.style.cssText = 'margin-top: 16px;';
+                    errorDiv.innerHTML = `
+                        <p style="margin: 0; font-style: italic; color: #ef4444; font-size: 0.9em; text-align: center;">
+                            Repositories which have not been cloned, will need to be downloaded manually using <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 3px; font-family: monospace; color: #ef4444;">update_osint_repos.py</code>
+                        </p>
+                    `;
+                    statusDetails.appendChild(errorDiv);
+                }
+
+            } catch (error) {
+                console.error('Error checking OSINT status:', error);
+                document.getElementById('status-light').style.background = '#ef4444';
+                document.getElementById('status-text').textContent = 'Error checking status';
+                document.getElementById('status-text').style.color = '#ef4444';
+            }
+        }
+
         // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
             loadLibrary();
+            checkOsintStatus();  // Check OSINT status on page load
 
             // Search input
             const searchInput = document.getElementById('library-search');

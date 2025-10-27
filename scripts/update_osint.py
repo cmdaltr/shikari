@@ -8,9 +8,16 @@ to air-gapped environments.
 
 Usage:
     python3 update_osint_repos.py [--force]
+    python3 update_osint_repos.py --sigma --elastic
+    python3 update_osint_repos.py --azure-sentinel --force
 
 Options:
-    --force     Force update even if repos were recently updated
+    --force             Force update even if repos were recently updated
+    --sigma             Update only Sigma repository
+    --elastic           Update only Elastic repository
+    --mitre-car         Update only MITRE CAR repository
+    --splunk            Update only Splunk repository
+    --azure-sentinel    Update only Azure Sentinel repository
 
 Air-Gapped Deployment:
     1. Run this script on an internet-connected machine
@@ -167,7 +174,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
                 ["git", "-C", str(repo_path), "pull", "--depth", "1"],
                 capture_output=True,
                 text=True,
-                timeout=900  # 15 minute timeout for large repos
+                timeout=30  # 30 second timeout
             )
 
             elapsed = time.time() - start_time
@@ -181,14 +188,14 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
             print(f"✓ Updated in {elapsed:.1f} seconds")
         else:
             # Clone new repo
-            print(f"📥 Cloning repository (this may take 10 seconds to 15 minutes depending on size)...")
+            print(f"📥 Cloning repository (maximum 30 seconds)...")
             start_time = time.time()
 
             result = subprocess.run(
                 ["git", "clone", "--depth", "1", repo_config["url"], str(repo_path)],
                 capture_output=True,
                 text=True,
-                timeout=900  # 15 minute timeout for large repos
+                timeout=30  # 30 second timeout
             )
 
             elapsed = time.time() - start_time
@@ -209,7 +216,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
         return True
 
     except subprocess.TimeoutExpired:
-        print(f"❌ Timeout while updating {repo_name}")
+        print(f"❌ Failed: Repository download exceeded 30 second timeout")
         return False
     except Exception as e:
         print(f"❌ Error updating {repo_name}: {e}")
@@ -286,25 +293,82 @@ def print_summary(success_count: int, total_count: int):
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(
-        description="Update OSINT repositories for Archer detection enrichment"
+        description="Update OSINT repositories for Archer detection enrichment",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python3 update_osint.py                    # Update all repositories
+  python3 update_osint.py --force            # Force update all repositories
+  python3 update_osint.py --sigma --elastic  # Update only Sigma and Elastic
+  python3 update_osint.py --azure-sentinel   # Update only Azure Sentinel
+        """
     )
     parser.add_argument(
         "--force",
         action="store_true",
         help="Force update even if repos were recently updated"
     )
+    parser.add_argument(
+        "--sigma",
+        action="store_true",
+        help="Update only Sigma repository"
+    )
+    parser.add_argument(
+        "--elastic",
+        action="store_true",
+        help="Update only Elastic repository"
+    )
+    parser.add_argument(
+        "--mitre-car",
+        action="store_true",
+        dest="mitre_car",
+        help="Update only MITRE CAR repository"
+    )
+    parser.add_argument(
+        "--splunk",
+        action="store_true",
+        help="Update only Splunk repository"
+    )
+    parser.add_argument(
+        "--azure-sentinel",
+        action="store_true",
+        dest="azure_sentinel",
+        help="Update only Azure Sentinel repository"
+    )
     args = parser.parse_args()
 
     print_banner()
 
+    # Determine which repos to update
+    repos_to_update = []
+
+    # Check if any specific repo flags were set
+    if args.sigma or args.elastic or args.mitre_car or args.splunk or args.azure_sentinel:
+        if args.sigma:
+            repos_to_update.append("sigma")
+        if args.elastic:
+            repos_to_update.append("elastic")
+        if args.mitre_car:
+            repos_to_update.append("mitre_car")
+        if args.splunk:
+            repos_to_update.append("splunk")
+        if args.azure_sentinel:
+            repos_to_update.append("azure_sentinel")
+    else:
+        # No specific repos specified, update all
+        repos_to_update = list(REPOS.keys())
+
     print(f"Starting update process...")
     print(f"Force update: {'Yes' if args.force else 'No'}")
-    print(f"Repositories to process: {len(REPOS)}")
+    print(f"Repositories to process: {len(repos_to_update)}")
+
+    if len(repos_to_update) < len(REPOS):
+        print(f"Selected repositories: {', '.join(repos_to_update)}")
 
     success_count = 0
-    total_count = len(REPOS)
+    total_count = len(repos_to_update)
 
-    for repo_name in REPOS.keys():
+    for repo_name in repos_to_update:
         if clone_or_update_repo(repo_name, force=args.force):
             success_count += 1
 

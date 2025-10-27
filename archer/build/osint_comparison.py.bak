@@ -129,24 +129,46 @@ def search_sigma_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
                     # Extract indicators from Sigma rule
                     detection = rule_data.get("detection", {})
                     if detection:
-                        # Extract command line patterns
+                        # Extract patterns from all selection blocks
                         cmd_patterns = []
                         image_patterns = []
+                        file_patterns = []
+                        registry_patterns = []
 
                         for key, value in detection.items():
                             if isinstance(value, dict):
-                                if "CommandLine" in value or "cmd" in str(value).lower():
-                                    cmd_patterns.extend(extract_sigma_patterns(value))
-                                if "Image" in value or "process" in str(value).lower():
-                                    image_patterns.extend(extract_sigma_patterns(value))
+                                # Check what fields are in this selection block
+                                fields_in_block = set()
+                                for field_key in value.keys():
+                                    # Extract base field name (before pipe modifier)
+                                    base_field = field_key.split('|')[0].lower()
+                                    fields_in_block.add(base_field)
 
-                        if cmd_patterns or image_patterns:
-                            indicators.append({
+                                # Categorize based on field names
+                                if any(f in fields_in_block for f in ['commandline', 'command', 'processcommandline']):
+                                    cmd_patterns.extend(extract_sigma_patterns(value))
+                                if any(f in fields_in_block for f in ['image', 'process', 'processname', 'newprocessname']):
+                                    image_patterns.extend(extract_sigma_patterns(value))
+                                if any(f in fields_in_block for f in ['targetfilename', 'filename', 'filepath']):
+                                    file_patterns.extend(extract_sigma_patterns(value))
+                                if any(f in fields_in_block for f in ['targetobject', 'registrykey', 'registryvaluename']):
+                                    registry_patterns.extend(extract_sigma_patterns(value))
+
+                        if cmd_patterns or image_patterns or file_patterns or registry_patterns:
+                            indicator_data = {
                                 "source": "Sigma",
-                                "rule_name": rule_data.get("title", file_path.split("/")[-1]),
-                                "cmd": cmd_patterns[:3],  # Limit to 3
-                                "file": image_patterns[:3]
-                            })
+                                "rule_name": rule_data.get("title", file_path.split("/")[-1])
+                            }
+                            if cmd_patterns:
+                                indicator_data["cmd"] = cmd_patterns[:5]  # Limit to 5
+                            if image_patterns:
+                                indicator_data["file"] = image_patterns[:5]
+                            if file_patterns:
+                                indicator_data["target_files"] = file_patterns[:5]
+                            if registry_patterns:
+                                indicator_data["registry"] = registry_patterns[:5]
+
+                            indicators.append(indicator_data)
 
                 except Exception as e:
                     # Silent failure for individual files
@@ -159,14 +181,33 @@ def search_sigma_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
 
 
 def extract_sigma_patterns(detection_dict: dict) -> list:
-    """Extract patterns from Sigma detection dict."""
+    """
+    Extract patterns from Sigma detection dict.
+    Handles Sigma field modifiers like |contains, |endswith, etc.
+    """
     patterns = []
 
     for key, value in detection_dict.items():
+        # Skip condition and filter keys
+        if key in ['condition', 'filter', 'timeframe']:
+            continue
+
+        # Handle list values
         if isinstance(value, list):
-            patterns.extend([str(v) for v in value if v])
+            for item in value:
+                if isinstance(item, str) and item:
+                    # Clean up the value (remove special chars if too many)
+                    cleaned = item.strip()
+                    if len(cleaned) > 2 and cleaned not in ['*', '?', '-']:
+                        patterns.append(cleaned)
+        # Handle string values
         elif isinstance(value, str) and value:
-            patterns.append(value)
+            cleaned = value.strip()
+            if len(cleaned) > 2 and cleaned not in ['*', '?', '-']:
+                patterns.append(cleaned)
+        # Handle nested dicts (common in Sigma selection blocks)
+        elif isinstance(value, dict):
+            patterns.extend(extract_sigma_patterns(value))
 
     return patterns
 
@@ -251,13 +292,15 @@ def search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
                     sources.append(github_url)
 
                     # Extract query/indicators
-                    rule_metadata = rule_data.get("rule", rule_data.get("metadata", {}))
-                    query = rule_data.get("query", "")
+                    # Query is nested under rule.query in the TOML structure
+                    rule_section = rule_data.get("rule", {})
+                    query = rule_section.get("query", "")
 
                     if query:
                         indicators.append({
                             "source": "Elastic",
-                            "rule_name": rule_metadata.get("name", file_path.split("/")[-1]),
+                            "source_url": github_url,  # Include the source URL
+                            "rule_name": rule_section.get("name", file_path.split("/")[-1]),
                             "query_snippet": query[:200]  # First 200 chars
                         })
 
@@ -306,6 +349,7 @@ def search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
                     if search_query:
                         indicators.append({
                             "source": "Splunk",
+                            "source_url": github_url,  # Include the source URL
                             "detection_name": detection_data.get("name", file_path.split("/")[-1]),
                             "search_snippet": search_query[:200]
                         })
@@ -380,38 +424,52 @@ def extract_indicators_from_sources(indicators_data: List[Dict]) -> Dict[str, Li
     """
     Extract actual IOCs/patterns from the found sources.
 
-    Returns: Dictionary of indicator types and values
+    Returns: Dictionary of indicator types and values matching Splunk schema:
+    - cmd: command line indicators
+    - sw: software/process indicators (files and processes)
+    - reg: registry indicators
+    - evt: event codes
     """
     extracted = {
         "cmd": [],
-        "file": [],
+        "sw": [],
         "reg": [],
-        "net": [],
-        "evt": []
+        "query_snippets": []
     }
 
     for indicator_info in indicators_data:
-        content = indicator_info.get("content", "")
+        source = indicator_info.get("source", "")
 
-        if not content:
-            continue
+        # Extract from Sigma indicators
+        if "cmd" in indicator_info:
+            extracted["cmd"].extend(indicator_info["cmd"])
+        if "file" in indicator_info:
+            extracted["sw"].extend(indicator_info["file"])  # Process images go to sw (software)
+        if "target_files" in indicator_info:
+            extracted["sw"].extend(indicator_info["target_files"])  # Target files also go to sw
+        if "registry" in indicator_info:
+            extracted["reg"].extend(indicator_info["registry"])
 
-        # Extract command line patterns
-        cmd_patterns = re.findall(r'CommandLine[:|=]\s*[\'"]([^\'"]+)[\'"]', content, re.IGNORECASE)
-        extracted["cmd"].extend(cmd_patterns[:3])  # Limit to 3
+        # Extract from Elastic/Splunk query snippets
+        # Format: [Source] snippet|||source_url (using ||| as delimiter)
+        if "query_snippet" in indicator_info:
+            snippet = indicator_info["query_snippet"]
+            source_url = indicator_info.get("source_url", "")
+            if snippet and len(snippet) > 20:  # Only include meaningful snippets
+                extracted["query_snippets"].append(f"[{source}] {snippet}|||{source_url}")
 
-        # Extract file paths
-        file_patterns = re.findall(r'Image[:|=]\s*[\'"]([^\'"]+)[\'"]', content, re.IGNORECASE)
-        file_patterns += re.findall(r'TargetFilename[:|=]\s*[\'"]([^\'"]+)[\'"]', content, re.IGNORECASE)
-        extracted["file"].extend(file_patterns[:3])
+        if "search_snippet" in indicator_info:
+            snippet = indicator_info["search_snippet"]
+            source_url = indicator_info.get("source_url", "")
+            if snippet and len(snippet) > 20:
+                extracted["query_snippets"].append(f"[{source}] {snippet}|||{source_url}")
 
-        # Extract process names
-        process_patterns = re.findall(r'(?:ProcessName|process)[:|=]\s*[\'"]([^\'"]+)[\'"]', content, re.IGNORECASE)
-        extracted["cmd"].extend(process_patterns[:2])
-
-    # Remove duplicates and empty values
+    # Remove duplicates and empty values, limit to reasonable numbers
     for key in extracted:
-        extracted[key] = list(set([x for x in extracted[key] if x]))
+        extracted[key] = list(set([x for x in extracted[key] if x]))[:15]  # Max 15 per category
+
+    # Remove empty categories
+    extracted = {k: v for k, v in extracted.items() if v}
 
     return extracted
 
@@ -436,9 +494,10 @@ def search_osint_for_technique(
     """
     print(f"🔍 OSINT Enrichment: Searching for detection methods for {technique_id} ({technique_name})")
 
-    # Ensure OSINT repos are ready (will update if > 1 hour old)
-    from archer.build.osint_repos import ensure_repos_ready
-    ensure_repos_ready()
+    # OSINT repos should be cloned/updated manually or during app initialization
+    # Not during detection generation to avoid blocking
+    # from archer.build.osint_repos import ensure_repos_ready
+    # ensure_repos_ready()
 
     # Check cache first
     cached_result = load_from_cache(technique_id)

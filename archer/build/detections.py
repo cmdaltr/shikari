@@ -195,7 +195,7 @@ def create_indicatorMappings():
     return indicatorMappings
 
 
-def compile_query(retrieved_data):
+def compile_query(retrieved_data, osint_enhancement=False):
     from archer.build.queries import is_query_applicable
     from archer.build.platform_validator_v2 import validate_procedure_for_index
 
@@ -244,7 +244,7 @@ def compile_query(retrieved_data):
 
     if not has_real_indicators and identifiers:
         print(f" ⚠️  All indicators are generic terms (e.g., 'condition', 'value', 'data')")
-        print(f" 🔍 Treating as no indicators - will attempt OSINT enrichment")
+        print(f" 🔍 Treating as no indicators - will attempt OSINT comparison")
         identifiers = {}  # Clear identifiers to trigger OSINT path
     else:
         identifiers = filtered_identifiers  # Use filtered identifiers
@@ -253,15 +253,15 @@ def compile_query(retrieved_data):
     procedure_platforms = retrieved_data.get("procedure_platforms", [])
     software_platforms = retrieved_data.get("software_platforms", {})
 
-    # OSINT enrichment data (will be populated if indicators exist or if no indicators)
-    osint_enrichment_data = None
+    # OSINT comparison data (will be populated if indicators exist or if no indicators)
+    osint_enhancement_data = None
 
     # Only construct YAML if there are identifiers for detection
     if identifiers:
-        # Enrich with OSINT to increase detection fidelity
-        print(f" 📊 Indicators found - enriching with OSINT to increase fidelity...")
+        # Always compare with OSINT to gather additional detection patterns
+        print(f" 📊 Indicators found - comparing with OSINT sources...")
 
-        from archer.build.osint_enrichment import search_osint_for_technique
+        from archer.build.osint_comparison import search_osint_for_technique
 
         osint_found, osint_data = search_osint_for_technique(
             technique_id=tid,
@@ -271,24 +271,29 @@ def compile_query(retrieved_data):
         )
 
         if osint_found:
-            print(f" ✅ OSINT enrichment successful - additional context added")
-            osint_enrichment_data = osint_data
+            print(f" ✅ OSINT comparison successful - additional detection patterns found")
+            print(f" 🔍 DEBUG detections.py - osint_data type: {type(osint_data)}")
+            print(f" 🔍 DEBUG detections.py - osint_data keys: {osint_data.keys() if isinstance(osint_data, dict) else 'NOT A DICT'}")
+            print(f" 🔍 DEBUG detections.py - osint_compared value: {osint_data.get('osint_compared') if isinstance(osint_data, dict) else 'N/A'}")
+            osint_enhancement_data = osint_data
 
-            # Merge OSINT indicators with existing indicators
-            osint_indicators = osint_data.get("osint_indicators", {})
-            for indicator_type, osint_values in osint_indicators.items():
-                if indicator_type in identifiers:
-                    # Merge with existing indicators
-                    if isinstance(identifiers[indicator_type], list):
-                        identifiers[indicator_type].extend(osint_values)
-                        # Remove duplicates
-                        identifiers[indicator_type] = list(set(identifiers[indicator_type]))
-                else:
-                    # Add new indicator type
-                    identifiers[indicator_type] = osint_values
-            print(f" 📈 Enriched indicator count: {sum(len(v) if isinstance(v, list) else 1 for v in identifiers.values())}")
+            # Only merge OSINT indicators if enhancement is enabled
+            if osint_enhancement:
+                print(f" 🔧 OSINT Enhancement enabled - merging indicators into query...")
+                osint_indicators = osint_data.get("osint_indicators", {})
+                for indicator_type, osint_values in osint_indicators.items():
+                    if indicator_type in identifiers:
+                        # Merge with existing indicators
+                        if isinstance(identifiers[indicator_type], list):
+                            identifiers[indicator_type].extend(osint_values)
+                            # Remove duplicates
+                            identifiers[indicator_type] = list(set(identifiers[indicator_type]))
+                    else:
+                        # Add new indicator type
+                        identifiers[indicator_type] = osint_values
+                print(f" 📈 Enhanced indicator count: {sum(len(v) if isinstance(v, list) else 1 for v in identifiers.values())}")
         else:
-            print(f" ℹ️  No additional OSINT enrichment found")
+            print(f" ℹ️  No additional OSINT patterns found")
 
         compatible_found = False
         yaml_files_created = False
@@ -389,6 +394,7 @@ def compile_query(retrieved_data):
         if compatible_sources:
             compatible_found = True
             print(f" Queries built for {name} ({tid}) on:")
+            print(f" 🔍 DEBUG detections.py - Before construct_yaml: osint_enhancement_data={osint_enhancement_data is not None}, osint_enhancement={osint_enhancement}")
             for source in sorted(compatible_sources):
                 print(f"  ✅ {source}")
                 construct_yaml(
@@ -402,7 +408,8 @@ def compile_query(retrieved_data):
                     source,
                     procedure_platforms,
                     software_platforms,
-                    osint_enrichment=osint_enrichment_data,  # Pass OSINT enrichment data
+                    osint_enhancement_data=osint_enhancement_data,  # Pass OSINT comparison data
+                    osint_enhancement=osint_enhancement,  # Pass OSINT comparison flag
                 )
             print()  # Empty line after technique
 
@@ -413,11 +420,11 @@ def compile_query(retrieved_data):
             else:
                 print(f" ❌ No identifiers found for {name}; no detections generated\n")
     else:
-        # No identifiers from MITRE - try OSINT enrichment
+        # No identifiers from MITRE - try OSINT comparison
         print(f" ⚠️  No identifiers found for {name} from MITRE ATT&CK data")
         print(f" 🔍 Searching OSINT sources for additional detection methods...")
 
-        from archer.build.osint_enrichment import search_osint_for_technique, should_create_detection
+        from archer.build.osint_comparison import search_osint_for_technique, should_create_detection
 
         # Search OSINT sources
         osint_found, osint_data = search_osint_for_technique(
@@ -429,12 +436,12 @@ def compile_query(retrieved_data):
 
         # Determine if we should create the detection
         if should_create_detection(has_mitre_indicators=False, osint_found=osint_found):
-            print(f" ✅ OSINT enrichment successful - creating detection with OSINT metadata")
+            print(f" ✅ OSINT comparison successful - creating detection with OSINT metadata")
 
             # Create detection with OSINT data as identifiers
             osint_identifiers = osint_data.get("osint_indicators", {})
             if osint_identifiers:
-                print(f" 📝 Creating OSINT-enriched detection for {name}")
+                print(f" 📝 Creating OSINT-compared detection for {name}")
 
                 # Use OSINT indicators to create detections
                 # Re-run the platform compatibility checks with OSINT indicators
@@ -492,7 +499,7 @@ def compile_query(retrieved_data):
 
                 # Create YAMLs for compatible sources
                 if compatible_sources:
-                    print(f" ✅ OSINT-enriched queries built for {name} ({tid}) on:")
+                    print(f" ✅ OSINT-compared queries built for {name} ({tid}) on:")
                     for source in sorted(compatible_sources):
                         print(f"  ✅ {source}")
                         construct_yaml(
@@ -506,7 +513,8 @@ def compile_query(retrieved_data):
                             source,
                             procedure_platforms,
                             software_platforms,
-                            osint_enrichment=osint_data,  # Pass OSINT metadata
+                            osint_enhancement_data=osint_data,  # Pass OSINT metadata
+                            osint_enhancement=osint_enhancement,  # Pass OSINT comparison flag
                         )
                     print()
                 else:

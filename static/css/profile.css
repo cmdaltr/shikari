@@ -458,6 +458,22 @@
   margin-bottom: 8px;
 }
 
+.apikey-hint {
+  font-size: 0.85em;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.apikey-hint a {
+  color: #0078D4;
+  text-decoration: none;
+}
+
+.apikey-hint a:hover {
+  text-decoration: underline;
+}
+
 .vendor-icon {
   width: 24px;
   height: 24px;

@@ -574,6 +574,108 @@
                 </div>
               </div>
 
+              <!-- OSINT Sources Section -->
+              <div class="apikey-section">
+                <h3 class="section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
+                    <polyline points="7.5 19.79 7.5 14.6 3 12"/>
+                    <polyline points="21 12 16.5 14.6 16.5 19.79"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                  </svg>
+                  OSINT Sources
+                </h3>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="shodanGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#E42C64;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#B8174C;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#shodanGradient)"/>
+                      <path d="M30 40 L70 40 M30 50 L70 50 M30 60 L70 60" stroke="white" stroke-width="6" stroke-linecap="round"/>
+                    </svg>
+                    Shodan API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter Shodan API key"
+                           id="shodan-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('shodan-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">Internet-facing assets detection (get free key at <a href="https://account.shodan.io/register" target="_blank">shodan.io</a>)</div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="securitytrailsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#2E5C8A;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#securitytrailsGradient)"/>
+                      <path d="M30 30 L50 50 L70 30 M50 50 L50 70" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    SecurityTrails API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter SecurityTrails API key"
+                           id="securitytrails-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('securitytrails-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">DNS history and domain intelligence (get key at <a href="https://securitytrails.com/app/signup" target="_blank">securitytrails.com</a>)</div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="githubGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#6E5494;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#24292E;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#githubGradient)"/>
+                      <path d="M50 20 C33 20 20 33 20 50 C20 63 27 74 38 78 C39.5 78.3 40 77.3 40 76.5 L40 70 C32 72 30 66 30 66 C29 64 27 63 27 63 C24 61 27 61 27 61 C30 61 32 64 32 64 C35 69 40 67 41 66 C41 64 42 63 43 62 C36 61 28 58 28 48 C28 45 29 42 32 40 C32 39 31 36 32 33 C32 33 35 32 40 35 C42 35 45 34 50 34 C55 34 58 35 60 35 C65 32 68 33 68 33 C69 36 68 39 68 40 C71 42 72 45 72 48 C72 58 64 61 57 62 C58 63 59 64 59 66 L59 76.5 C59 77.3 59.5 78.3 61 78 C72 74 79 63 79 50 C80 33 67 20 50 20 Z" fill="white"/>
+                    </svg>
+                    GitHub Token
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="ghp_..."
+                           id="github-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('github-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">Secret scanning and code search (create at <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>)</div>
+                </div>
+              </div>
+
               <!-- AI Models Section -->
               <div class="apikey-section">
                 <h3 class="section-title">

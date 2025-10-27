@@ -123,7 +123,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
                 ["git", "-C", str(repo_path), "pull", "--depth", "1"],
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=30  # 30 second timeout
             )
 
             if result.returncode != 0:
@@ -140,7 +140,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
                 ["git", "clone", "--depth", "1", repo_config["url"], str(repo_path)],
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=30  # 30 second timeout
             )
 
             elapsed = time.time() - start_time
@@ -156,7 +156,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
         return True
 
     except subprocess.TimeoutExpired:
-        print(f"❌ Timeout while updating {repo_name}")
+        print(f"❌ Timeout while updating {repo_name} (exceeded 30 seconds)")
         return False
     except Exception as e:
         print(f"❌ Error updating {repo_name}: {e}")

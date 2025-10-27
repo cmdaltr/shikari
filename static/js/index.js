@@ -31,12 +31,13 @@ function showLoading(groupName, enableProgressPolling) {
     }, 1000); // Poll every second
   } else {
     // Standard loading with dots animation
-    messageEl.textContent = 'Processing...';
+    messageEl.textContent = 'Initiating...';
     var count = 0;
     loadingInterval = setInterval(function () {
       count = (count + 1) % 4;
-      var dots = '.'.repeat(count);
-      messageEl.textContent = (groupName ? ("Processing '" + groupName + "'") : 'Processing') + dots;
+      // Pad dots to always be 3 characters wide to prevent text movement
+      var dots = '.'.repeat(count).padEnd(3, '\u00A0'); // Use non-breaking space
+      messageEl.textContent = (groupName ? ("Initiating '" + groupName + "'") : 'Initiating') + dots;
     }, 500);
   }
 }
@@ -45,7 +46,7 @@ function hideLoading() {
   if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
   if (progressPollInterval) { clearInterval(progressPollInterval); progressPollInterval = null; }
   var messageEl = document.getElementById('loading-message');
-  if (messageEl) messageEl.textContent = 'Processing...';
+  if (messageEl) messageEl.textContent = 'Initiating...';
 }
 
 function showY2KWarning() {

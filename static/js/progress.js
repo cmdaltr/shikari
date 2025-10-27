@@ -383,6 +383,31 @@ async function refresh(){
     const j = await res.json();
     const p = j.progress || j.progress_state || j || {};
 
+    // Check if processing failed
+    if (p.status === 'failed') {
+      // Show error message and stop polling
+      const yamlFill = document.getElementById('yaml-progress') || document.querySelector('.progress-fill.yaml');
+      const lastEl = getOrCreateLastFileEl(yamlFill);
+      if (lastEl) {
+        lastEl.innerHTML = '';
+        lastEl.style.display = 'block';
+
+        const errorText = document.createElement('span');
+        errorText.textContent = 'Error: ';
+        errorText.style.color = '#dc3545'; // Red color
+        errorText.style.fontWeight = 'bold';
+        lastEl.appendChild(errorText);
+
+        const msgSpan = document.createElement('span');
+        msgSpan.textContent = 'Processing failed. Please check the logs or try again.';
+        msgSpan.style.color = '#495057';
+        lastEl.appendChild(msgSpan);
+      }
+
+      // Stop further polling
+      return;
+    }
+
     // Detection generation progress (monotonic + lock at 100% once complete)
     const created = p.created_yaml || p.yaml_created || 0;
     const total = p.total_yaml || p.yaml_total || 10;
@@ -445,11 +470,25 @@ async function refresh(){
         // Stop ellipsis animation if it's still running
         stopEllipsis(true);
       }
-      // Still in progress - hide the text (spinner is sufficient)
+      // Still in progress - show "Searching for indicators" message with ellipsis if no files created yet
+      else if (created === 0) {
+        // Show "Searching for indicators..." with animated ellipsis
+        lastEl.innerHTML = ''; // Clear existing content
+        lastEl.style.display = 'block'; // Show element
+        lastEl.style.color = '#666'; // Grey text
+
+        const searchText = document.createTextNode('Searching for indicators');
+        lastEl.appendChild(searchText);
+
+        // Start ellipsis animation
+        startEllipsis(lastEl);
+      }
+      // Files are being created - hide the message
       else {
         // Clear text and hide element during detection generation
         lastEl.textContent = '';
         lastEl.style.display = 'none';
+        stopEllipsis(true);
       }
     }
 
@@ -599,7 +638,7 @@ async function refresh(){
 
       if (!isCrossVendorEnabled) {
         // Cross-vendor disabled
-        crossVendorInfoEl.textContent = 'Cross-vendor correlation not enabled for this analysis';
+        crossVendorInfoEl.textContent = 'Cross-vendor correlation not enabled for this analysis (coming soon)';
         crossVendorInfoEl.style.color = '#999';
       } else if (!soleVendorComplete) {
         // Wait for sole-vendor to complete

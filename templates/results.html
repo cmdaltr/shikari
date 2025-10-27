@@ -967,26 +967,33 @@ body, html {
             {% else %}
             {% for detection in vendor.detections %}
             <div class="detection-item{% if detection.needs_review %} unchecked{% endif %}" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}">
-              <div class="detection-title">
-                <input type="checkbox" class="detection-checkbox" {% if not detection.needs_review %}checked{% endif %} data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
-                <span class="detection-technique">{{ detection.technique }}</span>
-                {% if detection.osint_enriched %}
-                <span class="osint-enriched-badge" title="This detection was enriched with additional open-source intelligence (OSINT) research beyond MITRE ATT&CK. Review recommended to validate detection logic and sources.">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                  </svg>
-                  Needs Review - enriched with additional OSINT
-                </span>
-                {% elif detection.needs_review %}
-                <span class="needs-review-badge" title="No threat indicators extracted automatically. This detection may use complex logic, behavioral patterns, or aggregations. Review the query to validate effectiveness.">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  Needs Review - no indicators extracted
-                </span>
+              <div class="detection-title" style="position: relative;">
+                <div style="display: flex; align-items: center; flex: 1;">
+                  <input type="checkbox" class="detection-checkbox" {% if not detection.needs_review %}checked{% endif %} data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
+                  <span class="detection-technique">{{ detection.technique }}</span>
+                  {% if detection.osint_enhanced %}
+                  <span class="osint-enhanced-badge" title="This detection was enhanced with additional indicators from OSINT sources merged into the query logic.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    Enhanced with OSINT
+                  </span>
+                  {% elif detection.needs_review %}
+                  <span class="needs-review-badge" title="No threat indicators extracted automatically. This detection may use complex logic, behavioral patterns, or aggregations. Review the query to validate effectiveness.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    Needs Review - no indicators extracted
+                  </span>
+                  {% endif %}
+                </div>
+                {% if detection.osint_data %}
+                <button onclick="toggleOsintDetails('det-osint-{{ vendor.name }}-{{ loop.index }}-details')" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 500; margin-left: 12px; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3b82f6'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#3b82f6';">
+                  {% if detection.osint_enhanced %}Show Enhancement{% else %}Show Comparison{% endif %}
+                </button>
                 {% endif %}
               </div>
               <div style="margin-left: 26px; margin-top: 4px; margin-bottom: 6px;">
@@ -1000,6 +1007,90 @@ body, html {
               </div>
               {% endif %}
               <div class="detection-description" style="white-space: pre-line; font-style: italic;">{{ detection.description_html | safe }}</div>
+
+              <!-- OSINT Details (Collapsible) -->
+              {% if detection.osint_data %}
+              <div id="det-osint-{{ vendor.name }}-{{ loop.index }}-details" style="display: none; margin-top: 12px; background: #f0f7ff; border: 1px solid #3b82f6; border-radius: 6px; padding: 14px;">
+                <div style="font-weight: 600; color: #1e40af; margin-bottom: 10px; font-size: 0.95em;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle; margin-right: 6px;">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4M12 8h.01"/>
+                  </svg>
+                  {% if detection.osint_enhanced %}OSINT Enhancement Details{% else %}OSINT Comparison Details{% endif %}
+                </div>
+                <div style="font-size: 0.9em; color: #333;">
+                  {% if detection.osint_data.indicators %}
+                  <div style="display: flex; flex-direction: column; gap: 12px;">
+                    {% for category, items in detection.osint_data.indicators.items() %}
+                      {% if items %}
+                      <div>
+                        {% if category == 'query_snippets' %}
+                        <!-- Query snippets with source links -->
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                          {% for item in items %}
+                          {% set url_parts = item.split('|||') %}
+                          {% set snippet_with_source = url_parts[0] %}
+                          {% set source_url = url_parts[1] if url_parts|length > 1 else '' %}
+                          {% set parts = snippet_with_source.split('] ', 1) %}
+                          {% if parts|length == 2 %}
+                          {% set source_name = parts[0].replace('[', '') %}
+                          {% set snippet = parts[1] %}
+                          <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
+                            <!-- Vendor badge -->
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                              <span style="background: {% if source_name == 'Elastic' %}#00bfb3{% elif source_name == 'Splunk' %}#e91e8c{% else %}#0369a1{% endif %}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.7em; font-weight: 600;">
+                                {{ source_name }}
+                              </span>
+                              <span style="font-size: 0.7em; color: #6b7280; font-style: italic;">Detection Rule Query (excerpt)</span>
+                            </div>
+                            <!-- Query snippet -->
+                            <code style="display: block; background: #f8fafc; color: #0c4a6e; padding: 10px; border-radius: 4px; font-size: 0.8em; font-family: 'Courier New', monospace; line-height: 1.5; word-break: break-all; border-left: 3px solid {% if source_name == 'Elastic' %}#00bfb3{% elif source_name == 'Splunk' %}#e91e8c{% else %}#0369a1{% endif %};">{{ snippet }}...</code>
+                            <!-- Source link -->
+                            {% if source_url %}
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+                              <div style="display: flex; align-items: center; gap: 6px;">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="#6b7280">
+                                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                                </svg>
+                                <a href="{{ source_url }}" target="_blank" style="font-size: 0.75em; color: #4b5563; text-decoration: none; font-family: monospace;">
+                                  View full detection rule on GitHub →
+                                </a>
+                              </div>
+                            </div>
+                            {% endif %}
+                          </div>
+                          {% endif %}
+                          {% endfor %}
+                        </div>
+                        {% else %}
+                        <!-- Other indicator types (cmd, sw, reg, evt) -->
+                        <div style="font-size: 0.8em; color: #1e40af; font-weight: 600; margin-bottom: 6px;">
+                          {% if category == 'cmd' %}Commands:
+                          {% elif category == 'sw' %}Software/Processes:
+                          {% elif category == 'reg' %}Registry Keys:
+                          {% elif category == 'evt' %}Event Codes:
+                          {% else %}{{ category.replace('_', ' ').title() }}:
+                          {% endif %}
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                          {% for item in items %}
+                          <code style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 3px; font-size: 0.8em; font-family: 'Courier New', monospace;">{{ item }}</code>
+                          {% endfor %}
+                        </div>
+                        {% endif %}
+                      </div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                  {% if detection.osint_data.enrichment_date %}
+                  <p style="margin: 12px 0 0 0; font-size: 0.85em; color: #666; font-style: italic;">
+                    Enriched on: {{ detection.osint_data.enrichment_date }}
+                  </p>
+                  {% endif %}
+                </div>
+              </div>
+              {% endif %}
 
               <!-- Query Preview (Collapsible) -->
               {% if detection.queries and detection.queries|length > 0 %}
@@ -1026,7 +1117,7 @@ body, html {
     </div>
 
     <!-- Correlations Section -->
-    <div class="detection-section">
+    <div id="correlations" class="detection-section">
       <div class="detection-header">
         <h2>
           <div class="card-icon correlation" style="width: 40px; height: 40px; margin-right: 12px;">
@@ -1044,70 +1135,144 @@ body, html {
       </div>
 
       {% if correlations %}
-        <div class="correlation-content">
-          {% for correlation in correlations %}
-          <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}" data-correlation-id="corr-{{ loop.index }}">
-            <div class="detection-title">
-              <!-- Vendor Badge -->
-              <span style="background: #e3f2fd; color: #1976d2; padding: 4px 12px; border-radius: 4px; font-size: 0.85em; font-weight: 600; margin-right: 8px;">{{ correlation.vendor }}</span>
-
-              <!-- Technique Flow -->
-              {% for tech in correlation.techniques %}
-              <span class="detection-technique">{{ tech.name }}</span>
-              {% if not loop.last %}
-              <span style="margin: 0 8px; color: #999;">→</span>
-              {% endif %}
-              {% endfor %}
-
-              <!-- Severity Badge -->
-              {% if correlation.severity == 'Critical' %}
-              <span style="background: #d32f2f; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🔴 Critical</span>
-              {% elif correlation.severity == 'High' %}
-              <span style="background: #f57c00; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🟠 High</span>
-              {% endif %}
-
-              <!-- Needs Review Badge -->
-              {% if correlation.needs_review %}
-              <span class="needs-review-badge" title="At least one detection in this correlation has no threat indicators extracted automatically. Review the queries to validate effectiveness.">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+        {% for vendor in correlations %}
+        <div class="vendor-section">
+          <div class="vendor-header" onclick="toggleVendor(this)">
+            <div class="vendor-title">
+              {% if vendor.name == 'Splunk' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <defs>
+                    <radialGradient id="splunkGradientCorr" cx="30%" cy="30%">
+                      <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                      <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                    </radialGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r="48" fill="url(#splunkGradientCorr)"/>
+                  <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                 </svg>
-                Needs Review - no indicators extracted
+              </span>
+              {% elif vendor.name == 'MDE' or vendor.name == 'Microsoft' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <defs>
+                    <linearGradient id="defenderGradientCorr" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                      <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradientCorr)"/>
+                </svg>
+              </span>
+              {% elif vendor.name == 'Elastic' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <defs>
+                    <linearGradient id="elasticYellowCorr" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="elasticTealCorr" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="elasticBlueCorr" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellowCorr)"/>
+                  <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTealCorr)"/>
+                  <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlueCorr)"/>
+                </svg>
               </span>
               {% endif %}
-            </div>
-
-            <!-- Correlation Metadata -->
-            <div style="display: flex; gap: 20px; margin-top: 8px; margin-bottom: 8px; font-size: 0.9em; color: #666; flex-wrap: wrap; align-items: center;">
-              <span title="Relevance Score"><strong>Relevance:</strong> {{ correlation.relevance_score }}%</span>
-              <span title="Time Window"><strong>Time Window:</strong> {{ correlation.time_window }}</span>
-              {% if correlation.tactics %}
-              <span title="MITRE ATT&CK Tactics"><strong>Tactics:</strong> {{ correlation.tactics|join(', ') }}</span>
+              <span>{{ vendor.name }}</span>
+              {% if vendor.get('coming_soon') %}
+              <span class="vendor-count" style="background: #666;">Coming Soon</span>
+              {% else %}
+              <span class="vendor-count">{{ vendor.count }} correlation{{ 's' if vendor.count != 1 else '' }}</span>
               {% endif %}
             </div>
-
-            <!-- Tables/Indexes Display (if available) -->
-            {% if correlation.tables_indexes %}
-            <div style="margin-top: 8px; margin-bottom: 8px; font-size: 0.85em;">
-              <strong style="color: #555;">{% if correlation.vendor == 'MDE' %}Tables:{% else %}Indexes:{% endif %}</strong>
-              {% for table_idx in correlation.tables_indexes %}
-              <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
-              {% endfor %}
-            </div>
+            {% if not vendor.get('coming_soon') %}
+            <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
             {% endif %}
-
-            <!-- Combined Query Preview (Collapsible) -->
-            <div style="margin-top: 10px;">
-              <button onclick="toggleQuery('corr-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
-                <span id="corr-{{ loop.index }}-toggle">▶ View Combined Query</span>
-              </button>
-              <div id="corr-{{ loop.index }}-query" style="display: none; margin-top: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}</div>
-            </div>
           </div>
-          {% endfor %}
+          <div class="vendor-content">
+            {% if vendor.get('coming_soon') %}
+            <div class="detection-item">
+              <div class="detection-description" style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+                Elastic correlation generation coming soon
+              </div>
+            </div>
+            {% elif vendor.correlations %}
+            {% for correlation in vendor.correlations %}
+            <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}" data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}">
+              <div class="detection-title">
+                <!-- Technique Flow -->
+                {% for tech in correlation.techniques %}
+                <span class="detection-technique">{{ tech.name }}</span>
+                {% if not loop.last %}
+                <span style="margin: 0 8px; color: #999;">→</span>
+                {% endif %}
+                {% endfor %}
+
+                <!-- Severity Badge -->
+                {% if correlation.severity == 'Critical' %}
+                <span style="background: #d32f2f; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🔴 Critical</span>
+                {% elif correlation.severity == 'High' %}
+                <span style="background: #f57c00; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🟠 High</span>
+                {% endif %}
+
+                <!-- Needs Review Badge -->
+                {% if correlation.needs_review %}
+                <span class="needs-review-badge" title="At least one detection in this correlation has no threat indicators extracted automatically. Review the queries to validate effectiveness.">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  Needs Review - no indicators extracted
+                </span>
+                {% endif %}
+              </div>
+
+              <!-- Correlation Metadata -->
+              <div style="display: flex; gap: 20px; margin-top: 8px; margin-bottom: 8px; font-size: 0.9em; color: #666; flex-wrap: wrap; align-items: center;">
+                <span title="Relevance Score"><strong>Relevance:</strong> {{ correlation.relevance_score }}%</span>
+                <span title="Time Window"><strong>Time Window:</strong> {{ correlation.time_window }}</span>
+                {% if correlation.tactics %}
+                <span title="MITRE ATT&CK Tactics"><strong>Tactics:</strong> {{ correlation.tactics|join(', ') }}</span>
+                {% endif %}
+              </div>
+
+              <!-- Tables/Indexes Display (if available) -->
+              {% if correlation.tables_indexes %}
+              <div style="margin-top: 8px; margin-bottom: 8px; font-size: 0.85em;">
+                <strong style="color: #555;">{% if vendor.name == 'MDE' %}Tables:{% else %}Indexes:{% endif %}</strong>
+                {% for table_idx in correlation.tables_indexes %}
+                <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              <!-- Combined Query Preview (Collapsible) -->
+              <div style="margin-top: 10px;">
+                <button onclick="toggleQuery('corr-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
+                  <span id="corr-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Combined Query</span>
+                </button>
+                <div id="corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}</div>
+              </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+          </div>
         </div>
+        {% endfor %}
       {% else %}
         <p style="text-align: center; color: #666; padding: 40px 0;">No correlations detected.</p>
       {% endif %}
@@ -1265,6 +1430,19 @@ function toggleDetectionQuery(detId) {
   }
 }
 
+// Toggle OSINT details display
+function toggleOsintDetails(detId) {
+  const detailsDiv = document.getElementById(detId);
+
+  if (detailsDiv) {
+    if (detailsDiv.style.display === 'none' || detailsDiv.style.display === '') {
+      detailsDiv.style.display = 'block';
+    } else {
+      detailsDiv.style.display = 'none';
+    }
+  }
+}
+
 // Toggle all vendors
 let allExpanded = false;
 function toggleAllVendors() {
@@ -1293,23 +1471,34 @@ function toggleAllVendors() {
   btn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
 }
 
-// Toggle correlations section
+// Toggle correlations section - expand/collapse all vendors
 let correlationsExpanded = false;
 function toggleAllCorrelations() {
   const btn = event.target;
-  const content = document.querySelector('.correlation-content');
+  const vendorSections = document.querySelectorAll('#correlations .vendor-content');
+  const icons = document.querySelectorAll('#correlations .expand-icon');
 
-  if (!content) return;
+  if (!vendorSections.length) return;
 
   correlationsExpanded = !correlationsExpanded;
 
-  if (correlationsExpanded) {
-    content.classList.add('show');
-    btn.textContent = 'Collapse All';
-  } else {
-    content.classList.remove('show');
-    btn.textContent = 'Expand All';
-  }
+  vendorSections.forEach(content => {
+    if (correlationsExpanded) {
+      content.classList.add('show');
+    } else {
+      content.classList.remove('show');
+    }
+  });
+
+  icons.forEach(icon => {
+    if (correlationsExpanded) {
+      icon.classList.add('expanded');
+    } else {
+      icon.classList.remove('expanded');
+    }
+  });
+
+  btn.textContent = correlationsExpanded ? 'Collapse All' : 'Expand All';
 }
 
 // Select/Deselect all detections

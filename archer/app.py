@@ -329,19 +329,30 @@ def markdown_links_to_plain(text):
 
 def check_osint_enriched(yaml_file):
     """
-    Check if a YAML file has OSINT enrichment metadata.
-    Returns tuple: (is_enriched: bool, osint_data: dict)
+    Check if a YAML file has OSINT comparison/enhancement metadata.
+    Returns tuple: (is_enhanced: bool, osint_data: dict)
+
+    - is_enhanced: True if osint_enhanced=true (for orange badge)
+    - osint_data: Contains OSINT data if osint_compared=true (for Show Details button)
     """
     try:
         with open(yaml_file, "r") as f:
             content = f.read()
-            # Check for osint_enriched flag
-            if "osint_enriched: true" in content:
+
+            # Check for OSINT comparison (default behavior - always enabled)
+            has_osint_comparison = "osint_compared: true" in content
+
+            # Check for OSINT enhancement (optional - checkbox feature)
+            has_osint_enhancement = "osint_enhanced: true" in content
+
+            if has_osint_comparison:
                 osint_data = {}
-                # Extract enrichment date
-                date_match = re.search(r"enrichment_date:\s*(.+)", content)
+
+                # Extract comparison date
+                date_match = re.search(r"comparison_date:\s*(.+)", content)
                 if date_match:
-                    osint_data["enrichment_date"] = date_match.group(1).strip()
+                    osint_data["comparison_date"] = date_match.group(1).strip()
+
                 # Extract sources
                 sources = []
                 in_sources = False
@@ -356,9 +367,24 @@ def check_osint_enriched(yaml_file):
                             break
                 if sources:
                     osint_data["sources"] = sources
-                return True, osint_data
+
+                # Extract osint_indicators using proper YAML parsing
+                import yaml as yaml_lib
+                try:
+                    yaml_data = yaml_lib.safe_load(content)
+                    if yaml_data and "osint_indicators" in yaml_data:
+                        indicators = yaml_data["osint_indicators"]
+                        if indicators:
+                            osint_data["indicators"] = indicators
+                except Exception as e:
+                    logger.error(f"Error parsing YAML for osint_indicators: {e}")
+                    # Fallback to empty indicators
+                    osint_data["indicators"] = {}
+
+                # Return enhancement flag and OSINT data
+                return has_osint_enhancement, osint_data
     except Exception as e:
-        logger.error(f"Error checking OSINT enrichment in {yaml_file}: {e}")
+        logger.error(f"Error checking OSINT in {yaml_file}: {e}")
     return False, {}
 
 
@@ -652,22 +678,169 @@ def load_mitre_data():
 
 
 @app.on_event("startup")
-def initialize_osint_repos():
+async def initialize_osint_repos():
     """
     Initialize OSINT detection repositories on startup.
 
     Clones or updates Sigma and Elastic detection rule repositories locally
     for fast, offline searching without API rate limits. Repos are updated
     every hour automatically when searches are performed.
-    """
-    from archer.build.osint_repos import ensure_repos_ready
 
-    print("🔍 Initializing OSINT detection repositories...")
-    try:
-        ensure_repos_ready()
-        print("✓ OSINT repositories initialized successfully")
-    except Exception as e:
-        print(f"⚠️  Failed to initialize OSINT repos (will retry on first use): {e}")
+    This runs in the background to avoid blocking app startup.
+    """
+    import asyncio
+    from archer.build.osint_repos import clone_or_update_repo, REPOS
+
+    # Set initial status
+    app.state.osint_ready = False
+    app.state.osint_status = "Initializing OSINT detection repositories..."
+    app.state.osint_repos = {}  # Track status per repo
+    app.state.osint_failed_repos = []
+    app.state.osint_user_accepted_failures = False
+
+    async def init_repos():
+        try:
+            print("🔍 Initializing OSINT detection repositories...")
+            app.state.osint_status = "Cloning detection repositories (this may take 15-20 minutes on first run)..."
+
+            # Run in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+
+            # Clone each repo and track results
+            failed_repos = []
+            successful_repos = []
+
+            for repo_name in REPOS.keys():
+                app.state.osint_status = f"Cloning {repo_name}..."
+                app.state.osint_repos[repo_name] = {"status": "cloning", "error": None}
+
+                try:
+                    success = await loop.run_in_executor(None, clone_or_update_repo, repo_name, False)
+
+                    if success:
+                        app.state.osint_repos[repo_name] = {"status": "ready", "error": None}
+                        successful_repos.append(repo_name)
+                    else:
+                        # Check if it's a timeout by looking at the printed output
+                        # The clone_or_update_repo function returns False for timeouts
+                        app.state.osint_repos[repo_name] = {"status": "failed", "error": "Clone failed (possibly timeout)"}
+                        failed_repos.append(repo_name)
+                except Exception as e:
+                    error_msg = str(e)
+                    if "Timeout" in error_msg or "timed out" in error_msg.lower():
+                        error_msg = "Timeout while cloning (repo too large or slow connection)"
+                    app.state.osint_repos[repo_name] = {"status": "failed", "error": error_msg}
+                    failed_repos.append(repo_name)
+
+            app.state.osint_failed_repos = failed_repos
+
+            if failed_repos:
+                app.state.osint_ready = "partial"
+                app.state.osint_status = f"⚠️ {len(successful_repos)}/{len(REPOS)} repos ready. Failed: {', '.join(failed_repos)}"
+                print(f"⚠️  OSINT initialization completed with failures: {failed_repos}")
+            else:
+                app.state.osint_ready = True
+                app.state.osint_status = "OSINT repositories ready"
+                print("✓ OSINT repositories initialized successfully")
+
+        except Exception as e:
+            app.state.osint_ready = False
+            app.state.osint_status = f"Failed to initialize OSINT repos: {e}"
+            print(f"⚠️  Failed to initialize OSINT repos: {e}")
+
+    # Start initialization in background
+    asyncio.create_task(init_repos())
+
+
+@app.get("/api/status/osint")
+async def get_osint_status():
+    """Get OSINT repository initialization status."""
+    return {
+        "ready": getattr(app.state, "osint_ready", False),
+        "status": getattr(app.state, "osint_status", "Unknown"),
+        "repos": getattr(app.state, "osint_repos", {}),
+        "failed_repos": getattr(app.state, "osint_failed_repos", []),
+        "user_accepted_failures": getattr(app.state, "osint_user_accepted_failures", False),
+    }
+
+
+@app.post("/api/status/osint/accept-failures")
+async def accept_osint_failures():
+    """User accepts to continue without failed OSINT repos."""
+    app.state.osint_user_accepted_failures = True
+    # If we have at least one successful repo, consider it ready
+    if app.state.osint_ready == "partial":
+        app.state.osint_ready = True
+    return {
+        "accepted": True,
+        "message": "Continuing without failed repositories"
+    }
+
+
+@app.post("/api/status/osint/retry-failed")
+async def retry_failed_osint_repos():
+    """Retry cloning only the failed OSINT repositories."""
+    import asyncio
+    from archer.build.osint_repos import clone_or_update_repo
+
+    failed_repos = getattr(app.state, "osint_failed_repos", [])
+
+    if not failed_repos:
+        return {
+            "success": True,
+            "message": "No failed repositories to retry",
+            "retried": []
+        }
+
+    # Reset state for retry
+    app.state.osint_ready = False
+    app.state.osint_user_accepted_failures = False
+    retried_repos = []
+
+    async def retry_repos():
+        loop = asyncio.get_event_loop()
+        newly_failed = []
+        newly_succeeded = []
+
+        for repo_name in failed_repos:
+            app.state.osint_status = f"Retrying {repo_name}..."
+            app.state.osint_repos[repo_name] = {"status": "cloning", "error": None}
+
+            try:
+                success = await loop.run_in_executor(None, clone_or_update_repo, repo_name, True)
+
+                if success:
+                    app.state.osint_repos[repo_name] = {"status": "ready", "error": None}
+                    newly_succeeded.append(repo_name)
+                else:
+                    app.state.osint_repos[repo_name] = {"status": "failed", "error": "Clone failed"}
+                    newly_failed.append(repo_name)
+            except Exception as e:
+                error_msg = str(e)
+                if "Timeout" in error_msg or "timed out" in error_msg.lower():
+                    error_msg = "Timeout while cloning (repo too large or slow connection)"
+                app.state.osint_repos[repo_name] = {"status": "failed", "error": error_msg}
+                newly_failed.append(repo_name)
+
+        # Update failed repos list
+        app.state.osint_failed_repos = newly_failed
+
+        # Update ready state
+        if newly_failed:
+            app.state.osint_ready = "partial"
+            app.state.osint_status = f"⚠️ Retry complete. Still failed: {', '.join(newly_failed)}"
+        else:
+            app.state.osint_ready = True
+            app.state.osint_status = "All repositories ready after retry"
+
+    # Start retry in background
+    asyncio.create_task(retry_repos())
+
+    return {
+        "success": True,
+        "message": f"Retrying {len(failed_repos)} failed repository/repositories",
+        "retried": failed_repos
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -738,6 +911,7 @@ async def generate(
     emulation_mode: str = Form("simulate"),
     vectr_export: str = Form(None),
     vectr_campaign_name: str = Form(None),
+    osint_enhancement: str = Form(None),
 ):
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
@@ -769,6 +943,7 @@ async def generate(
                     manual_data=None,
                     genai_mode=genai_mode,
                     run_correlation=(run_correlation == "true"),
+                    osint_enhancement=(osint_enhancement == "true"),
                 )
 
                 # Run emulation if requested
@@ -1594,7 +1769,7 @@ def start_genai_processing(group_name):
 
 # Modify the orchestrator process to ensure completion
 def modified_process_group_wrapper(
-    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False
+    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False, osint_enhancement=False
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
@@ -1618,6 +1793,7 @@ def modified_process_group_wrapper(
             hypothesis=hypothesis,
             manual_data=manual_data,
             run_correlation=run_correlation,
+            osint_enhancement=osint_enhancement,
         )
 
         print(f"DEBUG: process_group completed successfully")
@@ -2904,9 +3080,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "description_html": desc_html,
                     "description_plain": desc_plain,
                     "indicators": indicators,
-                    "needs_review": len(indicators) == 0 and not is_osint_enriched,  # Normal needs review (yellow)
-                    "osint_enriched": is_osint_enriched,  # OSINT enriched flag (orange badge)
-                    "osint_data": osint_data if is_osint_enriched else {},
+                    "needs_review": len(indicators) == 0 and not osint_data,  # Normal needs review (yellow) - no indicators AND no OSINT data
+                    "osint_enriched": is_osint_enriched,  # OSINT enhanced flag (orange badge) - only true if enhancement checkbox was enabled
+                    "osint_data": osint_data,  # OSINT comparison data (for Show Details button) - included if OSINT comparison ran
                     "query": query_text,  # Add query for preview
                 }
             )
@@ -3164,6 +3340,34 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             print(f"Error loading correlations: {e}")
             pass
 
+    # Group correlations by vendor (similar to detections)
+    correlations_by_vendor = {}
+    for corr in correlations:
+        vendor = corr.get("vendor", "Unknown")
+        if vendor not in correlations_by_vendor:
+            correlations_by_vendor[vendor] = []
+        correlations_by_vendor[vendor].append(corr)
+
+    # Convert to list format similar to detections
+    grouped_correlations = []
+    for vendor, vendor_corrs in correlations_by_vendor.items():
+        grouped_correlations.append({
+            "name": vendor,
+            "count": len(vendor_corrs),
+            "correlations": vendor_corrs
+        })
+
+    # Add Elastic as "Coming Soon" placeholder
+    grouped_correlations.append({
+        "name": "Elastic",
+        "count": 0,
+        "correlations": [],
+        "coming_soon": True
+    })
+
+    # Sort by count descending (but keep coming_soon at the end)
+    grouped_correlations.sort(key=lambda x: (x.get("coming_soon", False), -x["count"]))
+
     # Check if attack flow exists
     attack_flow_file = os.path.join(ATTACK_FLOWS_DIR, f"{safe_group}_complete_flow.html")
     attack_flow_exists = os.path.exists(attack_flow_file)
@@ -3215,7 +3419,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             "technique_count": len(technique_set),
             "duration": duration,
             "detections": detections,
-            "correlations": correlations,
+            "correlations": grouped_correlations,
             "attack_flow_exists": attack_flow_exists,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         },
@@ -3990,6 +4194,16 @@ async def get_library_detections(request: Request, archer_session: Optional[str]
         result = []
         for detection in detections:
             creator = db.query(User).filter(User.id == detection.user_id).first()
+
+            # Extract OSINT sources from content if available
+            osint_sources = []
+            try:
+                content_data = json.loads(detection.content) if isinstance(detection.content, str) else detection.content
+                if isinstance(content_data, dict) and "osint_sources" in content_data:
+                    osint_sources = content_data["osint_sources"]
+            except:
+                pass
+
             result.append(
                 {
                     "id": detection.id,
@@ -4002,6 +4216,7 @@ async def get_library_detections(request: Request, archer_session: Optional[str]
                     "tags": detection.tags,
                     "created_at": detection.created_at.isoformat(),
                     "is_owner": detection.user_id == user.id,
+                    "osint_sources": osint_sources,
                 }
             )
 

@@ -757,3 +757,462 @@ python scripts/update_osint_repos.py --force
 1. Verify you're using the latest version of Archer
 2. Check that `archer/build/osint_enrichment.py` uses local repo searches, not API calls
 3. Update to the latest code if using old API-based method
+
+---
+
+## Query Snippets: Detailed Examples
+
+### What Are Query Snippets?
+
+**Query snippets** are detection query patterns extracted from OSINT sources (Elastic, Splunk, Azure Sentinel). They provide the most valuable enrichment for cloud-based detections where traditional endpoint IOCs don't apply.
+
+Query snippets show:
+- **Exact field names**: Field names specific to the log source
+- **Specific values**: API operation names, event types, status codes
+- **Known identifiers**: Role GUIDs, resource IDs, error codes
+- **Detection patterns**: How vendors structure their queries
+
+---
+
+### Example 1: T1098.003 - Additional Cloud Roles (Azure)
+
+#### MITRE ATT&CK Baseline
+
+**What MITRE Provides:**
+- Technique ID: T1098.003
+- Description: "Adversaries may add additional cloud roles to maintain persistent access"
+- Platforms: Azure AD, Office 365, IaaS
+
+**Generic Detection (MITRE-only):**
+```spl
+index=azure_signin
+| search operation_name="*role*"
+| table _time, user, operation_name, result
+```
+
+❌ **Issues**: 
+- Wildcard search (performance impact)
+- Too broad (catches benign role views)
+- Missing specific privileged role operations
+
+---
+
+#### OSINT Query Snippets
+
+**From Elastic Detection Rules:**
+```
+event.dataset:azure.auditlogs and
+azure.auditlogs.operation_name:"Update role setting in PIM" and
+event.outcome:(Success or success)
+```
+
+**What This Reveals:**
+- Field name: `azure.auditlogs.operation_name` (not just `operation_name`)
+- Specific operation: `"Update role setting in PIM"` (Privileged Identity Management)
+- Success filter: `event.outcome:(Success or success)`
+
+---
+
+**From Splunk Security Content:**
+```spl
+`o365_management_activity`
+Workload=AzureActiveDirectory
+Operation="Add member to role"
+| eval role_id=mvindex('ModifiedProperties{}.NewValue', 0)
+| where role_id IN (
+    "62e90394-69f5-4237-9190-012177145e10",  /* Global Admin */
+    "194ae4cb-b126-40b2-bd5b-6091b380977d"   /* Security Admin */
+  )
+```
+
+**What This Reveals:**
+- Specific operation: `"Add member to role"`
+- Field extraction pattern: `mvindex('ModifiedProperties{}.NewValue', 0)`
+- **Critical**: Known privileged role GUIDs to filter for high-value targets
+
+---
+
+#### Enhanced Detection (MITRE + OSINT)
+
+```spl
+index=azure_signin
+| where operation_name IN (
+    "Add member to role",
+    "Update role setting in PIM",
+    "Add eligible member to role",
+    "Add scoped member to role"
+  )
+  AND result_type="0"  /* Success */
+| eval role_id=mvindex('modified_property_new_value', 0)
+| where role_id IN (
+    "62e90394-69f5-4237-9190-012177145e10",  /* Global Administrator */
+    "194ae4cb-b126-40b2-bd5b-6091b380977d",  /* Security Administrator */
+    "729827e3-9c14-49f7-bb1b-9608f156bbb8",  /* Helpdesk Administrator */
+    "f28a1f50-f6e7-4571-818b-6a12f2af6b6c"   /* SharePoint Administrator */
+  )
+| stats count values(operation_name) as operations by
+    _time, user_principal_name, target_user_principal_name, role_id
+| sort - _time
+```
+
+**Improvements From OSINT:**
+1. ✅ Specific operations (no wildcards)
+2. ✅ Privileged role GUIDs from community intelligence
+3. ✅ Success-only filtering (`result_type="0"`)
+4. ✅ Field extraction patterns for nested JSON
+5. ✅ Statistical aggregation approach
+
+---
+
+### Example 2: T1136.001 - Create Account (Endpoint)
+
+#### MITRE ATT&CK Baseline
+
+**What MITRE Provides:**
+- Description: "Adversaries may create a local account"
+- Detection: "Monitor for command-line parameters associated with account creation"
+
+**Generic Detection:**
+```spl
+index=windows_events EventCode=4720
+| table _time, device, user, new_account_name
+```
+
+❌ **Issues**:
+- Windows Event ID only (misses command-line creation)
+- No macOS/Linux coverage
+- No service account filtering
+
+---
+
+#### OSINT Indicators & Snippets
+
+**From Sigma Rules (Indicators):**
+
+Commands:
+- `create`
+- `addUser`
+- `net user /add`
+- `/useradd`
+
+Software/Processes:
+- `net.exe`
+- `wmic.exe`
+- `/dscl`
+- `/sysadminctl`
+
+---
+
+**From Elastic (Query Snippet):**
+```
+event.code:"4720" and
+winlog.event_data.TargetUserName:* and
+not user.name:("DWM-*" or "UMFD-*")
+```
+
+**What This Reveals:**
+- Service account filter: Exclude `DWM-*`, `UMFD-*` (Desktop Window Manager, User Mode Driver Framework)
+- Field name: `winlog.event_data.TargetUserName`
+
+---
+
+**From Sigma (macOS Detection):**
+```yaml
+detection:
+  selection_dscl:
+    Image|endswith: '/dscl'
+    CommandLine|contains: 'create'
+  selection_sysadminctl:
+    Image|endswith: '/sysadminctl'
+    CommandLine|contains: 'addUser'
+```
+
+**What This Reveals:**
+- macOS account creation tools: `/dscl`, `/sysadminctl`
+- Command patterns to match
+
+---
+
+#### Enhanced Detection (Multi-Platform)
+
+```spl
+index IN (windows_events, edr_events, linux_syslog)
+(
+  /* Windows Event ID 4720 */
+  (EventCode=4720 AND sourcetype="WinEventLog:Security")
+  OR
+  /* Windows Command Line */
+  (
+    process_name IN ("net.exe", "wmic.exe") AND
+    process_command_line IN ("*user*add*", "*user*/add*", "*localgroup*administrators*/add*")
+  )
+  OR
+  /* macOS Commands */
+  (
+    process_name IN ("/dscl", "/sysadminctl", "/usr/bin/dscl") AND
+    process_command_line IN ("*create*", "*addUser*")
+  )
+  OR
+  /* Linux Commands */
+  (
+    process_name IN ("useradd", "/usr/sbin/useradd") AND
+    process_command_line="*"
+  )
+)
+/* Filter out service accounts from OSINT examples */
+| where NOT match(new_account_name, "(?i)DWM-|UMFD-|NT AUTHORITY")
+| stats count values(process_command_line) as commands by
+    _time, device, user, process_name, new_account_name, parent_process_name
+| where count < 5  /* Unusual to create many accounts */
+```
+
+**Improvements From OSINT:**
+1. ✅ Multi-platform coverage (Windows, macOS, Linux)
+2. ✅ Multiple detection methods (events + process monitoring)
+3. ✅ Service account exclusions from Elastic
+4. ✅ Specific tools and command patterns from Sigma
+5. ✅ Statistical anomaly (count < 5)
+
+---
+
+### Example 3: T1078.004 - Valid Accounts: Cloud Accounts
+
+#### MITRE ATT&CK Baseline
+
+**What MITRE Provides:**
+- Description: "Adversaries may obtain and abuse credentials of cloud accounts"
+- Platforms: IaaS, SaaS, Office 365
+
+**Generic Detection:**
+```spl
+index=azure_signin
+| search signin*
+| where result_type!=0
+| table _time, user, src_ip, result_description
+```
+
+❌ **Issues**:
+- Only detects failed logins (misses successful compromises)
+- No geolocation anomaly detection
+- No impossible travel detection
+
+---
+
+#### OSINT Query Snippets
+
+**From Elastic (Azure Signin from Rare Location):**
+```
+event.dataset:azure.signinlogs and
+azure.signinlogs.properties.status.errorCode:0 and
+not azure.signinlogs.properties.user_principal_name:*#EXT#* and
+event.outcome:success
+```
+
+**What This Reveals:**
+- Field: `azure.signinlogs.properties.status.errorCode`
+- Success code: `0` (not just `result_type`)
+- External user filter: Exclude `*#EXT#*` (guest accounts)
+
+---
+
+**From Splunk (Impossible Travel):**
+```spl
+`azure_monitor_aad`
+operationName="Sign-in activity"
+| iplocation src_ip
+| eval City=if(isnull(City),"Unknown",City)
+| streamstats current=f last(City) as prevCity last(_time) as prevTime window=2 by user
+| eval timeDelta=((_time - prevTime) / 3600)
+| eval distanceKM=...  /* Haversine formula */
+| eval speedKPH=(distanceKM / timeDelta)
+| where speedKPH > 800  /* Impossible to travel this fast */
+```
+
+**What This Reveals:**
+- Operation name: `"Sign-in activity"`
+- **Advanced pattern**: Geolocation tracking with `iplocation`
+- **Calculation**: Speed-based impossible travel detection (> 800 KPH)
+- **Window function**: `streamstats` to compare sequential logins
+
+---
+
+#### Enhanced Detection (Anomaly-Based)
+
+```spl
+index=azure_signin operationName="Sign-in activity"
+| where result_type="0"  /* Success */
+| where NOT match(user_principal_name, "#EXT#")  /* Exclude guests */
+| iplocation src_ip
+| eval City=if(isnull(City), "Unknown", City)
+| eval Country=if(isnull(Country), "Unknown", Country)
+/* Track previous login */
+| streamstats current=f
+    last(City) as prevCity
+    last(Country) as prevCountry
+    last(latitude) as prevLat
+    last(longitude) as prevLon
+    last(_time) as prevTime
+    window=2 by user_principal_name
+/* Calculate travel metrics */
+| eval timeDeltaHours=((_time - prevTime) / 3600)
+| eval distance=6371*acos(
+    cos(radians(latitude))*cos(radians(prevLat))*
+    cos(radians(prevLon)-radians(longitude))+
+    sin(radians(latitude))*sin(radians(prevLat))
+  )  /* Haversine formula for km */
+| eval speedKPH=round(distance / timeDeltaHours, 2)
+/* Flag anomalies */
+| where speedKPH > 800 OR
+    (City != prevCity AND timeDeltaHours < 1) OR
+    (Country != prevCountry AND Country != "Unknown" AND prevCountry != "Unknown")
+| table _time, user_principal_name, src_ip, City, Country,
+    prevCity, prevCountry, speedKPH, timeDeltaHours, app_display_name
+| sort - speedKPH
+```
+
+**Improvements From OSINT:**
+1. ✅ Impossible travel calculation from Splunk pattern
+2. ✅ Guest account filtering from Elastic
+3. ✅ Geographic tracking with `iplocation`
+4. ✅ Multiple anomaly conditions (speed, city change, country change)
+5. ✅ Haversine distance calculation for accuracy
+
+---
+
+### How Analysts Use Query Snippets
+
+#### Step 1: Review OSINT Details
+
+Click "Show Details" on enriched detection:
+
+```
+Sources Used:
+  ├─ Elastic: privilege_escalation_azure_rbac_administrator_roles_assigned.toml
+  └─ Splunk: azure_ad_privileged_role_assigned_to_service_principal.yml
+
+Indicators Used:
+  Query Patterns:
+    ├─ [Elastic] azure.auditlogs.operation_name:"Add member to role"
+    └─ [Splunk] role_id IN ("62e90394-69f5-4237-9190-012177145e10")
+```
+
+#### Step 2: Extract Field Names
+
+From snippet: `azure.auditlogs.operation_name`
+
+Verify in your environment:
+```spl
+index=azure_signin
+| table *
+| head 1
+```
+
+Check if field exists: `azure.auditlogs.operation_name` or `operation_name`
+
+#### Step 3: Copy Specific Values
+
+From snippet: `"Add member to role"`, `"Update role setting in PIM"`
+
+Add to your query:
+```spl
+| where operation_name IN ("Add member to role", "Update role setting in PIM")
+```
+
+#### Step 4: Incorporate GUIDs/IDs
+
+From Splunk snippet: Role GUID `62e90394-69f5-4237-9190-012177145e10`
+
+Research what this is:
+- Global Administrator role in Azure AD
+- Highest privilege level
+- Should be monitored closely
+
+Add to query for high-fidelity alerting.
+
+#### Step 5: Validate & Tune
+
+1. Run query in test environment
+2. Verify field names match your log format
+3. Adjust for your specific data sources
+4. Add exclusions for known-good activity
+5. Set appropriate alert thresholds
+
+---
+
+### Query Snippets vs Traditional IOCs
+
+| Aspect | Traditional IOCs | Query Snippets |
+|--------|------------------|----------------|
+| **Use Case** | Endpoint detections | Cloud/SaaS detections |
+| **Examples** | `wmic.exe`, `powershell.exe` | `azure.auditlogs.operation_name` |
+| **What They Provide** | File names, hashes, IPs | Field names, API operations, patterns |
+| **Detection Type** | Signature-based | Behavior-based |
+| **Platform** | Windows, Linux, macOS | Azure, AWS, GCP, O365 |
+
+**Key Insight**: For cloud techniques, query snippets ARE the indicators because cloud detections focus on:
+- API operation names (not processes)
+- Resource IDs (not file paths)
+- Service events (not endpoint logs)
+- Identity operations (not registry keys)
+
+---
+
+### Best Practices for Query Snippets
+
+#### DO:
+✅ Copy exact field names from snippets
+✅ Use specific operation names (not wildcards)
+✅ Include known identifiers (role GUIDs, error codes)
+✅ Apply filters from OSINT examples (service account exclusions)
+✅ Cross-reference multiple sources for validation
+
+#### DON'T:
+❌ Blindly copy entire queries without understanding them
+❌ Assume field names are identical across all log sources
+❌ Ignore exclusion patterns (false positive filters)
+❌ Skip validation in your environment
+❌ Forget to tune thresholds for your baseline
+
+---
+
+### Troubleshooting Query Snippets
+
+**Q: Field from snippet doesn't exist in my logs**
+
+A: Different log sources may use different field names:
+- Check your field schema: `index=* | fieldsummary`
+- Common variations:
+  - `operation_name` vs `azure.auditlogs.operation_name`
+  - `result_type` vs `properties.status.errorCode`
+  - `user` vs `user_principal_name`
+
+**Q: Query snippet is for Elasticsearch but I use Splunk**
+
+A: Translate the logic:
+- Elastic `event.dataset:azure.auditlogs` → Splunk `sourcetype=azure:audit`
+- Elastic `and` → Splunk `AND`
+- Elastic field:value → Splunk field=value
+
+**Q: No query snippets showing for my detection**
+
+A: This is normal for:
+- Endpoint techniques with clear IOCs (Sigma provides them)
+- Techniques without OSINT coverage yet
+- Very new techniques added to MITRE recently
+
+Use the software/command indicators instead.
+
+---
+
+## Summary
+
+Query snippets transform MITRE's generic descriptions into actionable detections by providing:
+
+1. **Precision**: Exact field names and values to search
+2. **Context**: How the security community detects this technique
+3. **Validation**: Cross-vendor confirmation of detection patterns
+4. **Tuning**: Known false positive filters and thresholds
+
+They are especially critical for cloud detections where traditional endpoint IOCs don't exist, making them the primary "indicators" for Azure, AWS, GCP, and SaaS platform detections.
+
+**Last Updated**: 2025-10-25

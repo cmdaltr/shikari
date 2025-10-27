@@ -167,7 +167,7 @@ def map_entities(query):
     return f"{query}{entities}"
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, osint_enrichment=None):
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, osint_data=None, osint_enhanced=False):
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
@@ -208,19 +208,45 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, o
     yaml_content = re.sub(r"(\(Citation: [^\)]+\))", r"", yaml_content)
     yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace("   | ", "  | ")
 
-    # Add OSINT enrichment metadata if provided
-    if osint_enrichment and osint_enrichment.get("osint_enriched"):
-        osint_section = "\n# OSINT Enrichment Metadata\n"
-        osint_section += f"osint_enriched: true\n"
-        osint_section += f"enrichment_date: {osint_enrichment.get('enrichment_date', '')}\n"
+    # Add OSINT metadata if data was found during comparison
+    print(f"🔍 DEBUG write_yaml: osint_data={osint_data is not None}, osint_enhanced={osint_enhanced}")
+    if osint_data:
+        print(f"   osint_data keys: {osint_data.keys() if isinstance(osint_data, dict) else 'NOT A DICT'}")
+        print(f"   osint_compared: {osint_data.get('osint_compared') if isinstance(osint_data, dict) else 'N/A'}")
 
-        if osint_enrichment.get("osint_sources"):
+    if osint_data and osint_data.get("osint_compared"):
+        print(f"   ✅ Writing OSINT metadata to YAML")
+        osint_section = "\n# OSINT Comparison Metadata\n"
+        osint_section += f"osint_compared: true\n"
+
+        # Add osint_enhanced flag if enhancement was enabled
+        if osint_enhanced:
+            osint_section += f"osint_enhanced: true\n"
+
+        osint_section += f"comparison_date: {osint_data.get('comparison_date', '')}\n"
+
+        if osint_data.get("osint_sources"):
             osint_section += "osint_sources:\n"
-            for source in osint_enrichment["osint_sources"]:
+            for source in osint_data["osint_sources"]:
                 osint_section += f"  - {source}\n"
 
-        if osint_enrichment.get("enrichment_notes"):
-            notes = osint_enrichment["enrichment_notes"].replace("\n", "\n  ")
+        # Add osint_indicators (always included for reference, even if not merged)
+        if osint_data.get("osint_indicators"):
+            import yaml as yaml_module
+            osint_section += "osint_indicators:\n"
+            for indicator_type, values in osint_data["osint_indicators"].items():
+                if values:
+                    osint_section += f"  {indicator_type}:\n"
+                    for value in values:
+                        # Use YAML library to properly escape the value
+                        # This handles all special characters including backslashes
+                        yaml_str = yaml_module.dump([value], default_flow_style=False)
+                        # Extract just the value part (remove the list syntax)
+                        yaml_value = yaml_str.strip().replace('- ', '', 1).strip()
+                        osint_section += f'    - {yaml_value}\n'
+
+        if osint_data.get("enrichment_notes"):
+            notes = osint_data["enrichment_notes"].replace("\n", "\n  ")
             osint_section += f"enrichment_notes: |\n  {notes}\n"
 
         yaml_content += osint_section
@@ -272,7 +298,8 @@ def construct_yaml(
     index_name,
     procedure_platforms,
     software_platforms,
-    osint_enrichment=None,
+    osint_enhancement_data=None,
+    osint_enhancement=False,
 ):
     """
     Construct a YAML file for a detection
@@ -286,11 +313,35 @@ def construct_yaml(
         identifiers: Dictionary of identifiers
         log_sources: List of log sources
         index_name: Optional index name to include in the filename
-        osint_enrichment: Optional OSINT enrichment metadata dict
+        osint_enhancement: Optional OSINT enrichment metadata dict
     """
+    print(f"🔍 DEBUG construct_yaml for {tid}: osint_enhancement_data={osint_enhancement_data is not None}, osint_enhancement={osint_enhancement}")
+
     appended_mde_queries, appended_splunk_queries = collate_data(
         identifiers, log_sources, procedure_platforms, software_platforms
     )
+
+    # Apply OSINT enhancement if requested (merge OSINT patterns into queries)
+    if osint_enhancement and osint_enhancement_data and osint_enhancement_data.get("osint_indicators"):
+        from archer.build.osint_query_enhancer import enhance_query_with_osint
+
+        osint_indicators = osint_enhancement_data.get("osint_indicators", {})
+
+        # Enhance MDE queries
+        enhanced_mde_queries = []
+        for query in appended_mde_queries:
+            enhanced_query = enhance_query_with_osint(query, osint_indicators, target_vendor="MDE")
+            enhanced_mde_queries.append(enhanced_query)
+        appended_mde_queries = enhanced_mde_queries
+
+        # Enhance Splunk queries
+        enhanced_splunk_queries = []
+        for query in appended_splunk_queries:
+            enhanced_query = enhance_query_with_osint(query, osint_indicators, target_vendor="Splunk")
+            enhanced_splunk_queries.append(enhanced_query)
+        appended_splunk_queries = enhanced_splunk_queries
+
+        print(f"  🔧 OSINT Enhancement: Merged OSINT patterns into {len(appended_mde_queries)} MDE and {len(appended_splunk_queries)} Splunk queries")
 
     all_tactics = additional_tactics(tid, tactic)
 
@@ -329,7 +380,8 @@ def construct_yaml(
                 all_tactics,
                 tag,
                 query_with_entities,
-                osint_enrichment,
+                osint_data=osint_enhancement_data,  # Pass OSINT data dict
+                osint_enhanced=osint_enhancement,    # Pass enhancement flag
             )
         else:
             update_yaml(yamlfile, tag)
@@ -349,7 +401,8 @@ def construct_yaml(
                 all_tactics,
                 tag,
                 query,
-                osint_enrichment,
+                osint_data=osint_enhancement_data,  # Pass OSINT data dict
+                osint_enhanced=osint_enhancement,    # Pass enhancement flag
             )
         else:
             update_yaml(yamlfile, tag)
