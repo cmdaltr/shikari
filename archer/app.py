@@ -482,6 +482,23 @@ def extract_indicators_from_query(yaml_file):
             paths = re.findall(path_pattern, query_text)
             indicators.extend(paths)
 
+            # Unix/Linux paths (e.g., /var/run, /tmp, /etc/passwd)
+            unix_path_pattern = r'["\']?(/[a-z_/]+)["\']?'
+            unix_paths = re.findall(unix_path_pattern, query_text, re.IGNORECASE)
+            # Filter to only include common Unix paths
+            for path in unix_paths:
+                if any(common in path for common in ['/var/', '/tmp/', '/etc/', '/home/', '/usr/', '/opt/', '/bin/', '/sbin/', '/dev/', '/proc/', '/sys/']):
+                    indicators.append(path)
+
+            # File extensions and patterns (e.g., .pid, .lock, .log)
+            extension_pattern = r'["\']?(\.[a-z]{2,5})["\']?'
+            extensions = re.findall(extension_pattern, query_text, re.IGNORECASE)
+            # Only include meaningful extensions
+            meaningful_exts = ['.pid', '.lock', '.log', '.tmp', '.conf', '.cfg', '.ini', '.dat']
+            for ext in extensions:
+                if ext.lower() in meaningful_exts:
+                    indicators.append(ext)
+
             # Event IDs (e.g., EventID 4624, EventCode=4688)
             event_pattern = r"\b(?:EventID|EventCode|event_id)[=\s]+(\d{4,5})\b"
             events = re.findall(event_pattern, query_text, re.IGNORECASE)
@@ -2952,21 +2969,37 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         for yaml_file in yaml_files:
             filename = os.path.basename(yaml_file)
 
-            # Determine vendor from filename
-            # MDE files: DeviceEvents, DeviceProcessEvents, etc.
-            # Splunk files: *.yaml (e.g., edr_events, linux_syslog, aws_cloudtrail)
+            # Determine vendor from YAML connectorId field (more reliable than filename)
             vendor = None
 
-            if filename.startswith("Device") or "_Device" in filename:
-                vendor = "mde"
-            elif filename.endswith("_prod.yaml"):
-                vendor = "splunk"
-            else:
-                # Fallback: check for vendor keywords
-                for v in vendor_icons.keys():
-                    if f"_{v}_" in filename.lower() or f"_{v}." in filename.lower():
-                        vendor = v
-                        break
+            try:
+                with open(yaml_file, "r") as f:
+                    # Read just enough to find connectorId
+                    for line in f:
+                        if "connectorId:" in line:
+                            connector_value = line.split(":", 1)[1].strip()
+                            if "MicrosoftThreatProtection" in connector_value:
+                                vendor = "mde"
+                            elif "Splunk" in connector_value:
+                                vendor = "splunk"
+                            elif "Elastic" in connector_value:
+                                vendor = "elastic"
+                            break
+            except:
+                pass
+
+            # Fallback to filename pattern if connectorId not found
+            if not vendor:
+                if filename.startswith("Device") or "_Device" in filename:
+                    vendor = "mde"
+                elif filename.endswith("_prod.yaml"):
+                    vendor = "splunk"
+                else:
+                    # Fallback: check for vendor keywords
+                    for v in vendor_icons.keys():
+                        if f"_{v}_" in filename.lower() or f"_{v}." in filename.lower():
+                            vendor = v
+                            break
 
             if not vendor:
                 vendor = "splunk"  # Default to Splunk instead of unknown

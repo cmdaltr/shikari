@@ -335,11 +335,14 @@ def construct_yaml(
         appended_mde_queries = enhanced_mde_queries
 
         # Enhance Splunk queries
-        enhanced_splunk_queries = []
-        for query in appended_splunk_queries:
-            enhanced_query = enhance_query_with_osint(query, osint_indicators, target_vendor="Splunk")
-            enhanced_splunk_queries.append(enhanced_query)
-        appended_splunk_queries = enhanced_splunk_queries
+        # NOTE: OSINT enhancement is now handled directly in compile_splunk_queries() function
+        # to ensure proper query structure with transformation pipelines and | search clause
+        # So we skip the post-processing enhancement here for Splunk queries
+        # enhanced_splunk_queries = []
+        # for query in appended_splunk_queries:
+        #     enhanced_query = enhance_query_with_osint(query, osint_indicators, target_vendor="Splunk")
+        #     enhanced_splunk_queries.append(enhanced_query)
+        # appended_splunk_queries = enhanced_splunk_queries
 
         print(f"  🔧 OSINT Enhancement: Merged OSINT patterns into {len(appended_mde_queries)} MDE and {len(appended_splunk_queries)} Splunk queries")
 

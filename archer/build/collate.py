@@ -113,18 +113,17 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                     index_name = None
                     if query.startswith("index="):
                         index_name = query.split()[0].replace("index=", "")
-                    # Add compatibility check here!
-                    if index_name:
-                        # Assume you have procedure_platforms and software_platforms available
+                        # Add compatibility check here!
                         if is_query_applicable(
                             procedure_platforms, software_platforms, index_name
                         ):
-                            # New schema structure: indicator_type -> index_name -> query template
-                            splunk_mapping = map_splunk_indices.get(indicator_type, {}).get(index_name, "")
-                            appended_query = f"{query}\n{splunk_mapping}"
-                            appended_splunk_queries.append(appended_query)
+                            # No need to append anything - compile_splunk_queries() already generates complete queries
+                            # with transformation pipelines from schemaSplunk.json included
+                            appended_splunk_queries.append(query)
                     else:
-                        appended_splunk_queries.append(query)
+                        # Query doesn't start with "index=" - likely an MDE query that got mixed in
+                        # Skip it instead of adding to Splunk queries
+                        print(f"⚠️  Warning: Skipping non-Splunk query in splunk_queries list: {query.split(chr(10))[0][:50]}")
 
             else:
                 pass
