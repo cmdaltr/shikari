@@ -3512,41 +3512,85 @@ def download_all_detections(group_name: str):
     """
     Download all detections, correlations, and attack flows for a group as a ZIP file.
     """
+    print(f"\n{'='*60}")
+    print(f"DOWNLOAD ALL REQUEST RECEIVED")
+    print(f"Group name: {group_name}")
+    print(f"{'='*60}\n")
+
     safe_group = sanitize_group_name(group_name)
+    formatted_tag = f"{group_name} (Group)"
 
     # Create in-memory ZIP file
     zip_buffer = io.BytesIO()
+    files_added = 0
 
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        # Add detection YAMLs
+        # Add detection YAMLs - find all YAML files containing the group tag
         generate_dir = GENERATE_DIR
         if os.path.exists(generate_dir):
-            for yaml_file in glob.glob(os.path.join(generate_dir, f"{safe_group}_*.yaml")):
-                filename = os.path.basename(yaml_file)
-                zip_file.write(yaml_file, f"detections/{filename}")
+            for yaml_file in glob.glob(os.path.join(generate_dir, "*.yaml")):
+                try:
+                    with open(yaml_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        # Check if this YAML file contains the group tag
+                        if formatted_tag in content:
+                            filename = os.path.basename(yaml_file)
+                            zip_file.write(yaml_file, f"detections/{filename}")
+                            files_added += 1
+                            logger.info(f"Added detection: {filename}")
+                except Exception as e:
+                    logger.error(f"Error reading YAML file {yaml_file}: {e}")
+                    continue
 
-        # Add correlation JSON
-        corr_file = os.path.join(CORRELATE_DIR, f"{safe_group}.json")
+        # Add correlation JSON - use original group name (with spaces)
+        corr_file = os.path.join(CORRELATE_DIR, f"{group_name}.json")
         if os.path.exists(corr_file):
-            zip_file.write(corr_file, f"correlations/{safe_group}.json")
+            zip_file.write(corr_file, f"correlations/{group_name}.json")
+            files_added += 1
+            logger.info(f"Added correlation: {group_name}.json")
+        else:
+            logger.warning(f"Correlation file not found: {corr_file}")
 
-        # Add attack flows
+        # Add attack flows - try both sanitized and original group name patterns
         flow_dir = ATTACK_FLOWS_DIR
         if os.path.exists(flow_dir):
+            # Try sanitized version (with underscores)
             for flow_file in glob.glob(os.path.join(flow_dir, f"{safe_group}_*.json")):
                 filename = os.path.basename(flow_file)
                 zip_file.write(flow_file, f"attack_flows/{filename}")
+                files_added += 1
+                logger.info(f"Added attack flow JSON: {filename}")
 
             for flow_file in glob.glob(os.path.join(flow_dir, f"{safe_group}_*.html")):
                 filename = os.path.basename(flow_file)
                 zip_file.write(flow_file, f"attack_flows/{filename}")
+                files_added += 1
+                logger.info(f"Added attack flow HTML: {filename}")
 
+            # Also try original group name (with spaces)
+            for flow_file in glob.glob(os.path.join(flow_dir, f"{group_name}_*.json")):
+                filename = os.path.basename(flow_file)
+                if f"attack_flows/{filename}" not in zip_file.namelist():
+                    zip_file.write(flow_file, f"attack_flows/{filename}")
+                    files_added += 1
+                    logger.info(f"Added attack flow JSON: {filename}")
+
+            for flow_file in glob.glob(os.path.join(flow_dir, f"{group_name}_*.html")):
+                filename = os.path.basename(flow_file)
+                if f"attack_flows/{filename}" not in zip_file.namelist():
+                    zip_file.write(flow_file, f"attack_flows/{filename}")
+                    files_added += 1
+                    logger.info(f"Added attack flow HTML: {filename}")
+
+    logger.info(f"Total files added to ZIP: {files_added}")
     zip_buffer.seek(0)
 
+    # Use quotes around filename to handle spaces properly
+    filename = f'"{group_name}.zip"'
     return StreamingResponse(
         zip_buffer,
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename={safe_group}_results.zip"},
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 

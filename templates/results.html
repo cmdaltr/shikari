@@ -1561,19 +1561,45 @@ function toggleAllCrossVendor() {
   }
 }
 
-// Download all button - only download selected detections
-document.getElementById('download-all-btn').addEventListener('click', function() {
-  const selected = getSelectedDetections();
-  if (selected.length === 0) {
-    alert('Please select at least one detection to download');
-    return;
-  }
+// Download all button - download all detections, correlations, and attack flows [v2024-10-28-v3-iframe]
+const downloadAllBtnElement = document.getElementById('download-all-btn');
+if (downloadAllBtnElement) {
+  // Remove any existing listeners
+  const newBtn = downloadAllBtnElement.cloneNode(true);
+  downloadAllBtnElement.parentNode.replaceChild(newBtn, downloadAllBtnElement);
 
-  // Build URL with selected techniques
-  const techniques = [...new Set(selected.map(s => s.technique))].join(',');
-  const url = `/api/download/all/{{ group_name }}?techniques=${encodeURIComponent(techniques)}`;
-  window.location.href = url;
-});
+  newBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Download everything for this group (detections, correlations, attack flows)
+    const groupName = '{{ group_name }}'.replace(/_/g, ' ');
+    const url = `/api/download/all/${encodeURIComponent(groupName)}`;
+
+    console.log('=== DOWNLOAD ALL CLICKED v3 (iframe method) ===');
+    console.log('URL:', url);
+    console.log('Group name:', groupName);
+    console.log('Group name (raw):', '{{ group_name }}');
+
+    hasDownloadedOrSaved = true;
+
+    // Use iframe-based download to bypass fetch truncation issue
+    // This uses the browser's native download mechanism
+    console.log('Creating hidden iframe for download...');
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+
+    // Clean up iframe after download starts
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      console.log('Download initiated via iframe, iframe removed');
+    }, 2000);
+  });
+}
 
 // Save to Library button
 document.getElementById('save-to-library-btn').addEventListener('click', async function() {
@@ -1937,15 +1963,8 @@ function showModal(title, message, confirmText = 'OK', cancelText = null) {
 let navigationConfirmed = false;
 let hasDownloadedOrSaved = false;
 
-// Track if user has downloaded or saved
-const downloadAllBtn = document.getElementById('download-all-btn');
+// Track if user has saved to library
 const saveToLibraryBtn = document.getElementById('save-to-library-btn');
-
-if (downloadAllBtn) {
-  downloadAllBtn.addEventListener('click', function() {
-    hasDownloadedOrSaved = true;
-  });
-}
 
 if (saveToLibraryBtn) {
   saveToLibraryBtn.addEventListener('click', function() {
