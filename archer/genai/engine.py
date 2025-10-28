@@ -778,18 +778,18 @@ def _score_correlation(corr: Dict, file_info: Dict) -> float:
 
 
 def _score_and_filter_correlations(
-    correlations: List[Dict], file_info: Dict, max_results: int = 20
+    correlations: List[Dict], file_info: Dict, min_relevance: float = 0.5
 ) -> List[Dict]:
     """
-    Score all correlations and return only the top N highest-scoring ones.
+    Score all correlations and return only those meeting the minimum relevance threshold.
 
     Args:
         correlations: List of correlation dictionaries
         file_info: File metadata dictionary
-        max_results: Maximum number of correlations to return (default 20)
+        min_relevance: Minimum relevance score threshold (default 0.5 = 50%)
 
     Returns:
-        Filtered list of top-scoring correlations with relevance_score added
+        Filtered list of correlations with relevance_score >= min_relevance
     """
     print(f"GenAI: Scoring {len(correlations)} correlations...")
 
@@ -811,11 +811,12 @@ def _score_and_filter_correlations(
         print(f"  Median score: {scores[len(scores)//2]:.1f}")
         print(f"  Lowest score: {scores[-1]:.1f}")
 
-    # Return top N correlations
-    top_correlations = [corr for _, corr in scored_correlations[:max_results]]
+    # Filter by minimum relevance threshold (50% = score >= 50)
+    min_score_threshold = min_relevance * 100
+    top_correlations = [corr for score, corr in scored_correlations if score >= min_score_threshold]
 
     print(
-        f"GenAI: Keeping top {len(top_correlations)} correlations (threshold: score >= {scored_correlations[min(max_results-1, len(scored_correlations)-1)][0]:.1f})"
+        f"GenAI: Keeping {len(top_correlations)}/{len(correlations)} correlations with relevance >= {min_relevance:.0%} (score >= {min_score_threshold:.1f})"
     )
 
     return top_correlations
@@ -1122,13 +1123,12 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         for vendor, corrs in by_vendor_corr.items():
             # Count detection files for this vendor
             vendor_detection_count = len(by_vendor.get(vendor, []))
-            max_correlations = max(10, int(vendor_detection_count * 0.10))
 
             print(
-                f"GenAI: Vendor '{vendor}' has {vendor_detection_count} detections, filtering {len(corrs)} correlations to top {max_correlations} (10%)"
+                f"GenAI: Vendor '{vendor}' has {vendor_detection_count} detections, filtering {len(corrs)} correlations by 50% relevance threshold"
             )
             top_vendor_corrs = _score_and_filter_correlations(
-                corrs, file_info, max_results=max_correlations
+                corrs, file_info, min_relevance=0.5
             )
             print(f"GenAI: Kept {len(top_vendor_corrs)} correlations for vendor '{vendor}'")
             filtered_corr.extend(top_vendor_corrs)

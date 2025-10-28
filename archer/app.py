@@ -4538,32 +4538,52 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
         all_tags = list(set(tags + auto_tags))  # Remove duplicates
         tags_json = json.dumps(all_tags) if all_tags else None
 
-        # Create new library detection
-        new_detection = LibraryDetection(
-            user_id=user.id,
-            title=title,
-            detection_type=DetectionType(detection_type),
-            visibility=VisibilityType(visibility),
-            content=json.dumps(content) if isinstance(content, dict) else content,
-            platform=platform,
-            tags=tags_json,
+        # Check if a detection with the same title already exists for this user
+        existing_detection = (
+            db.query(LibraryDetection)
+            .filter(LibraryDetection.user_id == user.id, LibraryDetection.title == title)
+            .first()
         )
 
-        db.add(new_detection)
+        is_update = False
+        if existing_detection:
+            # Update existing detection
+            is_update = True
+            existing_detection.detection_type = DetectionType(detection_type)
+            existing_detection.visibility = VisibilityType(visibility)
+            existing_detection.content = json.dumps(content) if isinstance(content, dict) else content
+            existing_detection.platform = platform
+            existing_detection.tags = tags_json
+            detection_to_return = existing_detection
+        else:
+            # Create new library detection
+            new_detection = LibraryDetection(
+                user_id=user.id,
+                title=title,
+                detection_type=DetectionType(detection_type),
+                visibility=VisibilityType(visibility),
+                content=json.dumps(content) if isinstance(content, dict) else content,
+                platform=platform,
+                tags=tags_json,
+            )
+            db.add(new_detection)
+            detection_to_return = new_detection
+
         db.commit()
 
         # Log library save activity
         try:
             log_activity(
                 user_id=user.id,
-                activity_type="library_save",
-                title=f"Saved detection to library: {title}",
-                description=f"Added {detection_type} detection with {visibility} visibility",
+                activity_type="library_save" if not is_update else "library_update",
+                title=f"{'Updated' if is_update else 'Saved'} detection to library: {title}",
+                description=f"{'Updated' if is_update else 'Added'} {detection_type} detection with {visibility} visibility",
                 metadata={
-                    "detection_id": new_detection.id,
+                    "detection_id": detection_to_return.id,
                     "detection_type": detection_type,
                     "platform": platform,
                     "visibility": visibility,
+                    "is_update": is_update,
                 },
             )
         except Exception as log_error:
@@ -4571,9 +4591,10 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
 
         return {
             "success": True,
-            "message": "Detection saved to library",
-            "id": new_detection.id,
+            "message": f"Detection {'updated in' if is_update else 'saved to'} library",
+            "id": detection_to_return.id,
             "tags": all_tags,
+            "is_update": is_update,
         }
 
     except HTTPException:
@@ -4581,7 +4602,9 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
     except Exception as e:
         db.rollback()
         logger.error(f"Error saving to library: {e}")
-        raise HTTPException(status_code=500, detail="Failed to save to library")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to save to library: {str(e)}")
     finally:
         db.close()
 

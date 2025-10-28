@@ -1605,6 +1605,7 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
 
   let savedCount = 0;
   let errorCount = 0;
+  const failedDetections = []; // Track failed detections with reasons
 
   // Get selected detections
   const selected = getSelectedDetections();
@@ -1646,15 +1647,40 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
             })
           });
 
+          if (!response.ok) {
+            // Handle HTTP error responses
+            errorCount++;
+            let errorMsg = `HTTP ${response.status}`;
+            try {
+              const errorData = await response.json();
+              errorMsg = errorData.detail || errorData.message || errorMsg;
+            } catch (e) {
+              errorMsg = await response.text() || errorMsg;
+            }
+            failedDetections.push({
+              name: detection.name || detection.title || 'Unknown Detection',
+              reason: errorMsg
+            });
+            continue;
+          }
+
           const result = await response.json();
           if (result.success) {
             savedCount++;
           } else {
             errorCount++;
+            failedDetections.push({
+              name: detection.name || detection.title || 'Unknown Detection',
+              reason: result.error || result.message || 'Unknown error occurred'
+            });
           }
         } catch (error) {
           console.error('Error saving detection:', error);
           errorCount++;
+          failedDetections.push({
+            name: detection.name || detection.title || 'Unknown Detection',
+            reason: error.message || 'Network or server error'
+          });
         }
       }
     }
@@ -1662,11 +1688,46 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
     // Save all correlations
     for (const correlation of correlations) {
       try {
+        // Safely get correlation title
+        const getCorrelationTitle = (corr) => {
+          // Check for techniques field
+          if (corr.techniques && Array.isArray(corr.techniques) && corr.techniques.length > 0) {
+            return `Correlation: ${corr.techniques.map(t => t.id || t).join(', ')}`;
+          }
+
+          // Extract technique names from file paths (a and b fields)
+          if (corr.a && corr.b) {
+            const extractTechniqueName = (path) => {
+              // Extract filename from path like "data/generate/TrustModification_edr_events.yaml"
+              const filename = path.split('/').pop();
+              // Get technique name before first underscore
+              const techName = filename.split('_')[0];
+              return techName;
+            };
+            const techA = extractTechniqueName(corr.a);
+            const techB = extractTechniqueName(corr.b);
+            const vendor = corr.vendor ? ` (${corr.vendor.charAt(0).toUpperCase() + corr.vendor.slice(1)})` : '';
+            return `${techA} + ${techB}${vendor}`;
+          }
+
+          // Fallback to provided title/name
+          if (corr.title && corr.title !== corr.vendor) {
+            return corr.title;
+          } else if (corr.name && corr.name !== corr.vendor) {
+            return corr.name;
+          }
+
+          // Last resort: use vendor name if nothing else available
+          return corr.vendor ? `Correlation (${corr.vendor.charAt(0).toUpperCase() + corr.vendor.slice(1)})` : 'Correlation';
+        };
+
+        const correlationTitle = getCorrelationTitle(correlation);
+
         const response = await fetch('/api/library/save', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
-            title: `Correlation: ${correlation.techniques.map(t => t.id).join(', ')}`,
+            title: correlationTitle,
             detection_type: 'sole_correlation',
             visibility: 'private',
             content: correlation,
@@ -1677,40 +1738,109 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
           })
         });
 
+        if (!response.ok) {
+          // Handle HTTP error responses
+          errorCount++;
+          let errorMsg = `HTTP ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.detail || errorData.message || errorMsg;
+          } catch (e) {
+            errorMsg = await response.text() || errorMsg;
+          }
+          failedDetections.push({
+            name: correlationTitle,
+            reason: errorMsg
+          });
+          continue;
+        }
+
         const result = await response.json();
         if (result.success) {
           savedCount++;
         } else {
           errorCount++;
+          failedDetections.push({
+            name: correlationTitle,
+            reason: result.error || result.message || 'Unknown error occurred'
+          });
         }
       } catch (error) {
         console.error('Error saving correlation:', error);
         errorCount++;
+        const safeName = correlation.title || correlation.name || 'Correlation';
+        failedDetections.push({
+          name: safeName,
+          reason: error.message || 'Network or server error'
+        });
       }
     }
 
     // Show success message
     console.log(`Save complete: ${savedCount} saved, ${errorCount} errors`);
     if (savedCount > 0) {
-      const autoTagMsg = group ? ` (auto-tagged: <strong>Group:${group}</strong>)` : cve ? ` (auto-tagged: <strong>CVE:${cve}</strong>)` : '';
-      const errorMsg = errorCount > 0 ? `<p style="color: #C53030;">${errorCount} detection(s) failed to save.</p>` : '';
+      let errorMsg = '';
+      if (errorCount > 0 && failedDetections.length > 0) {
+        const failedList = failedDetections.map(f =>
+          `<div style="margin: 4px 0; padding: 8px; background: #f8f9fa; border-left: 3px solid #C53030; font-size: 0.9em;">
+            <strong>${f.name}</strong><br>
+            <span style="color: #666;">Reason: ${f.reason}</span>
+          </div>`
+        ).join('');
+        errorMsg = `
+          <div style="margin-top: 16px;">
+            <div onclick="document.getElementById('failed-list').style.display = document.getElementById('failed-list').style.display === 'none' ? 'block' : 'none'; document.getElementById('arrow-icon').textContent = document.getElementById('arrow-icon').textContent === '▶' ? '▼' : '▶';"
+                 style="color: #C53030; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px;">
+              <span id="arrow-icon" style="font-size: 0.8em;">▶</span>
+              <span style="font-weight: 600;">${errorCount} detection(s) failed to save</span>
+            </div>
+            <div id="failed-list" style="display: none; margin-top: 8px; max-height: 300px; overflow-y: auto;">
+              ${failedList}
+            </div>
+          </div>
+        `;
+      }
       await showModal(
-        'Success!',
-        `<p>Successfully saved <strong>${savedCount} detection(s)</strong> to library${autoTagMsg}!</p>${errorMsg}`,
+        'Save Complete',
+        `<p>Successfully saved <strong>${savedCount} detection(s)</strong> to library.</p>${errorMsg}`,
         'OK'
       );
     } else {
+      // All saves failed - show error details
+      let errorMsg = 'No detections were saved.';
+      if (failedDetections.length > 0) {
+        const failedList = failedDetections.map(f =>
+          `<div style="margin: 4px 0; padding: 8px; background: #f8f9fa; border-left: 3px solid #C53030; font-size: 0.9em;">
+            <strong>${f.name}</strong><br>
+            <span style="color: #666;">Reason: ${f.reason}</span>
+          </div>`
+        ).join('');
+        errorMsg = `
+          <p>No detections were saved. See errors below:</p>
+          <div style="margin-top: 16px;">
+            <div onclick="document.getElementById('all-failed-list').style.display = document.getElementById('all-failed-list').style.display === 'none' ? 'block' : 'none'; document.getElementById('all-failed-arrow').textContent = document.getElementById('all-failed-arrow').textContent === '▶' ? '▼' : '▶';"
+                 style="color: #C53030; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px;">
+              <span id="all-failed-arrow" style="font-size: 0.8em;">▶</span>
+              <span style="font-weight: 600;">${failedDetections.length} detection(s) failed to save</span>
+            </div>
+            <div id="all-failed-list" style="display: none; margin-top: 8px; max-height: 300px; overflow-y: auto;">
+              ${failedList}
+            </div>
+          </div>
+        `;
+      }
       await showModal(
-        'Error',
-        'No detections were saved. Please try again.',
+        'Save Failed',
+        errorMsg,
         'OK'
       );
     }
   } catch (error) {
     console.error('Error saving to library:', error);
+    console.error('Error stack:', error.stack);
     await showModal(
       'Error',
-      'Failed to save to library. Please try again.',
+      `Failed to save to library: ${error.message || 'Unknown error'}. Check console for details.`,
       'OK'
     );
   }

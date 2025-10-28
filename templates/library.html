@@ -357,6 +357,13 @@
                 </svg>
                 Tags
               </button>
+              <button id="filter-tags-btn" class="btn-export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Filter
+              </button>
               <button id="toggle-visibility-btn" class="btn-export" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -448,7 +455,7 @@
           Select an action for <span id="tags-action-count">0</span> selected item(s).
         </p>
 
-        <div style="margin-bottom: 24px;">
+        <div style="margin-bottom: 0;">
           <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; background: var(--bg-primary);" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--border-color)'">
             <input type="radio" name="tag-action" id="tag-action-add" value="add" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer; accent-color: var(--accent);">
             <div>
@@ -474,11 +481,11 @@
           </label>
         </div>
 
-        <div class="flex-row" style="align-items: stretch;">
-          <button id="cancel-tags-action-btn" class="btn-secondary">
+        <div style="display: flex; align-items: flex-end; gap: 12px; margin-top: 24px;">
+          <button id="cancel-tags-action-btn" class="btn-secondary" style="padding: 14px 20px; height: auto;">
             Cancel
           </button>
-          <button id="continue-tags-action-btn" class="btn-primary">
+          <button id="continue-tags-action-btn" class="btn-primary" style="padding: 14px 20px; height: auto;">
             Continue
           </button>
         </div>
@@ -500,7 +507,7 @@
           </p>
         </div>
 
-        <div class="flex-row" style="align-items: stretch;">
+        <div class="flex-row" style="align-items: center; gap: 12px; justify-content: flex-end; margin-top: 20px;">
           <button id="cancel-tags-input-btn" class="btn-secondary">
             Cancel
           </button>
@@ -545,12 +552,39 @@
           </label>
         </div>
 
-        <div class="flex-row" style="align-items: stretch;">
-          <button id="cancel-export-btn" class="btn-secondary">
+        <div class="flex-row" style="align-items: center; gap: 12px; justify-content: flex-end;">
+          <button id="cancel-export-btn" class="btn-primary" style="background: var(--bg-secondary); color: var(--text-primary); border: 2px solid var(--border-color);">
             Cancel
           </button>
           <button id="download-export-btn" class="btn-primary">
             Download
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Tags Modal -->
+    <div id="filter-tags-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+      <div style="background: var(--bg-secondary); border-radius: 8px; padding: 30px; max-width: 500px; width: 90%; max-height: 80vh; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+        <h2 style="margin-top: 0; color: var(--text-primary); font-size: 1.5em;">Filter by Tags</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+          Select tags to filter detections. Multiple tags can be selected.
+        </p>
+
+        <div id="filter-tags-list" style="flex: 1; overflow-y: auto; margin-bottom: 20px; max-height: 400px; border: 2px solid var(--border-color); border-radius: 6px; padding: 12px; background: var(--bg-primary);">
+          <!-- Tags will be populated dynamically -->
+          <p style="color: var(--text-secondary); text-align: center; padding: 20px;">Loading tags...</p>
+        </div>
+
+        <div style="display: flex; align-items: flex-end; gap: 12px; justify-content: flex-end; margin-top: 0;">
+          <button id="clear-filter-btn" class="btn-secondary" style="padding: 14px 20px; height: auto;">
+            Clear
+          </button>
+          <button id="cancel-filter-btn" class="btn-secondary" style="padding: 14px 20px; height: auto;">
+            Cancel
+          </button>
+          <button id="apply-filter-btn" class="btn-primary" style="padding: 14px 20px; height: auto;">
+            Apply Filter
           </button>
         </div>
       </div>
@@ -912,11 +946,29 @@
                 if (result.success) {
                     allDetections = result.detections;
                     selectedIds.clear();
-                    renderTable(allDetections);
+                    applyFilters();
                 }
             } catch (error) {
                 console.error('Search error:', error);
             }
+        }
+
+        // Apply filters including tag filtering
+        function applyFilters() {
+            let filteredDetections = allDetections;
+
+            // Apply tag filter if active
+            if (activeTagFilters.length > 0) {
+                filteredDetections = filteredDetections.filter(detection => {
+                    if (!detection.tags || !Array.isArray(detection.tags)) {
+                        return false;
+                    }
+                    // Check if detection has ANY of the selected tags
+                    return activeTagFilters.some(filterTag => detection.tags.includes(filterTag));
+                });
+            }
+
+            renderTable(filteredDetections);
         }
 
         // Helper functions
@@ -1242,13 +1294,39 @@
             // Tags button
             document.getElementById('tags-btn').addEventListener('click', openTagsActionModal);
 
+            // Filter tags button
+            document.getElementById('filter-tags-btn').addEventListener('click', openFilterTagsModal);
+
             // Tags action modal buttons
-            document.getElementById('cancel-tags-action-btn').addEventListener('click', closeTagsActionModal);
-            document.getElementById('continue-tags-action-btn').addEventListener('click', continueTagsAction);
+            const cancelTagsActionBtn = document.getElementById('cancel-tags-action-btn');
+            const continueTagsActionBtn = document.getElementById('continue-tags-action-btn');
+
+            console.log('Cancel tags action button:', cancelTagsActionBtn);
+            console.log('Continue tags action button:', continueTagsActionBtn);
+
+            if (cancelTagsActionBtn) {
+                cancelTagsActionBtn.addEventListener('click', closeTagsActionModal);
+            } else {
+                console.error('cancel-tags-action-btn not found');
+            }
+
+            if (continueTagsActionBtn) {
+                continueTagsActionBtn.addEventListener('click', function(e) {
+                    console.log('Continue button clicked!', e);
+                    continueTagsAction();
+                });
+            } else {
+                console.error('continue-tags-action-btn not found');
+            }
 
             // Tags input modal buttons
             document.getElementById('cancel-tags-input-btn').addEventListener('click', closeTagsInputModal);
             document.getElementById('save-tags-btn').addEventListener('click', saveTags);
+
+            // Filter tags modal buttons
+            document.getElementById('cancel-filter-btn').addEventListener('click', closeFilterTagsModal);
+            document.getElementById('clear-filter-btn').addEventListener('click', clearTagFilter);
+            document.getElementById('apply-filter-btn').addEventListener('click', applyTagFilter);
 
             // Close modal on background click
             document.getElementById('tags-action-modal').addEventListener('click', function(e) {
@@ -1259,6 +1337,11 @@
             document.getElementById('tags-input-modal').addEventListener('click', function(e) {
                 if (e.target.id === 'tags-input-modal') {
                     closeTagsInputModal();
+                }
+            });
+            document.getElementById('filter-tags-modal').addEventListener('click', function(e) {
+                if (e.target.id === 'filter-tags-modal') {
+                    closeFilterTagsModal();
                 }
             });
 
@@ -1287,27 +1370,36 @@
 
         // Continue with selected tag action
         async function continueTagsAction() {
-            const addChecked = document.getElementById('tag-action-add').checked;
-            const editChecked = document.getElementById('tag-action-edit').checked;
-            const removeChecked = document.getElementById('tag-action-remove').checked;
+            console.log('continueTagsAction function called');
 
-            if (!addChecked && !editChecked && !removeChecked) {
-                alert('Please select an action');
-                return;
-            }
+            try {
+                const addChecked = document.getElementById('tag-action-add').checked;
+                const editChecked = document.getElementById('tag-action-edit').checked;
+                const removeChecked = document.getElementById('tag-action-remove').checked;
 
-            closeTagsActionModal();
+                console.log('Checked states:', { addChecked, editChecked, removeChecked });
 
-            if (removeChecked) {
-                // Show warning and remove all tags
-                const confirmed = confirm(`⚠️ Warning: This will remove ALL tags from ${selectedIds.size} selected item(s).\n\nAre you sure you want to continue?`);
-                if (confirmed) {
-                    await removeTags();
+                if (!addChecked && !editChecked && !removeChecked) {
+                    alert('Please select an action');
+                    return;
                 }
-            } else if (addChecked) {
-                openTagsInputModal('add');
-            } else if (editChecked) {
-                openTagsInputModal('edit');
+
+                closeTagsActionModal();
+
+                if (removeChecked) {
+                    // Show warning and remove all tags
+                    const confirmed = confirm(`⚠️ Warning: This will remove ALL tags from ${selectedIds.size} selected item(s).\n\nAre you sure you want to continue?`);
+                    if (confirmed) {
+                        await removeTags();
+                    }
+                } else if (addChecked) {
+                    openTagsInputModal('add');
+                } else if (editChecked) {
+                    openTagsInputModal('edit');
+                }
+            } catch (error) {
+                console.error('Error in continueTagsAction:', error);
+                alert('An error occurred: ' + error.message);
             }
         }
 
@@ -1599,6 +1691,60 @@
                     moonIcon.style.display = 'none';
                 }
             });
+        }
+
+        // Global variable to store active tag filters
+        let activeTagFilters = [];
+
+        // Open filter tags modal
+        function openFilterTagsModal() {
+            // Collect all unique tags from all detections
+            const allTags = new Set();
+            allDetections.forEach(detection => {
+                if (detection.tags && Array.isArray(detection.tags)) {
+                    detection.tags.forEach(tag => allTags.add(tag));
+                }
+            });
+
+            const sortedTags = Array.from(allTags).sort();
+            const filterList = document.getElementById('filter-tags-list');
+
+            if (sortedTags.length === 0) {
+                filterList.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No tags available</p>';
+            } else {
+                filterList.innerHTML = sortedTags.map(tag => `
+                    <label style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background 0.2s;"
+                           onmouseover="this.style.background='var(--bg-secondary)'"
+                           onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" value="${tag}" ${activeTagFilters.includes(tag) ? 'checked' : ''}
+                               style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer; accent-color: var(--accent);">
+                        <span style="color: var(--text-primary); font-size: 0.95em;">${tag}</span>
+                    </label>
+                `).join('');
+            }
+
+            document.getElementById('filter-tags-modal').style.display = 'flex';
+        }
+
+        // Close filter tags modal
+        function closeFilterTagsModal() {
+            document.getElementById('filter-tags-modal').style.display = 'none';
+        }
+
+        // Clear tag filter
+        function clearTagFilter() {
+            activeTagFilters = [];
+            const checkboxes = document.querySelectorAll('#filter-tags-list input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+
+        // Apply tag filter
+        function applyTagFilter() {
+            const checkboxes = document.querySelectorAll('#filter-tags-list input[type="checkbox"]:checked');
+            activeTagFilters = Array.from(checkboxes).map(cb => cb.value);
+
+            closeFilterTagsModal();
+            applyFilters(); // Re-apply all filters with the new tag filter
         }
     </script>
 </body>
