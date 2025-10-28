@@ -42,7 +42,7 @@ import os
 """
 
 
-def collate_data(identifiers, log_sources, procedure_platforms, software_platforms):
+def collate_data(identifiers, log_sources, procedure_platforms, software_platforms, detection_name=""):
     # Map identified log_sources with the data sources and return the logging table/indexes
     with open(
         os.path.join("archer", "mappings", "dataSources.json")
@@ -91,7 +91,7 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
             if indicator_type in indicator_mapping:
                 # Mapping and building MDE queries
                 mde_queries = compile_mde_queries(
-                    indicator_mapping, indicators, indicator_type, mde_queries
+                    indicator_mapping, indicators, indicator_type, mde_queries, detection_name
                 )
 
                 appended_mde_queries = []
@@ -104,7 +104,7 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
 
                 # Mapping and building Splunk queries
                 splunk_queries = compile_splunk_queries(
-                    indicator_mapping, indicators, indicator_type, splunk_queries
+                    indicator_mapping, indicators, indicator_type, splunk_queries, None, detection_name
                 )
 
                 appended_splunk_queries = []

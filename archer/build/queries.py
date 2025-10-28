@@ -1,6 +1,7 @@
 import os
 import json
 from pathlib import Path
+from archer.build.malware_iocs import enrich_indicators_with_iocs, log_ioc_enrichment
 
 
 def load_splunk_schema():
@@ -107,12 +108,22 @@ def compile_search_clause(field_value_pairs):
     return result
 
 
-def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queries):
+def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queries, detection_name=""):
+    # Enrich indicators with malware IOCs before building queries
+    enriched_indicators, ioc_metadata = enrich_indicators_with_iocs(indicators, indicator_type)
+
+    # Log enrichment if any occurred
+    if ioc_metadata and ioc_metadata.get("enriched_iocs"):
+        log_ioc_enrichment(detection_name or "MDE Detection", ioc_metadata)
+
+    # Use enriched indicators for query building
+    indicators_to_use = enriched_indicators if enriched_indicators else indicators
+
     # Mapping and building MDE queries
     for table, fields in indicator_mapping[indicator_type]["MDE"].items():
         has_all_indicators = []
         has_any_indicators = []
-        for indicator in indicators:
+        for indicator in indicators_to_use:
             if " " in indicator:
                 # Split into parts for has_all
                 parts = [part.strip() for part in indicator.split()]
@@ -137,13 +148,20 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
         condition = " or ".join(
             [f"{field} {clause}" for field in fields for clause in indicator_clauses]
         )
-        mde_queries.append(f"{table}\n| where Timestamp > ago(1d)\n| where {condition}")
+
+        # Add malware family name as comment if enrichment occurred
+        query = f"{table}\n| where Timestamp > ago(1d)\n| where {condition}"
+        if ioc_metadata and ioc_metadata.get("malware_family_names"):
+            malware_names_str = ", ".join(ioc_metadata["malware_family_names"])
+            query += f" // {malware_names_str}"
+
+        mde_queries.append(query)
 
     return mde_queries
 
 
 def compile_splunk_queries(
-    indicator_mapping, indicators, indicator_type, splunk_queries, osint_indicators=None
+    indicator_mapping, indicators, indicator_type, splunk_queries, osint_indicators=None, detection_name=""
 ):
     """
     Builds Splunk queries with proper structure:
@@ -157,10 +175,21 @@ def compile_splunk_queries(
         indicator_type: Type of indicator (cmd, reg, evt, sw, cve, operation, etc.)
         splunk_queries: List to append queries to
         osint_indicators: Optional dict of OSINT-extracted indicators {field: [values]}
+        detection_name: Name of the detection for logging purposes
 
     Returns:
         Updated splunk_queries list
     """
+    # Enrich indicators with malware IOCs before building queries
+    enriched_indicators, ioc_metadata = enrich_indicators_with_iocs(indicators, indicator_type)
+
+    # Log enrichment if any occurred
+    if ioc_metadata and ioc_metadata.get("enriched_iocs"):
+        log_ioc_enrichment(detection_name or "Splunk Detection", ioc_metadata)
+
+    # Use enriched indicators for query building
+    indicators_to_use = enriched_indicators if enriched_indicators else indicators
+
     # Get transformation pipeline from schema
     transformation_pipeline = SPLUNK_SCHEMA.get(indicator_type, {})
 
@@ -188,7 +217,7 @@ def compile_splunk_queries(
             if matched_field:
                 if matched_field not in field_value_pairs:
                     field_value_pairs[matched_field] = []
-                field_value_pairs[matched_field].extend(indicators)
+                field_value_pairs[matched_field].extend(indicators_to_use)
             else:
                 # Field from indicatorMapping.json not found in pipeline
                 # Log warning but continue (don't break the entire query)
@@ -225,6 +254,11 @@ def compile_splunk_queries(
 
         # Build final query with proper structure
         query = f"index={index} earliest=-1d\n{pipeline}\n| search {search_clause}"
+
+        # Add malware family name as comment if enrichment occurred
+        if ioc_metadata and ioc_metadata.get("malware_family_names"):
+            malware_names_str = ", ".join(ioc_metadata["malware_family_names"])
+            query += f" ```{malware_names_str}```"
 
         splunk_queries.append(query)
 

@@ -456,12 +456,16 @@ def extract_indicators_from_sources(indicators_data: List[Dict]) -> Dict[str, Li
             snippet = indicator_info["query_snippet"]
             source_url = indicator_info.get("source_url", "")
             if snippet and len(snippet) > 20:  # Only include meaningful snippets
+                # Remove newlines and extra whitespace to keep snippet on one line
+                snippet = " ".join(snippet.split())
                 extracted["query_snippets"].append(f"[{source}] {snippet}|||{source_url}")
 
         if "search_snippet" in indicator_info:
             snippet = indicator_info["search_snippet"]
             source_url = indicator_info.get("source_url", "")
             if snippet and len(snippet) > 20:
+                # Remove newlines and extra whitespace to keep snippet on one line
+                snippet = " ".join(snippet.split())
                 extracted["query_snippets"].append(f"[{source}] {snippet}|||{source_url}")
 
     # Remove duplicates and empty values, limit to reasonable numbers

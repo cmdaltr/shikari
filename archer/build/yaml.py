@@ -240,7 +240,8 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, o
                     for value in values:
                         # Use YAML library to properly escape the value
                         # This handles all special characters including backslashes
-                        yaml_str = yaml_module.dump([value], default_flow_style=False)
+                        # Use width=1000000 to prevent line wrapping
+                        yaml_str = yaml_module.dump([value], default_flow_style=False, width=1000000)
                         # Extract just the value part (remove the list syntax)
                         yaml_value = yaml_str.strip().replace('- ', '', 1).strip()
                         osint_section += f'    - {yaml_value}\n'
@@ -318,7 +319,7 @@ def construct_yaml(
     print(f"🔍 DEBUG construct_yaml for {tid}: osint_enhancement_data={osint_enhancement_data is not None}, osint_enhancement={osint_enhancement}")
 
     appended_mde_queries, appended_splunk_queries = collate_data(
-        identifiers, log_sources, procedure_platforms, software_platforms
+        identifiers, log_sources, procedure_platforms, software_platforms, name
     )
 
     # Apply OSINT enhancement if requested (merge OSINT patterns into queries)
