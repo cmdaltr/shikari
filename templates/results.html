@@ -789,7 +789,7 @@ body, html {
   <div class="results-container">
     <!-- Page heading -->
     <p class="lead">
-      Results for<br><span style="color:#8B0000">{{ group_name.replace('_', ' ') }}</span>.
+      Results for<br><span style="color:#8B0000; font-size: 28px;">{{ group_name.replace('_', ' ') }}</span>
     </p>
 
     <!-- Executive Summary Cards -->
@@ -970,8 +970,8 @@ body, html {
               <div class="detection-title" style="position: relative;">
                 <div style="display: flex; align-items: center; flex: 1;">
                   <input type="checkbox" class="detection-checkbox" {% if not detection.needs_review %}checked{% endif %} data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
-                  <span class="detection-technique">{{ detection.technique }}</span>
-                  {% if detection.osint_enhanced %}
+                  <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}">{{ detection.technique }}</span>
+                  {% if detection.osint_enriched %}
                   <span class="osint-enhanced-badge" title="This detection was enhanced with additional indicators from OSINT sources merged into the query logic.">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                       <circle cx="12" cy="12" r="10"/>
@@ -992,7 +992,7 @@ body, html {
                 </div>
                 {% if detection.osint_data %}
                 <button onclick="toggleOsintDetails('det-osint-{{ vendor.name }}-{{ loop.index }}-details')" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 500; margin-left: 12px; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3b82f6'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#3b82f6';">
-                  {% if detection.osint_enhanced %}Show Enhancement{% else %}Show Comparison{% endif %}
+                  {% if detection.osint_enriched %}Show Enhancement{% else %}Show Comparison{% endif %}
                 </button>
                 {% endif %}
               </div>
@@ -1016,7 +1016,7 @@ body, html {
                     <circle cx="12" cy="12" r="10"/>
                     <path d="M12 16v-4M12 8h.01"/>
                   </svg>
-                  {% if detection.osint_enhanced %}OSINT Enhancement Details{% else %}OSINT Comparison Details{% endif %}
+                  {% if detection.osint_enriched %}OSINT Enhancement Details{% else %}OSINT Comparison Details{% endif %}
                 </div>
                 <div style="font-size: 0.9em; color: #333;">
                   {% if detection.osint_data.indicators %}

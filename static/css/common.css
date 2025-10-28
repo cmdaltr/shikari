@@ -139,6 +139,39 @@ html, body {
     flex-shrink: 0;
 }
 
+/* Purple badge for OSINT-enhanced detections */
+.osint-enhanced-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #7C3AED;
+    color: #FFFFFF;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: help;
+    transition: all 0.2s;
+}
+
+.osint-enhanced-badge:hover {
+    background: #6D28D9;
+}
+
+.osint-enhanced-badge svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* Orange highlighting for enhanced technique names */
+.detection-technique.osint-enhanced {
+    background: #FFEDD5;
+    color: #9A3412;
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
 /* ========== Utility Classes ========== */
 .flex-row {
     display: flex;

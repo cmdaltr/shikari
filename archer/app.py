@@ -345,6 +345,11 @@ def check_osint_enriched(yaml_file):
             # Check for OSINT enhancement (optional - checkbox feature)
             has_osint_enhancement = "osint_enhanced: true" in content
 
+            # Debug logging
+            print(f"🔍 DEBUG check_osint_enriched for {yaml_file}:")
+            print(f"   has_osint_comparison: {has_osint_comparison}")
+            print(f"   has_osint_enhancement: {has_osint_enhancement}")
+
             if has_osint_comparison:
                 osint_data = {}
 
@@ -915,6 +920,10 @@ async def generate(
 ):
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
+
+    # Debug: Log OSINT enhancement parameter
+    print(f"🔍 DEBUG /generate endpoint: osint_enhancement raw value = '{osint_enhancement}'")
+    print(f"🔍 DEBUG /generate endpoint: osint_enhancement boolean = {osint_enhancement == 'true'}")
 
     # Determine GENAI_MODE based on checkboxes (priority order)
     genai_mode = None
@@ -3065,6 +3074,12 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
             # Check for OSINT enrichment
             is_osint_enriched, osint_data = check_osint_enriched(yaml_file)
+
+            # Debug: Log what we're passing to template
+            if is_osint_enriched or osint_data:
+                print(f"📤 DEBUG passing to template: {filename}")
+                print(f"   is_osint_enriched: {is_osint_enriched}")
+                print(f"   osint_data present: {bool(osint_data)}")
 
             # Extract the query from YAML for preview
             yaml_data = load_yaml_file(yaml_file)

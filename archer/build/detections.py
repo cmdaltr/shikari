@@ -278,20 +278,55 @@ def compile_query(retrieved_data, osint_enhancement=False):
             osint_enhancement_data = osint_data
 
             # Only merge OSINT indicators if enhancement is enabled
+            print(f" 🔍 DEBUG detections.py - osint_enhancement flag value: {osint_enhancement}")
             if osint_enhancement:
-                print(f" 🔧 OSINT Enhancement enabled - merging indicators into query...")
-                osint_indicators = osint_data.get("osint_indicators", {})
-                for indicator_type, osint_values in osint_indicators.items():
-                    if indicator_type in identifiers:
-                        # Merge with existing indicators
-                        if isinstance(identifiers[indicator_type], list):
-                            identifiers[indicator_type].extend(osint_values)
-                            # Remove duplicates
-                            identifiers[indicator_type] = list(set(identifiers[indicator_type]))
-                    else:
-                        # Add new indicator type
-                        identifiers[indicator_type] = osint_values
+                print(f" 🔧 OSINT Enhancement ENABLED - extracting and merging indicators from OSINT queries...")
+
+                # Extract indicators from OSINT query snippets
+                osint_indicators_raw = osint_data.get("osint_indicators", {})
+                query_snippets = osint_indicators_raw.get("query_snippets", [])
+
+                # Extract operation names and other searchable values from query snippets
+                extracted_operations = []
+                extracted_commands = []
+
+                import re
+                for snippet in query_snippets:
+                    # Extract from snippet (format: [Source] query|||url)
+                    if isinstance(snippet, str) and '|||' in snippet:
+                        query_part = snippet.split('|||')[0]
+
+                        # Extract Operation/operationName values
+                        # Pattern: Operation IN ("value1", "value2") or operationName="value"
+                        op_patterns = [
+                            r'[Oo]peration(?:Name)?\s+IN\s*\(["\']([^"\']+)["\'](?:\s*,\s*["\']([^"\']+)["\'])*\)',
+                            r'[Oo]peration(?:Name)?\s*[=:]\s*["\']([^"\']+)["\']',
+                        ]
+
+                        for pattern in op_patterns:
+                            matches = re.findall(pattern, query_part)
+                            for match in matches:
+                                if isinstance(match, tuple):
+                                    extracted_operations.extend([m for m in match if m])
+                                else:
+                                    extracted_operations.append(match)
+
+                # Add extracted operations to identifiers
+                if extracted_operations:
+                    # Remove duplicates and clean up
+                    extracted_operations = list(set([op.strip().rstrip('.') for op in extracted_operations if op]))
+
+                    if 'operation' not in identifiers:
+                        identifiers['operation'] = []
+
+                    identifiers['operation'].extend(extracted_operations)
+                    identifiers['operation'] = list(set(identifiers['operation']))  # Remove duplicates
+
+                    print(f" 📊 Extracted {len(extracted_operations)} operation(s) from OSINT queries: {extracted_operations[:5]}")
+
                 print(f" 📈 Enhanced indicator count: {sum(len(v) if isinstance(v, list) else 1 for v in identifiers.values())}")
+            else:
+                print(f" ℹ️  OSINT Enhancement DISABLED - OSINT data will be included as reference only (not merged into queries)")
         else:
             print(f" ℹ️  No additional OSINT patterns found")
 

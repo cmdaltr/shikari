@@ -409,6 +409,16 @@ document.addEventListener('DOMContentLoaded', function () {
       showLoading(displayName);
 
       var formData = new FormData(form);
+
+      // Explicitly add osint_enhancement checkbox value (forms don't send unchecked checkboxes)
+      var osintEnhancementCheckbox = document.getElementById('osint-enhancement-checkbox');
+      if (osintEnhancementCheckbox) {
+        // Remove existing value if present
+        formData.delete('osint_enhancement');
+        // Add explicit true/false value
+        formData.append('osint_enhancement', osintEnhancementCheckbox.checked ? 'true' : 'false');
+      }
+
       fetch(endpoint, {
         method: 'POST',
         body: formData,
