@@ -113,37 +113,6 @@
         height: 20px;
       }
 
-      /* Fixed position buttons - aligned with 1200px content edge */
-      .back-link {
-        position: fixed !important;
-        top: 20px !important;
-        left: calc((100vw - 1200px) / 2) !important;
-        z-index: 10000 !important;
-        color: var(--accent);
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.95em;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 16px;
-        min-height: 40px;
-        border: 2px solid var(--accent);
-        border-radius: 6px;
-        background: rgba(255, 255, 255, 0.95);
-        transition: all 0.2s;
-        box-sizing: border-box;
-      }
-
-      [data-theme="dark"] .back-link {
-        background: rgba(45, 45, 45, 0.95);
-      }
-
-      .back-link:hover {
-        background: var(--accent);
-        color: white;
-      }
-
       /* Fixed position button - aligned with 1200px content edge */
       .how-archer-link {
         position: fixed !important;
@@ -241,15 +210,6 @@
     </div>
     {% block content %}
     <div id="main-content" class="page-shell">
-      <!-- Home button - top left -->
-      <a href="/" class="back-link">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        Home
-      </a>
-
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2em; padding-top: 80px; position: relative;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">
