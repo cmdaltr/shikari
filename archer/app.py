@@ -4040,6 +4040,16 @@ async def register_page(request: Request, response: Response):
     return template_response
 
 
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    """
+    Render the forgot password page (coming soon).
+    """
+    return templates.TemplateResponse(
+        "forgot_password.html", {"request": request}
+    )
+
+
 @app.post("/register")
 async def register(
     request: Request,
