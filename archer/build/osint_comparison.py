@@ -623,3 +623,203 @@ def should_create_detection(has_mitre_indicators: bool, osint_found: bool) -> bo
 # YELLOW: "Needs Review" - detections with indicators but may need validation
 # ORANGE: "Needs Review - compared with additional OSINT sources" - detections created from OSINT only
 # (No badge): Normal detections with indicators from MITRE
+
+
+def filter_osint_indicators_by_relevance(
+    osint_indicators: Dict[str, List[str]],
+    technique_id: str,
+    platform: str,
+    min_relevance_score: float = 0.7
+) -> Dict[str, List[str]]:
+    """
+    Filter OSINT indicators by relevance to technique and platform.
+
+    Uses platform_indicator_validator to check if indicators are valid for the
+    technique and platform combination.
+
+    Args:
+        osint_indicators: Dict of {indicator_type: [values]}
+        technique_id: MITRE ATT&CK technique ID
+        platform: Target platform (Windows, Linux, Azure AD, AWS, etc.)
+        min_relevance_score: Minimum score to include (0.0-1.0)
+
+    Returns:
+        Filtered indicators dict with only relevant indicators
+    """
+    try:
+        from .platform_indicator_validator import validate_indicators_for_platform
+
+        # Validate all indicators
+        _, error_messages, filtered_indicators = validate_indicators_for_platform(
+            osint_indicators,
+            platform,
+            technique_id
+        )
+
+        if error_messages:
+            logger.info(f"Filtered {len(error_messages)} OSINT indicators for {technique_id} on {platform}")
+            for msg in error_messages[:3]:
+                logger.debug(f"  - {msg}")
+
+        return filtered_indicators
+
+    except ImportError:
+        logger.warning("Platform indicator validator not available, skipping OSINT filtering")
+        return osint_indicators
+
+
+def score_osint_indicator_relevance(
+    indicator: str,
+    indicator_type: str,
+    technique_id: str,
+    platform: str,
+    osint_source: str = ""
+) -> float:
+    """
+    Score how relevant an OSINT indicator is to the current detection.
+
+    Returns 0.0-1.0 where:
+    - 1.0 = Perfect match (valid for technique and platform)
+    - 0.5 = Partial match (valid for technique but generic)
+    - 0.0 = Invalid (wrong platform or unrelated)
+
+    Args:
+        indicator: The indicator value
+        indicator_type: Type (cmd, evt, sw, api, operation)
+        technique_id: MITRE ATT&CK technique ID
+        platform: Target platform
+        osint_source: Source of the indicator (Sigma, Elastic, etc.)
+
+    Returns:
+        Relevance score (0.0-1.0)
+    """
+    try:
+        from .platform_indicator_validator import validate_indicator_for_platform
+
+        # Check if indicator is valid for this technique/platform
+        is_valid, reason = validate_indicator_for_platform(
+            indicator,
+            indicator_type,
+            platform,
+            technique_id
+        )
+
+        if not is_valid:
+            # Invalid indicator = 0 score
+            return 0.0
+
+        # Valid indicator = base score of 0.7
+        score = 0.7
+
+        # Boost score for specific sources
+        if "Sigma" in osint_source:
+            score += 0.1  # Sigma rules are high quality
+        if "Elastic" in osint_source:
+            score += 0.1  # Elastic rules are well-tested
+        if "MITRE CAR" in osint_source:
+            score += 0.15  # MITRE CAR is authoritative
+
+        # Cap at 1.0
+        return min(score, 1.0)
+
+    except ImportError:
+        # Can't validate, return neutral score
+        return 0.5
+
+
+def extract_operations_from_osint_snippets(osint_indicators: Dict) -> Dict[str, List[str]]:
+    """
+    Extract structured API calls from OSINT query snippets.
+
+    This function parses query snippets to extract Azure operations, AWS API calls,
+    and other structured indicators that can be used directly in Splunk queries.
+
+    Args:
+        osint_indicators: Dictionary from OSINT comparison containing 'query_snippets'
+
+    Returns:
+        Dictionary with structured indicators by type:
+        - api: Azure operations (operation_name, operationName) and AWS API calls (event_name, api_call)
+        - cmd: Command line patterns
+    """
+    structured_indicators = {}
+
+    if not osint_indicators or "query_snippets" not in osint_indicators:
+        return structured_indicators
+
+    api_patterns = []  # Combined Azure operations and AWS API calls
+    cmd_patterns = []
+
+    for snippet_entry in osint_indicators["query_snippets"]:
+        # Format: [Source] snippet|||source_url
+        if "|||" not in snippet_entry:
+            continue
+
+        snippet = snippet_entry.split("|||")[0]
+
+        # Extract Azure operations from operation_name or operationName fields
+        # Patterns: operation_name:"Add member to role", operationName="Update role setting in PIM"
+        azure_op_patterns = [
+            r'operation_name[=:]"([^"]+)"',
+            r'operationName[=:]"([^"]+)"',
+            r'operation_name[=:]([A-Z][A-Za-z\s]+)',
+            r'operationName[=:]([A-Z][A-Za-z\s]+)'
+        ]
+
+        for pattern in azure_op_patterns:
+            matches = re.findall(pattern, snippet)
+            for match in matches:
+                # Clean up the operation name
+                op = match.strip()
+                if len(op) > 5 and not op.startswith("*"):  # Valid operation names
+                    api_patterns.append(op)
+
+        # Extract Azure activity_display_name or activityDisplayName
+        activity_patterns = [
+            r'activity_display_name[=:]"([^"]+)"',
+            r'activityDisplayName[=:]"([^"]+)"'
+        ]
+
+        for pattern in activity_patterns:
+            matches = re.findall(pattern, snippet)
+            for match in matches:
+                op = match.strip()
+                if len(op) > 5 and not op.startswith("*"):
+                    api_patterns.append(op)
+
+        # Extract AWS API calls from event.action or eventName
+        aws_api_patterns = [
+            r'event\.action[=:]"?([A-Z][A-Za-z]+)"?',
+            r'eventName[=:]"?([A-Z][A-Za-z]+)"?',
+            r'api\.operation[=:]"?([A-Z][A-Za-z]+)"?'
+        ]
+
+        for pattern in aws_api_patterns:
+            matches = re.findall(pattern, snippet)
+            for match in matches:
+                api = match.strip()
+                # AWS API calls typically start with uppercase
+                if len(api) > 3 and api[0].isupper():
+                    api_patterns.append(api)
+
+        # Extract command line patterns from process or command fields
+        cmd_field_patterns = [
+            r'process[=:]"([^"]+)"',
+            r'command[=:]"([^"]+)"',
+            r'CommandLine[=:]"([^"]+)"'
+        ]
+
+        for pattern in cmd_field_patterns:
+            matches = re.findall(pattern, snippet)
+            for match in matches:
+                cmd = match.strip()
+                if len(cmd) > 3:
+                    cmd_patterns.append(cmd)
+
+    # Remove duplicates and add to structured indicators
+    if api_patterns:
+        structured_indicators["api"] = list(set(api_patterns))
+    if cmd_patterns:
+        structured_indicators["cmd"] = list(set(cmd_patterns))
+
+    return structured_indicators

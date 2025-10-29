@@ -42,7 +42,17 @@ import os
 """
 
 
-def collate_data(identifiers, log_sources, procedure_platforms, software_platforms, detection_name=""):
+def collate_data(identifiers, log_sources, procedure_platforms, software_platforms, detection_name="", technique_id=None, osint_indicators=None):
+    from archer.build.platform_indicator_validator import normalize_platform_name
+    from archer.build.osint_comparison import extract_operations_from_osint_snippets
+
+    # Extract structured indicators from OSINT query snippets if provided
+    structured_osint_indicators = None
+    if osint_indicators:
+        structured_osint_indicators = extract_operations_from_osint_snippets(osint_indicators)
+        if structured_osint_indicators:
+            print(f"  📊 Extracted structured OSINT indicators: {list(structured_osint_indicators.keys())}")
+
     # Map identified log_sources with the data sources and return the logging table/indexes
     with open(
         os.path.join("archer", "mappings", "dataSources.json")
@@ -103,8 +113,21 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                     appended_mde_queries.append(appended_query)
 
                 # Mapping and building Splunk queries
+                # Extract platform from index name for validation
+                index_name = None
+                if "Splunk" in indicator_mapping.get(indicator_type, {}):
+                    splunk_indices = list(indicator_mapping[indicator_type]["Splunk"].keys())
+                    if splunk_indices:
+                        index_name = splunk_indices[0].replace("index=", "")
+                        platform = normalize_platform_name(index_name)
+                    else:
+                        platform = None
+                else:
+                    platform = None
+
                 splunk_queries = compile_splunk_queries(
-                    indicator_mapping, indicators, indicator_type, splunk_queries, None, detection_name
+                    indicator_mapping, indicators, indicator_type, splunk_queries, structured_osint_indicators, detection_name,
+                    platform=platform, technique_id=technique_id
                 )
 
                 appended_splunk_queries = []

@@ -198,6 +198,12 @@ def create_indicatorMappings():
 def compile_query(retrieved_data, osint_enhancement=False):
     from archer.build.queries import is_query_applicable
     from archer.build.platform_validator_v2 import validate_procedure_for_index
+    from archer.build.platform_indicator_validator import (
+        validate_indicators_for_platform,
+        normalize_platform_name,
+        validate_detection_before_generation
+    )
+    from archer.build.osint_comparison import filter_osint_indicators_by_relevance
 
     # Load indicator mappings
     indicator_mappings = load_indicator_mappings()
@@ -383,16 +389,39 @@ def compile_query(retrieved_data, osint_enhancement=False):
                         print(f"        procedure_platforms: {procedure_platforms}")
                         print(f"        index_platforms: {get_platforms_for_index(clean_index_name)}")
 
-                    # Check indicator-level platform compatibility (enhanced v2)
-                    # ONLY validate actual indicators, NOT procedure text (which has URLs and generic descriptions)
-                    print(f"     → validating indicator_text for {clean_index_name}: len={len(indicator_text)}, sample='{indicator_text[:80]}'")
-                    indicator_compatible = validate_procedure_for_index(
-                        indicator_text,  # CHANGED: Only validate actual indicators
-                        clean_index_name,
-                        vendor="Splunk",
-                        technique_desc=technique_description,
-                        technique_platforms=technique_platforms
+                    # NEW: Validate indicators using platform-indicator validator
+                    platform = normalize_platform_name(clean_index_name)
+                    indicator_dict = {indicator_type: indicators if isinstance(indicators, list) else [indicators]}
+
+                    should_generate, validation_error, filtered_indicators_dict = validate_detection_before_generation(
+                        technique_id=tid,
+                        platform=platform,
+                        data_source=clean_index_name,
+                        indicators=indicator_dict,
+                        strict_mode=False  # Allow with warnings
                     )
+
+                    if not should_generate:
+                        print(f"     ⚠️ Platform-indicator validation FAILED for {clean_index_name}: {validation_error}")
+                        indicator_compatible = False
+                    else:
+                        # Use filtered indicators (invalid ones removed)
+                        if filtered_indicators_dict and indicator_type in filtered_indicators_dict:
+                            filtered_count = len(filtered_indicators_dict[indicator_type])
+                            original_count = len(indicators) if isinstance(indicators, list) else 1
+                            if filtered_count < original_count:
+                                print(f"     ℹ️  Filtered {original_count - filtered_count} invalid indicators for {platform}")
+
+                        # Check indicator-level platform compatibility (enhanced v2)
+                        # ONLY validate actual indicators, NOT procedure text (which has URLs and generic descriptions)
+                        print(f"     → validating indicator_text for {clean_index_name}: len={len(indicator_text)}, sample='{indicator_text[:80]}'")
+                        indicator_compatible = validate_procedure_for_index(
+                            indicator_text,  # CHANGED: Only validate actual indicators
+                            clean_index_name,
+                            vendor="Splunk",
+                            technique_desc=technique_description,
+                            technique_platforms=technique_platforms
+                        )
 
                     # DEBUG: Log validation results
                     print(f"  🔍 {clean_index_name}: technique_compat={is_compatible}, indicator_compat={indicator_compatible}")

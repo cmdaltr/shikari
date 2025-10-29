@@ -161,7 +161,7 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
 
 
 def compile_splunk_queries(
-    indicator_mapping, indicators, indicator_type, splunk_queries, osint_indicators=None, detection_name=""
+    indicator_mapping, indicators, indicator_type, splunk_queries, osint_indicators=None, detection_name="", platform=None, technique_id=None
 ):
     """
     Builds Splunk queries with proper structure:
@@ -176,12 +176,19 @@ def compile_splunk_queries(
         splunk_queries: List to append queries to
         osint_indicators: Optional dict of OSINT-extracted indicators {field: [values]}
         detection_name: Name of the detection for logging purposes
+        platform: Optional platform name for validation (e.g., "Windows", "Azure AD", "AWS")
+        technique_id: Optional technique ID for validation (e.g., "T1136", "T1003.001")
 
     Returns:
         Updated splunk_queries list
     """
-    # Enrich indicators with malware IOCs before building queries
-    enriched_indicators, ioc_metadata = enrich_indicators_with_iocs(indicators, indicator_type)
+    # Enrich indicators with malware IOCs before building queries (with platform awareness)
+    enriched_indicators, ioc_metadata = enrich_indicators_with_iocs(
+        indicators,
+        indicator_type,
+        platform=platform,
+        technique_id=technique_id
+    )
 
     # Log enrichment if any occurred
     if ioc_metadata and ioc_metadata.get("enriched_iocs"):

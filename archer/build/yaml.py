@@ -318,8 +318,14 @@ def construct_yaml(
     """
     print(f"🔍 DEBUG construct_yaml for {tid}: osint_enhancement_data={osint_enhancement_data is not None}, osint_enhancement={osint_enhancement}")
 
+    # Extract OSINT indicators if enhancement is enabled
+    osint_indicators_to_pass = None
+    if osint_enhancement and osint_enhancement_data:
+        osint_indicators_to_pass = osint_enhancement_data.get("osint_indicators", {})
+        print(f"  🔧 Passing OSINT indicators to collate_data for query enhancement")
+
     appended_mde_queries, appended_splunk_queries = collate_data(
-        identifiers, log_sources, procedure_platforms, software_platforms, name
+        identifiers, log_sources, procedure_platforms, software_platforms, name, technique_id=tid, osint_indicators=osint_indicators_to_pass
     )
 
     # Apply OSINT enhancement if requested (merge OSINT patterns into queries)
