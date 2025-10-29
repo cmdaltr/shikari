@@ -145,8 +145,8 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                             appended_splunk_queries.append(query)
                     else:
                         # Query doesn't start with "index=" - likely an MDE query that got mixed in
-                        # Skip it instead of adding to Splunk queries
-                        print(f"⚠️  Warning: Skipping non-Splunk query in splunk_queries list: {query.split(chr(10))[0][:50]}")
+                        # Skip it silently (this is expected in mixed query results)
+                        pass
 
             else:
                 pass

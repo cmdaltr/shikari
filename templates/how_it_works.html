@@ -532,6 +532,102 @@
             flex: 1;
             min-width: 200px;
         }
+
+        /* FAQ Styling */
+        .faq-item {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1em;
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .faq-item {
+            background: rgba(45, 45, 45, 0.5);
+        }
+
+        .faq-item:hover {
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] .faq-item:hover {
+            background: rgba(45, 45, 45, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .faq-question {
+            padding: 1.2em 1.5em;
+            font-weight: 600;
+            font-size: 1.05em;
+            color: var(--text-primary);
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .faq-question::-webkit-details-marker {
+            display: none;
+        }
+
+        .faq-question::before {
+            content: '+';
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #C53030;
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        [data-theme="dark"] .faq-question::before {
+            color: var(--accent);
+        }
+
+        .faq-item[open] .faq-question::before {
+            content: '−';
+            transform: rotate(180deg);
+        }
+
+        .faq-question:hover {
+            color: #C53030;
+        }
+
+        [data-theme="dark"] .faq-question:hover {
+            color: var(--accent);
+        }
+
+        .faq-answer {
+            padding: 0 1.5em 1.5em 3.5em;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .faq-answer p {
+            margin: 0.5em 0;
+        }
+
+        .faq-answer ul, .faq-answer ol {
+            margin: 0.5em 0;
+            padding-left: 1.5em;
+        }
+
+        .faq-answer li {
+            margin: 0.3em 0;
+        }
+
+        .faq-answer strong {
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body>
@@ -1203,6 +1299,147 @@ data/APT29/
             <!-- End Tab Content -->
         </div>
         <!-- End Tabs Container -->
+
+        <!-- FAQ Section -->
+        <div class="section" style="margin-top: 3em;">
+            <h2>Frequently Asked Questions</h2>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is Archer and what does it do?</summary>
+                <div class="faq-answer">
+                    <p>Archer is an automated threat detection generator that transforms MITRE ATT&CK threat intelligence into production-ready detection queries for Splunk and Microsoft Defender for Endpoint (MDE). It combines machine learning from community queries, MITRE ATT&CK intelligence, and optional AI enhancement to automatically generate comprehensive, correlated detection coverage in minutes.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Do I need an OpenAI API key to use Archer?</summary>
+                <div class="faq-answer">
+                    <p>No, Archer works perfectly fine without an OpenAI API key. The AI enhancement is entirely optional and only improves certain features like IOC extraction accuracy and semantic understanding. Without AI, Archer uses high-quality regex-based extraction and pattern matching which is fast, free, and privacy-preserving.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What's the difference between OSINT Enhancement and OSINT Comparison?</summary>
+                <div class="faq-answer">
+                    <p><strong>OSINT Enhancement:</strong> Automatically incorporates battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk community rules) directly into your queries. This is enabled by default on the Generate tab and enriches your detections with proven indicators.</p>
+                    <p><strong>OSINT Comparison:</strong> Compares techniques against OSINT databases and adds metadata to YAML files (visible in the "Show Details" button). This is reference-only and doesn't modify the queries themselves.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What are Sole-Vendor and Cross-Vendor Correlations?</summary>
+                <div class="faq-answer">
+                    <p><strong>Sole-Vendor Correlation:</strong> Combines similar queries from the same vendor (either Splunk or MDE) into multi-stage detections. This is enabled by default and helps create detection chains that track attack progressions within a single SIEM platform.</p>
+                    <p><strong>Cross-Vendor Correlation:</strong> (Coming Soon) Will correlate queries across different vendors (Splunk + MDE) to create unified detection workflows across multiple security platforms.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How does Semantic Analysis work?</summary>
+                <div class="faq-answer">
+                    <p>Semantic Analysis groups queries by behavioral categories (authentication, network, file activity, process execution, etc.) rather than just by technique ID. This is enabled by default and helps organize detections logically, making them easier to review, deploy, and maintain. It includes advanced query parsing for intelligent syntax-aware merging.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What file formats does the Upload feature support?</summary>
+                <div class="faq-answer">
+                    <p>The Upload feature supports multiple threat intelligence file formats including: PDF, TXT, Markdown (MD), JSON, CSV, Excel (XLSX/XLS), Word (DOCX/DOC), and YARA rules (.yar/.yara). Archer automatically extracts TTPs (Tactics, Techniques, and Procedures) and IOCs (Indicators of Compromise) from these files.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is the Profile tab used for?</summary>
+                <div class="faq-answer">
+                    <p>The Profile tab lets you analyze an organization's threat landscape based on their domain. It automatically identifies industry-specific threats, geographic threat actors, technology stack vulnerabilities, and optionally supply chain dependencies. It then recommends relevant threat groups and can auto-generate detection queries for them.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How fast is Archer at generating detections?</summary>
+                <div class="faq-answer">
+                    <p>Archer is optimized for speed with template caching, parallel processing, and async operations. Generating 200 detection queries for a threat group like APT29 takes approximately 30 seconds with caching enabled (compared to 4-5 minutes without optimization). First-time runs take about 45 seconds while subsequent cached runs complete in about 5 seconds.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What output formats does Archer generate?</summary>
+                <div class="faq-answer">
+                    <p>Archer generates multiple output formats:</p>
+                    <ul>
+                        <li><strong>YAML files:</strong> Individual detection rules in standardized YAML format</li>
+                        <li><strong>Vendor queries:</strong> Splunk SPL and Microsoft KQL queries</li>
+                        <li><strong>Correlation JSON:</strong> Multi-stage detection relationships</li>
+                        <li><strong>Attack Flow diagrams:</strong> JSON and HTML visualizations following the MITRE ATT&CK Flow specification</li>
+                        <li><strong>Library view:</strong> Interactive web interface to browse and export detections</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Can I customize the generated detection queries?</summary>
+                <div class="faq-answer">
+                    <p>Yes! All generated detections are saved as YAML files that you can review, modify, and customize before deploying to your SIEM. The queries are designed to be production-ready but should always be tested in your environment and tuned to reduce false positives based on your specific infrastructure.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What data sources does Archer pull from?</summary>
+                <div class="faq-answer">
+                    <p>Archer pulls from multiple authoritative sources:</p>
+                    <ul>
+                        <li><strong>MITRE ATT&CK:</strong> Official enterprise-attack.json for technique mappings</li>
+                        <li><strong>Community repositories:</strong> Sigma rules, Elastic detection rules, Splunk security content</li>
+                        <li><strong>OSINT sources:</strong> 5+ open-source security repositories with 7,500+ detection rules</li>
+                        <li><strong>Threat reports:</strong> Uploaded files or analyzed blog posts/reports</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Is Archer suitable for production use?</summary>
+                <div class="faq-answer">
+                    <p>Archer generates production-quality detection queries, but as with any automated tool, you should review and test all detections in your environment before deploying to production. Different organizations have different baselines, and tuning is essential to reduce false positives and ensure the detections work correctly with your specific data sources and infrastructure.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do I get started with Archer?</summary>
+                <div class="faq-answer">
+                    <p>Getting started is easy:</p>
+                    <ol>
+                        <li>Go to the <strong>Generate</strong> tab and enter a threat group name (e.g., "APT29") or MITRE technique ID</li>
+                        <li>Optionally enable AI-Powered Correlations if you have an OpenAI API key</li>
+                        <li>Click "Generate Detections" and wait for processing to complete</li>
+                        <li>Download the generated detections as a ZIP file</li>
+                        <li>Review the YAML files and deploy queries to your SIEM</li>
+                    </ol>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Does Archer work offline?</summary>
+                <div class="faq-answer">
+                    <p>Archer requires internet access for the initial setup to download MITRE ATT&CK data and OSINT repositories. Once cached, it can generate detections offline without requiring external API calls (unless you enable AI enhancement). All OSINT sources are cloned locally, so Archer doesn't rely on external APIs for core functionality.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What's coming in future versions?</summary>
+                <div class="faq-answer">
+                    <p>Planned enhancements include:</p>
+                    <ul>
+                        <li>VECTR integration for purple team exercises</li>
+                        <li>Atomic Red Team emulation capabilities</li>
+                        <li>Additional SIEM platforms (Sentinel, QRadar, etc.)</li>
+                        <li>Real-time threat intelligence feeds</li>
+                        <li>Custom query template support</li>
+                        <li>Cross-vendor correlation workflows</li>
+                    </ul>
+                </div>
+            </details>
+        </div>
+        <!-- End FAQ Section -->
 
         <!-- Footer -->
         <footer class="page-footer">

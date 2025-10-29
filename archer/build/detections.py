@@ -195,7 +195,7 @@ def create_indicatorMappings():
     return indicatorMappings
 
 
-def compile_query(retrieved_data, osint_enhancement=False):
+def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False):
     from archer.build.queries import is_query_applicable
     from archer.build.platform_validator_v2 import validate_procedure_for_index
     from archer.build.platform_indicator_validator import (
@@ -222,18 +222,7 @@ def compile_query(retrieved_data, osint_enhancement=False):
     technique_description = retrieved_data.get("technique_description", "") or tdesc or ""
     technique_platforms = retrieved_data.get("technique_platforms", [])
 
-    # DEBUG: Log technique metadata to verify it's being passed
-    print(f"\n🔍 DEBUG compile_query for {tid}:")
-    print(f"  - technique_description length: {len(technique_description)}")
-    print(f"  - technique_platforms: {technique_platforms}")
-    print(f"  - procedure_text length: {len(procedure_text)}")
-
     # Get all identifiers
-    print(f"  - op_guidance type: {type(op_guidance)}, is dict: {isinstance(op_guidance, dict)}")
-    if isinstance(op_guidance, dict):
-        print(f"    op_guidance keys: {list(op_guidance.keys())[:5]}")
-    print(f"  - red_tool type: {type(red_tool)}, is dict: {isinstance(red_tool, dict)}")
-
     if isinstance(op_guidance, dict) and isinstance(red_tool, dict):
         identifiers = {**op_guidance, **red_tool}
     elif isinstance(op_guidance, dict):
@@ -264,29 +253,32 @@ def compile_query(retrieved_data, osint_enhancement=False):
 
     # Only construct YAML if there are identifiers for detection
     if identifiers:
-        # Always compare with OSINT to gather additional detection patterns
-        print(f" 📊 Indicators found - comparing with OSINT sources...")
+        # Compare with OSINT if comparison is enabled
+        if osint_comparison:
+            print(f" 📊 Indicators found - comparing with OSINT sources...")
 
-        from archer.build.osint_comparison import search_osint_for_technique
+            from archer.build.osint_comparison import search_osint_for_technique
 
-        osint_found, osint_data = search_osint_for_technique(
-            technique_id=tid,
-            technique_name=name,
-            technique_description=technique_description,
-            platforms=technique_platforms
-        )
+            osint_found, osint_data = search_osint_for_technique(
+                technique_id=tid,
+                technique_name=name,
+                technique_description=technique_description,
+                platforms=technique_platforms
+            )
 
-        if osint_found:
-            print(f" ✅ OSINT comparison successful - additional detection patterns found")
-            print(f" 🔍 DEBUG detections.py - osint_data type: {type(osint_data)}")
-            print(f" 🔍 DEBUG detections.py - osint_data keys: {osint_data.keys() if isinstance(osint_data, dict) else 'NOT A DICT'}")
-            print(f" 🔍 DEBUG detections.py - osint_compared value: {osint_data.get('osint_compared') if isinstance(osint_data, dict) else 'N/A'}")
-            osint_enhancement_data = osint_data
+            if osint_found:
+                print(f" ✅ OSINT comparison successful - additional detection patterns found")
+                osint_enhancement_data = osint_data
+        else:
+            # Skip OSINT comparison
+            osint_found = False
+            osint_data = None
+
+        if osint_enhancement_data:
 
             # Only merge OSINT indicators if enhancement is enabled
-            print(f" 🔍 DEBUG detections.py - osint_enhancement flag value: {osint_enhancement}")
             if osint_enhancement:
-                print(f" 🔧 OSINT Enhancement ENABLED - extracting and merging indicators from OSINT queries...")
+                print(f" 🔧 OSINT Enhancement ENABLED - merging indicators from OSINT sources")
 
                 # Extract indicators from OSINT query snippets
                 osint_indicators_raw = osint_data.get("osint_indicators", {})
@@ -458,7 +450,6 @@ def compile_query(retrieved_data, osint_enhancement=False):
         if compatible_sources:
             compatible_found = True
             print(f" Queries built for {name} ({tid}) on:")
-            print(f" 🔍 DEBUG detections.py - Before construct_yaml: osint_enhancement_data={osint_enhancement_data is not None}, osint_enhancement={osint_enhancement}")
             for source in sorted(compatible_sources):
                 print(f"  ✅ {source}")
                 construct_yaml(
@@ -484,109 +475,122 @@ def compile_query(retrieved_data, osint_enhancement=False):
             else:
                 print(f" ❌ No identifiers found for {name}; no detections generated\n")
     else:
-        # No identifiers from MITRE - try OSINT comparison
+        # No identifiers from MITRE - try OSINT comparison if enabled
         print(f" ⚠️  No identifiers found for {name} from MITRE ATT&CK data")
-        print(f" 🔍 Searching OSINT sources for additional detection methods...")
 
-        from archer.build.osint_comparison import search_osint_for_technique, should_create_detection
+        if osint_comparison:
+            print(f" 🔍 Searching OSINT sources for additional detection methods...")
 
-        # Search OSINT sources
-        osint_found, osint_data = search_osint_for_technique(
-            technique_id=tid,
-            technique_name=name,
-            technique_description=technique_description,
-            platforms=technique_platforms
-        )
+            from archer.build.osint_comparison import search_osint_for_technique, should_create_detection
+
+            # Search OSINT sources
+            osint_found, osint_data = search_osint_for_technique(
+                technique_id=tid,
+                technique_name=name,
+                technique_description=technique_description,
+                platforms=technique_platforms
+            )
+        else:
+            # OSINT comparison disabled
+            print(f" ℹ️  OSINT Comparison disabled - skipping OSINT search")
+            osint_found = False
+            osint_data = None
 
         # Determine if we should create the detection
-        if should_create_detection(has_mitre_indicators=False, osint_found=osint_found):
-            print(f" ✅ OSINT comparison successful - creating detection with OSINT metadata")
+        if osint_found and osint_comparison:
+            from archer.build.osint_comparison import should_create_detection
+            if should_create_detection(has_mitre_indicators=False, osint_found=osint_found):
+                print(f" ✅ OSINT comparison successful - creating detection with OSINT metadata")
 
-            # Create detection with OSINT data as identifiers
-            osint_identifiers = osint_data.get("osint_indicators", {})
-            if osint_identifiers:
-                print(f" 📝 Creating OSINT-compared detection for {name}")
+                # Create detection with OSINT data as identifiers
+                osint_identifiers = osint_data.get("osint_indicators", {})
+                if osint_identifiers:
+                    print(f" 📝 Creating OSINT-compared detection for {name}")
 
-                # Use OSINT indicators to create detections
-                # Re-run the platform compatibility checks with OSINT indicators
-                compatible_sources = set()
+                    # Use OSINT indicators to create detections
+                    # Re-run the platform compatibility checks with OSINT indicators
+                    compatible_sources = set()
 
-                # Check each indicator type from OSINT
-                for indicator_type in osint_identifiers:
-                    if indicator_type not in indicator_mappings:
-                        continue
+                    # Check each indicator type from OSINT
+                    for indicator_type in osint_identifiers:
+                        if indicator_type not in indicator_mappings:
+                            continue
 
-                    indicators_list = osint_identifiers[indicator_type]
-                    if not indicators_list:
-                        continue
+                        indicators_list = osint_identifiers[indicator_type]
+                        if not indicators_list:
+                            continue
 
-                    # Combine indicators into text for validation
-                    indicator_text = " ".join(str(i) for i in indicators_list)
+                        # Combine indicators into text for validation
+                        indicator_text = " ".join(str(i) for i in indicators_list)
 
-                    # Check SPLUNK compatibility
-                    if "Splunk" in indicator_mappings[indicator_type]:
-                        for index_name in indicator_mappings[indicator_type]["Splunk"]:
-                            clean_index_name = index_name.replace("index=", "")
+                        # Check SPLUNK compatibility
+                        if "Splunk" in indicator_mappings[indicator_type]:
+                            for index_name in indicator_mappings[indicator_type]["Splunk"]:
+                                clean_index_name = index_name.replace("index=", "")
 
-                            is_compatible = is_query_applicable(
-                                procedure_platforms, software_platforms, clean_index_name
+                                is_compatible = is_query_applicable(
+                                    procedure_platforms, software_platforms, clean_index_name
+                                )
+
+                                indicator_compatible = validate_procedure_for_index(
+                                    indicator_text,
+                                    clean_index_name,
+                                    vendor="Splunk",
+                                    technique_desc=technique_description,
+                                    technique_platforms=technique_platforms
+                                )
+
+                                if is_compatible and indicator_compatible:
+                                    compatible_sources.add(index_name)
+
+                        # Check MDE compatibility
+                        if "MDE" in indicator_mappings[indicator_type]:
+                            for table_name in indicator_mappings[indicator_type]["MDE"]:
+                                is_compatible = is_query_applicable(
+                                    procedure_platforms, software_platforms, table_name
+                                )
+
+                                indicator_compatible = validate_procedure_for_index(
+                                    indicator_text,
+                                    table_name,
+                                    vendor="MDE",
+                                    technique_desc=technique_description,
+                                    technique_platforms=technique_platforms
+                                )
+
+                                if is_compatible and indicator_compatible:
+                                    compatible_sources.add(table_name)
+
+                    # Create YAMLs for compatible sources
+                    if compatible_sources:
+                        print(f" ✅ OSINT-compared queries built for {name} ({tid}) on:")
+                        for source in sorted(compatible_sources):
+                            print(f"  ✅ {source}")
+                            construct_yaml(
+                                name,
+                                tid,
+                                tdesc,
+                                tactic,
+                                tag,
+                                osint_identifiers,
+                                log_sources,
+                                source,
+                                procedure_platforms,
+                                software_platforms,
+                                osint_enhancement_data=osint_data,  # Pass OSINT metadata
+                                osint_enhancement=osint_enhancement,  # Pass OSINT comparison flag
                             )
-
-                            indicator_compatible = validate_procedure_for_index(
-                                indicator_text,
-                                clean_index_name,
-                                vendor="Splunk",
-                                technique_desc=technique_description,
-                                technique_platforms=technique_platforms
-                            )
-
-                            if is_compatible and indicator_compatible:
-                                compatible_sources.add(index_name)
-
-                    # Check MDE compatibility
-                    if "MDE" in indicator_mappings[indicator_type]:
-                        for table_name in indicator_mappings[indicator_type]["MDE"]:
-                            is_compatible = is_query_applicable(
-                                procedure_platforms, software_platforms, table_name
-                            )
-
-                            indicator_compatible = validate_procedure_for_index(
-                                indicator_text,
-                                table_name,
-                                vendor="MDE",
-                                technique_desc=technique_description,
-                                technique_platforms=technique_platforms
-                            )
-
-                            if is_compatible and indicator_compatible:
-                                compatible_sources.add(table_name)
-
-                # Create YAMLs for compatible sources
-                if compatible_sources:
-                    print(f" ✅ OSINT-compared queries built for {name} ({tid}) on:")
-                    for source in sorted(compatible_sources):
-                        print(f"  ✅ {source}")
-                        construct_yaml(
-                            name,
-                            tid,
-                            tdesc,
-                            tactic,
-                            tag,
-                            osint_identifiers,
-                            log_sources,
-                            source,
-                            procedure_platforms,
-                            software_platforms,
-                            osint_enhancement_data=osint_data,  # Pass OSINT metadata
-                            osint_enhancement=osint_enhancement,  # Pass OSINT comparison flag
-                        )
-                    print()
+                        print()
+                    else:
+                        print(f" ⚠️  No compatible platforms found for OSINT indicators")
                 else:
-                    print(f" ⚠️  No compatible platforms found for OSINT indicators")
+                    # No actual indicators but OSINT found relevant information
+                    print(f" 📝 OSINT found relevant information but no specific indicators")
+                    print(f" ⚠️  Detection creation skipped - manual review required")
             else:
-                # No actual indicators but OSINT found relevant information
-                print(f" 📝 OSINT found relevant information but no specific indicators")
-                print(f" ⚠️  Detection creation skipped - manual review required")
+                print(f" ❌ OSINT data found but not sufficient for detection creation\n")
+        elif not osint_comparison:
+            print(f" ❌ No OSINT data available (OSINT Comparison disabled); detection NOT created\n")
         else:
             print(f" ❌ No OSINT sources found for {name}; detection NOT created\n")
 

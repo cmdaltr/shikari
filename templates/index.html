@@ -360,59 +360,39 @@
                        placeholder="e.g., CVE-2024-1234 or CVE-2021-44228, CVE-2022-22965">
               </div>
 
-              <!-- Advanced Options -->
+              <!-- Additional Options -->
               <details class="options-section">
-                <summary class="options-header">Advanced Options</summary>
-                <div class="options-grid">
-                  <label class="option-item">
-                    <input type="checkbox" name="semantic" value="true" checked id="semantic-checkbox">
-                    <span class="option-label">Semantic Analysis</span>
-                    <span class="option-hint">Group queries by behavior (authentication, network, file activity)</span>
-                  </label>
-                  <label class="option-item">
-                    <input type="checkbox" name="run_correlation" value="true" checked>
-                    <span class="option-label">Sole-Vendor Correlation</span>
-                    <span class="option-hint">Combine similar queries from same vendor (Splunk or MDE) into multi-stage detections (Recommended)</span>
-                  </label>
+                <summary class="options-header">Additional Options</summary>
+                <div class="options-grid three-columns">
+                  <!-- Left Column -->
                   <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
                     <input type="checkbox" name="cross_vendor_correlation" value="true" id="cross-vendor-checkbox" disabled>
-                    <span class="option-label">Cross-Vendor Correlation <span style="color: #6b7280; font-size: 0.85em;">(Coming Soon)</span></span>
-                    <span class="option-hint">Correlate queries across vendors (Splunk + MDE) - requires API keys for each SIEM platform (Experimental)</span>
-                  </label>
-                  <label class="option-item">
-                    <input type="checkbox" name="osint_enhancement" value="true" id="osint-enhancement-checkbox">
                     <span class="option-label">
-                      OSINT Enhancement
-                      <span class="warning-tooltip">
-                        ⚠️
-                        <span class="warning-tooltip-text">
-                          <strong>Experimental:</strong> Merges additional indicators from OSINT sources (Sigma, Elastic, Splunk) into your detection queries.<br><br>
-                          <strong>Without this:</strong> OSINT data is shown as reference material only (via Show Details button)<br><br>
-                          <strong>With this enabled:</strong> OSINT field names, operations, and detection logic are incorporated directly into generated queries
-                        </span>
+                      Cross-Vendor Correlation
+                      <span style="color: #6b7280; font-size: 0.85em; margin-left: 4px;">(Coming Soon)</span>
+                    </span>
+                  </label>
+
+                  <!-- Middle Column -->
+                  <label class="option-item">
+                    <input type="checkbox" name="osint_comparison" value="true" id="osint-comparison-checkbox">
+                    <span class="option-label">
+                      OSINT Comparison
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Compare techniques against OSINT databases and add metadata to YAML files. Note: OSINT Enhancement is enabled by default on Generate tab. Unchecking this means queries will only be built based on MITRE ATT&CK data indicators combined with OSINT enhancement patterns.</span>
                       </span>
                     </span>
-                    <span class="option-hint">Automatically incorporate battle-tested detection patterns from OSINT sources into queries (Experimental)</span>
                   </label>
-                  <label class="option-item">
-                    <input type="checkbox" name="advanced_parsing" value="true" id="advanced-parsing-checkbox">
-                    <span class="option-label">
-                      Advanced Query Parsing
-                      <span class="warning-tooltip">
-                        ⚠️
-                        <span class="warning-tooltip-text">
-                          <strong>Expert mode:</strong> Syntax parsing only, without behavioral grouping.<br><br>
-                          <strong>Use when:</strong> You need faster processing and don't require semantic categorization.<br><br>
-                          <strong>Note:</strong> Checking this will disable Semantic Analysis (they are mutually exclusive).
-                        </span>
-                      </span>
-                    </span>
-                    <span class="option-hint">Deep analysis of query structure for intelligent merging</span>
-                  </label>
+
+                  <!-- Right Column -->
                   <label class="option-item">
                     <input type="checkbox" name="ai_generators" value="true">
-                    <span class="option-label">AI-Powered Correlations</span>
-                    <span class="option-hint">Uses OpenAI API (requires OPENAI_API_KEY)</span>
+                    <span class="option-label">
+                      AI-Powered Correlations
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Use OpenAI's GPT models for advanced correlation analysis. Requires OPENAI_API_KEY environment variable.</span>
+                      </span>
+                    </span>
                   </label>
                 </div>
               </details>
@@ -514,24 +494,39 @@
                 </div>
               </div>
 
-              <!-- Shared Processing Options -->
+              <!-- Additional Options -->
               <details class="options-section">
-                <summary class="options-header">Processing Options</summary>
-                <div class="options-grid">
-                  <label class="option-item">
-                    <input type="checkbox" name="auto_generate" id="upload_auto_generate" value="true" checked>
-                    <span class="option-label">Auto-Generate Queries</span>
-                    <span class="option-hint">Automatically create detection queries</span>
+                <summary class="options-header">Additional Options</summary>
+                <div class="options-grid three-columns">
+                  <!-- Left Column -->
+                  <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
+                    <input type="checkbox" name="cross_vendor_correlation" id="upload_cross_vendor_checkbox" value="true" disabled>
+                    <span class="option-label">
+                      Cross-Vendor Correlation
+                      <span style="color: #6b7280; font-size: 0.85em; margin-left: 4px;">(Coming Soon)</span>
+                    </span>
                   </label>
+
+                  <!-- Middle Column -->
                   <label class="option-item">
-                    <input type="checkbox" name="run_correlation" id="upload_run_correlation" value="true">
-                    <span class="option-label">Run Correlation</span>
-                    <span class="option-hint">Correlate extracted indicators</span>
+                    <input type="checkbox" name="osint_enhancement" id="upload_osint_enhancement" value="true">
+                    <span class="option-label">
+                      OSINT Enhancement
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Automatically incorporate battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk) into queries.</span>
+                      </span>
+                    </span>
                   </label>
+
+                  <!-- Right Column -->
                   <label class="option-item">
                     <input type="checkbox" name="use_openai" id="upload_use_openai" value="true">
-                    <span class="option-label">OpenAI Enhancement</span>
-                    <span class="option-hint">Use AI for better TTP/IOC extraction</span>
+                    <span class="option-label">
+                      AI-Powered Correlations
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Use OpenAI's GPT models for advanced correlation analysis. Requires OPENAI_API_KEY environment variable.</span>
+                      </span>
+                    </span>
                   </label>
                 </div>
               </details>
@@ -572,39 +567,30 @@
                 </div>
               </details>
 
-              <!-- Profile Options -->
+              <!-- Additional Options -->
               <details class="options-section">
-                <summary class="options-header">Profile Options</summary>
+                <summary class="options-header">Additional Options</summary>
                 <div class="options-grid">
-                  <label class="option-item">
-                    <input type="checkbox" name="generate_detections" value="true" checked>
-                    <span class="option-label">Auto-Generate Detections</span>
-                    <span class="option-hint">Create detection queries for identified threats</span>
-                  </label>
-                  <label class="option-item">
-                    <input type="checkbox" name="include_industry" value="true" checked>
-                    <span class="option-label">Industry Analysis</span>
-                    <span class="option-hint">Identify industry-specific threats</span>
-                  </label>
-                  <label class="option-item">
-                    <input type="checkbox" name="include_geography" value="true" checked>
-                    <span class="option-label">Geographic Threats</span>
-                    <span class="option-hint">Analyze location-based threat actors</span>
-                  </label>
-                  <label class="option-item">
-                    <input type="checkbox" name="include_tech_stack" value="true" checked>
-                    <span class="option-label">Technology Stack</span>
-                    <span class="option-hint">Detect technologies and CVEs</span>
-                  </label>
+                  <!-- Left Column -->
                   <label class="option-item">
                     <input type="checkbox" name="include_supply_chain" value="true">
-                    <span class="option-label">Supply Chain</span>
-                    <span class="option-hint">Identify vendor dependencies</span>
+                    <span class="option-label">
+                      Supply Chain
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Identify vendor dependencies</span>
+                      </span>
+                    </span>
                   </label>
+
+                  <!-- Right Column -->
                   <label class="option-item">
                     <input type="checkbox" name="use_openai" value="true">
-                    <span class="option-label">AI Enhancement</span>
-                    <span class="option-hint">Use AI for deeper analysis (requires API key)</span>
+                    <span class="option-label">
+                      AI Enhancement
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Use AI for deeper analysis (requires API key)</span>
+                      </span>
+                    </span>
                   </label>
                 </div>
               </details>

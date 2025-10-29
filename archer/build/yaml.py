@@ -209,13 +209,8 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, o
     yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace("   | ", "  | ")
 
     # Add OSINT metadata if data was found during comparison
-    print(f"🔍 DEBUG write_yaml: osint_data={osint_data is not None}, osint_enhanced={osint_enhanced}")
-    if osint_data:
-        print(f"   osint_data keys: {osint_data.keys() if isinstance(osint_data, dict) else 'NOT A DICT'}")
-        print(f"   osint_compared: {osint_data.get('osint_compared') if isinstance(osint_data, dict) else 'N/A'}")
-
+    # Debug logging removed for cleaner output
     if osint_data and osint_data.get("osint_compared"):
-        print(f"   ✅ Writing OSINT metadata to YAML")
         osint_section = "\n# OSINT Comparison Metadata\n"
         osint_section += f"osint_compared: true\n"
 
@@ -316,13 +311,12 @@ def construct_yaml(
         index_name: Optional index name to include in the filename
         osint_enhancement: Optional OSINT enrichment metadata dict
     """
-    print(f"🔍 DEBUG construct_yaml for {tid}: osint_enhancement_data={osint_enhancement_data is not None}, osint_enhancement={osint_enhancement}")
+    # Debug logging removed for cleaner output
 
     # Extract OSINT indicators if enhancement is enabled
     osint_indicators_to_pass = None
     if osint_enhancement and osint_enhancement_data:
         osint_indicators_to_pass = osint_enhancement_data.get("osint_indicators", {})
-        print(f"  🔧 Passing OSINT indicators to collate_data for query enhancement")
 
     appended_mde_queries, appended_splunk_queries = collate_data(
         identifiers, log_sources, procedure_platforms, software_platforms, name, technique_id=tid, osint_indicators=osint_indicators_to_pass

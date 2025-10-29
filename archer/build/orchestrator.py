@@ -28,7 +28,7 @@ def safe_progress_update(group_name, status_data):
         pass
 
 
-def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False):
+def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False):
     # mitre variables
     url = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
     bundle = get_stix_data(url)
@@ -126,7 +126,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 retrieved_data["activity_desc"] = tech_info.get("detect_guidance", "") or f"Detection for {technique}"
 
                 # Build detection queries and YAML
-                compile_query(retrieved_data, osint_enhancement=osint_enhancement)
+                compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison)
                 created += 1
                 safe_progress_update(
                     group_name,
@@ -175,7 +175,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 retrieved_data["technique_description"] = procedure[9]
                 retrieved_data["technique_platforms"] = procedure[10]
 
-            compile_query(retrieved_data, osint_enhancement=osint_enhancement)
+            compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison)
             created += 1
             safe_progress_update(
                 group_name,

@@ -934,25 +934,18 @@ async def generate(
     vectr_export: str = Form(None),
     vectr_campaign_name: str = Form(None),
     osint_enhancement: str = Form(None),
+    osint_comparison: str = Form(None),
 ):
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
 
-    # Debug: Log OSINT enhancement parameter
-    print(f"🔍 DEBUG /generate endpoint: osint_enhancement raw value = '{osint_enhancement}'")
-    print(f"🔍 DEBUG /generate endpoint: osint_enhancement boolean = {osint_enhancement == 'true'}")
-
     # Determine GENAI_MODE based on checkboxes (priority order)
-    genai_mode = None
+    # Default to semantic mode for best results (includes advanced parsing + behavioral grouping)
+    genai_mode = "semantic"
     if local_llm == "true":
         genai_mode = "local_llm"
     elif ai_generators == "true":
         genai_mode = "ai_generators"
-    elif semantic == "true":
-        genai_mode = "semantic"
-    elif advanced_parsing == "true":
-        genai_mode = "advanced_parsing"
-    # If none selected, genai_mode remains None (uses default/heuristic)
 
     actor_found = check_group_in_mitre(app.state.bundle, group_name)
     if actor_found == "Y":
@@ -968,8 +961,9 @@ async def generate(
                     hypothesis,
                     manual_data=None,
                     genai_mode=genai_mode,
-                    run_correlation=(run_correlation == "true"),
-                    osint_enhancement=(osint_enhancement == "true"),
+                    run_correlation=True,  # Always enabled by default
+                    osint_enhancement=True,  # Always enabled by default
+                    osint_comparison=(osint_comparison == "true"),
                 )
 
                 # Run emulation if requested
@@ -1106,15 +1100,12 @@ async def generate_cve(
         group_name = f"{cve_ids[0]}_plus_{len(cve_ids)-1}"  # e.g., "CVE-2021-44228_plus_2"
 
     # Determine GENAI_MODE
-    genai_mode = None
+    # Default to semantic mode for best results (includes advanced parsing + behavioral grouping)
+    genai_mode = "semantic"
     if local_llm == "true":
         genai_mode = "local_llm"
     elif ai_generators == "true":
         genai_mode = "ai_generators"
-    elif semantic == "true":
-        genai_mode = "semantic"
-    elif advanced_parsing == "true":
-        genai_mode = "advanced_parsing"
 
     def _bg():
         try:
@@ -1338,7 +1329,9 @@ async def generate_cve(
                 hypothesis=f"CVE Hunting: {', '.join(cve_ids)}",
                 manual_data=manual_data,
                 genai_mode=genai_mode,
-                run_correlation=(run_correlation == "true"),
+                run_correlation=True,  # Always enabled by default
+                osint_enhancement=True,  # Always enabled by default
+                osint_comparison=False,  # Default to false for CVE hunting
             )
 
         except Exception as e:
@@ -1795,7 +1788,7 @@ def start_genai_processing(group_name):
 
 # Modify the orchestrator process to ensure completion
 def modified_process_group_wrapper(
-    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False, osint_enhancement=False
+    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False, osint_enhancement=False, osint_comparison=False
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
@@ -1820,6 +1813,7 @@ def modified_process_group_wrapper(
             manual_data=manual_data,
             run_correlation=run_correlation,
             osint_enhancement=osint_enhancement,
+            osint_comparison=osint_comparison,
         )
 
         print(f"DEBUG: process_group completed successfully")
@@ -2158,6 +2152,7 @@ async def generate_from_upload(
     synthetic_group_name: str = Form(...),
     selected_ttps: str = Form(None),
     selected_iocs: str = Form(None),
+    osint_enhancement: str = Form(None),
 ):
     """
     Generate detections from previously uploaded and extracted file.
@@ -2243,7 +2238,9 @@ async def generate_from_upload(
                     f"Generated from uploaded file: {filename}",
                     manual_data=manual_data,
                     genai_mode="semantic" if not use_ai else "ai_generators",
-                    run_correlation=run_correlation,
+                    run_correlation=True,  # Always enabled by default
+                    osint_enhancement=(osint_enhancement == "true"),  # Default to False for uploads
+                    osint_comparison=False,  # Default to false for uploads
                 )
             except Exception as e:
                 print(f"Error processing upload: {e}")
@@ -2693,15 +2690,16 @@ async def profile_company(
         domain = domain.replace("http://", "").replace("https://", "").split("/")[0]
 
         # Build options dict
+        # Note: Auto-Generate, Industry, Geography, and Tech Stack are always enabled by default
         options = {
-            "include_industry": include_industry == "true",
-            "include_geography": include_geography == "true",
-            "include_tech_stack": include_tech_stack == "true",
+            "include_industry": True,  # Always enabled
+            "include_geography": True,  # Always enabled
+            "include_tech_stack": True,  # Always enabled
             "include_supply_chain": include_supply_chain == "true",
         }
 
         use_ai = use_openai == "true"
-        auto_generate = generate_detections == "true"
+        auto_generate = True  # Always generate detections by default
 
         # Use domain as group_name for progress tracking
         group_name = domain.replace(".", "_").replace("/", "_")

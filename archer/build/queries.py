@@ -142,7 +142,7 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
 
         # Only generate query if there are indicators
         if not indicator_clauses:
-            print(f"⚠️  Warning: Skipping MDE query for {table} - no valid indicators")
+            # Skip silently - this is expected for some table/indicator combinations
             continue
 
         condition = " or ".join(
@@ -206,8 +206,8 @@ def compile_splunk_queries(
         pipeline = transformation_pipeline.get(index, "")
 
         if not pipeline:
-            # Fallback if no pipeline found - skip this query
-            print(f"⚠️  Warning: No transformation pipeline found for {index} with indicator type {indicator_type}")
+            # Fallback if no pipeline found - skip this query silently
+            # (This is expected for indexes not configured for this indicator type)
             continue
 
         # Extract field names available in the pipeline
@@ -227,9 +227,8 @@ def compile_splunk_queries(
                 field_value_pairs[matched_field].extend(indicators_to_use)
             else:
                 # Field from indicatorMapping.json not found in pipeline
-                # Log warning but continue (don't break the entire query)
-                print(f"⚠️  Warning: Field '{field}' from indicatorMapping.json not found in pipeline fields for {index}")
-                # Skip this field instead of using invalid field name
+                # Skip this field silently (this is expected for some index/field combinations)
+                pass
 
         # Add OSINT indicators if enhancement enabled
         if osint_indicators:
@@ -256,7 +255,7 @@ def compile_splunk_queries(
 
         # Only generate query if there are actual indicators in the search clause
         if not search_clause or search_clause.strip() == "":
-            print(f"⚠️  Warning: Skipping query for {index} - no valid indicators to search for")
+            # Skip silently - this is expected when no valid field mappings exist
             continue
 
         # Build final query with proper structure
