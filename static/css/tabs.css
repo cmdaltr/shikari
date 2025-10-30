@@ -329,7 +329,7 @@
 
 /* Three-column variant for specific sections */
 .options-grid.three-columns {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1.2fr 0.8fr 1fr;
 }
 
 .option-item {

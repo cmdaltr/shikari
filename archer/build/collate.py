@@ -99,9 +99,16 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
     for indicator_type, indicators in identifiers.items():
         if len(indicators) > 0:
             if indicator_type in indicator_mapping:
+                # Determine platform for cloud filtering
+                # Use procedure platforms if available, otherwise derive from indicators
+                platform = None
+                if procedure_platforms:
+                    # Use first procedure platform as the primary platform
+                    platform = list(procedure_platforms)[0] if isinstance(procedure_platforms, set) else procedure_platforms[0] if isinstance(procedure_platforms, list) else procedure_platforms
+
                 # Mapping and building MDE queries
                 mde_queries = compile_mde_queries(
-                    indicator_mapping, indicators, indicator_type, mde_queries, detection_name
+                    indicator_mapping, indicators, indicator_type, mde_queries, detection_name, platform=platform
                 )
 
                 appended_mde_queries = []
@@ -113,17 +120,18 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                     appended_mde_queries.append(appended_query)
 
                 # Mapping and building Splunk queries
-                # Extract platform from index name for validation
-                index_name = None
-                if "Splunk" in indicator_mapping.get(indicator_type, {}):
-                    splunk_indices = list(indicator_mapping[indicator_type]["Splunk"].keys())
-                    if splunk_indices:
-                        index_name = splunk_indices[0].replace("index=", "")
-                        platform = normalize_platform_name(index_name)
+                # Extract platform from index name for validation (if not already set)
+                if not platform:
+                    index_name = None
+                    if "Splunk" in indicator_mapping.get(indicator_type, {}):
+                        splunk_indices = list(indicator_mapping[indicator_type]["Splunk"].keys())
+                        if splunk_indices:
+                            index_name = splunk_indices[0].replace("index=", "")
+                            platform = normalize_platform_name(index_name)
+                        else:
+                            platform = None
                     else:
                         platform = None
-                else:
-                    platform = None
 
                 splunk_queries = compile_splunk_queries(
                     indicator_mapping, indicators, indicator_type, splunk_queries, structured_osint_indicators, detection_name,

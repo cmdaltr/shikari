@@ -4,7 +4,7 @@ from .enterprise import (
     obtain_technique_descriptions,
     check_group_in_mitre,
 )
-from .retrieve import retrieve_group, retrieve_techniques, retrieve_procedures
+from .retrieve import retrieve_group, retrieve_techniques, retrieve_procedures, get_software_techniques
 
 __all__ = [
     "get_stix_data",
@@ -14,4 +14,5 @@ __all__ = [
     "retrieve_group",
     "retrieve_techniques",
     "retrieve_procedures",
+    "get_software_techniques",
 ]

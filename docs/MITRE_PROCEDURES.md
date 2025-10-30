@@ -10,8 +10,34 @@ The script downloads the latest MITRE ATT&CK Enterprise data and extracts:
 - **Techniques**: ATT&CK technique ID, name, and description
 - **Tactics**: The tactics associated with each technique
 - **Groups**: Threat group ID, name, and description (only groups with IDs starting with "G")
+- **Software-to-Technique Traversal**: When groups use software (malware/tools), Archer automatically extracts the techniques employed by that software
 
-**Note**: This script focuses exclusively on threat actor groups and excludes malware and tools.
+## Software-to-Technique Indicator Extraction
+
+Archer implements **two paths** for indicator extraction when analyzing threat groups:
+
+### Path 1: Direct Techniques (Traditional)
+```
+Group → Techniques → Procedure Examples → Indicators
+```
+Example: APT29 uses T1059.001 (PowerShell) → Extract PowerShell command indicators
+
+### Path 2: Software Traversal (Enhanced) ⭐ NEW
+```
+Group → Software (Malware/Tools) → Techniques → Procedure Examples → Indicators
+```
+Example: Scattered Spider uses BlackCat ransomware → BlackCat uses T1083 (File Discovery) → Extract `net use`, `fsutil` commands
+
+**Benefits:**
+- **Comprehensive Coverage**: Groups using sophisticated malware generate detections for ALL the malware's techniques
+- **Actionable Indicators**: Instead of detecting "BlackCat" as a string, detect the specific commands it runs (`fsutil behavior set`, `vssadmin delete`)
+- **Automatic Updates**: As MITRE adds techniques to software profiles, detections automatically include them
+- **Deduplication**: Automatically removes duplicate indicators when both group and software use the same technique
+
+**Example:** For Scattered Spider + BlackCat:
+- Direct indicators: `net user`, `Get-ADUser` (from group's techniques)
+- Software indicators: `net use`, `fsutil`, `vssadmin`, `bcdedit` (from BlackCat's techniques)
+- Final detection includes ALL indicators with duplicates removed
 
 ## Requirements
 

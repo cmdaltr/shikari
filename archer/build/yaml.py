@@ -140,6 +140,19 @@ def find_nested_entity(field, entity_mappings):
 
 
 def map_entities(query):
+    # Check if this is a Splunk query (starts with "index=") or KQL/MDE query
+    # Splunk queries don't use "| summarize by Timestamp," syntax
+    if query.strip().startswith("index="):
+        # This is a Splunk query - entity mapping not applicable
+        # Return query unchanged
+        return query
+
+    # Check if query contains the expected KQL syntax
+    if "| summarize by Timestamp, " not in query:
+        # Query doesn't have the expected format - return unchanged
+        return query
+
+    # Process KQL/MDE queries with entity mapping
     fields = query.split("| summarize by Timestamp, ")[1].split(", ")
     with open(os.path.join("archer", "mappings", "entityMappings.json")) as f:
         entity_mappings = json.load(f)
@@ -311,6 +324,30 @@ def construct_yaml(
         index_name: Optional index name to include in the filename
         osint_enhancement: Optional OSINT enrichment metadata dict
     """
+    # CRITICAL: Don't create YAML files if there are no indicators
+    # This prevents "Needs Review - no indicators extracted" detections from being created
+    if not identifiers or len(identifiers) == 0:
+        print(f" ⚠️  construct_yaml called with empty identifiers - skipping YAML creation for {name}")
+        return
+
+    # Check if identifiers contains only empty values
+    has_real_indicators = False
+    for indicator_type, values in identifiers.items():
+        if values:  # Check if the value is not None, not empty list, not empty string
+            if isinstance(values, list) and len(values) > 0:
+                has_real_indicators = True
+                break
+            elif isinstance(values, str) and len(values.strip()) > 0:
+                has_real_indicators = True
+                break
+            elif isinstance(values, dict) and len(values) > 0:
+                has_real_indicators = True
+                break
+
+    if not has_real_indicators:
+        print(f" ⚠️  construct_yaml: All indicator values are empty - skipping YAML creation for {name}")
+        return
+
     # Debug logging removed for cleaner output
 
     # Extract OSINT indicators if enhancement is enabled
@@ -351,33 +388,26 @@ def construct_yaml(
 
     # Writing MDE YAML file
     for query in appended_mde_queries:
-        table = query.split("\n")[0].replace("Device", "")
+        # Extract the table name from the query (first line)
+        table_name = query.split("\n")[0].strip()
         query_with_entities = ""
         query_with_entities = map_entities(query)
         """if len(query_with_entities) > 10:
             print(
-                f"  {name} ({table}) breaches the MDE entityMapping limit of 10.\n   Please review before commiting to production.\n"
+                f"  {name} ({table_name}) breaches the MDE entityMapping limit of 10.\n   Please review before commiting to production.\n"
             )
             time.sleep(0.5)"""
-        name = name.replace(" ", "").replace("/", "")
-        # If index_name is provided, include it in the filename
-        # Handle case where index_name might be a dict or other non-string type
-        if isinstance(index_name, dict):
-            print(f"⚠️ WARNING: index_name is a dict, using 'unknown': {index_name}")
-            index_name_str = "unknown"
-        elif not isinstance(index_name, str):
-            print(
-                f"⚠️ WARNING: index_name is type {type(index_name)}, converting to string: {index_name}"
-            )
-            index_name_str = str(index_name)
-        else:
-            index_name_str = index_name.replace("=", "").replace(" ", "")
-        filename = f"{name}_{index_name_str}.yaml"
+        # Create filename-safe version of the name (remove spaces and slashes)
+        # But keep the original name for writing to the YAML metadata
+        name_safe = name.replace(" ", "").replace("/", "")
+        # Use the actual MDE table name from the query for the filename
+        # NOT the index_name parameter which might be a Splunk index
+        filename = f"{name_safe}_{table_name}.yaml"
         yamlfile = os.path.join(GENERATE_DIR, filename)
         if not os.path.exists(yamlfile):
             write_yaml(
                 yamlfile,
-                name,
+                name,  # Pass original name with spaces/slashes preserved
                 tid,
                 tdesc,
                 "MicrosoftThreatProtection",
@@ -394,7 +424,8 @@ def construct_yaml(
     for query in appended_splunk_queries:
         index = query.split("\n")[0].split(" earliest=")[0].replace("index=", "").replace(" ", "")
         query = query.replace(" earliest=-1d\n", " earliest=-1d\n  ")
-        yamlfile = os.path.join(GENERATE_DIR, f"{name}_{index}.yaml")
+        # Use filename-safe version for Splunk filenames too
+        yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_{index}.yaml")
         if not os.path.exists(yamlfile):
             write_yaml(
                 yamlfile,

@@ -4,15 +4,54 @@ import re
 
 def extract_commands(combined_desc):
     cleaned_desc = (
-        combined_desc.replace("“", '"')
-        .replace("”", '"')
-        .replace("‘", "'")
-        .replace("’", "'")
+        combined_desc.replace(""", '"')
+        .replace(""", '"')
+        .replace("'", "'")
+        .replace("'", "'")
     )
     cmds = re.findall("(?:`|<code>)([^`<]+)(?:`|</code>)", cleaned_desc)
     normalised_cmds = [cmd.strip() for cmd in cmds]
 
-    return {"cmd": normalised_cmds}
+    # Classify indicators as API calls vs. commands
+    # API calls are AWS/Azure/GCP API operations, not CLI commands
+    api_calls = []
+    commands = []
+
+    # Patterns that indicate API calls (not CLI commands)
+    api_patterns = [
+        # AWS API call patterns (PascalCase without spaces, typical AWS API naming)
+        r'^[A-Z][a-z]+(?:[A-Z][a-z]+)*$',  # DescribeInstances, ListBuckets, GetPublicAccessBlock
+    ]
+
+    # Patterns that indicate CLI commands (not API calls)
+    cli_patterns = [
+        r'^aws\s',      # aws iam list-users (AWS CLI)
+        r'^gcloud\s',   # gcloud compute instances list (gcloud CLI)
+        r'^az\s',       # az vm list (Azure CLI)
+        r'^kubectl\s',  # kubectl get pods
+        r'\s',          # Contains spaces (likely a command with args)
+        r'[/\\.]',      # Contains path separators or dots in middle (./script, net.exe)
+    ]
+
+    for cmd in normalised_cmds:
+        # Check if it's clearly a CLI command
+        is_cli = any(re.search(pattern, cmd) for pattern in cli_patterns)
+
+        # Check if it looks like an API call
+        is_api = any(re.match(pattern, cmd) for pattern in api_patterns)
+
+        if is_api and not is_cli:
+            api_calls.append(cmd)
+        else:
+            commands.append(cmd)
+
+    result = {}
+    if commands:
+        result["cmd"] = commands
+    if api_calls:
+        result["api"] = api_calls
+
+    return result
 
 
 def extract_software(combined_desc):

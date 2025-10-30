@@ -1,8 +1,64 @@
-# Archer Schema Normalizer
+# Archer Mappings & Schema System
 
-Automatic normalization for Splunk data source schemas in `schemaSplunk.json`.
+Documentation for Archer's schema normalization and cloud platform mapping system.
 
-## Overview
+## Cloud Platform Separation
+
+Archer includes sophisticated cloud platform separation to prevent mixing AWS, Azure, and GCP indicators incorrectly.
+
+### Log Source Categories
+
+**File:** `archer/mappings/logSourceCategories.json`
+
+Categorizes log sources into:
+
+- **endpoint**: Logs that can detect processes/commands on endpoints (including cloud CLI tools)
+  - Splunk: `edr_events`, `windows_events`, `linux_syslog`, `av_console`
+  - MDE: All `Device*` tables (DeviceProcessEvents, DeviceFileEvents, etc.)
+
+- **cloud_native_aws**: AWS cloud control plane logs (only for AWS operations)
+  - Splunk: `aws_cloudtrail`, `aws_guardduty`, `aws_waf`
+  - MDE: None (AWS CloudTrail not in MDE)
+
+- **cloud_native_azure**: Azure cloud control plane logs (only for Azure operations)
+  - Splunk: `azure_signin`, `azure_activity`, `casb_events`
+  - MDE: `AADSignInEventsBeta`, `CloudAppEvents`, `IdentityLogonEvents`, `IdentityDirectoryEvents`
+
+- **cloud_native_gcp**: GCP cloud control plane logs (only for GCP operations)
+  - Splunk: `gcp_audit`
+  - MDE: None (GCP Audit not in MDE)
+
+### Platform Definitions
+
+**File:** `archer/mappings/platforms.json`
+
+- **AWS**: Includes AWS cloud-native logs + endpoint logs (for detecting AWS CLI on endpoints)
+- **Azure**: Includes Azure cloud-native logs + Azure AD MDE tables + endpoint logs
+- **GCP**: Includes GCP cloud-native logs + endpoint logs
+- **Windows/Linux/macOS**: Endpoint-only platforms
+- **Legacy IaaS**: Deprecated - only includes endpoint logs now
+
+### Indicator Mapping Structure
+
+**File:** `archer/mappings/indicatorMapping.json`
+
+API indicators now use nested structure:
+```json
+"api": {
+  "Splunk": {
+    "cloud_native_aws": { "aws_cloudtrail": ["event_name", "eventName"] },
+    "cloud_native_azure": { "azure_signin": ["operation_name"] },
+    "endpoint": { "edr_events": ["command_line"] }
+  }
+}
+```
+
+This ensures:
+- AWS API calls (DescribeInstances) → aws_cloudtrail + endpoint logs
+- Azure API calls (Get-AzVM) → azure_activity + endpoint logs
+- No mixing: AWS indicators won't generate Azure detections
+
+## Schema Normalization Overview
 
 The Schema Normalizer automatically detects and processes new/unnormalized indexes added to `schemaSplunk.json`. It applies:
 

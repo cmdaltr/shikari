@@ -22,6 +22,155 @@ def load_splunk_schema():
 SPLUNK_SCHEMA = load_splunk_schema()
 
 
+def load_log_source_categories():
+    """Load log source categorization from logSourceCategories.json"""
+    categories_file = (
+        Path(os.path.dirname(__file__)) / ".." / "mappings" / "logSourceCategories.json"
+    )
+    if not categories_file.exists():
+        return {}
+
+    try:
+        with open(categories_file, "r") as f:
+            data = json.load(f)
+            return data.get("categories", {}), data.get("cloud_indicator_mappings", {})
+    except Exception:
+        return {}, {}
+
+
+LOG_SOURCE_CATEGORIES, CLOUD_INDICATOR_MAPPINGS = load_log_source_categories()
+
+
+def detect_cloud_platform_from_indicators(indicators, indicator_type):
+    """
+    Detects which cloud platform(s) the indicators belong to based on API calls, commands, or tools.
+
+    Args:
+        indicators: List of indicator values (e.g., ["DescribeInstances", "ListBuckets"])
+        indicator_type: Type of indicator (cmd, api, sw, etc.)
+
+    Returns:
+        Set of cloud platforms: {"aws", "azure", "gcp"} or empty set if not cloud-specific
+    """
+    if not indicators or not CLOUD_INDICATOR_MAPPINGS:
+        print(f"[DEBUG] detect_cloud_platform: No indicators or mappings (indicators={bool(indicators)}, mappings={bool(CLOUD_INDICATOR_MAPPINGS)})")
+        return set()
+
+    print(f"[DEBUG] detect_cloud_platform: Analyzing {len(indicators)} indicators of type '{indicator_type}'")
+    print(f"[DEBUG]   Indicators: {indicators}")
+
+    detected_platforms = set()
+
+    # Check each indicator against cloud platform mappings
+    for indicator in indicators:
+        indicator_lower = indicator.lower()
+
+        # Check AWS
+        aws_mapping = CLOUD_INDICATOR_MAPPINGS.get("aws", {})
+        for category in ["api_calls", "commands", "tools"]:
+            if any(indicator_lower in item.lower() or item.lower() in indicator_lower
+                   for item in aws_mapping.get(category, [])):
+                detected_platforms.add("aws")
+                print(f"[DEBUG]   -> Detected AWS from '{indicator}' (category: {category})")
+                break
+
+        # Check Azure
+        azure_mapping = CLOUD_INDICATOR_MAPPINGS.get("azure", {})
+        for category in ["api_calls", "commands", "tools"]:
+            if any(indicator_lower in item.lower() or item.lower() in indicator_lower
+                   for item in azure_mapping.get(category, [])):
+                detected_platforms.add("azure")
+                print(f"[DEBUG]   -> Detected Azure from '{indicator}' (category: {category})")
+                break
+
+        # Check GCP
+        gcp_mapping = CLOUD_INDICATOR_MAPPINGS.get("gcp", {})
+        for category in ["api_calls", "commands", "tools"]:
+            if any(indicator_lower in item.lower() or item.lower() in indicator_lower
+                   for item in gcp_mapping.get(category, [])):
+                detected_platforms.add("gcp")
+                print(f"[DEBUG]   -> Detected GCP from '{indicator}' (category: {category})")
+                break
+
+    print(f"[DEBUG]   Final detected platforms: {detected_platforms}")
+    return detected_platforms
+
+
+def get_valid_indices_for_platform(indicator_mapping_section, vendor, detected_platforms, technique_platform, indicator_type=None):
+    """
+    Returns valid indices/tables based on detected cloud platform and technique platform.
+
+    Args:
+        indicator_mapping_section: The indicator mapping section from indicatorMapping.json (e.g., mapping["api"]["Splunk"])
+        vendor: "Splunk" or "MDE"
+        detected_platforms: Set of detected cloud platforms from indicators {"aws", "azure", "gcp"}
+        technique_platform: MITRE technique platform (e.g., "AWS", "Azure", "GCP", "Windows")
+        indicator_type: The indicator type (e.g., "api", "cmd", "sw", etc.) - only "api" has cloud categorization
+
+    Returns:
+        Dict of {index/table: fields} that are valid for this platform combination
+    """
+    print(f"[DEBUG] get_valid_indices_for_platform: vendor={vendor}, indicator_type={indicator_type}, detected_platforms={detected_platforms}, technique_platform={technique_platform}")
+
+    valid_indices = {}
+
+    # Only "api" indicator type has the nested cloud categorization structure
+    # Other types (cmd, reg, evt, sw, network) have flat structures
+    has_cloud_categories = (indicator_type == "api" and
+                           any(key.startswith("cloud_native_") or key == "endpoint"
+                               for key in indicator_mapping_section.keys()))
+
+    print(f"[DEBUG]   has_cloud_categories: {has_cloud_categories}")
+    print(f"[DEBUG]   available keys: {list(indicator_mapping_section.keys())}")
+
+    if not has_cloud_categories:
+        # Legacy flat structure - return all indices
+        print(f"[DEBUG]   Using legacy flat structure, returning {len(indicator_mapping_section)} indices")
+        return indicator_mapping_section
+
+    # Endpoint sources should NOT be used for API indicators
+    # API calls (DescribeInstances, ListBuckets, etc.) can ONLY be detected in cloud-native logs (CloudTrail, Azure Activity Log, GCP Audit)
+    # They cannot be detected in endpoint logs like DeviceProcessEvents or linux_syslog
+    # The only exception would be CLI tool usage, but those should be classified as "cmd" type, not "api" type
+    if indicator_type != "api" and "endpoint" in indicator_mapping_section:
+        valid_indices.update(indicator_mapping_section["endpoint"])
+        print(f"[DEBUG]   Added endpoint sources: {list(indicator_mapping_section['endpoint'].keys())}")
+    elif indicator_type == "api":
+        print(f"[DEBUG]   Skipping endpoint sources for API indicator type")
+
+    # If no cloud platforms detected and no technique platform, return what we have so far
+    # For API indicators, this will be empty (no endpoint sources)
+    # For other indicator types, this will include endpoint sources
+    if not detected_platforms and not technique_platform:
+        print(f"[DEBUG]   No cloud platforms detected and no technique platform, returning current valid_indices")
+        return valid_indices
+
+    # Add cloud-native sources only if they match detected platform or technique platform
+    platform_map = {
+        "AWS": "cloud_native_aws",
+        "Azure": "cloud_native_azure",
+        "Azure AD": "cloud_native_azure",
+        "GCP": "cloud_native_gcp"
+    }
+
+    # Check technique platform
+    if technique_platform in platform_map:
+        cloud_key = platform_map[technique_platform]
+        if cloud_key in indicator_mapping_section:
+            valid_indices.update(indicator_mapping_section[cloud_key])
+            print(f"[DEBUG]   Added cloud sources from technique_platform '{technique_platform}': {list(indicator_mapping_section[cloud_key].keys())}")
+
+    # Check detected platforms from indicators
+    for platform in detected_platforms:
+        cloud_key = f"cloud_native_{platform}"
+        if cloud_key in indicator_mapping_section:
+            valid_indices.update(indicator_mapping_section[cloud_key])
+            print(f"[DEBUG]   Added cloud sources from detected platform '{platform}': {list(indicator_mapping_section[cloud_key].keys())}")
+
+    print(f"[DEBUG]   Final valid_indices: {list(valid_indices.keys())}")
+    return valid_indices
+
+
 def compile_search_clause(field_value_pairs):
     """
     Compiles field-value pairs into proper | search syntax
@@ -108,7 +257,7 @@ def compile_search_clause(field_value_pairs):
     return result
 
 
-def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queries, detection_name=""):
+def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queries, detection_name="", platform=None):
     # Enrich indicators with malware IOCs before building queries
     enriched_indicators, ioc_metadata = enrich_indicators_with_iocs(indicators, indicator_type)
 
@@ -119,8 +268,21 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
     # Use enriched indicators for query building
     indicators_to_use = enriched_indicators if enriched_indicators else indicators
 
+    # Detect cloud platform from indicators (for API calls, commands, etc.)
+    detected_platforms = detect_cloud_platform_from_indicators(indicators_to_use, indicator_type)
+
+    # Get valid tables based on platform filtering
+    mde_mapping = indicator_mapping[indicator_type].get("MDE", {})
+    valid_tables = get_valid_indices_for_platform(
+        mde_mapping,
+        "MDE",
+        detected_platforms,
+        platform,
+        indicator_type
+    )
+
     # Mapping and building MDE queries
-    for table, fields in indicator_mapping[indicator_type]["MDE"].items():
+    for table, fields in valid_tables.items():
         has_all_indicators = []
         has_any_indicators = []
         for indicator in indicators_to_use:
@@ -197,21 +359,42 @@ def compile_splunk_queries(
     # Use enriched indicators for query building
     indicators_to_use = enriched_indicators if enriched_indicators else indicators
 
+    # Detect cloud platform from indicators (for API calls, commands, etc.)
+    detected_platforms = detect_cloud_platform_from_indicators(indicators_to_use, indicator_type)
+
+    # Get valid indices based on platform filtering
+    splunk_mapping = indicator_mapping[indicator_type].get("Splunk", {})
+    valid_indices = get_valid_indices_for_platform(
+        splunk_mapping,
+        "Splunk",
+        detected_platforms,
+        platform,
+        indicator_type
+    )
+    print(f"[DEBUG] valid_indices for indicator_type='{indicator_type}': {list(valid_indices.keys())}")
+
     # Get transformation pipeline from schema
     transformation_pipeline = SPLUNK_SCHEMA.get(indicator_type, {})
+    print(f"[DEBUG] transformation_pipeline keys for indicator_type='{indicator_type}': {list(transformation_pipeline.keys())}")
 
-    # Build queries for each index
-    for index, fields in indicator_mapping[indicator_type]["Splunk"].items():
+    # Build queries for each valid index
+    for index, fields in valid_indices.items():
+        print(f"[DEBUG] Processing index: {index}, fields: {fields}")
+
         # Get the transformation pipeline for this index
         pipeline = transformation_pipeline.get(index, "")
 
         if not pipeline:
             # Fallback if no pipeline found - skip this query silently
             # (This is expected for indexes not configured for this indicator type)
+            print(f"[DEBUG]   No pipeline found for {index}, skipping")
             continue
+
+        print(f"[DEBUG]   Pipeline found, length: {len(pipeline)}")
 
         # Extract field names available in the pipeline
         pipeline_fields = extract_field_names_from_pipeline(pipeline)
+        print(f"[DEBUG]   Pipeline fields extracted: {pipeline_fields}")
 
         # Build field-value pairs for | search clause
         field_value_pairs = {}
@@ -225,9 +408,11 @@ def compile_splunk_queries(
                 if matched_field not in field_value_pairs:
                     field_value_pairs[matched_field] = []
                 field_value_pairs[matched_field].extend(indicators_to_use)
+                print(f"[DEBUG]   Matched field '{field}' -> '{matched_field}', added {len(indicators_to_use)} indicators")
             else:
                 # Field from indicatorMapping.json not found in pipeline
                 # Skip this field silently (this is expected for some index/field combinations)
+                print(f"[DEBUG]   Field '{field}' NOT matched in pipeline fields, skipping")
                 pass
 
         # Add OSINT indicators if enhancement enabled
@@ -250,12 +435,16 @@ def compile_splunk_queries(
                         field_value_pairs[osint_field] = []
                     field_value_pairs[osint_field].extend(osint_values)
 
+        print(f"[DEBUG]   Final field_value_pairs: {list(field_value_pairs.keys())}")
+
         # Compile the search clause
         search_clause = compile_search_clause(field_value_pairs)
+        print(f"[DEBUG]   Search clause compiled, length: {len(search_clause) if search_clause else 0}")
 
         # Only generate query if there are actual indicators in the search clause
         if not search_clause or search_clause.strip() == "":
             # Skip silently - this is expected when no valid field mappings exist
+            print(f"[DEBUG]   Search clause is empty, skipping query for {index}")
             continue
 
         # Build final query with proper structure
@@ -359,6 +548,24 @@ def get_platforms_for_index(index_name):
 
 
 def is_query_applicable(procedure_platforms, software_platforms, index_name):
+    # Special case: Cloud-native log sources (CloudTrail, Azure Activity Log, GCP Audit)
+    # These should ALWAYS be applicable when their cloud platform is involved
+    # They log API calls that happen regardless of the underlying OS (Windows/Linux/macOS)
+    cloud_native_indices = {
+        "aws_cloudtrail": "AWS",
+        "aws_guardduty": "AWS",
+        "aws_waf": "AWS",
+        "aws_directory": "AWS",
+        "azure_activity": "Azure",
+        "azure_signin": "Azure AD",
+        "gcp_audit": "GCP"
+    }
+
+    if index_name in cloud_native_indices:
+        # Cloud-native logs are always applicable - they capture cloud API activity
+        # regardless of the OS platform of the MITRE technique
+        return True
+
     # Special case: Windows Event Logs (windows_events) should NEVER be used for non-Windows platforms
     if index_name == "windows_events":
         # Only allow if procedure is explicitly for Windows

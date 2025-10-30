@@ -9,12 +9,13 @@ The Correlation Query Builder analyzes YAML detection files and automatically cr
 ### Features
 
 - **YAML Parsing**: Reads all YAML detection files and extracts queries with metadata
-- **Relevance Assessment**: Calculates similarity scores based on:
-  - Threat groups (40% weight) - queries targeting the same adversary groups
-  - Platform compatibility (20% weight) - MDE vs Splunk
-  - Attack tactics (30% weight) - overlapping MITRE ATT&CK tactics
-  - Severity alignment (10% weight) - similar threat levels
-- **Intelligent Grouping**: Automatically groups queries into logical correlation sets
+- **Relevance Assessment**: Calculates similarity scores (0-100 points) based on:
+  - **Technique Criticality (30 points)**: High-impact techniques like credential dumping, lateral movement, data exfiltration
+  - **Query Specificity (20 points)**: Specific queries with detailed indicators score better than generic ones
+  - **False Positive Rate (25 points)**: Lower estimated FP rates increase score
+  - **Attack Progression (25 points)**: Logical attack chains (e.g., Initial Access → Execution → Persistence)
+  - **Note**: Semantic overlap (query field similarity) is displayed as metadata but does NOT affect scoring
+- **Intelligent Grouping**: Automatically groups queries into logical correlation sets based on attack progression
 - **Multi-Platform Support**: Generates correlation queries for both MDE (KQL) and Splunk
 - **Query Summarization**: Creates human-readable summaries for each correlation
 - **JSON Export**: Saves all correlations to a structured JSON file
@@ -32,6 +33,33 @@ archer/genai/
 
 - **engine.py**: Heuristic and advanced correlation generation
 - **models.py**: AI-powered query combination (LocalLLMGenerator, RemoteAPIGenerator)
+
+## Configuration
+
+### Minimum Relevance Threshold
+
+By default, Archer only includes correlations with **50% or higher relevance** (score ≥ 50). This filters out weak correlations and ensures only meaningful attack chains are included.
+
+**To adjust the threshold:**
+
+1. Create or edit `.env` file in the Archer root directory
+2. Set `CORRELATION_MIN_RELEVANCE` (range: 0.0 to 1.0)
+
+```bash
+# Default: 0.5 (50% relevance)
+CORRELATION_MIN_RELEVANCE=0.5
+
+# Higher threshold (70%) - fewer but higher quality correlations
+CORRELATION_MIN_RELEVANCE=0.7
+
+# Lower threshold (30%) - more correlations but potentially less relevant
+CORRELATION_MIN_RELEVANCE=0.3
+```
+
+**Examples:**
+- `0.3` (30%) = More correlations, may include weaker relationships
+- `0.5` (50%) = **Default** - balanced quality/quantity
+- `0.7` (70%) = Fewer correlations, only strong attack progressions
 
 ## Usage
 

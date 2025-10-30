@@ -1425,6 +1425,54 @@ data/APT29/
             </details>
 
             <details class="faq-item">
+                <summary class="faq-question">How does Archer handle software (malware/tools) in threat groups?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses <strong>software-to-technique traversal</strong> to extract actionable indicators from malware and tools. Instead of just detecting software names like "BlackCat" or "Mimikatz", Archer automatically:</p>
+                    <ol>
+                        <li>Identifies which techniques the software employs (e.g., BlackCat uses T1083 File Discovery, T1486 Data Encryption)</li>
+                        <li>Extracts technical indicators from those techniques (e.g., <code>net use</code>, <code>fsutil behavior set</code>)</li>
+                        <li>Merges these with the group's direct technique indicators</li>
+                        <li>Removes duplicates to create comprehensive detections</li>
+                    </ol>
+                    <p><strong>Example:</strong> For Scattered Spider using BlackCat ransomware, detections include specific commands BlackCat runs (like <code>fsutil</code>, <code>vssadmin</code>) rather than just looking for the "BlackCat" string.</p>
+                    <p>This implements two indicator extraction paths:</p>
+                    <ul>
+                        <li><strong>Direct:</strong> Group → Techniques → Indicators</li>
+                        <li><strong>Software:</strong> Group → Software → Techniques → Indicators</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How are correlations scored and prioritized?</summary>
+                <div class="faq-answer">
+                    <p>Archer scores correlations on a 100-point scale based on four key factors:</p>
+                    <ul>
+                        <li><strong>Technique Criticality (30 points):</strong> High-impact techniques like credential dumping, lateral movement, and data exfiltration score higher</li>
+                        <li><strong>Query Specificity (20 points):</strong> More specific queries with detailed indicators score better than generic ones</li>
+                        <li><strong>False Positive Rate (25 points):</strong> Lower estimated false positive rates increase the score</li>
+                        <li><strong>Attack Progression (25 points):</strong> Correlations that follow logical attack chains (e.g., Initial Access → Execution → Persistence) score highest</li>
+                    </ul>
+                    <p><strong>Note:</strong> Semantic overlap (query field similarity) is calculated and displayed as <em>informational metadata</em> but does NOT affect scoring. What matters is whether the techniques form a meaningful attack chain, not whether they use similar log fields.</p>
+                    <p><strong>Minimum Threshold:</strong> Only correlations with 50% or higher relevance (score ≥ 50) are included by default. This threshold can be adjusted by setting <code>CORRELATION_MIN_RELEVANCE</code> in your <code>.env</code> file (range: 0.0 to 1.0).</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How does Archer handle multi-cloud environments (AWS/Azure/GCP)?</summary>
+                <div class="faq-answer">
+                    <p>Archer includes sophisticated <strong>cloud platform separation</strong> to prevent mixing AWS, Azure, and GCP indicators incorrectly:</p>
+                    <ul>
+                        <li><strong>Cloud-native logs:</strong> AWS CloudTrail, Azure Activity Log, and GCP Audit logs are only used for their respective cloud platforms</li>
+                        <li><strong>Endpoint detection:</strong> Endpoint logs (Windows, Linux, MDE tables) can detect cloud CLI tools running on endpoints (e.g., <code>aws</code>, <code>az</code>, <code>gcloud</code> commands)</li>
+                        <li><strong>Automatic filtering:</strong> Detection queries automatically select appropriate log sources based on cloud platform context</li>
+                        <li><strong>No cross-contamination:</strong> AWS API calls won't generate Azure AD detections, and vice versa</li>
+                    </ul>
+                    <p>This ensures clean, platform-specific detections while maintaining the ability to detect cloud CLI usage on endpoints.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
                 <summary class="faq-question">What's coming in future versions?</summary>
                 <div class="faq-answer">
                     <p>Planned enhancements include:</p>

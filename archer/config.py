@@ -93,3 +93,6 @@ class CoreConfig:
     # GenAI settings
     genai_mode = os.getenv("GENAI_MODE", "heuristic")
     llama_model_path = os.getenv("LLAMA_MODEL_PATH")
+
+    # Correlation settings
+    correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", "0.5"))

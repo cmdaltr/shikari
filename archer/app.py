@@ -467,6 +467,43 @@ def extract_indicators_from_query(yaml_file):
             actions = re.findall(action_pattern, query_text, re.IGNORECASE)
             indicators.extend(actions)
 
+            # KQL has_any() function - extract values from has_any("val1", "val2", ...)
+            # Example: | where AdditionalFields has_any("wevtutil", "evtx")
+            has_any_pattern = r'has_any\s*\(\s*"([^"]+)"(?:\s*,\s*"([^"]+)")*'
+            has_any_matches = re.findall(has_any_pattern, query_text, re.IGNORECASE)
+            for match in has_any_matches:
+                # Match returns tuples, flatten and add non-empty values
+                for val in match:
+                    if val and len(val.strip()) >= 3:
+                        cleaned = val.strip().strip('*').strip()
+                        if cleaned:
+                            indicators.append(cleaned)
+
+            # KQL has_any() - alternate approach to catch all values in the parentheses
+            has_any_full_pattern = r'has_any\s*\(([^)]+)\)'
+            has_any_full_matches = re.findall(has_any_full_pattern, query_text, re.IGNORECASE)
+            for match_group in has_any_full_matches:
+                # Split by comma and extract quoted values
+                values = re.findall(r'"([^"]+)"', match_group)
+                for val in values:
+                    if val and len(val.strip()) >= 3:
+                        cleaned = val.strip().strip('*').strip()
+                        if cleaned and cleaned not in indicators:
+                            indicators.append(cleaned)
+
+            # Splunk IN () syntax - extract values from IN ("val1", "val2", ...)
+            # Example: | search process IN ("wevtutil", "evtx")
+            in_pattern = r'\bIN\s*\(([^)]+)\)'
+            in_matches = re.findall(in_pattern, query_text, re.IGNORECASE)
+            for match_group in in_matches:
+                # Extract quoted values
+                values = re.findall(r'"([^"]+)"', match_group)
+                for val in values:
+                    if val and len(val.strip()) >= 3:
+                        cleaned = val.strip().strip('*').strip()
+                        if cleaned and cleaned not in indicators:
+                            indicators.append(cleaned)
+
             # Command-line flags and switches (e.g., -enc, -encodedcommand, /c)
             flag_pattern = r"(?:^|\s)([-/]\w+)\b"
             flags = re.findall(flag_pattern, query_text)
@@ -519,6 +556,18 @@ def extract_indicators_from_query(yaml_file):
                 if len(field_val) > 3 and (field_val[0].isupper() or field_val.isupper()):
                     indicators.append(field_val)
 
+            # Splunk field=value patterns (e.g., process="runas", command="cmd.exe", user="admin")
+            # Match any field="value" pattern and extract the value
+            simple_field_pattern = r'\w+\s*=\s*"([^"]+)"'
+            field_values = re.findall(simple_field_pattern, query_text)
+            for val in field_values:
+                # Include values that are alphanumeric, not just generic words
+                # Skip very short values (< 3 chars) and pure numbers
+                # Strip asterisks and leading/trailing spaces (wildcards from queries)
+                cleaned_val = val.strip().strip('*').strip()
+                if len(cleaned_val) >= 3 and not cleaned_val.isdigit() and cleaned_val.lower() not in ['and', 'or', 'not', 'null', 'none', 'true', 'false']:
+                    indicators.append(cleaned_val)
+
             # Common suspicious strings (base64, encoded, etc.)
             suspicious_patterns = [
                 r"\b(base64)\b",
@@ -546,7 +595,8 @@ def extract_indicators_from_query(yaml_file):
             }
 
             for item in indicators:
-                item_str = str(item).strip()
+                # Strip whitespace AND asterisks for consistent deduplication
+                item_str = str(item).strip().strip('*').strip()
                 item_lower = item_str.lower()
 
                 # Skip if empty or too short
@@ -561,7 +611,7 @@ def extract_indicators_from_query(yaml_file):
                 if item_lower in generic_terms:
                     continue
 
-                # Skip if already seen
+                # Skip if already seen (using cleaned version for comparison)
                 if item_lower in seen:
                     continue
 
@@ -1918,7 +1968,10 @@ def modified_process_group_wrapper(
                 print(f"Error logging activity: {log_error}")
 
     except Exception as e:
+        import traceback
         print(f"Error in process group: {e}")
+        print("Full traceback:")
+        traceback.print_exc()
         try:
             write_progress(group_name, {"status": "failed"})
         except:
@@ -3068,6 +3121,11 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             except:
                 pass
 
+            # IMPORTANT: Read technique name from YAML file's "name:" field, NOT from filename
+            # Filenames are filesystem-safe (no spaces/slashes) but YAML has the correct MITRE ATT&CK name
+            yaml_data_early = load_yaml_file(yaml_file)
+            yaml_technique_name = yaml_data_early.get("name", "") if yaml_data_early else ""
+
             # Get technique name from ATT&CK if available (only for actual technique IDs like T1234)
             technique_name = ""
             technique_upper = technique.upper()
@@ -3083,6 +3141,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             # Format technique display as "T1234 - Technique Name" or just the tactic name
             if technique_name:
                 technique_display = f"{technique_upper} - {technique_name}"
+            elif yaml_technique_name:
+                # Use the technique name from YAML file (preserves MITRE ATT&CK formatting)
+                technique_display = yaml_technique_name
             else:
                 # Check if it's an actual technique ID (T followed by digits) vs a technique name
                 import re

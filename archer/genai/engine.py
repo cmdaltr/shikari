@@ -750,29 +750,26 @@ def _score_correlation(corr: Dict, file_info: Dict) -> float:
     avg_specificity = (specificity_a + specificity_b) / 2
     score += avg_specificity * 20
 
-    # 3. False Positive Rate (0-20 points) - inverse scoring
+    # 3. False Positive Rate (0-25 points) - inverse scoring
     fp_rate_a = _estimate_false_positive_rate(query_a, corr.get("vendor", ""))
     fp_rate_b = _estimate_false_positive_rate(query_b, corr.get("vendor", ""))
     avg_fp_rate = (fp_rate_a + fp_rate_b) / 2
-    score += (1.0 - avg_fp_rate) * 20  # Lower FP rate = higher score
+    score += (1.0 - avg_fp_rate) * 25  # Lower FP rate = higher score
 
-    # 4. Semantic Overlap (0-15 points)
-    # Re-calculate semantic overlap for scoring
-    overlap = _estimate_semantic_overlap_kql(query_a, query_b)
-    if overlap > 50:  # Already filtered to >50%
-        # Normalize 50-100% to 0-15 points
-        score += ((overlap - 50) / 50) * 15
-
-    # 5. Attack Progression (0-15 points)
-    # Check if tactics form a logical progression
+    # 4. Attack Progression (0-25 points)
+    # Check if tactics form a logical progression - this is the KEY metric for correlation value
     for tactic_a in tactics_a:
         for tactic_b in tactics_b:
             if (tactic_a, tactic_b) in _ATTACK_PROGRESSIONS:
-                score += 15
+                score += 25
                 break
             elif (tactic_b, tactic_a) in _ATTACK_PROGRESSIONS:
-                score += 15
+                score += 25
                 break
+
+    # NOTE: Semantic overlap is calculated and displayed as informational metadata
+    # but is NOT used in correlation scoring. What matters is attack chain progression,
+    # not whether queries use similar fields/indicators.
 
     return min(100.0, score)
 
@@ -1065,11 +1062,9 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                     if normalized_a == normalized_b:
                         skip_pair = True
 
-                # KQL-only filter: require semantic overlap > 50% to include result
-                if not skip_pair and detected_vendor in ["mde", "microsoft", "sentinel", "kql"]:
-                    ov = _estimate_semantic_overlap_kql(query_a, query_b)
-                    if ov <= 50:
-                        skip_pair = True
+                # NOTE: Semantic overlap filter removed - we care about attack chain progression,
+                # not query field similarity. Semantic overlap is still calculated for display
+                # but does not filter correlations.
 
                 # Update progress periodically with cumulative count (every 10 pairs evaluated)
                 if cumulative_count % 10 == 0:
@@ -1124,11 +1119,15 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             # Count detection files for this vendor
             vendor_detection_count = len(by_vendor.get(vendor, []))
 
+            # Get minimum relevance threshold from config (default 0.5 = 50%)
+            from archer.config import CoreConfig
+            min_relevance = CoreConfig.correlation_min_relevance
+
             print(
-                f"GenAI: Vendor '{vendor}' has {vendor_detection_count} detections, filtering {len(corrs)} correlations by 50% relevance threshold"
+                f"GenAI: Vendor '{vendor}' has {vendor_detection_count} detections, filtering {len(corrs)} correlations by {min_relevance:.0%} relevance threshold"
             )
             top_vendor_corrs = _score_and_filter_correlations(
-                corrs, file_info, min_relevance=0.5
+                corrs, file_info, min_relevance=min_relevance
             )
             print(f"GenAI: Kept {len(top_vendor_corrs)} correlations for vendor '{vendor}'")
             filtered_corr.extend(top_vendor_corrs)

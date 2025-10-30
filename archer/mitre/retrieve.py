@@ -17,14 +17,63 @@ def retrieve_group(bundle, group):
 
 def retrieve_techniques(bundle, group_id):
     techniques = []
+    software_to_expand = []  # Track software that needs to be expanded to techniques
+
+    print(f"[DEBUG] retrieve_techniques: START for group {group_id}")
+
     for obj in bundle.objects:
         if (
             obj.get("type") == "relationship"
             and obj.get("relationship_type") == "uses"
             and obj.get("source_ref") == group_id
         ):
-            techniques.append((obj.get("description"), obj.get("target_ref")))
+            target_ref = obj.get("target_ref")
+            description = obj.get("description")
 
+            # Check if target is software (tool or malware) or a technique (attack-pattern)
+            target_type = None
+            for target_obj in bundle.objects:
+                if target_obj.get("id") == target_ref:
+                    target_type = target_obj.get("type")
+                    break
+
+            if target_type in ["tool", "malware"]:
+                # This is software - we need to expand it to get techniques
+                print(f"[DEBUG] retrieve_techniques: Found SOFTWARE {target_ref} - will expand to techniques")
+                software_to_expand.append((description, target_ref))
+            elif target_type == "attack-pattern":
+                # This is a technique - add it directly
+                techniques.append((description, target_ref))
+            else:
+                # Unknown type - add it anyway for backward compatibility
+                techniques.append((description, target_ref))
+
+    print(f"[DEBUG] retrieve_techniques: Found {len(techniques)} direct techniques, {len(software_to_expand)} software to expand")
+
+    # Now expand software to their techniques
+    # For each software, find what techniques it uses
+    for sw_desc, sw_ref in software_to_expand:
+        sw_tech_count = 0
+        for rel_obj in bundle.objects:
+            if (
+                rel_obj.get("type") == "relationship"
+                and rel_obj.get("relationship_type") == "uses"
+                and rel_obj.get("source_ref") == sw_ref
+            ):
+                # This software uses a technique
+                tech_ref = rel_obj.get("target_ref")
+                tech_desc = rel_obj.get("description")
+
+                # Combine the group's description of using the software
+                # with the software's use of the technique
+                combined_desc = f"{sw_desc}\n\nSoftware technique: {tech_desc}" if tech_desc else sw_desc
+
+                techniques.append((combined_desc, tech_ref))
+                sw_tech_count += 1
+
+        print(f"[DEBUG] retrieve_techniques: Expanded software {sw_ref} to {sw_tech_count} techniques")
+
+    print(f"[DEBUG] retrieve_techniques: TOTAL {len(techniques)} techniques after expansion")
     return techniques
 
 
@@ -49,11 +98,19 @@ def retrieve_additional_techniques(bundle, procedure_ref):
             and obj.get("target_ref") == procedure_ref
             and obj.get("source_ref") != procedure_ref  # Avoid self-references
         ):
-            # Get the group that uses this technique
-            source_group = obj.get("source_ref")
-            additional_techniques.append(
-                (source_group, obj.get("description"), obj.get("target_ref"))
-            )
+            source_ref = obj.get("source_ref")
+
+            # Check if source is a group (intrusion-set), not software (tool/malware)
+            # We only want additional evidence from other groups, not from software
+            for source_obj in bundle.objects:
+                if source_obj.get("id") == source_ref:
+                    if source_obj.get("type") == "intrusion-set":
+                        # This is a group - add it
+                        additional_techniques.append(
+                            (source_ref, obj.get("description"), obj.get("target_ref"))
+                        )
+                    # Silently skip tool/malware types - we don't want software procedures here
+                    break
 
     return additional_techniques
 
@@ -76,11 +133,18 @@ def get_all_groups(bundle):
 
 
 def retrieve_procedures(bundle, retrieved_techniques):
+    print(f"[DEBUG] ===== RETRIEVE_PROCEDURES CALLED =====")
+    print(f"[DEBUG] Number of retrieved_techniques: {len(retrieved_techniques)}")
+
     procedures = []
     group_ids = get_all_groups(bundle)
 
-    for obj in bundle.objects:
-        for group_procedure_desc, procedure_ref in retrieved_techniques:
+    # Process each technique once (not for every object in bundle)
+    for group_procedure_desc, procedure_ref in retrieved_techniques:
+        print(f"[DEBUG] Processing procedure_ref: {procedure_ref}")
+
+        # Find the matching attack-pattern object
+        for obj in bundle.objects:
             if obj.get("type") == "attack-pattern" and obj.get("id") == procedure_ref:
                 red_info, blue_info = find_procedure_evidence(
                     group_procedure_desc, obj["description"], obj["x_mitre_detection"]
@@ -229,6 +293,14 @@ def retrieve_procedures(bundle, retrieved_techniques):
                                                     ] + add_red_tools
 
                 # Retrieve platform metadata
+                print(f"[DEBUG] Before extracting software_refs - red_tools type: {type(red_tools)}")
+                if isinstance(red_tools, dict):
+                    print(f"[DEBUG]   red_tools keys: {list(red_tools.keys())}")
+                    if "sw" in red_tools:
+                        print(f"[DEBUG]   red_tools['sw']: {red_tools['sw']}")
+                elif isinstance(red_tools, list):
+                    print(f"[DEBUG]   red_tools is a list with {len(red_tools)} items")
+
                 software_refs = []
                 if isinstance(red_tools, list):
                     software_refs = [
@@ -237,7 +309,101 @@ def retrieve_procedures(bundle, retrieved_techniques):
                         if isinstance(tool, dict) and "id" in tool
                     ]
                 elif isinstance(red_tools, dict) and "sw" in red_tools:
-                    software_refs = red_tools["sw"]
+                    # red_tools["sw"] contains software NAMES, not IDs
+                    # Convert names to STIX IDs
+                    software_names = red_tools["sw"] if isinstance(red_tools["sw"], list) else [red_tools["sw"]]
+                    software_refs = []
+                    for sw_name in software_names:
+                        # Find the STIX ID for this software name
+                        # IMPORTANT: Use sw_obj instead of obj to avoid shadowing the outer loop variable
+                        for sw_obj in bundle.objects:
+                            if (sw_obj.get("type") in ["tool", "malware"]
+                                and sw_obj.get("name", "").lower() == sw_name.lower()):
+                                software_refs.append(sw_obj.get("id"))
+                                break
+
+                print(f"[DEBUG] Extracted software_refs: {software_refs}")
+
+                # NOTE: Software expansion is now handled in retrieve_techniques()
+                # We no longer need to traverse software here since we already expanded
+                # software to their techniques at the retrieval stage.
+                # This prevents duplicate processing and software IDs appearing in final output.
+
+                # DISABLED: Expand software to techniques and extract their indicators
+                # This implements: Group -> Software -> Techniques -> Indicators
+                if False and software_refs:
+                    print(f"[DEBUG] retrieve_procedures: Traversing {len(software_refs)} software for technique indicators")
+                    print(f"[DEBUG]   Original op_guidance keys: {list(op_guidance.keys()) if isinstance(op_guidance, dict) else 'not a dict'}")
+
+                    software_techniques = get_software_techniques(bundle, software_refs)
+                    print(f"[DEBUG]   Software traversal returned {len(software_techniques)} techniques")
+
+                    # For each technique used by the software, extract indicators
+                    for sw_tech_id, sw_tech_name, sw_tech_desc in software_techniques:
+                        print(f"[DEBUG]   Processing software technique: {sw_tech_id} - {sw_tech_name}")
+
+                        # Find the technique object
+                        for sw_tech_obj in bundle.objects:
+                            if (sw_tech_obj.get("type") == "attack-pattern"
+                                and sw_tech_obj.get("external_references", [{}])[0].get("external_id") == sw_tech_id):
+
+                                # Extract indicators from this software technique
+                                sw_red_info, sw_blue_info = find_procedure_evidence(
+                                    sw_tech_desc,  # How the software uses this technique
+                                    sw_tech_obj["description"],  # Technique description
+                                    sw_tech_obj.get("x_mitre_detection", "")
+                                )
+                                sw_op_guidance, _ = sw_red_info
+                                print(f"[DEBUG]     Extracted sw_op_guidance type: {type(sw_op_guidance)}, content: {sw_op_guidance}")
+
+                                # Make sure sw_op_guidance is a dictionary
+                                if isinstance(sw_op_guidance, str):
+                                    sw_op_guidance = {"description": sw_op_guidance} if sw_op_guidance else {}
+                                elif sw_op_guidance == "":
+                                    sw_op_guidance = {}
+
+                                # Filter short values
+                                sw_op_guidance = filter_short_values(sw_op_guidance)
+                                print(f"[DEBUG]     After filtering: {sw_op_guidance}")
+
+                                # Merge software technique indicators into main op_guidance
+                                # This ensures we get indicators like "net use", "fsutil" from BlackCat
+                                if isinstance(op_guidance, dict) and isinstance(sw_op_guidance, dict):
+                                    for key in ["cmd", "reg", "evt", "sw", "api", "network"]:
+                                        if sw_op_guidance.get(key):
+                                            if not op_guidance.get(key):
+                                                # No existing indicators for this type, add software's
+                                                op_guidance[key] = sw_op_guidance[key]
+                                                print(f"[DEBUG]       Added {key}: {sw_op_guidance[key]}")
+                                            else:
+                                                # Merge and deduplicate
+                                                existing = op_guidance[key] if isinstance(op_guidance[key], list) else [op_guidance[key]]
+                                                new_indicators = sw_op_guidance[key] if isinstance(sw_op_guidance[key], list) else [sw_op_guidance[key]]
+                                                # Combine and remove duplicates (case-insensitive)
+                                                combined = existing + [ind for ind in new_indicators if ind.lower() not in [e.lower() for e in existing]]
+                                                op_guidance[key] = combined
+                                                print(f"[DEBUG]       Merged {key}: {combined}")
+                                break
+
+                    print(f"[DEBUG]   Final op_guidance after software traversal: {op_guidance}")
+
+                    # IMPORTANT: After software traversal, remove software names from red_tools
+                    # Software indicators have been extracted and merged into op_guidance
+                    # We don't want software NAMES (like "BoomBox", "BlackCat") as detection indicators
+                    # Only the actual technique indicators (commands, APIs, etc.) should be used
+                    if isinstance(red_tools, dict) and "sw" in red_tools:
+                        print(f"[DEBUG]   Removing software names from red_tools after traversal")
+                        del red_tools["sw"]
+                    elif isinstance(red_tools, list):
+                        # If red_tools is a list of software names/objects, clear it in place
+                        print(f"[DEBUG]   Clearing red_tools list after software traversal")
+                        red_tools.clear()
+
+                # ALSO: Remove software names from red_tools even if no software_refs were traversed
+                # This handles cases where software names appear as indicators but shouldn't be used
+                if isinstance(red_tools, dict) and "sw" in red_tools:
+                    print(f"[DEBUG] Removing 'sw' key from red_tools to prevent software names in queries")
+                    del red_tools["sw"]
 
                 procedure_platforms, software_platforms = retrieve_platform_metadata(
                     bundle, procedure_ref, software_refs
@@ -254,10 +420,13 @@ def retrieve_procedures(bundle, retrieved_techniques):
                 technique_description = obj.get("description", "")
                 technique_platforms = obj.get("x_mitre_platforms", [])
 
+                tech_id = obj["external_references"][0]["external_id"]
+                tech_name = obj["name"]
+
                 procedures.append(
                     (
-                        obj["external_references"][0]["external_id"],
-                        obj["name"],
+                        tech_id,
+                        tech_name,
                         tactics,
                         group_procedure_desc,
                         op_guidance,
@@ -269,6 +438,8 @@ def retrieve_procedures(bundle, retrieved_techniques):
                         technique_platforms,
                     )
                 )
+                # Break after finding and processing this technique
+                break
 
     return procedures
 
@@ -302,6 +473,74 @@ def retrieve_platform_metadata(bundle, procedure_ref, software_refs):
                     software_platforms[software_ref] = obj["x_mitre_platforms"]
 
     return procedure_platforms, software_platforms
+
+
+def get_software_techniques(bundle, software_refs):
+    """
+    Retrieve all techniques used by the specified software (malware/tools).
+
+    This enables the pattern: Group -> Software -> Techniques -> Procedures -> Indicators
+    Instead of just using software names as indicators, we extract the actual technical indicators
+    from the techniques that software employs.
+
+    Args:
+        bundle: STIX bundle containing MITRE ATT&CK data
+        software_refs: List of software reference IDs (e.g., ["malware--abc123", "tool--def456"])
+
+    Returns:
+        List of tuples: [(technique_id, technique_name, description), ...]
+    """
+    if not software_refs:
+        print(f"[DEBUG] get_software_techniques: No software_refs provided")
+        return []
+
+    print(f"[DEBUG] get_software_techniques: Processing {len(software_refs)} software references")
+    print(f"[DEBUG]   software_refs sample (first 3): {software_refs[:3]}")
+    print(f"[DEBUG]   software_refs types: {[type(ref) for ref in software_refs[:3]]}")
+
+    for sw_ref in software_refs:
+        # Get software name for better logging
+        found = False
+        for obj in bundle.objects:
+            if obj.get("id") == sw_ref:
+                sw_name = obj.get("name", sw_ref)
+                print(f"[DEBUG]   - Software: {sw_name} ({sw_ref})")
+                found = True
+                break
+        if not found:
+            print(f"[DEBUG]   - Software NOT FOUND: {sw_ref} (type: {type(sw_ref)})")
+
+    software_techniques = []
+
+    # Find all "uses" relationships where software uses techniques
+    for obj in bundle.objects:
+        if obj.get("type") == "relationship" and obj.get("relationship_type") == "uses":
+            source_ref = obj.get("source_ref", "")
+            target_ref = obj.get("target_ref", "")
+
+            # Check if this relationship is from our software to a technique
+            if source_ref in software_refs and target_ref.startswith("attack-pattern--"):
+                # Get the description from the relationship (how the software uses this technique)
+                relationship_desc = obj.get("description", "")
+
+                # Find the technique object to get technique ID and name
+                for tech_obj in bundle.objects:
+                    if tech_obj.get("type") == "attack-pattern" and tech_obj.get("id") == target_ref:
+                        technique_id = tech_obj.get("external_references", [{}])[0].get("external_id", "")
+                        technique_name = tech_obj.get("name", "")
+
+                        print(f"[DEBUG]   -> Found technique: {technique_id} - {technique_name}")
+
+                        # Store technique with the software's specific usage description
+                        software_techniques.append((
+                            technique_id,
+                            technique_name,
+                            relationship_desc
+                        ))
+                        break
+
+    print(f"[DEBUG] get_software_techniques: Found {len(software_techniques)} techniques total")
+    return software_techniques
 
 
 def is_compatible_with_index(platforms, index_name):

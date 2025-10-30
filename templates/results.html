@@ -445,9 +445,9 @@ body, html {
 }
 
 .vendor-content.show {
-  max-height: 5000px;
+  max-height: none;
   padding: 8px 0;
-  transition: max-height 0.5s ease-in, padding 0.3s ease-in;
+  transition: padding 0.3s ease-in;
 }
 
 /* Correlation and cross-vendor collapsible content */
@@ -460,8 +460,8 @@ body, html {
 
 .correlation-content.show,
 .cross-vendor-content.show {
-  max-height: 5000px;
-  transition: max-height 0.5s ease-in;
+  max-height: none;
+  transition: none;
 }
 
 /* detection-item base styles now in common.css */
