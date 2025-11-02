@@ -546,7 +546,9 @@ async function refresh(){
       const correlationStatus = p.status || '';
       const correlationProcessed = p.processed || 0;
       const correlationTotal = p.total_pairs || 0;
-      const vendorCount = p.vendor_count || 0;
+      // Use post-merge count if available (reflects what's displayed on results page after merging)
+      // Otherwise fall back to pre-merge count for backward compatibility
+      const vendorCount = p.correlation_count_post_merge || p.vendor_count || 0;
 
       if (correlationStatus === 'genai_complete' || correlationStatus === 'complete') {
         // Correlation complete

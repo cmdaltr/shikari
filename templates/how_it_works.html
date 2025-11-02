@@ -1685,6 +1685,143 @@ data/APT29/
             </details>
 
             <details class="faq-item">
+                <summary class="faq-question">What are the various approaches to building correlations available in Archer and how do I invoke each one?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses <strong>one correlation engine</strong> that automatically runs after detection generation. However, you can influence the quality of correlations by choosing different <strong>detection generation modes</strong>:</p>
+
+                    <h4>The Correlation Engine (Always Enabled)</h4>
+                    <p>Archer's correlation engine uses a <strong>rule-based heuristic scoring system</strong> with 6 factors (0-140 points) to intelligently pair detections within each vendor. This engine:</p>
+                    <ul>
+                        <li>Automatically runs after detection generation completes</li>
+                        <li>Cannot be disabled (always generates correlations)</li>
+                        <li>Works entirely offline without AI</li>
+                        <li>Provides deterministic, consistent results</li>
+                        <li><strong>Includes semantic analysis by default</strong>: Calculates semantic overlap between queries (0-100%) to filter duplicates and ensure diversity</li>
+                    </ul>
+
+                    <p><strong>Scoring factors:</strong> Technique Criticality (0-30 pts), Tactic Priority (0-20 pts), Query Specificity (0-20 pts), False Positive Rate (0-25 pts), Attack Progression (0-25 pts), Data Source Diversity (-10 to +20 pts)</p>
+
+                    <p><strong>Built-in semantic analysis:</strong> Always calculates token-based semantic overlap (Jaccard similarity) to filter correlations with >80% overlap (too similar)</p>
+
+                    <p><strong>Tunable parameters</strong> (Profile → Config):</p>
+                    <ul>
+                        <li><strong>Threshold:</strong> 40% (minimum relevance score to include correlation)</li>
+                        <li><strong>Per-Vendor Limit:</strong> 60 (max correlations per vendor)</li>
+                        <li><strong>Tech Frequency:</strong> 20 (max appearances of a technique in simple correlations)</li>
+                    </ul>
+
+                    <h4>Detection Generation Modes (Affect Correlation Quality)</h4>
+                    <p>The quality and types of correlations depend on what detections you generate. Choose a generation mode:</p>
+
+                    <h5>1. Standard Generation (Default)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Don't check any boxes (default)</li>
+                        <li><strong>What it does:</strong> Generates detections using template-based approach</li>
+                        <li><strong>Correlation result:</strong> Standard correlations based on templates</li>
+                    </ul>
+
+                    <h5>2. Advanced Parsing (Semantic Analysis)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Check "Advanced Parsing" in Web UI</li>
+                        <li><strong>What it does:</strong> Groups detections by behavioral categories during generation (authentication, network, file, process)</li>
+                        <li><strong>Correlation result:</strong> More semantically-related correlations that understand behavioral context</li>
+                        <li><strong>When to use:</strong> Complex attack chains where behavioral relationships matter</li>
+                    </ul>
+
+                    <h5>3. AI Generators (Optional)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Check "AI Generators" checkbox in Web UI</li>
+                        <li><strong>What it does:</strong> Uses LLMs to enhance detection generation quality</li>
+                        <li><strong>Effect on correlations:</strong> AI-enhanced detections → better quality input for correlation engine</li>
+                        <li><strong>AI Providers:</strong> OpenAI GPT (cloud) or local LLMs via Ollama/LM Studio</li>
+                        <li><strong>Requirements:</strong> OPENAI_API_KEY for cloud AI, or local LLM server for offline AI</li>
+                        <li><strong>When to use:</strong> Experimental AI-enhanced detection quality</li>
+                    </ul>
+
+                    <h5>4. AI Correlations (Optional)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Check "AI Correlations" checkbox in Web UI (requires "AI Generators" also enabled)</li>
+                        <li><strong>What it does:</strong> Uses LLMs to improve correlation JOIN query combination strategies</li>
+                        <li><strong>What it does NOT do:</strong> Detection pairing and scoring remain rule-based (6-factor, 0-140 points). AI cannot change which detections get paired or their relevance scores</li>
+                        <li><strong>Effect on correlations:</strong> Smarter JOIN query logic for combining detection queries</li>
+                        <li><strong>Requirements:</strong> "AI Generators" enabled + OPENAI_API_KEY</li>
+                        <li><strong>When to use:</strong> Experimental AI-enhanced correlation query combination</li>
+                    </ul>
+
+                    <h4>The Complete Flow</h4>
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 1em 0; font-family: monospace; font-size: 0.9em;">
+                        <strong>Step 1: Detection Generation</strong> (choose one mode)<br>
+                        &nbsp;&nbsp;├─ Standard (default)<br>
+                        &nbsp;&nbsp;├─ Advanced Parsing (semantic grouping)<br>
+                        &nbsp;&nbsp;└─ AI Generators (AI-enhanced)<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                        <strong>Step 2: Generated Detections</strong> (YAML files)<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                        <strong>Step 3: Correlation Engine</strong> (ALWAYS runs automatically)<br>
+                        &nbsp;&nbsp;├─ Score all detection pairs (0-140)<br>
+                        &nbsp;&nbsp;├─ Filter by threshold (40%)<br>
+                        &nbsp;&nbsp;├─ Apply per-vendor limit (60)<br>
+                        &nbsp;&nbsp;├─ Merge related correlations<br>
+                        &nbsp;&nbsp;└─ Generate JOIN queries<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                        <strong>Step 4: Correlation Results</strong> (JSON file)
+                    </div>
+
+                    <h4>Quick Reference</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;">
+                        <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                            <th style="padding: 8px; text-align: left;">Option</th>
+                            <th style="padding: 8px; text-align: left;">Invocation</th>
+                            <th style="padding: 8px; text-align: left;">Offline?</th>
+                            <th style="padding: 8px; text-align: left;">Effect on Correlations</th>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Standard</strong></td>
+                            <td style="padding: 8px;">Default (no boxes)</td>
+                            <td style="padding: 8px;">✅ Yes</td>
+                            <td style="padding: 8px;">Standard template-based correlations</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Advanced Parsing</strong></td>
+                            <td style="padding: 8px;">Check "Advanced Parsing"</td>
+                            <td style="padding: 8px;">✅ Yes</td>
+                            <td style="padding: 8px;">Semantically-grouped correlations</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>AI Generators</strong></td>
+                            <td style="padding: 8px;">Check "AI Generators"</td>
+                            <td style="padding: 8px;">❌ No (requires API)</td>
+                            <td style="padding: 8px;">AI-enhanced detections → better input quality</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>AI Correlations</strong></td>
+                            <td style="padding: 8px;">Check "AI Correlations"</td>
+                            <td style="padding: 8px;">❌ No (requires API)</td>
+                            <td style="padding: 8px;">Smarter JOIN query combination logic</td>
+                        </tr>
+                    </table>
+
+                    <h4>Advanced Correlation Options</h4>
+                    <p>These options modify how the correlation engine processes results:</p>
+                    <ul>
+                        <li><strong>Merge by Parent Technique:</strong> Groups correlations by parent technique (e.g., T1003.001, T1003.002 → T1003) - Check "Merge by Parent Technique" in UI</li>
+                        <li><strong>OSINT Enrichment:</strong> Incorporate battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk) - Check "OSINT Enrichment" in UI</li>
+                        <li><strong>OSINT Comparison:</strong> Compare generated correlations with open-source repos to show alignment with community detection rules - Check "OSINT Comparison" in UI</li>
+                    </ul>
+
+                    <h4>Key Takeaways</h4>
+                    <ul>
+                        <li><strong>ONE correlation engine</strong>: Rule-based heuristic with built-in semantic analysis (always active)</li>
+                        <li><strong>Detection generation modes</strong>: Affect the INPUT to correlation (quality of detections)</li>
+                        <li><strong>AI Generators</strong>: Enhances detection quality, providing better input for correlation engine</li>
+                        <li><strong>AI Correlations</strong>: Improves JOIN query combination logic, but scoring/pairing remain rule-based</li>
+                        <li><strong>Semantic analysis</strong>: Token-based overlap calculation (0-100%) is default, "Advanced Parsing" adds deep behavioral categorization</li>
+                        <li><strong>All correlations</strong>: Scored identically (6 factors, 0-140 points) regardless of generation mode or AI options</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
                 <summary class="faq-question">What's coming in future versions?</summary>
                 <div class="faq-answer">
                     <p>Planned enhancements include:</p>

@@ -97,5 +97,6 @@ class CoreConfig:
     llama_model_path = os.getenv("LLAMA_MODEL_PATH")
 
     # Correlation settings
-    correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", "0.60"))
+    # Testing at 0.40 (40%) with increased technique frequency limit (20)
+    correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", "0.7"))
     correlation_max_limit = int(os.getenv("CORRELATION_MAX_LIMIT", "250"))

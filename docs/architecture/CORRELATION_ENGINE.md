@@ -545,17 +545,26 @@ DeviceFileEvents_CredentialAccess
 
 ## Configuration Parameters
 
-### Thresholds & Limits
+### Tunable Parameters ⚙️
+
+These three parameters can be adjusted via **Profile → Config** in the web UI or via the CLI script.
+
+| Parameter | Default | Location | Purpose | Tunable? |
+|-----------|---------|----------|---------|----------|
+| **Min Relevance Score (Threshold)** | **40%** (56/140) | `config.py` + `engine.py` | Quality threshold | ✅ **YES** |
+| **Max Correlations/Vendor** | **60** | `engine.py` function parameter | Prevent overload | ✅ **YES** |
+| **Tech Frequency Limit** | **20** | `_apply_correlation_grouping()` | Ensure diversity | ✅ **YES** |
+
+**See:** [Correlation Quick Reference](../reference/CORRELATION_QUICK_REFERENCE.md) for detailed tuning guide.
+
+### Fixed Parameters
 
 | Parameter | Value | Location | Purpose |
 |-----------|-------|----------|---------|
-| **Min Relevance Score** | 75% (105/140) | `_score_and_filter_correlations()` | Quality threshold |
-| **Max Correlations/Vendor** | 25 | `_score_and_filter_correlations()` | Prevent overload |
-| **Max Techniques/Correlation** | 8 | Super-merging logic | **NEW** - Prevent complexity |
-| **Min Tactics/Correlation** | 2 | Super-merging logic | **NEW** - Ensure cross-phase |
-| **Max Technique Frequency** | 3 | Frequency limiting | Ensure diversity |
+| **Max Techniques/Correlation** | 8 | Super-merging logic | Prevent complexity |
+| **Min Tactics/Correlation** | 2 | Super-merging logic | Ensure cross-phase |
 | **JOIN Time Window** | 60 minutes | JOIN query generation | Event correlation window |
-| **Top Correlations/Group** | 3 | First-level grouping | De-duplication |
+| **Super-Merge Skip Threshold** | >10 targets | `_apply_correlation_grouping()` | Prevent massive correlations |
 
 ### Scoring Weights
 

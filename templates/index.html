@@ -425,30 +425,30 @@
               <!-- Additional Options -->
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
-                <div class="options-grid" style="grid-template-columns: 1fr calc(1fr - 20px) calc(1fr + 20px);">
-                  <!-- Column 1: Merge Options -->
-                  <label class="option-item">
-                    <input type="checkbox" name="merge_by_tactic" value="true">
-                    <span class="option-label">
-                      Merge by Tactic
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge all techniques under the same MITRE ATT&CK tactic (e.g., all Credential Access techniques), then correlate across tactics. Generates ~8-15 high-level phase-based correlations instead of hundreds of technique-level pairs. Best for executive dashboards and low-noise alerting.</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Column 2: OSINT Enhancement -->
+                <div class="options-grid" style="grid-template-columns: 0.9fr 0.9fr 1.2fr;">
+                  <!-- Row 1 Column 1: OSINT Enhancement -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_enhancement" value="true" id="osint-enhancement-checkbox">
                     <span class="option-label">
-                      OSINT Enhancement
+                      OSINT Enrichment
                       <span class="option-info-icon">i
                         <span class="option-info-tooltip">Automatically incorporate battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk) into queries.</span>
                       </span>
                     </span>
                   </label>
 
-                  <!-- Column 3: Cross-Vendor -->
+                  <!-- Row 1 Column 2: AI Generators -->
+                  <label class="option-item">
+                    <input type="checkbox" name="ai_generators" value="true">
+                    <span class="option-label">
+                      AI Generators
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Use AI (OpenAI GPT, local LLMs) to enhance detection generation quality with smarter query logic. Requires OPENAI_API_KEY for cloud AI or local LLM server.</span>
+                      </span>
+                    </span>
+                  </label>
+
+                  <!-- Row 1 Column 3: Cross-Vendor Correlation -->
                   <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
                     <input type="checkbox" name="cross_vendor_correlation" value="true" id="cross-vendor-checkbox" disabled>
                     <span class="option-label">
@@ -457,18 +457,7 @@
                     </span>
                   </label>
 
-                  <!-- Row 2 Column 1: Parent Technique -->
-                  <label class="option-item">
-                    <input type="checkbox" name="merge_by_parent" value="true">
-                    <span class="option-label">
-                      Merge by Parent Technique
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Row 2 Column 2: OSINT Comparison -->
+                  <!-- Row 2 Column 1: OSINT Comparison -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_comparison" value="true" id="osint-comparison-checkbox">
                     <span class="option-label">
@@ -479,34 +468,27 @@
                     </span>
                   </label>
 
-                  <!-- Row 2 Column 3: AI-Powered -->
+                  <!-- Row 2 Column 2: AI Correlations -->
                   <label class="option-item">
-                    <input type="checkbox" name="ai_generators" value="true">
+                    <input type="checkbox" name="ai_correlations" value="true">
                     <span class="option-label">
-                      AI-Powered Correlations
+                      AI Correlations
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Use OpenAI's GPT models for advanced correlation analysis. Requires OPENAI_API_KEY environment variable.</span>
+                        <span class="option-info-tooltip"><strong>What AI does:</strong> Improves correlation JOIN query combination strategies (smarter query logic).<br><br><strong>What AI does NOT do:</strong> Detection pairing and scoring remain rule-based (6-factor, 0-140 points). AI cannot change which detections get paired or their relevance scores.<br><br>Requires AI Generators checkbox + OPENAI_API_KEY.</span>
                       </span>
                     </span>
                   </label>
 
-                  <!-- Relevance Slider - Full Width -->
-                  <div class="option-item" style="grid-column: span 3; padding-top: 12px; border-top: 1px solid #e5e7eb;">
-                    <label class="option-label" style="display: block; margin-bottom: 8px; font-weight: 500;">
-                      Correlation Relevance Threshold: <span id="relevance-value-generate" style="color: #8B0000; font-weight: 600;">75%</span>
+                  <!-- Row 2 Column 3: Merge by Parent Technique -->
+                  <label class="option-item">
+                    <input type="checkbox" name="merge_by_parent" value="true">
+                    <span class="option-label">
+                      Merge by Parent Technique
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">
-                          Higher values (75-100%): Fewer, more precise correlations between highly similar detections.<br>
-                          Lower values (50-74%): More correlations, including loosely related detections.<br>
-                          Default: 75% provides best balance of quality and coverage.
-                        </span>
+                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
                       </span>
-                    </label>
-                    <input type="range" name="correlation_min_relevance"
-                           min="0.50" max="1.0" step="0.05" value="0.75"
-                           style="width: 60%; cursor: pointer;"
-                           oninput="document.getElementById('relevance-value-generate').textContent = Math.round(this.value * 100) + '%'">
-                  </div>
+                    </span>
+                  </label>
                 </div>
               </details>
 
@@ -610,30 +592,30 @@
               <!-- Additional Options -->
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
-                <div class="options-grid" style="grid-template-columns: 1fr calc(1fr - 20px) calc(1fr + 20px);">
-                  <!-- Column 1: Merge Options -->
-                  <label class="option-item">
-                    <input type="checkbox" name="merge_by_tactic" value="true">
-                    <span class="option-label">
-                      Merge by Tactic
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge all techniques under the same MITRE ATT&CK tactic (e.g., all Credential Access techniques), then correlate across tactics. Generates ~8-15 high-level phase-based correlations instead of hundreds of technique-level pairs. Best for executive dashboards and low-noise alerting.</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Column 2: OSINT Enhancement -->
+                <div class="options-grid" style="grid-template-columns: 0.9fr 0.9fr 1.2fr;">
+                  <!-- Row 1 Column 1: OSINT Enhancement -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_enhancement" id="upload_osint_enhancement" value="true">
                     <span class="option-label">
-                      OSINT Enhancement
+                      OSINT Enrichment
                       <span class="option-info-icon">i
                         <span class="option-info-tooltip">Automatically incorporate battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk) into queries.</span>
                       </span>
                     </span>
                   </label>
 
-                  <!-- Column 3: Cross-Vendor -->
+                  <!-- Row 1 Column 2: AI Generators -->
+                  <label class="option-item">
+                    <input type="checkbox" name="use_openai" id="upload_use_openai" value="true">
+                    <span class="option-label">
+                      AI Generators
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Use AI (OpenAI GPT, local LLMs) to enhance detection generation quality with smarter query logic. Requires OPENAI_API_KEY for cloud AI or local LLM server.</span>
+                      </span>
+                    </span>
+                  </label>
+
+                  <!-- Row 1 Column 3: Cross-Vendor Correlation -->
                   <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
                     <input type="checkbox" name="cross_vendor_correlation" id="upload_cross_vendor_checkbox" value="true" disabled>
                     <span class="option-label">
@@ -642,18 +624,7 @@
                     </span>
                   </label>
 
-                  <!-- Row 2 Column 1: Parent Technique -->
-                  <label class="option-item">
-                    <input type="checkbox" name="merge_by_parent" value="true">
-                    <span class="option-label">
-                      Merge by Parent Technique
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Row 2 Column 2: OSINT Comparison -->
+                  <!-- Row 2 Column 1: OSINT Comparison -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_comparison" id="upload_osint_comparison" value="true">
                     <span class="option-label">
@@ -664,34 +635,27 @@
                     </span>
                   </label>
 
-                  <!-- Row 2 Column 3: AI-Powered -->
+                  <!-- Row 2 Column 2: AI Correlations -->
                   <label class="option-item">
-                    <input type="checkbox" name="use_openai" id="upload_use_openai" value="true">
+                    <input type="checkbox" name="ai_correlations" value="true">
                     <span class="option-label">
-                      AI-Powered Correlations
+                      AI Correlations
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Use OpenAI's GPT models for advanced correlation analysis. Requires OPENAI_API_KEY environment variable.</span>
+                        <span class="option-info-tooltip"><strong>What AI does:</strong> Improves correlation JOIN query combination strategies (smarter query logic).<br><br><strong>What AI does NOT do:</strong> Detection pairing and scoring remain rule-based (6-factor, 0-140 points). AI cannot change which detections get paired or their relevance scores.<br><br>Requires AI Generators checkbox + OPENAI_API_KEY.</span>
                       </span>
                     </span>
                   </label>
 
-                  <!-- Relevance Slider - Full Width -->
-                  <div class="option-item" style="grid-column: span 3; padding-top: 12px; border-top: 1px solid #e5e7eb;">
-                    <label class="option-label" style="display: block; margin-bottom: 8px; font-weight: 500;">
-                      Correlation Relevance Threshold: <span id="relevance-value-upload" style="color: #8B0000; font-weight: 600;">75%</span>
+                  <!-- Row 2 Column 3: Merge by Parent Technique -->
+                  <label class="option-item">
+                    <input type="checkbox" name="merge_by_parent" value="true">
+                    <span class="option-label">
+                      Merge by Parent Technique
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">
-                          Higher values (75-100%): Fewer, more precise correlations between highly similar detections.<br>
-                          Lower values (50-74%): More correlations, including loosely related detections.<br>
-                          Default: 75% provides best balance of quality and coverage.
-                        </span>
+                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
                       </span>
-                    </label>
-                    <input type="range" name="correlation_min_relevance"
-                           min="0.50" max="1.0" step="0.05" value="0.75"
-                           style="width: 60%; cursor: pointer;"
-                           oninput="document.getElementById('relevance-value-upload').textContent = Math.round(this.value * 100) + '%'">
-                  </div>
+                    </span>
+                  </label>
                 </div>
               </details>
 

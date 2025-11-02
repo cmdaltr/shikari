@@ -945,6 +945,11 @@ body, html {
 
                   <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-size: 1em; font-weight: 600; margin-right: 8px;">{{ emoji }} {{ tactic }}</span>
 
+                  {# Save tactic colors for technique badge #}
+                  {% set technique_bg = bg_color %}
+                  {% set technique_text = text_color %}
+                  {% set technique_emoji = emoji %}
+
                   {# Detection Likelihood Badge #}
                   {% set likelihood = detection.detection_likelihood | default(50) %}
                   {% if likelihood >= 75 %}
@@ -963,7 +968,7 @@ body, html {
                     {% set likelihood_label = 'Low' %}
                     {% set likelihood_icon = '!' %}
                   {% endif %}
-                  <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}" style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; margin-right: 8px;">{{ emoji }} {{ detection.technique }}</span>
+                  <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}" style="display: inline-block; background: {{ technique_bg }}; color: {{ technique_text }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; margin-right: 8px;">{{ technique_emoji }} {{ detection.technique }}</span>
 
                   <span style="display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-right: 8px;" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">Confidence of detection: <span style="color: {{ likelihood_bg }}; font-weight: 700;">{{ likelihood_label }}</span></span>
                   {% if detection.osint_enriched %}
@@ -1224,8 +1229,10 @@ body, html {
             <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}" data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}">
               <div class="detection-title">
                 <!-- Technique Flow -->
-                {% for tech in correlation.techniques %}
-                  {% set tactic = tech.tactic %}
+                {% if correlation.is_merged and correlation.techniques|length >= 2 %}
+                  {# Display merged correlation: First → Second1/Second2/Second3 #}
+                  {% set first_tech = correlation.techniques[0] %}
+                  {% set tactic = first_tech.tactic %}
                   {% if tactic == 'Initial Access' %}
                     {% set bg_color = '#E3F2FD' %}  {# light blue #}
                     {% set text_color = '#01579B' %}  {# dark blue text #}
@@ -1279,11 +1286,134 @@ body, html {
                     {% set text_color = '#01579B' %}  {# default dark blue text #}
                     {% set emoji = '❓' %}
                   {% endif %}
-                <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech.name }}</span>
-                {% if not loop.last %}
-                <span style="margin: 0 8px; color: #999;">→</span>
+                  {# Display first technique #}
+                  <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ first_tech.name }}</span>
+                  <span style="margin: 0 8px; color: #999;">→</span>
+
+                  {# Display merged second techniques with "/" separator #}
+                  {% for tech in correlation.techniques[1:] %}
+                    {% set tactic = tech.tactic %}
+                    {% if tactic == 'Initial Access' %}
+                      {% set bg_color = '#E3F2FD' %}  {# light blue #}
+                      {% set text_color = '#01579B' %}  {# dark blue text #}
+                      {% set emoji = '🚪' %}
+                    {% elif tactic == 'Execution' %}
+                      {% set bg_color = '#FFF3E0' %}  {# light orange #}
+                      {% set text_color = '#E65100' %}  {# dark orange text #}
+                      {% set emoji = '💻' %}
+                    {% elif tactic == 'Persistence' %}
+                      {% set bg_color = '#FCE4EC' %}  {# light pink #}
+                      {% set text_color = '#880E4F' %}  {# dark pink/magenta text #}
+                      {% set emoji = '📌' %}
+                    {% elif tactic == 'Privilege Escalation' %}
+                      {% set bg_color = '#FFF9C4' %}  {# light yellow #}
+                      {% set text_color = '#F57F17' %}  {# dark yellow/gold text #}
+                      {% set emoji = '👑' %}
+                    {% elif tactic == 'Defense Evasion' %}
+                      {% set bg_color = '#F3E5F5' %}  {# light purple #}
+                      {% set text_color = '#4A148C' %}  {# dark purple text #}
+                      {% set emoji = '🥷' %}
+                    {% elif tactic == 'Credential Access' %}
+                      {% set bg_color = '#FFEBEE' %}  {# light red #}
+                      {% set text_color = '#B71C1C' %}  {# dark red text #}
+                      {% set emoji = '🔑' %}
+                    {% elif tactic == 'Discovery' %}
+                      {% set bg_color = '#E0F2F1' %}  {# light teal #}
+                      {% set text_color = '#004D40' %}  {# dark teal text #}
+                      {% set emoji = '🔍' %}
+                    {% elif tactic == 'Lateral Movement' %}
+                      {% set bg_color = '#E8F5E9' %}  {# light green #}
+                      {% set text_color = '#1B5E20' %}  {# dark green text #}
+                      {% set emoji = '🔗' %}
+                    {% elif tactic == 'Collection' %}
+                      {% set bg_color = '#FFF8E1' %}  {# light amber #}
+                      {% set text_color = '#FF6F00' %}  {# dark amber/orange text #}
+                      {% set emoji = '📦' %}
+                    {% elif tactic == 'Command and Control' %}
+                      {% set bg_color = '#E1F5FE' %}  {# light cyan #}
+                      {% set text_color = '#006064' %}  {# dark cyan text #}
+                      {% set emoji = '📡' %}
+                    {% elif tactic == 'Exfiltration' %}
+                      {% set bg_color = '#EFEBE9' %}  {# light brown #}
+                      {% set text_color = '#3E2723' %}  {# dark brown text #}
+                      {% set emoji = '🚀' %}
+                    {% elif tactic == 'Impact' %}
+                      {% set bg_color = '#FFCDD2' %}  {# light red #}
+                      {% set text_color = '#C62828' %}  {# dark red text #}
+                      {% set emoji = '💥' %}
+                    {% else %}
+                      {% set bg_color = '#E3F2FD' %}  {# default light blue #}
+                      {% set text_color = '#01579B' %}  {# default dark blue text #}
+                      {% set emoji = '❓' %}
+                    {% endif %}
+                    <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech.name }}</span>
+                    {% if not loop.last %}
+                    <span style="margin: 0 4px; color: #999;">/</span>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  {# Display normal (non-merged) correlation #}
+                  {% for tech in correlation.techniques %}
+                    {% set tactic = tech.tactic %}
+                    {% if tactic == 'Initial Access' %}
+                      {% set bg_color = '#E3F2FD' %}  {# light blue #}
+                      {% set text_color = '#01579B' %}  {# dark blue text #}
+                      {% set emoji = '🚪' %}
+                    {% elif tactic == 'Execution' %}
+                      {% set bg_color = '#FFF3E0' %}  {# light orange #}
+                      {% set text_color = '#E65100' %}  {# dark orange text #}
+                      {% set emoji = '💻' %}
+                    {% elif tactic == 'Persistence' %}
+                      {% set bg_color = '#FCE4EC' %}  {# light pink #}
+                      {% set text_color = '#880E4F' %}  {# dark pink/magenta text #}
+                      {% set emoji = '📌' %}
+                    {% elif tactic == 'Privilege Escalation' %}
+                      {% set bg_color = '#FFF9C4' %}  {# light yellow #}
+                      {% set text_color = '#F57F17' %}  {# dark yellow/gold text #}
+                      {% set emoji = '👑' %}
+                    {% elif tactic == 'Defense Evasion' %}
+                      {% set bg_color = '#F3E5F5' %}  {# light purple #}
+                      {% set text_color = '#4A148C' %}  {# dark purple text #}
+                      {% set emoji = '🥷' %}
+                    {% elif tactic == 'Credential Access' %}
+                      {% set bg_color = '#FFEBEE' %}  {# light red #}
+                      {% set text_color = '#B71C1C' %}  {# dark red text #}
+                      {% set emoji = '🔑' %}
+                    {% elif tactic == 'Discovery' %}
+                      {% set bg_color = '#E0F2F1' %}  {# light teal #}
+                      {% set text_color = '#004D40' %}  {# dark teal text #}
+                      {% set emoji = '🔍' %}
+                    {% elif tactic == 'Lateral Movement' %}
+                      {% set bg_color = '#E8F5E9' %}  {# light green #}
+                      {% set text_color = '#1B5E20' %}  {# dark green text #}
+                      {% set emoji = '🔗' %}
+                    {% elif tactic == 'Collection' %}
+                      {% set bg_color = '#FFF8E1' %}  {# light amber #}
+                      {% set text_color = '#FF6F00' %}  {# dark amber/orange text #}
+                      {% set emoji = '📦' %}
+                    {% elif tactic == 'Command and Control' %}
+                      {% set bg_color = '#E1F5FE' %}  {# light cyan #}
+                      {% set text_color = '#006064' %}  {# dark cyan text #}
+                      {% set emoji = '📡' %}
+                    {% elif tactic == 'Exfiltration' %}
+                      {% set bg_color = '#EFEBE9' %}  {# light brown #}
+                      {% set text_color = '#3E2723' %}  {# dark brown text #}
+                      {% set emoji = '🚀' %}
+                    {% elif tactic == 'Impact' %}
+                      {% set bg_color = '#FFCDD2' %}  {# light red #}
+                      {% set text_color = '#C62828' %}  {# dark red text #}
+                      {% set emoji = '💥' %}
+                    {% else %}
+                      {% set bg_color = '#E3F2FD' %}  {# default light blue #}
+                      {% set text_color = '#01579B' %}  {# default dark blue text #}
+                      {% set emoji = '❓' %}
+                    {% endif %}
+                  <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech.name }}</span>
+                  {% if not loop.last %}
+                  <span style="margin: 0 8px; color: #999;">→</span>
+                  {% endif %}
+                  {% endfor %}
                 {% endif %}
-                {% endfor %}
 
                 <!-- Severity Badge -->
                 {% if correlation.severity == 'Critical' %}
@@ -1313,77 +1443,6 @@ body, html {
                 <span title="MITRE ATT&CK Tactics"><strong>Tactics:</strong> {{ correlation.tactics|join(', ') }}</span>
                 {% endif %}
               </div>
-
-              <!-- Techniques Involved (for merged correlations) - Grouped by Tactic -->
-              {% if correlation.techniques_by_tactic and correlation.techniques_by_tactic|length > 0 %}
-              <div style="margin-top: 8px; margin-bottom: 12px; font-size: 0.85em;">
-                <strong style="color: #555;">Techniques Involved:</strong>
-                <div style="margin-top: 4px;">
-                {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact', 'Unknown'] %}
-                {% for tactic in tactic_order %}
-                  {% if tactic in correlation.techniques_by_tactic %}
-                  <div style="margin-bottom: 6px;">
-                    <strong style="color: #333; font-size: 0.95em;">{{ tactic }}:</strong>
-                    <div style="display: inline-block; margin-left: 8px;">
-                    {% for tech_name in correlation.techniques_by_tactic[tactic] %}
-                      {% if tactic == 'Initial Access' %}
-                        {% set bg_color = '#E3F2FD' %}  {# light blue #}
-                        {% set text_color = '#01579B' %}  {# dark blue text #}
-                        {% set emoji = '🚪' %}
-                      {% elif tactic == 'Execution' %}
-                        {% set bg_color = '#FFF3E0' %}  {# light orange #}
-                        {% set text_color = '#E65100' %}  {# dark orange text #}
-                        {% set emoji = '💻' %}
-                      {% elif tactic == 'Persistence' %}
-                        {% set bg_color = '#FCE4EC' %}  {# light pink #}
-                        {% set text_color = '#880E4F' %}  {# dark pink/magenta text #}
-                        {% set emoji = '📌' %}
-                      {% elif tactic == 'Defense Evasion' %}
-                        {% set bg_color = '#F3E5F5' %}  {# light purple #}
-                        {% set text_color = '#4A148C' %}  {# dark purple text #}
-                        {% set emoji = '🥷' %}
-                      {% elif tactic == 'Credential Access' %}
-                        {% set bg_color = '#FFEBEE' %}  {# light red #}
-                        {% set text_color = '#B71C1C' %}  {# dark red text #}
-                        {% set emoji = '🔑' %}
-                      {% elif tactic == 'Discovery' %}
-                        {% set bg_color = '#E0F2F1' %}  {# light teal #}
-                        {% set text_color = '#004D40' %}  {# dark teal text #}
-                        {% set emoji = '🔍' %}
-                      {% elif tactic == 'Lateral Movement' %}
-                        {% set bg_color = '#E8F5E9' %}  {# light green #}
-                        {% set text_color = '#1B5E20' %}  {# dark green text #}
-                        {% set emoji = '🔗' %}
-                      {% elif tactic == 'Collection' %}
-                        {% set bg_color = '#FFF8E1' %}  {# light amber #}
-                        {% set text_color = '#FF6F00' %}  {# dark amber/orange text #}
-                        {% set emoji = '📦' %}
-                      {% elif tactic == 'Command and Control' %}
-                        {% set bg_color = '#E1F5FE' %}  {# light cyan #}
-                        {% set text_color = '#006064' %}  {# dark cyan text #}
-                        {% set emoji = '📡' %}
-                      {% elif tactic == 'Exfiltration' %}
-                        {% set bg_color = '#EFEBE9' %}  {# light brown #}
-                        {% set text_color = '#3E2723' %}  {# dark brown text #}
-                        {% set emoji = '🚀' %}
-                      {% elif tactic == 'Impact' %}
-                        {% set bg_color = '#FFCDD2' %}  {# light red #}
-                        {% set text_color = '#C62828' %}  {# dark red text #}
-                        {% set emoji = '💥' %}
-                      {% else %}
-                        {% set bg_color = '#E3F2FD' %}  {# default light blue #}
-                        {% set text_color = '#01579B' %}  {# default dark blue text #}
-                        {% set emoji = '❓' %}
-                      {% endif %}
-                      <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 4px 10px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid {{ bg_color }}; font-size: 0.9em; font-weight: 600;">{{ emoji }} {{ tech_name }}</span>
-                    {% endfor %}
-                    </div>
-                  </div>
-                  {% endif %}
-                {% endfor %}
-                </div>
-              </div>
-              {% endif %}
 
               <!-- Attack Flow Diagram (overlaid on tactic columns) -->
               {% if correlation.techniques_by_tactic and correlation.techniques_by_tactic|length > 1 %}

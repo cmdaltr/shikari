@@ -361,6 +361,14 @@ def format_technique_name(name: str) -> str:
         result = re.sub(r'\b([A-Z])\s+([A-Z])\s+([A-Z])\b', r'\1\2\3', result)
         return result
 
+    # Special case: PowerShell should stay as one word (not "Power Shell")
+    if name == 'PowerShell':
+        return 'PowerShell'
+
+    # Special case: Windows Management Instrumentation (WMI) variations
+    if name in ['WindowsManagementInstrumentation', 'WMI']:
+        return 'Windows Management Instrumentation'
+
     # Insert space before uppercase letters (except at start)
     result = re.sub(r'(?<!^)(?=[A-Z])', ' ', name)
 
@@ -376,6 +384,242 @@ def format_technique_name(name: str) -> str:
     result = re.sub(r'\bTwo\s+Factor\b', 'Two-Factor', result)
 
     return result
+
+
+def merge_correlations(vendor_corrs: list) -> list:
+    """
+    Merge correlations that share the same first technique (file 'a') and have
+    multiple second techniques (file 'b') from the same tactic into a single correlation.
+
+    Example:
+        Before:
+        - MFA → Create Process with Token (Defense Evasion)
+        - MFA → SID-History Injection (Defense Evasion)
+        - MFA → Access Token Manipulation (Defense Evasion)
+
+        After:
+        - MFA → Create Process with Token/SID-History Injection/Access Token Manipulation
+
+    Args:
+        vendor_corrs: List of correlation dictionaries from JSON
+
+    Returns:
+        List of correlations with merged entries where applicable
+    """
+    import os
+    import glob
+
+    # Group correlations by (vendor, file_a)
+    groups = {}
+    for corr in vendor_corrs:
+        vendor = corr.get('vendor', 'unknown')
+        file_a = corr.get('a', '')
+        key = (vendor, file_a)
+
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(corr)
+
+    # Process each group and merge where appropriate
+    merged_correlations = []
+
+    for key, group in groups.items():
+        if len(group) == 1:
+            # No merging needed - only one correlation for this first technique
+            merged_correlations.append(group[0])
+            continue
+
+        # Group by PRIMARY tactic of second technique (most specific tactic)
+        # Only merge if techniques share a rare/specific tactic (not common ones like Persistence/Defense Evasion)
+        by_tactic = {}
+
+        # Common tactics that should NOT trigger merging (too broad)
+        common_tactics = {'Persistence', 'Defense Evasion', 'Privilege Escalation'}
+
+        for corr in group:
+            file_b = corr.get('b', '')
+            if not file_b:
+                continue
+
+            # Extract tactics from file_b YAML
+            full_path = os.path.join(GENERATE_DIR, os.path.basename(file_b))
+            if os.path.exists(full_path):
+                yaml_data = load_yaml_file(full_path)
+                if yaml_data:
+                    tactics = yaml_data.get('tactics', [])
+
+                    # Find the most specific (non-common) tactic as primary
+                    primary_tactic = "Unknown"
+                    for tactic in tactics:
+                        if tactic not in common_tactics:
+                            primary_tactic = tactic
+                            break
+
+                    # If all tactics are common, don't group - keep separate
+                    if primary_tactic == "Unknown" or primary_tactic in common_tactics:
+                        # Use technique name as unique key instead (prevents merging)
+                        basename_b = os.path.basename(file_b).replace('.yaml', '').split('_')[0]
+                        primary_tactic = f"_unique_{basename_b}"
+
+                    if primary_tactic not in by_tactic:
+                        by_tactic[primary_tactic] = []
+                    by_tactic[primary_tactic].append(corr)
+            else:
+                # If file doesn't exist, add to "Unknown" tactic with unique key
+                basename_b = os.path.basename(file_b).replace('.yaml', '').split('_')[0]
+                unique_key = f"_unique_{basename_b}"
+                if unique_key not in by_tactic:
+                    by_tactic[unique_key] = []
+                by_tactic[unique_key].append(corr)
+
+        # Merge groups with 2+ techniques in same SPECIFIC tactic
+        for tactic, tactic_corrs in by_tactic.items():
+            if len(tactic_corrs) >= 2 and not tactic.startswith('_unique_'):
+                # Merge these correlations (they share a specific tactic)
+                merged = _merge_correlation_group(tactic_corrs)
+                merged_correlations.append(merged)
+            else:
+                # Add as-is (unique techniques or single correlation)
+                merged_correlations.extend(tactic_corrs)
+
+    return merged_correlations
+
+
+def _merge_correlation_group(correlations: list) -> dict:
+    """
+    Merge multiple correlations into a single correlation with combined queries.
+
+    Args:
+        correlations: List of correlations to merge (all share same first technique and tactic)
+
+    Returns:
+        Single merged correlation dictionary
+    """
+    if not correlations:
+        return {}
+
+    # Use first correlation as base
+    base = correlations[0].copy()
+
+    # Collect all file_b paths
+    files_b = []
+    techniques_involved = [base.get('techniques_involved', [])[0]] if base.get('techniques_involved') else []
+
+    # Extract second technique names and file paths
+    for corr in correlations:
+        file_b = corr.get('b', '')
+        if file_b:
+            files_b.append(file_b)
+
+        # Add second technique name
+        tech_involved = corr.get('techniques_involved', [])
+        if len(tech_involved) > 1:
+            second_tech = tech_involved[1]
+            if second_tech not in techniques_involved:
+                techniques_involved.append(second_tech)
+
+    # Merge queries using OR logic
+    merged_query = _build_merged_query(correlations)
+
+    # Update base correlation with merged data
+    base['b'] = files_b  # Now an array
+    base['merged'] = True
+    base['techniques_involved'] = techniques_involved
+    base['combined_query'] = merged_query
+
+    # Combine all tactics
+    all_tactics = set()
+    for corr in correlations:
+        all_tactics.update(corr.get('tactics', []))
+    base['tactics'] = sorted(list(all_tactics))
+
+    # Use highest relevance score
+    base['relevance_score'] = max(c.get('relevance_score', 0.0) for c in correlations)
+
+    return base
+
+
+def _build_merged_query(correlations: list) -> str:
+    """
+    Build a merged KQL query that combines multiple second techniques with OR conditions.
+
+    Args:
+        correlations: List of correlations to merge
+
+    Returns:
+        Combined KQL query string
+    """
+    if not correlations:
+        return ""
+
+    # Extract first technique query (same for all correlations)
+    first_corr = correlations[0]
+    combined_query = first_corr.get('combined_query', '')
+
+    # Parse out the first technique section
+    import re
+
+    # Extract the first "let" statement (first technique)
+    first_let_match = re.search(r'(let\s+\w+\s*=.*?\|\s*project[^;]+;)', combined_query, re.DOTALL)
+    if not first_let_match:
+        return combined_query  # Can't parse, return original
+
+    first_let = first_let_match.group(1)
+
+    # Build combined second technique conditions
+    second_conditions = []
+    second_let_statements = []
+    table_counter = {}
+
+    for idx, corr in enumerate(correlations):
+        query = corr.get('combined_query', '')
+        techniques = corr.get('techniques_involved', [])
+        second_tech = techniques[1] if len(techniques) > 1 else f"Technique{idx+1}"
+
+        # Extract second let statement
+        # Find all let statements after the first one
+        let_matches = list(re.finditer(r'let\s+(\w+)\s*=\s*(\w+)\s*\n\|\s*where\s+Timestamp[^;]+\|\s*where\s+([^\n]+(?:\n(?!\|)[^\n]+)*)', query, re.DOTALL))
+
+        if len(let_matches) > 1:
+            # Get the second let statement
+            table_name = let_matches[1].group(2)  # e.g., "DeviceEvents"
+            where_condition = let_matches[1].group(3).strip()
+
+            # Track unique table names
+            if table_name not in table_counter:
+                table_counter[table_name] = 0
+            table_counter[table_name] += 1
+
+            # Format the condition with technique comment
+            second_conditions.append(f"  // {second_tech}\n  ({where_condition})")
+
+    # Build the merged query
+    if not second_conditions:
+        return combined_query  # Can't merge, return original
+
+    # Create the second technique query with OR conditions
+    # Determine which table is most common
+    most_common_table = max(table_counter.keys(), key=lambda k: table_counter[k]) if table_counter else "DeviceEvents"
+
+    # Parse the original query to extract join template
+    join_match = re.search(r'(//\s*Chain events.*?\|\s*project\s+\*)', combined_query, re.DOTALL)
+    join_template = join_match.group(1) if join_match else ""
+
+    # Build new combined query
+    merged = f"""{first_let}
+
+let {most_common_table}_Combined = {most_common_table}
+| where Timestamp > ago(1h)
+| where
+{" or\n".join(second_conditions)}
+| project Timestamp, DeviceName, AccountName=AccountName, *;
+
+{join_template}"""
+
+    # Fix the join to use the new combined table
+    merged = re.sub(r'\|\s*join\s+kind=inner\s*\(\s*\w+', f'| join kind=inner (\n    {most_common_table}_Combined', merged)
+
+    return merged
 
 
 def get_platform_from_data_source(data_source: str) -> str:
@@ -741,6 +985,9 @@ def get_indicators_from_yaml(yaml_file):
     Returns:
         List of indicator strings for display
     """
+    import html
+    import re
+
     try:
         # First, try to load the indicators section from YAML
         yaml_data = load_yaml_file(yaml_file)
@@ -749,13 +996,59 @@ def get_indicators_from_yaml(yaml_file):
             if indicators_section and isinstance(indicators_section, dict):
                 # Flatten all indicator categories into a single list
                 all_indicators = []
+                seen_indicators = set()  # Track duplicates
+
                 for category, values in indicators_section.items():
                     if values and isinstance(values, list):
                         # Strip asterisks (wildcards) from indicators for display
                         for val in values:
                             cleaned = str(val).strip().strip('*').strip()
-                            if cleaned:
-                                all_indicators.append(cleaned)
+
+                            # Decode HTML entities (e.g., &lt; -> <, &gt; -> >)
+                            cleaned = html.unescape(cleaned)
+
+                            # Validate indicator - skip if:
+                            # 1. Empty after cleaning
+                            # 2. Just a common word (and, or, to, the, etc.)
+                            # 3. Contains sentence patterns (ends with period, has "Citation:")
+                            # 4. Too long (likely a description fragment)
+                            # 5. Already seen (duplicate)
+
+                            if not cleaned:
+                                continue
+
+                            # Skip common filler words
+                            common_words = {'and', 'or', 'to', 'the', 'a', 'an', 'in', 'on', 'at', 'for', 'with', 'from'}
+                            if cleaned.lower() in common_words:
+                                continue
+
+                            # Skip if it contains citation markers or ends with period (likely description)
+                            if 'Citation:' in cleaned or cleaned.endswith('.'):
+                                continue
+
+                            # Skip if it looks like a sentence (contains "may", "can", "to the", etc.)
+                            sentence_patterns = [
+                                r'\bmay\b', r'\bcan\b', r'\bwill\b', r'\bshould\b',
+                                r'to the\b', r'to ensure\b', r'to modify\b',
+                                r'Adversaries', r'Users may', r'file to\b',
+                                r'\. And$',  # Ends with ". And"
+                                r'memory is mapped',  # Descriptive phrase
+                                r'virtual address space'  # Descriptive phrase
+                            ]
+                            if any(re.search(pattern, cleaned, re.IGNORECASE) for pattern in sentence_patterns):
+                                continue
+
+                            # Skip if too long (> 150 chars, likely a sentence)
+                            if len(cleaned) > 150:
+                                continue
+
+                            # Skip duplicates (case-insensitive)
+                            cleaned_lower = cleaned.lower()
+                            if cleaned_lower in seen_indicators:
+                                continue
+
+                            seen_indicators.add(cleaned_lower)
+                            all_indicators.append(cleaned)
 
                 if all_indicators:
                     # Return first 10 indicators
@@ -1228,6 +1521,119 @@ async def accept_osint_failures():
         "accepted": True,
         "message": "Continuing without failed repositories"
     }
+
+
+@app.get("/api/correlation/params")
+async def get_correlation_params():
+    """Get current correlation parameters from config files."""
+    import re
+    try:
+        # Read config.py for threshold
+        config_path = os.path.join(os.path.dirname(__file__), 'config.py')
+        with open(config_path, 'r') as f:
+            config_content = f.read()
+
+        # Extract threshold
+        threshold_match = re.search(r'correlation_min_relevance = float\(os\.getenv\("CORRELATION_MIN_RELEVANCE", "([0-9.]+)"\)\)', config_content)
+        threshold = float(threshold_match.group(1)) if threshold_match else 0.40
+
+        # Read engine.py for per_vendor and tech_freq
+        engine_path = os.path.join(os.path.dirname(__file__), 'genai', 'engine.py')
+        with open(engine_path, 'r') as f:
+            engine_content = f.read()
+
+        # Extract max_per_vendor
+        per_vendor_match = re.search(r'max_per_vendor: int = (\d+)', engine_content)
+        per_vendor = int(per_vendor_match.group(1)) if per_vendor_match else 25
+
+        # Extract tech frequency limit
+        tech_freq_match = re.search(r'if max_occurrences < (\d+):\s*#.*simple correlations', engine_content)
+        tech_freq = int(tech_freq_match.group(1)) if tech_freq_match else 20
+
+        return {
+            "success": True,
+            "threshold": threshold,
+            "per_vendor": per_vendor,
+            "tech_freq": tech_freq
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "threshold": 0.40,
+            "per_vendor": 25,
+            "tech_freq": 20
+        }
+
+
+@app.post("/api/correlation/params")
+async def save_correlation_params(request: Request):
+    """Save correlation parameters to config files."""
+    import re
+    try:
+        data = await request.json()
+        threshold = float(data.get('threshold', 0.40))
+        per_vendor = int(data.get('per_vendor', 25))
+        tech_freq = int(data.get('tech_freq', 20))
+
+        # Validate inputs
+        if not (0.0 <= threshold <= 1.0):
+            return {"success": False, "message": "Threshold must be between 0.0 and 1.0"}
+
+        if per_vendor < 1:
+            return {"success": False, "message": "Per-vendor limit must be at least 1"}
+
+        if tech_freq < 1:
+            return {"success": False, "message": "Tech frequency limit must be at least 1"}
+
+        # Update config.py
+        config_path = os.path.join(os.path.dirname(__file__), 'config.py')
+        with open(config_path, 'r') as f:
+            lines = f.readlines()
+
+        for i, line in enumerate(lines):
+            if 'correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE"' in line:
+                lines[i] = f'    correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", "{threshold}"))\n'
+
+        with open(config_path, 'w') as f:
+            f.writelines(lines)
+
+        # Update engine.py
+        engine_path = os.path.join(os.path.dirname(__file__), 'genai', 'engine.py')
+        with open(engine_path, 'r') as f:
+            content = f.read()
+
+        # Update max_per_vendor parameter default
+        content = re.sub(
+            r'max_per_vendor: int = \d+',
+            f'max_per_vendor: int = {per_vendor}',
+            content
+        )
+
+        # Update tech frequency limit
+        lines = content.split('\n')
+        for i, line in enumerate(lines):
+            if 'if max_occurrences <' in line and 'simple correlations' in line:
+                lines[i] = f'            if max_occurrences < {tech_freq}:  # Allow each technique in up to {tech_freq} simple correlations'
+                break
+
+        with open(engine_path, 'w') as f:
+            f.write('\n'.join(lines))
+
+        return {
+            "success": True,
+            "message": "Correlation parameters updated successfully",
+            "threshold": threshold,
+            "per_vendor": per_vendor,
+            "tech_freq": tech_freq
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error saving parameters: {str(e)}"
+        }
 
 
 @app.post("/api/status/osint/retry-failed")
@@ -3894,6 +4300,23 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                 # The file uses "vendor_correlations" not "correlations"
                 vendor_corrs = corr_data.get("vendor_correlations", [])
 
+                # Merge correlations with same first technique and related second techniques
+                print(f"[MERGE] Before merging: {len(vendor_corrs)} correlations", flush=True)
+                pre_merge_count = len(vendor_corrs)
+                vendor_corrs = merge_correlations(vendor_corrs)
+                post_merge_count = len(vendor_corrs)
+                print(f"[MERGE] After merging: {post_merge_count} correlations", flush=True)
+
+                # Update progress with post-merge correlation count
+                from archer.build.progress import write_progress
+                write_progress(
+                    group_name,
+                    {
+                        "correlation_count_pre_merge": pre_merge_count,
+                        "correlation_count_post_merge": post_merge_count,
+                    }
+                )
+
                 # Extract technique and data source information from filenames
                 for idx, corr in enumerate(vendor_corrs):
                     vendor = corr.get("vendor", "unknown")
@@ -3901,6 +4324,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     file_b = corr.get("b", "")
                     relevance_score = corr.get("relevance_score", 0.0)
                     combined_query = corr.get("combined_query", "")
+                    is_merged = corr.get("merged", False)
 
                     # Parse filename format: "example_index.yaml"
                     # Example: "Multi-FactorAuthentication_edr_events.yaml"
@@ -3912,7 +4336,14 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
                     total_indicators = 0  # Track total indicators across both detections
 
-                    for file_path in [file_a, file_b]:
+                    # Handle file_b being either a string or a list (for merged correlations)
+                    files_to_process = [file_a]
+                    if isinstance(file_b, list):
+                        files_to_process.extend(file_b)
+                    elif file_b:
+                        files_to_process.append(file_b)
+
+                    for file_path in files_to_process:
                         if file_path:
                             # Check if file exists before processing
                             full_path = os.path.join(GENERATE_DIR, os.path.basename(file_path))
@@ -4079,6 +4510,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                 "technique_tactic_map": technique_tactic_map,  # Map techniques to their primary tactics
                                 "techniques_by_tactic": techniques_by_tactic,  # Group techniques by tactic
                                 "attack_chain_length": attack_chain_length,  # Number of tactics in ordered attack flow
+                                "is_merged": is_merged,  # Flag indicating if this is a merged correlation
                             }
                         )
         except Exception as e:

@@ -39,9 +39,9 @@ Can be enabled via environment variables:
   - 📊 **Splunk Search API** - SPL query execution with job management
   - Available in web UI Settings
   - Code implemented but not validated against live MDE/Splunk environments
-- 🔗 **n8n Workflow Automation** - API endpoints for workflow integration
-  - All API endpoints accessible for n8n HTTP Request nodes
-  - Endpoints available but not validated with live n8n workflows
+~~- 🔗 **n8n Workflow Automation** - API endpoints for workflow integration~~
+  ~~- All API endpoints accessible for n8n HTTP Request nodes~~
+  ~~- Endpoints available but not validated with live n8n workflows~~
 
 </details>
 
@@ -259,6 +259,36 @@ python3 archer.py correlate "Scattered Spider"
 
 # Hunt for specific technique
 python3 archer.py hunt "PowerShell"
+
+# Test correlation parameters (adjust quality/coverage)
+python scripts/test_correlation_params.py -t 40 -v 60 -f 20
+```
+
+#### Tuning Correlation Parameters
+
+Archer's correlation engine has three tunable parameters that control quality vs coverage:
+
+```bash
+# Test different parameter combinations
+python scripts/test_correlation_params.py \
+  --threshold 40 \        # Minimum quality score (0-100%)
+  --per-vendor 60 \       # Max correlations per vendor
+  --tech-freq 20          # Max technique appearances
+
+# Or use short options
+python scripts/test_correlation_params.py -t 40 -v 60 -f 20
+```
+
+**Defaults:** threshold=40%, per-vendor=60, tech-freq=20
+
+**Quick Presets:**
+- **Small SOC:** `-t 50 -v 25 -f 15` (~20-30 high-quality correlations)
+- **Standard:** `-t 40 -v 60 -f 20` (~40-60 balanced correlations) ⭐ **Default**
+- **Large SOC:** `-t 40 -v 100 -f 30` (~80-110 comprehensive coverage)
+
+See [Correlation Quick Reference](docs/CORRELATION_QUICK_REFERENCE.md) for detailed parameter explanations and test results.
+
+Alternatively, adjust parameters via **Profile → Config** page in the web UI.
 ```
 
 #### Adversary Emulation (Optional - Untested)
@@ -347,17 +377,17 @@ python3 archer.py correlate "APT29"
 ---
 <br>
 
-## ⚙️ Using Archer with n8n (Untested)
+~~## ⚙️ Using Archer with n8n (Untested)~~
 
-⚠️ **Status**: API endpoints available but not validated with live n8n workflows.
+~~⚠️ **Status**: API endpoints available but not validated with live n8n workflows.~~
 
-Archer provides API endpoints that can be integrated with [n8n](https://n8n.io/) for workflow automation.
+~~Archer provides API endpoints that can be integrated with [n8n](https://n8n.io/) for workflow automation.~~
 
-### Example: Trigger Archer Hunt via HTTP Request Node
+~~### Example: Trigger Archer Hunt via HTTP Request Node~~
 
-1. Add an HTTP Request node in n8n.
+~~1. Add an HTTP Request node in n8n.~~
 
-2. Configure it to make a POST request to Archer's endpoint:
+~~2. Configure it to make a POST request to Archer's endpoint:~~
 
 ```
 POST http://localhost:8000/hunt
@@ -371,18 +401,18 @@ Content-Type: application/json
 }
 ```
 
-3. The response will contain the hunt queries in YAML format, which can be parsed and used in subsequent workflow nodes.
+~~3. The response will contain the hunt queries in YAML format, which can be parsed and used in subsequent workflow nodes.~~
 
 ---
 <br>
 
-### Tips for n8n Integration
+~~### Tips for n8n Integration~~
 
-- Use the **Function** node to parse YAML responses into JSON for easier manipulation.
+~~- Use the **Function** node to parse YAML responses into JSON for easier manipulation.~~
 
-- Chain multiple Archer calls to build complex threat hunting workflows.
+~~- Chain multiple Archer calls to build complex threat hunting workflows.~~
 
-- Combine Archer outputs with enrichment services (e.g., VirusTotal, MISP) within n8n.
+~~- Combine Archer outputs with enrichment services (e.g., VirusTotal, MISP) within n8n.~~
 
 ---
 <br>
@@ -391,28 +421,21 @@ Content-Type: application/json
 
 ### Archer Documentation
 
-**Core Documentation:**
-- [Getting Started Guide](docs/GETTING_STARTED.md) - Setup and troubleshooting
-- [API Reference](docs/API_REFERENCE.md) - Complete REST API documentation for all endpoints
-- [Security Features Guide](docs/SECURITY_FEATURES.md) - Complete security documentation, authentication, user management, and best practices
+**📖 [Complete Documentation Index](docs/DOCS.md)** - Browse all documentation by category
 
-**Feature Guides:**
-- [MITRE Procedures Guide](docs/MITRE_PROCEDURES.md) - MITRE ATT&CK procedure extraction and technique expansion
-- [Parent/Subtechnique Expansion](docs/PARENT_SUBTECHNIQUE_EXPANSION.md) - Automatic subtechnique detection generation specification
-- [**Correlation Engine**](docs/CORRELATION_ENGINE.md) - **Complete correlation generation documentation** (scoring, filtering, JOIN queries)
-- [Correlation Quick Reference](docs/CORRELATION_QUICK_REFERENCE.md) - Quick reference for correlation engine settings and logic
-- [Emulation Guide](docs/guides/EMULATION_GUIDE.md) - Adversary emulation and remote execution
-- [Query Execution Guide](docs/guides/QUERY_API_GUIDE.md) - MDE and Splunk API integration
-- [Correlation Guide](docs/guides/CORRELATION_GUIDE.md) - Correlation query builder (user guide)
-- [CVE Hunting Guide](docs/guides/CVE_HUNTING_GUIDE.md) - CVE-based detection generation
-- [Testing Guide](docs/guides/TESTING_GUIDE.md) - Testing and validation workflows
+**Quick Links:**
+- **Getting Started:** [Setup Guide](docs/guides/GETTING_STARTED.md) | [Mapping Setup](docs/guides/MAPPING_SETUP_GUIDE.md)
+- **API Integration:** [API Documentation](docs/reference/API_DOCUMENTATION.md) | [API Reference](docs/reference/API_REFERENCE.md)
+- **Correlation Tuning:** [Quick Reference](docs/reference/CORRELATION_QUICK_REFERENCE.md) ⚙️ (threshold, per-vendor, tech frequency)
+- **Features:** [Security](docs/features/SECURITY_FEATURES.md) | [AI Training](docs/features/AI_TRAINING.md) | [OSINT](docs/features/OSINT_INTEGRATION.md)
+- **Architecture:** [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) | [Performance](docs/architecture/PERFORMANCE_ARCHITECTURE.md)
 
 ### External Resources
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)
 - [Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)
 - [VECTR](https://vectr.io/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [n8n Workflow Automation](https://n8n.io/)
+~~- [n8n Workflow Automation](https://n8n.io/)~~
 
 ---
 <br>

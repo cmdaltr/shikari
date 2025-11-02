@@ -30,11 +30,10 @@ digraph ArcherCLI {
         fillcolor="#c8e6c9";
         fontname="Arial Bold";
 
-        splunk [label="Splunk Parser\nsplunk.py\n\nParses SPL syntax\nGenerates Splunk queries"];
-        mde [label="MDE Parser\nmde.py\n\nParses KQL syntax\nGenerates MDE queries"];
-        correlations [label="Correlation Engine\ncorrelations.py\n\nFinds related techniques\nCreates multi-stage detections"];
-        semantics [label="Semantic Analyzer\nsemantics.py\n\nGroups by behavior\n(auth, network, file)"];
-        validator [label="Query Validator\nvalidator.py\n\nSyntax validation\nPlatform checking"];
+        detections [label="Detection Builder\ndetections.py\n\nGenerates queries for all platforms\nYAML output"];
+        correlations [label="Correlation Engine\nengine.py\n\nScores pairs (0-140)\nFilters (threshold=40%)\nMerges correlations\nGenerates JOIN queries"];
+        osint [label="OSINT Integration\nosint_repos.py\n\nSigma, Splunk rules\nComparison & enrichment"];
+        validator [label="Query Validator\nplatform_validator_v2.py\n\nSyntax validation\nPlatform checking\nField validation"];
     }
 
     // Intelligence layer
@@ -66,8 +65,8 @@ digraph ArcherCLI {
         fontname="Arial Bold";
 
         attack_data [label="MITRE ATT&CK\nenterprise-attack.json\n\n15,000+ techniques\n600+ groups"];
-        repos [label="Community Repos\nSplunkSecurity/...\nSigma rules\n\n10,000+ queries"];
-        cache [label="Template Cache\ndata/cache/\n\nPre-compiled templates\nFast generation"];
+        repos [label="OSINT Repos\nSigma, Splunk, etc.\n(GitHub)\n\n10,000+ detections"];
+        cache [label="CVE Cache\ndata/cve_cache/\n\nVulnerability data"];
     }
 
     // Output
@@ -77,8 +76,8 @@ digraph ArcherCLI {
         fillcolor="#ffccbc";
         fontname="Arial Bold";
 
-        yamls [label="Detection YAMLs\ndata/<group>/splunk/\ndata/<group>/mde/\n\nReady to deploy"];
-        corr_files [label="Correlation JSONs\ndata/<group>/correlations/\n\nMulti-stage detections"];
+        yamls [label="Detection YAMLs\ndata/generate/\n\nReady to deploy"];
+        corr_files [label="Correlation JSONs\ndata/correlate/\n\nMulti-stage detections"];
         flow_files [label="Attack Flow JSONs\ndata/attack_flows/\n\nVisual diagrams"];
     }
 
@@ -89,17 +88,16 @@ digraph ArcherCLI {
     orchestrator -> learning [label="Get templates"];
 
     mitre -> attack_data [label="Load data", style=dashed];
-    learning -> repos [label="Parse queries", style=dashed];
-    learning -> cache [label="Cache templates", style=dashed];
+    osint -> repos [label="Clone/Pull", style=dashed];
+    orchestrator -> cache [label="Cache CVE data", style=dashed];
 
-    orchestrator -> splunk [label="Generate Splunk"];
-    orchestrator -> mde [label="Generate MDE"];
-    orchestrator -> correlations [label="Find correlations"];
-    orchestrator -> semantics [label="Group semantically"];
+    orchestrator -> detections [label="Generate detections"];
+    orchestrator -> correlations [label="Build correlations"];
+    orchestrator -> osint [label="OSINT enrichment"];
     orchestrator -> attack_flow [label="Generate flows"];
 
-    splunk -> validator [label="Validate"];
-    mde -> validator [label="Validate"];
+    detections -> validator [label="Validate"];
+    correlations -> validator [label="Validate"];
 
     validator -> yamls [label="Write files"];
     correlations -> corr_files [label="Write JSON"];

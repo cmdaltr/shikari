@@ -924,7 +924,7 @@ def _score_correlation(corr: Dict, file_info: Dict) -> float:
 
 
 def _score_and_filter_correlations(
-    correlations: List[Dict], file_info: Dict, min_relevance: float = 0.5, max_per_vendor: int = 25
+    correlations: List[Dict], file_info: Dict, min_relevance: float = 0.5, max_per_vendor: int = 60
 ) -> List[Dict]:
     """
     Score all correlations and return only those meeting the minimum relevance threshold.
@@ -933,7 +933,7 @@ def _score_and_filter_correlations(
         correlations: List of correlation dictionaries
         file_info: File metadata dictionary
         min_relevance: Minimum relevance score threshold (default 0.5 = 50%)
-        max_per_vendor: Maximum correlations per vendor (default 25)
+        max_per_vendor: Maximum correlations per vendor (default 60)
 
     Returns:
         Filtered list of correlations with relevance_score >= min_relevance, capped at max_per_vendor
@@ -1626,7 +1626,7 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
             # Check if any technique has exceeded the limit
             max_occurrences = max(technique_count.get(t, 0) for t in all_techniques) if all_techniques else 0
 
-            if max_occurrences < 10:  # Allow each technique in up to 10 simple correlations
+            if max_occurrences < 20:  # Allow each technique in up to 20 simple correlations
                 diverse_correlations.append(corr)
                 # Update counts
                 for t in all_techniques:
