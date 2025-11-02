@@ -124,6 +124,119 @@ def load_yaml_file(file_path: str) -> Optional[dict]:
         return None
 
 
+def calculate_detection_likelihood(indicators: list, query: str, technique: str, yaml_data: dict) -> int:
+    """
+    Calculate the likelihood of successfully detecting this technique based on indicator strength,
+    data source requirements, and query complexity.
+
+    Scoring factors:
+    - Strong indicators (hashes, IPs, domains, specific commands): +30
+    - Medium indicators (file paths, generic commands): +20
+    - Weak indicators (behavioral patterns, config files): +10
+    - Common/reliable data sources (process, network, file): +20
+    - Uncommon data sources (registry MFA, cloud audit): -10
+    - OSINT enrichment: +15
+    - Query specificity (not just "contains"): +10
+
+    Args:
+        indicators: List of extracted indicators
+        query: The detection query
+        technique: Technique ID
+        yaml_data: Full YAML data including metadata
+
+    Returns:
+        Detection likelihood score (0-100)
+    """
+    score = 50  # Base score
+
+    # Indicator strength analysis
+    if indicators:
+        strong_indicators = 0
+        medium_indicators = 0
+        weak_indicators = 0
+
+        for indicator in indicators:
+            indicator_lower = indicator.lower()
+
+            # Strong indicators: hashes, specific malware names, specific commands
+            if any(x in indicator_lower for x in ['sha256', 'sha1', 'md5', '.exe', 'mimikatz', 'powershell.exe', 'cmd.exe',
+                                                    'psexec', 'cobalt', 'beacon', 'meterpreter', 'empire']):
+                strong_indicators += 1
+            # Medium indicators: file paths, registry keys, specific patterns
+            elif any(x in indicator_lower for x in [':\\\\', 'hkey', 'software\\\\', 'system32', 'appdata',
+                                                      'temp\\\\', '.dll', '.bat', '.ps1', '.vbs']):
+                medium_indicators += 1
+            # Weak indicators: generic terms, config files
+            elif any(x in indicator_lower for x in ['hosts', 'config', 'settings', 'user', 'admin']):
+                weak_indicators += 1
+            else:
+                medium_indicators += 1
+
+        # Add points based on indicator strength
+        score += min(strong_indicators * 8, 30)  # Cap at +30
+        score += min(medium_indicators * 5, 20)  # Cap at +20
+        score += min(weak_indicators * 2, 10)   # Cap at +10
+
+    else:
+        # No indicators extracted - behavioral detection
+        score -= 20
+
+    # Data source reliability analysis
+    required_connectors = yaml_data.get('requiredDataConnectors', []) if yaml_data else []
+    if required_connectors:
+        for connector in required_connectors:
+            connector_id = connector.get('connectorId', '').lower() if isinstance(connector, dict) else str(connector).lower()
+
+            # Reliable, commonly available data sources
+            if any(x in connector_id for x in ['threatprotection', 'defender', 'sysmon', 'windows']):
+                score += 10
+            # Cloud/specialized data sources (may not be configured)
+            elif any(x in connector_id for x in ['azureactivedirectory', 'office365', 'aws', 'gcp']):
+                score -= 5
+
+    # Query specificity analysis
+    if query:
+        query_lower = query.lower()
+
+        # Specific, high-fidelity queries
+        if any(x in query_lower for x in ['sha256', 'sha1', 'md5', '==', 'has_all']):
+            score += 10
+        # Generic "contains" queries (higher false positive risk)
+        elif query_lower.count('contains') > 3:
+            score -= 5
+
+        # Network-based detections (generally reliable if you have network monitoring)
+        if any(x in query_lower for x in ['remoteip', 'destinationip', 'destinationport', 'url', 'domain']):
+            score += 10
+
+        # File/Process-based detections (very reliable)
+        if any(x in query_lower for x in ['processcommandline', 'filename', 'filepath', 'deviceprocessevents']):
+            score += 10
+
+    # Check for weak indicator patterns that reduce likelihood
+    if indicators:
+        for indicator in indicators:
+            # MFA/hosts file example - very weak indicator
+            if 'hosts' in indicator.lower() and 'etc' in indicator.lower():
+                score -= 25  # Major penalty for weak indicators
+
+            # Generic admin/system paths
+            if indicator.lower() in ['admin', 'administrator', 'system', 'user']:
+                score -= 10
+
+    # OSINT enrichment adds confidence
+    if yaml_data and yaml_data.get('osint_enriched'):
+        score += 15
+
+    # Ensure score is within 0-100 range
+    final_score = max(0, min(100, score))
+
+    # Debug output
+    print(f"[LIKELIHOOD] Technique: {technique}, Indicators: {len(indicators)}, Score: {final_score}", flush=True)
+
+    return final_score
+
+
 def extract_tables_indexes(query: str, vendor: str) -> list:
     """
     Extract table names (MDE) or index names (Splunk) from a correlation query.
@@ -344,11 +457,6 @@ def check_osint_enriched(yaml_file):
 
             # Check for OSINT enhancement (optional - checkbox feature)
             has_osint_enhancement = "osint_enhanced: true" in content
-
-            # Debug logging
-            print(f"🔍 DEBUG check_osint_enriched for {yaml_file}:")
-            print(f"   has_osint_comparison: {has_osint_comparison}")
-            print(f"   has_osint_enhancement: {has_osint_enhancement}")
 
             if has_osint_comparison:
                 osint_data = {}
@@ -625,6 +733,42 @@ def extract_indicators_from_query(yaml_file):
         return []
 
 
+def get_indicators_from_yaml(yaml_file):
+    """
+    Extract indicators from YAML file, prioritizing the 'indicators' section.
+    Falls back to query extraction if no indicators section exists.
+
+    Returns:
+        List of indicator strings for display
+    """
+    try:
+        # First, try to load the indicators section from YAML
+        yaml_data = load_yaml_file(yaml_file)
+        if yaml_data and "indicators" in yaml_data:
+            indicators_section = yaml_data["indicators"]
+            if indicators_section and isinstance(indicators_section, dict):
+                # Flatten all indicator categories into a single list
+                all_indicators = []
+                for category, values in indicators_section.items():
+                    if values and isinstance(values, list):
+                        # Strip asterisks (wildcards) from indicators for display
+                        for val in values:
+                            cleaned = str(val).strip().strip('*').strip()
+                            if cleaned:
+                                all_indicators.append(cleaned)
+
+                if all_indicators:
+                    # Return first 10 indicators
+                    return all_indicators[:10]
+
+        # Fallback: extract from query if no indicators section
+        return extract_indicators_from_query(yaml_file)
+    except Exception as e:
+        logger.error(f"Error getting indicators from {yaml_file}: {e}")
+        # Final fallback: try query extraction
+        return extract_indicators_from_query(yaml_file)
+
+
 app = FastAPI(title="Archer Threat Hunting Service")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -772,7 +916,6 @@ async def initialize_osint_repos():
 
     async def init_repos():
         try:
-            print("🔍 Initializing OSINT detection repositories...")
             app.state.osint_status = "Cloning detection repositories (this may take 15-20 minutes on first run)..."
 
             # Run in thread pool to avoid blocking
@@ -822,6 +965,244 @@ async def initialize_osint_repos():
 
     # Start initialization in background
     asyncio.create_task(init_repos())
+
+
+@app.on_event("startup")
+async def detect_local_llm():
+    """Detect available local LLM endpoints on startup."""
+    import requests
+    import asyncio
+
+    llm_endpoints = [
+        ("Ollama", "http://localhost:11434/api/tags"),
+        ("LM Studio", "http://localhost:1234/v1/models"),
+        ("Llama.cpp", "http://localhost:8080/health"),
+    ]
+
+    async def check_endpoint(name, url):
+        try:
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: requests.get(url, timeout=2)
+            )
+            if response.ok:
+                return {"name": name, "url": url, "available": True}
+        except:
+            pass
+        return None
+
+    # Check all endpoints concurrently
+    tasks = [check_endpoint(name, url) for name, url in llm_endpoints]
+    results = await asyncio.gather(*tasks)
+
+    # Find first available LLM
+    for result in results:
+        if result:
+            app.state.local_llm_detected = result
+            print(f"✓ Local LLM detected: {result['name']} at {result['url']}")
+            return
+
+    app.state.local_llm_detected = {"available": False}
+    print("ℹ️  No local LLM detected")
+
+
+@app.get("/api/llm/detect")
+async def get_local_llm_status():
+    """Get local LLM detection status."""
+    return getattr(app.state, "local_llm_detected", {"available": False})
+
+
+@app.post("/api/llm/preference")
+async def set_llm_preference(
+    request: Request,
+    use_local_llm: bool = Form(...),
+    dont_ask_again: bool = Form(False),
+    archer_session: Optional[str] = Cookie(None),
+):
+    """Save user preference for local LLM usage."""
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+
+    user, db = auth_result
+
+    # Store preference in database or user settings
+    # For now, store in app.state (could be moved to database)
+    if not hasattr(app.state, "user_llm_preferences"):
+        app.state.user_llm_preferences = {}
+
+    app.state.user_llm_preferences[user.id] = {
+        "use_local_llm": use_local_llm,
+        "dont_ask_again": dont_ask_again,
+    }
+
+    db.close()
+
+    return {
+        "success": True,
+        "message": "LLM preference saved",
+        "use_local_llm": use_local_llm,
+    }
+
+
+@app.post("/api/mappings/save")
+async def save_mapping_config(
+    request: Request,
+    platform: str = Form(...),
+    cmd: str = Form(""),
+    file: str = Form(""),
+    reg: str = Form(""),
+    network: str = Form(""),
+    archer_session: Optional[str] = Cookie(None),
+):
+    """Save custom mapping configuration for a platform."""
+    import json
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+
+    user, db = auth_result
+    db.close()
+
+    try:
+        # Build mapping configuration
+        mappings = {}
+        if cmd:
+            for idx in cmd.split(','):
+                idx = idx.strip()
+                if idx:
+                    mappings[idx] = "| summarize by relevant_fields"
+
+        # Save to custom mapping file
+        mapping_file = Path(f"archer/mappings/schema{platform.capitalize()}_custom.json")
+
+        # Read existing template if available
+        template_file = Path(f"archer/mappings/schema{platform.capitalize()}.json")
+        if template_file.exists():
+            with open(template_file, 'r') as f:
+                template = json.load(f)
+        else:
+            template = {}
+
+        # Create simplified mapping structure
+        custom_mappings = {
+            "cmd": cmd.split(',') if cmd else [],
+            "file": file.split(',') if file else [],
+            "reg": reg.split(',') if reg else [],
+            "network": network.split(',') if network else []
+        }
+
+        # Write custom mappings
+        with open(mapping_file, 'w') as f:
+            json.dump(custom_mappings, f, indent=2)
+
+        return {
+            "success": True,
+            "message": f"Mapping configuration saved for {platform}",
+            "file": str(mapping_file)
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/api/mappings/load")
+async def load_mapping_config(
+    request: Request,
+    platform: str,
+    archer_session: Optional[str] = Cookie(None),
+):
+    """Load current mapping configuration for a platform."""
+    import json
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+
+    user, db = auth_result
+    db.close()
+
+    try:
+        # Try to load custom mapping file first
+        mapping_file = Path(f"archer/mappings/schema{platform.capitalize()}_custom.json")
+
+        if mapping_file.exists():
+            with open(mapping_file, 'r') as f:
+                custom_mappings = json.load(f)
+
+            # Convert arrays back to comma-separated strings
+            return {
+                "success": True,
+                "mappings": {
+                    "cmd": ", ".join(custom_mappings.get("cmd", [])),
+                    "file": ", ".join(custom_mappings.get("file", [])),
+                    "reg": ", ".join(custom_mappings.get("reg", [])),
+                    "network": ", ".join(custom_mappings.get("network", []))
+                }
+            }
+        else:
+            return {
+                "success": False,
+                "message": "No custom configuration found"
+            }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.post("/api/mappings/test")
+async def test_mapping_config(
+    request: Request,
+    platform: str = Form(...),
+    cmd: str = Form(""),
+    file: str = Form(""),
+    reg: str = Form(""),
+    network: str = Form(""),
+    archer_session: Optional[str] = Cookie(None),
+):
+    """Test/validate mapping configuration."""
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+
+    user, db = auth_result
+    db.close()
+
+    try:
+        # Basic validation: check that index names don't contain invalid characters
+        import re
+        valid_pattern = re.compile(r'^[a-zA-Z0-9_\-,\s]+$')
+
+        all_values = [cmd, file, reg, network]
+        for value in all_values:
+            if value and not valid_pattern.match(value):
+                return {
+                    "success": False,
+                    "error": "Index names can only contain letters, numbers, underscores, hyphens, commas, and spaces"
+                }
+
+        return {
+            "success": True,
+            "message": "Configuration is valid"
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 @app.get("/api/status/osint")
@@ -985,6 +1366,8 @@ async def generate(
     vectr_campaign_name: str = Form(None),
     osint_enhancement: str = Form(None),
     osint_comparison: str = Form(None),
+    merge_by_tactic: str = Form(None),
+    merge_by_parent: str = Form(None),
 ):
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
@@ -1014,6 +1397,8 @@ async def generate(
                     run_correlation=True,  # Always enabled by default
                     osint_enhancement=True,  # Always enabled by default
                     osint_comparison=(osint_comparison == "true"),
+                    merge_by_tactic=(merge_by_tactic == "true"),
+                    merge_by_parent=(merge_by_parent == "true"),
                 )
 
                 # Run emulation if requested
@@ -1159,11 +1544,12 @@ async def generate_cve(
 
     def _bg():
         try:
-            print(f"========================================", flush=True)
-            print(f"CVE BACKGROUND THREAD STARTED", flush=True)
-            print(f"Group name: {group_name}", flush=True)
-            print(f"CVE IDs: {cve_ids}", flush=True)
-            print(f"========================================", flush=True)
+            # print(f"========================================", flush=True)
+            # print(f"CVE BACKGROUND THREAD STARTED", flush=True)
+            # print(f"Group name: {group_name}", flush=True)
+            # print(f"CVE IDs: {cve_ids}", flush=True)
+            # print(f"========================================", flush=True)
+            pass
 
             write_progress(
                 group_name,
@@ -1188,7 +1574,7 @@ async def generate_cve(
             }
 
             for cve in cve_ids:
-                print(f"Researching {cve}...")
+                # print(f"Researching {cve}...")
                 research = research_and_hunt(cve)
 
                 # Collect techniques
@@ -1203,9 +1589,9 @@ async def generate_cve(
             for ioc_type in all_iocs:
                 all_iocs[ioc_type] = list(set(all_iocs[ioc_type]))
 
-            print(f"Found {len(all_techniques)} unique techniques from {len(cve_ids)} CVE(s)")
-            print(f"DEBUG: Techniques list: {all_techniques}")
-            print(f"DEBUG: IOCs collected: {sum(len(v) for v in all_iocs.values())} total")
+            # print(f"Found {len(all_techniques)} unique techniques from {len(cve_ids)} CVE(s)")
+            # print(f"DEBUG: Techniques list: {all_techniques}")
+            # print(f"DEBUG: IOCs collected: {sum(len(v) for v in all_iocs.values())} total")
 
             # Build IOC guidance from collected IOCs
             ioc_guidance = []
@@ -1239,18 +1625,18 @@ async def generate_cve(
                     # Check if this is an ATT&CK technique ID or synthetic CVE technique
                     if tech_id.startswith("T") and tech_id[1:].split(".")[0].isdigit():
                         # Real ATT&CK technique - try to get info
-                        print(f"DEBUG: Getting ATT&CK info for {tech_id}")
+                        # print(f"DEBUG: Getting ATT&CK info for {tech_id}")
                         tech_info = _get_technique_info(tech_id)
                         if tech_info:
                             tactic = tech_info.get("tactic", "CVE Exploitation")
-                            print(f"DEBUG: {tech_id} → {tactic}")
+                            # print(f"DEBUG: {tech_id} → {tactic}")
                         else:
                             tactic = "CVE Exploitation"
-                            print(f"DEBUG: {tech_id} → CVE Exploitation (no ATT&CK mapping)")
+                            # print(f"DEBUG: {tech_id} → CVE Exploitation (no ATT&CK mapping)")
                     else:
                         # Synthetic CVE-based technique
                         tactic = "CVE Exploitation"
-                        print(f"DEBUG: {tech_id} → CVE Exploitation (synthetic)")
+                        # print(f"DEBUG: {tech_id} → CVE Exploitation (synthetic)")
 
                     if tactic not in tactic_map:
                         tactic_map[tactic] = []
@@ -1304,12 +1690,12 @@ async def generate_cve(
                                 ioc_dict["cmd"].extend(values[:10])
 
                     # DEBUG: Log the IOC dict structure before adding to tactic_map
-                    print(f"DEBUG [app.py]: Built ioc_dict for {tech_id}:")
-                    print(f"  - ioc_dict keys: {list(ioc_dict.keys())}")
-                    for key, vals in ioc_dict.items():
-                        print(
-                            f"  - {key}: type={type(vals)}, count={len(vals) if isinstance(vals, list) else 'N/A'}"
-                        )
+                    # print(f"DEBUG [app.py]: Built ioc_dict for {tech_id}:")
+                    # print(f"  - ioc_dict keys: {list(ioc_dict.keys())}")
+                    # for key, vals in ioc_dict.items():
+                    #     print(
+                    #         f"  - {key}: type={type(vals)}, count={len(vals) if isinstance(vals, list) else 'N/A'}"
+                    #     )
 
                     # Get platforms for this technique (required for platform validation)
                     tech_platforms = []
@@ -1362,15 +1748,15 @@ async def generate_cve(
             for tactic, techniques in tactic_map.items():
                 manual_data.append({"tactic": tactic, "techniques": techniques})
 
-            print(f"DEBUG: Built manual_data with {len(manual_data)} tactics")
-            for entry in manual_data:
-                print(f"  - Tactic: {entry['tactic']}, Techniques: {len(entry['techniques'])}")
+            # print(f"DEBUG: Built manual_data with {len(manual_data)} tactics")
+            # for entry in manual_data:
+            #     print(f"  - Tactic: {entry['tactic']}, Techniques: {len(entry['techniques'])}")
 
             if not manual_data:
                 print(f"ERROR: Failed to build manual_data even with fallbacks!")
-                print(f"  - CVE IDs: {cve_ids}")
-                print(f"  - Techniques: {all_techniques}")
-                print(f"  - IOCs: {all_iocs}")
+                # print(f"  - CVE IDs: {cve_ids}")
+                # print(f"  - Techniques: {all_techniques}")
+                # print(f"  - IOCs: {all_iocs}")
                 raise ValueError(f"CVE research failed to build detection data")
 
             # Process using existing pipeline
@@ -1411,6 +1797,174 @@ async def generate_cve(
                 "cve_ids": cve_ids,
                 "user_id": user_id,
                 "source_type": "cve",
+            },
+        )
+    except Exception:
+        pass
+
+    return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
+
+
+@app.post("/hunt/technique")
+async def hunt_technique(
+    request: Request,
+    technique_ids: str = Form(...),
+    merge_by_tactic: str = Form(None),
+    merge_by_parent: str = Form(None),
+    osint_enhancement: str = Form(None),
+    osint_comparison: str = Form(None),
+    ai_generators: str = Form(None),
+    local_llm: str = Form(None),
+    correlation_min_relevance: str = Form(None),
+    archer_session: Optional[str] = Cookie(None),
+):
+    """Generate detection queries for specific ATT&CK technique(s)."""
+    import re
+
+    # Check authentication
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+
+    user, db = auth_result
+    user_id = user.id
+    db.close()
+
+    # Parse technique IDs (comma-separated, case-insensitive)
+    technique_id_list = [t.strip().upper() for t in technique_ids.split(",") if t.strip()]
+
+    if not technique_id_list:
+        return JSONResponse({"error": "No technique IDs provided"}, status_code=400)
+
+    # Validate technique format: T####.### or T####
+    technique_pattern = re.compile(r"^T\d{4}(\.\d{3})?$", re.IGNORECASE)
+    invalid_techniques = [t for t in technique_id_list if not technique_pattern.match(t)]
+
+    if invalid_techniques:
+        return JSONResponse(
+            {
+                "error": f"Invalid technique format: {', '.join(invalid_techniques)}. "
+                "Technique IDs must follow format: T#### or T####.### (e.g., T1003 or T1003.001)"
+            },
+            status_code=400,
+        )
+
+    # Create group name based on techniques
+    if len(technique_id_list) == 1:
+        group_name = f"Hunt_{technique_id_list[0]}"
+    else:
+        group_name = f"Hunt_{technique_id_list[0]}_plus_{len(technique_id_list)-1}"
+
+    # Sanitize group name
+    group_name = sanitize_group_name(group_name)
+
+    # Parse options
+    merge_tactic = merge_by_tactic == "true"
+    merge_parent = merge_by_parent == "true"
+    osint_enh = osint_enhancement == "true"
+    osint_comp = osint_comparison == "true"
+
+    # Determine GENAI_MODE
+    genai_mode = "heuristic"
+    if local_llm == "true":
+        genai_mode = "local_llm"
+    elif ai_generators == "true":
+        genai_mode = "ai_generators"
+
+    # Parse correlation threshold
+    correlation_threshold = None
+    if correlation_min_relevance:
+        try:
+            correlation_threshold = float(correlation_min_relevance)
+        except ValueError:
+            correlation_threshold = None
+
+    def _bg():
+        try:
+            write_progress(
+                group_name,
+                {
+                    "status": "researching_techniques",
+                    "stage": "Technique Research",
+                    "created_yaml": 0,
+                    "total_yaml": len(technique_id_list),
+                },
+            )
+
+            # Build manual_data by looking up each technique
+            tactic_map = {}
+
+            for tech_id in technique_id_list:
+                tech_info = _get_technique_info(tech_id)
+
+                if not tech_info:
+                    print(f"Warning: Could not find information for technique {tech_id}")
+                    # Add to "Unknown Tactic" as fallback
+                    tactic = "Unknown Tactic"
+                else:
+                    tactic = tech_info.get("tactic", "Unknown Tactic")
+
+                if tactic not in tactic_map:
+                    tactic_map[tactic] = []
+
+                # Build technique entry
+                technique_entry = {
+                    "technique": tech_id,
+                    "op_guidance": tech_info.get("description", f"Hunt for {tech_id}") if tech_info else f"Hunt for {tech_id}",
+                    "red_tool": {},
+                    "detect_guidance": tech_info.get("description", f"Detect usage of {tech_id}") if tech_info else f"Detect usage of {tech_id}",
+                }
+
+                # Add platforms if available
+                if tech_info and "platforms" in tech_info:
+                    technique_entry["procedure_platforms"] = tech_info["platforms"]
+
+                tactic_map[tactic].append(technique_entry)
+
+            # Convert tactic_map to manual_data format
+            manual_data = []
+            for tactic, techniques in tactic_map.items():
+                manual_data.append({"tactic": tactic, "techniques": techniques})
+
+            if not manual_data:
+                raise ValueError(f"Could not build detection data for techniques: {technique_id_list}")
+
+            # Process using existing pipeline
+            modified_process_group_wrapper(
+                group_name,
+                hypothesis=f"Technique Hunt: {', '.join(technique_id_list)}",
+                manual_data=manual_data,
+                genai_mode=genai_mode,
+                run_correlation=True,
+                osint_enhancement=osint_enh,
+                osint_comparison=osint_comp,
+                merge_by_tactic=merge_tactic,
+                merge_by_parent=merge_parent,
+                correlation_min_relevance=correlation_threshold,
+            )
+
+        except Exception as e:
+            print(f"Technique hunt error: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            try:
+                write_progress(group_name, {"status": "failed", "error": str(e)})
+            except Exception:
+                pass
+
+    threading.Thread(target=_bg, daemon=True).start()
+
+    # Initialize progress
+    try:
+        write_progress(
+            group_name,
+            {
+                "status": "started",
+                "stage": "Technique Hunt",
+                "created_yaml": 0,
+                "technique_ids": technique_id_list,
+                "user_id": user_id,
+                "source_type": "technique_hunt",
             },
         )
     except Exception:
@@ -1838,7 +2392,7 @@ def start_genai_processing(group_name):
 
 # Modify the orchestrator process to ensure completion
 def modified_process_group_wrapper(
-    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False, osint_enhancement=False, osint_comparison=False
+    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, merge_by_tactic=False, merge_by_parent=False
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
@@ -1846,15 +2400,26 @@ def modified_process_group_wrapper(
     if genai_mode:
         os.environ["GENAI_MODE"] = genai_mode
 
+    # Set correlation merging options
+    if merge_by_tactic:
+        os.environ["CORRELATION_MERGE_BY_TACTIC"] = "true"
+    else:
+        os.environ.pop("CORRELATION_MERGE_BY_TACTIC", None)
+
+    if merge_by_parent:
+        os.environ["CORRELATION_MERGE_BY_PARENT"] = "true"
+    else:
+        os.environ.pop("CORRELATION_MERGE_BY_PARENT", None)
+
     try:
         # Call the original process_group with run_correlation parameter
         # IMPORTANT: Use named parameters to avoid positional argument mismatch
-        print(f"DEBUG: About to call process_group with:")
-        print(f"  - group_name: {group_name}")
-        print(f"  - output_dir: None")
-        print(f"  - hypothesis: {hypothesis}")
-        print(f"  - manual_data: {manual_data is not None} (is not None)")
-        print(f"  - run_correlation: {run_correlation}")
+        # print(f"DEBUG: About to call process_group with:")
+        # print(f"  - group_name: {group_name}")
+        # print(f"  - output_dir: None")
+        # print(f"  - hypothesis: {hypothesis}")
+        # print(f"  - manual_data: {manual_data is not None} (is not None)")
+        # print(f"  - run_correlation: {run_correlation}")
 
         process_group(
             group_name=group_name,
@@ -1866,7 +2431,7 @@ def modified_process_group_wrapper(
             osint_comparison=osint_comparison,
         )
 
-        print(f"DEBUG: process_group completed successfully")
+        # print(f"DEBUG: process_group completed successfully")
 
         # If correlation was requested, log correlation activity
         if run_correlation:
@@ -1921,8 +2486,8 @@ def modified_process_group_wrapper(
                 progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
 
             progress_data["status"] = "complete"
-            print(f"✅ Setting progress status to 'complete' for {group_name} (correlations finished)")
-            print(f"   Progress data: created_yaml={progress_data.get('created_yaml')}, total_yaml={progress_data.get('total_yaml')}, processed={progress_data.get('processed')}, total_pairs={progress_data.get('total_pairs')}")
+            # print(f"✅ Setting progress status to 'complete' for {group_name} (correlations finished)")
+            # print(f"   Progress data: created_yaml={progress_data.get('created_yaml')}, total_yaml={progress_data.get('total_yaml')}, processed={progress_data.get('processed')}, total_pairs={progress_data.get('total_pairs')}")
             write_progress(group_name, progress_data)
             return
 
@@ -2166,13 +2731,6 @@ async def upload_file(
             "iocs_count": sum(len(v) for v in iocs.values()),
             "auto_generate_requested": auto_generate == "true",
         }
-
-        print(f"\n[DEBUG] Returning extraction results:")
-        print(f"  - show_extraction: {response_data['show_extraction']}")
-        print(f"  - filename: {response_data['filename']}")
-        print(f"  - ttps_count: {response_data['ttps_count']}")
-        print(f"  - iocs_count: {response_data['iocs_count']}")
-        print(f"  - auto_generate_requested: {response_data['auto_generate_requested']}")
 
         # Log upload activity
         try:
@@ -3161,21 +3719,31 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             desc_html = markdown_links_to_html(desc_text)
             desc_plain = markdown_links_to_plain(desc_text)
 
-            # Extract indicators from the query
-            indicators = extract_indicators_from_query(yaml_file)
+            # Extract indicators from YAML indicators section or query
+            indicators = get_indicators_from_yaml(yaml_file)
 
             # Check for OSINT enrichment
             is_osint_enriched, osint_data = check_osint_enriched(yaml_file)
 
             # Debug: Log what we're passing to template
             if is_osint_enriched or osint_data:
-                print(f"📤 DEBUG passing to template: {filename}")
                 print(f"   is_osint_enriched: {is_osint_enriched}")
                 print(f"   osint_data present: {bool(osint_data)}")
 
-            # Extract the query from YAML for preview
+            # Extract the query and tactics from YAML for preview
             yaml_data = load_yaml_file(yaml_file)
             query_text = yaml_data.get("query", "") if yaml_data else ""
+            tactics_list = yaml_data.get("tactics", []) if yaml_data else []
+            # Get primary tactic (first in list)
+            primary_tactic = tactics_list[0] if tactics_list else "Unknown"
+
+            # Calculate detection likelihood score (0-100)
+            detection_likelihood = calculate_detection_likelihood(
+                indicators=indicators,
+                query=query_text,
+                technique=technique,
+                yaml_data=yaml_data
+            )
 
             detection_files[vendor].append(
                 {
@@ -3187,10 +3755,13 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "description_html": desc_html,
                     "description_plain": desc_plain,
                     "indicators": indicators,
-                    "needs_review": len(indicators) == 0 and not osint_data,  # Normal needs review (yellow) - no indicators AND no OSINT data
+                    "needs_review": False,  # Generated detections always have indicators
                     "osint_enriched": is_osint_enriched,  # OSINT enhanced flag (orange badge) - only true if enhancement checkbox was enabled
                     "osint_data": osint_data,  # OSINT comparison data (for Show Details button) - included if OSINT comparison ran
                     "query": query_text,  # Add query for preview
+                    "tactic": primary_tactic,  # Primary tactic for color coding
+                    "tactics": tactics_list,  # All tactics
+                    "detection_likelihood": detection_likelihood,  # Likelihood score (0-100)
                 }
             )
 
@@ -3218,6 +3789,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "needs_review": file_data.get("needs_review", False),
                     "osint_enriched": file_data.get("osint_enriched", False),
                     "osint_data": file_data.get("osint_data", {}),
+                    "tactic": file_data.get("tactic", "Unknown"),
+                    "tactics": file_data.get("tactics", []),
+                    "detection_likelihood": file_data.get("detection_likelihood", 50),
                     "queries": [],  # Store all queries for this group
                 }
             else:
@@ -3257,10 +3831,13 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "description_html": data.get("description_html", description),
                     "description_plain": data.get("description_plain", description),
                     "indicators": data.get("indicators", []),
-                    "needs_review": not has_indicators and not is_osint,  # Yellow badge
+                    "needs_review": False,  # Generated detections always have indicators
                     "osint_enriched": is_osint,  # Orange badge
                     "osint_data": data.get("osint_data", {}),
                     "queries": data.get("queries", []),  # Pass queries for preview
+                    "tactic": data.get("tactic", "Unknown"),  # Primary tactic
+                    "tactics": data.get("tactics", []),  # All tactics
+                    "detection_likelihood": data.get("detection_likelihood", 50),  # Likelihood score
                 }
             )
 
@@ -3351,7 +3928,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                 technique_id = parts[0].replace("-", " ")
 
                                 # Check if this file has indicators
-                                indicators = extract_indicators_from_query(full_path)
+                                indicators = get_indicators_from_yaml(full_path)
                                 total_indicators += len(indicators)
 
                                 # Extract metadata from YAML file including actual technique name and data source
@@ -3384,8 +3961,11 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
                                     # Get tactics
                                     tactics = yaml_data.get('tactics', [])
+                                    primary_tactic = "Unknown"
                                     if isinstance(tactics, list):
                                         tactics_set.update(tactics)
+                                        # Use first tactic as primary for coloring
+                                        primary_tactic = tactics[0] if tactics else "Unknown"
 
                                     # Extract time window from combined query if available
                                     if 'maxspan' in combined_query:
@@ -3398,6 +3978,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                         "id": technique_id,
                                         "name": technique_name,
                                         "source": friendly_source,
+                                        "tactic": primary_tactic,
                                     }
                                 )
 
@@ -3429,6 +4010,59 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                         # Extract tables (MDE) or indexes (Splunk) from the combined query
                         tables_indexes = extract_tables_indexes(combined_query, vendor)
 
+                        # Build technique-to-tactic mapping and formatted names for techniques_involved
+                        technique_tactic_map = {}
+                        techniques_involved_formatted = []
+                        techniques_by_tactic = {}  # Group techniques by tactic
+                        techniques_involved = corr.get("techniques_involved", [])
+
+                        # Map each technique to its primary tactic and get formatted name
+                        for tech_name in techniques_involved:
+                            # Look for YAML file matching this technique name
+                            pattern = os.path.join(GENERATE_DIR, f"{tech_name}_*.yaml")
+                            matching_files = glob.glob(pattern)
+
+                            if matching_files:
+                                # Use first matching file
+                                yaml_data = load_yaml_file(matching_files[0])
+                                if yaml_data:
+                                    # Get formatted name from YAML
+                                    raw_name = yaml_data.get('name', tech_name)
+                                    formatted_name = format_technique_name(raw_name)
+
+                                    tech_tactics = yaml_data.get('tactics', [])
+                                    # Use first tactic as primary
+                                    primary_tactic = tech_tactics[0] if tech_tactics else "Unknown"
+                                    technique_tactic_map[formatted_name] = primary_tactic
+                                    techniques_involved_formatted.append(formatted_name)
+
+                                    # Group by tactic
+                                    if primary_tactic not in techniques_by_tactic:
+                                        techniques_by_tactic[primary_tactic] = []
+                                    techniques_by_tactic[primary_tactic].append(formatted_name)
+                                else:
+                                    # Fallback: format the filename-based name
+                                    formatted_name = tech_name.replace("-", " ")
+                                    technique_tactic_map[formatted_name] = "Unknown"
+                                    techniques_involved_formatted.append(formatted_name)
+                                    if "Unknown" not in techniques_by_tactic:
+                                        techniques_by_tactic["Unknown"] = []
+                                    techniques_by_tactic["Unknown"].append(formatted_name)
+                            else:
+                                # Fallback: format the filename-based name
+                                formatted_name = tech_name.replace("-", " ")
+                                technique_tactic_map[formatted_name] = "Unknown"
+                                techniques_involved_formatted.append(formatted_name)
+                                if "Unknown" not in techniques_by_tactic:
+                                    techniques_by_tactic["Unknown"] = []
+                                techniques_by_tactic["Unknown"].append(formatted_name)
+
+                        # Calculate attack chain length (number of tactics in attack flow order)
+                        tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation',
+                                       'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement',
+                                       'Collection', 'Command and Control', 'Exfiltration', 'Impact']
+                        attack_chain_length = sum(1 for tactic in tactic_order if tactic in techniques_by_tactic)
+
                         correlations.append(
                             {
                                 "techniques": techniques,
@@ -3441,6 +4075,10 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                 "tactics": list(tactics_set),
                                 "combined_query": combined_query,
                                 "tables_indexes": tables_indexes,  # Add tables/indexes
+                                "techniques_involved": techniques_involved_formatted,  # Add formatted technique names
+                                "technique_tactic_map": technique_tactic_map,  # Map techniques to their primary tactics
+                                "techniques_by_tactic": techniques_by_tactic,  # Group techniques by tactic
+                                "attack_chain_length": attack_chain_length,  # Number of tactics in ordered attack flow
                             }
                         )
         except Exception as e:
@@ -3458,10 +4096,21 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
     # Convert to list format similar to detections
     grouped_correlations = []
     for vendor, vendor_corrs in correlations_by_vendor.items():
+        # Sort correlations within each vendor by:
+        # 1. Relevance score (descending)
+        # 2. Attack chain length (number of tactics in attack flow progression, descending)
+        sorted_corrs = sorted(
+            vendor_corrs,
+            key=lambda c: (
+                -c.get("relevance_score", 0),  # Higher relevance first
+                -c.get("attack_chain_length", 0)  # Longer attack chains first (as tiebreaker)
+            )
+        )
+
         grouped_correlations.append({
             "name": vendor,
-            "count": len(vendor_corrs),
-            "correlations": vendor_corrs
+            "count": len(sorted_corrs),
+            "correlations": sorted_corrs
         })
 
     # Add Elastic as "Coming Soon" placeholder
@@ -4308,6 +4957,9 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
     """
     Render the Library page for managing saved detections.
     """
+    from archer.database.models import LibraryDetection
+    import json
+
     # Check authentication
     auth_result = require_auth(request, archer_session)
     if isinstance(auth_result, RedirectResponse):
@@ -4316,8 +4968,219 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
     user, db = auth_result
 
     try:
+        # Vendor display names mapping
+        VENDOR_DISPLAY_NAMES = {
+            "splunk": "Splunk",
+            "mde": "Microsoft Defender for Endpoint",
+            "microsoft": "Microsoft Defender",
+            "elastic": "Elastic",
+            "sentinel": "Azure Sentinel"
+        }
+
+        # Helper function to safely parse JSON fields
+        def parse_json_field(field_value, default=None):
+            if default is None:
+                default = []
+            if not field_value:
+                return default
+            if isinstance(field_value, list):
+                return field_value
+            if isinstance(field_value, str):
+                try:
+                    return json.loads(field_value)
+                except (json.JSONDecodeError, ValueError):
+                    return default
+            return default
+
+        # Query all detections for this user
+        detections = db.query(LibraryDetection).filter_by(user_id=user.id).all()
+
+        # Group by vendor and collect filter options
+        vendors_dict = {}
+        all_groups = set()
+        all_tactics = set()
+        all_techniques = set()
+
+        for det in detections:
+            # Parse the content JSON to extract detection details
+            try:
+                content_data = json.loads(det.content) if isinstance(det.content, str) else det.content
+            except (json.JSONDecodeError, ValueError):
+                content_data = {}
+
+            # Determine vendor (from platform or content)
+            vendor = (det.platform or "unknown").lower()
+            if vendor not in vendors_dict:
+                vendors_dict[vendor] = []
+
+            # Parse JSON fields safely
+            tags = parse_json_field(det.tags, [])
+
+            # Extract data from content JSON or YAML-like structure
+            # Content can be a query string or a structured object
+            if isinstance(content_data, dict):
+                # Check if this is a detection object from results page (has 'technique' and 'queries' fields)
+                if "technique" in content_data and "queries" in content_data:
+                    # This is a detection saved from results page
+                    technique_name = content_data.get("technique") or det.title
+                    technique_id = ""  # Not stored in detection object
+                    description = content_data.get("description", "")
+                    queries = content_data.get("queries", [])
+                    query_content = "\n\n".join(queries) if queries else ""
+
+                    # Extract data source from title (format: "title1, title2, etc")
+                    title_parts = content_data.get("title", "").split(", ")
+                    data_source = title_parts[0] if title_parts else det.platform or "Unknown"
+
+                    # Extract indicators
+                    indicators = parse_json_field(content_data.get("indicators"), [])
+
+                    # Extract tactics (not stored in detection object, get from tags)
+                    tactics = []
+
+                    # Group name not in detection object, will extract from tags
+                    group_name = "Unknown"
+
+                    # Check if OSINT enriched
+                    osint_enriched = content_data.get("osint_enriched", False)
+
+                # Check if this is a YAML-like structure (has 'name' and 'requiredDataConnectors')
+                elif "name" in content_data or "requiredDataConnectors" in content_data:
+                    # This is a YAML detection
+                    technique_name = content_data.get("name") or content_data.get("technique_name") or det.title
+                    technique_id = content_data.get("technique_id", "")
+                    description = content_data.get("description", "")
+                    query_content = content_data.get("query") or str(content_data)
+
+                    # Extract data source from requiredDataConnectors
+                    data_source = ""
+                    connectors = content_data.get("requiredDataConnectors", [])
+                    if connectors and isinstance(connectors, list) and len(connectors) > 0:
+                        data_types = connectors[0].get("dataTypes", [])
+                        if data_types and len(data_types) > 0:
+                            data_source = data_types[0]
+
+                    # Extract indicators
+                    indicators = parse_json_field(content_data.get("indicators"), [])
+
+                    # Extract tactics
+                    tactics = parse_json_field(content_data.get("tactics"), [])
+
+                    # Extract group/threat actor
+                    group_name = content_data.get("group") or content_data.get("threat_actor", "Unknown")
+
+                    # Check if OSINT enriched
+                    osint_enriched = content_data.get("osint_enriched", False)
+
+                # Check if this is a correlation object (has 'techniques' and 'combined_query')
+                elif "techniques" in content_data and "combined_query" in content_data:
+                    # This is a correlation saved from results page
+                    techniques = content_data.get("techniques", [])
+                    technique_name = " + ".join([t.get("name", "") for t in techniques])
+                    technique_id = " + ".join([t.get("id", "") for t in techniques])
+                    description = f"Correlation between {len(techniques)} techniques"
+                    query_content = content_data.get("combined_query", "")
+                    data_source = content_data.get("vendor", det.platform or "Unknown")
+                    indicators = []  # Correlations don't have indicators in this structure
+                    tactics = parse_json_field(content_data.get("tactics"), [])
+                    group_name = "Unknown"
+                    osint_enriched = False
+
+                else:
+                    # Unknown structure, use defaults
+                    technique_name = det.title
+                    technique_id = ""
+                    description = ""
+                    query_content = str(content_data)
+                    data_source = det.platform or "Unknown"
+                    indicators = []
+                    tactics = []
+                    group_name = "Unknown"
+                    osint_enriched = False
+            else:
+                # Content is just a query string
+                technique_name = det.title
+                technique_id = ""
+                description = ""
+                query_content = str(content_data)
+                data_source = det.platform or ""
+                indicators = []
+                tactics = []
+                group_name = "Unknown"
+                osint_enriched = False
+
+            # Extract group from tags if not found in content
+            if group_name == "Unknown":
+                for tag in tags:
+                    if tag.startswith("Group:"):
+                        group_name = tag.replace("Group:", "").strip()
+                        break
+
+            # Build detection data object
+            detection_data = {
+                "id": det.id,
+                "technique_name": technique_name,
+                "technique_id": technique_id,
+                "data_source": data_source or det.platform or "Unknown",
+                "description": description,
+                "query": query_content,
+                "indicators": indicators,
+                "tags": tags,
+                "group": group_name,
+                "tactics": tactics,
+                "saved_date": det.created_at.strftime('%Y-%m-%d') if det.created_at else "",
+                "osint_enriched": osint_enriched,
+                "needs_review": False  # Generated detections always have indicators
+            }
+
+            vendors_dict[vendor].append(detection_data)
+
+            # Collect filter options
+            all_groups.add(group_name)
+            if technique_id:
+                all_techniques.add(technique_id)
+            for tactic in tactics:
+                all_tactics.add(tactic)
+
+        # Format vendors for template
+        vendors = []
+        for vendor_name, vendor_detections in vendors_dict.items():
+            vendors.append({
+                "name": vendor_name,
+                "display_name": VENDOR_DISPLAY_NAMES.get(vendor_name, vendor_name.title()),
+                "count": len(vendor_detections),
+                "detections": vendor_detections
+            })
+
+        # Sort vendors: splunk, mde/microsoft, elastic, then others
+        vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "elastic": 2, "sentinel": 3}
+        vendors.sort(key=lambda v: (vendor_order.get(v["name"], 99), v["name"]))
+
+        # Calculate summary statistics
+        total_detections = len(detections)
+
+        # Count correlations (detections with detection_type=correlation)
+        total_correlations = sum(
+            1 for d in detections
+            if d.detection_type and "correlation" in str(d.detection_type).lower()
+        )
+
+        # Count unique techniques
+        technique_count = len(all_techniques)
+
         template_response = templates.TemplateResponse(
-            "library.html", {"request": request, "user": user}
+            "library.html",
+            {
+                "request": request,
+                "user": user,
+                "vendors": vendors,
+                "total_detections": total_detections,
+                "total_correlations": total_correlations,
+                "technique_count": technique_count,
+                "all_groups": sorted(all_groups),
+                "all_tactics": sorted(all_tactics),
+                "all_techniques": sorted(filter(None, all_techniques))
+            }
         )
         return template_response
     finally:
@@ -4891,7 +5754,7 @@ async def update_profile(request: Request, archer_session: Optional[str] = Cooki
     """
     Update user profile information.
 
-    Requires authentication. Updates full_name in the database.
+    Requires authentication. Updates full_name and team in the database.
     """
     # Check authentication
     auth_result = require_auth(request, archer_session)
@@ -4903,12 +5766,14 @@ async def update_profile(request: Request, archer_session: Optional[str] = Cooki
     try:
         data = await request.json()
         full_name = data.get("full_name", "").strip()
+        team = data.get("team", "").strip()
 
         if not full_name:
             return {"success": False, "error": "Full name is required"}
 
-        # Update user's full name
+        # Update user's full name and team
         user.full_name = full_name
+        user.team = team if team else None
         db.commit()
         db.refresh(user)
 
@@ -5341,6 +6206,7 @@ async def get_users(request: Request, archer_session: Optional[str] = Cookie(Non
                     "id": u.id,
                     "email": u.email,
                     "full_name": u.full_name,
+                    "team": u.team,
                     "role": u.role.value,
                     "is_active": u.is_active,
                     "created_at": u.created_at.isoformat() if u.created_at else None,
@@ -5588,6 +6454,7 @@ async def get_all_users(request: Request, archer_session: Optional[str] = Cookie
                     "id": user.id,
                     "email": user.email,
                     "full_name": user.full_name,
+                    "team": user.team,
                     "role": user.role.value,
                     "is_active": user.is_active,
                     "created_at": user.created_at.isoformat() if user.created_at else None,
@@ -5890,3 +6757,4 @@ async def get_activities(request: Request, archer_session: Optional[str] = Cooki
 
     finally:
         db.close()
+ 

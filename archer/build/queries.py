@@ -5,10 +5,25 @@ from archer.build.malware_iocs import enrich_indicators_with_iocs, log_ioc_enric
 
 
 def load_splunk_schema():
-    """Load Splunk transformation pipelines from schemaSplunk.json"""
-    schema_file = (
-        Path(os.path.dirname(__file__)) / ".." / "mappings" / "schemaSplunk.json"
-    )
+    """Load Splunk transformation pipelines from schemaSplunk.json
+
+    Checks for custom mapping file first (schemaSplunk_custom.json),
+    then falls back to default mapping file (schemaSplunk.json).
+    """
+    mappings_dir = Path(os.path.dirname(__file__)) / ".." / "mappings"
+
+    # Try custom mapping file first
+    custom_schema_file = mappings_dir / "schemaSplunk_custom.json"
+    if custom_schema_file.exists():
+        try:
+            with open(custom_schema_file, "r") as f:
+                return json.load(f)
+        except Exception:
+            # If custom file fails to load, fall back to default
+            pass
+
+    # Fall back to default mapping file
+    schema_file = mappings_dir / "schemaSplunk.json"
     if not schema_file.exists():
         return {}
 
@@ -53,11 +68,7 @@ def detect_cloud_platform_from_indicators(indicators, indicator_type):
         Set of cloud platforms: {"aws", "azure", "gcp"} or empty set if not cloud-specific
     """
     if not indicators or not CLOUD_INDICATOR_MAPPINGS:
-        print(f"[DEBUG] detect_cloud_platform: No indicators or mappings (indicators={bool(indicators)}, mappings={bool(CLOUD_INDICATOR_MAPPINGS)})")
         return set()
-
-    print(f"[DEBUG] detect_cloud_platform: Analyzing {len(indicators)} indicators of type '{indicator_type}'")
-    print(f"[DEBUG]   Indicators: {indicators}")
 
     detected_platforms = set()
 
@@ -71,7 +82,6 @@ def detect_cloud_platform_from_indicators(indicators, indicator_type):
             if any(indicator_lower in item.lower() or item.lower() in indicator_lower
                    for item in aws_mapping.get(category, [])):
                 detected_platforms.add("aws")
-                print(f"[DEBUG]   -> Detected AWS from '{indicator}' (category: {category})")
                 break
 
         # Check Azure
@@ -80,7 +90,6 @@ def detect_cloud_platform_from_indicators(indicators, indicator_type):
             if any(indicator_lower in item.lower() or item.lower() in indicator_lower
                    for item in azure_mapping.get(category, [])):
                 detected_platforms.add("azure")
-                print(f"[DEBUG]   -> Detected Azure from '{indicator}' (category: {category})")
                 break
 
         # Check GCP
@@ -89,10 +98,8 @@ def detect_cloud_platform_from_indicators(indicators, indicator_type):
             if any(indicator_lower in item.lower() or item.lower() in indicator_lower
                    for item in gcp_mapping.get(category, [])):
                 detected_platforms.add("gcp")
-                print(f"[DEBUG]   -> Detected GCP from '{indicator}' (category: {category})")
                 break
 
-    print(f"[DEBUG]   Final detected platforms: {detected_platforms}")
     return detected_platforms
 
 
@@ -110,8 +117,6 @@ def get_valid_indices_for_platform(indicator_mapping_section, vendor, detected_p
     Returns:
         Dict of {index/table: fields} that are valid for this platform combination
     """
-    print(f"[DEBUG] get_valid_indices_for_platform: vendor={vendor}, indicator_type={indicator_type}, detected_platforms={detected_platforms}, technique_platform={technique_platform}")
-
     valid_indices = {}
 
     # Only "api" indicator type has the nested cloud categorization structure
@@ -120,12 +125,8 @@ def get_valid_indices_for_platform(indicator_mapping_section, vendor, detected_p
                            any(key.startswith("cloud_native_") or key == "endpoint"
                                for key in indicator_mapping_section.keys()))
 
-    print(f"[DEBUG]   has_cloud_categories: {has_cloud_categories}")
-    print(f"[DEBUG]   available keys: {list(indicator_mapping_section.keys())}")
-
     if not has_cloud_categories:
         # Legacy flat structure - return all indices
-        print(f"[DEBUG]   Using legacy flat structure, returning {len(indicator_mapping_section)} indices")
         return indicator_mapping_section
 
     # Endpoint sources should NOT be used for API indicators
@@ -134,15 +135,11 @@ def get_valid_indices_for_platform(indicator_mapping_section, vendor, detected_p
     # The only exception would be CLI tool usage, but those should be classified as "cmd" type, not "api" type
     if indicator_type != "api" and "endpoint" in indicator_mapping_section:
         valid_indices.update(indicator_mapping_section["endpoint"])
-        print(f"[DEBUG]   Added endpoint sources: {list(indicator_mapping_section['endpoint'].keys())}")
-    elif indicator_type == "api":
-        print(f"[DEBUG]   Skipping endpoint sources for API indicator type")
 
     # If no cloud platforms detected and no technique platform, return what we have so far
     # For API indicators, this will be empty (no endpoint sources)
     # For other indicator types, this will include endpoint sources
     if not detected_platforms and not technique_platform:
-        print(f"[DEBUG]   No cloud platforms detected and no technique platform, returning current valid_indices")
         return valid_indices
 
     # Add cloud-native sources only if they match detected platform or technique platform
@@ -158,16 +155,13 @@ def get_valid_indices_for_platform(indicator_mapping_section, vendor, detected_p
         cloud_key = platform_map[technique_platform]
         if cloud_key in indicator_mapping_section:
             valid_indices.update(indicator_mapping_section[cloud_key])
-            print(f"[DEBUG]   Added cloud sources from technique_platform '{technique_platform}': {list(indicator_mapping_section[cloud_key].keys())}")
 
     # Check detected platforms from indicators
     for platform in detected_platforms:
         cloud_key = f"cloud_native_{platform}"
         if cloud_key in indicator_mapping_section:
             valid_indices.update(indicator_mapping_section[cloud_key])
-            print(f"[DEBUG]   Added cloud sources from detected platform '{platform}': {list(indicator_mapping_section[cloud_key].keys())}")
 
-    print(f"[DEBUG]   Final valid_indices: {list(valid_indices.keys())}")
     return valid_indices
 
 
@@ -286,12 +280,14 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
         has_all_indicators = []
         has_any_indicators = []
         for indicator in indicators_to_use:
-            if " " in indicator:
+            # Escape backslashes for KQL
+            escaped_indicator = indicator.replace('\\', '\\\\')
+            if " " in escaped_indicator:
                 # Split into parts for has_all
-                parts = [part.strip() for part in indicator.split()]
+                parts = [part.strip() for part in escaped_indicator.split()]
                 has_all_indicators.append(parts)
             else:
-                has_any_indicators.append(indicator)
+                has_any_indicators.append(escaped_indicator)
 
         # Format indicators
         indicator_clauses = []
@@ -299,17 +295,35 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
             all_str = '", "'.join(parts)
             indicator_clauses.append(f'has_all("{all_str}")')
         if has_any_indicators:
-            any_str = '", "'.join(has_any_indicators)
-            indicator_clauses.append(f'has_any("{any_str}")')
+            # Use 'contains' for single value, 'has_any' for multiple
+            if len(has_any_indicators) == 1:
+                indicator_clauses.append(f'contains "{has_any_indicators[0]}"')
+            else:
+                any_str = '", "'.join(has_any_indicators)
+                indicator_clauses.append(f'has_any("{any_str}")')
 
         # Only generate query if there are indicators
         if not indicator_clauses:
             # Skip silently - this is expected for some table/indicator combinations
             continue
 
-        condition = " or ".join(
-            [f"{field} {clause}" for field in fields for clause in indicator_clauses]
-        )
+        # Build conditions with dual field checks where appropriate
+        # For command-line fields, check both ProcessCommandLine and InitiatingProcessCommandLine together
+        if "ProcessCommandLine" in fields and "InitiatingProcessCommandLine" in fields:
+            # Group both command-line fields for each clause
+            dual_conditions = []
+            for clause in indicator_clauses:
+                dual_conditions.append(f"(ProcessCommandLine {clause} or InitiatingProcessCommandLine {clause})")
+            # Handle AdditionalFields if present in DeviceEvents
+            if "AdditionalFields" in fields:
+                for clause in indicator_clauses:
+                    dual_conditions.append(f"AdditionalFields {clause}")
+            condition = " or ".join(dual_conditions)
+        else:
+            # Standard condition for non-command-line fields
+            condition = " or ".join(
+                [f"{field} {clause}" for field in fields for clause in indicator_clauses]
+            )
 
         # Add malware family name as comment if enrichment occurred
         query = f"{table}\n| where Timestamp > ago(1d)\n| where {condition}"
@@ -371,30 +385,22 @@ def compile_splunk_queries(
         platform,
         indicator_type
     )
-    print(f"[DEBUG] valid_indices for indicator_type='{indicator_type}': {list(valid_indices.keys())}")
 
     # Get transformation pipeline from schema
     transformation_pipeline = SPLUNK_SCHEMA.get(indicator_type, {})
-    print(f"[DEBUG] transformation_pipeline keys for indicator_type='{indicator_type}': {list(transformation_pipeline.keys())}")
 
     # Build queries for each valid index
     for index, fields in valid_indices.items():
-        print(f"[DEBUG] Processing index: {index}, fields: {fields}")
-
         # Get the transformation pipeline for this index
         pipeline = transformation_pipeline.get(index, "")
 
         if not pipeline:
             # Fallback if no pipeline found - skip this query silently
             # (This is expected for indexes not configured for this indicator type)
-            print(f"[DEBUG]   No pipeline found for {index}, skipping")
             continue
-
-        print(f"[DEBUG]   Pipeline found, length: {len(pipeline)}")
 
         # Extract field names available in the pipeline
         pipeline_fields = extract_field_names_from_pipeline(pipeline)
-        print(f"[DEBUG]   Pipeline fields extracted: {pipeline_fields}")
 
         # Build field-value pairs for | search clause
         field_value_pairs = {}
@@ -408,11 +414,9 @@ def compile_splunk_queries(
                 if matched_field not in field_value_pairs:
                     field_value_pairs[matched_field] = []
                 field_value_pairs[matched_field].extend(indicators_to_use)
-                print(f"[DEBUG]   Matched field '{field}' -> '{matched_field}', added {len(indicators_to_use)} indicators")
             else:
                 # Field from indicatorMapping.json not found in pipeline
                 # Skip this field silently (this is expected for some index/field combinations)
-                print(f"[DEBUG]   Field '{field}' NOT matched in pipeline fields, skipping")
                 pass
 
         # Add OSINT indicators if enhancement enabled
@@ -435,16 +439,12 @@ def compile_splunk_queries(
                         field_value_pairs[osint_field] = []
                     field_value_pairs[osint_field].extend(osint_values)
 
-        print(f"[DEBUG]   Final field_value_pairs: {list(field_value_pairs.keys())}")
-
         # Compile the search clause
         search_clause = compile_search_clause(field_value_pairs)
-        print(f"[DEBUG]   Search clause compiled, length: {len(search_clause) if search_clause else 0}")
 
         # Only generate query if there are actual indicators in the search clause
         if not search_clause or search_clause.strip() == "":
             # Skip silently - this is expected when no valid field mappings exist
-            print(f"[DEBUG]   Search clause is empty, skipping query for {index}")
             continue
 
         # Build final query with proper structure

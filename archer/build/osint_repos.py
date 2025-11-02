@@ -23,35 +23,37 @@ from datetime import datetime, timedelta
 import time
 
 # Repository configurations
+from ..config import OSINT_REPOS_DIR
+
 REPOS = {
     "sigma": {
         "url": "https://github.com/SigmaHQ/sigma.git",
-        "path": "data/osint_repos/sigma",
+        "path": os.path.join(OSINT_REPOS_DIR, "sigma"),
         "search_dir": "rules",
     },
     "elastic": {
         "url": "https://github.com/elastic/detection-rules.git",
-        "path": "data/osint_repos/elastic",
+        "path": os.path.join(OSINT_REPOS_DIR, "elastic"),
         "search_dir": "rules",
     },
     "mitre_car": {
         "url": "https://github.com/mitre-attack/car.git",
-        "path": "data/osint_repos/mitre_car",
+        "path": os.path.join(OSINT_REPOS_DIR, "mitre_car"),
         "search_dir": "analytics",
     },
     "splunk": {
         "url": "https://github.com/splunk/security_content.git",
-        "path": "data/osint_repos/splunk",
+        "path": os.path.join(OSINT_REPOS_DIR, "splunk"),
         "search_dir": "detections",
     },
     "azure_sentinel": {
         "url": "https://github.com/Azure/Azure-Sentinel.git",
-        "path": "data/osint_repos/azure_sentinel",
+        "path": os.path.join(OSINT_REPOS_DIR, "azure_sentinel"),
         "search_dir": "Detections",
     }
 }
 
-REPOS_BASE_DIR = Path("data/osint_repos")
+REPOS_BASE_DIR = Path(OSINT_REPOS_DIR)
 UPDATE_INTERVAL = timedelta(hours=1)  # Update every hour
 
 
@@ -170,8 +172,6 @@ def ensure_repos_ready() -> bool:
     Returns:
         True if all repos are ready, False otherwise
     """
-    print("🔍 Checking OSINT repositories...")
-
     all_ready = True
     for repo_name in REPOS.keys():
         if not clone_or_update_repo(repo_name):

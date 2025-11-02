@@ -638,7 +638,7 @@ async function refresh(){
 
       if (!isCrossVendorEnabled) {
         // Cross-vendor disabled
-        crossVendorInfoEl.textContent = 'Cross-vendor correlation not enabled for this analysis (coming soon)';
+        crossVendorInfoEl.textContent = 'Cross-vendor correlation not enabled for this analysis';
         crossVendorInfoEl.style.color = '#999';
       } else if (!soleVendorComplete) {
         // Wait for sole-vendor to complete

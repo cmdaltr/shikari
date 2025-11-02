@@ -222,7 +222,6 @@ def validate_indicators_for_platform(
                 all_valid = False
                 error_msg = f"[{platform}] [{indicator_type}] '{indicator}': {reason}"
                 error_messages.append(error_msg)
-                logger.warning(f"Filtered invalid indicator: {error_msg}")
 
         if valid_indicators_for_type:
             filtered_indicators[indicator_type] = valid_indicators_for_type

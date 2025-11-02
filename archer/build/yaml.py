@@ -180,7 +180,7 @@ def map_entities(query):
     return f"{query}{entities}"
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, osint_data=None, osint_enhanced=False):
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, indicators=None, osint_data=None, osint_enhanced=False):
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
@@ -220,6 +220,29 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, o
     yaml_content = re.sub(r"\n\n", r"\n  ", yaml_content)
     yaml_content = re.sub(r"(\(Citation: [^\)]+\))", r"", yaml_content)
     yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace("   | ", "  | ")
+
+    # Add indicators section if present
+    if indicators:
+        import yaml as yaml_module
+        indicators_section = "\n# Extracted Indicators\n"
+        indicators_section += "indicators:\n"
+
+        # Handle dict or list format
+        if isinstance(indicators, dict):
+            for indicator_type, values in indicators.items():
+                if values:
+                    indicators_section += f"  {indicator_type}:\n"
+                    for value in values:
+                        yaml_str = yaml_module.dump([value], default_flow_style=False, width=1000000)
+                        yaml_value = yaml_str.strip().replace('- ', '', 1).strip()
+                        indicators_section += f'    - {yaml_value}\n'
+        elif isinstance(indicators, list) and indicators:
+            for value in indicators:
+                yaml_str = yaml_module.dump([value], default_flow_style=False, width=1000000)
+                yaml_value = yaml_str.strip().replace('- ', '', 1).strip()
+                indicators_section += f'  - {yaml_value}\n'
+
+        yaml_content += indicators_section
 
     # Add OSINT metadata if data was found during comparison
     # Debug logging removed for cleaner output
@@ -414,6 +437,7 @@ def construct_yaml(
                 all_tactics,
                 tag,
                 query_with_entities,
+                indicators=identifiers,  # Pass indicators for YAML metadata
                 osint_data=osint_enhancement_data,  # Pass OSINT data dict
                 osint_enhanced=osint_enhancement,    # Pass enhancement flag
             )
@@ -436,6 +460,7 @@ def construct_yaml(
                 all_tactics,
                 tag,
                 query,
+                indicators=identifiers,  # Pass indicators for YAML metadata
                 osint_data=osint_enhancement_data,  # Pass OSINT data dict
                 osint_enhanced=osint_enhancement,    # Pass enhancement flag
             )

@@ -98,6 +98,52 @@ cd archer
 ---
 <br>
 
+## ⚠️ IMPORTANT: Configure Mapping Files
+
+**Before generating detections**, you MUST configure mapping files for your environment!
+
+Archer ships with **generic, example mapping files** that reference placeholder index names like `edr_events`, `windows_events`, etc. These will NOT work in your environment.
+
+### Quick Setup
+
+Run the interactive setup wizard:
+
+```bash
+python scripts/setup_mappings.py
+```
+
+This will guide you through configuring:
+- ✅ Your actual index/source names (Splunk, Sentinel, etc.)
+- ✅ Field name mappings for your log format
+- ✅ Which data sources you have available
+
+### Manual Setup
+
+Alternatively, edit the mapping files directly:
+
+```bash
+# Copy example files
+cp archer/mappings/schemaSplunk.json archer/mappings/schemaSplunk_custom.json
+cp archer/mappings/schemaMDE.json archer/mappings/schemaMDE_custom.json
+
+# Edit with your actual index names and field mappings
+vim archer/mappings/schemaSplunk_custom.json
+```
+
+### Documentation
+
+For detailed instructions, see: **[docs/MAPPING_SETUP_GUIDE.md](docs/MAPPING_SETUP_GUIDE.md)**
+
+**Why This Matters:**
+- ❌ Without proper mappings, generated queries will reference non-existent indices
+- ❌ Field names won't match your log format
+- ❌ Detections will return no results or false positives
+
+✅ **Take 10 minutes now to configure mappings correctly!**
+
+---
+<br>
+
 ## 3️⃣ Setup Options
 
 ### Option A: Run with Docker (Recommended)
@@ -344,12 +390,20 @@ Content-Type: application/json
 ## 📚 Documentation & Resources
 
 ### Archer Documentation
+
+**Core Documentation:**
 - [Getting Started Guide](docs/GETTING_STARTED.md) - Setup and troubleshooting
 - [API Reference](docs/API_REFERENCE.md) - Complete REST API documentation for all endpoints
 - [Security Features Guide](docs/SECURITY_FEATURES.md) - Complete security documentation, authentication, user management, and best practices
+
+**Feature Guides:**
+- [MITRE Procedures Guide](docs/MITRE_PROCEDURES.md) - MITRE ATT&CK procedure extraction and technique expansion
+- [Parent/Subtechnique Expansion](docs/PARENT_SUBTECHNIQUE_EXPANSION.md) - Automatic subtechnique detection generation specification
+- [**Correlation Engine**](docs/CORRELATION_ENGINE.md) - **Complete correlation generation documentation** (scoring, filtering, JOIN queries)
+- [Correlation Quick Reference](docs/CORRELATION_QUICK_REFERENCE.md) - Quick reference for correlation engine settings and logic
 - [Emulation Guide](docs/guides/EMULATION_GUIDE.md) - Adversary emulation and remote execution
 - [Query Execution Guide](docs/guides/QUERY_API_GUIDE.md) - MDE and Splunk API integration
-- [Correlation Guide](docs/guides/CORRELATION_GUIDE.md) - Correlation query builder
+- [Correlation Guide](docs/guides/CORRELATION_GUIDE.md) - Correlation query builder (user guide)
 - [CVE Hunting Guide](docs/guides/CVE_HUNTING_GUIDE.md) - CVE-based detection generation
 - [Testing Guide](docs/guides/TESTING_GUIDE.md) - Testing and validation workflows
 

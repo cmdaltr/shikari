@@ -239,7 +239,6 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
 
     if not has_real_indicators and identifiers:
         print(f" ⚠️  All indicators are generic terms (e.g., 'condition', 'value', 'data')")
-        print(f" 🔍 Treating as no indicators - will attempt OSINT comparison")
         identifiers = {}  # Clear identifiers to trigger OSINT path
     else:
         identifiers = filtered_identifiers  # Use filtered identifiers
@@ -361,10 +360,6 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
             else:
                 indicator_text = str(indicators)
 
-            # DEBUG: Show what indicators we're validating
-            print(f"  🔍 Checking indicator_type='{indicator_type}' with {len(indicators) if isinstance(indicators, (list, dict)) else 1} value(s)")
-            if indicator_text:
-                print(f"     Sample: {indicator_text[:150]}{'...' if len(indicator_text) > 150 else ''}")
 
             # SPLUNK
             if "Splunk" in indicator_mappings[indicator_type]:
@@ -375,11 +370,6 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                     is_compatible = is_query_applicable(
                         procedure_platforms, software_platforms, clean_index_name
                     )
-                    # DEBUG: Log what's being checked
-                    if not is_compatible:
-                        print(f"     ⚠️ is_query_applicable returned FALSE for {clean_index_name}")
-                        print(f"        procedure_platforms: {procedure_platforms}")
-                        print(f"        index_platforms: {get_platforms_for_index(clean_index_name)}")
 
                     # NEW: Validate indicators using platform-indicator validator
                     platform = normalize_platform_name(clean_index_name)
@@ -394,7 +384,6 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                     )
 
                     if not should_generate:
-                        print(f"     ⚠️ Platform-indicator validation FAILED for {clean_index_name}: {validation_error}")
                         indicator_compatible = False
                     else:
                         # Use filtered indicators (invalid ones removed)
@@ -406,7 +395,6 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
 
                         # Check indicator-level platform compatibility (enhanced v2)
                         # ONLY validate actual indicators, NOT procedure text (which has URLs and generic descriptions)
-                        print(f"     → validating indicator_text for {clean_index_name}: len={len(indicator_text)}, sample='{indicator_text[:80]}'")
                         indicator_compatible = validate_procedure_for_index(
                             indicator_text,  # CHANGED: Only validate actual indicators
                             clean_index_name,
@@ -414,9 +402,6 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                             technique_desc=technique_description,
                             technique_platforms=technique_platforms
                         )
-
-                    # DEBUG: Log validation results
-                    print(f"  🔍 {clean_index_name}: technique_compat={is_compatible}, indicator_compat={indicator_compatible}")
 
                     if is_compatible and indicator_compatible:
                         compatible_sources.add(index_name)
@@ -479,8 +464,6 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
         print(f" ⚠️  No identifiers found for {name} from MITRE ATT&CK data")
 
         if osint_comparison:
-            print(f" 🔍 Searching OSINT sources for additional detection methods...")
-
             from archer.build.osint_comparison import search_osint_for_technique, should_create_detection
 
             # Search OSINT sources

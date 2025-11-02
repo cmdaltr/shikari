@@ -20,7 +20,9 @@ PROGRESS_DIR = os.path.join(DATA_DIR, "progress")
 PROFILE_PICS_DIR = os.path.join(DATA_DIR, "profile_pictures")
 VALIDATION_CACHE_DIR = os.path.join(DATA_DIR, "validation_cache")
 AI_CACHE_DIR = os.path.join(DATA_DIR, "ai_cache")
-CVE_CACHE_DIR = os.path.join(DATA_DIR, "cve_cache")
+CVE_CACHE_DIR = os.path.join(DATA_DIR, "cache", "cve")
+OSINT_CACHE_DIR = os.path.join(DATA_DIR, "cache", "osint")
+OSINT_REPOS_DIR = os.path.join(DATA_DIR, "repos")
 
 # ========== Common Constants ==========
 # Severity order for comparison (highest to lowest priority)
@@ -95,4 +97,5 @@ class CoreConfig:
     llama_model_path = os.getenv("LLAMA_MODEL_PATH")
 
     # Correlation settings
-    correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", "0.5"))
+    correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", "0.60"))
+    correlation_max_limit = int(os.getenv("CORRELATION_MAX_LIMIT", "250"))

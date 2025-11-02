@@ -2,51 +2,80 @@ var loadingInterval;
 var progressPollInterval;
 function showLoading(groupName, enableProgressPolling) {
   var overlay = document.getElementById('loading-overlay');
-  var messageEl = document.getElementById('loading-message');
+  var spinnerEl = document.getElementById('loading-spinner');
   overlay.style.display = 'flex';
+
+  // Detect animal from group name and set emoji
+  var animalMap = {
+    'spider': '🕷️',
+    'panda': '🐼',
+    'kitten': '🐱',
+    'bear': '🐻',
+    'fox': '🦊',
+    'kitsune': '🦊',
+    'tiger': '🐯',
+    'mouse': '🐭',
+    'smilodon': '🐱',
+    'worm': '🪱',
+    'eagle': '🦅',
+    'falcon': '🦅',
+    'wolf': '🐺',
+    'rabbit': '🐰',
+    'snake': '🐍',
+    'dragon': '🐉',
+    'lion': '🦁',
+    'leopard': '🐆'
+  };
+
+  var selectedAnimal = null;
+  if (groupName) {
+    var groupLower = groupName.toLowerCase();
+    for (var animal in animalMap) {
+      if (groupLower.indexOf(animal) !== -1) {
+        selectedAnimal = animalMap[animal];
+        break;
+      }
+    }
+  }
+
+  // Set the animal emoji (or leave empty for default red ring)
+  if (selectedAnimal && spinnerEl) {
+    spinnerEl.setAttribute('data-emoji', selectedAnimal);
+  } else if (spinnerEl) {
+    spinnerEl.removeAttribute('data-emoji');
+  }
 
   // If progress polling is enabled (for profiling), poll for progress messages
   if (enableProgressPolling && groupName) {
     var safeGroupName = groupName.replace(/\./g, '_').replace(/\//g, '_');
-    messageEl.textContent = 'Initializing...';
 
     progressPollInterval = setInterval(function () {
       fetch('/progress_status?group_name=' + encodeURIComponent(safeGroupName))
         .then(function (res) { return res.json(); })
         .then(function (data) {
           var p = data.progress || data.progress_state || data || {};
-          var message = p.message || 'Processing...';
           var status = p.status || '';
 
-          // Update message if we have one
-          if (message && status === 'profiling') {
-            messageEl.textContent = message;
-          } else if (status === 'profile_complete') {
-            messageEl.textContent = 'Profile complete!';
+          // Stop polling if complete
+          if (status === 'complete' || status === 'profile_complete' || status === 'error') {
+            if (progressPollInterval) {
+              clearInterval(progressPollInterval);
+              progressPollInterval = null;
+            }
           }
         })
         .catch(function () {
-          // Silently fail - keep existing message
+          // Silently fail - keep existing state
         });
     }, 1000); // Poll every second
-  } else {
-    // Standard loading with dots animation
-    messageEl.textContent = 'Initiating...';
-    var count = 0;
-    loadingInterval = setInterval(function () {
-      count = (count + 1) % 4;
-      // Pad dots to always be 3 characters wide to prevent text movement
-      var dots = '.'.repeat(count).padEnd(3, '\u00A0'); // Use non-breaking space
-      messageEl.textContent = (groupName ? ("Initiating '" + groupName + "'") : 'Initiating') + dots;
-    }, 500);
   }
 }
 function hideLoading() {
   document.getElementById('loading-overlay').style.display = 'none';
   if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
   if (progressPollInterval) { clearInterval(progressPollInterval); progressPollInterval = null; }
-  var messageEl = document.getElementById('loading-message');
-  if (messageEl) messageEl.textContent = 'Initiating...';
+  var spinnerEl = document.getElementById('loading-spinner');
+  if (spinnerEl) spinnerEl.removeAttribute('data-emoji');
 }
 
 function showY2KWarning() {
@@ -360,13 +389,15 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
 
-      // Check if CVE input or group name is provided
+      // Check if CVE input, technique input, or group name is provided
       var cveInput = document.getElementById('cve_input');
+      var techniqueInput = document.getElementById('technique_input');
       var groupName = input ? input.value.trim() : '';
       var cveId = cveInput ? cveInput.value.trim() : '';
+      var techniqueIds = techniqueInput ? techniqueInput.value.trim() : '';
 
-      if (!groupName && !cveId) {
-        alert('Please enter either a Threat Group Name or CVE Identifier');
+      if (!groupName && !cveId && !techniqueIds) {
+        alert('Please enter a Threat Group Name, CVE Identifier, or ATT&CK Technique IDs');
         return false;
       }
 
@@ -402,9 +433,38 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
 
-      // Determine endpoint based on input
-      var endpoint = cveId ? '/generate/cve' : '/generate';
-      var displayName = cveId || groupName;
+      // Validate Technique format if technique input is used
+      if (techniqueIds) {
+        var techniquePattern = /^T\d{4}(\.\d{3})?$/i;
+        var techniques = techniqueIds.split(',').map(function(t) { return t.trim(); });
+        var invalidTechniques = [];
+
+        for (var i = 0; i < techniques.length; i++) {
+          if (!techniquePattern.test(techniques[i])) {
+            invalidTechniques.push(techniques[i]);
+          }
+        }
+
+        if (invalidTechniques.length > 0) {
+          alert('Invalid ATT&CK Technique format: ' + invalidTechniques.join(', ') + '\n\nTechnique IDs must:\n- Start with "T" followed by 4 digits (e.g., T1003)\n- Optionally include subtechnique: T1003.001\n- Multiple techniques separated by commas');
+          return false;
+        }
+      }
+
+      // Determine endpoint based on input priority: technique > CVE > group
+      var endpoint = '/generate';
+      var displayName = groupName;
+
+      if (techniqueIds) {
+        endpoint = '/hunt/technique';
+        displayName = 'Hunt: ' + techniqueIds.split(',')[0].trim();
+        if (techniqueIds.split(',').length > 1) {
+          displayName += ' +' + (techniqueIds.split(',').length - 1);
+        }
+      } else if (cveId) {
+        endpoint = '/generate/cve';
+        displayName = cveId;
+      }
 
       showLoading(displayName);
 

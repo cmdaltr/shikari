@@ -250,7 +250,6 @@ def sync_with_vectr(
     testcase_mgr = TestCaseManager()
 
     # Export: Create test cases for new detections
-    print("📤 Exporting new detections to VECTR...")
     export_result = testcase_mgr.bulk_create_from_directory(
         campaign_id=campaign_id, yaml_dir=yaml_dir, filter_group=threat_group
     )

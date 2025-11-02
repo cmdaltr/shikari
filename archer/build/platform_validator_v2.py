@@ -488,22 +488,18 @@ def validate_indicator_for_index(
     is_cve_indicator = any(pattern in indicator_lower for pattern in ["jndi", "log4j", "cve-", "${", "exploit", "ldap://", "ldaps://", "rmi://", "dns://"])
 
     if is_cve_indicator:
-        print(f"      ✅ RULE 6 BYPASSED: CVE indicator detected (platform-agnostic), skipping Multi-OS validation")
+        pass  # CVE indicators are platform-agnostic
     elif technique_platforms and len(technique_platforms) > 1:
         # Check if technique supports BOTH Windows and Linux/Unix
         supports_windows = any(p.lower() == "windows" for p in technique_platforms)
         supports_linux = any(p.lower() in ["linux", "unix"] for p in technique_platforms)
         supports_macos = any(p.lower() == "macos" for p in technique_platforms)
 
-        # DEBUG: Log Rule 6 evaluation
-        print(f"      🔍 RULE 6: Multi-OS check - supports_win={supports_windows}, supports_linux={supports_linux}, index_platforms={index_platforms}")
-
         if supports_windows and (supports_linux or supports_macos):
             # Multi-OS technique - REQUIRE specific indicators for OS-specific indexes
             if "Windows" in index_platforms and "Linux" not in index_platforms and "macOS" not in index_platforms:
                 # Windows-only index - MUST have Windows-specific indicators
                 has_strict = has_windows_only_indicators(indicator_text)
-                print(f"         → Windows index: has_strict_windows={has_strict}, checking indicator_text[:100]='{indicator_text[:100]}'")
                 if not has_strict:
                     # Check for Windows-suggestive patterns (less strict but more precise)
                     indicator_lower = indicator_text.lower()
@@ -513,14 +509,12 @@ def validate_indicator_for_index(
                         # Windows processes/commands with word boundaries
                         bool(re.search(r'\b(powershell|cmd\.exe|svchost|lsass|winlogon|explorer\.exe|rundll32|regsvr32|wmic|net\.exe)\b', indicator_lower))
                     )
-                    print(f"         → Windows-suggestive={windows_suggestive}")
                     if not windows_suggestive:
                         return (False, f"Multi-OS technique ({technique_platforms}) requires Windows-specific indicators for Windows index, but none found")
 
             elif ("Linux" in index_platforms or "Unix" in index_platforms) and "Windows" not in index_platforms:
                 # Linux/Unix-only index - MUST have Linux-specific indicators
                 has_strict = has_linux_only_indicators(indicator_text)
-                print(f"         → Linux/Unix index: has_strict_linux={has_strict}, checking indicator_text[:100]='{indicator_text[:100]}'")
                 if not has_strict:
                     # Check for Linux-suggestive patterns (less strict but more precise)
                     indicator_lower = indicator_text.lower()
@@ -533,13 +527,6 @@ def validate_indicator_for_index(
                     cmd_match = re.search(r'\b(bash|chmod|chown|sudo|apt|yum|systemctl|systemd|iptables|grep|sed|awk)\b', indicator_lower)
 
                     linux_suggestive = bool(matched_paths or cmd_match)
-
-                    if matched_paths:
-                        print(f"         → Linux-suggestive=True (matched paths: {matched_paths})")
-                    elif cmd_match:
-                        print(f"         → Linux-suggestive=True (matched command: {cmd_match.group(0)})")
-                    else:
-                        print(f"         → Linux-suggestive=False (no matches)")
 
                     if not linux_suggestive:
                         return (False, f"Multi-OS technique ({technique_platforms}) requires Linux-specific indicators for Linux index, but none found")
@@ -582,21 +569,12 @@ def validate_procedure_for_index(
     Returns:
         True if compatible, False to skip
     """
-    # DEBUG: Log what we're receiving
-    print(f"    🔍 VALIDATOR for {index_name}:")
-    print(f"      - technique_desc len: {len(technique_desc or '')}")
-    print(f"      - technique_platforms: {technique_platforms}")
-    print(f"      - procedure_text sample: {(procedure_text or '')[:80]}")
-
     is_valid, reason = validate_indicator_for_index(
         procedure_text,
         technique_desc or "",
         technique_platforms or [],
         index_name
     )
-
-    if not is_valid and reason:
-        print(f"      ❌ REJECTED: {reason}")
 
     return is_valid
 

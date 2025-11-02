@@ -105,21 +105,23 @@ def _list_yaml_files(group_name: str, yaml_dir: str) -> List[str]:
 
 def _parse_yaml_for_vendor(path: str) -> Dict:
     """
-    Parse a YAML file to extract vendor information and search query content.
+    Parse a YAML file to extract vendor information, search query content, and tactics.
 
     Returns a dictionary with:
     - path: the file path
     - vendor: detected vendor (or None)
     - query: the search query if found (or None)
+    - tactics: list of MITRE ATT&CK tactics (or [])
     """
     try:
         with open(path, "r", encoding="utf-8") as fh:
             text = fh.read()
     except Exception:
-        return {"path": path, "vendor": None, "query": None}
+        return {"path": path, "vendor": None, "query": None, "tactics": []}
 
     vendor = None
     query = None
+    tactics = []
     connector_id = None
 
     # Look for the connectorId field to determine vendor
@@ -214,7 +216,26 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
     ]:
         vendor = "mde"
 
-    return {"path": path, "vendor": vendor, "query": query}
+    # Extract tactics from the YAML
+    tactics_marker = False
+    for line in text.splitlines():
+        line_stripped = line.strip()
+
+        if line_stripped.startswith("tactics:"):
+            tactics_marker = True
+            continue
+
+        if tactics_marker:
+            # Check if this is a list item (starts with -)
+            if line_stripped.startswith("- "):
+                tactic = line_stripped[2:].strip()
+                if tactic:
+                    tactics.append(tactic)
+            elif line_stripped and not line.startswith(" ") and not line.startswith("\t") and ":" in line:
+                # New section started
+                break
+
+    return {"path": path, "vendor": vendor, "query": query, "tactics": tactics}
 
 
 def _combine_queries(vendor: str, query_a: str, query_b: str, a: str = None, b: str = None) -> str:
@@ -472,16 +493,69 @@ _HIGH_IMPACT_TECHNIQUES = {
 
 # Logical attack progressions (tactic pairs that naturally follow each other)
 _ATTACK_PROGRESSIONS = [
+    # Classic kill chain progressions
     ("initial-access", "execution"),
     ("initial-access", "persistence"),
+    ("initial-access", "defense-evasion"),
     ("execution", "privilege-escalation"),
+    ("execution", "defense-evasion"),
+    ("execution", "persistence"),
+    ("execution", "credential-access"),
+    ("execution", "discovery"),
     ("privilege-escalation", "defense-evasion"),
     ("privilege-escalation", "credential-access"),
+    ("privilege-escalation", "persistence"),
     ("credential-access", "lateral-movement"),
+    ("credential-access", "collection"),
+    ("credential-access", "discovery"),
     ("lateral-movement", "collection"),
+    ("lateral-movement", "execution"),
+    ("lateral-movement", "credential-access"),
     ("collection", "exfiltration"),
     ("defense-evasion", "persistence"),
+    ("defense-evasion", "credential-access"),
+    ("defense-evasion", "lateral-movement"),
+    ("discovery", "lateral-movement"),
+    ("discovery", "collection"),
+    ("discovery", "credential-access"),
+    ("persistence", "defense-evasion"),
+    ("persistence", "execution"),
+    ("persistence", "privilege-escalation"),
+    # Common tactics that often appear together
+    ("execution", "command-and-control"),
+    ("persistence", "command-and-control"),
+    ("command-and-control", "exfiltration"),
+    ("command-and-control", "collection"),
+    ("command-and-control", "lateral-movement"),
+    ("impact", "exfiltration"),
+    ("resource-development", "initial-access"),
+    ("reconnaissance", "initial-access"),
 ]
+
+# Tactic priority weights (higher = more critical to detect)
+_TACTIC_PRIORITY = {
+    # Critical tactics (highest priority)
+    "credential-access": 10,
+    "lateral-movement": 10,
+    "exfiltration": 10,
+    "impact": 10,
+
+    # High priority tactics
+    "privilege-escalation": 8,
+    "persistence": 8,
+    "command-and-control": 8,
+
+    # Medium priority tactics
+    "defense-evasion": 6,
+    "collection": 6,
+    "initial-access": 6,
+
+    # Lower priority tactics (still important but more common/noisy)
+    "execution": 4,
+    "discovery": 4,
+    "resource-development": 3,
+    "reconnaissance": 3,
+}
 
 
 def _extract_technique_ids(file_path: str) -> List[str]:
@@ -493,13 +567,19 @@ def _extract_technique_ids(file_path: str) -> List[str]:
     matches = re.findall(r"T\d{4}(?:\.\d{3})?", basename)
     technique_ids.extend(matches)
 
-    # Try to extract from file content if no matches
-    if not technique_ids and os.path.exists(file_path):
+    # Always try to extract from file content (more reliable than filename)
+    if os.path.exists(file_path):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read(500)  # Read first 500 chars
-                matches = re.findall(r"T\d{4}(?:\.\d{3})?", content)
-                technique_ids.extend(matches)
+                content = f.read(1000)  # Read first 1000 chars
+                # Look for technique_id field in YAML
+                yaml_matches = re.findall(r"technique_id:\s*['\"]?(T\d{4}(?:\.\d{3})?)", content)
+                if yaml_matches:
+                    technique_ids.extend(yaml_matches)
+                else:
+                    # Fallback: any T-number patterns
+                    matches = re.findall(r"T\d{4}(?:\.\d{3})?", content)
+                    technique_ids.extend(matches)
         except:
             pass
 
@@ -716,10 +796,64 @@ def _estimate_false_positive_rate(query: str, vendor: str) -> float:
     return max(0.0, min(1.0, fp_score))
 
 
+def _extract_primary_tables(query: str, vendor: str) -> set:
+    """
+    Extract primary data tables/indexes from a query.
+
+    Args:
+        query: The query string
+        vendor: Vendor type (mde, splunk, etc.)
+
+    Returns:
+        Set of table/index names
+    """
+    tables = set()
+
+    if vendor.lower() == "splunk":
+        # Extract Splunk indexes
+        index_matches = re.findall(r'index\s*=\s*(\w+)', query, re.IGNORECASE)
+        tables.update(index_matches)
+    else:
+        # Extract MDE/KQL tables (DeviceProcessEvents, DeviceFileEvents, etc.)
+        table_matches = re.findall(r'\b(Device\w+Events?|Email\w+|Identity\w+)\b', query)
+        tables.update(table_matches)
+
+    return tables
+
+
+def _check_attack_progression(path_a: str, path_b: str) -> bool:
+    """
+    Check if two detections form a logical attack progression or share tactics.
+
+    Args:
+        path_a: Path to first YAML file
+        path_b: Path to second YAML file
+
+    Returns:
+        True if tactics form a logical progression or share tactics, False otherwise
+    """
+    tactics_a = _extract_tactics(path_a)
+    tactics_b = _extract_tactics(path_b)
+
+    # Allow correlations within the same tactic (e.g., multiple credential-access techniques)
+    if set(tactics_a) & set(tactics_b):  # If any tactics overlap
+        return True
+
+    # Check if any tactic pair matches attack progressions
+    for tactic_a in tactics_a:
+        for tactic_b in tactics_b:
+            if (tactic_a, tactic_b) in _ATTACK_PROGRESSIONS:
+                return True
+            elif (tactic_b, tactic_a) in _ATTACK_PROGRESSIONS:
+                return True
+
+    return False
+
+
 def _score_correlation(corr: Dict, file_info: Dict) -> float:
     """
     Score a correlation based on multiple factors.
-    Returns score from 0-100 (higher is better).
+    Returns score from 0-140 (higher is better).
     """
     path_a = corr.get("a", "")
     path_b = corr.get("b", "")
@@ -744,19 +878,29 @@ def _score_correlation(corr: Dict, file_info: Dict) -> float:
 
     score += min(30, high_impact_count * 15)  # 15 points per high-impact technique
 
-    # 2. Query Specificity (0-20 points)
+    # 2. Tactic Priority (0-20 points)
+    # Prioritize critical tactics: credential-access, lateral-movement, exfiltration, impact
+    tactic_priority_score = 0
+    all_tactics = set(tactics_a + tactics_b)
+    for tactic in all_tactics:
+        tactic_weight = _TACTIC_PRIORITY.get(tactic, 0)
+        tactic_priority_score += tactic_weight
+    # Normalize to 0-20 range (max realistic is ~20 with 2 critical tactics)
+    score += min(20, tactic_priority_score)
+
+    # 3. Query Specificity (0-20 points)
     specificity_a = _calculate_query_specificity(query_a)
     specificity_b = _calculate_query_specificity(query_b)
     avg_specificity = (specificity_a + specificity_b) / 2
     score += avg_specificity * 20
 
-    # 3. False Positive Rate (0-25 points) - inverse scoring
+    # 4. False Positive Rate (0-25 points) - inverse scoring
     fp_rate_a = _estimate_false_positive_rate(query_a, corr.get("vendor", ""))
     fp_rate_b = _estimate_false_positive_rate(query_b, corr.get("vendor", ""))
     avg_fp_rate = (fp_rate_a + fp_rate_b) / 2
     score += (1.0 - avg_fp_rate) * 25  # Lower FP rate = higher score
 
-    # 4. Attack Progression (0-25 points)
+    # 5. Attack Progression (0-25 points)
     # Check if tactics form a logical progression - this is the KEY metric for correlation value
     for tactic_a in tactics_a:
         for tactic_b in tactics_b:
@@ -767,15 +911,20 @@ def _score_correlation(corr: Dict, file_info: Dict) -> float:
                 score += 25
                 break
 
+    # 6. Data Source Diversity (-10 to +20 points)
+    # Bonus for correlations spanning multiple data sources
+    diversity_score = _score_data_source_diversity(corr, corr.get("vendor", ""))
+    score += diversity_score
+
     # NOTE: Semantic overlap is calculated and displayed as informational metadata
     # but is NOT used in correlation scoring. What matters is attack chain progression,
     # not whether queries use similar fields/indicators.
 
-    return min(100.0, score)
+    return min(140.0, score)  # Max 140 now (added tactic priority bonus)
 
 
 def _score_and_filter_correlations(
-    correlations: List[Dict], file_info: Dict, min_relevance: float = 0.5
+    correlations: List[Dict], file_info: Dict, min_relevance: float = 0.5, max_per_vendor: int = 25
 ) -> List[Dict]:
     """
     Score all correlations and return only those meeting the minimum relevance threshold.
@@ -784,37 +933,28 @@ def _score_and_filter_correlations(
         correlations: List of correlation dictionaries
         file_info: File metadata dictionary
         min_relevance: Minimum relevance score threshold (default 0.5 = 50%)
+        max_per_vendor: Maximum correlations per vendor (default 25)
 
     Returns:
-        Filtered list of correlations with relevance_score >= min_relevance
+        Filtered list of correlations with relevance_score >= min_relevance, capped at max_per_vendor
     """
-    print(f"GenAI: Scoring {len(correlations)} correlations...")
-
     # Score each correlation
     scored_correlations = []
     for corr in correlations:
         score = _score_correlation(corr, file_info)
-        corr["relevance_score"] = round(score / 100, 2)  # Normalize to 0-1
+        corr["relevance_score"] = round(score / 140, 2)  # Normalize to 0-1 (max 140 with tactic priority + diversity)
         scored_correlations.append((score, corr))
 
     # Sort by score (descending)
     scored_correlations.sort(key=lambda x: x[0], reverse=True)
 
-    # Log score distribution
-    if scored_correlations:
-        scores = [s[0] for s in scored_correlations]
-        print(f"GenAI: Score distribution:")
-        print(f"  Top score: {scores[0]:.1f}")
-        print(f"  Median score: {scores[len(scores)//2]:.1f}")
-        print(f"  Lowest score: {scores[-1]:.1f}")
-
-    # Filter by minimum relevance threshold (50% = score >= 50)
+    # Filter by minimum relevance threshold (75% = score >= 75)
     min_score_threshold = min_relevance * 100
     top_correlations = [corr for score, corr in scored_correlations if score >= min_score_threshold]
 
-    print(
-        f"GenAI: Keeping {len(top_correlations)}/{len(correlations)} correlations with relevance >= {min_relevance:.0%} (score >= {min_score_threshold:.1f})"
-    )
+    # Cap at max_per_vendor (default 25)
+    if len(top_correlations) > max_per_vendor:
+        top_correlations = top_correlations[:max_per_vendor]
 
     return top_correlations
 
@@ -845,7 +985,7 @@ def generate_correlations(group_name: str, yaml_dir: str, progress_prefix: str =
 
     try:
         files = _list_yaml_files(group_name, yaml_dir)
-        print(f"GenAI: Found {len(files)} YAML files for {group_name}")
+        # print(f"GenAI: Found {len(files)} YAML files for {group_name}")
         write_progress(
             group_name,
             {"status": "genai_started", "total_files": len(files), "processed": 0},
@@ -853,7 +993,7 @@ def generate_correlations(group_name: str, yaml_dir: str, progress_prefix: str =
 
         # If configured to use a local model, attempt it and gracefully fallback
         mode = os.environ.get("GENAI_MODE", "heuristic").lower()
-        print(f"GenAI: Using mode '{mode}'")
+        # print(f"GenAI: Using mode '{mode}'")
 
         # Track available capabilities for logging only
         available_modes = ["heuristic"]
@@ -865,7 +1005,7 @@ def generate_correlations(group_name: str, yaml_dir: str, progress_prefix: str =
             available_modes.append("ai_generators")
         if _HAS_LLAMA or _HAS_TRANSFORMERS:
             available_modes.append("local_llm")
-        print(f"GenAI: Available capability modes: {', '.join(available_modes)}")
+        # print(f"GenAI: Available capability modes: {', '.join(available_modes)}")
 
         # Set global generation mode to control downstream behavior
         global _GEN_MODE
@@ -901,7 +1041,7 @@ def generate_correlations(group_name: str, yaml_dir: str, progress_prefix: str =
     finally:
         # Always release the lock when done
         group_lock.release()
-        print(f"GenAI: Released correlation lock for '{group_name}'")
+        # print(f"GenAI: Released correlation lock for '{group_name}'")
 
 
 def process_genai(group_name: str):
@@ -912,20 +1052,626 @@ def process_genai(group_name: str):
     Args:
         group_name: The group name to process
     """
-    print(f"process_genai called for group {group_name}")
+    # print(f"process_genai called for group {group_name}")
     yaml_dir = GENERATE_DIR
     return generate_correlations(group_name, yaml_dir)
 
 
 def process(group_name: str):
     """Alias for process_genai for compatibility."""
-    print(f"process alias called for group {group_name}")
+    # print(f"process alias called for group {group_name}")
     return process_genai(group_name)
+
+
+def _merge_by_tactic(files: List[str], file_info: Dict) -> Dict[str, List[str]]:
+    """
+    Merge YAML files by their MITRE ATT&CK tactic.
+
+    Returns:
+        Dictionary mapping tactic name to list of file paths
+    """
+    tactic_groups = {}
+
+    for file_path in files:
+        tactics = _extract_tactics(file_path)
+        for tactic in tactics:
+            if tactic not in tactic_groups:
+                tactic_groups[tactic] = []
+            tactic_groups[tactic].append(file_path)
+
+    # print(f"GenAI: Merged {len(files)} files into {len(tactic_groups)} tactic groups")
+    # for tactic, paths in tactic_groups.items():
+    #     print(f"  - {tactic}: {len(paths)} detections")
+
+    return tactic_groups
+
+
+def _merge_by_parent(files: List[str], file_info: Dict) -> Dict[str, List[str]]:
+    """
+    Merge YAML files by their parent technique ID (e.g., T1003 from T1003.001).
+
+    Returns:
+        Dictionary mapping parent technique ID to list of file paths
+    """
+    parent_groups = {}
+
+    for file_path in files:
+        techniques = _extract_technique_ids(file_path)
+        for technique in techniques:
+            # Extract parent (e.g., T1003 from T1003.001)
+            parent = technique.split('.')[0] if '.' in technique else technique
+            if parent not in parent_groups:
+                parent_groups[parent] = []
+            parent_groups[parent].append(file_path)
+
+    # print(f"GenAI: Merged {len(files)} files into {len(parent_groups)} parent technique groups")
+    # for parent, paths in parent_groups.items():
+    #     print(f"  - {parent}: {len(paths)} detections")
+
+    return parent_groups
+
+
+def _combine_queries_for_group(file_paths: List[str], file_info: Dict, vendor: str) -> Tuple[str, List[str]]:
+    """
+    Combine multiple queries into a single merged query with OR logic.
+
+    Returns:
+        Tuple of (combined_query, list of individual queries)
+    """
+    queries = []
+    for path in file_paths:
+        query = file_info.get(path, {}).get("query", "")
+        if query:
+            # Clean up query
+            if query.startswith("|\n"):
+                query = query[2:].lstrip()
+            queries.append(query)
+
+    if not queries:
+        return ("", [])
+
+    # For now, return a simple comment indicating merged queries
+    # In a production system, you'd want to parse and intelligently merge
+    combined = f"-- Merged {len(queries)} detections --\n" + " UNION ".join([f"({q})" for q in queries[:5]])
+    if len(queries) > 5:
+        combined += f"\n-- ... and {len(queries) - 5} more queries"
+
+    return (combined, queries)
+
+
+def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
+    """
+    Build a JOIN-based correlation query that chains events by DeviceName and AccountName.
+    Merges techniques by tactic with inline comments showing technique attribution.
+
+    Args:
+        corr_data: Correlation data with query_a, query_b, techniques_involved, etc.
+        file_info: Dictionary mapping file paths to their YAML data
+
+    Returns:
+        KQL query string with JOINs and technique comments
+    """
+    # Get all queries - may contain UNION queries from super-merging
+    query_a = corr_data.get("query_a", "")
+    query_b = corr_data.get("query_b", "")
+
+    # Get techniques involved to map queries to techniques
+    techniques_involved = corr_data.get("techniques_involved", [])
+
+    # Parse queries to extract table names and conditions
+    queries_with_metadata = []
+
+    # Split UNION queries into individual queries
+    all_queries = []
+    for query_text in [query_a, query_b]:
+        if "UNION" in query_text:
+            # Split by UNION
+            parts = query_text.split("\nUNION\n")
+            all_queries.extend(parts)
+        elif query_text:
+            all_queries.append(query_text)
+
+    # Process each individual query
+    for query in all_queries:
+        query = query.strip()
+        if not query:
+            continue
+
+        # Extract table name (first line of query)
+        table_match = re.match(r'^(\w+)', query)
+        table_name = table_match.group(1) if table_match else "DeviceEvents"
+
+        # Extract just the condition part - skip "Timestamp > ago" lines
+        # Get all "| where" clauses
+        where_lines = []
+        for line in query.split('\n'):
+            stripped = line.strip()
+            if stripped.startswith('| where') and 'Timestamp > ago' not in stripped:
+                # Extract just the condition after "| where"
+                condition = stripped.replace('| where', '').strip()
+                if condition:
+                    where_lines.append(condition)
+
+        # Join all where conditions
+        where_clause = ' and '.join(where_lines) if where_lines else ""
+
+        # Try to match this query to a technique by looking for it in file_info
+        technique_name = "Unknown"
+        tactic = "Unknown"
+
+        # Look through file_info to find matching query
+        for path, info in file_info.items():
+            if info.get("query", "").strip() == query:
+                basename = os.path.basename(path).replace(".yaml", "").replace(".yml", "")
+                technique_name = basename.split("_")[0] if "_" in basename else basename
+                tactics = info.get("tactics", [])
+                tactic = tactics[0] if tactics else "Unknown"
+                break
+
+        # If we couldn't match, try to infer from techniques_involved list
+        if technique_name == "Unknown" and techniques_involved:
+            # Use table name to guess technique (simple heuristic)
+            for tech in techniques_involved:
+                if tech.lower() in query.lower()[:200]:
+                    technique_name = tech
+                    break
+
+            if technique_name == "Unknown":
+                technique_name = techniques_involved[0]
+
+        queries_with_metadata.append({
+            "technique": technique_name,
+            "tactic": tactic,
+            "table": table_name,
+            "where": where_clause,
+            "query": query
+        })
+
+    if not queries_with_metadata:
+        return query_a + "\n" + query_b  # Fallback to UNION approach
+
+    # Group by tactic and table
+    by_tactic_table = {}
+    for qm in queries_with_metadata:
+        key = (qm["tactic"], qm["table"])
+        if key not in by_tactic_table:
+            by_tactic_table[key] = []
+        by_tactic_table[key].append(qm)
+
+    # Build the JOIN query
+    join_parts = []
+    first_table = None
+
+    for (tactic, table), queries in by_tactic_table.items():
+        # Merge where clauses with technique comments
+        where_conditions = []
+        for qm in queries:
+            technique_comment = f"// {qm['technique']}"
+            # Clean up where clause - remove timestamp filter and any remaining pipe operators
+            where_clause = qm["where"]
+            where_clause = where_clause.replace("Timestamp > ago(1d)", "").strip()
+            where_clause = where_clause.replace("Timestamp > ago(1h)", "").strip()
+
+            # Remove leading "and" or "or" if present
+            where_clause = re.sub(r'^(?:and|or)\s+', '', where_clause, flags=re.IGNORECASE).strip()
+
+            if where_clause:
+                where_conditions.append(f"  {technique_comment}\n  ({where_clause})")
+
+        # Build the merged where clause
+        merged_where = " or\n".join(where_conditions)
+
+        # Determine account field based on table
+        account_field = _get_account_field_for_table(table)
+
+        # Build this table's query
+        table_query = f"""let {table}_{tactic.replace(' ', '')} = {table}
+| where Timestamp > ago(1h)
+| where {merged_where}
+| project Timestamp, DeviceName, AccountName={account_field}, *;"""
+
+        if first_table is None:
+            first_table = f"{table}_{tactic.replace(' ', '')}"
+            join_parts.append(table_query)
+        else:
+            join_parts.append(table_query)
+
+    # If we only have one table group, return as-is
+    if len(join_parts) == 1:
+        return join_parts[0].replace("let ", "").replace(f"{first_table} = ", "")
+
+    # Build JOIN chain
+    join_query = "\n\n".join(join_parts)
+    join_query += f"\n\n// Chain events by DeviceName and AccountName\n{first_table}"
+
+    table_names = [f"{qm['table']}_{qm['tactic'].replace(' ', '')}" for qm in queries_with_metadata]
+    for i, table_name in enumerate(table_names[1:], 1):
+        join_query += f"""
+| join kind=inner (
+    {table_name}
+) on DeviceName, AccountName
+| where abs(datetime_diff('minute', Timestamp, Timestamp{i})) <= 60"""
+
+    join_query += "\n| project *"
+
+    return join_query
+
+
+def _get_account_field_for_table(table_name: str) -> str:
+    """
+    Get the appropriate account field name for a given MDE table.
+
+    Args:
+        table_name: MDE table name (DeviceFileEvents, DeviceProcessEvents, etc.)
+
+    Returns:
+        Field name to use for AccountName
+    """
+    # Map tables to their primary account field
+    account_field_map = {
+        "DeviceFileEvents": "InitiatingProcessAccountName",
+        "DeviceProcessEvents": "AccountName",  # Has both AccountName and InitiatingProcessAccountName
+        "DeviceEvents": "AccountName",
+        "DeviceRegistryEvents": "InitiatingProcessAccountName",
+        "DeviceNetworkEvents": "InitiatingProcessAccountName",
+        "DeviceImageLoadEvents": "InitiatingProcessAccountName",
+        "DeviceLogonEvents": "AccountName",
+        "DeviceInfo": "LoggedOnUsers",  # Special case - no single account field
+    }
+
+    return account_field_map.get(table_name, "InitiatingProcessAccountName")
+
+
+def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> List[Dict]:
+    """
+    Group similar correlations and keep only the top-scored ones from each group.
+    Correlations are grouped by full technique pair + data source to allow variety.
+    Keeps up to 3 best correlations per group.
+
+    Returns:
+        Deduplicated list of correlations
+    """
+    # Group correlations by technique pair + data source
+    grouped = {}
+    for i, corr in enumerate(correlations):
+        path_a = corr.get("a", "")
+        path_b = corr.get("b", "")
+
+        # Extract technique name from filename (e.g., "Multi-FactorAuthentication" from "Multi-FactorAuthentication_DeviceFileEvents.yaml")
+        basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
+        basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
+
+        # Split by underscore to get technique name (before table/index name)
+        # Example: "Multi-FactorAuthentication_DeviceFileEvents" -> "Multi-FactorAuthentication"
+        technique_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
+        technique_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
+
+        # Debug first correlation
+        if i == 0:
+            print(f"   DEBUG technique_name_a: {technique_name_a}")
+            print(f"   DEBUG technique_name_b: {technique_name_b}")
+
+        # Create pair key with technique names (unique enough for grouping)
+        pair_key = tuple(sorted([technique_name_a, technique_name_b]))
+
+        if pair_key not in grouped:
+            grouped[pair_key] = []
+        grouped[pair_key].append(corr)
+
+    # Merge correlations from each group into single multi-source correlations
+    final_correlations = []
+    print(f"   Grouping: {len(correlations)} correlations grouped into {len(grouped)} unique technique pairs")
+    for pair_key, corr_list in grouped.items():
+        # Sort by relevance score (descending)
+        corr_list.sort(key=lambda c: c.get('relevance_score', 0), reverse=True)
+
+        if len(corr_list) == 1:
+            # Single correlation - keep as is
+            final_correlations.append(corr_list[0])
+        else:
+            # Multiple correlations with same technique pair - merge into one
+            # Use the best correlation as the base and merge queries from others
+            merged = corr_list[0].copy()
+
+            # Collect all unique queries
+            all_queries_a = [corr_list[0].get("query_a", "")]
+            all_queries_b = [corr_list[0].get("query_b", "")]
+
+            for corr in corr_list[1:]:
+                query_a = corr.get("query_a", "")
+                query_b = corr.get("query_b", "")
+                if query_a and query_a not in all_queries_a:
+                    all_queries_a.append(query_a)
+                if query_b and query_b not in all_queries_b:
+                    all_queries_b.append(query_b)
+
+            # Combine queries with UNION
+            if len(all_queries_a) > 1:
+                merged["query_a"] = "\nUNION\n".join(all_queries_a)
+            if len(all_queries_b) > 1:
+                merged["query_b"] = "\nUNION\n".join(all_queries_b)
+
+            # Update combined query
+            merged["combined_query"] = merged["query_a"] + "\n" + merged["query_b"]
+
+            print(f"      Merged {len(corr_list)} correlations for {pair_key} into 1 multi-source correlation")
+            final_correlations.append(merged)
+
+    # Second-level grouping: Merge correlations that share one technique
+    # Example: (A→B), (A→C), (A→D) becomes (A→(B OR C OR D))
+    by_single_technique = {}
+    for corr in final_correlations:
+        path_a = corr.get("a", "")
+        path_b = corr.get("b", "")
+
+        basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
+        basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
+
+        technique_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
+        technique_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
+
+        # Group by the first technique (A)
+        if technique_name_a not in by_single_technique:
+            by_single_technique[technique_name_a] = {}
+        if technique_name_b not in by_single_technique[technique_name_a]:
+            by_single_technique[technique_name_a][technique_name_b] = []
+        by_single_technique[technique_name_a][technique_name_b].append(corr)
+
+    # Merge correlations where one technique correlates with multiple others
+    # BUT only if it's reasonable (3-10 targets) - don't super-merge if too many targets
+    super_merged_correlations = []
+    for tech_a, tech_b_dict in by_single_technique.items():
+        num_targets = len(tech_b_dict)
+
+        if num_targets == 1:
+            # Single target technique - keep all correlations as-is
+            for tech_b, corr_list in tech_b_dict.items():
+                for corr in corr_list:
+                    # Add techniques_involved field for consistency
+                    if "techniques_involved" not in corr:
+                        corr["techniques_involved"] = sorted([tech_a, tech_b])
+
+                    # Build JOIN-based correlation query for this pair too
+                    join_query = _build_join_correlation_query(corr, file_info)
+                    corr["combined_query"] = join_query
+
+                    super_merged_correlations.append(corr)
+        elif num_targets == 2:
+            # 2 targets - create single merged correlation (tech_a correlates with tech_b1 OR tech_b2)
+            # This is a good use case for super-merging
+            pass  # Continue to super-merge logic below
+        elif 3 <= num_targets <= 10:
+            # 3-10 targets - create multiple groups of correlations (up to 5 groups)
+            pass  # Continue to super-merge logic below
+        elif num_targets > 10:
+            # Too many targets (>10) - skip super-merging and keep as individual correlations
+            # This prevents creating one massive correlation from a popular technique
+            print(f"      Skipping super-merge for '{tech_a}' ({num_targets} targets) - keeping as individual correlations")
+            for tech_b, corr_list in tech_b_dict.items():
+                for corr in corr_list:
+                    if "techniques_involved" not in corr:
+                        corr["techniques_involved"] = sorted([tech_a, tech_b])
+
+                    join_query = _build_join_correlation_query(corr, file_info)
+                    corr["combined_query"] = join_query
+
+                    super_merged_correlations.append(corr)
+            continue  # Skip to next tech_a
+
+        # Super-merge logic for 2-10 targets
+        if 2 <= num_targets <= 10:
+            # Multiple target techniques - create multiple super-correlations if needed
+            # Each super-correlation has max 8 techniques and at least 2 tactics
+            all_corrs = []
+            for corr_list in tech_b_dict.values():
+                all_corrs.extend(corr_list)
+            all_corrs.sort(key=lambda c: c.get('relevance_score', 0), reverse=True)
+
+            # Create multiple super-correlations (groups) instead of one huge correlation
+            # Each group will have up to 8 techniques
+            groups_created = 0
+            max_groups = 5  # Limit to 5 super-correlations per tech_a to avoid over-generation
+            corr_idx = 0
+
+            while corr_idx < len(all_corrs) and groups_created < max_groups:
+                # Start a new group
+                techniques_involved = set()
+                techniques_involved.add(tech_a)
+                tactics_involved = set()
+
+                # Get ALL tactics for tech_a (not just first)
+                for path in [all_corrs[0].get("a", ""), all_corrs[0].get("b", "")]:
+                    if path and path in file_info:
+                        basename = os.path.basename(path).replace(".yaml", "").replace(".yml", "")
+                        tech_name = basename.split("_")[0] if "_" in basename else basename
+                        if tech_name == tech_a:
+                            tactics = file_info[path].get("tactics", [])
+                            tactics_involved.update(tactics)
+                            break
+
+                # Select correlations up to max 8 techniques for this group, ensuring >= 2 tactics
+                selected_corrs = []
+                all_queries_a = []
+                all_queries_b = []
+
+                while corr_idx < len(all_corrs):
+                    corr = all_corrs[corr_idx]
+                    corr_idx += 1
+
+                    # Extract technique names and tactics from this correlation
+                    path_a = corr.get("a", "")
+                    path_b = corr.get("b", "")
+
+                    basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
+                    basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
+
+                    tech_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
+                    tech_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
+
+                    # Get tactics for these techniques (use ALL tactics, not just first)
+                    temp_tactics = set(tactics_involved)
+                    if path_a in file_info:
+                        tactics = file_info[path_a].get("tactics", [])
+                        temp_tactics.update(tactics)
+                    if path_b in file_info:
+                        tactics = file_info[path_b].get("tactics", [])
+                        temp_tactics.update(tactics)
+
+                    # Check if adding this correlation would exceed 8 techniques
+                    temp_techniques = set(techniques_involved)
+                    temp_techniques.add(tech_name_a)
+                    temp_techniques.add(tech_name_b)
+
+                    # Decision logic:
+                    # 1. If we have < 2 tactics, keep adding to build up tactics (up to 8 techniques max)
+                    # 2. If we have >= 2 tactics, only add if we're under 8 techniques
+                    should_add = False
+                    if len(tactics_involved) < 2:
+                        # Still building up tactics - add if under 8 techniques
+                        should_add = len(temp_techniques) <= 8
+                    else:
+                        # Have enough tactics - enforce strict 8 technique limit
+                        should_add = len(temp_techniques) <= 8
+
+                    if should_add:
+                        techniques_involved = temp_techniques
+                        tactics_involved = temp_tactics
+                        selected_corrs.append(corr)
+
+                        qa = corr.get("query_a", "")
+                        qb = corr.get("query_b", "")
+                        if qa and qa not in all_queries_a:
+                            all_queries_a.append(qa)
+                        if qb and qb not in all_queries_b:
+                            all_queries_b.append(qb)
+
+                    # Stop this group if we have 8 techniques and at least 2 tactics
+                    if len(techniques_involved) >= 8 and len(tactics_involved) >= 2:
+                        break
+
+                # Skip if no correlations were selected for this group
+                if not selected_corrs:
+                    break
+
+                # Use the first selected correlation as base
+                base_corr = selected_corrs[0].copy()
+
+                # Combine with UNION (for backward compatibility, but will be replaced by JOIN)
+                if len(all_queries_a) > 1:
+                    base_corr["query_a"] = "\nUNION\n".join(all_queries_a)
+                if len(all_queries_b) > 1:
+                    base_corr["query_b"] = "\nUNION\n".join(all_queries_b)
+
+                # Store the list of all techniques involved in this merged correlation
+                base_corr["techniques_involved"] = sorted(list(techniques_involved))
+
+                # Collect ALL tactics from all techniques (not just first tactic)
+                all_tactics_set = set()
+                for tech_name in techniques_involved:
+                    # Find the file for this technique
+                    for path in [corr.get("a", "") for corr in selected_corrs] + [corr.get("b", "") for corr in selected_corrs]:
+                        if path and path in file_info:
+                            basename = os.path.basename(path).replace(".yaml", "").replace(".yml", "")
+                            path_tech_name = basename.split("_")[0] if "_" in basename else basename
+                            if path_tech_name == tech_name:
+                                tactics = file_info[path].get("tactics", [])
+                                all_tactics_set.update(tactics)
+                                break
+
+                # Update the correlation with complete tactics
+                base_corr["tactics"] = sorted(list(all_tactics_set))
+
+                # Build JOIN-based correlation query (default behavior)
+                join_query = _build_join_correlation_query(base_corr, file_info)
+                base_corr["combined_query"] = join_query
+
+                print(f"      Super-merged group {groups_created + 1} for '{tech_a}': {len(selected_corrs)} correlations into 1 multi-technique correlation ({len(techniques_involved)} techniques, {len(all_tactics_set)} tactics)")
+                super_merged_correlations.append(base_corr)
+                groups_created += 1
+
+    final_correlations = super_merged_correlations
+    print(f"   After super-merging: {len(final_correlations)} correlations")
+
+    # Apply technique frequency limit: each technique can appear in multiple correlations
+    # - Super-merged correlations (3+ techniques): unlimited frequency (already consolidated)
+    # - Simple correlations (2 techniques): limit to 10 appearances for diversity
+    technique_count = {}
+    diverse_correlations = []
+
+    # Sort by relevance score to prioritize best correlations
+    final_correlations.sort(key=lambda c: c.get('relevance_score', 0), reverse=True)
+
+    for corr in final_correlations:
+        # Extract technique names from file paths (consistent with grouping logic)
+        path_a = corr.get("a", "")
+        path_b = corr.get("b", "")
+
+        basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
+        basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
+
+        technique_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
+        technique_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
+
+        # Check if this is a super-merged correlation (3+ techniques)
+        techniques_involved = corr.get("techniques_involved", [])
+        is_super_merged = len(techniques_involved) >= 3
+
+        if is_super_merged:
+            # Super-merged correlations always pass (no frequency limit)
+            diverse_correlations.append(corr)
+        else:
+            # Simple 2-technique correlations - apply frequency limit of 10
+            all_techniques = {technique_name_a, technique_name_b}
+
+            # Check if any technique has exceeded the limit
+            max_occurrences = max(technique_count.get(t, 0) for t in all_techniques) if all_techniques else 0
+
+            if max_occurrences < 10:  # Allow each technique in up to 10 simple correlations
+                diverse_correlations.append(corr)
+                # Update counts
+                for t in all_techniques:
+                    technique_count[t] = technique_count.get(t, 0) + 1
+
+    print(f"   After frequency limiting: {len(diverse_correlations)} correlations (removed {len(final_correlations) - len(diverse_correlations)} due to technique frequency)")
+    return diverse_correlations
+
+
+def _score_data_source_diversity(corr: Dict, vendor: str) -> float:
+    """
+    Score correlation based on data source diversity.
+    Returns bonus/penalty points (-10 to +20).
+
+    High diversity (different data sources) = bonus points
+    Low diversity (same data source) = penalty points
+    """
+    query_a = corr.get("query_a", "")
+    query_b = corr.get("query_b", "")
+
+    # Extract tables/indexes from both queries
+    tables_a = _extract_primary_tables(query_a, vendor)
+    tables_b = _extract_primary_tables(query_b, vendor)
+
+    if not tables_a or not tables_b:
+        return 0  # Can't determine diversity
+
+    # Calculate diversity ratio
+    unique_tables = len(tables_a | tables_b)  # Union
+    total_tables = len(tables_a) + len(tables_b)
+
+    diversity_ratio = unique_tables / total_tables if total_tables > 0 else 0
+
+    # Award points based on diversity
+    if diversity_ratio > 0.8:  # Different sources (high diversity)
+        return 20
+    elif diversity_ratio < 0.4:  # Same source (low diversity)
+        return -10
+    else:  # Moderate diversity
+        return 5
 
 
 def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
     """Generate correlations using a rule-based heuristic approach."""
-    print(f"GenAI: Running heuristic correlation generation for {len(files)} files")
+    # print(f"GenAI: Running heuristic correlation generation for {len(files)} files")
 
     # Parse all files to extract vendor information and queries
     parsed = [_parse_yaml_for_vendor(p) for p in files]
@@ -939,7 +1685,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         v = p.get("vendor") or "unknown"
         vendor_counts[v] = vendor_counts.get(v, 0) + 1
 
-    print(f"GenAI: Vendor distribution: {vendor_counts}")
+    # print(f"GenAI: Vendor distribution: {vendor_counts}")
 
     # Group files by vendor
     by_vendor = {}
@@ -947,6 +1693,33 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         v = p.get("vendor") or "unknown"
         # No need for additional normalization since it's done in _parse_yaml_for_vendor
         by_vendor.setdefault(v, []).append(p["path"])
+
+    # Check for merging options from environment variables
+    merge_by_tactic = os.getenv("CORRELATION_MERGE_BY_TACTIC", "").lower() == "true"
+    merge_by_parent = os.getenv("CORRELATION_MERGE_BY_PARENT", "").lower() == "true"
+
+    # Apply merging if requested
+    if merge_by_tactic:
+        # print("GenAI: Merging detections by tactic before correlation")
+        # Merge each vendor's files by tactic
+        merged_by_vendor = {}
+        for v, paths in by_vendor.items():
+            tactic_groups = _merge_by_tactic(paths, file_info)
+            # Convert tactic groups to list of lists (group representatives)
+            merged_by_vendor[v] = list(tactic_groups.values())
+        by_vendor_merged = merged_by_vendor
+    elif merge_by_parent:
+        # print("GenAI: Merging detections by parent technique before correlation")
+        # Merge each vendor's files by parent technique
+        merged_by_vendor = {}
+        for v, paths in by_vendor.items():
+            parent_groups = _merge_by_parent(paths, file_info)
+            # Convert parent groups to list of lists (group representatives)
+            merged_by_vendor[v] = list(parent_groups.values())
+        by_vendor_merged = merged_by_vendor
+    else:
+        # No merging - use individual files
+        by_vendor_merged = {v: [[p] for p in paths] for v, paths in by_vendor.items()}
 
     # Calculate total pairs across all vendors first for cumulative progress
     total_pairs_all_vendors = 0
@@ -966,7 +1739,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         vendor_pair_counts[v] = potential_pairs
         total_pairs_all_vendors += potential_pairs
 
-    print(f"GenAI: Total pairs across all vendors: {total_pairs_all_vendors}")
+    # print(f"GenAI: Total pairs across all vendors: {total_pairs_all_vendors}")
 
     # Send initial progress with total
     write_progress(
@@ -982,35 +1755,38 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
     vendor_corr = []
     cumulative_count = 0  # Track progress across all vendors
 
-    for v, paths in by_vendor.items():
+    for v, groups in by_vendor_merged.items():
         # Only process MDE and Splunk vendors
         if v.lower() not in ["mde", "splunk"]:
-            print(f"GenAI: Skipping vendor '{v}' as it's not MDE or Splunk")
+            # print(f"GenAI: Skipping vendor '{v}' as it's not MDE or Splunk")
             continue
 
-        if len(paths) < 2:
-            print(
-                f"GenAI: Vendor '{v}' has only {len(paths)} file(s), skipping intra-vendor correlations"
-            )
+        if len(groups) < 2:
+            # print(
+            #     f"GenAI: Vendor '{v}' has only {len(groups)} group(s), skipping intra-vendor correlations"
+            # )
             continue
 
-        # Calculate potential number of pairs
-        potential_pairs = len(paths) * (len(paths) - 1) // 2
-        print(f"GenAI: Vendor '{v}' has {len(paths)} files, potentially {potential_pairs} pairs")
+        # Calculate potential number of pairs (groups, not individual files)
+        potential_pairs = len(groups) * (len(groups) - 1) // 2
+        # if merge_by_tactic or merge_by_parent:
+        #     print(f"GenAI: Vendor '{v}' has {len(groups)} merged groups, potentially {potential_pairs} pairs")
+        # else:
+        #     print(f"GenAI: Vendor '{v}' has {len(groups)} files, potentially {potential_pairs} pairs")
 
         # Limit the number of pairs to avoid performance issues
         if potential_pairs > MAX_PAIRS_PER_VENDOR:
-            print(
-                f"GenAI: Limiting {v} to {MAX_PAIRS_PER_VENDOR} pairs (from potential {potential_pairs})"
-            )
-            # Limit by taking only the first N files
-            max_files = int(math.sqrt(MAX_PAIRS_PER_VENDOR * 2)) + 1
-            paths = paths[:max_files]
-            print(f"GenAI: Limited to first {len(paths)} files")
-            potential_pairs = len(paths) * (len(paths) - 1) // 2
+            # print(
+            #     f"GenAI: Limiting {v} to {MAX_PAIRS_PER_VENDOR} pairs (from potential {potential_pairs})"
+            # )
+            # Limit by taking only the first N groups
+            max_groups = int(math.sqrt(MAX_PAIRS_PER_VENDOR * 2)) + 1
+            groups = groups[:max_groups]
+            # print(f"GenAI: Limited to first {len(groups)} groups")
+            potential_pairs = len(groups) * (len(groups) - 1) // 2
 
         # Send progress update at start of each vendor
-        print(f"GenAI: Starting vendor '{v}' - {cumulative_count} pairs completed so far")
+        # print(f"GenAI: Starting vendor '{v}' - {cumulative_count} pairs completed so far")
         write_progress(
             group_name,
             {
@@ -1023,14 +1799,31 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         # Generate pairs using combinatorial approach
         count = 0
         pairs_evaluated = 0  # Track all pairs evaluated (including filtered ones)
-        for i in range(len(paths)):
-            for j in range(i + 1, len(paths)):
-                path_a = paths[i]
-                path_b = paths[j]
+
+        # Track filter statistics
+        filter_stats = {
+            "generic_terms": 0,
+            "identical_queries": 0,
+            "excessive_overlap": 0,
+            "insufficient_overlap": 0,
+            "same_table": 0,
+            "no_progression": 0,
+            "no_high_impact": 0,
+        }
+
+        for i in range(len(groups)):
+            for j in range(i + 1, len(groups)):
+                group_a = groups[i]  # List of file paths in group A
+                group_b = groups[j]  # List of file paths in group B
 
                 # Increment pairs_evaluated for every pair we look at
                 pairs_evaluated += 1
                 cumulative_count += 1
+
+                # For merged groups, use the first file as representative
+                # (In production, you'd want to combine queries intelligently)
+                path_a = group_a[0] if isinstance(group_a, list) else group_a
+                path_b = group_b[0] if isinstance(group_b, list) else group_b
 
                 # Get queries from our file_info lookup
                 query_a = file_info.get(path_a, {}).get("query", "")
@@ -1051,8 +1844,10 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
                 # Filter out queries with only generic terms
                 skip_pair = False
+                skip_reason = None
                 if _has_only_generic_terms(query_a) or _has_only_generic_terms(query_b):
                     skip_pair = True
+                    skip_reason = "generic_terms"
 
                 # Filter out identical queries (normalizing whitespace for comparison)
                 if not skip_pair:
@@ -1061,16 +1856,58 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                     normalized_b = " ".join(query_b.split())
                     if normalized_a == normalized_b:
                         skip_pair = True
+                        skip_reason = "identical_queries"
 
-                # NOTE: Semantic overlap filter removed - we care about attack chain progression,
-                # not query field similarity. Semantic overlap is still calculated for display
-                # but does not filter correlations.
+                # PHASE 1 FILTER 1: Skip pairs with excessive semantic overlap (>80% = near duplicates)
+                # Balanced threshold to reduce noise while allowing related correlations
+                if not skip_pair:
+                    overlap_pct = _estimate_semantic_overlap_kql(query_a, query_b)
+                    if overlap_pct > 80:
+                        skip_pair = True
+                        skip_reason = "excessive_overlap"
+                    # NOTE: Minimum overlap filter (<20%) disabled - too aggressive
+                    # Attack progression is sufficient for ensuring relatedness
+
+                # PHASE 1 FILTER 2: Same-table filter DISABLED
+                # Correlating techniques from the same data source is valuable
+                # The scoring system will prioritize diverse data sources via data source diversity scoring
+                # if not skip_pair:
+                #     tables_a = _extract_primary_tables(query_a, detected_vendor)
+                #     tables_b = _extract_primary_tables(query_b, detected_vendor)
+                #     # If both queries use identical table sets, skip
+                #     if tables_a and tables_b and tables_a == tables_b:
+                #         # Check if they're different subtechniques - if so, allow
+                #         techniques_a = _extract_technique_ids(path_a)
+                #         techniques_b = _extract_technique_ids(path_b)
+                #         # Extract base technique IDs (e.g., T1003 from T1003.001)
+                #         base_a = set(t.split('.')[0] for t in techniques_a)
+                #         base_b = set(t.split('.')[0] for t in techniques_b)
+                #         # Allow only if same base technique but different subtechniques
+                #         if not (base_a == base_b and techniques_a != techniques_b):
+                #             skip_pair = True
+                #             skip_reason = "same_table"
+
+                # PHASE 1 FILTER 3: MANDATORY attack progression check
+                # Only correlate detections that follow logical attack chain progression
+                if not skip_pair:
+                    has_progression = _check_attack_progression(path_a, path_b)
+                    if not has_progression:
+                        skip_pair = True
+                        skip_reason = "no_progression"
+
+                # NOTE: High-impact requirement removed as hard filter
+                # It's still used in scoring (see _score_correlation function)
+                # This allows correlations between lower-priority techniques if they follow attack progression
+
+                # Track filter statistics
+                if skip_pair and skip_reason:
+                    filter_stats[skip_reason] += 1
 
                 # Update progress periodically with cumulative count (every 10 pairs evaluated)
                 if cumulative_count % 10 == 0:
-                    print(
-                        f"GenAI: Evaluated {cumulative_count} pairs total ({count} kept for vendor '{v}')"
-                    )
+                    # print(
+                    #     f"GenAI: Evaluated {cumulative_count} pairs total ({count} kept for vendor '{v}')"
+                    # )
                     write_progress(
                         group_name,
                         {
@@ -1087,6 +1924,18 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                 # Generate combined query
                 combined_query = _combine_queries(detected_vendor, query_a, query_b, path_a, path_b)
 
+                # Remove semantic overlap text from query
+                if combined_query:
+                    combined_query = re.sub(r';\s*\d+%\s*semantic overlap', '', combined_query)
+
+                # Extract tactics from both files
+                tactics_set = set()
+                for path in [path_a, path_b]:
+                    if path in file_info:
+                        path_tactics = file_info[path].get("tactics", [])
+                        if path_tactics:
+                            tactics_set.update(path_tactics)
+
                 vendor_corr.append(
                     {
                         "vendor": detected_vendor,
@@ -1095,15 +1944,35 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                         "query_a": query_a,
                         "query_b": query_b,
                         "combined_query": combined_query,
+                        "tactics": sorted(list(tactics_set)),  # Add tactics field
                     }
                 )
                 count += 1
 
-        print(f"GenAI: Generated {count} pairs for vendor '{v}'")
+        # Log filter statistics for this vendor
+        total_filtered = sum(filter_stats.values())
+        # print(f"✅ Generated {count} correlation(s) for vendor '{v}'")
+        # if total_filtered > 0:
+        #     print(f"  Filter breakdown:")
+        #     if filter_stats["generic_terms"] > 0:
+        #         print(f"    - Generic terms: {filter_stats['generic_terms']}")
+        #     if filter_stats["identical_queries"] > 0:
+        #         print(f"    - Identical queries: {filter_stats['identical_queries']}")
+        #     if filter_stats["excessive_overlap"] > 0:
+        #         print(f"    - Excessive overlap (>75%): {filter_stats['excessive_overlap']}")
+        #     if filter_stats["insufficient_overlap"] > 0:
+        #         print(f"    - Insufficient overlap (<20%): {filter_stats['insufficient_overlap']}")
+        #     if filter_stats["same_table"] > 0:
+        #         print(f"    - Same table/index: {filter_stats['same_table']}")
+        #     if filter_stats["no_progression"] > 0:
+        #         print(f"    - No attack progression: {filter_stats['no_progression']}")
+        #     if filter_stats["no_high_impact"] > 0:
+        #         print(f"    - No high-impact technique: {filter_stats['no_high_impact']}")
 
-    print(f"GenAI: Total correlations before filtering: {len(vendor_corr)}")
+    # print(f"GenAI: Total correlations before filtering: {len(vendor_corr)}")
 
-    # Score and filter correlations to keep 10% per vendor based on detection count
+    # Score correlations but don't filter aggressively
+    # MODIFIED: Reduced filtering to allow more correlations through
     if vendor_corr:
         # Separate correlations by vendor
         by_vendor_corr = {}
@@ -1113,27 +1982,22 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                 by_vendor_corr[vendor] = []
             by_vendor_corr[vendor].append(corr)
 
-        # Filter each vendor separately to get top 10% (minimum 10)
+        # Score and filter each vendor (balanced threshold)
         filtered_corr = []
         for vendor, corrs in by_vendor_corr.items():
-            # Count detection files for this vendor
-            vendor_detection_count = len(by_vendor.get(vendor, []))
+            print(f"\n   Vendor: {vendor} - {len(corrs)} raw correlations")
 
-            # Get minimum relevance threshold from config (default 0.5 = 50%)
+            # Use config relevance threshold (default 75%)
             from archer.config import CoreConfig
             min_relevance = CoreConfig.correlation_min_relevance
 
-            print(
-                f"GenAI: Vendor '{vendor}' has {vendor_detection_count} detections, filtering {len(corrs)} correlations by {min_relevance:.0%} relevance threshold"
-            )
             top_vendor_corrs = _score_and_filter_correlations(
                 corrs, file_info, min_relevance=min_relevance
             )
-            print(f"GenAI: Kept {len(top_vendor_corrs)} correlations for vendor '{vendor}'")
+            print(f"   Kept {len(top_vendor_corrs)}/{len(corrs)} after relevance filtering (>= {min_relevance:.0%})")
             filtered_corr.extend(top_vendor_corrs)
 
         vendor_corr = filtered_corr
-        print(f"GenAI: Total filtered correlations across all vendors: {len(vendor_corr)}")
 
     # Send final progress update with complete count
     write_progress(
@@ -1144,11 +2008,20 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             "processed": cumulative_count,
         },
     )
-    print(f"GenAI: Completed processing {cumulative_count} total pairs across all vendors")
+    # print(f"GenAI: Completed processing {cumulative_count} total pairs across all vendors")
+
+    # Apply correlation grouping to reduce redundancy (keeps best correlation per technique pair)
+    if vendor_corr:
+        print(f"   Before grouping: {len(vendor_corr)} correlations")
+        vendor_corr = _apply_correlation_grouping(vendor_corr, file_info)
+        print(f"   After grouping: {len(vendor_corr)} correlations")
+        pass
+
+    print(f"📊 Final correlation count: {len(vendor_corr)} correlations")
 
     # No cross-vendor correlations - explicitly create an empty list
     cross_corr = []
-    print(f"GenAI: Cross-vendor correlations disabled")
+    # print(f"GenAI: Cross-vendor correlations disabled")
 
     # Write results to correlation JSON file
     results = {
@@ -1163,7 +2036,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
     try:
         with open(out_path, "w", encoding="utf-8") as fh:
             json.dump(results, fh, indent=2)
-        print(f"GenAI: Wrote correlation results to {out_path}")
+        # print(f"GenAI: Wrote correlation results to {out_path}")
     except Exception as e:
         print(f"GenAI: Error writing correlations file: {e}")
 
@@ -1452,18 +2325,18 @@ def build_correlation_queries(
         else:
             output_file = os.path.join(CORRELATE_DIR, "correlation_queries.json")
 
-    print(f"Scanning YAML files in {yaml_dir}...")
+    # print(f"Scanning YAML files in {yaml_dir}...")
     import time
 
-    time.sleep(0.5)
+    # time.sleep(0.5)
 
     # Step 1: Read all YAML files and extract metadata
     yaml_files = [
         os.path.join(yaml_dir, f) for f in os.listdir(yaml_dir) if f.endswith((".yaml", ".yml"))
     ]
 
-    print(f"Found {len(yaml_files)} YAML files")
-    time.sleep(0.5)
+    # print(f"Found {len(yaml_files)} YAML files")
+    # time.sleep(0.5)
 
     queries_data = []
     for yaml_path in yaml_files:
@@ -1496,7 +2369,7 @@ def build_correlation_queries(
             print(f"Error reading {yaml_path}: {e}")
             continue
 
-    print(f"Successfully parsed {len(queries_data)} queries")
+    # print(f"Successfully parsed {len(queries_data)} queries")
     time.sleep(0.5)
 
     # Filter by threat group if specified (case-insensitive partial match)
@@ -1539,18 +2412,18 @@ def build_correlation_queries(
                 "correlations": [],
                 "query_inventory": filtered_queries,
             }
-        print(f"Filtered to {len(filtered_queries)} queries for threat group '{threat_group}'")
+        # print(f"Filtered to {len(filtered_queries)} queries for threat group '{threat_group}'")
         time.sleep(0.5)
         queries_data = filtered_queries
 
     # Step 2: Assess relevance and build correlation groups
-    print("Assessing query relevance...")
-    time.sleep(0.5)
+    # print("Assessing query relevance...")
+    # time.sleep(0.5)
     correlation_groups = _build_correlation_groups(queries_data, min_queries, max_queries)
 
     # Step 3: Build correlation searches
-    print(f"Building {len(correlation_groups)} correlation searches...")
-    time.sleep(0.5)
+    # print(f"Building {len(correlation_groups)} correlation searches...")
+    # time.sleep(0.5)
     correlations = []
 
     for idx, group in enumerate(correlation_groups, 1):
@@ -1583,7 +2456,7 @@ def build_correlation_queries(
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2)
 
-    print(f"Correlation queries saved to {output_file}")
+    # print(f"Correlation queries saved to {output_file}")
     time.sleep(0.5)
     return output_data
 
@@ -1680,45 +2553,20 @@ def _build_correlation_groups(
             if len(platform_queries) < min_queries:
                 continue
 
-            # Build correlations ensuring no duplicate tactics
-            # Group queries by unique tactics
-            used_queries = set()
+            # Group queries by their technique combination (sorted tactics)
+            # This ensures all queries with the same techniques are merged into one correlation
+            technique_groups = defaultdict(list)
+            for query in platform_queries:
+                # Create a unique key from sorted tactics
+                tactics_key = tuple(sorted(query.get("tactics", [])))
+                technique_groups[tactics_key].append(query)
 
-            while len(platform_queries) >= min_queries:
-                correlation_group = []
-                used_tactics = set()
-
-                for query in platform_queries:
-                    query_id = query.get("id")
-                    if query_id in used_queries:
-                        continue
-
-                    # Get tactics for this query
-                    query_tactics = query.get("tactics", [])
-
-                    # Check if this query's tactics overlap with already used tactics
-                    if any(tactic in used_tactics for tactic in query_tactics):
-                        continue
-
-                    # Add query to correlation group
-                    correlation_group.append(query)
-                    used_tactics.update(query_tactics)
-                    used_queries.add(query_id)
-
-                    # Stop if we hit max_queries
-                    if len(correlation_group) >= max_queries:
-                        break
-
-                # Only add if we meet minimum requirements
-                if len(correlation_group) >= min_queries:
+            # Build one correlation per technique combination
+            for tactics_key, technique_queries in technique_groups.items():
+                if len(technique_queries) >= min_queries:
+                    # Take up to max_queries for this technique
+                    correlation_group = technique_queries[:max_queries]
                     correlation_groups.append(correlation_group)
-                    # Remove used queries from pool
-                    platform_queries = [
-                        q for q in platform_queries if q.get("id") not in used_queries
-                    ]
-                else:
-                    # Can't build more correlations
-                    break
 
     return correlation_groups
 

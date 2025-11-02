@@ -73,6 +73,28 @@ body, html {
   height: 20px;
 }
 
+/* Validation Checklist Styling */
+.validation-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.validation-step {
+  padding: 16px;
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.validation-step:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
 /* Custom Modal Dialog */
 .modal-overlay {
   display: none;
@@ -174,42 +196,6 @@ body, html {
 }
 
 /* Logo at top center - between Back and How Archer Works */
-.header-logo-container {
-  position: absolute;
-  top: 22px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-}
-
-.header-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  text-decoration: none;
-  transition: opacity 0.2s;
-}
-
-.header-logo:hover {
-  opacity: 0.8;
-}
-
-.header-logo img {
-  width: auto;
-  height: 42px;
-  filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.2));
-}
-
-.header-logo h1 {
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  font-size: 33.6px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: #1a1a1a;
-  margin: 0;
-  text-shadow: 0px 1px 3px rgba(0,0,0,0.15);
-}
-
 .results-container {
   background: #f7fafc !important;
   max-width: 1200px;
@@ -272,6 +258,8 @@ body, html {
 .card-icon.correlation { background: #e3f2fd; }
 .card-icon.technique { background: #fff3e0; }
 .card-icon.vendor { background: #f3e5f5; }
+.card-icon.validation { background: #d1fae5; }
+.card-icon.metrics { background: #ede9fe; }
 
 .card-icon svg {
   width: 28px;
@@ -282,6 +270,8 @@ body, html {
 .card-icon.correlation svg { stroke: #2196f3; }
 .card-icon.technique svg { stroke: #ff9800; }
 .card-icon.vendor svg { stroke: #9c27b0; }
+.card-icon.validation svg { stroke: #10b981; }
+.card-icon.metrics svg { stroke: #8b5cf6; }
 
 .card-content h3 {
   font-size: 2.5em;
@@ -302,18 +292,19 @@ body, html {
 .detection-section {
   background: white;
   border-radius: 16px;
-  padding: 32px;
+  padding: 16px;
   border: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   margin-bottom: 24px;
+  overflow: hidden;
 }
 
 .detection-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 2px solid #e2e8f0;
 }
 
@@ -509,7 +500,7 @@ body, html {
 
 .detection-indicators {
   margin-top: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -517,7 +508,7 @@ body, html {
 
 .detection-indicators-placeholder {
   margin-top: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .indicator-tag {
@@ -710,82 +701,6 @@ body, html {
 {% block main_class %}page-shell{% endblock %}
 
 {% block content %}
-  <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help) -->
-  <div class="global-nav-controls">
-    {% if user %}
-    <a href="/library" class="nav-icon-btn" aria-label="Library" title="Library">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>
-    </a>
-    <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-    </a>
-    <a href="/logout" class="nav-icon-btn" aria-label="Logout" title="Logout">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-        <polyline points="16 17 21 12 16 7"/>
-        <line x1="21" y1="12" x2="9" y2="12"/>
-      </svg>
-    </a>
-    <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-    </a>
-    {% else %}
-    <a href="/login" class="nav-icon-btn" aria-label="Login" title="Login">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-        <polyline points="10 17 15 12 10 7"/>
-        <line x1="15" y1="12" x2="3" y2="12"/>
-      </svg>
-    </a>
-    <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-    </a>
-    {% endif %}
-    <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
-      <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="5"/>
-        <line x1="12" y1="1" x2="12" y2="3"/>
-        <line x1="12" y1="21" x2="12" y2="23"/>
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-        <line x1="1" y1="12" x2="3" y2="12"/>
-        <line x1="21" y1="12" x2="23" y2="12"/>
-        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-      </svg>
-      <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-      </svg>
-    </button>
-    <a href="/how-it-works" class="nav-icon-btn" aria-label="Help" title="Help">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-        <line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-    </a>
-  </div>
-
-  <!-- Logo at top center -->
-  <div class="header-logo-container">
-    <a href="/" class="header-logo">
-      <img src="{{ url_for('static', path='images/icon.png') }}" alt="Archer Logo">
-      <h1>RCHER</h1>
-    </a>
-  </div>
-
   <div class="results-container">
     <!-- Page heading -->
     <p class="lead">
@@ -796,7 +711,7 @@ body, html {
     <div class="summary-cards">
       <div class="summary-card">
         <div class="card-icon detection">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2">
             <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
           </svg>
         </div>
@@ -851,6 +766,7 @@ body, html {
       </div>
 
     </div>
+
 
     <!-- Detection Rules Section -->
     <div class="detection-section">
@@ -970,7 +886,86 @@ body, html {
               <div class="detection-title" style="position: relative;">
                 <div style="display: flex; align-items: center; flex: 1;">
                   <input type="checkbox" class="detection-checkbox" {% if not detection.needs_review %}checked{% endif %} data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
-                  <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}">{{ detection.technique }}</span>
+
+                  {# Tactic badge with emoji and color #}
+                  {% set tactic = detection.tactic %}
+                  {% if tactic == 'Initial Access' %}
+                    {% set bg_color = '#E3F2FD' %}
+                    {% set text_color = '#01579B' %}
+                    {% set emoji = '🚪' %}
+                  {% elif tactic == 'Execution' %}
+                    {% set bg_color = '#FFF3E0' %}
+                    {% set text_color = '#E65100' %}
+                    {% set emoji = '💻' %}
+                  {% elif tactic == 'Persistence' %}
+                    {% set bg_color = '#FCE4EC' %}
+                    {% set text_color = '#880E4F' %}
+                    {% set emoji = '📌' %}
+                  {% elif tactic == 'Privilege Escalation' %}
+                    {% set bg_color = '#FFF9C4' %}
+                    {% set text_color = '#F57F17' %}
+                    {% set emoji = '👑' %}
+                  {% elif tactic == 'Defense Evasion' %}
+                    {% set bg_color = '#F3E5F5' %}
+                    {% set text_color = '#4A148C' %}
+                    {% set emoji = '🥷' %}
+                  {% elif tactic == 'Credential Access' %}
+                    {% set bg_color = '#FFEBEE' %}
+                    {% set text_color = '#B71C1C' %}
+                    {% set emoji = '🔑' %}
+                  {% elif tactic == 'Discovery' %}
+                    {% set bg_color = '#E0F2F1' %}
+                    {% set text_color = '#004D40' %}
+                    {% set emoji = '🔍' %}
+                  {% elif tactic == 'Lateral Movement' %}
+                    {% set bg_color = '#E8F5E9' %}
+                    {% set text_color = '#1B5E20' %}
+                    {% set emoji = '🔗' %}
+                  {% elif tactic == 'Collection' %}
+                    {% set bg_color = '#FFF8E1' %}
+                    {% set text_color = '#FF6F00' %}
+                    {% set emoji = '📦' %}
+                  {% elif tactic == 'Command and Control' %}
+                    {% set bg_color = '#E1F5FE' %}
+                    {% set text_color = '#006064' %}
+                    {% set emoji = '📡' %}
+                  {% elif tactic == 'Exfiltration' %}
+                    {% set bg_color = '#EFEBE9' %}
+                    {% set text_color = '#3E2723' %}
+                    {% set emoji = '🚀' %}
+                  {% elif tactic == 'Impact' %}
+                    {% set bg_color = '#FFCDD2' %}
+                    {% set text_color = '#C62828' %}
+                    {% set emoji = '💥' %}
+                  {% else %}
+                    {% set bg_color = '#F5F5F5' %}
+                    {% set text_color = '#666666' %}
+                    {% set emoji = '❓' %}
+                  {% endif %}
+
+                  <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-size: 1em; font-weight: 600; margin-right: 8px;">{{ emoji }} {{ tactic }}</span>
+
+                  {# Detection Likelihood Badge #}
+                  {% set likelihood = detection.detection_likelihood | default(50) %}
+                  {% if likelihood >= 75 %}
+                    {% set likelihood_bg = '#4caf50' %}
+                    {% set likelihood_text = 'white' %}
+                    {% set likelihood_label = 'High' %}
+                    {% set likelihood_icon = '✓' %}
+                  {% elif likelihood >= 50 %}
+                    {% set likelihood_bg = '#ff9800' %}
+                    {% set likelihood_text = 'white' %}
+                    {% set likelihood_label = 'Medium' %}
+                    {% set likelihood_icon = '~' %}
+                  {% else %}
+                    {% set likelihood_bg = '#f44336' %}
+                    {% set likelihood_text = 'white' %}
+                    {% set likelihood_label = 'Low' %}
+                    {% set likelihood_icon = '!' %}
+                  {% endif %}
+                  <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}" style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; margin-right: 8px;">{{ emoji }} {{ detection.technique }}</span>
+
+                  <span style="display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-right: 8px;" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">Confidence of detection: <span style="color: {{ likelihood_bg }}; font-weight: 700;">{{ likelihood_label }}</span></span>
                   {% if detection.osint_enriched %}
                   <span class="osint-enhanced-badge" title="This detection was enhanced with additional indicators from OSINT sources merged into the query logic.">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -1037,7 +1032,7 @@ body, html {
                           {% set snippet = parts[1] %}
                           <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
                             <!-- Vendor badge -->
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
                               <span style="background: {% if source_name == 'Elastic' %}#00bfb3{% elif source_name == 'Splunk' %}#e91e8c{% else %}#0369a1{% endif %}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.7em; font-weight: 600;">
                                 {{ source_name }}
                               </span>
@@ -1131,7 +1126,22 @@ body, html {
           </div>
           Correlations
         </h2>
-        <span class="expand-btn" onclick="toggleAllCorrelations()">Expand All</span>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button class="btn-selection" onclick="selectAllCorrelations()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 11 12 14 22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            Select All
+          </button>
+          <button class="btn-selection" onclick="deselectAllCorrelations()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            </svg>
+            Deselect All
+          </button>
+          <span class="expand-btn" onclick="toggleAllCorrelations()">Expand All</span>
+        </div>
       </div>
 
       {% if correlations %}
@@ -1215,7 +1225,61 @@ body, html {
               <div class="detection-title">
                 <!-- Technique Flow -->
                 {% for tech in correlation.techniques %}
-                <span class="detection-technique">{{ tech.name }}</span>
+                  {% set tactic = tech.tactic %}
+                  {% if tactic == 'Initial Access' %}
+                    {% set bg_color = '#E3F2FD' %}  {# light blue #}
+                    {% set text_color = '#01579B' %}  {# dark blue text #}
+                    {% set emoji = '🚪' %}
+                  {% elif tactic == 'Execution' %}
+                    {% set bg_color = '#FFF3E0' %}  {# light orange #}
+                    {% set text_color = '#E65100' %}  {# dark orange text #}
+                    {% set emoji = '💻' %}
+                  {% elif tactic == 'Persistence' %}
+                    {% set bg_color = '#FCE4EC' %}  {# light pink #}
+                    {% set text_color = '#880E4F' %}  {# dark pink/magenta text #}
+                    {% set emoji = '📌' %}
+                  {% elif tactic == 'Privilege Escalation' %}
+                    {% set bg_color = '#FFF9C4' %}  {# light yellow #}
+                    {% set text_color = '#F57F17' %}  {# dark yellow/gold text #}
+                    {% set emoji = '👑' %}
+                  {% elif tactic == 'Defense Evasion' %}
+                    {% set bg_color = '#F3E5F5' %}  {# light purple #}
+                    {% set text_color = '#4A148C' %}  {# dark purple text #}
+                    {% set emoji = '🥷' %}
+                  {% elif tactic == 'Credential Access' %}
+                    {% set bg_color = '#FFEBEE' %}  {# light red #}
+                    {% set text_color = '#B71C1C' %}  {# dark red text #}
+                    {% set emoji = '🔑' %}
+                  {% elif tactic == 'Discovery' %}
+                    {% set bg_color = '#E0F2F1' %}  {# light teal #}
+                    {% set text_color = '#004D40' %}  {# dark teal text #}
+                    {% set emoji = '🔍' %}
+                  {% elif tactic == 'Lateral Movement' %}
+                    {% set bg_color = '#E8F5E9' %}  {# light green #}
+                    {% set text_color = '#1B5E20' %}  {# dark green text #}
+                    {% set emoji = '🔗' %}
+                  {% elif tactic == 'Collection' %}
+                    {% set bg_color = '#FFF8E1' %}  {# light amber #}
+                    {% set text_color = '#FF6F00' %}  {# dark amber/orange text #}
+                    {% set emoji = '📦' %}
+                  {% elif tactic == 'Command and Control' %}
+                    {% set bg_color = '#E1F5FE' %}  {# light cyan #}
+                    {% set text_color = '#006064' %}  {# dark cyan text #}
+                    {% set emoji = '📡' %}
+                  {% elif tactic == 'Exfiltration' %}
+                    {% set bg_color = '#EFEBE9' %}  {# light brown #}
+                    {% set text_color = '#3E2723' %}  {# dark brown text #}
+                    {% set emoji = '🚀' %}
+                  {% elif tactic == 'Impact' %}
+                    {% set bg_color = '#FFCDD2' %}  {# light red #}
+                    {% set text_color = '#C62828' %}  {# dark red text #}
+                    {% set emoji = '💥' %}
+                  {% else %}
+                    {% set bg_color = '#E3F2FD' %}  {# default light blue #}
+                    {% set text_color = '#01579B' %}  {# default dark blue text #}
+                    {% set emoji = '❓' %}
+                  {% endif %}
+                <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech.name }}</span>
                 {% if not loop.last %}
                 <span style="margin: 0 8px; color: #999;">→</span>
                 {% endif %}
@@ -1242,7 +1306,7 @@ body, html {
               </div>
 
               <!-- Correlation Metadata -->
-              <div style="display: flex; gap: 20px; margin-top: 8px; margin-bottom: 8px; font-size: 0.9em; color: #666; flex-wrap: wrap; align-items: center;">
+              <div style="display: flex; gap: 20px; margin-top: 8px; margin-bottom: 12px; font-size: 0.9em; color: #666; flex-wrap: wrap; align-items: center;">
                 <span title="Relevance Score"><strong>Relevance:</strong> {{ correlation.relevance_score }}%</span>
                 <span title="Time Window"><strong>Time Window:</strong> {{ correlation.time_window }}</span>
                 {% if correlation.tactics %}
@@ -1250,9 +1314,179 @@ body, html {
                 {% endif %}
               </div>
 
+              <!-- Techniques Involved (for merged correlations) - Grouped by Tactic -->
+              {% if correlation.techniques_by_tactic and correlation.techniques_by_tactic|length > 0 %}
+              <div style="margin-top: 8px; margin-bottom: 12px; font-size: 0.85em;">
+                <strong style="color: #555;">Techniques Involved:</strong>
+                <div style="margin-top: 4px;">
+                {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact', 'Unknown'] %}
+                {% for tactic in tactic_order %}
+                  {% if tactic in correlation.techniques_by_tactic %}
+                  <div style="margin-bottom: 6px;">
+                    <strong style="color: #333; font-size: 0.95em;">{{ tactic }}:</strong>
+                    <div style="display: inline-block; margin-left: 8px;">
+                    {% for tech_name in correlation.techniques_by_tactic[tactic] %}
+                      {% if tactic == 'Initial Access' %}
+                        {% set bg_color = '#E3F2FD' %}  {# light blue #}
+                        {% set text_color = '#01579B' %}  {# dark blue text #}
+                        {% set emoji = '🚪' %}
+                      {% elif tactic == 'Execution' %}
+                        {% set bg_color = '#FFF3E0' %}  {# light orange #}
+                        {% set text_color = '#E65100' %}  {# dark orange text #}
+                        {% set emoji = '💻' %}
+                      {% elif tactic == 'Persistence' %}
+                        {% set bg_color = '#FCE4EC' %}  {# light pink #}
+                        {% set text_color = '#880E4F' %}  {# dark pink/magenta text #}
+                        {% set emoji = '📌' %}
+                      {% elif tactic == 'Defense Evasion' %}
+                        {% set bg_color = '#F3E5F5' %}  {# light purple #}
+                        {% set text_color = '#4A148C' %}  {# dark purple text #}
+                        {% set emoji = '🥷' %}
+                      {% elif tactic == 'Credential Access' %}
+                        {% set bg_color = '#FFEBEE' %}  {# light red #}
+                        {% set text_color = '#B71C1C' %}  {# dark red text #}
+                        {% set emoji = '🔑' %}
+                      {% elif tactic == 'Discovery' %}
+                        {% set bg_color = '#E0F2F1' %}  {# light teal #}
+                        {% set text_color = '#004D40' %}  {# dark teal text #}
+                        {% set emoji = '🔍' %}
+                      {% elif tactic == 'Lateral Movement' %}
+                        {% set bg_color = '#E8F5E9' %}  {# light green #}
+                        {% set text_color = '#1B5E20' %}  {# dark green text #}
+                        {% set emoji = '🔗' %}
+                      {% elif tactic == 'Collection' %}
+                        {% set bg_color = '#FFF8E1' %}  {# light amber #}
+                        {% set text_color = '#FF6F00' %}  {# dark amber/orange text #}
+                        {% set emoji = '📦' %}
+                      {% elif tactic == 'Command and Control' %}
+                        {% set bg_color = '#E1F5FE' %}  {# light cyan #}
+                        {% set text_color = '#006064' %}  {# dark cyan text #}
+                        {% set emoji = '📡' %}
+                      {% elif tactic == 'Exfiltration' %}
+                        {% set bg_color = '#EFEBE9' %}  {# light brown #}
+                        {% set text_color = '#3E2723' %}  {# dark brown text #}
+                        {% set emoji = '🚀' %}
+                      {% elif tactic == 'Impact' %}
+                        {% set bg_color = '#FFCDD2' %}  {# light red #}
+                        {% set text_color = '#C62828' %}  {# dark red text #}
+                        {% set emoji = '💥' %}
+                      {% else %}
+                        {% set bg_color = '#E3F2FD' %}  {# default light blue #}
+                        {% set text_color = '#01579B' %}  {# default dark blue text #}
+                        {% set emoji = '❓' %}
+                      {% endif %}
+                      <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 4px 10px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid {{ bg_color }}; font-size: 0.9em; font-weight: 600;">{{ emoji }} {{ tech_name }}</span>
+                    {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- Attack Flow Diagram (overlaid on tactic columns) -->
+              {% if correlation.techniques_by_tactic and correlation.techniques_by_tactic|length > 1 %}
+              <div style="margin-top: 12px; margin-bottom: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 16px;">
+                <strong style="color: #555; display: block; margin-bottom: 12px;">Attack Flow:</strong>
+                <div style="display: flex; gap: 8px; align-items: stretch; overflow-x: auto;">
+                {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
+                {% set displayed_tactics = [] %}
+                {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
+                  {% set _ = displayed_tactics.append(tactic) %}
+                {% endfor %}
+                {% for tactic in displayed_tactics %}
+                    <!-- Tactic Column -->
+                    <div style="flex: 1; min-width: 120px; background: white; border: 2px solid #ddd; border-radius: 4px; padding: 8px; position: relative;">
+                      <!-- Tactic Header -->
+                      <div style="font-size: 0.75em; font-weight: 700; color: #555; text-align: center; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        {{ tactic }}
+                      </div>
+                      <!-- Technique Count Badge -->
+                      <div style="text-align: center; margin-bottom: 4px;">
+                        <span style="display: inline-block; background: #4CAF50; color: white; font-size: 0.7em; font-weight: 600; padding: 2px 8px; border-radius: 10px;">
+                          {{ correlation.techniques_by_tactic[tactic]|length }} technique{{ 's' if correlation.techniques_by_tactic[tactic]|length > 1 else '' }}
+                        </span>
+                      </div>
+                      <!-- Tactic Stage Indicator -->
+                      <div style="height: 40px; display: flex; align-items: center; justify-content: center;">
+                        {% if tactic == 'Initial Access' %}
+                          {% set flow_emoji = '🚪' %}
+                          {% set flow_bg = '#E3F2FD' %}
+                          {% set flow_border = '#01579B' %}
+                        {% elif tactic == 'Execution' %}
+                          {% set flow_emoji = '💻' %}
+                          {% set flow_bg = '#FFF3E0' %}
+                          {% set flow_border = '#E65100' %}
+                        {% elif tactic == 'Persistence' %}
+                          {% set flow_emoji = '📌' %}
+                          {% set flow_bg = '#FCE4EC' %}
+                          {% set flow_border = '#880E4F' %}
+                        {% elif tactic == 'Privilege Escalation' %}
+                          {% set flow_emoji = '👑' %}
+                          {% set flow_bg = '#FFF9C4' %}
+                          {% set flow_border = '#F57F17' %}
+                        {% elif tactic == 'Defense Evasion' %}
+                          {% set flow_emoji = '🥷' %}
+                          {% set flow_bg = '#F3E5F5' %}
+                          {% set flow_border = '#4A148C' %}
+                        {% elif tactic == 'Credential Access' %}
+                          {% set flow_emoji = '🔑' %}
+                          {% set flow_bg = '#FFEBEE' %}
+                          {% set flow_border = '#B71C1C' %}
+                        {% elif tactic == 'Discovery' %}
+                          {% set flow_emoji = '🔍' %}
+                          {% set flow_bg = '#E0F2F1' %}
+                          {% set flow_border = '#004D40' %}
+                        {% elif tactic == 'Lateral Movement' %}
+                          {% set flow_emoji = '🔗' %}
+                          {% set flow_bg = '#E8F5E9' %}
+                          {% set flow_border = '#1B5E20' %}
+                        {% elif tactic == 'Collection' %}
+                          {% set flow_emoji = '📦' %}
+                          {% set flow_bg = '#FFF8E1' %}
+                          {% set flow_border = '#FF6F00' %}
+                        {% elif tactic == 'Command and Control' %}
+                          {% set flow_emoji = '📡' %}
+                          {% set flow_bg = '#E1F5FE' %}
+                          {% set flow_border = '#006064' %}
+                        {% elif tactic == 'Exfiltration' %}
+                          {% set flow_emoji = '🚀' %}
+                          {% set flow_bg = '#EFEBE9' %}
+                          {% set flow_border = '#3E2723' %}
+                        {% elif tactic == 'Impact' %}
+                          {% set flow_emoji = '💥' %}
+                          {% set flow_bg = '#FFCDD2' %}
+                          {% set flow_border = '#C62828' %}
+                        {% else %}
+                          {% set flow_emoji = '❓' %}
+                          {% set flow_bg = '#E3F2FD' %}
+                          {% set flow_border = '#01579B' %}
+                        {% endif %}
+                        <div style="width: 32px; height: 32px; background: {{ flow_bg }}; border: 2px solid {{ flow_border }}; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                          <span style="font-size: 1.2em;">{{ flow_emoji }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Arrow between tactics (only if not the last displayed tactic) -->
+                    {% if not loop.last %}
+                    <div style="display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0 4px;">
+                      <svg width="32" height="32" viewBox="0 0 24 24" style="fill: #999;">
+                        <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+                      </svg>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </div>
+                <div style="margin-top: 8px; text-align: center; font-size: 0.75em; color: #666;">
+                  Attack chain progresses through {{ displayed_tactics|length }} tactic{{ 's' if displayed_tactics|length > 1 else '' }}
+                </div>
+              </div>
+              {% endif %}
+
               <!-- Tables/Indexes Display (if available) -->
               {% if correlation.tables_indexes %}
-              <div style="margin-top: 8px; margin-bottom: 8px; font-size: 0.85em;">
+              <div style="margin-top: 8px; margin-bottom: 12px; font-size: 0.85em;">
                 <strong style="color: #555;">{% if vendor.name == 'MDE' %}Tables:{% else %}Indexes:{% endif %}</strong>
                 {% for table_idx in correlation.tables_indexes %}
                 <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
@@ -1300,42 +1534,280 @@ body, html {
       </div>
     </div>
 
-    <!-- Action Buttons - 5 horizontal buttons below Detection Rules -->
-    <div class="action-buttons">
-      <button class="btn-action" id="download-all-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-        </svg>
-        Download All
-      </button>
-      <button class="btn-action" id="save-to-library-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-        </svg>
-        Save to Library
-      </button>
-      <button class="btn-action" disabled style="opacity: 0.5; cursor: not-allowed; background: #f5f5f5; color: #999; border-color: #ddd;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-        </svg>
-        Export to VECTR
-        <span style="font-size: 0.75em; margin-left: 6px;">(Coming Soon)</span>
-      </button>
-      <button class="btn-action" disabled style="opacity: 0.5; cursor: not-allowed; background: #f5f5f5; color: #999; border-color: #ddd;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <polygon points="10 8 16 12 10 16 10 8"/>
-        </svg>
-        Run Emulation
-        <span style="font-size: 0.75em; margin-left: 6px;">(Coming Soon)</span>
-      </button>
-      <button class="btn-action" id="new-analysis-btn" onclick="window.location.href='/'">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        New Analysis
-      </button>
+    <!-- Divider -->
+    <div style="border-top: 2px solid #e5e7eb; margin: 40px 0;"></div>
+
+    <!-- Validation Checklist Section -->
+    <div id="validation-checklist" class="detection-section">
+      <div class="detection-header">
+        <h2>
+          <div class="card-icon validation" style="width: 40px; height: 40px; margin-right: 12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </div>
+          Validation Checklist
+        </h2>
+        <span class="expand-btn" onclick="toggleValidationChecklist()">Expand</span>
+      </div>
+
+      <div id="validation-content" style="display: none;">
+        <!-- Step 1: Review Detection Logic -->
+        <div class="validation-step" data-step="1">
+          <div>
+            <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
+              Step 1: Review Detection Logic
+            </div>
+            <p style="color: #666; margin: 8px 0 0 0; line-height: 1.5;">
+              Verify that each query's logic matches the technique description and would catch the intended attack behavior.
+            </p>
+            <details style="margin-top: 10px;">
+              <summary style="color: #C53030; cursor: pointer; font-weight: 500; font-size: 0.95em;">View Guidance</summary>
+              <ul style="margin: 10px 0; padding-left: 20px; color: #666; line-height: 1.6;">
+                <li>Does the query logic align with the MITRE ATT&CK technique description?</li>
+                <li>Are the indicators appropriate for detecting this technique?</li>
+                <li>Would this query catch actual attack behavior?</li>
+                <li>Review any OSINT enrichment data for additional context</li>
+              </ul>
+            </details>
+          </div>
+        </div>
+
+        <!-- Step 2: Test Query Syntax -->
+        <div class="validation-step" data-step="2" style="margin-top: 20px;">
+          <div>
+            <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
+              Step 2: Test Query Syntax
+            </div>
+            <p style="color: #666; margin: 8px 0 0 0; line-height: 1.5;">
+              Copy queries to your SIEM and verify they execute without syntax errors and complete in reasonable time.
+            </p>
+            <details style="margin-top: 10px;">
+              <summary style="color: #C53030; cursor: pointer; font-weight: 500; font-size: 0.95em;">View Guidance</summary>
+              <ul style="margin: 10px 0; padding-left: 20px; color: #666; line-height: 1.6;">
+                <li>Run the query in your SIEM environment</li>
+                <li>Verify no syntax errors occur</li>
+                <li>Check query performance (recommend <30 seconds execution time)</li>
+                <li>Test across your configured time ranges</li>
+              </ul>
+            </details>
+          </div>
+        </div>
+
+        <!-- Step 3: Validate Field Names -->
+        <div class="validation-step" data-step="3" style="margin-top: 20px;">
+          <div>
+            <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
+              Step 3: Validate Field Names
+            </div>
+            <p style="color: #666; margin: 8px 0 0 0; line-height: 1.5;">
+              Confirm that field names and index/source names match your actual log schema.
+            </p>
+            <details style="margin-top: 10px;">
+              <summary style="color: #C53030; cursor: pointer; font-weight: 500; font-size: 0.95em;">View Guidance</summary>
+              <ul style="margin: 10px 0; padding-left: 20px; color: #666; line-height: 1.6;">
+                <li>Verify field names match your log schema (e.g., process_name vs ProcessName)</li>
+                <li>Check that index/source names are correct for your environment</li>
+                <li>Update your mapping files if needed (see profile page)</li>
+                <li>Ensure data sources are actively collecting logs</li>
+              </ul>
+            </details>
+          </div>
+        </div>
+
+        <!-- Step 4: Assess False Positive Risk -->
+        <div class="validation-step" data-step="4" style="margin-top: 20px;">
+          <div>
+            <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
+              Step 4: Assess False Positive Risk
+            </div>
+            <p style="color: #666; margin: 8px 0 0 0; line-height: 1.5;">
+              Review query specificity and identify any benign processes or patterns that may need exclusions.
+            </p>
+            <details style="margin-top: 10px;">
+              <summary style="color: #C53030; cursor: pointer; font-weight: 500; font-size: 0.95em;">View Guidance</summary>
+              <ul style="margin: 10px 0; padding-left: 20px; color: #666; line-height: 1.6;">
+                <li>Is the query too broad? Consider tightening criteria</li>
+                <li>Identify benign processes that match the pattern (e.g., admin tools)</li>
+                <li>Add exclusions for known-good processes/paths if needed</li>
+                <li>Test in monitoring mode before enabling alerting</li>
+                  <li>Consider environment-specific tuning (dev vs prod)</li>
+                </ul>
+              </details>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generation Metrics Section -->
+      <div id="generation-metrics" class="detection-section">
+        <div class="detection-header">
+          <h2>
+            <div class="card-icon metrics" style="width: 40px; height: 40px; margin-right: 12px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+            </div>
+            Generation Metrics
+          </h2>
+          <span class="expand-btn" onclick="toggleGenerationMetrics()">Expand</span>
+        </div>
+
+        <div id="metrics-content" style="display: none;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin: 0; max-width: 100%; box-sizing: border-box;">
+
+            {% set total_detections = total_detections %}
+            {% set manual_hours = (total_detections * 2)|round(1) %}
+            {% set archer_hours = (total_detections * 0.1)|round(1) %}
+            {% set hours_saved = (manual_hours - archer_hours)|round(1) %}
+            {% set hourly_rate = 50 %}
+            {% set cost_savings = (hours_saved * hourly_rate)|round(0)|int %}
+            {% set osint_count = namespace(count=0) %}
+            {% for vendor in detections %}
+              {% for detection in vendor.detections %}
+                {% if detection.osint_data and detection.osint_data.enriched %}
+                  {% set osint_count.count = osint_count.count + 1 %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% set osint_research_hours = (osint_count.count * 0.65)|round(1) %}
+
+            <!-- Cost Savings -->
+            <div style="background: #dcfce7; border: 1px solid #22c55e; border-radius: 8px; padding: 20px;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                  <path d="M16.24 7.76l-1.42 1.42M7.76 16.24l1.42-1.42"/>
+                </svg>
+                <span style="font-size: 0.9em; color: #14532d; font-weight: 600;">Cost Savings</span>
+              </div>
+              <div style="font-size: 2.5em; font-weight: 700; line-height: 1; color: #14532d;">
+                ${{ '{:,}'.format(cost_savings) }}
+              </div>
+              <div style="font-size: 0.85em; color: #166534; margin-top: 8px; line-height: 1.4;">
+                @ ${{ hourly_rate }}/hr analyst rate<br>
+                {{ hours_saved }} hours saved
+              </div>
+            </div>
+
+            <!-- Time Efficiency -->
+            <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 20px;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span style="font-size: 0.9em; color: #1e3a8a; font-weight: 600;">Time Efficiency</span>
+              </div>
+              {% set archer_time_seconds = (duration|float) if duration else 0 %}
+              {% set archer_display = "" %}
+              {% if archer_time_seconds < 60 %}
+                {% set archer_display = (archer_time_seconds|round(0)|int)|string + " sec" %}
+              {% elif archer_time_seconds < 3600 %}
+                {% set archer_display = ((archer_time_seconds / 60)|round(1))|string + " min" %}
+              {% else %}
+                {% set archer_display = ((archer_time_seconds / 3600)|round(1))|string + " hrs" %}
+              {% endif %}
+              {% set speedup = (manual_hours * 3600 / archer_time_seconds)|round(0)|int if archer_time_seconds > 0 else 0 %}
+              <div style="font-size: 2.5em; font-weight: 700; line-height: 1; color: #1e3a8a;">
+                {{ speedup }}x
+              </div>
+              <div style="font-size: 0.85em; color: #1e40af; margin-top: 8px; line-height: 1.4;">
+                Manual: {{ manual_hours }} hrs<br>
+                Archer: {{ archer_display }}
+              </div>
+            </div>
+
+            <!-- Real-World Validated -->
+            <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 20px;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+                  <path d="M9 12l2 2 4-4"/>
+                  <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span style="font-size: 0.9em; color: #78350f; font-weight: 600;">Real-World Validated</span>
+              </div>
+              <div style="font-size: 2.5em; font-weight: 700; line-height: 1; color: #78350f;">
+                {{ osint_count.count }}
+              </div>
+              <div style="font-size: 0.85em; color: #92400e; margin-top: 8px; line-height: 1.4;">
+                Based on observed attack patterns
+                {% if osint_research_hours > 0 %}<br>Research saved: ~{{ osint_research_hours }} hrs{% endif %}
+              </div>
+            </div>
+
+            <!-- Detection Fidelity -->
+            <div style="background: #f3e8ff; border: 1px solid #a855f7; border-radius: 8px; padding: 20px;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7e22ce" stroke-width="2">
+                  <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                <span style="font-size: 0.9em; color: #581c87; font-weight: 600;">Detection Fidelity</span>
+              </div>
+              {% set osint_pct = 0 %}
+              {% if total_detections > 0 %}
+                {% set osint_pct = ((osint_count.count / total_detections) * 100)|round(0)|int %}
+              {% endif %}
+              {% set has_correlations = correlation_count > 0 %}
+              {% set multi_platform = (detections|length > 1) %}
+              {% set fidelity_score = (osint_pct * 0.4) + (40 if has_correlations else 0) + (20 if multi_platform else 0) %}
+              <div style="font-size: 2.5em; font-weight: 700; line-height: 1; color: #581c87;">
+                {{ fidelity_score|round(0)|int }}/100
+              </div>
+              <div style="font-size: 0.85em; color: #6b21a8; margin-top: 8px; line-height: 1.4;">
+                {% if osint_pct > 0 %}✓ OSINT enrichment ({{ osint_pct }}%)<br>{% endif %}
+                {% if has_correlations %}✓ Correlations ({{ correlation_count }})<br>{% endif %}
+                {% if multi_platform %}✓ Multi-platform coverage{% endif %}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons - 5 horizontal buttons below Detection Rules -->
+      <div class="detection-section">
+        <div class="action-buttons">
+        <button class="btn-action" id="download-all-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          Download All
+        </button>
+        <button class="btn-action" id="save-to-library-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          Save to Library
+        </button>
+        <button class="btn-action" disabled style="opacity: 0.5; cursor: not-allowed; background: #f5f5f5; color: #999; border-color: #ddd;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+          Export to VECTR
+          <span style="font-size: 0.75em; margin-left: 6px;">(Coming Soon)</span>
+        </button>
+        <button class="btn-action" disabled style="opacity: 0.5; cursor: not-allowed; background: #f5f5f5; color: #999; border-color: #ddd;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="10 8 16 12 10 16 10 8"/>
+          </svg>
+          Run Emulation
+          <span style="font-size: 0.75em; margin-left: 6px;">(Coming Soon)</span>
+        </button>
+        <button class="btn-action" id="new-analysis-btn" onclick="window.location.href='/'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          New Analysis
+        </button>
+      </div>
+
+      </div>
+
     </div>
 
   </div>
@@ -2017,5 +2489,35 @@ document.addEventListener('click', function(e) {
     navigationConfirmed = true;
   }
 });
+
+// ========== Validation Checklist Functions ==========
+
+// Toggle validation checklist visibility
+function toggleValidationChecklist() {
+  const content = document.getElementById('validation-content');
+  const toggle = document.getElementById('validation-toggle');
+
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    toggle.textContent = 'Collapse';
+  } else {
+    content.style.display = 'none';
+    toggle.textContent = 'Expand';
+  }
+}
+
+// Toggle Generation Metrics section
+function toggleGenerationMetrics() {
+  const content = document.getElementById('metrics-content');
+  const toggle = document.getElementById('metrics-toggle');
+
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    toggle.textContent = 'Collapse';
+  } else {
+    content.style.display = 'none';
+    toggle.textContent = 'Expand';
+  }
+}
 </script>
 {% endblock %}

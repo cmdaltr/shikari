@@ -41,9 +41,11 @@ def get_stix_data(url, cache_days=7):
 
     # Try to fetch from network
     try:
+        # First attempt with SSL verification
         print(f"Fetching MITRE ATT&CK data from {url}...")
-        response = requests.get(url, timeout=30)
+        response = requests.get(url, verify=True, timeout=30)
         response.raise_for_status()
+        print("✓ MITRE ATT&CK data fetched with SSL verification")
 
         # Save to cache
         try:
@@ -55,6 +57,31 @@ def get_stix_data(url, cache_days=7):
 
         # Load the STIX bundle
         return stix2.parse(response.text, allow_custom=True)
+
+    except requests.exceptions.SSLError as ssl_err:
+        # Fallback: retry without SSL verification
+        import warnings
+        warnings.warn(f"SSL verification failed: {ssl_err}. Retrying without SSL verification...")
+        print("⚠️  SSL verification failed, retrying without verification")
+        try:
+            response = requests.get(url, verify=False, timeout=30)
+            response.raise_for_status()
+            print("✓ MITRE ATT&CK data fetched (SSL verification disabled)")
+
+            # Save to cache
+            try:
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                print(f"Cached MITRE ATT&CK data to {cache_path}")
+            except Exception as e:
+                print(f"Warning: Could not cache data: {e}")
+
+            # Load the STIX bundle
+            return stix2.parse(response.text, allow_custom=True)
+
+        except Exception as e2:
+            print(f"❌ Failed to fetch MITRE ATT&CK data even without SSL: {e2}")
+            raise
 
     except (requests.RequestException, requests.exceptions.ConnectionError) as e:
         # Network error - try to use stale cache if available

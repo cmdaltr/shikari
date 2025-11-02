@@ -303,6 +303,12 @@
             </svg>
             <span>API Keys</span>
           </button>
+          <button class="tab-button" data-tab="mappings">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <span>Mappings</span>
+          </button>
           {% if user and user.role.value == 'admin' %}
           <button class="tab-button" data-tab="users">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -319,11 +325,11 @@
         <div class="tabs-content">
           <!-- PROFILE TAB -->
           <div class="tab-pane active" id="tab-profile">
-            <div class="tab-description">
+            <div class="tab-description" style="margin-bottom: 16px;">
               Profile information and preferences
             </div>
 
-            <div class="profile-container">
+            <div class="profile-container" style="gap: 20px;">
               <!-- Profile Picture Section -->
               <div class="profile-picture-section">
                 <div class="profile-picture-wrapper" onclick="document.getElementById('profile-picture-input').click()">
@@ -348,10 +354,10 @@
 
               <!-- Profile Form -->
               <form id="profile-form" class="profile-form">
-                <!-- Email (75%) + Account Type (25%) row -->
-                <div style="display: flex; gap: 16px;">
-                  <!-- Email field (75%) -->
-                  <div class="form-section" style="flex: 0 0 75%; margin: 0;">
+                <!-- Email + Team + Type row -->
+                <div style="display: flex; gap: 12px;">
+                  <!-- Email field (50%) -->
+                  <div class="form-section" style="flex: 0 0 50%; margin: 0;">
                     <label for="email" class="form-label">Email</label>
                     <input type="email"
                            name="email"
@@ -363,9 +369,20 @@
                            style="background-color: var(--bg-primary); cursor: not-allowed;">
                   </div>
 
-                  <!-- Account Type (25%) -->
-                  <div class="form-section" style="flex: 0 0 calc(25% - 16px); margin: 0;">
-                    <label for="user_type" class="form-label">Account Type</label>
+                  <!-- Team field (30%) -->
+                  <div class="form-section" style="flex: 0 0 30%; margin: 0;">
+                    <label for="team" class="form-label">Team</label>
+                    <input type="text"
+                           name="team"
+                           id="team"
+                           class="form-input"
+                           placeholder="e.g., Security Operations"
+                           value="{{ user.team if user and user.team else '' }}">
+                  </div>
+
+                  <!-- Type (20%) -->
+                  <div class="form-section" style="flex: 0 0 calc(20% - 24px); margin: 0;">
+                    <label for="user_type" class="form-label">Type</label>
                     <input type="text"
                            name="user_type"
                            id="user_type"
@@ -1019,6 +1036,128 @@
             </div>
           </div>
 
+          <!-- MAPPINGS TAB -->
+          <div class="tab-pane" id="tab-mappings">
+            <div class="tab-description">
+              Configure mapping files for your SIEM environment
+            </div>
+
+            <div style="margin-top: 24px;">
+              <!-- Info Banner -->
+              <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">About Mapping Files</span>
+                </div>
+                <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                  Mapping files tell Archer how to map indicator types (commands, files, registry, network) to your actual index/source names and field schemas. Configure these to match your SIEM environment.
+                </div>
+              </div>
+
+              <!-- Platform Selector -->
+              <div style="margin-bottom: 24px; opacity: 0.6; pointer-events: none;">
+                <label style="display: block; font-weight: 600; color: #9ca3af; margin-bottom: 12px; font-size: 1.05em;">
+                  Select Platform
+                </label>
+                <div style="display: flex; gap: 12px;">
+                  <button class="platform-btn active" data-platform="splunk" style="opacity: 0.6; cursor: not-allowed;" disabled>
+                    <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+                      <circle cx="50" cy="50" r="48" fill="#E91E8C"/>
+                      <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                    Splunk
+                  </button>
+                  <button class="platform-btn" data-platform="mde" style="opacity: 0.6; cursor: not-allowed;" disabled>
+                    <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+                      <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="#0078D4"/>
+                    </svg>
+                    Microsoft Defender
+                  </button>
+                  <button class="platform-btn" data-platform="elastic" style="opacity: 0.6; cursor: not-allowed;" disabled>
+                    <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+                      <rect x="10" y="20" width="70" height="12" rx="6" fill="#FED10A"/>
+                      <rect x="20" y="44" width="70" height="12" rx="6" fill="#00BFB3"/>
+                      <rect x="10" y="68" width="70" height="12" rx="6" fill="#0077CC"/>
+                    </svg>
+                    Elastic
+                  </button>
+                </div>
+              </div>
+
+              <!-- Mapping Configuration -->
+              <div id="mapping-config" style="background: #f9fafb; border-radius: 8px; padding: 24px; border: 1px solid #e5e7eb; opacity: 0.6; pointer-events: none; position: relative;">
+                <!-- Coming Soon Badge -->
+                <div style="position: absolute; top: 16px; right: 16px; background: #6b7280; color: white; padding: 6px 16px; border-radius: 20px; font-size: 0.85em; font-weight: 600; letter-spacing: 0.5px;">
+                  COMING SOON
+                </div>
+
+                <h3 style="margin: 0 0 16px 0; font-size: 1.2em; color: #9ca3af;">
+                  <span id="platform-name">Splunk</span> Mapping Configuration
+                </h3>
+
+                <div style="margin-bottom: 16px;">
+                  <label style="display: block; font-weight: 500; color: #9ca3af; margin-bottom: 8px;">
+                    Index/Source Names
+                    <span style="font-weight: 400; color: #9ca3af; font-size: 0.9em;">(comma-separated)</span>
+                  </label>
+
+                  <!-- Command-line logs -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.9em; color: #9ca3af; margin-bottom: 4px;">Command-line logs:</label>
+                    <input type="text" id="mapping-cmd" class="form-input" placeholder="e.g., windows_security, sysmon, process_events" disabled>
+                  </div>
+
+                  <!-- File activity logs -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.9em; color: #9ca3af; margin-bottom: 4px;">File activity logs:</label>
+                    <input type="text" id="mapping-file" class="form-input" placeholder="e.g., file_events, sysmon_file" disabled>
+                  </div>
+
+                  <!-- Registry logs -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.9em; color: #9ca3af; margin-bottom: 4px;">Registry logs:</label>
+                    <input type="text" id="mapping-reg" class="form-input" placeholder="e.g., registry_events, sysmon_registry" disabled>
+                  </div>
+
+                  <!-- Network logs -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.9em; color: #9ca3af; margin-bottom: 4px;">Network logs:</label>
+                    <input type="text" id="mapping-network" class="form-input" placeholder="e.g., network_events, firewall" disabled>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                  <button disabled style="flex: 1; background: #d1d5db; color: #9ca3af; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: not-allowed; transition: all 0.2s;">
+                    Save Configuration
+                  </button>
+                  <button disabled style="flex: 1; background: #d1d5db; color: #9ca3af; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: not-allowed; transition: all 0.2s;">
+                    Test Configuration
+                  </button>
+                  <button disabled style="background: #d1d5db; color: #9ca3af; border: none; padding: 12px 24px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: not-allowed; transition: all 0.2s;">
+                    Load Current
+                  </button>
+                </div>
+
+                <!-- Status Messages -->
+                <div id="mapping-status" style="margin-top: 16px; padding: 12px; border-radius: 6px; display: none;"></div>
+              </div>
+
+              <!-- Documentation Link -->
+              <div style="margin-top: 24px; padding: 16px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+                <p style="margin: 0; color: #666; font-size: 0.95em; line-height: 1.6;">
+                  <strong>Need help?</strong> Check out the
+                  <a href="/docs/MAPPING_SETUP_GUIDE.md" target="_blank" style="color: #8b5cf6; text-decoration: none; font-weight: 500;">Mapping Setup Guide</a>
+                  for detailed instructions on configuring mapping files.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- USERS TAB (Admin Only) -->
           {% if user and user.role.value == 'admin' %}
           <div class="tab-pane" id="tab-users">
@@ -1075,6 +1214,7 @@
             html += '<thead><tr style="border-bottom: 2px solid var(--border-color);">';
             html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Full Name</th>';
             html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Email</th>';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Team</th>';
             html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Role</th>';
             html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Status</th>';
             html += '<th style="padding: 12px; text-align: center; font-weight: 600;">Actions</th>';
@@ -1086,6 +1226,7 @@
               const statusBadge = user.is_active
                 ? '<span style="color: #10b981;">Active</span>'
                 : '<span style="color: #ef4444;">Inactive</span>';
+              const teamDisplay = user.team ? escapeHtml(user.team) : '<span style="color: var(--text-tertiary);">—</span>';
 
               // Only show cog icon for users that are not the current user
               const actionsCell = user.is_current_user
@@ -1101,6 +1242,7 @@
               html += '<tr style="border-bottom: 1px solid var(--border-color);">';
               html += `<td style="padding: 12px;">${escapeHtml(user.full_name)}${youLabel}</td>`;
               html += `<td style="padding: 12px;">${escapeHtml(user.email)}</td>`;
+              html += `<td style="padding: 12px;">${teamDisplay}</td>`;
               html += `<td style="padding: 12px; text-transform: capitalize;">${escapeHtml(user.role)}</td>`;
               html += `<td style="padding: 12px;">${statusBadge}</td>`;
               html += actionsCell;
@@ -2033,6 +2175,200 @@
             }
         }
     </script>
+
+    <!-- Mappings Tab Styling and Functionality -->
+    <style>
+        .platform-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            background: white;
+            color: #1f2937;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .platform-btn:hover {
+            border-color: #8b5cf6;
+            background: #f3f4f6;
+        }
+
+        .platform-btn.active {
+            border-color: #8b5cf6;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            color: #6d28d9;
+        }
+
+        [data-theme="dark"] .platform-btn {
+            background: #2d2d2d;
+            border-color: #404040;
+            color: #f0f0f0;
+        }
+
+        [data-theme="dark"] .platform-btn:hover {
+            background: #3d3d3d;
+            border-color: #8b5cf6;
+        }
+
+        [data-theme="dark"] .platform-btn.active {
+            background: linear-gradient(135deg, #667eea25 0%, #764ba225 100%);
+            border-color: #8b5cf6;
+            color: #a78bfa;
+        }
+    </style>
+
+    <script>
+        // Mappings Tab Functionality
+        let currentPlatform = 'splunk';
+
+        function selectPlatform(platform) {
+            currentPlatform = platform;
+
+            // Update button states
+            document.querySelectorAll('.platform-btn').forEach(btn => {
+                if (btn.dataset.platform === platform) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Update platform name
+            const platformNames = {
+                'splunk': 'Splunk',
+                'mde': 'Microsoft Defender',
+                'elastic': 'Elastic'
+            };
+            document.getElementById('platform-name').textContent = platformNames[platform];
+
+            // Load configuration for this platform
+            loadMappingConfig();
+        }
+
+        async function loadMappingConfig() {
+            try {
+                const response = await fetch(`/api/mappings/load?platform=${currentPlatform}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Populate fields with current configuration
+                    document.getElementById('mapping-cmd').value = data.mappings.cmd || '';
+                    document.getElementById('mapping-file').value = data.mappings.file || '';
+                    document.getElementById('mapping-reg').value = data.mappings.reg || '';
+                    document.getElementById('mapping-network').value = data.mappings.network || '';
+
+                    showMappingStatus('Configuration loaded successfully', 'success');
+                } else {
+                    showMappingStatus('No existing configuration found. Please configure and save.', 'info');
+                }
+            } catch (error) {
+                showMappingStatus('Error loading configuration: ' + error.message, 'error');
+            }
+        }
+
+        async function saveMappingConfig() {
+            const mappings = {
+                platform: currentPlatform,
+                cmd: document.getElementById('mapping-cmd').value,
+                file: document.getElementById('mapping-file').value,
+                reg: document.getElementById('mapping-reg').value,
+                network: document.getElementById('mapping-network').value
+            };
+
+            try {
+                const formData = new FormData();
+                formData.append('platform', mappings.platform);
+                formData.append('cmd', mappings.cmd);
+                formData.append('file', mappings.file);
+                formData.append('reg', mappings.reg);
+                formData.append('network', mappings.network);
+
+                const response = await fetch('/api/mappings/save', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMappingStatus('Configuration saved successfully! Detections will now use your custom mappings.', 'success');
+                } else {
+                    showMappingStatus('Error saving configuration: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showMappingStatus('Error saving configuration: ' + error.message, 'error');
+            }
+        }
+
+        async function testMappingConfig() {
+            const mappings = {
+                platform: currentPlatform,
+                cmd: document.getElementById('mapping-cmd').value,
+                file: document.getElementById('mapping-file').value,
+                reg: document.getElementById('mapping-reg').value,
+                network: document.getElementById('mapping-network').value
+            };
+
+            // Validate that at least one field is filled
+            const hasValues = mappings.cmd || mappings.file || mappings.reg || mappings.network;
+            if (!hasValues) {
+                showMappingStatus('Please enter at least one index/source name to test', 'error');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('platform', mappings.platform);
+                formData.append('cmd', mappings.cmd);
+                formData.append('file', mappings.file);
+                formData.append('reg', mappings.reg);
+                formData.append('network', mappings.network);
+
+                const response = await fetch('/api/mappings/test', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMappingStatus('Configuration is valid! All index names are properly formatted.', 'success');
+                } else {
+                    showMappingStatus('Validation error: ' + (data.error || 'Invalid configuration'), 'error');
+                }
+            } catch (error) {
+                showMappingStatus('Error testing configuration: ' + error.message, 'error');
+            }
+        }
+
+        function showMappingStatus(message, type) {
+            const statusDiv = document.getElementById('mapping-status');
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = message;
+
+            const colors = {
+                'success': { bg: '#d1fae5', border: '#10b981', text: '#065f46' },
+                'error': { bg: '#fee2e2', border: '#ef4444', text: '#991b1b' },
+                'info': { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' }
+            };
+
+            const color = colors[type] || colors['info'];
+            statusDiv.style.background = color.bg;
+            statusDiv.style.borderLeft = `4px solid ${color.border}`;
+            statusDiv.style.color = color.text;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+
     {% endblock %}
 </body>
 </html>

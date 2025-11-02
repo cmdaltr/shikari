@@ -158,6 +158,44 @@
       [data-theme="dark"] footer a:hover {
         color: var(--accent) !important;
       }
+
+      /* Loading spinner with animal */
+      .loading-spinner {
+        width: 80px;
+        height: 80px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+      }
+
+      .loading-spinner::before {
+        content: '';
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #8B0000;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        z-index: 1;
+      }
+
+      .loading-spinner::after {
+        content: attr(data-emoji);
+        font-size: 40px;
+        position: relative;
+        z-index: 2;
+        filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.2));
+        animation: none !important;
+        transform: none !important;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
     {% endblock %}
 </head>
@@ -360,11 +398,57 @@
                        placeholder="e.g., CVE-2024-1234 or CVE-2021-44228, CVE-2022-22965">
               </div>
 
+              <!-- OR Separator -->
+              <div class="form-separator">
+                <span class="separator-line"></span>
+                <span class="separator-text">OR</span>
+                <span class="separator-line"></span>
+              </div>
+
+              <!-- Technique Hunt Input -->
+              <div class="form-section" style="opacity: 0.6; pointer-events: none; position: relative;">
+                <!-- Coming Soon Badge -->
+                <div style="position: absolute; top: 8px; right: 8px; background: #6b7280; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.75em; font-weight: 600; letter-spacing: 0.5px; z-index: 10;">
+                  COMING SOON
+                </div>
+                <label for="technique_input" class="form-label" style="color: #9ca3af;">
+                  ATT&CK Technique IDs
+                  <span style="font-weight: 400; color: #9ca3af; font-size: 0.9em;">(Hunt specific techniques)</span>
+                </label>
+                <input type="text" name="technique_ids" id="technique_input" class="form-input"
+                       placeholder="e.g., T1003, T1021.001, T1078 or T1003, T1021, T1078" disabled>
+                <div style="margin-top: 8px; font-size: 0.85em; color: #9ca3af;">
+                  Enter one or more MITRE ATT&CK technique IDs separated by commas. Supports both parent techniques (T1003) and subtechniques (T1003.001).
+                </div>
+              </div>
+
               <!-- Additional Options -->
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
-                <div class="options-grid three-columns">
-                  <!-- Left Column -->
+                <div class="options-grid" style="grid-template-columns: 1fr calc(1fr - 20px) calc(1fr + 20px);">
+                  <!-- Column 1: Merge Options -->
+                  <label class="option-item">
+                    <input type="checkbox" name="merge_by_tactic" value="true">
+                    <span class="option-label">
+                      Merge by Tactic
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Merge all techniques under the same MITRE ATT&CK tactic (e.g., all Credential Access techniques), then correlate across tactics. Generates ~8-15 high-level phase-based correlations instead of hundreds of technique-level pairs. Best for executive dashboards and low-noise alerting.</span>
+                      </span>
+                    </span>
+                  </label>
+
+                  <!-- Column 2: OSINT Enhancement -->
+                  <label class="option-item">
+                    <input type="checkbox" name="osint_enhancement" value="true" id="osint-enhancement-checkbox">
+                    <span class="option-label">
+                      OSINT Enhancement
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Automatically incorporate battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk) into queries.</span>
+                      </span>
+                    </span>
+                  </label>
+
+                  <!-- Column 3: Cross-Vendor -->
                   <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
                     <input type="checkbox" name="cross_vendor_correlation" value="true" id="cross-vendor-checkbox" disabled>
                     <span class="option-label">
@@ -373,18 +457,29 @@
                     </span>
                   </label>
 
-                  <!-- Middle Column -->
+                  <!-- Row 2 Column 1: Parent Technique -->
+                  <label class="option-item">
+                    <input type="checkbox" name="merge_by_parent" value="true">
+                    <span class="option-label">
+                      Merge by Parent Technique
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
+                      </span>
+                    </span>
+                  </label>
+
+                  <!-- Row 2 Column 2: OSINT Comparison -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_comparison" value="true" id="osint-comparison-checkbox">
                     <span class="option-label">
                       OSINT Comparison
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Compare techniques against OSINT databases and add metadata to YAML files. Note: OSINT Enhancement is enabled by default on Generate tab. Unchecking this means queries will only be built based on MITRE ATT&CK data indicators combined with OSINT enhancement patterns.</span>
+                        <span class="option-info-tooltip">Compare generated detections against OSINT databases (Sigma, Elastic, Splunk, etc.) and add comparison metadata to YAML files showing how well they align with community detection rules.</span>
                       </span>
                     </span>
                   </label>
 
-                  <!-- Right Column -->
+                  <!-- Row 2 Column 3: AI-Powered -->
                   <label class="option-item">
                     <input type="checkbox" name="ai_generators" value="true">
                     <span class="option-label">
@@ -394,6 +489,24 @@
                       </span>
                     </span>
                   </label>
+
+                  <!-- Relevance Slider - Full Width -->
+                  <div class="option-item" style="grid-column: span 3; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                    <label class="option-label" style="display: block; margin-bottom: 8px; font-weight: 500;">
+                      Correlation Relevance Threshold: <span id="relevance-value-generate" style="color: #8B0000; font-weight: 600;">75%</span>
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">
+                          Higher values (75-100%): Fewer, more precise correlations between highly similar detections.<br>
+                          Lower values (50-74%): More correlations, including loosely related detections.<br>
+                          Default: 75% provides best balance of quality and coverage.
+                        </span>
+                      </span>
+                    </label>
+                    <input type="range" name="correlation_min_relevance"
+                           min="0.50" max="1.0" step="0.05" value="0.75"
+                           style="width: 60%; cursor: pointer;"
+                           oninput="document.getElementById('relevance-value-generate').textContent = Math.round(this.value * 100) + '%'">
+                  </div>
                 </div>
               </details>
 
@@ -497,17 +610,19 @@
               <!-- Additional Options -->
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
-                <div class="options-grid three-columns">
-                  <!-- Left Column -->
-                  <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
-                    <input type="checkbox" name="cross_vendor_correlation" id="upload_cross_vendor_checkbox" value="true" disabled>
+                <div class="options-grid" style="grid-template-columns: 1fr calc(1fr - 20px) calc(1fr + 20px);">
+                  <!-- Column 1: Merge Options -->
+                  <label class="option-item">
+                    <input type="checkbox" name="merge_by_tactic" value="true">
                     <span class="option-label">
-                      Cross-Vendor Correlation
-                      <span style="color: #6b7280; font-size: 0.85em; margin-left: 4px;">(Coming Soon)</span>
+                      Merge by Tactic
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Merge all techniques under the same MITRE ATT&CK tactic (e.g., all Credential Access techniques), then correlate across tactics. Generates ~8-15 high-level phase-based correlations instead of hundreds of technique-level pairs. Best for executive dashboards and low-noise alerting.</span>
+                      </span>
                     </span>
                   </label>
 
-                  <!-- Middle Column -->
+                  <!-- Column 2: OSINT Enhancement -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_enhancement" id="upload_osint_enhancement" value="true">
                     <span class="option-label">
@@ -518,7 +633,38 @@
                     </span>
                   </label>
 
-                  <!-- Right Column -->
+                  <!-- Column 3: Cross-Vendor -->
+                  <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
+                    <input type="checkbox" name="cross_vendor_correlation" id="upload_cross_vendor_checkbox" value="true" disabled>
+                    <span class="option-label">
+                      Cross-Vendor Correlation
+                      <span style="color: #6b7280; font-size: 0.85em; margin-left: 4px;">(Coming Soon)</span>
+                    </span>
+                  </label>
+
+                  <!-- Row 2 Column 1: Parent Technique -->
+                  <label class="option-item">
+                    <input type="checkbox" name="merge_by_parent" value="true">
+                    <span class="option-label">
+                      Merge by Parent Technique
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
+                      </span>
+                    </span>
+                  </label>
+
+                  <!-- Row 2 Column 2: OSINT Comparison -->
+                  <label class="option-item">
+                    <input type="checkbox" name="osint_comparison" id="upload_osint_comparison" value="true">
+                    <span class="option-label">
+                      OSINT Comparison
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Compare generated detections against OSINT databases (Sigma, Elastic, Splunk, etc.) and add comparison metadata to YAML files showing how well they align with community detection rules.</span>
+                      </span>
+                    </span>
+                  </label>
+
+                  <!-- Row 2 Column 3: AI-Powered -->
                   <label class="option-item">
                     <input type="checkbox" name="use_openai" id="upload_use_openai" value="true">
                     <span class="option-label">
@@ -528,6 +674,24 @@
                       </span>
                     </span>
                   </label>
+
+                  <!-- Relevance Slider - Full Width -->
+                  <div class="option-item" style="grid-column: span 3; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                    <label class="option-label" style="display: block; margin-bottom: 8px; font-weight: 500;">
+                      Correlation Relevance Threshold: <span id="relevance-value-upload" style="color: #8B0000; font-weight: 600;">75%</span>
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">
+                          Higher values (75-100%): Fewer, more precise correlations between highly similar detections.<br>
+                          Lower values (50-74%): More correlations, including loosely related detections.<br>
+                          Default: 75% provides best balance of quality and coverage.
+                        </span>
+                      </span>
+                    </label>
+                    <input type="range" name="correlation_min_relevance"
+                           min="0.50" max="1.0" step="0.05" value="0.75"
+                           style="width: 60%; cursor: pointer;"
+                           oninput="document.getElementById('relevance-value-upload').textContent = Math.round(this.value * 100) + '%'">
+                  </div>
                 </div>
               </details>
 
@@ -691,12 +855,7 @@
       </div>
 
       <!-- Loading overlay -->
-      <div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.95);z-index:1000;align-items:center;justify-content:center;">
-        <div style="text-align:center;">
-          <div class="loading-spinner"></div>
-          <h2 id="loading-message" style="margin-top: 1em;">Processing...</h2>
-        </div>
-      </div>
+      <div id="loading-overlay" style="display:none;"></div>
     </div>
     </div>
 
@@ -797,6 +956,44 @@
             // Add pattern validation
             cveInput.setAttribute('pattern', '(CVE-20\\d{2}-\\d{4,5})(\\s*,\\s*CVE-20\\d{2}-\\d{4,5})*');
             cveInput.setAttribute('title', 'Enter CVE ID(s) in format CVE-20XX-XXXX (max 14 chars each). Multiple CVEs separated by commas.');
+        }
+    </script>
+
+    <!-- Technique Hunt Input Validation Script -->
+    <script>
+        const techniqueInput = document.getElementById('technique_input');
+
+        if (techniqueInput) {
+            techniqueInput.addEventListener('input', function(e) {
+                let value = e.target.value.toUpperCase();
+
+                // Split by comma to handle multiple techniques
+                let techniques = value.split(',').map(t => t.trim());
+                let validatedTechniques = [];
+
+                for (let tech of techniques) {
+                    // Limit to 10 characters (T1234.567 format)
+                    if (tech.length > 10) {
+                        tech = tech.substring(0, 10);
+                    }
+                    validatedTechniques.push(tech);
+                }
+
+                // Reconstruct the value
+                let newValue = validatedTechniques.join(', ');
+
+                // Only update if changed to avoid cursor jumping
+                if (newValue !== value) {
+                    const cursorPos = e.target.selectionStart;
+                    e.target.value = newValue;
+                    // Try to maintain cursor position
+                    e.target.setSelectionRange(cursorPos, cursorPos);
+                }
+            });
+
+            // Add pattern validation for ATT&CK technique IDs
+            techniqueInput.setAttribute('pattern', '(T\\d{4}(\\.\\d{3})?)(\\s*,\\s*T\\d{4}(\\.\\d{3})?)*');
+            techniqueInput.setAttribute('title', 'Enter ATT&CK Technique ID(s) in format T1234 or T1234.567. Multiple techniques separated by commas.');
         }
     </script>
     {% endblock %}

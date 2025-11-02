@@ -12,6 +12,27 @@ The script downloads the latest MITRE ATT&CK Enterprise data and extracts:
 - **Groups**: Threat group ID, name, and description (only groups with IDs starting with "G")
 - **Software-to-Technique Traversal**: When groups use software (malware/tools), Archer automatically extracts the techniques employed by that software
 
+## Parent Technique to Subtechnique Expansion ⭐ NEW
+
+When a threat group uses a parent technique (e.g., T1136: Create Account), Archer automatically expands to include all relevant subtechniques (T1136.001, T1136.002, T1136.003) and generates detections for each subtechnique that has unique indicators.
+
+**How it works:**
+- **Parent Detection**: Generate detection for the parent technique (T1136)
+- **Subtechnique Discovery**: Find all subtechniques from MITRE ATT&CK
+- **Indicator Analysis**: Compare subtechnique indicators with parent indicators
+- **Conditional Generation**: Only create subtechnique detection if indicators are unique
+- **Preservation**: Always keep the parent technique detection
+
+**Example:** T1136 (Create Account) expands to:
+- T1136: Create Account (parent - always included)
+- T1136.001: Local Account (unique indicators: `net user`, `useradd`)
+- T1136.002: Domain Account (unique indicators: `dsadd`, `New-ADUser`)
+- T1136.003: Cloud Account (unique indicators: `aws iam`, `az ad user`)
+
+**Constraint:** If a group only uses a subtechnique (e.g., T1136.001) **without** the parent, Archer generates **only** that subtechnique detection and does not expand to other subtechniques.
+
+For detailed implementation specifications, see [PARENT_SUBTECHNIQUE_EXPANSION.md](PARENT_SUBTECHNIQUE_EXPANSION.md).
+
 ## Software-to-Technique Indicator Extraction
 
 Archer implements **two paths** for indicator extraction when analyzing threat groups:

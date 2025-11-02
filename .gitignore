@@ -52,9 +52,11 @@ data/correlate/*
 !data/correlate/.gitkeep
 !data/correlate/*_example*.json
 
-# CVE cache (runtime downloaded)
+# CVE cache (runtime downloaded) - MIGRATED TO data/cache/cve
 data/cve_cache/*
 !data/cve_cache/.gitkeep
+data/cache/cve/*
+!data/cache/cve/.gitkeep
 
 # Generated detections (dynamically created)
 data/generate/*
@@ -122,6 +124,10 @@ htmlcov/
 .dmypy.json
 dmypy.json
 
-# OSINT enrichment - local repo clones and cache
+# OSINT enrichment - local repo clones and cache - MIGRATED TO data/cache/osint and data/repos
 data/osint_cache/
 data/osint_repos/
+data/cache/osint/*
+!data/cache/osint/.gitkeep
+data/repos/*
+!data/repos/.gitkeep

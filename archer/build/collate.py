@@ -75,14 +75,28 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
         alignment_results.append({"detection_step": step, "matches": matched_sources})
 
     # For each indicator type (cmd, evt, reg, sw) in operator_guidance, fetch mapping
-    with open(os.path.join("archer", "mappings", "schemaSplunk.json")) as f:
-        map_splunk_indices = json.load(f)
+    # Check for custom Splunk schema first, fall back to default
+    splunk_custom_file = os.path.join("archer", "mappings", "schemaSplunk_custom.json")
+    splunk_default_file = os.path.join("archer", "mappings", "schemaSplunk.json")
+    if os.path.exists(splunk_custom_file):
+        with open(splunk_custom_file) as f:
+            map_splunk_indices = json.load(f)
+    else:
+        with open(splunk_default_file) as f:
+            map_splunk_indices = json.load(f)
 
     with open(os.path.join("archer", "mappings", "indicatorMapping.json"), "r") as f:
         indicator_mapping = json.load(f)
 
-    with open(os.path.join("archer", "mappings", "schemaMDE.json")) as f:
-        map_defender_tables = json.load(f)
+    # Check for custom MDE schema first, fall back to default
+    mde_custom_file = os.path.join("archer", "mappings", "schemaMDE_custom.json")
+    mde_default_file = os.path.join("archer", "mappings", "schemaMDE.json")
+    if os.path.exists(mde_custom_file):
+        with open(mde_custom_file) as f:
+            map_defender_tables = json.load(f)
+    else:
+        with open(mde_default_file) as f:
+            map_defender_tables = json.load(f)
 
     # Note: This validation loop is unused - variables assigned but never used
     # Commented out due to incompatibility with new schemaSplunk.json structure

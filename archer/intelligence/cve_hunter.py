@@ -28,7 +28,8 @@ class CVEHunter:
     def __init__(self):
         self.nvd_api_key = os.getenv("NVD_API_KEY")  # Optional: increases rate limit
         self.github_token = os.getenv("GITHUB_TOKEN")  # Optional: for PoC search
-        self.cache_dir = "data/cve_cache"
+        from ..config import CVE_CACHE_DIR
+        self.cache_dir = CVE_CACHE_DIR
         os.makedirs(self.cache_dir, exist_ok=True)
 
     def research_cve(self, cve_id: str) -> Dict[str, Any]:

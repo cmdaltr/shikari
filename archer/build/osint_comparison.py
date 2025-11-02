@@ -44,7 +44,8 @@ import yaml as yaml_lib
 
 
 # Cache directory for OSINT results
-OSINT_CACHE_DIR = Path("data/osint_cache")
+from ..config import OSINT_CACHE_DIR as OSINT_CACHE_DIR_STR
+OSINT_CACHE_DIR = Path(OSINT_CACHE_DIR_STR)
 OSINT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -496,8 +497,6 @@ def search_osint_for_technique(
     Returns:
         Tuple of (found: bool, enrichment_data: dict)
     """
-    print(f"🔍 OSINT Comparison: Searching for detection methods for {technique_id} ({technique_name})")
-
     # OSINT repos should be cloned/updated manually or during app initialization
     # Not during detection generation to avoid blocking
     # from archer.build.osint_repos import ensure_repos_ready

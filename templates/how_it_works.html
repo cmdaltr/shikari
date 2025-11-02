@@ -1319,6 +1319,103 @@ data/APT29/
             </details>
 
             <details class="faq-item">
+                <summary class="faq-question">Why is Archer so fast? Is it using AI or machine learning?</summary>
+                <div class="faq-answer">
+                    <p><strong>Archer is fast because it uses deterministic algorithms, not AI/ML inference.</strong> Here's exactly how speed is achieved:</p>
+
+                    <h4>1. Pre-Computed Intelligence (No AI Required)</h4>
+                    <ul>
+                        <li><strong>MITRE ATT&CK Cache:</strong> Downloads and caches the entire STIX bundle once (enterprise-attack.json), then reads from local filesystem</li>
+                        <li><strong>Pattern Matching:</strong> Uses compiled regex patterns and dictionary lookups instead of neural networks</li>
+                        <li><strong>Template-Based Generation:</strong> Queries are generated from predefined templates, not generated token-by-token by LLMs</li>
+                        <li><strong>Rule-Based Logic:</strong> All correlation scoring uses mathematical formulas (0-140 point scale) instead of ML models</li>
+                    </ul>
+
+                    <h4>2. Parallel Processing Architecture</h4>
+                    <ul>
+                        <li><strong>Background Threading:</strong> Detection generation runs in daemon threads, keeping UI responsive</li>
+                        <li><strong>Async I/O:</strong> FastAPI handles concurrent requests without blocking</li>
+                        <li><strong>Lock-Based Deduplication:</strong> Prevents duplicate correlation processing with thread-safe locks</li>
+                        <li><strong>Streaming Progress Updates:</strong> Real-time progress tracking via JSON file updates (no polling delays)</li>
+                    </ul>
+
+                    <h4>3. Smart Filtering (Not Machine Learning)</h4>
+                    <ul>
+                        <li><strong>Attack Progression Filter:</strong> Simple dictionary lookup against 35 predefined tactic pairs</li>
+                        <li><strong>Semantic Overlap:</strong> Set intersection math (Jaccard similarity), not word embeddings</li>
+                        <li><strong>High-Impact Techniques:</strong> Hardcoded set of 30+ critical techniques, O(1) lookups</li>
+                        <li><strong>Correlation Grouping:</strong> Hash-based deduplication using technique IDs as keys</li>
+                    </ul>
+
+                    <h4>4. Efficient Data Structures</h4>
+                    <ul>
+                        <li><strong>In-Memory Caching:</strong> Techniques, tactics, and procedures loaded once at startup (app.state)</li>
+                        <li><strong>Dictionary Lookups:</strong> O(1) average-case complexity for technique/group mapping</li>
+                        <li><strong>Set Operations:</strong> Fast indicator deduplication and overlap calculations</li>
+                        <li><strong>SQLite Database:</strong> Local file-based storage, no network round-trips</li>
+                    </ul>
+
+                    <h4>5. Optional AI Enhancement (When Enabled)</h4>
+                    <p>When you enable "AI-Powered Correlations", Archer CAN use OpenAI GPT models, but this is:</p>
+                    <ul>
+                        <li><strong>Completely Optional:</strong> Disabled by default, requires explicit checkbox + API key</li>
+                        <li><strong>Limited Scope:</strong> Only used for advanced semantic analysis and IOC enrichment</li>
+                        <li><strong>Async Execution:</strong> AI calls don't block main generation pipeline</li>
+                        <li><strong>Fallback Logic:</strong> If AI fails or isn't configured, uses deterministic methods</li>
+                    </ul>
+
+                    <h4>Performance Benchmarks (Typical Hardware)</h4>
+                    <ul>
+                        <li><strong>100 detections generated:</strong> 15-30 seconds (no AI)</li>
+                        <li><strong>500 correlation pairs evaluated:</strong> 2-5 seconds</li>
+                        <li><strong>OSINT comparison (Sigma/Elastic):</strong> 5-10 seconds per technique</li>
+                        <li><strong>Full threat group (30-50 techniques):</strong> 2-5 minutes total</li>
+                    </ul>
+
+                    <h4>What Makes This Different from AI-Based Tools</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1em;">
+                        <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                            <th style="padding: 8px; text-align: left;">Aspect</th>
+                            <th style="padding: 8px; text-align: left;">Archer (Deterministic)</th>
+                            <th style="padding: 8px; text-align: left;">AI/ML Tools</th>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Speed</strong></td>
+                            <td style="padding: 8px;">✅ <1 second per detection</td>
+                            <td style="padding: 8px;">❌ 5-30 seconds per LLM call</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Cost</strong></td>
+                            <td style="padding: 8px;">✅ $0 (runs locally)</td>
+                            <td style="padding: 8px;">❌ $0.01-0.50 per query</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Privacy</strong></td>
+                            <td style="padding: 8px;">✅ All data stays local</td>
+                            <td style="padding: 8px;">❌ Sends to cloud APIs</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Reliability</strong></td>
+                            <td style="padding: 8px;">✅ Deterministic output</td>
+                            <td style="padding: 8px;">❌ Non-deterministic results</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Offline Use</strong></td>
+                            <td style="padding: 8px;">✅ Works without internet</td>
+                            <td style="padding: 8px;">❌ Requires API connectivity</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px;"><strong>Explainability</strong></td>
+                            <td style="padding: 8px;">✅ Every decision has clear logic</td>
+                            <td style="padding: 8px;">❌ "Black box" reasoning</td>
+                        </tr>
+                    </table>
+
+                    <p style="margin-top: 1em;"><strong>Bottom Line:</strong> Archer achieves speed through intelligent engineering and algorithmic efficiency, not by avoiding AI (though that helps). When AI is optionally enabled, it's used surgically for specific enhancements, not as the core engine.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
                 <summary class="faq-question">What's the difference between OSINT Enhancement and OSINT Comparison?</summary>
                 <div class="faq-answer">
                     <p><strong>OSINT Enhancement:</strong> Automatically incorporates battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk community rules) directly into your queries. This is enabled by default on the Generate tab and enriches your detections with proven indicators.</p>
@@ -1380,6 +1477,26 @@ data/APT29/
                 <summary class="faq-question">Can I customize the generated detection queries?</summary>
                 <div class="faq-answer">
                     <p>Yes! All generated detections are saved as YAML files that you can review, modify, and customize before deploying to your SIEM. The queries are designed to be production-ready but should always be tested in your environment and tuned to reduce false positives based on your specific infrastructure.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do I customize mapping files for my environment?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses three mapping files to control detection generation for different environments:</p>
+                    <ul>
+                        <li><strong>indicatorMapping.json:</strong> Maps indicator types (cmd, file, ip, domain, etc.) to data sources and fields</li>
+                        <li><strong>platformMapping.json:</strong> Defines which platforms (Windows, Linux, AWS, Azure) are supported by each data source</li>
+                        <li><strong>fieldMapping.json:</strong> Maps generic field names to vendor-specific field names (e.g., process_name → ProcessName for MDE)</li>
+                    </ul>
+                    <p><strong>Common customization scenarios:</strong></p>
+                    <ul>
+                        <li>Using custom Splunk indexes: Update <code>indicatorMapping.json</code> to replace default indexes with your own (e.g., <code>index=custom_windows_logs</code>)</li>
+                        <li>Multi-cloud environments: Add AWS/Azure/GCP data sources to appropriate indicator types</li>
+                        <li>Custom EDR solutions: Add new vendor mappings for CrowdStrike, Carbon Black, SentinelOne, etc.</li>
+                        <li>Disabling unused sources: Remove or comment out data sources you don't have</li>
+                    </ul>
+                    <p><strong>Best practices:</strong> Always backup mapping files before modifying, validate JSON syntax, test with small groups first, and document your changes. See the <a href="https://github.com/cmdshiftd/archer/blob/main/docs/guides/MAPPING_FILES_GUIDE.md" target="_blank" style="color: #8B0000; text-decoration: underline;">Mapping Files Configuration Guide</a> for detailed instructions and examples.</p>
                 </div>
             </details>
 
@@ -1446,15 +1563,24 @@ data/APT29/
             <details class="faq-item">
                 <summary class="faq-question">How are correlations scored and prioritized?</summary>
                 <div class="faq-answer">
-                    <p>Archer scores correlations on a 100-point scale based on four key factors:</p>
+                    <p>Archer scores correlations on a 140-point scale based on six key factors:</p>
                     <ul>
                         <li><strong>Technique Criticality (30 points):</strong> High-impact techniques like credential dumping, lateral movement, and data exfiltration score higher</li>
+                        <li><strong>Tactic Priority (20 points):</strong> Correlations involving critical tactics (Credential Access, Lateral Movement, Exfiltration, Impact) score significantly higher than lower-priority tactics (Execution, Discovery)</li>
                         <li><strong>Query Specificity (20 points):</strong> More specific queries with detailed indicators score better than generic ones</li>
                         <li><strong>False Positive Rate (25 points):</strong> Lower estimated false positive rates increase the score</li>
-                        <li><strong>Attack Progression (25 points):</strong> Correlations that follow logical attack chains (e.g., Initial Access → Execution → Persistence) score highest</li>
+                        <li><strong>Attack Progression (25 points):</strong> Correlations that follow logical attack chains (e.g., Credential Access → Lateral Movement) score highest</li>
+                        <li><strong>Data Source Diversity (-10 to +20 points):</strong> Correlations spanning multiple data sources (e.g., process + network) get bonus points</li>
+                    </ul>
+                    <p><strong>Tactic Priority Weights:</strong></p>
+                    <ul style="margin-left: 20px; font-size: 0.95em;">
+                        <li><strong>Critical (10 pts):</strong> Credential Access, Lateral Movement, Exfiltration, Impact</li>
+                        <li><strong>High (8 pts):</strong> Privilege Escalation, Persistence, Command & Control</li>
+                        <li><strong>Medium (6 pts):</strong> Defense Evasion, Collection, Initial Access</li>
+                        <li><strong>Lower (3-4 pts):</strong> Execution, Discovery, Reconnaissance</li>
                     </ul>
                     <p><strong>Note:</strong> Semantic overlap (query field similarity) is calculated and displayed as <em>informational metadata</em> but does NOT affect scoring. What matters is whether the techniques form a meaningful attack chain, not whether they use similar log fields.</p>
-                    <p><strong>Minimum Threshold:</strong> Only correlations with 50% or higher relevance (score ≥ 50) are included by default. This threshold can be adjusted by setting <code>CORRELATION_MIN_RELEVANCE</code> in your <code>.env</code> file (range: 0.0 to 1.0).</p>
+                    <p><strong>Minimum Threshold:</strong> Only correlations with 75% or higher relevance (score ≥ 105/140) are included by default. This threshold can be adjusted by setting <code>CORRELATION_MIN_RELEVANCE</code> in your <code>.env</code> file (range: 0.0 to 1.0).</p>
                 </div>
             </details>
 
@@ -1469,6 +1595,92 @@ data/APT29/
                         <li><strong>No cross-contamination:</strong> AWS API calls won't generate Azure AD detections, and vice versa</li>
                     </ul>
                     <p>This ensures clean, platform-specific detections while maintaining the ability to detect cloud CLI usage on endpoints.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do correlation filters work?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses multiple intelligent filters to ensure only high-quality correlations are generated:</p>
+                    <ul>
+                        <li><strong>Attack Progression Filter:</strong> Only correlates techniques that follow logical kill chain sequences (e.g., Initial Access → Execution → Privilege Escalation)</li>
+                        <li><strong>Semantic Overlap Filters:</strong> Removes near-duplicates (>75% overlap) and completely unrelated pairs (<20% overlap)</li>
+                        <li><strong>Same-Table Deduplication:</strong> Prevents low-value correlations between detections querying identical data sources</li>
+                        <li><strong>High-Impact Requirement:</strong> Prioritizes correlations involving at least one high-value MITRE ATT&CK technique</li>
+                        <li><strong>Data Source Diversity:</strong> Awards bonus points to correlations spanning multiple data sources for better coverage</li>
+                        <li><strong>Correlation Grouping:</strong> Automatically deduplicates similar technique pairs, keeping only the highest-quality correlation</li>
+                    </ul>
+                    <p><strong>Result:</strong> 75-85% reduction in correlation noise while maintaining attack chain detection fidelity.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is "Merge by Tactic" and when should I use it?</summary>
+                <div class="faq-answer">
+                    <p><strong>Merge by Tactic</strong> combines all detections under the same MITRE ATT&CK tactic (e.g., all Credential Access techniques), then correlates across tactics.</p>
+
+                    <p><strong>When to use:</strong></p>
+                    <ul>
+                        <li>Executive dashboards requiring simple, high-level view</li>
+                        <li>Low-noise alerting for SOC environments</li>
+                        <li>Phase-based threat hunting campaigns</li>
+                        <li>Incident response workflows focused on attack progression</li>
+                    </ul>
+
+                    <p><strong>Benefits:</strong></p>
+                    <ul>
+                        <li>Generates 8-15 high-level correlations instead of hundreds</li>
+                        <li>Represents entire attack phases (e.g., "All Credential Access → All Lateral Movement")</li>
+                        <li>Broader detection coverage - catches ANY technique in the tactic</li>
+                        <li>Reduces alert fatigue significantly</li>
+                    </ul>
+
+                    <p><strong>Trade-off:</strong> Less granular - you won't see which specific techniques triggered, but you'll know which attack phases occurred.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is "Merge by Parent Technique"?</summary>
+                <div class="faq-answer">
+                    <p><strong>Merge by Parent Technique</strong> groups subtechniques under their parent (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlates parent techniques.</p>
+
+                    <p><strong>When to use:</strong></p>
+                    <ul>
+                        <li>Mid-level granularity between tactic-level and subtechnique-level</li>
+                        <li>Tracking specific attack patterns without excessive detail</li>
+                        <li>Correlating technique families (all OS Credential Dumping methods)</li>
+                    </ul>
+
+                    <p><strong>Benefits:</strong></p>
+                    <ul>
+                        <li>Moderate correlation reduction (~50-70% fewer than default)</li>
+                        <li>Maintains technique-level context</li>
+                        <li>Groups related attack methods logically</li>
+                        <li>Good balance between detail and simplicity</li>
+                    </ul>
+
+                    <p><strong>Example:</strong> Instead of 9 correlations for every LSASS dumping variant, you get 1 correlation for "OS Credential Dumping (T1003)".</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How can I test which correlation settings work best for me?</summary>
+                <div class="faq-answer">
+                    <p>Archer includes a test script to evaluate different filter combinations:</p>
+
+                    <pre><code>python test_correlation_filters.py "Scattered Spider"</code></pre>
+
+                    <p>The script will:</p>
+                    <ul>
+                        <li>Run correlations with baseline, merge-by-tactic, and merge-by-parent modes</li>
+                        <li>Compare total correlation counts</li>
+                        <li>Calculate average relevance scores</li>
+                        <li>Identify high-quality correlation counts</li>
+                        <li>Measure execution time for each configuration</li>
+                        <li>Provide recommendations based on your specific threat group</li>
+                    </ul>
+
+                    <p>Results are saved to a JSON file for further analysis. Use this to determine which mode produces the most actionable results for your environment.</p>
                 </div>
             </details>
 

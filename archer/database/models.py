@@ -35,6 +35,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     full_name = Column(String(255), nullable=False)
+    team = Column(String(255), nullable=True)  # User's team/department
     password_hash = Column(String(255), nullable=False)  # bcrypt hash
     role = Column(Enum(UserRole), nullable=False, default=UserRole.STANDARD)
     is_active = Column(Boolean, default=True, nullable=False)
