@@ -541,13 +541,14 @@ def _merge_correlation_group(correlations: list) -> dict:
 
 def _build_merged_query(correlations: list) -> str:
     """
-    Build a merged KQL query that combines multiple second techniques with OR conditions.
+    Build a merged query that combines multiple second techniques with OR conditions.
+    Supports both KQL (MDE) and Splunk query languages.
 
     Args:
         correlations: List of correlations to merge
 
     Returns:
-        Combined KQL query string
+        Combined query string
     """
     if not correlations:
         return ""
@@ -555,10 +556,25 @@ def _build_merged_query(correlations: list) -> str:
     # Extract first technique query (same for all correlations)
     first_corr = correlations[0]
     combined_query = first_corr.get('combined_query', '')
+    vendor = first_corr.get('vendor', '').lower()
 
     # Parse out the first technique section
     import re
 
+    # Detect if this is a Splunk query
+    is_splunk = (vendor == 'splunk' or
+                 (isinstance(combined_query, str) and
+                  ('index=' in combined_query or 'earliest=' in combined_query)))
+
+    # For Splunk queries, we can't easily merge the transaction-based correlation syntax
+    # Return the first correlation's combined query as-is
+    # TODO: Implement proper Splunk correlation merging if needed
+    if is_splunk:
+        # For now, just return the original combined query
+        # Splunk correlations use transaction-based syntax which is complex to merge
+        return combined_query
+
+    # KQL/MDE query merging logic below
     # Extract the first "let" statement (first technique)
     first_let_match = re.search(r'(let\s+\w+\s*=.*?\|\s*project[^;]+;)', combined_query, re.DOTALL)
     if not first_let_match:
@@ -590,8 +606,14 @@ def _build_merged_query(correlations: list) -> str:
                 table_counter[table_name] = 0
             table_counter[table_name] += 1
 
+            # Strip any existing comment lines from the where_condition to avoid duplication
+            # Remove lines that start with // (with optional leading whitespace)
+            condition_lines = where_condition.split('\n')
+            cleaned_lines = [line for line in condition_lines if not line.lstrip().startswith('//')]
+            cleaned_condition = '\n'.join(cleaned_lines).strip()
+
             # Format the condition with technique comment
-            second_conditions.append(f"  // {second_tech}\n  ({where_condition})")
+            second_conditions.append(f"  // {second_tech}\n  ({cleaned_condition})")
 
     # Build the merged query
     if not second_conditions:

@@ -637,7 +637,7 @@ body, html {
     <div class="loading-indicator" id="loading-indicator">
       <div style="text-align: center;">
         <div class="spinner" id="loading-spinner"></div>
-        <p style="margin-top: 1.5em; font-size: 18px; color: #666; font-weight: 500; letter-spacing: 0.5px;">Stand by...</p>
+        <p id="loading-message" style="margin-top: 1.5em; font-size: 18px; color: #666; font-weight: 500; letter-spacing: 0.5px;">Stand by...</p>
       </div>
     </div>
 
@@ -860,6 +860,53 @@ if (downloadAllBtn) {
 })();
 
 // Crawling animal animation REMOVED - animal now only appears in spinner
+
+// Rotate loading messages
+(function() {
+  const groupName = "{{ group_name }}";
+  const cveMatch = groupName.match(/CVE-\d{4}-\d+/i);
+
+  const messages = [
+    `Searching for ${cveMatch ? cveMatch[0] : groupName}...`,
+    "Gathering OSINT...",
+    "Analysing Mappings...",
+    "Collecting 1s and 0s...",
+    "Mining Crypto...",
+    "Contacting Skynet...",
+    "Issuing Symlinks...",
+    "Assigning variables...",
+    "Downloading more RAM..."
+  ];
+
+  let currentIndex = 0;
+  const messageElement = document.getElementById('loading-message');
+  const loadingIndicator = document.getElementById('loading-indicator');
+
+  function rotateMessage() {
+    // Only rotate if loading indicator is still visible
+    if (!loadingIndicator.classList.contains('fade-out') &&
+        !loadingIndicator.classList.contains('hidden')) {
+      messageElement.textContent = messages[currentIndex];
+      currentIndex = (currentIndex + 1) % messages.length;
+    }
+  }
+
+  // Initial message
+  rotateMessage();
+
+  // Rotate every 3 seconds
+  const rotationInterval = setInterval(rotateMessage, 3000);
+
+  // Clean up interval when loading is done
+  const observer = new MutationObserver(function(mutations) {
+    if (loadingIndicator.classList.contains('hidden')) {
+      clearInterval(rotationInterval);
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(loadingIndicator, { attributes: true, attributeFilter: ['class'] });
+})();
 </script>
 
 {% endblock %}

@@ -252,8 +252,8 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
 
     # Only construct YAML if there are identifiers for detection
     if identifiers:
-        # Compare with OSINT if comparison is enabled
-        if osint_comparison:
+        # Run OSINT search if either comparison OR enrichment is enabled
+        if osint_comparison or osint_enhancement:
             print(f" 📊 Indicators found - comparing with OSINT sources...")
 
             from archer.build.osint_comparison import search_osint_for_technique
@@ -284,6 +284,9 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                 query_snippets = osint_indicators_raw.get("query_snippets", [])
 
                 # Extract operation names and other searchable values from query snippets
+                # Note: Splunk-to-KQL field translation and filtering is now handled by
+                # osint_query_enhancer.py during query enhancement, so we just extract
+                # indicator values here
                 extracted_operations = []
                 extracted_commands = []
 
@@ -460,10 +463,10 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
             else:
                 print(f" ❌ No identifiers found for {name}; no detections generated\n")
     else:
-        # No identifiers from MITRE - try OSINT comparison if enabled
+        # No identifiers from MITRE - try OSINT search if either comparison or enrichment is enabled
         print(f" ⚠️  No identifiers found for {name} from MITRE ATT&CK data")
 
-        if osint_comparison:
+        if osint_comparison or osint_enhancement:
             from archer.build.osint_comparison import search_osint_for_technique, should_create_detection
 
             # Search OSINT sources
@@ -474,13 +477,13 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                 platforms=technique_platforms
             )
         else:
-            # OSINT comparison disabled
-            print(f" ℹ️  OSINT Comparison disabled - skipping OSINT search")
+            # Both OSINT features disabled
+            print(f" ℹ️  OSINT Comparison and Enrichment disabled - skipping OSINT search")
             osint_found = False
             osint_data = None
 
         # Determine if we should create the detection
-        if osint_found and osint_comparison:
+        if osint_found and (osint_comparison or osint_enhancement):
             from archer.build.osint_comparison import should_create_detection
             if should_create_detection(has_mitre_indicators=False, osint_found=osint_found):
                 print(f" ✅ OSINT comparison successful - creating detection with OSINT metadata")

@@ -1149,11 +1149,28 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
         file_info: Dictionary mapping file paths to their YAML data
 
     Returns:
-        KQL query string with JOINs and technique comments
+        KQL query string with JOINs and technique comments (MDE only)
+        or original combined query string for other vendors
     """
     # Get all queries - may contain UNION queries from super-merging
     query_a = corr_data.get("query_a", "")
     query_b = corr_data.get("query_b", "")
+    vendor = corr_data.get("vendor", "").lower()
+
+    # Detect if this is a Splunk or non-MDE query
+    is_splunk = (vendor == 'splunk' or
+                 (isinstance(query_a, str) and query_a.lstrip().startswith("index=")) or
+                 (isinstance(query_b, str) and query_b.lstrip().startswith("index=")))
+
+    # For Splunk queries, return the already-generated combined query
+    # The _combine_queries() function already handles Splunk correlation syntax properly
+    if is_splunk:
+        combined = corr_data.get("combined_query", "")
+        if combined:
+            return combined
+        # Fallback: call _combine_queries to generate it
+        return _combine_queries(vendor, query_a, query_b,
+                               corr_data.get("a"), corr_data.get("b"))
 
     # Get techniques involved to map queries to techniques
     techniques_involved = corr_data.get("techniques_involved", [])
@@ -1202,8 +1219,11 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
         # Look through file_info to find matching query
         for path, info in file_info.items():
             if info.get("query", "").strip() == query:
-                basename = os.path.basename(path).replace(".yaml", "").replace(".yml", "")
-                technique_name = basename.split("_")[0] if "_" in basename else basename
+                # Use the 'name' field from YAML if available, otherwise fall back to filename
+                technique_name = info.get("name")
+                if not technique_name:
+                    basename = os.path.basename(path).replace(".yaml", "").replace(".yml", "")
+                    technique_name = basename.split("_")[0] if "_" in basename else basename
                 tactics = info.get("tactics", [])
                 tactic = tactics[0] if tactics else "Unknown"
                 break
@@ -1246,7 +1266,7 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
         # Merge where clauses with technique comments
         where_conditions = []
         for qm in queries:
-            technique_comment = f"// {qm['technique']}"
+            technique_comment = f"// {_format_technique_name(qm['technique'])}"
             # Clean up where clause - remove timestamp filter and any remaining pipe operators
             where_clause = qm["where"]
             where_clause = where_clause.replace("Timestamp > ago(1d)", "").strip()
@@ -1295,6 +1315,47 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
     join_query += "\n| project *"
 
     return join_query
+
+
+def _format_technique_name(technique_name: str) -> str:
+    """
+    Format technique names with proper spacing for display in comments.
+
+    Examples:
+        "PasstheHash" -> "Pass the Hash"
+        "PasstheTicket" -> "Pass the Ticket"
+        "Multi-FactorAuthentication" -> "Multi-Factor Authentication"
+        "CloudServices" -> "Cloud Services"
+        "Multi-Factor Authentication" -> "Multi-Factor Authentication" (already formatted)
+
+    Args:
+        technique_name: Raw technique name (from YAML 'name' field or filename)
+
+    Returns:
+        Formatted technique name with proper spacing
+    """
+    # If the name already has spaces, it's likely properly formatted from YAML - return as-is
+    if ' ' in technique_name:
+        return technique_name
+
+    # Handle common patterns for filenames
+    name = technique_name
+
+    # Replace common compound words
+    name = name.replace("Passthe", "Pass the ")
+    name = name.replace("Multithe", "Multi the ")
+
+    # Add space before capital letters (except at start)
+    # This converts CamelCase to Camel Case
+    name = re.sub(r'(?<!^)(?=[A-Z])', ' ', name)
+
+    # Replace hyphens with spaces (Multi-Factor -> Multi Factor)
+    name = name.replace('-', ' ')
+
+    # Clean up any double spaces
+    name = ' '.join(name.split())
+
+    return name
 
 
 def _get_account_field_for_table(table_name: str) -> str:

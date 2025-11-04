@@ -534,9 +534,16 @@ async function refresh(){
         console.warn(`Unexpected correlation status: "${correlationStatus}"`);
       }
 
+      // Debug logging for correlation progress
+      if (correlationStatus === 'genai_processing' && correlationProcessed > 0) {
+        console.log(`Correlation progress: ${correlationProcessed}/${correlationTotal} = ${correlationPct}%`);
+      }
+
       correlationFill.style.width = correlationPct + '%';
       if (correlationPct >= 100) {
         correlationFill.classList.add('complete');
+      } else {
+        correlationFill.classList.remove('complete');
       }
     }
 

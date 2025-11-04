@@ -7,8 +7,10 @@ from OSINT sources (Elastic, Splunk, Sigma).
 
 The enhancement process:
 1. Extract key detection patterns from OSINT query snippets
-2. Translate field names to target schema (Elastic -> Splunk, etc.)
+2. Translate field names to target schema using pySigma pipelines when available
 3. Merge patterns into generated queries as additional OR conditions
+
+Uses pySigma for industry-standard field mapping where possible.
 """
 
 import re
@@ -17,6 +19,16 @@ from typing import Dict, List, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# Try to import pySigma for advanced field mapping
+try:
+    from sigma.backends.microsoft365defender import KustoBackend
+    from sigma.pipelines.microsoft365defender import microsoft_365_defender_pipeline
+    from sigma.collection import SigmaCollection
+    HAS_PYSIGMA = True
+except ImportError:
+    HAS_PYSIGMA = False
+    logger.warning("pySigma not available - using fallback field mappings")
+
 
 class OSINTQueryEnhancer:
     """Enhances queries with OSINT detection patterns"""
@@ -24,52 +36,258 @@ class OSINTQueryEnhancer:
     def __init__(self, target_vendor="Splunk"):
         self.target_vendor = target_vendor
         self.field_mappings = self._load_field_mappings()
+        self.mde_valid_fields = self._load_mde_schema_fields()
+        self.pysigma_field_cache = self._load_pysigma_field_mappings()
+
+    def _load_mde_schema_fields(self) -> set:
+        """
+        Load valid MDE field names from schemaMDE.json
+
+        Returns set of all valid MDE field names across all tables
+        """
+        try:
+            import json
+            import os
+            schema_path = os.path.join(os.path.dirname(__file__), '..', 'mappings', 'schemaMDE.json')
+            with open(schema_path, 'r') as f:
+                mde_schema = json.load(f)
+
+            # Extract fields from all tables
+            valid_fields = set()
+            for table, query in mde_schema.items():
+                # Extract fields from "summarize by Field1, Field2, ..."
+                match = re.search(r'summarize by (.+)', query)
+                if match:
+                    fields = [f.strip() for f in match.group(1).split(',')]
+                    valid_fields.update(fields)
+
+            logger.info(f"Loaded {len(valid_fields)} valid MDE fields from schema")
+            return valid_fields
+        except Exception as e:
+            logger.warning(f"Could not load MDE schema: {e}")
+            return set()
+
+    def _load_pysigma_field_mappings(self) -> Dict[str, str]:
+        """
+        Pre-load pySigma field mappings for common Sigma fields
+
+        This avoids the performance overhead of converting individual fields on-the-fly.
+        Returns a dictionary of Sigma field → KQL field mappings.
+        """
+        if not HAS_PYSIGMA or self.target_vendor != "MDE":
+            return {}
+
+        # Common Sigma field names to pre-translate
+        common_sigma_fields = [
+            "CommandLine", "Image", "ParentImage", "ParentCommandLine",
+            "TargetFilename", "FileName", "User", "ParentUser",
+            "ProcessId", "ParentProcessId", "DestinationIp", "SourceIp",
+            "DestinationPort", "SourcePort", "RegistryKey", "RegistryValueData",
+            "TargetObject", "Details", "Hashes", "md5", "sha1", "sha256",
+            "IntegrityLevel", "Imphash"
+        ]
+
+        field_cache = {}
+        try:
+            pipeline = microsoft_365_defender_pipeline()
+            backend = KustoBackend(processing_pipeline=pipeline)
+
+            for field in common_sigma_fields:
+                try:
+                    test_rule = f"""
+title: Field Mapping Test
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        {field}: test_value
+    condition: selection
+"""
+                    sigma_collection = SigmaCollection.from_yaml(test_rule)
+                    result = backend.convert(sigma_collection)
+
+                    if result:
+                        kql = result[0]
+                        # Extract KQL field name from output
+                        match = re.search(r'(\w+)\s+(?:==|contains|endswith|startswith|has_any)', kql)
+                        if match:
+                            kql_field = match.group(1)
+                            field_cache[field] = kql_field
+                            logger.debug(f"pySigma: {field} → {kql_field}")
+                except Exception:
+                    # Field not supported by pySigma - skip
+                    field_cache[field] = None
+
+            logger.info(f"Cached {len([v for v in field_cache.values() if v])} pySigma field mappings")
+        except Exception as e:
+            logger.warning(f"Could not load pySigma field mappings: {e}")
+
+        return field_cache
 
     def _load_field_mappings(self) -> Dict[str, Dict[str, str]]:
         """
         Load field name mappings for schema translation
         Maps: source_vendor -> {source_field: target_field}
+
+        For OSINT-to-KQL (MDE) mappings:
+        - Maps source field names (Splunk/Elastic/Sigma/CAR) to their KQL equivalents
+        - Uses None for fields that should be skipped (no KQL equivalent)
         """
         return {
             "Elastic": {
                 # Azure/Cloud fields
-                "event.dataset": "source",
-                "event.action": "EventID",
-                "event.outcome": "EventResult",
+                "event.dataset": None,  # ECS-specific, no direct KQL mapping
+                "event.action": "ActionType",  # Maps to MDE ActionType
+                "event.outcome": None,  # Generic field, context-dependent
                 "azure.auditlogs.operation_name": "OperationName",
                 "azure.auditlogs.properties.category": "Category",
-                "azure.auditlogs.properties.target_resources": "TargetResources",
-                "azure.activitylogs.properties.requestbody.properties.roleDefinitionId": "RoleDefinitionId",
+                "azure.auditlogs.properties.target_resources": None,  # Complex nested field
+                "azure.activitylogs.properties.requestbody.properties.roleDefinitionId": None,  # Complex nested field
 
-                # Process fields
-                "process.name": "Image",
-                "process.command_line": "CommandLine",
-                "process.executable": "ProcessPath",
-                "process.parent.name": "ParentImage",
-                "process.parent.command_line": "ParentCommandLine",
+                # Process fields (ECS to KQL/MDE)
+                "process.name": "FileName",  # ECS process.name -> MDE FileName
+                "process.executable": "FolderPath",  # ECS process.executable -> MDE FolderPath (full path)
+                "process.command_line": "ProcessCommandLine",  # ECS -> MDE
+                "process.parent.name": "InitiatingProcessFileName",  # ECS parent -> MDE InitiatingProcess
+                "process.parent.executable": "InitiatingProcessFolderPath",
+                "process.parent.command_line": "InitiatingProcessCommandLine",
 
-                # File fields
-                "file.name": "TargetFilename",
-                "file.path": "TargetObject",
-                "file.extension": "FileExtension",
+                # File fields (ECS to KQL/MDE)
+                "file.name": "FileName",
+                "file.path": "FolderPath",
+                "file.extension": None,  # No direct MDE field, skip
+                "file.hash.sha256": "SHA256",
+                "file.hash.sha1": "SHA1",
+                "file.hash.md5": "MD5",
 
-                # Network fields
-                "destination.ip": "DestinationIp",
-                "destination.port": "DestinationPort",
-                "source.ip": "SourceIp",
-                "source.port": "SourcePort",
+                # Network fields (ECS to KQL/MDE)
+                "destination.ip": "RemoteIP",
+                "destination.port": "RemotePort",
+                "source.ip": "LocalIP",
+                "source.port": "LocalPort",
+                "destination.address": "RemoteUrl",
+                "source.address": "LocalIP",
 
-                # User/Account fields
-                "user.name": "User",
-                "user.domain": "Domain",
+                # User/Account fields (ECS to KQL/MDE)
+                "user.name": "AccountName",
+                "user.domain": "AccountDomain",
+                "user.id": None,  # Generic ID, skip
             },
             "Sigma": {
-                # Sigma uses generic field names
-                "CommandLine": "CommandLine",
-                "Image": "Image",
-                "ParentImage": "ParentImage",
-                "TargetFilename": "TargetFilename",
-                "DestinationIp": "DestinationIp",
+                # Sigma-to-KQL (MDE) field mappings
+                # Sigma uses Windows/Sysmon-like field names
+
+                # Process fields
+                "CommandLine": "ProcessCommandLine",
+                "Image": "FileName",  # Sigma 'Image' (process path) -> MDE FileName
+                "ParentImage": "InitiatingProcessFolderPath",  # Sigma ParentImage -> MDE InitiatingProcessFolderPath
+                "ParentCommandLine": "InitiatingProcessCommandLine",
+                "ParentProcessId": None,  # Not in standard MDE tables
+                "ProcessId": None,  # Not in standard MDE tables
+
+                # File fields
+                "TargetFilename": "FileName",
+                "TargetObject": "RegistryKey",  # For registry operations
+                "FileName": "FileName",
+
+                # Network fields
+                "DestinationIp": "RemoteIP",
+                "DestinationPort": "RemotePort",
+                "SourceIp": "LocalIP",
+                "SourcePort": "LocalPort",
+
+                # User fields
+                "User": "AccountName",
+                "LogonId": "LogonId",
+
+                # Registry fields
+                "TargetObject": "RegistryKey",
+                "Details": "RegistryValueData",
+
+                # Hash fields
+                "Hashes": None,  # Sigma uses combined hash field, needs parsing
+                "md5": "MD5",
+                "sha1": "SHA1",
+                "sha256": "SHA256",
+
+                # Fields to SKIP
+                "IntegrityLevel": None,  # Sysmon-specific, no MDE equivalent
+                "Imphash": None,  # Import hash, not in MDE standard tables
+            },
+            "Splunk": {
+                # Splunk-to-KQL (MDE) field mappings
+                # Process fields
+                "process": "FileName",  # Splunk 'process' field maps to KQL 'FileName'
+                "ParentUser": "InitiatingProcessAccountName",  # Splunk 'ParentUser' maps to KQL 'InitiatingProcessAccountName'
+                "parent_process": "InitiatingProcessFolderPath",  # Parent process path
+                "parent_process_name": "InitiatingProcessFolderPath",  # Parent process path
+                "process_name": "FileName",
+                "process_path": "FolderPath",
+
+                # User/Account fields
+                "User": "AccountName",
+                "src_user": "AccountName",
+                "user": "AccountName",
+                "dest_user": "AccountName",
+
+                # File fields
+                "file_name": "FileName",
+                "file_path": "FolderPath",
+
+                # Command fields
+                "CommandLine": "ProcessCommandLine",
+                "ParentCommandLine": "InitiatingProcessCommandLine",
+
+                # Network fields
+                "src_ip": "LocalIP",
+                "dest_ip": "RemoteIP",
+                "src_port": "LocalPort",
+                "dest_port": "RemotePort",
+
+                # Fields to SKIP (Splunk-only, no KQL equivalent)
+                # Using None as value means "skip this field"
+                "process_integrity_level": None,  # Only in DeviceProcessEvents, not DeviceEvents
+                "ProcessIntegrityLevel": None,  # Only in DeviceProcessEvents
+                "IntegrityLevel": None,  # Splunk Sysmon field, no direct KQL equivalent
+                "SidHistory": None,  # AD-specific, not in MDE tables
+                "EnabledPrivilegeList": None,  # No direct KQL equivalent
+                "Processes.process": None,  # Splunk data model syntax
+                "Processes.user": None,  # Splunk data model syntax
+                "Processes.process_integrity_level": None,  # Splunk data model syntax
+                "Endpoint.Processes": None,  # Splunk data model
+                "signature": None,  # Splunk ES field, context-dependent
+            },
+            "CAR": {
+                # MITRE CAR-to-KQL (MDE) field mappings
+                # CAR uses a data model similar to CIM/Splunk
+
+                # Process fields
+                "exe": "FolderPath",  # CAR 'exe' -> full executable path
+                "command_line": "ProcessCommandLine",
+                "parent_exe": "InitiatingProcessFolderPath",
+                "parent_command_line": "InitiatingProcessCommandLine",
+                "pid": "ProcessId",
+                "ppid": "InitiatingProcessId",
+
+                # User fields
+                "user": "AccountName",
+                "uid": None,  # Unix UID, not applicable to Windows MDE
+
+                # File fields
+                "file_name": "FileName",
+                "file_path": "FolderPath",
+
+                # Network fields
+                "src_ip": "LocalIP",
+                "dest_ip": "RemoteIP",
+                "src_port": "LocalPort",
+                "dest_port": "RemotePort",
+                "hostname": "DeviceName",
+
+                # Fields to SKIP
+                "sysmon_event_id": None,  # Sysmon-specific
+                "event_type": None,  # Generic field
             }
         }
 
@@ -169,24 +387,132 @@ class OSINTQueryEnhancer:
 
         return patterns
 
-    def translate_field(self, field: str, source_vendor: str) -> str:
-        """Translate field name from source schema to target schema"""
+    def translate_field_with_pysigma(self, field: str, source_vendor: str) -> Optional[str]:
+        """
+        Use pySigma to translate field names (for Sigma rules targeting MDE/KQL)
+
+        Returns:
+            - Translated field name if pySigma can map it
+            - None if field should be skipped or pySigma not available
+        """
+        if not HAS_PYSIGMA or self.target_vendor != "MDE" or source_vendor != "Sigma":
+            return None
+
+        try:
+            # pySigma's microsoft_365_defender pipeline has built-in field mappings
+            # We can construct a minimal Sigma rule to test field translation
+            test_rule = f"""
+title: Field Translation Test
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        {field}: test_value
+    condition: selection
+"""
+            pipeline = microsoft_365_defender_pipeline()
+            backend = KustoBackend(processing_pipeline=pipeline)
+            sigma_collection = SigmaCollection.from_yaml(test_rule)
+
+            # Convert and extract the field name from the KQL output
+            result = backend.convert(sigma_collection)
+            if result:
+                kql = result[0]
+                # Extract field name from pattern like "FieldName == "test_value"" or "FieldName contains "test_value""
+                match = re.search(r'(\w+)\s+(?:==|contains|endswith|startswith)', kql)
+                if match:
+                    return match.group(1)
+        except Exception as e:
+            # Field not supported by pySigma pipeline - will skip
+            logger.debug(f"pySigma field translation failed for {field}: {e}")
+            return None
+
+        return None
+
+    def translate_field(self, field: str, source_vendor: str) -> Optional[str]:
+        """
+        Translate field name from source schema to target schema
+
+        Uses pySigma for Sigma→KQL translation when available, otherwise uses fallback mappings.
+        Validates translated fields against schemaMDE.json for MDE target.
+
+        Returns:
+            - Translated field name if mapping exists and is valid
+            - Original field name if no mapping exists
+            - None if field should be skipped (has no equivalent in target schema)
+        """
+        # Try pySigma cache first for Sigma rules targeting MDE
+        if source_vendor == "Sigma" and self.target_vendor == "MDE" and self.pysigma_field_cache:
+            if field in self.pysigma_field_cache:
+                cached_result = self.pysigma_field_cache[field]
+                if cached_result:
+                    logger.debug(f"pySigma cache hit: {field} → {cached_result}")
+                    return cached_result
+                else:
+                    # Cached as unsupported
+                    logger.debug(f"pySigma cache: {field} is unsupported")
+                    return None
+
+        # Fallback to manual mappings
         if source_vendor not in self.field_mappings:
+            # If targeting MDE and no mapping, check if field already exists in schema
+            if self.target_vendor == "MDE" and self.mde_valid_fields:
+                if field in self.mde_valid_fields:
+                    return field  # Field name is already valid MDE field
+                else:
+                    logger.debug(f"Field '{field}' not found in MDE schema - skipping")
+                    return None  # Field doesn't exist in MDE schema
             return field
 
         mapping = self.field_mappings[source_vendor]
-        return mapping.get(field, field)
+
+        # Check if field exists in mapping
+        if field in mapping:
+            translated = mapping[field]
+            # None means "skip this field"
+            if translated is None:
+                return None
+
+            # Validate translated field against MDE schema
+            if self.target_vendor == "MDE" and self.mde_valid_fields:
+                if translated not in self.mde_valid_fields:
+                    logger.warning(f"Mapped field '{field}' → '{translated}' not found in MDE schema - skipping")
+                    return None
+
+            return translated
+
+        # No mapping found - check if field already valid for target
+        if self.target_vendor == "MDE" and self.mde_valid_fields:
+            if field in self.mde_valid_fields:
+                return field  # Field name is already valid
+            else:
+                logger.debug(f"Unmapped field '{field}' not found in MDE schema - skipping")
+                return None
+
+        # Return original field name
+        return field
 
     def generate_enhancement_conditions(self, patterns: List[Dict[str, Any]], source_vendor: str) -> List[str]:
         """
         Generate query conditions from extracted patterns
 
         Returns list of condition strings that can be added to the main query
+        Skips patterns where the source field has no target equivalent (translates to None)
         """
         conditions = []
+        skipped_fields = []
 
         for pattern in patterns:
-            field = self.translate_field(pattern["field"], source_vendor)
+            # Translate field name (may return None if field should be skipped)
+            translated_field = self.translate_field(pattern["field"], source_vendor)
+
+            # Skip this pattern if field has no target equivalent
+            if translated_field is None:
+                skipped_fields.append(pattern["field"])
+                continue
+
+            field = translated_field
             operator = pattern["operator"]
             values = pattern["values"]
 
@@ -215,6 +541,11 @@ class OSINTQueryEnhancer:
                 elif operator == "IN":
                     values_str = ', '.join([f'"{v}"' for v in values])
                     conditions.append(f'{field} has_any ({values_str})')
+
+        # Log skipped fields if any
+        if skipped_fields:
+            unique_skipped = list(set(skipped_fields))
+            logger.info(f"Skipped {len(unique_skipped)} Splunk-only field(s) with no {self.target_vendor} equivalent: {', '.join(unique_skipped[:5])}")
 
         return conditions
 
