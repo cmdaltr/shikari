@@ -448,18 +448,17 @@ def merge_correlations(vendor_corrs: list) -> list:
                 if yaml_data:
                     tactics = yaml_data.get('tactics', [])
 
-                    # Find the most specific (non-common) tactic as primary
+                    # Find the first tactic as primary (prefer non-common tactics)
                     primary_tactic = "Unknown"
+                    # First try to find a non-common tactic
                     for tactic in tactics:
                         if tactic not in common_tactics:
                             primary_tactic = tactic
                             break
 
-                    # If all tactics are common, don't group - keep separate
-                    if primary_tactic == "Unknown" or primary_tactic in common_tactics:
-                        # Use technique name as unique key instead (prevents merging)
-                        basename_b = os.path.basename(file_b).replace('.yaml', '').split('_')[0]
-                        primary_tactic = f"_unique_{basename_b}"
+                    # If no non-common tactic found, use the first tactic (even if common)
+                    if primary_tactic == "Unknown" and tactics:
+                        primary_tactic = tactics[0]
 
                     if primary_tactic not in by_tactic:
                         by_tactic[primary_tactic] = []
@@ -485,6 +484,44 @@ def merge_correlations(vendor_corrs: list) -> list:
     return merged_correlations
 
 
+def find_yaml_for_technique(technique_name: str, yaml_dir: str) -> str:
+    """
+    Find the YAML file for a given technique name by searching the directory.
+
+    Args:
+        technique_name: The technique name to search for (e.g., "Clear Windows Event Logs")
+        yaml_dir: Directory containing YAML files
+
+    Returns:
+        Filename of matching YAML file, or None if not found
+    """
+    import glob
+
+    # Normalize technique name for filename matching (remove spaces, special chars)
+    normalized = technique_name.replace(' ', '').replace('-', '').lower()
+
+    # Search for YAML files
+    yaml_files = glob.glob(os.path.join(yaml_dir, '*.yaml'))
+
+    for yaml_file in yaml_files:
+        yaml_data = load_yaml_file(yaml_file)
+        if yaml_data:
+            # Check if the 'name' field matches
+            yaml_name = yaml_data.get('name', '')
+            if yaml_name == technique_name:
+                return os.path.basename(yaml_file)
+
+    # Fallback: try filename matching
+    for yaml_file in yaml_files:
+        basename = os.path.basename(yaml_file).replace('.yaml', '')
+        # Remove data source suffix (e.g., "_DeviceProcessEvents")
+        basename_clean = basename.split('_')[0].lower()
+        if basename_clean == normalized:
+            return os.path.basename(yaml_file)
+
+    return None
+
+
 def _merge_correlation_group(correlations: list) -> dict:
     """
     Merge multiple correlations into a single correlation with combined queries.
@@ -501,9 +538,22 @@ def _merge_correlation_group(correlations: list) -> dict:
     # Use first correlation as base
     base = correlations[0].copy()
 
-    # Collect all file_b paths
+    # Collect all file_b paths and technique names with their tactics
     files_b = []
-    techniques_involved = [base.get('techniques_involved', [])[0]] if base.get('techniques_involved') else []
+    techniques_with_tactics = []
+
+    # Get first technique
+    first_tech = base.get('techniques_involved', [])[0] if base.get('techniques_involved') else None
+    if first_tech:
+        # Get primary tactic of first technique
+        file_a = base.get('a', '')
+        full_path_a = os.path.join(GENERATE_DIR, os.path.basename(file_a))
+        if os.path.exists(full_path_a):
+            yaml_data = load_yaml_file(full_path_a)
+            if yaml_data:
+                tactics_a = yaml_data.get('tactics', [])
+                primary_tactic_a = tactics_a[0] if tactics_a else "Unknown"
+                techniques_with_tactics.append((first_tech, primary_tactic_a))
 
     # Extract second technique names and file paths
     for corr in correlations:
@@ -511,12 +561,40 @@ def _merge_correlation_group(correlations: list) -> dict:
         if file_b:
             files_b.append(file_b)
 
-        # Add second technique name
+        # Add ALL techniques after the first one (not just index [1])
         tech_involved = corr.get('techniques_involved', [])
         if len(tech_involved) > 1:
-            second_tech = tech_involved[1]
-            if second_tech not in techniques_involved:
-                techniques_involved.append(second_tech)
+            # Iterate through all techniques starting from index 1
+            for idx in range(1, len(tech_involved)):
+                second_tech = tech_involved[idx]
+                # Check if already added
+                if not any(t[0] == second_tech for t in techniques_with_tactics):
+                    # Get primary tactic of this technique by finding its YAML file
+                    # Need to find the file for this specific technique
+                    tech_file = find_yaml_for_technique(second_tech, GENERATE_DIR)
+                    if tech_file:
+                        full_path = os.path.join(GENERATE_DIR, tech_file)
+                        if os.path.exists(full_path):
+                            yaml_data = load_yaml_file(full_path)
+                            if yaml_data:
+                                tactics = yaml_data.get('tactics', [])
+                                primary_tactic = tactics[0] if tactics else "Unknown"
+                                techniques_with_tactics.append((second_tech, primary_tactic))
+
+    # Sort techniques by MITRE ATT&CK tactic order
+    tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation',
+                   'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement',
+                   'Collection', 'Command and Control', 'Exfiltration', 'Impact']
+
+    def get_tactic_index(tech_tuple):
+        tactic = tech_tuple[1]
+        try:
+            return tactic_order.index(tactic)
+        except ValueError:
+            return 999  # Unknown tactics go last
+
+    techniques_with_tactics.sort(key=get_tactic_index)
+    techniques_involved = [tech[0] for tech in techniques_with_tactics]
 
     # Merge queries using OR logic
     merged_query = _build_merged_query(correlations)
@@ -590,7 +668,6 @@ def _build_merged_query(correlations: list) -> str:
     for idx, corr in enumerate(correlations):
         query = corr.get('combined_query', '')
         techniques = corr.get('techniques_involved', [])
-        second_tech = techniques[1] if len(techniques) > 1 else f"Technique{idx+1}"
 
         # Extract second let statement
         # Find all let statements after the first one
@@ -606,6 +683,15 @@ def _build_merged_query(correlations: list) -> str:
                 table_counter[table_name] = 0
             table_counter[table_name] += 1
 
+            # Extract the technique name from the existing comment in the WHERE condition
+            # Look for // TechniqueName pattern
+            comment_match = re.search(r'//\s*([^\n]+)', where_condition)
+            if comment_match:
+                technique_name = comment_match.group(1).strip()
+            else:
+                # Fallback: use second technique from list, or all techniques after the first
+                technique_name = ' / '.join(techniques[1:]) if len(techniques) > 1 else f"Technique{idx+1}"
+
             # Strip any existing comment lines from the where_condition to avoid duplication
             # Remove lines that start with // (with optional leading whitespace)
             condition_lines = where_condition.split('\n')
@@ -613,7 +699,7 @@ def _build_merged_query(correlations: list) -> str:
             cleaned_condition = '\n'.join(cleaned_lines).strip()
 
             # Format the condition with technique comment
-            second_conditions.append(f"  // {second_tech}\n  ({cleaned_condition})")
+            second_conditions.append(f"  // {technique_name}\n  ({cleaned_condition})")
 
     # Build the merged query
     if not second_conditions:
@@ -4358,6 +4444,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
                     total_indicators = 0  # Track total indicators across both detections
 
+                    # Get techniques_involved for later use in building the techniques list
+                    techniques_involved = corr.get("techniques_involved", [])
+
                     # Handle file_b being either a string or a list (for merged correlations)
                     files_to_process = [file_a]
                     if isinstance(file_b, list):
@@ -4467,12 +4556,15 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                         technique_tactic_map = {}
                         techniques_involved_formatted = []
                         techniques_by_tactic = {}  # Group techniques by tactic
-                        techniques_involved = corr.get("techniques_involved", [])
+                        # techniques_involved already loaded above at line 4361
 
                         # Map each technique to its primary tactic and get formatted name
+                        # Build attack flow from ALL techniques (including merged ones)
                         for tech_name in techniques_involved:
                             # Look for YAML file matching this technique name
-                            pattern = os.path.join(GENERATE_DIR, f"{tech_name}_*.yaml")
+                            # Normalize technique name to match filename format (remove spaces)
+                            filename_pattern = tech_name.replace(" ", "").replace("/", "")
+                            pattern = os.path.join(GENERATE_DIR, f"{filename_pattern}_*.yaml")
                             matching_files = glob.glob(pattern)
 
                             if matching_files:
@@ -4489,10 +4581,12 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                     technique_tactic_map[formatted_name] = primary_tactic
                                     techniques_involved_formatted.append(formatted_name)
 
-                                    # Group by tactic
-                                    if primary_tactic not in techniques_by_tactic:
-                                        techniques_by_tactic[primary_tactic] = []
-                                    techniques_by_tactic[primary_tactic].append(formatted_name)
+                                    # Group by ALL tactics (not just primary) for attack flow visualization
+                                    for tactic in tech_tactics:
+                                        if tactic not in techniques_by_tactic:
+                                            techniques_by_tactic[tactic] = []
+                                        if formatted_name not in techniques_by_tactic[tactic]:
+                                            techniques_by_tactic[tactic].append(formatted_name)
                                 else:
                                     # Fallback: format the filename-based name
                                     formatted_name = tech_name.replace("-", " ")
@@ -4510,11 +4604,100 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                     techniques_by_tactic["Unknown"] = []
                                 techniques_by_tactic["Unknown"].append(formatted_name)
 
+                        # Sort techniques_involved_formatted by MITRE ATT&CK tactic order
+                        # Sort by PRIMARY tactic to match how techniques are highlighted
+                        tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation',
+                                       'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement',
+                                       'Collection', 'Command and Control', 'Exfiltration', 'Impact']
+
+                        def get_technique_sort_key(tech_name):
+                            # Use the primary tactic from technique_tactic_map
+                            tactic = technique_tactic_map.get(tech_name, "Unknown")
+                            try:
+                                tactic_index = tactic_order.index(tactic)
+                            except ValueError:
+                                tactic_index = 999  # Unknown tactics go last
+
+                            # Return tuple: (tactic_index, technique_name_alphabetically)
+                            # This sorts by tactic first, then alphabetically within same tactic
+                            return (tactic_index, tech_name.lower())
+
+                        techniques_involved_formatted.sort(key=get_technique_sort_key)
+
+                        # Identify primary techniques for highlighting
+                        # Goal: Highlight 2-3 unique primary tactics
+                        # Strategy: Keep adding techniques until we have 3 unique tactics
+                        primary_technique_names = []
+                        primary_tactics = set()
+
+                        for tech_name in techniques_involved_formatted:
+                            primary_technique_names.append(tech_name)
+                            if tech_name in technique_tactic_map:
+                                primary_tactics.add(technique_tactic_map[tech_name])
+
+                            # Stop after we have 3 unique tactics
+                            if len(primary_tactics) >= 3:
+                                break
+
+                        # Rebuild techniques_by_tactic to only include primary techniques
+                        # This ensures attack flow only shows tactics involved in the primary techniques
+                        techniques_by_tactic_filtered = {}
+                        for tech_name in primary_technique_names:
+                            # Look for YAML file to get ALL tactics (not just primary)
+                            filename_pattern = tech_name.replace(" ", "").replace("/", "")
+                            pattern = os.path.join(GENERATE_DIR, f"{filename_pattern}_*.yaml")
+                            matching_files = glob.glob(pattern)
+
+                            if matching_files:
+                                yaml_data = load_yaml_file(matching_files[0])
+                                if yaml_data:
+                                    tech_tactics = yaml_data.get('tactics', [])
+                                    # Add this technique to all its tactics
+                                    for tactic in tech_tactics:
+                                        if tactic not in techniques_by_tactic_filtered:
+                                            techniques_by_tactic_filtered[tactic] = []
+                                        if tech_name not in techniques_by_tactic_filtered[tactic]:
+                                            techniques_by_tactic_filtered[tactic].append(tech_name)
+
+                        # Replace techniques_by_tactic with filtered version
+                        techniques_by_tactic = techniques_by_tactic_filtered
+
                         # Calculate attack chain length (number of tactics in attack flow order)
                         tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation',
                                        'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement',
                                        'Collection', 'Command and Control', 'Exfiltration', 'Impact']
                         attack_chain_length = sum(1 for tactic in tactic_order if tactic in techniques_by_tactic)
+
+                        # Rebuild techniques list to match techniques_involved_formatted order and content
+                        # This ensures the displayed techniques match what's being used for highlighting
+                        techniques_rebuilt = []
+                        for formatted_name in techniques_involved_formatted:
+                            # Find matching technique in the original techniques list
+                            matching_tech = None
+                            for tech in techniques:
+                                if tech['name'] == formatted_name:
+                                    matching_tech = tech
+                                    break
+
+                            if matching_tech:
+                                # Update the tactic field to use the PRIMARY tactic
+                                primary_tactic = technique_tactic_map.get(formatted_name, matching_tech.get('tactic', 'Unknown'))
+                                matching_tech_copy = matching_tech.copy()
+                                matching_tech_copy['tactic'] = primary_tactic
+                                techniques_rebuilt.append(matching_tech_copy)
+                            else:
+                                # Create a minimal technique entry if not found in original list
+                                # This happens when techniques_involved has techniques not in files_to_process
+                                primary_tactic = technique_tactic_map.get(formatted_name, "Unknown")
+                                techniques_rebuilt.append({
+                                    "id": formatted_name.replace(" ", "-"),
+                                    "name": formatted_name,
+                                    "source": vendor_display,
+                                    "tactic": primary_tactic,
+                                })
+
+                        # Use the rebuilt list
+                        techniques = techniques_rebuilt
 
                         correlations.append(
                             {
@@ -4533,6 +4716,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                 "techniques_by_tactic": techniques_by_tactic,  # Group techniques by tactic
                                 "attack_chain_length": attack_chain_length,  # Number of tactics in ordered attack flow
                                 "is_merged": is_merged,  # Flag indicating if this is a merged correlation
+                                "primary_tactics": list(primary_tactics),  # Tactics containing the original correlation pair
                             }
                         )
         except Exception as e:

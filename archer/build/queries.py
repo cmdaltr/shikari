@@ -1,7 +1,116 @@
 import os
 import json
+import re
 from pathlib import Path
 from archer.build.malware_iocs import enrich_indicators_with_iocs, log_ioc_enrichment
+
+
+def validate_and_clean_indicators(indicators: list, indicator_type: str = "cmd") -> list:
+    """
+    Validate and clean indicators before using them in queries.
+
+    Filters out:
+    - Description/citation text
+    - Overly generic terms
+    - Duplicates
+    - Very short strings (< 3 chars)
+    - Common English words
+    - Invalid characters/formatting
+
+    Args:
+        indicators: List of raw indicators
+        indicator_type: Type of indicator (cmd, process, file, etc.)
+
+    Returns:
+        List of cleaned and validated indicators
+    """
+    if not indicators:
+        return []
+
+    # Common words to filter out (case-insensitive)
+    GENERIC_WORDS = {
+        'and', 'or', 'the', 'to', 'from', 'for', 'in', 'on', 'at', 'by', 'with',
+        'as', 'is', 'was', 'are', 'be', 'been', 'being', 'have', 'has', 'had',
+        'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might',
+        'can', 'a', 'an', 'of', 'it', 'this', 'that', 'these', 'those',
+        'file', 'files', 'show', 'shows', 'shown', 'used', 'use', 'using',
+        'each', 'all', 'any', 'some', 'process', 'memory', 'system', 'data',
+        'r', 'n', 'x', 'i', 'v', 't', 'f', 'l', 'd', 's', 'p', 'e', 'c', 'w'
+    }
+
+    # Citation patterns to filter out
+    CITATION_PATTERNS = [
+        r'\(Citation:.*?\)',  # (Citation: ...)
+        r'https?://',  # URLs
+        r'www\.',  # www links
+        r'\d{4}',  # Years (2018, 2022, etc.)
+        r'GitHub',  # Platform names
+        r'Adversaries',  # ATT&CK description language
+        r'pseudo-filesystem',
+        r'interface',
+        r'kernel',
+        r'virtual',
+        r'address space',
+        r'cleartext',
+        r'passwords',
+        r'identify',
+        r'regex patterns',
+        r'dump'
+    ]
+
+    cleaned = []
+    seen = set()  # Track duplicates
+
+    for indicator in indicators:
+        if not indicator or not isinstance(indicator, str):
+            continue
+
+        # Strip whitespace
+        indicator = indicator.strip()
+
+        # Skip empty or very short indicators (< 3 characters)
+        if len(indicator) < 3:
+            continue
+
+        # Skip if it matches citation patterns
+        is_citation = False
+        for pattern in CITATION_PATTERNS:
+            if re.search(pattern, indicator, re.IGNORECASE):
+                is_citation = True
+                break
+        if is_citation:
+            continue
+
+        # Skip generic single words
+        if ' ' not in indicator and indicator.lower() in GENERIC_WORDS:
+            continue
+
+        # Skip indicators that are mostly common words
+        if ' ' in indicator:
+            words = indicator.split()
+            # If more than 60% of words are generic, skip it
+            generic_count = sum(1 for w in words if w.lower() in GENERIC_WORDS)
+            if len(words) > 2 and generic_count / len(words) > 0.6:
+                continue
+
+        # Skip if it contains multiple consecutive dots or suspicious patterns
+        if '..' in indicator or '  ' in indicator:
+            continue
+
+        # Remove duplicate quotes and fix escaping issues
+        # Replace double-double quotes with single quotes
+        indicator = indicator.replace('""', '"')
+
+        # Skip if already seen (case-insensitive deduplication)
+        indicator_lower = indicator.lower()
+        if indicator_lower in seen:
+            continue
+        seen.add(indicator_lower)
+
+        # Add to cleaned list
+        cleaned.append(indicator)
+
+    return cleaned
 
 
 def load_splunk_schema():
@@ -262,6 +371,9 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
     # Use enriched indicators for query building
     indicators_to_use = enriched_indicators if enriched_indicators else indicators
 
+    # Validate and clean indicators to remove description text, duplicates, and generic terms
+    indicators_to_use = validate_and_clean_indicators(indicators_to_use, indicator_type)
+
     # Detect cloud platform from indicators (for API calls, commands, etc.)
     detected_platforms = detect_cloud_platform_from_indicators(indicators_to_use, indicator_type)
 
@@ -372,6 +484,9 @@ def compile_splunk_queries(
 
     # Use enriched indicators for query building
     indicators_to_use = enriched_indicators if enriched_indicators else indicators
+
+    # Validate and clean indicators to remove description text, duplicates, and generic terms
+    indicators_to_use = validate_and_clean_indicators(indicators_to_use, indicator_type)
 
     # Detect cloud platform from indicators (for API calls, commands, etc.)
     detected_platforms = detect_cloud_platform_from_indicators(indicators_to_use, indicator_type)

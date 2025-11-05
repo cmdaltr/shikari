@@ -1227,32 +1227,18 @@ body, html {
             {% elif vendor.correlations %}
             {% for correlation in vendor.correlations %}
             <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}" data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}">
-              <div class="detection-title">
+              <div class="detection-title" style="display: flex; justify-content: space-between; align-items: flex-start; position: relative;">
+                <div style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
                 <!-- Technique Flow -->
                 {% if correlation.is_merged and correlation.techniques|length >= 2 %}
-                  {# Sort techniques by MITRE ATT&CK tactic order to match Attack Flow #}
-                  {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
-                  {% set sorted_techniques = [] %}
-                  {% for tactic in tactic_order %}
-                    {% for tech in correlation.techniques %}
-                      {% if tech.tactic == tactic %}
-                        {% set _ = sorted_techniques.append(tech) %}
-                      {% endif %}
-                    {% endfor %}
-                  {% endfor %}
-                  {# Fallback: append any techniques not in tactic order #}
+                  {# Display techniques in the order they appear in correlation.techniques #}
+                  {# This preserves the attack flow order from techniques_involved_formatted #}
                   {% for tech in correlation.techniques %}
-                    {% if tech not in sorted_techniques %}
-                      {% set _ = sorted_techniques.append(tech) %}
-                    {% endif %}
-                  {% endfor %}
-
-                  {# Display sorted techniques with smart separators #}
-                  {% set prev_tactic = None %}
-                  {% for tech in sorted_techniques %}
                     {% set tactic = tech.tactic %}
                     {# Add separator before technique (except first) #}
                     {% if not loop.first %}
+                      {% set prev_tech = correlation.techniques[loop.index0 - 1] %}
+                      {% set prev_tactic = prev_tech.tactic %}
                       {% if tactic == prev_tactic %}
                         {# Same tactic: use slash separator #}
                         <span style="margin: 0 4px; color: #999;">/</span>
@@ -1319,9 +1305,6 @@ body, html {
 
                     {# Display technique badge #}
                     <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech.name }}</span>
-
-                    {# Track previous tactic for next iteration #}
-                    {% set prev_tactic = tactic %}
                   {% endfor %}
                 {% else %}
                   {# Display normal (non-merged) correlation - Sort by MITRE ATT&CK order to match Attack Flow #}
@@ -1437,6 +1420,20 @@ body, html {
                   Needs Review - no indicators extracted
                 </span>
                 {% endif %}
+                </div>
+
+                <!-- OSINT Enhanced Badge (Right-aligned) -->
+                {% if correlation.osint_enriched %}
+                <div style="flex-shrink: 0; margin-left: 12px;">
+                  <span class="osint-enhanced-badge" title="This correlation includes detections enhanced with additional indicators from OSINT sources merged into the query logic.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    Enhanced with OSINT
+                  </span>
+                </div>
+                {% endif %}
               </div>
 
               <!-- Correlation Metadata -->
@@ -1457,18 +1454,34 @@ body, html {
               {% if correlation.techniques_by_tactic and correlation.techniques_by_tactic|length > 1 %}
               <div style="margin-top: 12px; margin-bottom: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 16px;">
                 <strong style="color: #555; display: block; margin-bottom: 12px;">Attack Flow:</strong>
-                <div style="display: flex; gap: 8px; align-items: stretch; overflow-x: auto;">
                 {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
                 {% set displayed_tactics = [] %}
                 {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
                   {% set _ = displayed_tactics.append(tactic) %}
                 {% endfor %}
+                {# Adjust box size based on number of tactics #}
+                {% set num_tactics = displayed_tactics|length %}
+                {% if num_tactics <= 5 %}
+                  {% set min_box_width = '120px' %}
+                {% elif num_tactics == 6 %}
+                  {% set min_box_width = '100px' %}
+                {% else %}
+                  {% set min_box_width = '90px' %}
+                {% endif %}
+                <div style="display: flex; gap: 8px; align-items: stretch; overflow-x: auto;">
                 {% for tactic in displayed_tactics %}
-                    <!-- Tactic Column -->
-                    <div style="flex: 1; min-width: 120px; background: white; border: 2px solid #ddd; border-radius: 4px; padding: 8px; position: relative;">
+                    <!-- Tactic Column (highlighted if primary) -->
+                    {% set is_primary = correlation.primary_tactics and tactic in correlation.primary_tactics %}
+                    <div style="flex: 1; min-width: {{ min_box_width }}; background: white; border: 2px solid {% if is_primary %}#1976d2{% else %}#ddd{% endif %}; border-radius: 4px; padding: 8px; position: relative; {% if is_primary %}box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);{% endif %}">
                       <!-- Tactic Header -->
-                      <div style="font-size: 0.75em; font-weight: 700; color: #555; text-align: center; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        {{ tactic }}
+                      <div style="font-size: 0.75em; font-weight: 700; color: {% if is_primary %}#1976d2{% else %}#555{% endif %}; text-align: center; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        {% if tactic == 'Command and Control' %}
+                          Command<br>and Control
+                        {% elif ' ' in tactic %}
+                          {{ tactic.replace(' ', '<br>', 1)|safe }}
+                        {% else %}
+                          {{ tactic }}<br><span style="color: white;">_</span>
+                        {% endif %}
                       </div>
                       <!-- Technique Count Badge -->
                       <div style="text-align: center; margin-bottom: 4px;">
@@ -1539,7 +1552,7 @@ body, html {
                     <!-- Arrow between tactics (only if not the last displayed tactic) -->
                     {% if not loop.last %}
                     <div style="display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0 4px;">
-                      <svg width="32" height="32" viewBox="0 0 24 24" style="fill: #999;">
+                      <svg width="26" height="26" viewBox="0 0 24 24" style="fill: #999;">
                         <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
                       </svg>
                     </div>
@@ -1547,7 +1560,7 @@ body, html {
                 {% endfor %}
                 </div>
                 <div style="margin-top: 8px; text-align: center; font-size: 0.75em; color: #666;">
-                  Attack chain progresses through {{ displayed_tactics|length }} tactic{{ 's' if displayed_tactics|length > 1 else '' }}
+                  Attack chain progresses through {{ correlation.primary_tactics|length }} primary tactic{{ 's' if correlation.primary_tactics|length > 1 else '' }}
                 </div>
               </div>
               {% endif %}
@@ -1569,6 +1582,72 @@ body, html {
                 </button>
                 <div id="corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}</div>
               </div>
+
+              <!-- OSINT Details (Collapsible) -->
+              {% if correlation.osint_data %}
+              <div style="margin-top: 10px;">
+                <button onclick="toggleOsintDetails('corr-osint-{{ vendor.name }}-{{ loop.index }}-details')" style="background: #f0f7ff; border: 1px solid #3b82f6; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #1e40af;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4M12 8h.01"/>
+                  </svg>
+                  {% if correlation.osint_enriched %}View OSINT Enhancement Details{% else %}View OSINT Comparison Details{% endif %}
+                </button>
+                <div id="corr-osint-{{ vendor.name }}-{{ loop.index }}-details" style="display: none; margin-top: 12px; background: #f0f7ff; border: 1px solid #3b82f6; border-radius: 6px; padding: 14px;">
+                  <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                    {% if correlation.osint_enriched %}OSINT Enhancement Details{% else %}OSINT Comparison Details{% endif %}
+                  </div>
+                  <div style="font-size: 0.9em; color: #333;">
+                    {% if correlation.osint_data.indicators and correlation.osint_data.indicators.query_snippets %}
+                    <div>
+                      <strong style="display: block; margin-bottom: 12px;">OSINT Detection Query Snippets:</strong>
+                      <!-- Query snippets with source links and vendor grouping -->
+                      <div style="display: flex; flex-direction: column; gap: 12px;">
+                        {% for item in correlation.osint_data.indicators.query_snippets %}
+                        {% set url_parts = item.split('|||') %}
+                        {% set snippet_with_source = url_parts[0] %}
+                        {% set source_url = url_parts[1] if url_parts|length > 1 else '' %}
+                        {% set parts = snippet_with_source.split('] ', 1) %}
+                        {% if parts|length == 2 %}
+                        {% set source_name = parts[0].replace('[', '') %}
+                        {% set snippet = parts[1] %}
+                        <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
+                          <!-- Vendor badge -->
+                          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <span style="background: {% if source_name == 'Elastic' %}#00bfb3{% elif source_name == 'Splunk' %}#e91e8c{% else %}#0369a1{% endif %}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.7em; font-weight: 600;">
+                              {{ source_name }}
+                            </span>
+                            <span style="font-size: 0.7em; color: #6b7280; font-style: italic;">Detection Rule Query (excerpt)</span>
+                          </div>
+                          <!-- Query snippet -->
+                          <code style="display: block; background: #f8fafc; color: #0c4a6e; padding: 10px; border-radius: 4px; font-size: 0.8em; font-family: 'Courier New', monospace; line-height: 1.5; word-break: break-all; border-left: 3px solid {% if source_name == 'Elastic' %}#00bfb3{% elif source_name == 'Splunk' %}#e91e8c{% else %}#0369a1{% endif %};">{{ snippet }}...</code>
+                          <!-- Source link -->
+                          {% if source_url %}
+                          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                              <svg width="14" height="14" viewBox="0 0 16 16" fill="#6b7280">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                              </svg>
+                              <a href="{{ source_url }}" target="_blank" style="font-size: 0.75em; color: #4b5563; text-decoration: none; font-family: monospace;">
+                                View full detection rule on GitHub →
+                              </a>
+                            </div>
+                          </div>
+                          {% endif %}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                      </div>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endif %}
             </div>
             {% endfor %}
             {% endif %}

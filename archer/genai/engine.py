@@ -105,23 +105,25 @@ def _list_yaml_files(group_name: str, yaml_dir: str) -> List[str]:
 
 def _parse_yaml_for_vendor(path: str) -> Dict:
     """
-    Parse a YAML file to extract vendor information, search query content, and tactics.
+    Parse a YAML file to extract vendor information, search query content, tactics, and name.
 
     Returns a dictionary with:
     - path: the file path
     - vendor: detected vendor (or None)
     - query: the search query if found (or None)
     - tactics: list of MITRE ATT&CK tactics (or [])
+    - name: the technique name from the YAML file (or None)
     """
     try:
         with open(path, "r", encoding="utf-8") as fh:
             text = fh.read()
     except Exception:
-        return {"path": path, "vendor": None, "query": None, "tactics": []}
+        return {"path": path, "vendor": None, "query": None, "tactics": [], "name": None}
 
     vendor = None
     query = None
     tactics = []
+    name = None
     connector_id = None
 
     # Look for the connectorId field to determine vendor
@@ -129,6 +131,13 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
         line_lower = line.lower().strip()
         if line_lower.startswith("connectorid:"):
             connector_id = line.split(":", 1)[1].strip()
+            break
+
+    # Extract the name field from the YAML
+    for line in text.splitlines():
+        line_stripped = line.strip()
+        if line_stripped.startswith("name:"):
+            name = line_stripped.split(":", 1)[1].strip()
             break
 
     # Set vendor based on connectorId
@@ -235,7 +244,7 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
                 # New section started
                 break
 
-    return {"path": path, "vendor": vendor, "query": query, "tactics": tactics}
+    return {"path": path, "vendor": vendor, "query": query, "tactics": tactics, "name": name}
 
 
 def _combine_queries(vendor: str, query_a: str, query_b: str, a: str = None, b: str = None) -> str:
@@ -1349,9 +1358,6 @@ def _format_technique_name(technique_name: str) -> str:
     # This converts CamelCase to Camel Case
     name = re.sub(r'(?<!^)(?=[A-Z])', ' ', name)
 
-    # Replace hyphens with spaces (Multi-Factor -> Multi Factor)
-    name = name.replace('-', ' ')
-
     # Clean up any double spaces
     name = ' '.join(name.split())
 
@@ -1398,14 +1404,17 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
         path_a = corr.get("a", "")
         path_b = corr.get("b", "")
 
-        # Extract technique name from filename (e.g., "Multi-FactorAuthentication" from "Multi-FactorAuthentication_DeviceFileEvents.yaml")
-        basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
-        basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
+        # Extract technique name from file_info (using proper names from YAML)
+        # Fall back to filename extraction if not found in file_info
+        technique_name_a = file_info.get(path_a, {}).get("name")
+        if not technique_name_a:
+            basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
+            technique_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
 
-        # Split by underscore to get technique name (before table/index name)
-        # Example: "Multi-FactorAuthentication_DeviceFileEvents" -> "Multi-FactorAuthentication"
-        technique_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
-        technique_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
+        technique_name_b = file_info.get(path_b, {}).get("name")
+        if not technique_name_b:
+            basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
+            technique_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
 
         # Debug first correlation
         if i == 0:
@@ -1465,11 +1474,17 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
         path_a = corr.get("a", "")
         path_b = corr.get("b", "")
 
-        basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
-        basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
+        # Extract technique name from file_info (using proper names from YAML)
+        # Fall back to filename extraction if not found in file_info
+        technique_name_a = file_info.get(path_a, {}).get("name")
+        if not technique_name_a:
+            basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
+            technique_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
 
-        technique_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
-        technique_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
+        technique_name_b = file_info.get(path_b, {}).get("name")
+        if not technique_name_b:
+            basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
+            technique_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
 
         # Group by the first technique (A)
         if technique_name_a not in by_single_technique:
