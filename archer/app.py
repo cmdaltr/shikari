@@ -555,31 +555,38 @@ def _merge_correlation_group(correlations: list) -> dict:
                 primary_tactic_a = tactics_a[0] if tactics_a else "Unknown"
                 techniques_with_tactics.append((first_tech, primary_tactic_a))
 
-    # Extract second technique names and file paths
+    # Extract ALL technique names from file paths (a and b) for each correlation
+    # This ensures we capture all techniques that appear in the merged queries
     for corr in correlations:
+        # Process file_a (first technique) - skip if already added
+        file_a = corr.get('a', '')
+        if file_a:
+            basename_a = os.path.basename(file_a).replace('.yaml', '').replace('.yml', '')
+            full_path_a = os.path.join(GENERATE_DIR, basename_a + '.yaml')
+            if os.path.exists(full_path_a):
+                yaml_data_a = load_yaml_file(full_path_a)
+                if yaml_data_a:
+                    tech_name_a = yaml_data_a.get('name', '')
+                    if tech_name_a and not any(t[0] == tech_name_a for t in techniques_with_tactics):
+                        tactics_a = yaml_data_a.get('tactics', [])
+                        primary_tactic_a = tactics_a[0] if tactics_a else "Unknown"
+                        techniques_with_tactics.append((tech_name_a, primary_tactic_a))
+
+        # Process file_b (second technique)
         file_b = corr.get('b', '')
         if file_b:
             files_b.append(file_b)
 
-        # Add ALL techniques after the first one (not just index [1])
-        tech_involved = corr.get('techniques_involved', [])
-        if len(tech_involved) > 1:
-            # Iterate through all techniques starting from index 1
-            for idx in range(1, len(tech_involved)):
-                second_tech = tech_involved[idx]
-                # Check if already added
-                if not any(t[0] == second_tech for t in techniques_with_tactics):
-                    # Get primary tactic of this technique by finding its YAML file
-                    # Need to find the file for this specific technique
-                    tech_file = find_yaml_for_technique(second_tech, GENERATE_DIR)
-                    if tech_file:
-                        full_path = os.path.join(GENERATE_DIR, tech_file)
-                        if os.path.exists(full_path):
-                            yaml_data = load_yaml_file(full_path)
-                            if yaml_data:
-                                tactics = yaml_data.get('tactics', [])
-                                primary_tactic = tactics[0] if tactics else "Unknown"
-                                techniques_with_tactics.append((second_tech, primary_tactic))
+            basename_b = os.path.basename(file_b).replace('.yaml', '').replace('.yml', '')
+            full_path_b = os.path.join(GENERATE_DIR, basename_b + '.yaml')
+            if os.path.exists(full_path_b):
+                yaml_data_b = load_yaml_file(full_path_b)
+                if yaml_data_b:
+                    tech_name_b = yaml_data_b.get('name', '')
+                    if tech_name_b and not any(t[0] == tech_name_b for t in techniques_with_tactics):
+                        tactics_b = yaml_data_b.get('tactics', [])
+                        primary_tactic_b = tactics_b[0] if tactics_b else "Unknown"
+                        techniques_with_tactics.append((tech_name_b, primary_tactic_b))
 
     # Sort techniques by MITRE ATT&CK tactic order
     tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation',
@@ -595,6 +602,10 @@ def _merge_correlation_group(correlations: list) -> dict:
 
     techniques_with_tactics.sort(key=get_tactic_index)
     techniques_involved = [tech[0] for tech in techniques_with_tactics]
+
+    # Debug: Log what techniques were collected
+    if len(techniques_involved) > 2:
+        print(f"DEBUG _merge_correlation_group: Collected {len(techniques_involved)} techniques: {techniques_involved}")
 
     # Merge queries using OR logic
     merged_query = _build_merged_query(correlations)

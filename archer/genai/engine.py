@@ -1594,9 +1594,10 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
                         temp_tactics.update(tactics)
 
                     # Check if adding this correlation would exceed 8 techniques
+                    # Use techniques_involved from the correlation if it exists (for already-merged correlations)
+                    corr_techniques = corr.get("techniques_involved", [tech_name_a, tech_name_b])
                     temp_techniques = set(techniques_involved)
-                    temp_techniques.add(tech_name_a)
-                    temp_techniques.add(tech_name_b)
+                    temp_techniques.update(corr_techniques)
 
                     # Decision logic:
                     # 1. If we have < 2 tactics, keep adding to build up tactics (up to 8 techniques max)
