@@ -1046,29 +1046,20 @@ body, html {
               {% elif vendor.name == 'google_secops' %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  <!-- Google SecOps logo - Google colored shapes -->
+                  <!-- Google SecOps logo - cloud with Google colors -->
                   <defs>
-                    <linearGradient id="googleBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id="googleCloudBlue" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
                       <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
                     </linearGradient>
-                    <linearGradient id="googleRed" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="googleYellow" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="googleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
-                    </linearGradient>
                   </defs>
-                  <circle cx="25" cy="45" r="20" fill="url(#googleBlue)"/>
-                  <circle cx="50" cy="32" r="26" fill="url(#googleRed)"/>
-                  <circle cx="75" cy="45" r="20" fill="url(#googleYellow)"/>
-                  <rect x="15" y="50" width="70" height="25" rx="10" fill="url(#googleGreen)"/>
+                  <!-- Cloud shape with Google blue gradient -->
+                  <path d="M 72 45 C 72 38, 67 32, 60 30 C 58 22, 51 16, 42 16 C 31 16, 22 24, 20 34 C 13 35, 8 41, 8 48 C 8 56, 14 62, 22 62 L 70 62 C 78 62, 84 56, 84 48 C 84 42, 79 37, 72 45 Z" fill="url(#googleCloudBlue)" opacity="0.95"/>
+                  <!-- Small security lock icon in center -->
+                  <rect x="43" y="42" width="14" height="12" rx="2" fill="white" opacity="0.9"/>
+                  <path d="M 46 42 L 46 38 C 46 35, 48 33, 50 33 C 52 33, 54 35, 54 38 L 54 42" stroke="white" stroke-width="2" fill="none" opacity="0.9"/>
+                  <!-- Small keyhole -->
+                  <circle cx="50" cy="48" r="1.5" fill="url(#googleCloudBlue)"/>
                 </svg>
               </span>
               {% elif vendor.name == 'elastic' %}
@@ -1422,29 +1413,20 @@ body, html {
               {% elif vendor.name == 'Google SecOps' %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  <!-- Google SecOps logo - Google colored shapes -->
+                  <!-- Google SecOps logo - cloud with Google colors -->
                   <defs>
-                    <linearGradient id="googleBlueCorr" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id="googleCloudBlueCorr" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
                       <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
                     </linearGradient>
-                    <linearGradient id="googleRedCorr" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="googleYellowCorr" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="googleGreenCorr" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
-                    </linearGradient>
                   </defs>
-                  <circle cx="25" cy="45" r="20" fill="url(#googleBlueCorr)"/>
-                  <circle cx="50" cy="32" r="26" fill="url(#googleRedCorr)"/>
-                  <circle cx="75" cy="45" r="20" fill="url(#googleYellowCorr)"/>
-                  <rect x="15" y="50" width="70" height="25" rx="10" fill="url(#googleGreenCorr)"/>
+                  <!-- Cloud shape with Google blue gradient -->
+                  <path d="M 72 45 C 72 38, 67 32, 60 30 C 58 22, 51 16, 42 16 C 31 16, 22 24, 20 34 C 13 35, 8 41, 8 48 C 8 56, 14 62, 22 62 L 70 62 C 78 62, 84 56, 84 48 C 84 42, 79 37, 72 45 Z" fill="url(#googleCloudBlueCorr)" opacity="0.95"/>
+                  <!-- Small security lock icon in center -->
+                  <rect x="43" y="42" width="14" height="12" rx="2" fill="white" opacity="0.9"/>
+                  <path d="M 46 42 L 46 38 C 46 35, 48 33, 50 33 C 52 33, 54 35, 54 38 L 54 42" stroke="white" stroke-width="2" fill="none" opacity="0.9"/>
+                  <!-- Small keyhole -->
+                  <circle cx="50" cy="48" r="1.5" fill="url(#googleCloudBlueCorr)"/>
                 </svg>
               </span>
               {% elif vendor.name == 'Elastic' %}
@@ -2118,7 +2100,7 @@ body, html {
           <line x1="12" y1="9" x2="12" y2="13"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
-        <span>Archer leverages AI and is not 100% accurate; complete all validation steps above to enable Download and Save options.</span>
+        <span>Archer leverages AI and is not 100% accurate; complete all validation steps above to proceed.</span>
       </div>
 
       </div>
@@ -2156,7 +2138,7 @@ body, html {
     <div class="timestamp">
       {{ generated_time }}<br>
       <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
-        Vendor logos are stylized representations. Splunk®, Microsoft®, Google®, and Elastic® are registered trademarks of their respective companies.
+        Vendor logos are stylized representations. Splunk®, Microsoft®, and Elastic® are registered trademarks of their respective companies.
       </span>
     </div>
   </footer>
