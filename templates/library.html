@@ -154,11 +154,12 @@ body, html {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-right: 12px;
 }
 
 .card-icon.detection { background: transparent; }
 .card-icon.correlation { background: transparent; }
-.card-icon.technique { background: #fff3e0; }
+.card-icon.technique { background: transparent; }
 .card-icon.cross-vendor { background: transparent; }
 
 .card-icon svg {
@@ -170,6 +171,8 @@ body, html {
 .card-icon.correlation svg { stroke: #2196f3; }
 .card-icon.technique svg { stroke: #ff9800; }
 .card-icon.cross-vendor svg { stroke: #e91e63; }
+.card-icon.metrics svg { stroke: #8b5cf6; }
+.card-icon.filters svg { stroke: #92400e; }
 
 .card-content h3 {
   font-size: 2.5em;
@@ -343,18 +346,18 @@ body, html {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 2px solid var(--border-color);
 }
 
 .detection-header h2 {
-  font-size: 1.5em;
+  font-size: 26px;
   margin: 0;
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-weight: 600;
 }
 
@@ -853,21 +856,23 @@ body, html {
         </p>
 
         <!-- Statistics Section -->
-        <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-            <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleStatistics()">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
-                    <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                </svg>
-                Statistics
-                <span id="stats-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
-            </h2>
-
-            <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
+        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <div class="detection-header">
+                <h2 onclick="toggleStatistics()" style="cursor: pointer; user-select: none;">
+                    <div class="card-icon metrics" style="width: 40px; height: 40px; margin-right: 12px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    Statistics
+                </h2>
+                <span id="stats-toggle-text" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleStatistics()">Collapse</span>
+            </div>
 
             <div id="statistics-content" style="transition: all 0.3s ease; overflow: hidden;">
 
-        <!-- First Row: Detections | Correlations | Cross-vendor -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
+            <!-- First Row: Detections | Correlations | Cross-vendor -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
 
             <!-- Total Detections -->
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -893,10 +898,10 @@ body, html {
                 </div>
             </div>
 
-        </div>
+            </div>
 
-        <!-- Second Row: Techniques | Tactics | Time Saved -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px;">
+            <!-- Second Row: Techniques | Tactics | Time Saved -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px;">
 
             <!-- Unique Techniques -->
             <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -922,37 +927,39 @@ body, html {
                 </div>
             </div>
 
-        </div>
+            </div>
 
-        <!-- Value Proposition -->
-        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-top: 16px;">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
-                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                </svg>
-                <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">Archer Value Summary</span>
+            <!-- Value Proposition -->
+            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-top: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">Archer Value Summary</span>
+                </div>
+                <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                    You've generated <strong>{{ detections|length }}</strong> production-ready detections across <strong>{{ all_groups|length }}</strong> threat groups,
+                    covering <strong>{{ all_techniques|length }}</strong> MITRE ATT&CK techniques and <strong>{{ all_tactics|length }}</strong> tactics.
+                    This represents approximately <strong>{{ ((detections|length * 0.5)|round(1)) }} hours</strong> of work automated,
+                    with <strong>{{ correlations|length }}</strong> behavioral correlations that would typically require manual analysis.
+                </div>
             </div>
-            <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
-                You've generated <strong>{{ detections|length }}</strong> production-ready detections across <strong>{{ all_groups|length }}</strong> threat groups,
-                covering <strong>{{ all_techniques|length }}</strong> MITRE ATT&CK techniques and <strong>{{ all_tactics|length }}</strong> tactics.
-                This represents approximately <strong>{{ ((detections|length * 0.5)|round(1)) }} hours</strong> of work automated,
-                with <strong>{{ correlations|length }}</strong> behavioral correlations that would typically require manual analysis.
             </div>
-        </div>
-        </div>
         </div>
 
         <!-- Metrics Section -->
-        <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-            <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleMetrics()">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                </svg>
-                Metrics
-                <span id="metrics-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
-            </h2>
-
-            <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
+        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <div class="detection-header">
+                <h2 onclick="toggleMetrics()" style="cursor: pointer; user-select: none;">
+                    <div class="card-icon technique" style="width: 40px; height: 40px; margin-right: 12px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                        </svg>
+                    </div>
+                    Metrics
+                </h2>
+                <span id="metrics-toggle-text" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleMetrics()">Collapse</span>
+            </div>
 
             <div id="metrics-content" style="transition: all 0.3s ease; overflow: hidden;">
               <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
@@ -1095,16 +1102,18 @@ body, html {
         </div>
 
         <!-- Filter and Action Section -->
-        <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-            <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleFilters()">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-                </svg>
-                Filters
-                <span id="filters-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
-            </h2>
-
-            <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
+        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <div class="detection-header">
+                <h2 onclick="toggleFilters()" style="cursor: pointer; user-select: none;">
+                    <div class="card-icon filters" style="width: 40px; height: 40px; margin-right: 12px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                        </svg>
+                    </div>
+                    Filters
+                </h2>
+                <span id="filters-toggle-text" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleFilters()">Collapse</span>
+            </div>
 
             <div id="filters-content" style="transition: all 0.3s ease; overflow: hidden; padding: 0; margin: 0;">
                 <div class="library-controls">
@@ -1125,7 +1134,7 @@ body, html {
                 <select id="filter-vendor" class="dropdown-styled">
                     <option value="">Vendors</option>
                     <option value="splunk">Splunk</option>
-                    <option value="mde">Microsoft Defender</option>
+                    <option value="mde">MDE</option>
                     <option value="elastic">Elastic</option>
                 </select>
 
@@ -1267,7 +1276,7 @@ body, html {
                   </defs>
                   <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
                   <!-- White chevron > -->
-                  <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                 </svg>
               </span>
               {% elif vendor.name == 'mde' or vendor.name == 'microsoft' %}

@@ -261,14 +261,15 @@ body, html {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-right: 12px;
 }
 
 .card-icon.detection { background: transparent; }
 .card-icon.correlation { background: transparent; }
-.card-icon.technique { background: #fff3e0; }
+.card-icon.technique { background: transparent; }
 .card-icon.vendor { background: transparent; }
 .card-icon.validation { background: transparent; }
-.card-icon.metrics { background: #ede9fe; }
+.card-icon.metrics { background: transparent; }
 
 .card-icon svg {
   width: 28px;
@@ -318,12 +319,12 @@ body, html {
 }
 
 .detection-header h2 {
-  font-size: 1.5em;
+  font-size: 26px;
   margin: 0;
   color: #1a1a1a;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-weight: 600;
 }
 
@@ -723,16 +724,18 @@ body, html {
     {% set hours_saved = (manual_hours - archer_hours)|round(1) %}
 
     <!-- Statistics Section -->
-    <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleStatistics()">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
-                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-            </svg>
-            Statistics
-            <span id="stats-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
-        </h2>
-
-        <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
+    <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <div class="detection-header">
+            <h2 onclick="toggleStatistics()" style="cursor: pointer; user-select: none;">
+                <div class="card-icon metrics" style="width: 40px; height: 40px; margin-right: 12px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                Statistics
+            </h2>
+            <span id="stats-toggle-text" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleStatistics()">Collapse</span>
+        </div>
 
         <div id="statistics-content" style="transition: all 0.3s ease; overflow: hidden;">
 
@@ -813,16 +816,18 @@ body, html {
     </div>
 
     <!-- Metrics Section -->
-    <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleGenerationMetrics()">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-            </svg>
-            Metrics
-            <span id="metrics-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
-        </h2>
-
-        <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
+    <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <div class="detection-header">
+            <h2 onclick="toggleGenerationMetrics()" style="cursor: pointer; user-select: none;">
+                <div class="card-icon technique" style="width: 40px; height: 40px; margin-right: 12px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                    </svg>
+                </div>
+                Metrics
+            </h2>
+            <span id="metrics-toggle-text" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleGenerationMetrics()">Collapse</span>
+        </div>
 
         <div id="metrics-content" style="transition: all 0.3s ease; overflow: hidden;">
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
@@ -1025,7 +1030,7 @@ body, html {
                   </defs>
                   <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
                   <!-- White chevron > -->
-                  <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                 </svg>
               </span>
               {% elif vendor.name == 'mde' or vendor.name == 'microsoft' %}
@@ -1046,20 +1051,28 @@ body, html {
               {% elif vendor.name == 'google_secops' %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  <!-- Google SecOps logo - cloud with Google colors -->
                   <defs>
-                    <linearGradient id="googleCloudBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id="googleBlue" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
                       <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
                     </linearGradient>
+                    <linearGradient id="googleRed" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleYellow" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
+                    </linearGradient>
                   </defs>
-                  <!-- Cloud shape with Google blue gradient -->
-                  <path d="M 72 45 C 72 38, 67 32, 60 30 C 58 22, 51 16, 42 16 C 31 16, 22 24, 20 34 C 13 35, 8 41, 8 48 C 8 56, 14 62, 22 62 L 70 62 C 78 62, 84 56, 84 48 C 84 42, 79 37, 72 45 Z" fill="url(#googleCloudBlue)" opacity="0.95"/>
-                  <!-- Small security lock icon in center -->
-                  <rect x="43" y="42" width="14" height="12" rx="2" fill="white" opacity="0.9"/>
-                  <path d="M 46 42 L 46 38 C 46 35, 48 33, 50 33 C 52 33, 54 35, 54 38 L 54 42" stroke="white" stroke-width="2" fill="none" opacity="0.9"/>
-                  <!-- Small keyhole -->
-                  <circle cx="50" cy="48" r="1.5" fill="url(#googleCloudBlue)"/>
+                  <circle cx="30" cy="48" r="16" fill="url(#googleBlue)"/>
+                  <circle cx="50" cy="38" r="20" fill="url(#googleRed)"/>
+                  <circle cx="70" cy="48" r="16" fill="url(#googleYellow)"/>
+                  <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen)"/>
                 </svg>
               </span>
               {% elif vendor.name == 'elastic' %}
@@ -1106,7 +1119,7 @@ body, html {
             {% if vendor.get('coming_soon') %}
             <div class="detection-item">
               <div class="detection-description" style="text-align: center; padding: 20px; color: #666; font-style: italic;">
-                Elastic detection generation coming soon
+                Detection generation coming soon
               </div>
             </div>
             {% else %}
@@ -1394,7 +1407,7 @@ body, html {
                     </radialGradient>
                   </defs>
                   <circle cx="50" cy="50" r="48" fill="url(#splunkGradientCorr)"/>
-                  <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                 </svg>
               </span>
               {% elif vendor.name == 'MDE' or vendor.name == 'Microsoft' %}
@@ -1413,21 +1426,30 @@ body, html {
               {% elif vendor.name == 'Google SecOps' %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  <!-- Google SecOps logo - cloud with Google colors -->
                   <defs>
-                    <linearGradient id="googleCloudBlueCorr" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id="googleBlue" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
                       <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
                     </linearGradient>
+                    <linearGradient id="googleRed" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleYellow" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
+                    </linearGradient>
                   </defs>
-                  <!-- Cloud shape with Google blue gradient -->
-                  <path d="M 72 45 C 72 38, 67 32, 60 30 C 58 22, 51 16, 42 16 C 31 16, 22 24, 20 34 C 13 35, 8 41, 8 48 C 8 56, 14 62, 22 62 L 70 62 C 78 62, 84 56, 84 48 C 84 42, 79 37, 72 45 Z" fill="url(#googleCloudBlueCorr)" opacity="0.95"/>
-                  <!-- Small security lock icon in center -->
-                  <rect x="43" y="42" width="14" height="12" rx="2" fill="white" opacity="0.9"/>
-                  <path d="M 46 42 L 46 38 C 46 35, 48 33, 50 33 C 52 33, 54 35, 54 38 L 54 42" stroke="white" stroke-width="2" fill="none" opacity="0.9"/>
-                  <!-- Small keyhole -->
-                  <circle cx="50" cy="48" r="1.5" fill="url(#googleCloudBlueCorr)"/>
+                  <circle cx="30" cy="48" r="16" fill="url(#googleBlue)"/>
+                  <circle cx="50" cy="38" r="20" fill="url(#googleRed)"/>
+                  <circle cx="70" cy="48" r="16" fill="url(#googleYellow)"/>
+                  <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen)"/>
                 </svg>
+
               </span>
               {% elif vendor.name == 'Elastic' %}
               <span class="vendor-logo-icon">
@@ -1573,11 +1595,12 @@ body, html {
                   {% endfor %}
 
                   {# Display sorted techniques with smart separators #}
-                  {% set prev_tactic = None %}
                   {% for tech in sorted_techniques %}
                     {% set tactic = tech.tactic %}
                     {# Add separator before technique (except first) #}
                     {% if not loop.first %}
+                      {% set prev_tech = sorted_techniques[loop.index0 - 1] %}
+                      {% set prev_tactic = prev_tech.tactic %}
                       {% if tactic == prev_tactic %}
                         {# Same tactic: use slash separator #}
                         <span style="margin: 0 4px; color: #999;">/</span>
@@ -1644,9 +1667,6 @@ body, html {
 
                     {# Display technique badge #}
                     <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech.name }}</span>
-
-                    {# Track previous tactic for next iteration #}
-                    {% set prev_tactic = tactic %}
                   {% endfor %}
                 {% endif %}
 

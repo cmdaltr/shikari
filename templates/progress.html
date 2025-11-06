@@ -136,6 +136,7 @@ body, html {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-right: 12px;
 }
 
 .card-icon.detection { background: #e8f5e9; }
@@ -178,6 +179,17 @@ body, html {
   margin-bottom: 24px;
 }
 
+/* Standardized section heading styles */
+.section-heading {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .detection-header {
   display: flex;
   justify-content: space-between;
@@ -188,12 +200,12 @@ body, html {
 }
 
 .detection-header h2 {
-  font-size: 1.5em;
+  font-size: 26px;
   margin: 0;
   color: #1a1a1a;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-weight: 600;
 }
 
@@ -527,7 +539,7 @@ body, html {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
+  margin-right: 8px;
   vertical-align: middle;
 }
 
@@ -544,8 +556,8 @@ body, html {
 }
 
 .progress-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .progress-icon.detection svg {
@@ -645,12 +657,8 @@ body, html {
     <div class="detection-section">
       <h3 class="detection-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 12px; display: flex; align-items: center; justify-content: flex-start;">
         <div class="progress-icon detection">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
           </svg>
         </div>
         <span style="text-align: left;">Detections</span>
@@ -664,7 +672,7 @@ body, html {
     <div class="detection-section">
       <h3 class="detection-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 12px; display: flex; align-items: center; justify-content: flex-start;">
         <div class="progress-icon correlation">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="18" cy="5" r="3"/>
             <circle cx="6" cy="12" r="3"/>
             <circle cx="18" cy="19" r="3"/>
@@ -683,7 +691,7 @@ body, html {
     <div class="detection-section disabled" id="cross-vendor-section">
       <h3 class="detection-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 12px; display: flex; align-items: center; justify-content: flex-start;">
         <div class="progress-icon cross-vendor">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -863,8 +871,6 @@ if (downloadAllBtn) {
   }, 30000);
 })();
 
-// Crawling animal animation REMOVED - animal now only appears in spinner
-
 // Rotate loading messages
 (function() {
   const groupName = "{{ group_name }}";
@@ -874,14 +880,16 @@ if (downloadAllBtn) {
     `Searching for ${cveMatch ? cveMatch[0] : groupName}...`,
     "Analysing mappings...",
     "Collecting 1s and 0s...",
-    "Mining Crypto...",
-    "Contacting Skynet...",
     "Issuing Symlinks...",
+    "Contacting Skynet...",
     "Assigning variables...",
     "Downloading more RAM...",
     "Consulting Internet Elders...",
     "Turning it off and on again...",
-    "Scoring some CTF points..."
+    "Scoring some CTF points...",
+    "Turning Time Circuits on...",
+    "Beep boop...",
+    "Mining for Bitcoin..."
   ];
 
   let currentIndex = 0;

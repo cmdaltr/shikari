@@ -411,8 +411,19 @@ def construct_yaml(
 
     # Writing MDE YAML file
     for query in appended_mde_queries:
-        # Extract the table name from the query (first line)
-        table_name = query.split("\n")[0].strip()
+        # Extract the table name from the query, skipping comment lines and let statements
+        lines = query.split("\n")
+        table_name = None
+        for line in lines:
+            stripped = line.strip()
+            # Skip empty lines, comments, and let statements
+            if stripped and not stripped.startswith("//") and not stripped.startswith("let "):
+                table_name = stripped
+                break
+
+        # Fallback if no table name found
+        if not table_name:
+            table_name = "UnknownTable"
         query_with_entities = ""
         query_with_entities = map_entities(query)
         """if len(query_with_entities) > 10:

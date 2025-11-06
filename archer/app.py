@@ -4074,8 +4074,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
     vendor_display_names = {
         "splunk": "Splunk",
-        "mde": "Microsoft Defender",
-        "microsoft": "Microsoft Defender",
+        "mde": "MDE",
+        "microsoft": "MDE",
         "elastic": "Elastic",
         "qradar": "IBM QRadar",
         "sumo": "Sumo Logic",
@@ -5657,8 +5657,8 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         # Vendor display names mapping
         VENDOR_DISPLAY_NAMES = {
             "splunk": "Splunk",
-            "mde": "Microsoft Defender for Endpoint",
-            "microsoft": "Microsoft Defender",
+            "mde": "MDE",
+            "microsoft": "MDE",
             "elastic": "Elastic",
             "sentinel": "Azure Sentinel"
         }
