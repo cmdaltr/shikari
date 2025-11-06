@@ -2921,6 +2921,10 @@ def modified_process_group_wrapper(
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
+    # Capture start time for duration tracking
+    import time
+    start_time = time.time()
+
     # Set GENAI_MODE environment variable if provided
     if genai_mode:
         os.environ["GENAI_MODE"] = genai_mode
@@ -2957,6 +2961,10 @@ def modified_process_group_wrapper(
         )
 
         # print(f"DEBUG: process_group completed successfully")
+
+        # Calculate duration
+        end_time = time.time()
+        duration_seconds = end_time - start_time
 
         # If correlation was requested, log correlation activity
         if run_correlation:
@@ -3011,6 +3019,7 @@ def modified_process_group_wrapper(
                 progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
 
             progress_data["status"] = "complete"
+            progress_data["duration"] = duration_seconds
             # print(f"✅ Setting progress status to 'complete' for {group_name} (correlations finished)")
             # print(f"   Progress data: created_yaml={progress_data.get('created_yaml')}, total_yaml={progress_data.get('total_yaml')}, processed={progress_data.get('processed')}, total_pairs={progress_data.get('total_pairs')}")
             write_progress(group_name, progress_data)
@@ -3025,6 +3034,7 @@ def modified_process_group_wrapper(
             progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
 
         progress_data["status"] = "complete"
+        progress_data["duration"] = duration_seconds
         write_progress(group_name, progress_data)
 
         # Log activity to timeline
@@ -4388,6 +4398,18 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             }
         )
 
+    # Add Google SecOps as "Coming Soon" placeholder
+    detections.append(
+        {
+            "name": "google_secops",
+            "display_name": "Google SecOps",
+            "icon": "☁️",
+            "count": 0,
+            "detections": [],
+            "coming_soon": True,
+        }
+    )
+
     # Add Elastic as "Coming Soon" placeholder
     detections.append(
         {
@@ -4762,6 +4784,14 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             "correlations": sorted_corrs
         })
 
+    # Add Google SecOps as "Coming Soon" placeholder
+    grouped_correlations.append({
+        "name": "Google SecOps",
+        "count": 0,
+        "correlations": [],
+        "coming_soon": True
+    })
+
     # Add Elastic as "Coming Soon" placeholder
     grouped_correlations.append({
         "name": "Elastic",
@@ -4777,21 +4807,27 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
     attack_flow_file = os.path.join(ATTACK_FLOWS_DIR, f"{safe_group}_complete_flow.html")
     attack_flow_exists = os.path.exists(attack_flow_file)
 
-    # Get unique technique count
+    # Get unique technique count and tactic count
     technique_set = set()
+    tactic_set = set()
     for vendor_data in detections:
         for detection in vendor_data["detections"]:
             technique_set.add(detection["technique"])
+            # Add all tactics from this detection
+            tactics = detection.get("tactics", [])
+            if tactics:
+                tactic_set.update(tactics)
 
     # Calculate duration (if progress file exists)
-    duration = "N/A"
-    progress_file = os.path.join(PROGRESS_DIR, f"{safe_group}.json")
+    # Progress files are saved with the original group name (with spaces), not sanitized
+    duration = 0
+    progress_file = os.path.join(PROGRESS_DIR, f"{group_name}.json")
     if os.path.exists(progress_file):
         try:
             with open(progress_file, "r") as f:
                 progress_data = json.load(f)
-                # Estimate based on timestamps if available
-                duration = "~3min"  # Placeholder
+                # Get actual duration in seconds from progress data
+                duration = progress_data.get("duration", 0)
         except:
             pass
 
@@ -4822,6 +4858,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             "vendor_count": len(detections),
             "correlation_count": len(correlations),
             "technique_count": len(technique_set),
+            "tactic_count": len(tactic_set),
             "duration": duration,
             "detections": detections,
             "correlations": grouped_correlations,

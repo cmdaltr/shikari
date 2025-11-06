@@ -156,10 +156,10 @@ body, html {
   flex-shrink: 0;
 }
 
-.card-icon.detection { background: #e8f5e9; }
-.card-icon.correlation { background: #e3f2fd; }
+.card-icon.detection { background: transparent; }
+.card-icon.correlation { background: transparent; }
 .card-icon.technique { background: #fff3e0; }
-.card-icon.cross-vendor { background: #fce4ec; }
+.card-icon.cross-vendor { background: transparent; }
 
 .card-icon svg {
   width: 28px;
@@ -188,7 +188,7 @@ body, html {
 
 /* Library Controls */
 .library-controls {
-  margin: 40px 0;
+  margin: 0;
   padding: 24px;
   background: var(--bg-secondary);
   border-radius: 12px;
@@ -333,7 +333,7 @@ body, html {
 .detection-section {
   background: var(--bg-secondary);
   border-radius: 16px;
-  padding: 32px;
+  padding: 16px;
   border: none;
   box-shadow: 0 2px 8px var(--shadow);
   margin-bottom: 24px;
@@ -363,12 +363,12 @@ body, html {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 12px 10px;
-  border: 2px solid #C53030;
-  border-radius: 8px;
+  padding: 6px 12px;
+  border: 1px solid #C53030;
+  border-radius: 4px;
   background: white;
   color: #C53030;
-  font-size: 1em;
+  font-size: 0.85em;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -384,10 +384,19 @@ body, html {
 }
 
 .expand-btn {
-  color: var(--accent);
-  cursor: pointer;
-  font-size: 0.95em;
+  color: #C53030;
+  text-decoration: none;
+  font-size: 16px;
   font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.expand-btn:hover {
+  background: rgba(197, 48, 48, 0.1);
 }
 
 /* Vendor sections */
@@ -843,114 +852,269 @@ body, html {
             <span style="color: var(--bg-primary);">Archer</span><br><span style="color:#666666; font-size: 28px;">Library</span>
         </p>
 
-        <!-- All-Time Metrics Section -->
+        <!-- Statistics Section -->
         <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
             <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleStatistics()">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
                     <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                 </svg>
-                All-Time Statistics
-                <span id="stats-toggle-text" style="margin-left: auto; color: var(--archer-red); font-size: 0.75em; font-weight: 600; transition: all 0.3s ease;">Collapse</span>
+                Statistics
+                <span id="stats-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
             </h2>
+
+            <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
 
             <div id="statistics-content" style="transition: all 0.3s ease; overflow: hidden;">
 
-            <!-- First Row: Detections | Correlations | Cross-vendor -->
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
+        <!-- First Row: Detections | Correlations | Cross-vendor -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
 
-                <!-- Total Detections -->
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Detections</div>
-                    <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
-                        {% set total_detections = detections|length if detections|length > 0 else 1234 %}
-                        {{ total_detections }}
-                    </div>
+            <!-- Total Detections -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Detections</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ detections|length }}
                 </div>
-
-                <!-- Total Correlations -->
-                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Correlations</div>
-                    <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
-                        {% set total_correlations = correlations|length if correlations|length > 0 else 1567 %}
-                        {{ total_correlations }}
-                    </div>
-                </div>
-
-                <!-- Cross-vendor -->
-                <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 8px; padding: 16px; color: #555; box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0.6;">
-                    <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Cross-vendor</div>
-                    <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
-                        0
-                    </div>
-                </div>
-
             </div>
 
-            <!-- Second Row: Threat Groups | Techniques | Tactics | Time Saved -->
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px;">
-
-                <!-- Unique Groups -->
-                <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Threat Groups</div>
-                    <div style="font-size: 2.2em; font-weight: 900; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        {{ all_groups|length if all_groups|length > 0 else 12 }}
-                    </div>
+            <!-- Total Correlations -->
+            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Correlations</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ correlations|length }}
                 </div>
-
-                <!-- Unique Techniques -->
-                <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Techniques</div>
-                    <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
-                        {{ all_techniques|length if all_techniques|length > 0 else 196 }} / 196
-                    </div>
-                </div>
-
-                <!-- Unique Tactics -->
-                <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Tactics</div>
-                    <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
-                        {{ all_tactics|length if all_tactics|length > 0 else 14 }} / 14
-                    </div>
-                </div>
-
-                <!-- Total Time Saved -->
-                <div style="background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Total Time Saved</div>
-                    <div style="font-size: 1.8em; font-weight: 900; line-height: 1;">
-                        {% set total_hours = (total_detections * 0.5)|round(1) %}
-                        {{ total_hours if total_hours > 0 else 1234.5 }} hrs
-                    </div>
-                </div>
-
             </div>
 
-            <!-- Value Proposition -->
-            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-top: 16px;">
+            <!-- Cross-vendor -->
+            <div style="background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%); border-radius: 8px; padding: 16px; color: #555; box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0.6;">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Cross-vendor</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    0
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Second Row: Techniques | Tactics | Time Saved -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px;">
+
+            <!-- Unique Techniques -->
+            <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Techniques</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ all_techniques|length }} / 196
+                </div>
+            </div>
+
+            <!-- Unique Tactics -->
+            <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Tactics</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ all_tactics|length }} / 14
+                </div>
+            </div>
+
+            <!-- Total Time Saved -->
+            <div style="background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Total Time Saved</div>
+                <div style="font-size: 1.8em; font-weight: 900; line-height: 1;">
+                    {{ ((detections|length * 0.5)|round(1)) }} hrs
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Value Proposition -->
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-top: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+                <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">Archer Value Summary</span>
+            </div>
+            <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                You've generated <strong>{{ detections|length }}</strong> production-ready detections across <strong>{{ all_groups|length }}</strong> threat groups,
+                covering <strong>{{ all_techniques|length }}</strong> MITRE ATT&CK techniques and <strong>{{ all_tactics|length }}</strong> tactics.
+                This represents approximately <strong>{{ ((detections|length * 0.5)|round(1)) }} hours</strong> of work automated,
+                with <strong>{{ correlations|length }}</strong> behavioral correlations that would typically require manual analysis.
+            </div>
+        </div>
+        </div>
+        </div>
+
+        <!-- Metrics Section -->
+        <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleMetrics()">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                </svg>
+                Metrics
+                <span id="metrics-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
+            </h2>
+
+            <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
+
+            <div id="metrics-content" style="transition: all 0.3s ease; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+
+                {# Calculate values for metrics #}
+                {% set hourly_rate = 25 %}
+                {% set hours_saved = ((detections|length * 0.5)|round(1)) %}
+                {% set cost_savings = (hours_saved * hourly_rate)|round(0)|int %}
+                {% set osint_count = namespace(count=0) %}
+
+                {% for vendor in vendors %}
+                  {% for detection in vendor.detections %}
+                    {% if detection.osint_enriched %}
+                      {% set osint_count.count = osint_count.count + 1 %}
+                    {% endif %}
+                  {% endfor %}
+                {% endfor %}
+
+                {% set osint_research_hours = (osint_count.count * 0.65)|round(1) %}
+
+                <!-- Cost Savings -->
+                <div style="background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                  <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Cost Savings</div>
+                  <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    ${{ '{:,}'.format(cost_savings) }}
+                  </div>
+                  <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.4;">
+                    @ ${{ hourly_rate }}/hr analyst rate<br>
+                    {{ hours_saved }} hours saved
+                  </div>
+                </div>
+
+                <!-- Time Efficiency -->
+                <div style="background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                  <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Time Efficiency</div>
+                  {% set manual_hours = (detections|length * 2)|round(1) %}
+                  {% set speedup = (manual_hours / hours_saved)|round(0)|int if hours_saved > 0 else 0 %}
+                  <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {% if speedup > 0 %}{{ speedup }}x{% else %}N/A{% endif %}
+                  </div>
+                  <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.4;">
+                    Manual: {{ manual_hours }} hrs<br>
+                    Archer: {{ hours_saved }} hrs
+                  </div>
+                </div>
+
+                <!-- Detection Fidelity -->
+                <div style="background: linear-gradient(135deg, #38f9d7 0%, #43e97b 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                  <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Detection Fidelity</div>
+                  {% set osint_pct = 0 %}
+                  {% if detections|length > 0 %}
+                    {% set osint_pct = ((osint_count.count / detections|length) * 100)|round(0)|int %}
+                  {% endif %}
+                  {% set has_correlations = correlations|length > 0 %}
+                  {% set multi_platform = (vendors|length > 1) %}
+                  {% set fidelity_score = (osint_pct * 0.4) + (40 if has_correlations else 0) + (20 if multi_platform else 0) %}
+                  <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ fidelity_score|round(0)|int }}/100
+                  </div>
+                  <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.4;">
+                    {% if has_correlations %}40 | 40 | 20 weighting*{% endif %}<br>
+                    {% if multi_platform %}Proprietry analyics scoring{% endif %}
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Second Row: Additional Quality Metrics -->
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px;">
+
+                <!-- Real-World Validated -->
+                <div style="background: linear-gradient(135deg, #a6c1ee 0%, #fbc2eb 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                  <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Real-World Validated</div>
+                  <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ osint_count.count }}
+                  </div>
+                  <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
+                    Based on observed attack patterns<br>
+                    Reviewed against OSINT repositories
+                    {% if osint_research_hours > 0 %}<br>Research saved: ~{{ osint_research_hours }} hrs{% endif %}
+                  </div>
+                </div>
+
+                {% set indicator_count = namespace(total=0, detection_count=0) %}
+
+                {% for vendor in vendors %}
+                  {% for detection in vendor.detections %}
+                    {% if detection.indicators and detection.indicators|length > 0 %}
+                      {% set indicator_count.total = indicator_count.total + detection.indicators|length %}
+                      {% set indicator_count.detection_count = indicator_count.detection_count + 1 %}
+                    {% endif %}
+                  {% endfor %}
+                {% endfor %}
+
+                {% set avg_indicators = (indicator_count.total / indicator_count.detection_count)|round(1) if indicator_count.detection_count > 0 else 0 %}
+
+                <!-- Indicator Density -->
+                <div style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                  <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Indicator Density</div>
+                  <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ avg_indicators }}
+                  </div>
+                  <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
+                    Avg indicators per detection<br>
+                    {{ indicator_count.total }} total indicators
+                  </div>
+                </div>
+
+                <!-- Detection Reusability -->
+                <div style="background: linear-gradient(135deg, #fab1a0 0%, #ff7675 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                  <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Detection Reusability</div>
+                  {% set reusability_score = ((detections|length / all_techniques|length)|round(1)) if all_techniques|length > 0 else 0 %}
+                  <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ reusability_score }}x
+                  </div>
+                  <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
+                    Detections per technique<br>
+                    Multi-vendor redundancy
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Value Proposition -->
+              <div style="background: linear-gradient(135deg, #f59e0b15 0%, #f59e0b15 100%); border-left: 4px solid #f59e0b; border-radius: 6px; padding: 16px; margin-top: 16px;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                    </svg>
-                    <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">Archer Value Summary</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                  <span style="font-weight: 600; color: #d97706; font-size: 1.05em;">Archer Value Summary</span>
                 </div>
                 <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
-                    You've generated <strong>{{ total_detections }}</strong> production-ready detections across <strong>{{ all_groups|length if all_groups|length > 0 else 12 }}</strong> threat groups,
-                    covering <strong>{{ all_techniques|length if all_techniques|length > 0 else 196 }}</strong> MITRE ATT&CK techniques and <strong>{{ all_tactics|length if all_tactics|length > 0 else 14 }}</strong> tactics.
-                    This represents approximately <strong>{{ total_hours if total_hours > 0 else 617.0 }} hours</strong> of work automated,
-                    with <strong>{{ total_correlations }}</strong> behavioral correlations that would typically require manual analysis.
+                  Archer delivered <strong>${{ '{:,}'.format(cost_savings) }}</strong> in cost savings by automating <strong>{{ hours_saved }} hours</strong> of manual detection engineering.
+                  {% if speedup > 0 %}Detections were generated <strong>{{ speedup }}x faster</strong> than manual development.{% endif %}
+                  {% if osint_count.count > 0 %}With <strong>{{ osint_count.count }}</strong> detections validated against real-world threat intelligence, you have immediate production-ready coverage.{% endif %}
+                  The fidelity score of <strong>{{ fidelity_score|round(0)|int }}/100</strong> reflects multi-platform coverage, behavioral correlation, and OSINT validation.
                 </div>
-            </div>
+              </div>
             </div>
         </div>
 
         <!-- Filter and Action Section -->
-        <div class="library-controls">
-            <!-- Search Row -->
-            <div class="search-row">
-                <input type="text" id="search-input" placeholder="Search detections...">
-            </div>
+        <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleFilters()">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                Filters
+                <span id="filters-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
+            </h2>
 
-            <!-- Filters Row -->
-            <div class="filters-row">
+            <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
+
+            <div id="filters-content" style="transition: all 0.3s ease; overflow: hidden; padding: 0; margin: 0;">
+                <div class="library-controls">
+                    <!-- Search Row -->
+                    <div class="search-row">
+                        <input type="text" id="search-input" placeholder="Search detections...">
+                    </div>
+
+                    <!-- Filters Row -->
+                    <div class="filters-row">
                 <select id="filter-group" class="dropdown-styled" style="min-width: 180px;">
                     <option value="">Groups</option>
                     {% for group in all_groups %}
@@ -1049,165 +1213,178 @@ body, html {
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Detections Section -->
-        <div class="detection-section">
-            <div class="detection-header">
-                <h2>
-                    <div class="card-icon detection" style="width: 40px; height: 40px; margin-right: 12px;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
-                        </svg>
-                    </div>
-                    Detections
-                </h2>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    <button class="btn-selection" onclick="selectAll()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="9 11 12 14 22 4"/>
-                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                        </svg>
-                        Select All
-                    </button>
-                    <button class="btn-selection" onclick="deselectAll()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                        </svg>
-                        Deselect All
-                    </button>
-                    <span class="expand-btn" onclick="toggleAllVendors()">Expand All</span>
                 </div>
             </div>
-
-            {% if vendors %}
-                {% for vendor in vendors %}
-                <div class="vendor-section" data-vendor="{{ vendor.name }}">
-                    <div class="vendor-header" onclick="toggleVendor(this)">
-                        <div class="vendor-title">
-                            {% if vendor.name == 'splunk' %}
-                            <span class="vendor-logo-icon">
-                                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                                    <defs>
-                                        <radialGradient id="splunkGradient" cx="30%" cy="30%">
-                                            <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
-                                            <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
-                                            <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
-                                        </radialGradient>
-                                    </defs>
-                                    <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
-                                    <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                                </svg>
-                            </span>
-                            {% elif vendor.name == 'mde' or vendor.name == 'microsoft' %}
-                            <span class="vendor-logo-icon">
-                                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                                    <defs>
-                                        <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
-                                            <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
-                                            <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
-                                        </linearGradient>
-                                    </defs>
-                                    <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
-                                </svg>
-                            </span>
-                            {% elif vendor.name == 'elastic' %}
-                            <span class="vendor-logo-icon">
-                                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                                    <defs>
-                                        <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
-                                            <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
-                                        </linearGradient>
-                                        <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
-                                            <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
-                                        </linearGradient>
-                                        <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
-                                            <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
-                                        </linearGradient>
-                                    </defs>
-                                    <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
-                                    <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
-                                    <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
-                                </svg>
-                            </span>
-                            {% endif %}
-                            <span>{{ vendor.display_name }}</span>
-                            <span class="vendor-count">{{ vendor.count }} rules</span>
-                        </div>
-                        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="6 9 12 15 18 9"/>
-                        </svg>
-                    </div>
-                    <div class="vendor-content">
-                        {% for detection in vendor.detections %}
-                        <div class="detection-item{% if detection.needs_review %} unchecked{% endif %} library-item"
-                             data-detection-id="{{ detection.id }}"
-                             data-group="{{ detection.group }}"
-                             data-tactic="{{ detection.tactics|join(',') if detection.tactics else '' }}"
-                             data-technique="{{ detection.technique_id }}"
-                             data-vendor="{{ vendor.name }}">
-
-                            <div class="detection-title" style="position: relative;">
-                                <div style="display: flex; align-items: center; flex: 1;">
-                                    <input type="checkbox" class="library-checkbox" data-id="{{ detection.id }}">
-                                    <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}">{{ detection.technique_name }}</span>
-                                    {% if detection.osint_enriched %}
-                                    <span class="osint-enhanced-badge" title="This detection was enhanced with additional indicators from OSINT sources merged into the query logic.">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                                            <circle cx="12" cy="12" r="10"/>
-                                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                                        </svg>
-                                        Enhanced with OSINT
-                                    </span>
-                                    {% elif detection.needs_review %}
-                                    <span class="needs-review-badge" title="No threat indicators extracted automatically. This detection may use complex logic, behavioral patterns, or aggregations. Review the query to validate effectiveness.">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                                            <circle cx="12" cy="12" r="10"/>
-                                            <line x1="12" y1="8" x2="12" y2="12"/>
-                                            <line x1="12" y1="16" x2="12.01" y2="16"/>
-                                        </svg>
-                                        Needs Review - no indicators extracted
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div style="margin-left: 26px; margin-top: 4px; margin-bottom: 6px;">
-                                <span style="font-weight: 400; color: #666;">{{ detection.title.replace(', ', ' | ') if detection.title else detection.data_source }}</span>
-                            </div>
-                            {% if detection.indicators %}
-                            <div class="detection-indicators">
-                                {% for indicator in detection.indicators %}
-                                <code class="indicator-tag">{{ indicator }}</code>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <div class="detection-description" style="white-space: pre-line; font-style: italic;">{{ detection.description }}</div>
-
-                            <!-- Metadata -->
-                            <div class="detection-metadata" style="margin-top: 8px;">
-                                <span>Group: {{ detection.group }}</span> •
-                                <span>Saved: {{ detection.saved_date }}</span>
-                            </div>
-
-                            <button class="view-query-btn" onclick="toggleQuery('det-{{ vendor.name }}-{{ loop.index }}')">
-                                <span id="det-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Query</span>
-                            </button>
-                            <div class="query-preview" id="det-{{ vendor.name }}-{{ loop.index }}-query" style="display: none;">
-                                <pre><code>{{ detection.query }}</code></pre>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <p style="text-align: center; color: var(--text-secondary); padding: 40px 0;">No detections in library yet.</p>
-            {% endif %}
         </div>
+
+        <!-- Divider -->
+        <div style="border-top: 2px solid #e5e7eb; margin: 40px 0;"></div>
+
+        <!-- Detection Rules Section -->
+        <div class="detection-section">
+          <div class="detection-header">
+            <h2>
+              <div class="card-icon detection" style="width: 40px; height: 40px; margin-right: 12px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                </svg>
+              </div>
+              Detections
+            </h2>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <button class="btn-selection" onclick="selectAll()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="9 11 12 14 22 4"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+                Select All
+              </button>
+              <button class="btn-selection" onclick="deselectAll()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                </svg>
+                Deselect All
+              </button>
+              <span class="expand-btn" onclick="toggleAllVendors()">Expand All</span>
+            </div>
+          </div>
+
+      {% if vendors %}
+        {% for vendor in vendors %}
+        <div class="vendor-section" data-vendor="{{ vendor.name }}">
+          <div class="vendor-header" onclick="toggleVendor(this)">
+            <div class="vendor-title">
+              {% if vendor.name == 'splunk' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <!-- Gradient background circle -->
+                  <defs>
+                    <radialGradient id="splunkGradient" cx="30%" cy="30%">
+                      <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                      <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                    </radialGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
+                  <!-- White chevron > -->
+                  <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </span>
+              {% elif vendor.name == 'mde' or vendor.name == 'microsoft' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <!-- Gradient for shield -->
+                  <defs>
+                    <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                      <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <!-- Blue gradient shield -->
+                  <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
+                </svg>
+              </span>
+              {% elif vendor.name == 'elastic' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <!-- Elasticsearch logo - three stacked rounded bars with offset -->
+                  <defs>
+                    <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <!-- Three stacked elongated shapes with offset -->
+                  <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
+                  <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
+                  <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
+                </svg>
+              </span>
+              {% else %}
+              <span class="vendor-icon">{{ vendor.icon }}</span>
+              {% endif %}
+              <span>{{ vendor.display_name }}</span>
+              <span class="vendor-count">{{ vendor.count }} rules</span>
+            </div>
+            <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+          <div class="vendor-content">
+            {% for detection in vendor.detections %}
+            <div class="detection-item{% if detection.needs_review %} unchecked{% endif %} library-item"
+                 data-detection-id="{{ detection.id }}"
+                 data-group="{{ detection.group }}"
+                 data-tactic="{{ detection.tactics|join(',') if detection.tactics else '' }}"
+                 data-technique="{{ detection.technique_id }}"
+                 data-vendor="{{ vendor.name }}">
+
+              <div class="detection-title" style="position: relative;">
+                <div style="display: flex; align-items: center; flex: 1;">
+                  <input type="checkbox" class="library-checkbox" data-id="{{ detection.id }}">
+                  <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}">{{ detection.technique_name }}</span>
+                  {% if detection.osint_enriched %}
+                  <span class="osint-enhanced-badge" title="This detection was enhanced with additional indicators from OSINT sources merged into the query logic.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    Enhanced with OSINT
+                  </span>
+                  {% elif detection.needs_review %}
+                  <span class="needs-review-badge" title="No threat indicators extracted automatically. This detection may use complex logic, behavioral patterns, or aggregations. Review the query to validate effectiveness.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    Needs Review - no indicators extracted
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+              <div style="margin-left: 26px; margin-top: 4px; margin-bottom: 6px;">
+                <span style="font-weight: 400; color: #666;">{{ detection.title.replace(', ', ' | ') if detection.title else detection.data_source }}</span>
+              </div>
+              {% if detection.indicators %}
+              <div class="detection-indicators">
+                {% for indicator in detection.indicators %}
+                <code class="indicator-tag">{{ indicator }}</code>
+                {% endfor %}
+              </div>
+              {% endif %}
+              <div class="detection-description" style="white-space: pre-line; font-style: italic;">{{ detection.description }}</div>
+
+              <!-- Metadata -->
+              <div class="detection-metadata" style="margin-top: 8px;">
+                <span>Group: {{ detection.group }}</span> •
+                <span>Saved: {{ detection.saved_date }}</span>
+              </div>
+
+              <button class="view-query-btn" onclick="toggleQuery('det-{{ vendor.name }}-{{ loop.index }}')">
+                <span id="det-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Query</span>
+              </button>
+              <div class="query-preview" id="det-{{ vendor.name }}-{{ loop.index }}-query" style="display: none;">
+                <pre><code>{{ detection.query }}</code></pre>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p style="text-align: center; color: var(--text-secondary); padding: 40px 0;">No detections in library yet.</p>
+      {% endif %}
+    </div>
 
     <!-- Correlations Section -->
     <div id="correlations" class="detection-section">
@@ -1248,12 +1425,13 @@ body, html {
     <div class="detection-section" style="opacity: 0.5; pointer-events: none;">
       <div class="detection-header">
         <h2>
-          <div class="card-icon cross-vendor" style="width: 40px; height: 40px; margin-right: 12px; background: #fce4ec;">
+          <div class="card-icon cross-vendor" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
             <svg viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <path d="M3 16 L3 19 L21 19 L21 16"/>
+              <path d="M6 16 L6 10"/>
+              <path d="M12 16 L12 6"/>
+              <path d="M18 16 L18 10"/>
+              <path d="M2 19 L22 19" stroke-width="2.5"/>
             </svg>
           </div>
           Cross-vendor Correlations
@@ -1952,19 +2130,89 @@ function toggleStatistics() {
     }
 }
 
-// Initialize statistics state on page load
-document.addEventListener('DOMContentLoaded', function() {
-    const content = document.getElementById('statistics-content');
-    const toggleText = document.getElementById('stats-toggle-text');
-    const isCollapsed = localStorage.getItem('statsCollapsed') === 'true';
+// Toggle Filters Section
+function toggleFilters() {
+    const content = document.getElementById('filters-content');
+    const toggleText = document.getElementById('filters-toggle-text');
+    const isCollapsed = content.style.maxHeight === '0px';
 
     if (isCollapsed) {
-        content.style.maxHeight = '0px';
-        toggleText.textContent = 'Expand';
-    } else {
-        // Set initial max-height to enable smooth transitions
+        // Expand
         content.style.maxHeight = content.scrollHeight + 'px';
         toggleText.textContent = 'Collapse';
+        localStorage.setItem('filtersCollapsed', 'false');
+    } else {
+        // Collapse
+        content.style.maxHeight = '0px';
+        toggleText.textContent = 'Expand';
+        localStorage.setItem('filtersCollapsed', 'true');
+    }
+}
+
+// Toggle Metrics Section
+function toggleMetrics() {
+    const content = document.getElementById('metrics-content');
+    const toggleText = document.getElementById('metrics-toggle-text');
+    const isCollapsed = content.style.maxHeight === '0px';
+
+    if (isCollapsed) {
+        // Expand
+        content.style.maxHeight = content.scrollHeight + 'px';
+        toggleText.textContent = 'Collapse';
+        localStorage.setItem('metricsCollapsed', 'false');
+    } else {
+        // Collapse
+        content.style.maxHeight = '0px';
+        toggleText.textContent = 'Expand';
+        localStorage.setItem('metricsCollapsed', 'true');
+    }
+}
+
+// Initialize statistics, filters, and metrics state on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize statistics
+    const statsContent = document.getElementById('statistics-content');
+    const statsToggleText = document.getElementById('stats-toggle-text');
+    // Default to collapsed if no localStorage value is set
+    const statsCollapsed = localStorage.getItem('statsCollapsed') !== 'false';
+
+    if (statsCollapsed) {
+        statsContent.style.maxHeight = '0px';
+        statsToggleText.textContent = 'Expand';
+    } else {
+        // Set initial max-height to enable smooth transitions
+        statsContent.style.maxHeight = statsContent.scrollHeight + 'px';
+        statsToggleText.textContent = 'Collapse';
+    }
+
+    // Initialize filters
+    const filtersContent = document.getElementById('filters-content');
+    const filtersToggleText = document.getElementById('filters-toggle-text');
+    // Default to collapsed if no localStorage value is set
+    const filtersCollapsed = localStorage.getItem('filtersCollapsed') !== 'false';
+
+    if (filtersCollapsed) {
+        filtersContent.style.maxHeight = '0px';
+        filtersToggleText.textContent = 'Expand';
+    } else {
+        // Set initial max-height to enable smooth transitions
+        filtersContent.style.maxHeight = filtersContent.scrollHeight + 'px';
+        filtersToggleText.textContent = 'Collapse';
+    }
+
+    // Initialize metrics
+    const metricsContent = document.getElementById('metrics-content');
+    const metricsToggleText = document.getElementById('metrics-toggle-text');
+    // Default to collapsed if no localStorage value is set
+    const metricsCollapsed = localStorage.getItem('metricsCollapsed') !== 'false';
+
+    if (metricsCollapsed) {
+        metricsContent.style.maxHeight = '0px';
+        metricsToggleText.textContent = 'Expand';
+    } else {
+        // Set initial max-height to enable smooth transitions
+        metricsContent.style.maxHeight = metricsContent.scrollHeight + 'px';
+        metricsToggleText.textContent = 'Collapse';
     }
 });
 </script>

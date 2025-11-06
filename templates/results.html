@@ -95,6 +95,15 @@ body, html {
   border-color: #d1d5db;
 }
 
+.validation-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: #C53030;
+  flex-shrink: 0;
+}
+
 /* Custom Modal Dialog */
 .modal-overlay {
   display: none;
@@ -254,11 +263,11 @@ body, html {
   flex-shrink: 0;
 }
 
-.card-icon.detection { background: #e8f5e9; }
-.card-icon.correlation { background: #e3f2fd; }
+.card-icon.detection { background: transparent; }
+.card-icon.correlation { background: transparent; }
 .card-icon.technique { background: #fff3e0; }
-.card-icon.vendor { background: #f3e5f5; }
-.card-icon.validation { background: #d1fae5; }
+.card-icon.vendor { background: transparent; }
+.card-icon.validation { background: transparent; }
 .card-icon.metrics { background: #ede9fe; }
 
 .card-icon svg {
@@ -321,7 +330,7 @@ body, html {
 .expand-btn {
   color: #C53030;
   text-decoration: none;
-  font-size: 0.95em;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   user-select: none;
@@ -707,66 +716,267 @@ body, html {
       Results for<br><span style="color:#8B0000; font-size: 28px;">{{ group_name.replace('_', ' ') }}</span>
     </p>
 
-    <!-- Executive Summary Cards -->
-    <div class="summary-cards">
-      <div class="summary-card">
-        <div class="card-icon detection">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2">
-            <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
-          </svg>
-        </div>
-        <div class="card-content">
-          <h3>{{ total_detections }}</h3>
-          <p>Detections</p>
-        </div>
-      </div>
+    {# Calculate time-related metrics once for use across both Statistics and Metrics sections #}
+    {% set total_detections_calc = total_detections %}
+    {% set manual_hours = (total_detections * 2)|round(1) %}
+    {% set archer_hours = ((duration / 3600) if duration else (total_detections * 0.1))|round(2) %}
+    {% set hours_saved = (manual_hours - archer_hours)|round(1) %}
 
-      <div class="summary-card">
-        <div class="card-icon correlation">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="18" cy="5" r="3"/>
-            <circle cx="6" cy="12" r="3"/>
-            <circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-          </svg>
-        </div>
-        <div class="card-content">
-          <h3>{{ correlation_count }}</h3>
-          <p>Correlations</p>
-        </div>
-      </div>
+    <!-- Statistics Section -->
+    <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleStatistics()">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            Statistics
+            <span id="stats-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
+        </h2>
 
-      <div class="summary-card" style="opacity: 0.5;">
-        <div class="card-icon cross-vendor" style="background: #fce4ec;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </div>
-        <div class="card-content">
-          <h3 style="color: #999;">0</h3>
-          <p style="color: #999;">Cross-vendor</p>
-        </div>
-      </div>
+        <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
 
-      <div class="summary-card">
-        <div class="card-icon technique">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-        </div>
-        <div class="card-content">
-          <h3>{{ technique_count }}</h3>
-          <p>Techniques</p>
-        </div>
-      </div>
+        <div id="statistics-content" style="transition: all 0.3s ease; overflow: hidden;">
 
+        <!-- First Row: Detections | Correlations | Cross-vendor -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
+
+            <!-- Total Detections -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Detections</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ total_detections }}
+                </div>
+            </div>
+
+            <!-- Total Correlations -->
+            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Correlations</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ correlation_count }}
+                </div>
+            </div>
+
+            <!-- Cross-vendor -->
+            <div style="background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%); border-radius: 8px; padding: 16px; color: #555; box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0.6;">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Cross-vendor</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    0
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Second Row: Techniques | Tactics | Time Saved -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px;">
+
+            <!-- Unique Techniques -->
+            <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Techniques</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ technique_count }} / 196
+                </div>
+            </div>
+
+            <!-- Unique Tactics -->
+            <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Tactics</div>
+                <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                    {{ tactic_count }} / 14
+                </div>
+            </div>
+
+            <!-- Total Time Saved -->
+            <div style="background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Total Time Saved</div>
+                <div style="font-size: 1.8em; font-weight: 900; line-height: 1;">
+                    {{ hours_saved }} hrs
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Value Proposition -->
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-top: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+                <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">Archer Value Summary</span>
+            </div>
+            <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                You've generated <strong>{{ total_detections }}</strong> production-ready detections for <strong>{{ group_name.replace('_', ' ') }}</strong>,
+                covering <strong>{{ technique_count }}</strong> MITRE ATT&CK techniques and <strong>{{ tactic_count }}</strong> tactics.
+                This represents approximately <strong>{{ total_hours }} hours</strong> of work automated,
+                with <strong>{{ correlation_count }}</strong> behavioral correlations that would typically require manual analysis.
+            </div>
+        </div>
+        </div>
     </div>
 
+    <!-- Metrics Section -->
+    <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <h2 style="margin: 0 0 20px 0; font-size: 1.4em; color: #1f2937; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;" onclick="toggleGenerationMetrics()">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+            Metrics
+            <span id="metrics-toggle-text" class="expand-btn" style="margin-left: auto; transition: all 0.3s ease;">Collapse</span>
+        </h2>
+
+        <div style="border-top: 2px solid #e5e7eb; margin: 20px 0;"></div>
+
+        <div id="metrics-content" style="transition: all 0.3s ease; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+
+            {# Use pre-calculated values from top of template #}
+            {% set hourly_rate = 25 %}
+            {% set cost_savings = (hours_saved * hourly_rate)|round(0)|int %}
+            {% set osint_count = namespace(count=0) %}
+            {% for vendor in detections %}
+              {% for detection in vendor.detections %}
+                {% if detection.osint_data and detection.osint_data.enriched %}
+                  {% set osint_count.count = osint_count.count + 1 %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% set osint_research_hours = (osint_count.count * 0.65)|round(1) %}
+
+            <!-- Cost Savings -->
+            <div style="background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Cost Savings</div>
+              <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                ${{ '{:,}'.format(cost_savings) }}
+              </div>
+              <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.4;">
+                @ ${{ hourly_rate }}/hr analyst rate<br>
+                {{ hours_saved }} hours saved
+              </div>
+            </div>
+
+            <!-- Time Efficiency -->
+            <div style="background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Time Efficiency</div>
+              {% set archer_time_seconds = (duration|float) if duration else 0 %}
+              {% set archer_display = "" %}
+              {% set archer_time_for_calc = 0 %}
+              {% if archer_time_seconds > 0 and archer_time_seconds < 60 %}
+                {% set archer_display = (archer_time_seconds|round(0)|int)|string + " sec" %}
+                {% set archer_time_for_calc = archer_time_seconds|round(0) %}
+              {% elif archer_time_seconds >= 60 and archer_time_seconds < 3600 %}
+                {% set archer_display = ((archer_time_seconds / 60)|round(1))|string + " min" %}
+                {% set archer_time_for_calc = ((archer_time_seconds / 60)|round(1)) * 60 %}
+              {% elif archer_time_seconds >= 3600 %}
+                {% set archer_display = ((archer_time_seconds / 3600)|round(1))|string + " hrs" %}
+                {% set archer_time_for_calc = ((archer_time_seconds / 3600)|round(1)) * 3600 %}
+              {% else %}
+                {% set archer_display = "N/A" %}
+              {% endif %}
+              {% set speedup = (manual_hours * 3600 / archer_time_for_calc)|round(0)|int if archer_time_for_calc > 0 else 0 %}
+              <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                {% if speedup > 0 %}{{ speedup }}x{% else %}N/A{% endif %}
+              </div>
+              <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.4;">
+                Manual: {{ manual_hours }} hrs<br>
+                Archer: {{ archer_display }}
+              </div>
+            </div>
+
+            <!-- Detection Fidelity -->
+            <div style="background: linear-gradient(135deg, #38f9d7 0%, #43e97b 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Detection Fidelity</div>
+              {% set osint_pct = 0 %}
+              {% if total_detections > 0 %}
+                {% set osint_pct = ((osint_count.count / total_detections) * 100)|round(0)|int %}
+              {% endif %}
+              {% set has_correlations = correlation_count > 0 %}
+              {% set multi_platform = (detections|length > 1) %}
+              {% set fidelity_score = (osint_pct * 0.4) + (40 if has_correlations else 0) + (20 if multi_platform else 0) %}
+              <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                {{ fidelity_score|round(0)|int }}/100
+              </div>
+              <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.4;">
+                {% if has_correlations %}40 | 40 | 20 weighting*{% endif %}<br>
+                {% if multi_platform %}Proprietry analyics scoring{% endif %}
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Second Row: Additional Quality Metrics -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px;">
+
+            <!-- Real-World Validated -->
+            <div style="background: linear-gradient(135deg, #a6c1ee 0%, #fbc2eb 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Real-World Validated</div>
+              <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                {{ osint_count.count }}
+              </div>
+              <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
+                Based on observed attack patterns<br>
+                Reviewed against OSINT repositories
+                {% if osint_research_hours > 0 %}<br>Research saved: ~{{ osint_research_hours }} hrs{% endif %}
+              </div>
+            </div>
+
+            {% set indicator_count = namespace(total=0, detection_count=0) %}
+
+            {% for vendor in detections %}
+              {% for detection in vendor.detections %}
+                {% if detection.indicators and detection.indicators|length > 0 %}
+                  {% set indicator_count.total = indicator_count.total + detection.indicators|length %}
+                  {% set indicator_count.detection_count = indicator_count.detection_count + 1 %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+
+            {% set avg_indicators = (indicator_count.total / indicator_count.detection_count)|round(1) if indicator_count.detection_count > 0 else 0 %}
+
+            <!-- Indicator Density -->
+            <div style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Indicator Density</div>
+              <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                {{ avg_indicators }}
+              </div>
+              <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
+                Avg indicators per detection<br>
+                {{ indicator_count.total }} total indicators
+              </div>
+            </div>
+
+            <!-- Detection Reusability -->
+            <div style="background: linear-gradient(135deg, #fab1a0 0%, #ff7675 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Detection Reusability</div>
+              {% set reusability_score = ((total_detections / technique_count)|round(1)) if technique_count > 0 else 0 %}
+              <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                {{ reusability_score }}x
+              </div>
+              <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
+                Detections per technique<br>
+                Multi-vendor redundancy
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Value Proposition -->
+          <div style="background: linear-gradient(135deg, #f59e0b15 0%, #f59e0b15 100%); border-left: 4px solid #f59e0b; border-radius: 6px; padding: 16px; margin-top: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              <span style="font-weight: 600; color: #d97706; font-size: 1.05em;">Archer Value Summary</span>
+            </div>
+            <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
+              Archer delivered <strong>${{ '{:,}'.format(cost_savings) }}</strong> in cost savings by automating <strong>{{ hours_saved }} hours</strong> of manual detection engineering.
+              {% if speedup > 0 %}Detections were generated <strong>{{ speedup }}x faster</strong> than manual development.{% endif %}
+              {% if osint_count.count > 0 %}With <strong>{{ osint_count.count }}</strong> detections validated against real-world threat intelligence, you have immediate production-ready coverage.{% endif %}
+              The fidelity score of <strong>{{ fidelity_score|round(0)|int }}/100</strong> reflects multi-platform coverage, behavioral correlation, and OSINT validation.
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <!-- Divider -->
+    <div style="border-top: 2px solid #e5e7eb; margin: 40px 0;"></div>
 
     <!-- Detection Rules Section -->
     <div class="detection-section">
@@ -831,6 +1041,34 @@ body, html {
                   </defs>
                   <!-- Blue gradient shield -->
                   <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
+                </svg>
+              </span>
+              {% elif vendor.name == 'google_secops' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <!-- Google SecOps logo - Google colored shapes -->
+                  <defs>
+                    <linearGradient id="googleBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleRed" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleYellow" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="25" cy="45" r="20" fill="url(#googleBlue)"/>
+                  <circle cx="50" cy="32" r="26" fill="url(#googleRed)"/>
+                  <circle cx="75" cy="45" r="20" fill="url(#googleYellow)"/>
+                  <rect x="15" y="50" width="70" height="25" rx="10" fill="url(#googleGreen)"/>
                 </svg>
               </span>
               {% elif vendor.name == 'elastic' %}
@@ -1179,6 +1417,34 @@ body, html {
                     </linearGradient>
                   </defs>
                   <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradientCorr)"/>
+                </svg>
+              </span>
+              {% elif vendor.name == 'Google SecOps' %}
+              <span class="vendor-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  <!-- Google SecOps logo - Google colored shapes -->
+                  <defs>
+                    <linearGradient id="googleBlueCorr" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleRedCorr" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleYellowCorr" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="googleGreenCorr" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="25" cy="45" r="20" fill="url(#googleBlueCorr)"/>
+                  <circle cx="50" cy="32" r="26" fill="url(#googleRedCorr)"/>
+                  <circle cx="75" cy="45" r="20" fill="url(#googleYellowCorr)"/>
+                  <rect x="15" y="50" width="70" height="25" rx="10" fill="url(#googleGreenCorr)"/>
                 </svg>
               </span>
               {% elif vendor.name == 'Elastic' %}
@@ -1663,12 +1929,13 @@ body, html {
     <div class="detection-section" style="opacity: 0.5; pointer-events: none;">
       <div class="detection-header">
         <h2>
-          <div class="card-icon cross-vendor" style="width: 40px; height: 40px; margin-right: 12px; background: #fce4ec;">
+          <div class="card-icon cross-vendor" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
             <svg viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <path d="M3 16 L3 19 L21 19 L21 16"/>
+              <path d="M6 16 L6 10"/>
+              <path d="M12 16 L12 6"/>
+              <path d="M18 16 L18 10"/>
+              <path d="M2 19 L22 19" stroke-width="2.5"/>
             </svg>
           </div>
           Cross-vendor Correlations
@@ -1684,28 +1951,36 @@ body, html {
     <!-- Divider -->
     <div style="border-top: 2px solid #e5e7eb; margin: 40px 0;"></div>
 
-    <!-- Validation Checklist Section -->
+    <!-- Validation Section -->
     <div id="validation-checklist" class="detection-section">
       <div class="detection-header">
         <h2>
           <div class="card-icon validation" style="width: 40px; height: 40px; margin-right: 12px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 11l3 3L22 4"></path>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
             </svg>
           </div>
-          Validation Checklist
+          Validation
         </h2>
-        <span class="expand-btn" onclick="toggleValidationChecklist()">Expand</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; color: #374151; font-size: 14px; font-weight: 500;">
+            <input type="checkbox" class="validation-checkbox" id="check-all-validation" onchange="toggleAllValidation()" style="margin: 0;">
+            Check All
+          </label>
+          <span class="expand-btn" id="validation-toggle" onclick="toggleValidationChecklist()">Expand</span>
+        </div>
       </div>
 
       <div id="validation-content" style="display: none;">
         <!-- Step 1: Review Detection Logic -->
         <div class="validation-step" data-step="1">
-          <div>
-            <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
-              Step 1: Review Detection Logic
-            </div>
+          <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <input type="checkbox" class="validation-checkbox" id="validation-step-1" onchange="checkValidationStatus()">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
+                Step 1: Review Detection Logic
+              </div>
             <p style="color: #666; margin: 8px 0 0 0; line-height: 1.5;">
               Verify that each query's logic matches the technique description and would catch the intended attack behavior.
             </p>
@@ -1718,15 +1993,18 @@ body, html {
                 <li>Review any OSINT enrichment data for additional context</li>
               </ul>
             </details>
+            </div>
           </div>
         </div>
 
         <!-- Step 2: Test Query Syntax -->
         <div class="validation-step" data-step="2" style="margin-top: 20px;">
-          <div>
-            <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
-              Step 2: Test Query Syntax
-            </div>
+          <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <input type="checkbox" class="validation-checkbox" id="validation-step-2" onchange="checkValidationStatus()">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
+                Step 2: Test Query Syntax
+              </div>
             <p style="color: #666; margin: 8px 0 0 0; line-height: 1.5;">
               Copy queries to your SIEM and verify they execute without syntax errors and complete in reasonable time.
             </p>
@@ -1739,15 +2017,18 @@ body, html {
                 <li>Test across your configured time ranges</li>
               </ul>
             </details>
+            </div>
           </div>
         </div>
 
         <!-- Step 3: Validate Field Names -->
         <div class="validation-step" data-step="3" style="margin-top: 20px;">
-          <div>
-            <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
-              Step 3: Validate Field Names
-            </div>
+          <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <input type="checkbox" class="validation-checkbox" id="validation-step-3" onchange="checkValidationStatus()">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
+                Step 3: Validate Field Names
+              </div>
             <p style="color: #666; margin: 8px 0 0 0; line-height: 1.5;">
               Confirm that field names and index/source names match your actual log schema.
             </p>
@@ -1760,15 +2041,18 @@ body, html {
                 <li>Ensure data sources are actively collecting logs</li>
               </ul>
             </details>
+            </div>
           </div>
         </div>
 
         <!-- Step 4: Assess False Positive Risk -->
         <div class="validation-step" data-step="4" style="margin-top: 20px;">
-          <div>
-            <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
-              Step 4: Assess False Positive Risk
-            </div>
+          <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <input type="checkbox" class="validation-checkbox" id="validation-step-4" onchange="checkValidationStatus()">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 1.05em; color: #1f2937; margin-bottom: 6px;">
+                Step 4: Assess False Positive Risk
+              </div>
             <p style="color: #666; margin: 8px 0 0 0; line-height: 1.5;">
               Review query specificity and identify any benign processes or patterns that may need exclusions.
             </p>
@@ -1786,132 +2070,6 @@ body, html {
           </div>
         </div>
       </div>
-
-      <!-- Generation Metrics Section -->
-      <div id="generation-metrics" class="detection-section">
-        <div class="detection-header">
-          <h2>
-            <div class="card-icon metrics" style="width: 40px; height: 40px; margin-right: 12px;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-              </svg>
-            </div>
-            Generation Metrics
-          </h2>
-          <span class="expand-btn" onclick="toggleGenerationMetrics()">Expand</span>
-        </div>
-
-        <div id="metrics-content" style="display: none;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin: 0; max-width: 100%; box-sizing: border-box;">
-
-            {% set total_detections = total_detections %}
-            {% set manual_hours = (total_detections * 2)|round(1) %}
-            {% set archer_hours = (total_detections * 0.1)|round(1) %}
-            {% set hours_saved = (manual_hours - archer_hours)|round(1) %}
-            {% set hourly_rate = 50 %}
-            {% set cost_savings = (hours_saved * hourly_rate)|round(0)|int %}
-            {% set osint_count = namespace(count=0) %}
-            {% for vendor in detections %}
-              {% for detection in vendor.detections %}
-                {% if detection.osint_data and detection.osint_data.enriched %}
-                  {% set osint_count.count = osint_count.count + 1 %}
-                {% endif %}
-              {% endfor %}
-            {% endfor %}
-            {% set osint_research_hours = (osint_count.count * 0.65)|round(1) %}
-
-            <!-- Cost Savings -->
-            <div style="background: #dcfce7; border: 1px solid #22c55e; border-radius: 8px; padding: 20px;">
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 6v6l4 2"/>
-                  <path d="M16.24 7.76l-1.42 1.42M7.76 16.24l1.42-1.42"/>
-                </svg>
-                <span style="font-size: 0.9em; color: #14532d; font-weight: 600;">Cost Savings</span>
-              </div>
-              <div style="font-size: 2.5em; font-weight: 700; line-height: 1; color: #14532d;">
-                ${{ '{:,}'.format(cost_savings) }}
-              </div>
-              <div style="font-size: 0.85em; color: #166534; margin-top: 8px; line-height: 1.4;">
-                @ ${{ hourly_rate }}/hr analyst rate<br>
-                {{ hours_saved }} hours saved
-              </div>
-            </div>
-
-            <!-- Time Efficiency -->
-            <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 20px;">
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <span style="font-size: 0.9em; color: #1e3a8a; font-weight: 600;">Time Efficiency</span>
-              </div>
-              {% set archer_time_seconds = (duration|float) if duration else 0 %}
-              {% set archer_display = "" %}
-              {% if archer_time_seconds < 60 %}
-                {% set archer_display = (archer_time_seconds|round(0)|int)|string + " sec" %}
-              {% elif archer_time_seconds < 3600 %}
-                {% set archer_display = ((archer_time_seconds / 60)|round(1))|string + " min" %}
-              {% else %}
-                {% set archer_display = ((archer_time_seconds / 3600)|round(1))|string + " hrs" %}
-              {% endif %}
-              {% set speedup = (manual_hours * 3600 / archer_time_seconds)|round(0)|int if archer_time_seconds > 0 else 0 %}
-              <div style="font-size: 2.5em; font-weight: 700; line-height: 1; color: #1e3a8a;">
-                {{ speedup }}x
-              </div>
-              <div style="font-size: 0.85em; color: #1e40af; margin-top: 8px; line-height: 1.4;">
-                Manual: {{ manual_hours }} hrs<br>
-                Archer: {{ archer_display }}
-              </div>
-            </div>
-
-            <!-- Real-World Validated -->
-            <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 20px;">
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
-                  <path d="M9 12l2 2 4-4"/>
-                  <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <span style="font-size: 0.9em; color: #78350f; font-weight: 600;">Real-World Validated</span>
-              </div>
-              <div style="font-size: 2.5em; font-weight: 700; line-height: 1; color: #78350f;">
-                {{ osint_count.count }}
-              </div>
-              <div style="font-size: 0.85em; color: #92400e; margin-top: 8px; line-height: 1.4;">
-                Based on observed attack patterns
-                {% if osint_research_hours > 0 %}<br>Research saved: ~{{ osint_research_hours }} hrs{% endif %}
-              </div>
-            </div>
-
-            <!-- Detection Fidelity -->
-            <div style="background: #f3e8ff; border: 1px solid #a855f7; border-radius: 8px; padding: 20px;">
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7e22ce" stroke-width="2">
-                  <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                </svg>
-                <span style="font-size: 0.9em; color: #581c87; font-weight: 600;">Detection Fidelity</span>
-              </div>
-              {% set osint_pct = 0 %}
-              {% if total_detections > 0 %}
-                {% set osint_pct = ((osint_count.count / total_detections) * 100)|round(0)|int %}
-              {% endif %}
-              {% set has_correlations = correlation_count > 0 %}
-              {% set multi_platform = (detections|length > 1) %}
-              {% set fidelity_score = (osint_pct * 0.4) + (40 if has_correlations else 0) + (20 if multi_platform else 0) %}
-              <div style="font-size: 2.5em; font-weight: 700; line-height: 1; color: #581c87;">
-                {{ fidelity_score|round(0)|int }}/100
-              </div>
-              <div style="font-size: 0.85em; color: #6b21a8; margin-top: 8px; line-height: 1.4;">
-                {% if osint_pct > 0 %}✓ OSINT enrichment ({{ osint_pct }}%)<br>{% endif %}
-                {% if has_correlations %}✓ Correlations ({{ correlation_count }})<br>{% endif %}
-                {% if multi_platform %}✓ Multi-platform coverage{% endif %}
-              </div>
-            </div>
-
-          </div>
-        </div>
       </div>
 
       <!-- Action Buttons - 5 horizontal buttons below Detection Rules -->
@@ -1953,6 +2111,16 @@ body, html {
         </button>
       </div>
 
+      <!-- Validation Warning Message -->
+      <div id="validation-warning" style="margin-top: 12px; padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; color: #856404; font-size: 0.9em; display: flex; align-items: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span>Archer leverages AI and is not 100% accurate; complete all validation steps above to enable Download and Save options.</span>
+      </div>
+
       </div>
 
     </div>
@@ -1988,7 +2156,7 @@ body, html {
     <div class="timestamp">
       {{ generated_time }}<br>
       <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
-        Vendor logos are stylized representations. Splunk®, Microsoft®, and Elastic® are registered trademarks of their respective companies.
+        Vendor logos are stylized representations. Splunk®, Microsoft®, Google®, and Elastic® are registered trademarks of their respective companies.
       </span>
     </div>
   </footer>
@@ -2180,6 +2348,74 @@ function toggleAllCrossVendor() {
   }
 }
 
+// Validation checkbox logic
+function checkValidationStatus() {
+  const checkbox1 = document.getElementById('validation-step-1');
+  const checkbox2 = document.getElementById('validation-step-2');
+  const checkbox3 = document.getElementById('validation-step-3');
+  const checkbox4 = document.getElementById('validation-step-4');
+  const checkAllBox = document.getElementById('check-all-validation');
+  const warningMsg = document.getElementById('validation-warning');
+
+  const allChecked = checkbox1.checked && checkbox2.checked && checkbox3.checked && checkbox4.checked;
+
+  // Update the "Check All" checkbox state
+  if (checkAllBox) {
+    checkAllBox.checked = allChecked;
+  }
+
+  const downloadBtn = document.getElementById('download-all-btn');
+  const saveBtn = document.getElementById('save-to-library-btn');
+
+  if (allChecked) {
+    downloadBtn.disabled = false;
+    downloadBtn.style.opacity = '1';
+    downloadBtn.style.cursor = 'pointer';
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = '1';
+    saveBtn.style.cursor = 'pointer';
+    // Hide warning message
+    if (warningMsg) {
+      warningMsg.style.display = 'none';
+    }
+  } else {
+    downloadBtn.disabled = true;
+    downloadBtn.style.opacity = '0.5';
+    downloadBtn.style.cursor = 'not-allowed';
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = '0.5';
+    saveBtn.style.cursor = 'not-allowed';
+    // Show warning message
+    if (warningMsg) {
+      warningMsg.style.display = 'flex';
+    }
+  }
+}
+
+// Toggle all validation checkboxes
+function toggleAllValidation() {
+  const checkAllBox = document.getElementById('check-all-validation');
+  const checkbox1 = document.getElementById('validation-step-1');
+  const checkbox2 = document.getElementById('validation-step-2');
+  const checkbox3 = document.getElementById('validation-step-3');
+  const checkbox4 = document.getElementById('validation-step-4');
+
+  const isChecked = checkAllBox.checked;
+
+  checkbox1.checked = isChecked;
+  checkbox2.checked = isChecked;
+  checkbox3.checked = isChecked;
+  checkbox4.checked = isChecked;
+
+  // Update button states
+  checkValidationStatus();
+}
+
+// Initialize validation status on page load
+document.addEventListener('DOMContentLoaded', function() {
+  checkValidationStatus();
+});
+
 // Download all button - download all detections, correlations, and attack flows [v2024-10-28-v3-iframe]
 const downloadAllBtnElement = document.getElementById('download-all-btn');
 if (downloadAllBtnElement) {
@@ -2190,6 +2426,16 @@ if (downloadAllBtnElement) {
   newBtn.addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
+
+    // Check validation before allowing download
+    if (newBtn.disabled) {
+      showModal(
+        'Validation Required',
+        'Please complete all validation steps before downloading.',
+        'OK'
+      );
+      return;
+    }
 
     // Download everything for this group (detections, correlations, attack flows)
     const groupName = '{{ group_name }}'.replace(/_/g, ' ');
@@ -2222,6 +2468,17 @@ if (downloadAllBtnElement) {
 
 // Save to Library button
 document.getElementById('save-to-library-btn').addEventListener('click', async function() {
+  // Check validation before allowing save
+  const saveBtn = document.getElementById('save-to-library-btn');
+  if (saveBtn.disabled) {
+    await showModal(
+      'Validation Required',
+      'Please complete all validation steps before saving to library.',
+      'OK'
+    );
+    return;
+  }
+
   const groupName = '{{ group_name }}';
   // eslint-disable-next-line no-undef
   const detections = {{ detections | tojson | safe }};
@@ -2656,15 +2913,71 @@ function toggleValidationChecklist() {
 // Toggle Generation Metrics section
 function toggleGenerationMetrics() {
   const content = document.getElementById('metrics-content');
-  const toggle = document.getElementById('metrics-toggle');
+  const toggleText = document.getElementById('metrics-toggle-text');
+  const isCollapsed = content.style.maxHeight === '0px';
 
-  if (content.style.display === 'none') {
-    content.style.display = 'block';
-    toggle.textContent = 'Collapse';
+  if (isCollapsed) {
+    // Expand
+    content.style.maxHeight = content.scrollHeight + 'px';
+    toggleText.textContent = 'Collapse';
+    localStorage.setItem('metricsCollapsed', 'false');
   } else {
-    content.style.display = 'none';
-    toggle.textContent = 'Expand';
+    // Collapse
+    content.style.maxHeight = '0px';
+    toggleText.textContent = 'Expand';
+    localStorage.setItem('metricsCollapsed', 'true');
   }
 }
+
+// Toggle Statistics section
+function toggleStatistics() {
+  const content = document.getElementById('statistics-content');
+  const toggleText = document.getElementById('stats-toggle-text');
+  const isCollapsed = content.style.maxHeight === '0px';
+
+  if (isCollapsed) {
+    // Expand
+    content.style.maxHeight = content.scrollHeight + 'px';
+    toggleText.textContent = 'Collapse';
+    localStorage.setItem('statsCollapsed', 'false');
+  } else {
+    // Collapse
+    content.style.maxHeight = '0px';
+    toggleText.textContent = 'Expand';
+    localStorage.setItem('statsCollapsed', 'true');
+  }
+}
+
+// Initialize statistics state on page load
+document.addEventListener('DOMContentLoaded', function() {
+  const statsContent = document.getElementById('statistics-content');
+  const statsToggleText = document.getElementById('stats-toggle-text');
+  // Default to collapsed if no localStorage value is set
+  const statsCollapsed = localStorage.getItem('statsCollapsed') !== 'false';
+
+  if (statsCollapsed) {
+    statsContent.style.maxHeight = '0px';
+    statsToggleText.textContent = 'Expand';
+  } else {
+    // Set initial max-height to enable smooth transitions
+    statsContent.style.maxHeight = statsContent.scrollHeight + 'px';
+    statsToggleText.textContent = 'Collapse';
+  }
+
+  // Initialize metrics state
+  const metricsContent = document.getElementById('metrics-content');
+  const metricsToggleText = document.getElementById('metrics-toggle-text');
+  // Default to collapsed if no localStorage value is set
+  const metricsCollapsed = localStorage.getItem('metricsCollapsed') !== 'false';
+
+  if (metricsCollapsed) {
+    metricsContent.style.maxHeight = '0px';
+    metricsToggleText.textContent = 'Expand';
+  } else {
+    // Set initial max-height to enable smooth transitions
+    metricsContent.style.maxHeight = metricsContent.scrollHeight + 'px';
+    metricsToggleText.textContent = 'Collapse';
+  }
+});
 </script>
 {% endblock %}

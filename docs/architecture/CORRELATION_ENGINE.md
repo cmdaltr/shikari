@@ -851,7 +851,7 @@ Already fixed! New limits ensure:
    - Train model on analyst feedback
    - Adaptive threshold based on environment
 
-2. **Cross-Vendor Correlations:**
+2. **Cross-vendor Correlations:**
    - Currently disabled
    - Future: Correlate MDE + Splunk + Elastic
 

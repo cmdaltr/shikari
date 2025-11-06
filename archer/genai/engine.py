@@ -240,7 +240,12 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
                 tactic = line_stripped[2:].strip()
                 if tactic:
                     tactics.append(tactic)
-            elif line_stripped and not line.startswith(" ") and not line.startswith("\t") and ":" in line:
+            elif (
+                line_stripped
+                and not line.startswith(" ")
+                and not line.startswith("\t")
+                and ":" in line
+            ):
                 # New section started
                 break
 
@@ -548,17 +553,14 @@ _TACTIC_PRIORITY = {
     "lateral-movement": 10,
     "exfiltration": 10,
     "impact": 10,
-
     # High priority tactics
     "privilege-escalation": 8,
     "persistence": 8,
     "command-and-control": 8,
-
     # Medium priority tactics
     "defense-evasion": 6,
     "collection": 6,
     "initial-access": 6,
-
     # Lower priority tactics (still important but more common/noisy)
     "execution": 4,
     "discovery": 4,
@@ -820,11 +822,11 @@ def _extract_primary_tables(query: str, vendor: str) -> set:
 
     if vendor.lower() == "splunk":
         # Extract Splunk indexes
-        index_matches = re.findall(r'index\s*=\s*(\w+)', query, re.IGNORECASE)
+        index_matches = re.findall(r"index\s*=\s*(\w+)", query, re.IGNORECASE)
         tables.update(index_matches)
     else:
         # Extract MDE/KQL tables (DeviceProcessEvents, DeviceFileEvents, etc.)
-        table_matches = re.findall(r'\b(Device\w+Events?|Email\w+|Identity\w+)\b', query)
+        table_matches = re.findall(r"\b(Device\w+Events?|Email\w+|Identity\w+)\b", query)
         tables.update(table_matches)
 
     return tables
@@ -951,7 +953,9 @@ def _score_and_filter_correlations(
     scored_correlations = []
     for corr in correlations:
         score = _score_correlation(corr, file_info)
-        corr["relevance_score"] = round(score / 140, 2)  # Normalize to 0-1 (max 140 with tactic priority + diversity)
+        corr["relevance_score"] = round(
+            score / 140, 2
+        )  # Normalize to 0-1 (max 140 with tactic priority + diversity)
         scored_correlations.append((score, corr))
 
     # Sort by score (descending)
@@ -1108,7 +1112,7 @@ def _merge_by_parent(files: List[str], file_info: Dict) -> Dict[str, List[str]]:
         techniques = _extract_technique_ids(file_path)
         for technique in techniques:
             # Extract parent (e.g., T1003 from T1003.001)
-            parent = technique.split('.')[0] if '.' in technique else technique
+            parent = technique.split(".")[0] if "." in technique else technique
             if parent not in parent_groups:
                 parent_groups[parent] = []
             parent_groups[parent].append(file_path)
@@ -1120,7 +1124,9 @@ def _merge_by_parent(files: List[str], file_info: Dict) -> Dict[str, List[str]]:
     return parent_groups
 
 
-def _combine_queries_for_group(file_paths: List[str], file_info: Dict, vendor: str) -> Tuple[str, List[str]]:
+def _combine_queries_for_group(
+    file_paths: List[str], file_info: Dict, vendor: str
+) -> Tuple[str, List[str]]:
     """
     Combine multiple queries into a single merged query with OR logic.
 
@@ -1141,7 +1147,9 @@ def _combine_queries_for_group(file_paths: List[str], file_info: Dict, vendor: s
 
     # For now, return a simple comment indicating merged queries
     # In a production system, you'd want to parse and intelligently merge
-    combined = f"-- Merged {len(queries)} detections --\n" + " UNION ".join([f"({q})" for q in queries[:5]])
+    combined = f"-- Merged {len(queries)} detections --\n" + " UNION ".join(
+        [f"({q})" for q in queries[:5]]
+    )
     if len(queries) > 5:
         combined += f"\n-- ... and {len(queries) - 5} more queries"
 
@@ -1167,9 +1175,11 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
     vendor = corr_data.get("vendor", "").lower()
 
     # Detect if this is a Splunk or non-MDE query
-    is_splunk = (vendor == 'splunk' or
-                 (isinstance(query_a, str) and query_a.lstrip().startswith("index=")) or
-                 (isinstance(query_b, str) and query_b.lstrip().startswith("index=")))
+    is_splunk = (
+        vendor == "splunk"
+        or (isinstance(query_a, str) and query_a.lstrip().startswith("index="))
+        or (isinstance(query_b, str) and query_b.lstrip().startswith("index="))
+    )
 
     # For Splunk queries, return the already-generated combined query
     # The _combine_queries() function already handles Splunk correlation syntax properly
@@ -1178,8 +1188,7 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
         if combined:
             return combined
         # Fallback: call _combine_queries to generate it
-        return _combine_queries(vendor, query_a, query_b,
-                               corr_data.get("a"), corr_data.get("b"))
+        return _combine_queries(vendor, query_a, query_b, corr_data.get("a"), corr_data.get("b"))
 
     # Get techniques involved to map queries to techniques
     techniques_involved = corr_data.get("techniques_involved", [])
@@ -1204,22 +1213,22 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
             continue
 
         # Extract table name (first line of query)
-        table_match = re.match(r'^(\w+)', query)
+        table_match = re.match(r"^(\w+)", query)
         table_name = table_match.group(1) if table_match else "DeviceEvents"
 
         # Extract just the condition part - skip "Timestamp > ago" lines
         # Get all "| where" clauses
         where_lines = []
-        for line in query.split('\n'):
+        for line in query.split("\n"):
             stripped = line.strip()
-            if stripped.startswith('| where') and 'Timestamp > ago' not in stripped:
+            if stripped.startswith("| where") and "Timestamp > ago" not in stripped:
                 # Extract just the condition after "| where"
-                condition = stripped.replace('| where', '').strip()
+                condition = stripped.replace("| where", "").strip()
                 if condition:
                     where_lines.append(condition)
 
         # Join all where conditions
-        where_clause = ' and '.join(where_lines) if where_lines else ""
+        where_clause = " and ".join(where_lines) if where_lines else ""
 
         # Try to match this query to a technique by looking for it in file_info
         technique_name = "Unknown"
@@ -1248,13 +1257,15 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
             if technique_name == "Unknown":
                 technique_name = techniques_involved[0]
 
-        queries_with_metadata.append({
-            "technique": technique_name,
-            "tactic": tactic,
-            "table": table_name,
-            "where": where_clause,
-            "query": query
-        })
+        queries_with_metadata.append(
+            {
+                "technique": technique_name,
+                "tactic": tactic,
+                "table": table_name,
+                "where": where_clause,
+                "query": query,
+            }
+        )
 
     if not queries_with_metadata:
         return query_a + "\n" + query_b  # Fallback to UNION approach
@@ -1275,14 +1286,15 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
         # Merge where clauses with technique comments
         where_conditions = []
         for qm in queries:
-            technique_comment = f"// {_format_technique_name(qm['technique'])}"
+            # Use technique name directly from YAML - it's already in correct MITRE ATT&CK format
+            technique_comment = f"// {qm['technique']}"
             # Clean up where clause - remove timestamp filter and any remaining pipe operators
             where_clause = qm["where"]
             where_clause = where_clause.replace("Timestamp > ago(1d)", "").strip()
             where_clause = where_clause.replace("Timestamp > ago(1h)", "").strip()
 
             # Remove leading "and" or "or" if present
-            where_clause = re.sub(r'^(?:and|or)\s+', '', where_clause, flags=re.IGNORECASE).strip()
+            where_clause = re.sub(r"^(?:and|or)\s+", "", where_clause, flags=re.IGNORECASE).strip()
 
             if where_clause:
                 where_conditions.append(f"  {technique_comment}\n  ({where_clause})")
@@ -1344,7 +1356,7 @@ def _format_technique_name(technique_name: str) -> str:
         Formatted technique name with proper spacing
     """
     # If the name already has spaces, it's likely properly formatted from YAML - return as-is
-    if ' ' in technique_name:
+    if " " in technique_name:
         return technique_name
 
     # Handle common patterns for filenames
@@ -1356,10 +1368,10 @@ def _format_technique_name(technique_name: str) -> str:
 
     # Add space before capital letters (except at start)
     # This converts CamelCase to Camel Case
-    name = re.sub(r'(?<!^)(?=[A-Z])', ' ', name)
+    name = re.sub(r"(?<!^)(?=[A-Z])", " ", name)
 
     # Clean up any double spaces
-    name = ' '.join(name.split())
+    name = " ".join(name.split())
 
     return name
 
@@ -1430,10 +1442,12 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
 
     # Merge correlations from each group into single multi-source correlations
     final_correlations = []
-    print(f"   Grouping: {len(correlations)} correlations grouped into {len(grouped)} unique technique pairs")
+    print(
+        f"   Grouping: {len(correlations)} correlations grouped into {len(grouped)} unique technique pairs"
+    )
     for pair_key, corr_list in grouped.items():
         # Sort by relevance score (descending)
-        corr_list.sort(key=lambda c: c.get('relevance_score', 0), reverse=True)
+        corr_list.sort(key=lambda c: c.get("relevance_score", 0), reverse=True)
 
         if len(corr_list) == 1:
             # Single correlation - keep as is
@@ -1464,7 +1478,9 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
             # Update combined query
             merged["combined_query"] = merged["query_a"] + "\n" + merged["query_b"]
 
-            print(f"      Merged {len(corr_list)} correlations for {pair_key} into 1 multi-source correlation")
+            print(
+                f"      Merged {len(corr_list)} correlations for {pair_key} into 1 multi-source correlation"
+            )
             final_correlations.append(merged)
 
     # Second-level grouping: Merge correlations that share one technique
@@ -1522,7 +1538,9 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
         elif num_targets > 10:
             # Too many targets (>10) - skip super-merging and keep as individual correlations
             # This prevents creating one massive correlation from a popular technique
-            print(f"      Skipping super-merge for '{tech_a}' ({num_targets} targets) - keeping as individual correlations")
+            print(
+                f"      Skipping super-merge for '{tech_a}' ({num_targets} targets) - keeping as individual correlations"
+            )
             for tech_b, corr_list in tech_b_dict.items():
                 for corr in corr_list:
                     if "techniques_involved" not in corr:
@@ -1541,7 +1559,7 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
             all_corrs = []
             for corr_list in tech_b_dict.values():
                 all_corrs.extend(corr_list)
-            all_corrs.sort(key=lambda c: c.get('relevance_score', 0), reverse=True)
+            all_corrs.sort(key=lambda c: c.get("relevance_score", 0), reverse=True)
 
             # Create multiple super-correlations (groups) instead of one huge correlation
             # Each group will have up to 8 techniques
@@ -1646,9 +1664,13 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
                 all_tactics_set = set()
                 for tech_name in techniques_involved:
                     # Find the file for this technique
-                    for path in [corr.get("a", "") for corr in selected_corrs] + [corr.get("b", "") for corr in selected_corrs]:
+                    for path in [corr.get("a", "") for corr in selected_corrs] + [
+                        corr.get("b", "") for corr in selected_corrs
+                    ]:
                         if path and path in file_info:
-                            basename = os.path.basename(path).replace(".yaml", "").replace(".yml", "")
+                            basename = (
+                                os.path.basename(path).replace(".yaml", "").replace(".yml", "")
+                            )
                             path_tech_name = basename.split("_")[0] if "_" in basename else basename
                             if path_tech_name == tech_name:
                                 tactics = file_info[path].get("tactics", [])
@@ -1662,7 +1684,9 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
                 join_query = _build_join_correlation_query(base_corr, file_info)
                 base_corr["combined_query"] = join_query
 
-                print(f"      Super-merged group {groups_created + 1} for '{tech_a}': {len(selected_corrs)} correlations into 1 multi-technique correlation ({len(techniques_involved)} techniques, {len(all_tactics_set)} tactics)")
+                print(
+                    f"      Super-merged group {groups_created + 1} for '{tech_a}': {len(selected_corrs)} correlations into 1 multi-technique correlation ({len(techniques_involved)} techniques, {len(all_tactics_set)} tactics)"
+                )
                 super_merged_correlations.append(base_corr)
                 groups_created += 1
 
@@ -1676,7 +1700,7 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
     diverse_correlations = []
 
     # Sort by relevance score to prioritize best correlations
-    final_correlations.sort(key=lambda c: c.get('relevance_score', 0), reverse=True)
+    final_correlations.sort(key=lambda c: c.get("relevance_score", 0), reverse=True)
 
     for corr in final_correlations:
         # Extract technique names from file paths (consistent with grouping logic)
@@ -1701,7 +1725,9 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
             all_techniques = {technique_name_a, technique_name_b}
 
             # Check if any technique has exceeded the limit
-            max_occurrences = max(technique_count.get(t, 0) for t in all_techniques) if all_techniques else 0
+            max_occurrences = (
+                max(technique_count.get(t, 0) for t in all_techniques) if all_techniques else 0
+            )
 
             if max_occurrences < 20:  # Allow each technique in up to 20 simple correlations
                 diverse_correlations.append(corr)
@@ -1709,7 +1735,9 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
                 for t in all_techniques:
                     technique_count[t] = technique_count.get(t, 0) + 1
 
-    print(f"   After frequency limiting: {len(diverse_correlations)} correlations (removed {len(final_correlations) - len(diverse_correlations)} due to technique frequency)")
+    print(
+        f"   After frequency limiting: {len(diverse_correlations)} correlations (removed {len(final_correlations) - len(diverse_correlations)} due to technique frequency)"
+    )
     return diverse_correlations
 
 
@@ -2003,7 +2031,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
                 # Remove semantic overlap text from query
                 if combined_query:
-                    combined_query = re.sub(r';\s*\d+%\s*semantic overlap', '', combined_query)
+                    combined_query = re.sub(r";\s*\d+%\s*semantic overlap", "", combined_query)
 
                 # Extract tactics from both files
                 tactics_set = set()
@@ -2066,12 +2094,15 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
             # Use config relevance threshold (default 75%)
             from archer.config import CoreConfig
+
             min_relevance = CoreConfig.correlation_min_relevance
 
             top_vendor_corrs = _score_and_filter_correlations(
                 corrs, file_info, min_relevance=min_relevance
             )
-            print(f"   Kept {len(top_vendor_corrs)}/{len(corrs)} after relevance filtering (>= {min_relevance:.0%})")
+            print(
+                f"   Kept {len(top_vendor_corrs)}/{len(corrs)} after relevance filtering (>= {min_relevance:.0%})"
+            )
             filtered_corr.extend(top_vendor_corrs)
 
         vendor_corr = filtered_corr
@@ -2098,7 +2129,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
     # No cross-vendor correlations - explicitly create an empty list
     cross_corr = []
-    # print(f"GenAI: Cross-vendor correlations disabled")
+    # print(f"GenAI: Cross-vendor Correlations disabled")
 
     # Write results to correlation JSON file
     results = {

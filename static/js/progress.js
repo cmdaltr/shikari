@@ -507,6 +507,9 @@ async function refresh(){
       } else if (correlationStatus === 'genai_complete' || correlationStatus === 'complete') {
         // Both genai_complete and complete mean correlation finished
         correlationPct = 100;
+      } else if (correlationStatus === 'merging_correlations') {
+        // Show 99% during merge to indicate near completion but still processing
+        correlationPct = 99;
       } else if (correlationStatus === 'genai_processing' || correlationStatus === 'genai_started') {
         // Calculate percentage if we have totals
         if (correlationTotal > 0 && correlationProcessed >= 0) {
@@ -573,6 +576,17 @@ async function refresh(){
         countSpan.textContent = `${vendorCount} high-fidelity correlations generated`;
         countSpan.style.color = '#495057'; // Default grey/black text
         correlationInfoEl.appendChild(countSpan);
+      } else if (correlationStatus === 'merging_correlations') {
+        // Show merging status
+        correlationInfoEl.innerHTML = '';
+
+        // "Merging correlations: " in default color
+        const prefixSpan = document.createElement('span');
+        prefixSpan.textContent = 'Merging correlations with shared techniques';
+        correlationInfoEl.appendChild(prefixSpan);
+
+        // Add animated ellipsis
+        startEllipsis(correlationInfoEl);
       } else if (correlationStatus === 'genai_processing') {
         // Show progress
         correlationInfoEl.innerHTML = '';

@@ -45,7 +45,7 @@
     }
 
     if (vc.length) wrap.appendChild(makeList("Vendor correlations", vc));
-    if (cc.length) wrap.appendChild(makeList("Cross-vendor correlations", cc));
+    if (cc.length) wrap.appendChild(makeList("Cross-vendor Correlations", cc));
     content.innerHTML = "";
     content.appendChild(wrap);
   }
