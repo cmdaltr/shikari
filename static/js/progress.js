@@ -524,16 +524,9 @@ async function refresh(){
       } else if (correlationStatus === 'genai_starting') {
         // Just starting, show minimal progress
         correlationPct = 1;
-      } else if (yamlComplete && correlationProcessed > 0 && correlationTotal > 0) {
-        // Fallback: If YAML is complete and we have correlation data, calculate progress
-        // This handles edge cases where status might not match expected values
-        if (correlationProcessed >= correlationTotal) {
-          correlationPct = 100;
-        } else {
-          correlationPct = Math.min(99, Math.round((correlationProcessed / correlationTotal) * 100));
-        }
       } else if (correlationStatus && correlationStatus !== 'yaml') {
-        // Log unexpected status for debugging
+        // Log unexpected status for debugging - but don't try to calculate progress
+        // to avoid progress bar jumping
         console.warn(`Unexpected correlation status: "${correlationStatus}"`);
       }
 

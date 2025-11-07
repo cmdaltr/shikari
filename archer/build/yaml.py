@@ -140,17 +140,23 @@ def find_nested_entity(field, entity_mappings):
 
 
 def map_entities(query):
+    """
+    Extract entity mappings from a KQL query.
+
+    Returns:
+        tuple: (query, entity_mappings_string) where entity_mappings_string is empty for non-MDE queries
+    """
     # Check if this is a Splunk query (starts with "index=") or KQL/MDE query
     # Splunk queries don't use "| summarize by Timestamp," syntax
     if query.strip().startswith("index="):
         # This is a Splunk query - entity mapping not applicable
-        # Return query unchanged
-        return query
+        # Return query unchanged with no entity mappings
+        return (query, "")
 
     # Check if query contains the expected KQL syntax
     if "| summarize by Timestamp, " not in query:
         # Query doesn't have the expected format - return unchanged
-        return query
+        return (query, "")
 
     # Process KQL/MDE queries with entity mapping
     fields = query.split("| summarize by Timestamp, ")[1].split(", ")
@@ -168,7 +174,7 @@ def map_entities(query):
     # Build entityMappings string efficiently
     entities = ""
     if results:
-        entities = "\nentityMappings:"
+        entities = "entityMappings:"
         for entity_type, identifier, column_name in results:
             entities += (
                 f"\n- entityType: {entity_type}\n"
@@ -177,26 +183,53 @@ def map_entities(query):
                 f"      columnName: {column_name}"
             )
 
-    return f"{query}{entities}"
+    return (query, entities)
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, indicators=None, osint_data=None, osint_enhanced=False):
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None):
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
     uid = check_id([])
     desc = tdesc.replace("\n  \n", "\n  ").replace("\n* ", "\n  * ")
     desc = re.sub(r"</?code>", r"`", desc)
-    datatype = (
-        query.split("\n")[0].split(" earliest=")[0].replace("index=", "").replace("_prod", "")
-    )
+
+    # Extract datatype from first non-comment, non-let line
+    datatype = ""
+    for line in query.split("\n"):
+        stripped = line.strip()
+        # Skip empty lines, comments, and let statements
+        if stripped and not stripped.startswith("//") and not stripped.startswith("let "):
+            datatype = stripped.split(" earliest=")[0].replace("index=", "").replace("_prod", "")
+            break
+
+    # Fallback if no valid line found
+    if not datatype:
+        datatype = "UnknownDataType"
     tactic = str(tactic)[2:-2].replace("', '", "\n  - ")
-    query = query.replace("\n| ", "  | ")
+
+    # Indent ALL query lines properly for YAML literal block
+    # Split query into lines, indent each non-empty line with 2 spaces
+    query_lines = query.split("\n")
+    indented_lines = []
+    for line in query_lines:
+        if line.strip():  # Non-empty line
+            # Add 2 spaces indentation to all non-empty lines
+            indented_lines.append("  " + line)
+        else:
+            # Empty line - keep it empty
+            indented_lines.append(line)
+    query = "\n".join(indented_lines)
+
     author = getpass.getuser()
     team = get_team(author)
 
     # Format the threat group tag with (Group) suffix
     formatted_tag = f"{tag} (Group)" if tag else ""
+
+    # Format entity mappings
+    # Template already has newlines before and after placeholder, so no modification needed
+    entity_mappings_formatted = entity_mappings if entity_mappings else ""
 
     yaml_content = (
         template.replace("§id§", uid)
@@ -209,17 +242,20 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, i
         .replace("§tactic§", tactic)
         .replace("§group§", formatted_tag)
         .replace("§query§", query)
+        .replace("§entityMappings§", entity_mappings_formatted)
         .replace("§ver§", "1.0")
         .replace("§source§", "Archer")
         .replace("§author§", author)
         .replace("§support§", team)
         .replace("query:  |", "query: |")
-        .replace("  | ", " | ")
-        .replace("\n | ", "\n  | ")
+        # NOTE: Old indentation logic removed - now handled by pre-indenting query lines above
+        # .replace("  | ", " | ")
+        # .replace("\n | ", "\n  | ")
     )
     yaml_content = re.sub(r"\n\n", r"\n  ", yaml_content)
     yaml_content = re.sub(r"(\(Citation: [^\)]+\))", r"", yaml_content)
-    yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace("   | ", "  | ")
+    # NOTE: Old pipe reformatting removed - now handled by pre-indenting query lines above
+    # yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace("   | ", "  | ")
 
     # Add indicators section if present
     if indicators:
@@ -383,16 +419,21 @@ def construct_yaml(
     )
 
     # Apply OSINT enhancement if requested (merge OSINT patterns into queries)
+    # Track which queries were actually enhanced (not just attempted)
+    mde_queries_enhanced = {}  # Map query -> was_enhanced bool
+    splunk_queries_enhanced = {}  # Map query -> was_enhanced bool
+
     if osint_enhancement and osint_enhancement_data and osint_enhancement_data.get("osint_indicators"):
         from archer.build.osint_query_enhancer import enhance_query_with_osint
 
         osint_indicators = osint_enhancement_data.get("osint_indicators", {})
 
-        # Enhance MDE queries
+        # Enhance MDE queries and track which ones were actually modified
         enhanced_mde_queries = []
         for query in appended_mde_queries:
-            enhanced_query = enhance_query_with_osint(query, osint_indicators, target_vendor="MDE")
+            enhanced_query, was_enhanced = enhance_query_with_osint(query, osint_indicators, target_vendor="MDE")
             enhanced_mde_queries.append(enhanced_query)
+            mde_queries_enhanced[enhanced_query] = was_enhanced
         appended_mde_queries = enhanced_mde_queries
 
         # Enhance Splunk queries
@@ -401,11 +442,14 @@ def construct_yaml(
         # So we skip the post-processing enhancement here for Splunk queries
         # enhanced_splunk_queries = []
         # for query in appended_splunk_queries:
-        #     enhanced_query = enhance_query_with_osint(query, osint_indicators, target_vendor="Splunk")
+        #     enhanced_query, was_enhanced = enhance_query_with_osint(query, osint_indicators, target_vendor="Splunk")
         #     enhanced_splunk_queries.append(enhanced_query)
+        #     splunk_queries_enhanced[enhanced_query] = was_enhanced
         # appended_splunk_queries = enhanced_splunk_queries
 
-        print(f"  🔧 OSINT Enhancement: Merged OSINT patterns into {len(appended_mde_queries)} MDE and {len(appended_splunk_queries)} Splunk queries")
+        # Count how many queries were actually enhanced
+        mde_enhanced_count = sum(1 for enhanced in mde_queries_enhanced.values() if enhanced)
+        print(f"  🔧 OSINT Enhancement: Successfully enhanced {mde_enhanced_count}/{len(appended_mde_queries)} MDE queries with datatables")
 
     all_tactics = additional_tactics(tid, tactic)
 
@@ -424,8 +468,10 @@ def construct_yaml(
         # Fallback if no table name found
         if not table_name:
             table_name = "UnknownTable"
-        query_with_entities = ""
-        query_with_entities = map_entities(query)
+
+        # Extract query and entity mappings separately
+        query_only, entity_mappings_str = map_entities(query)
+
         """if len(query_with_entities) > 10:
             print(
                 f"  {name} ({table_name}) breaches the MDE entityMapping limit of 10.\n   Please review before commiting to production.\n"
@@ -439,6 +485,9 @@ def construct_yaml(
         filename = f"{name_safe}_{table_name}.yaml"
         yamlfile = os.path.join(GENERATE_DIR, filename)
         if not os.path.exists(yamlfile):
+            # Check if THIS specific query was enhanced (not just if enhancement was attempted)
+            query_was_enhanced = mde_queries_enhanced.get(query, False)
+
             write_yaml(
                 yamlfile,
                 name,  # Pass original name with spaces/slashes preserved
@@ -447,10 +496,11 @@ def construct_yaml(
                 "MicrosoftThreatProtection",
                 all_tactics,
                 tag,
-                query_with_entities,
+                query_only,  # Pass query WITHOUT entity mappings
                 indicators=identifiers,  # Pass indicators for YAML metadata
                 osint_data=osint_enhancement_data,  # Pass OSINT data dict
-                osint_enhanced=osint_enhancement,    # Pass enhancement flag
+                osint_enhanced=query_was_enhanced,    # Pass TRUE only if this query was actually enhanced
+                entity_mappings=entity_mappings_str,  # Pass entity mappings separately
             )
         else:
             update_yaml(yamlfile, tag)

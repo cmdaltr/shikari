@@ -16,8 +16,9 @@ tactics:
   - §tactic§
 tags:
   - §group§
-query:  |
-  §query§
+query: |
+§query§
+§entityMappings§
 version: §ver§
 kind: Scheduled
 metadata:

@@ -1185,8 +1185,6 @@ body, html {
                     {% set emoji = '❓' %}
                   {% endif %}
 
-                  <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-size: 1em; font-weight: 600; margin-right: 8px;">{{ emoji }} {{ tactic }}</span>
-
                   {# Save tactic colors for technique badge #}
                   {% set technique_bg = bg_color %}
                   {% set technique_text = text_color %}
@@ -1210,9 +1208,8 @@ body, html {
                     {% set likelihood_label = 'Low' %}
                     {% set likelihood_icon = '!' %}
                   {% endif %}
-                  <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}" style="display: inline-block; background: {{ technique_bg }}; color: {{ technique_text }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; margin-right: 8px;">{{ technique_emoji }} {{ detection.technique }}</span>
+                  <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}" style="display: inline-block; background: {{ technique_bg }}; color: {{ technique_text }}; padding: 6px 4px; border-radius: 4px; font-weight: 600; margin-left: 4px; margin-right: 8px;">{{ technique_emoji }} {{ detection.technique }} ({{ tactic }})</span>
 
-                  <span style="display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-right: 8px;" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">Confidence of detection: <span style="color: {{ likelihood_bg }}; font-weight: 700;">{{ likelihood_label }}</span></span>
                   {% if detection.osint_enriched %}
                   <span class="osint-enhanced-badge" title="This detection was enhanced with additional indicators from OSINT sources merged into the query logic.">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -1238,8 +1235,9 @@ body, html {
                 </button>
                 {% endif %}
               </div>
-              <div style="margin-left: 26px; margin-top: 4px; margin-bottom: 6px;">
-                <span style="font-weight: 400; color: #666;">{{ detection.title.replace(', ', ' | ') }}</span>
+              <div style="margin-top: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="margin-left: 26px; font-weight: 400; color: #666;">{{ detection.title.replace(', ', ' | ') }}</span>
+                <span style="display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600;" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">Confidence of detection: <span style="color: {{ likelihood_bg }}; font-weight: 700;">{{ likelihood_label }}</span></span>
               </div>
               {% if detection.indicators %}
               <div class="detection-indicators">

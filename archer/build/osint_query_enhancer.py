@@ -549,8 +549,90 @@ detection:
 
         return conditions
 
+    def _build_mde_osint_variables(self, osint_indicators: Dict[str, List[str]]) -> str:
+        """
+        Build KQL let statements for OSINT indicator datatables
+
+        Maps indicator types to KQL datatable variables:
+        - cmd → OSINTCommands
+        - sw → OSINTSoftware
+        - path → OSINTPaths
+        - acct → OSINTAccounts
+        - reg → OSINTRegistry
+        - api → OSINTAPIs
+        - op → OSINTOperations
+        """
+        let_statements = []
+        let_statements.append("// OSINT Enhancements")
+
+        # Map indicator types to variable names and datatable column types
+        indicator_mappings = {
+            "cmd": ("OSINTCommands", "cmds"),
+            "sw": ("OSINTSoftware", "software"),
+            "path": ("OSINTPaths", "paths"),
+            "acct": ("OSINTAccounts", "accounts"),
+            "reg": ("OSINTRegistry", "registry"),
+            "api": ("OSINTAPIs", "apis"),
+            "op": ("OSINTOperations", "operations"),
+            "evt": ("OSINTEvents", "events"),
+        }
+
+        for indicator_type, (var_name, column_name) in indicator_mappings.items():
+            values = osint_indicators.get(indicator_type, [])
+            if values and len(values) > 0:
+                # Escape quotes in values and format as KQL array
+                escaped_values = [f'"{v.replace(chr(34), chr(34)+chr(34))}"' for v in values]
+                values_str = ", ".join(escaped_values)
+                let_statements.append(f'let {var_name} = datatable({column_name}:string) [{values_str}];')
+
+        return "\n".join(let_statements)
+
+    def _build_mde_osint_conditions(self, osint_indicators: Dict[str, List[str]]) -> str:
+        """
+        Build KQL where conditions for OSINT enhancement
+
+        Creates conditions that check various MDE fields against OSINT datatables
+        """
+        conditions = []
+
+        # Commands - check ProcessCommandLine and InitiatingProcessCommandLine
+        if osint_indicators.get("cmd"):
+            conditions.append("ProcessCommandLine in (OSINTCommands) or InitiatingProcessCommandLine in (OSINTCommands)")
+
+        # Software/Processes - check process names and paths
+        if osint_indicators.get("sw"):
+            conditions.append("ProcessCommandLine in (OSINTSoftware) or InitiatingProcessCommandLine in (OSINTSoftware) or FolderPath in (OSINTSoftware) or InitiatingProcessFolderPath in (OSINTSoftware)")
+
+        # Paths - check file and process paths
+        if osint_indicators.get("path"):
+            conditions.append("ProcessCommandLine in (OSINTPaths) or InitiatingProcessCommandLine in (OSINTPaths) or FolderPath in (OSINTPaths) or InitiatingProcessFolderPath in (OSINTPaths)")
+
+        # Accounts - check account names
+        if osint_indicators.get("acct"):
+            conditions.append("AccountName in (OSINTAccounts) or InitiatingProcessAccountName in (OSINTAccounts)")
+
+        # Registry - check registry keys
+        if osint_indicators.get("reg"):
+            conditions.append("RegistryKey in (OSINTRegistry) or PreviousRegistryKey in (OSINTRegistry)")
+
+        # APIs - check command lines for API calls
+        if osint_indicators.get("api"):
+            conditions.append("ProcessCommandLine in (OSINTAPIs) or InitiatingProcessCommandLine in (OSINTAPIs)")
+
+        # Operations - check command lines for operations
+        if osint_indicators.get("op"):
+            conditions.append("ProcessCommandLine in (OSINTOperations) or InitiatingProcessCommandLine in (OSINTOperations)")
+
+        # Events - check ActionType
+        if osint_indicators.get("evt"):
+            conditions.append("ActionType in (OSINTEvents)")
+
+        if conditions:
+            return "(" + " or\n".join(conditions) + ")"
+        return ""
+
     def enhance_query(self, base_query: str, osint_indicators: Dict[str, List[str]],
-                      target_vendor: str = "Splunk") -> str:
+                      target_vendor: str = "Splunk") -> tuple:
         """
         Enhance a base query with OSINT detection patterns
 
@@ -560,12 +642,136 @@ detection:
             target_vendor: Target SIEM vendor (Splunk or MDE)
 
         Returns:
-            Enhanced query with OSINT patterns merged in
+            tuple: (enhanced_query, was_enhanced) where was_enhanced is True if query was actually modified
         """
         if not osint_indicators:
-            return base_query
+            logger.debug("No OSINT indicators provided, returning base query")
+            return (base_query, False)
 
         self.target_vendor = target_vendor
+
+        # Debug logging
+        logger.info(f"=== OSINT Enhancement Debug ===")
+        logger.info(f"Target vendor: {target_vendor}")
+        logger.info(f"OSINT indicators keys: {list(osint_indicators.keys())}")
+        for key, value in osint_indicators.items():
+            if isinstance(value, list):
+                logger.info(f"  {key}: {len(value)} items")
+            else:
+                logger.info(f"  {key}: {type(value)}")
+
+        # For MDE: Use structured datatable approach
+        if target_vendor == "MDE":
+            # Check if we have any direct indicators (cmd, sw, path, etc.)
+            has_direct_indicators = any(
+                osint_indicators.get(ind_type)
+                for ind_type in ["cmd", "sw", "path", "acct", "reg", "api", "op", "evt"]
+            )
+
+            logger.info(f"Has direct indicators: {has_direct_indicators}")
+            if has_direct_indicators:
+                for ind_type in ["cmd", "sw", "path", "acct", "reg", "api", "op", "evt"]:
+                    indicators = osint_indicators.get(ind_type)
+                    if indicators:
+                        logger.info(f"  - {ind_type}: {len(indicators)} indicators")
+
+            if has_direct_indicators:
+                # Build let statements for datatables
+                let_statements = self._build_mde_osint_variables(osint_indicators)
+                logger.info(f"Built let statements:\n{let_statements}")
+
+                # Build OSINT enhancement conditions
+                osint_conditions = self._build_mde_osint_conditions(osint_indicators)
+                logger.info(f"Built OSINT conditions:\n{osint_conditions}")
+
+                if osint_conditions:
+                    # Parse the base query to find where to inject OSINT enhancements
+                    lines = base_query.strip().split("\n")
+
+                    # Find the table name (first non-comment, non-let line)
+                    table_line_idx = 0
+                    for i, line in enumerate(lines):
+                        stripped = line.strip()
+                        if stripped and not stripped.startswith("//") and not stripped.startswith("let "):
+                            table_line_idx = i
+                            break
+
+                    # Find the summarize line (last line typically)
+                    summarize_line_idx = len(lines) - 1
+                    for i in range(len(lines) - 1, -1, -1):
+                        if "summarize by" in lines[i].lower() or "| summarize" in lines[i].lower():
+                            summarize_line_idx = i
+                            break
+
+                    # Extract existing query body (between table and summarize)
+                    existing_query_lines = lines[table_line_idx + 1:summarize_line_idx]
+
+                    # Find the last where clause to append OSINT conditions
+                    last_where_idx = -1
+                    for i in range(len(existing_query_lines) - 1, -1, -1):
+                        if "| where" in existing_query_lines[i]:
+                            last_where_idx = i
+                            break
+
+                    # Build enhanced query
+                    enhanced_parts = []
+                    enhanced_parts.append(let_statements)
+                    enhanced_parts.append(lines[table_line_idx])  # Table name
+
+                    if last_where_idx >= 0:
+                        # Add all lines up to and including the last where clause
+                        for i in range(last_where_idx + 1):
+                            enhanced_parts.append(existing_query_lines[i])
+
+                        # Wrap existing where condition and add OSINT enhancement
+                        last_where_line = existing_query_lines[last_where_idx]
+                        # Extract the condition part (everything after "| where")
+                        where_condition = last_where_line.split("| where", 1)[1].strip()
+
+                        # Replace the last where with enhanced version
+                        enhanced_parts[-1] = f"| where ({where_condition}) or"
+                        enhanced_parts.append("// OSINT Enhancement")
+                        enhanced_parts.append(osint_conditions)
+
+                        # Add remaining lines after the last where clause
+                        for i in range(last_where_idx + 1, len(existing_query_lines)):
+                            enhanced_parts.append(existing_query_lines[i])
+                    else:
+                        # No where clause found, add OSINT as new where clause
+                        for line in existing_query_lines:
+                            enhanced_parts.append(line)
+                        enhanced_parts.append("// OSINT Enhancement")
+                        enhanced_parts.append(f"| where {osint_conditions}")
+
+                    enhanced_parts.append(lines[summarize_line_idx])  # Summarize
+
+                    enhanced_query = "\n".join(enhanced_parts)
+
+                    logger.info(f"✓ Enhanced MDE query with OSINT datatables")
+                    return (enhanced_query, True)
+                else:
+                    logger.warning("No OSINT conditions generated, falling back to query_snippets method")
+
+            else:
+                logger.info("No direct indicators found, falling back to query_snippets method")
+
+            # Fallback to query_snippets method if no direct indicators
+            logger.info("Using _enhance_with_query_snippets fallback method")
+            result = self._enhance_with_query_snippets(base_query, osint_indicators, target_vendor)
+            # For MDE, if we're using fallback, it means no enhancement was done
+            return (result, False)
+
+        # For Splunk: Use existing query_snippets method
+        result = self._enhance_with_query_snippets(base_query, osint_indicators, target_vendor)
+        # Check if Splunk query was actually enhanced (different from base)
+        was_enhanced = result != base_query
+        return (result, was_enhanced)
+
+    def _enhance_with_query_snippets(self, base_query: str, osint_indicators: Dict[str, List[str]], target_vendor: str) -> str:
+        """
+        Original enhancement method using query snippets
+        Used as fallback for MDE when no direct indicators, and default for Splunk
+        """
         all_conditions = []
 
         # Extract and process query snippets
@@ -604,17 +810,18 @@ detection:
                 enhanced_query = base_query + osint_filter
                 return enhanced_query
 
-            # For MDE: Add as OR conditions in the where clause
+            # For MDE: Use datatable format even for query_snippet-extracted patterns
             elif target_vendor == "MDE":
-                osint_filter = " or " + " or ".join(all_conditions)
-                enhanced_query = base_query + osint_filter
-                return enhanced_query
+                # The old method just appended conditions - but we should NOT do that
+                # Instead, return the base query and log that we need proper indicators
+                logger.warning(f"MDE query has OSINT query_snippets but no direct indicators - enhancement skipped. Query snippets should be converted to direct indicators during OSINT comparison phase.")
+                return base_query
 
         return base_query
 
 
 def enhance_query_with_osint(base_query: str, osint_indicators: Dict[str, List[str]],
-                              target_vendor: str = "Splunk") -> str:
+                              target_vendor: str = "Splunk") -> tuple:
     """
     Convenience function to enhance a query with OSINT patterns
 
@@ -624,7 +831,7 @@ def enhance_query_with_osint(base_query: str, osint_indicators: Dict[str, List[s
         target_vendor: Target SIEM vendor (Splunk or MDE)
 
     Returns:
-        Enhanced query with OSINT patterns merged in
+        tuple: (enhanced_query, was_enhanced) where was_enhanced is True if query was actually modified
     """
     enhancer = OSINTQueryEnhancer(target_vendor=target_vendor)
     return enhancer.enhance_query(base_query, osint_indicators, target_vendor)
