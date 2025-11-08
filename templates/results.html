@@ -1,711 +1,8 @@
 {% extends "base.html" %}
+{% block title %}Archer - Results{% endblock %}
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
-<style>
-/* Ensure consistent positioning across all browsers */
-html, body {
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
-  zoom: 1.0;
-}
-
-/* Single background color throughout - matching How Archer Works page */
-body, html {
-  background: #f7fafc !important;
-  overflow-x: hidden;
-}
-
-.page-shell {
-  background: #f7fafc !important;
-  flex: 1;
-  padding-top: 0;
-  overflow-x: hidden;
-  max-width: 100%;
-  position: relative;
-}
-
-/* Global navigation buttons */
-.global-nav-controls {
-  position: fixed;
-  top: 20px;
-  right: calc((100vw - 1200px) / 2 + 10px);
-  z-index: 10001;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-@media (max-width: 1400px) {
-  .global-nav-controls {
-    right: auto;
-    left: 20px;
-    top: 70px;
-  }
-}
-
-.nav-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  min-height: 40px;
-  padding: 8px;
-  border: 2px solid #C53030;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #C53030;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  box-sizing: border-box;
-}
-
-.nav-icon-btn:hover {
-  background: #C53030;
-  color: white;
-}
-
-.nav-icon-btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* Validation Checklist Styling */
-.validation-checkbox {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  margin-top: 4px;
-  flex-shrink: 0;
-}
-
-.validation-step {
-  padding: 16px;
-  border-radius: 8px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  transition: all 0.2s;
-}
-
-.validation-step:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-}
-
-.validation-checkbox {
-  width: 18px;
-  height: 18px;
-  margin-top: 2px;
-  cursor: pointer;
-  accent-color: #C53030;
-  flex-shrink: 0;
-}
-
-/* Custom Modal Dialog */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(31, 45, 53, 0.8);
-  z-index: 10002;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-overlay.show {
-  display: flex;
-}
-
-.modal-dialog {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  max-width: 500px;
-  width: 90%;
-  padding: 0;
-  overflow: hidden;
-  animation: modalSlideIn 0.3s ease;
-}
-
-@keyframes modalSlideIn {
-  from {
-    transform: translateY(-50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.modal-header {
-  background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
-  padding: 20px 24px;
-  border-bottom: 3px solid #C53030;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: white;
-  font-size: 1.25em;
-  font-weight: 600;
-}
-
-.modal-body {
-  padding: 24px;
-  color: #333;
-  line-height: 1.6;
-}
-
-.modal-body p {
-  margin: 0 0 16px 0;
-}
-
-.modal-footer {
-  padding: 16px 24px;
-  background: #f7fafc;
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  border-top: 1px solid #e2e8f0;
-}
-
-.modal-btn {
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 2px solid #C53030;
-  font-size: 0.95em;
-}
-
-.modal-btn-cancel {
-  background: white;
-  color: #C53030;
-}
-
-.modal-btn-cancel:hover {
-  background: #f7fafc;
-}
-
-.modal-btn-confirm {
-  background: #C53030;
-  color: white;
-}
-
-.modal-btn-confirm:hover {
-  background: #a02525;
-}
-
-/* Logo at top center - between Back and How Archer Works */
-.results-container {
-  background: #f7fafc !important;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-  padding-top: 80px;
-  padding-bottom: 2em;
-  position: relative;
-  box-sizing: border-box;
-}
-
-/* Lead text styling - matching progress.html */
-.lead {
-  font-size: 20px;
-  font-weight: 500;
-  letter-spacing: 2.5px;
-  color: #666666;
-  text-align: center;
-  margin: 0 0 32px 0;
-  line-height: 1.6;
-  text-transform: uppercase;
-}
-
-/* Summary cards - 4-column grid (one row) */
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.summary-card {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.summary-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-}
-
-.card-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-right: 12px;
-}
-
-.card-icon.detection { background: transparent; }
-.card-icon.correlation { background: transparent; }
-.card-icon.technique { background: transparent; }
-.card-icon.vendor { background: transparent; }
-.card-icon.validation { background: transparent; }
-.card-icon.metrics { background: transparent; }
-
-.card-icon svg {
-  width: 28px;
-  height: 28px;
-}
-
-.card-icon.detection svg { stroke: #4caf50; }
-.card-icon.correlation svg { stroke: #2196f3; }
-.card-icon.technique svg { stroke: #ff9800; }
-.card-icon.vendor svg { stroke: #9c27b0; }
-.card-icon.validation svg { stroke: #10b981; }
-.card-icon.metrics svg { stroke: #8b5cf6; }
-
-.card-content h3 {
-  font-size: 2.5em;
-  margin: 0;
-  color: #1a1a1a;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.card-content p {
-  margin: 8px 0 0 0;
-  color: #999;
-  font-size: 1em;
-  font-weight: 400;
-}
-
-/* Detection Rules Section */
-.detection-section {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  margin-bottom: 24px;
-  overflow: hidden;
-}
-
-.detection-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-.detection-header h2 {
-  font-size: 26px;
-  margin: 0;
-  color: #1a1a1a;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.expand-btn {
-  color: #C53030;
-  text-decoration: none;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  user-select: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-
-.expand-btn:hover {
-  background: rgba(197, 48, 48, 0.1);
-}
-
-.btn-selection {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid #C53030;
-  border-radius: 4px;
-  background: white;
-  color: #C53030;
-  font-size: 0.85em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-selection:hover {
-  background: #C53030;
-  color: white;
-}
-
-.btn-selection svg {
-  flex-shrink: 0;
-}
-
-/* Vendor sections */
-.vendor-section {
-  margin-bottom: 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-  transition: all 0.2s;
-}
-
-.vendor-section:hover {
-  border-color: #cbd5e0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.vendor-header {
-  background: #f8f9fa;
-  padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.2s;
-}
-
-.vendor-header:hover {
-  background: #e9ecef;
-}
-
-.vendor-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
-  font-size: 1.1em;
-  color: #1a1a1a;
-}
-
-.vendor-icon {
-  font-size: 1.3em;
-}
-
-.vendor-logo-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 8px;
-}
-
-.vendor-count {
-  background: #C53030;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.85em;
-  font-weight: 600;
-}
-
-.expand-icon {
-  transition: transform 0.3s;
-  color: #666;
-  width: 20px;
-  height: 20px;
-}
-
-.expand-icon.expanded {
-  transform: rotate(180deg);
-}
-
-.vendor-content {
-  max-height: 0;
-  overflow: hidden;
-  padding: 0;
-  background: white;
-  transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-}
-
-.vendor-content.show {
-  max-height: none;
-  padding: 8px 0;
-  transition: padding 0.3s ease-in;
-}
-
-/* Correlation and cross-vendor collapsible content */
-.correlation-content,
-.cross-vendor-content {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease-out;
-}
-
-.correlation-content.show,
-.cross-vendor-content.show {
-  max-height: none;
-  transition: none;
-}
-
-/* detection-item base styles now in common.css */
-
-.detection-item:hover {
-  background: #fafafa;
-}
-
-.detection-title {
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 6px;
-  font-size: 1em;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;  /* Allow wrapping to prevent stretching */
-  gap: 8px;
-}
-
-.detection-checkbox {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-/* detection-item.unchecked styles now in common.css */
-
-.detection-item.unchecked {
-  background-color: #f9f9f9;
-}
-
-.detection-technique {
-  display: inline-block;
-  background: #fff3e0;
-  color: #ff9800;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 0.85em;
-  font-weight: 600;
-  margin-right: 8px;
-  flex-shrink: 0;  /* Prevent badge from growing */
-  width: fit-content;  /* Only as wide as content */
-}
-
-.detection-indicators {
-  margin-top: 8px;
-  margin-bottom: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.detection-indicators-placeholder {
-  margin-top: 8px;
-  margin-bottom: 12px;
-}
-
-.indicator-tag {
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  padding: 2px 8px;
-  font-size: 0.85em;
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  color: #d63384;
-  white-space: nowrap;
-}
-
-/* needs-review-badge base styles now in common.css */
-
-.needs-review-badge {
-  border: 1px solid #ffc107;
-  padding: 2px 8px;
-  font-size: 0.75em;
-  margin-left: 8px;
-}
-
-/* OSINT enriched badge - orange color */
-.osint-enriched-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #ff9800;
-  color: white;
-  border: 1px solid #f57c00;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 0.75em;
-  font-weight: 500;
-  margin-left: 8px;
-}
-
-.osint-enriched-badge svg {
-  flex-shrink: 0;
-}
-
-.detection-description {
-  color: #666;
-  font-size: 0.9em;
-  margin-top: 6px;
-  line-height: 1.5;
-}
-
-.detection-description a {
-  color: #0066cc;
-  text-decoration: none;
-}
-
-.detection-description a:hover {
-  text-decoration: underline;
-}
-
-/* Action buttons - 5 horizontal buttons below Detection Rules */
-.action-buttons {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  margin: 24px 0 16px 0;
-}
-
-.btn-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.95em;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 2px solid #C53030;
-  text-decoration: none;
-  background: white;
-  color: #C53030;
-}
-
-.btn-action:hover {
-  background: #C53030;
-  color: white;
-}
-
-/* Footer - matching index.html - full width */
-.page-footer {
-  margin-top: 60px;
-  margin-left: calc(-50vw + 50%);
-  margin-right: calc(-50vw + 50%);
-  margin-bottom: 0 !important;
-  padding: 30px 0 30px 0;
-  background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
-  border-top: 3px solid #C53030;
-  text-align: center;
-  width: 100vw;
-  box-sizing: border-box;
-}
-
-.page-footer .footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.page-footer .github-link {
-  flex: 1;
-  min-width: 200px;
-  text-align: left;
-}
-
-.page-footer .github-link a {
-  color: #8B9AA3;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.95em;
-  transition: color 0.2s;
-}
-
-.page-footer .github-link a:hover {
-  color: #C53030;
-}
-
-.page-footer .timestamp {
-  color: #8B9AA3;
-  font-size: 0.85em;
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid rgba(139, 154, 163, 0.2);
-}
-
-.page-footer .quote {
-  flex: 2;
-  min-width: 300px;
-  text-align: center;
-}
-
-.page-footer .quote p {
-  color: #a8b5bd;
-  font-style: italic;
-  font-size: 0.95em;
-  margin: 0;
-  line-height: 1.5;
-}
-
-.page-footer .quote span {
-  font-size: 0.9em;
-  color: #8B9AA3;
-}
-
-.page-footer .spacer {
-  flex: 1;
-  min-width: 200px;
-}
-
-/* Hide timestamp display - moved to footer */
-.timestamp-display {
-  display: none;
-}
-
-/* Ensure page-shell doesn't restrict footer width but constrains content */
-#main-content.page-shell {
-  display: block;
-  padding: 0;
-  margin: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Ensure content cards don't overflow */
-.summary-card,
-.detection-section,
-.success-banner,
-.action-buttons {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-</style>
 {% endblock %}
 
 {% block main_class %}page-shell{% endblock %}
@@ -732,7 +29,7 @@ body, html {
                         <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                 </div>
-                Statistics
+                Metrics
             </h2>
             <span id="stats-toggle-text" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleStatistics()">Collapse</span>
         </div>
@@ -812,24 +109,11 @@ body, html {
                 with <strong>{{ correlation_count }}</strong> behavioral correlations that would typically require manual analysis.
             </div>
         </div>
-        </div>
-    </div>
 
-    <!-- Metrics Section -->
-    <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <div class="detection-header">
-            <h2 onclick="toggleGenerationMetrics()" style="cursor: pointer; user-select: none;">
-                <div class="card-icon technique" style="width: 40px; height: 40px; margin-right: 12px;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                    </svg>
-                </div>
-                Metrics
-            </h2>
-            <span id="metrics-toggle-text" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleGenerationMetrics()">Collapse</span>
-        </div>
+        <!-- Horizontal Divider -->
+        <hr style="border: none; border-top: 2px solid #e0e0e0; margin: 24px 0;">
 
-        <div id="metrics-content" style="transition: all 0.3s ease; overflow: hidden;">
+        <!-- Metrics Content -->
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
 
             {# Use pre-calculated values from top of template #}
@@ -976,6 +260,173 @@ body, html {
               {% if osint_count.count > 0 %}With <strong>{{ osint_count.count }}</strong> detections validated against real-world threat intelligence, you have immediate production-ready coverage.{% endif %}
               The fidelity score of <strong>{{ fidelity_score|round(0)|int }}/100</strong> reflects multi-platform coverage, behavioral correlation, and OSINT validation.
             </div>
+          </div>
+        </div>
+    </div>
+
+    <!-- Key Section -->
+    <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <div class="detection-header">
+            <h2 onclick="toggleKeyMetrics()" style="cursor: pointer; user-select: none;">
+                <div class="card-icon technique" style="width: 40px; height: 40px; margin-right: 12px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+                    </svg>
+                </div>
+                Key
+            </h2>
+            <span id="key-metrics-toggle-text" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleKeyMetrics()">Expand</span>
+        </div>
+
+        <div id="key-metrics-content" style="transition: all 0.3s ease; overflow: hidden; max-height: 0px;">
+          <div style="padding: 20px 0; overflow-wrap: break-word; word-wrap: break-word;">
+
+            <!-- MITRE ATT&CK Tactics Legend -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">MITRE ATT&CK Tactics</h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #E3F2FD; color: #01579B; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🚪 Initial Access</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #FFF3E0; color: #E65100; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">💻 Execution</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #FCE4EC; color: #880E4F; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">📌 Persistence</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #FFF9C4; color: #F57F17; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">👑 Privilege Escalation</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #F3E5F5; color: #4A148C; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🥷 Defense Evasion</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #FFEBEE; color: #B71C1C; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🔑 Credential Access</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #E0F2F1; color: #004D40; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🔍 Discovery</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #E8F5E9; color: #1B5E20; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🔗 Lateral Movement</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #FFF8E1; color: #FF6F00; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">📦 Collection</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #E1F5FE; color: #006064; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">📡 Command and Control</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #EFEBE9; color: #3E2723; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🚀 Exfiltration</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #FFCDD2; color: #C62828; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">💥 Impact</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Label Indicators -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Label Indicators</h3>
+
+              <div style="margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                  <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    Enhanced with OSINT
+                  </span>
+                </div>
+                <p style="margin: 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
+                  This detection includes additional indicators retrieved from open-source intelligence (OSINT) sources and merged into the query logic. These enhanced detections combine MITRE ATT&CK procedure examples with threat intelligence from security vendors, GitHub repositories, and community detection rules to provide more comprehensive coverage.
+                </p>
+              </div>
+
+              <div style="margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                  <span style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Compared with OSINT
+                  </span>
+                </div>
+                <p style="margin: 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
+                  This detection was generated when MITRE ATT&CK provided insufficient indicators. The system searched additional OSINT sources (threat intelligence blogs, Sigma rules, Elastic/Splunk security content, MITRE CAR, and LOLBAs) to create meaningful detections. These require review to validate accuracy and relevance.
+                </p>
+              </div>
+            </div>
+
+            <!-- Confidence of Detection -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Confidence of Detection</h3>
+              <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
+                Each detection includes a confidence score indicating the estimated probability of successful detection. This likelihood percentage is calculated based on:
+              </p>
+              <ul style="margin: 0; padding-left: 24px; color: #475569; font-size: 0.9em; line-height: 1.8;">
+                <li><strong>Indicator Strength</strong> - Quality and specificity of indicators (file paths, registry keys, command-line patterns, network signatures)</li>
+                <li><strong>Data Source Availability</strong> - Whether the required log sources are commonly available in enterprise environments</li>
+                <li><strong>Query Specificity</strong> - How precisely the detection targets the technique versus generating potential false positives</li>
+              </ul>
+              <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">
+                <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600;">High (75-100%)</span>
+                <span style="background: #fef3c7; color: #a16207; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600;">Medium (50-74%)</span>
+                <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600;">Low (0-49%)</span>
+              </div>
+            </div>
+
+            <!-- How Detections are Generated -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">How Detections are Generated</h3>
+              <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
+                Archer generates detections through an automated pipeline that transforms threat intelligence into actionable security rules:
+              </p>
+              <ol style="margin: 0; padding-left: 24px; color: #475569; font-size: 0.9em; line-height: 1.8;">
+                <li><strong>MITRE ATT&CK Extraction</strong> - Retrieves technique descriptions, procedure examples, and software/malware behaviors from the MITRE ATT&CK framework</li>
+                <li><strong>Indicator Parsing</strong> - Extracts specific indicators including file paths, registry keys, command-line patterns, process names, network indicators, and behavioral signatures</li>
+                <li><strong>Generic Filtering</strong> - Removes overly broad terms (e.g., "file", "process", "command") that would generate excessive false positives</li>
+                <li><strong>Vendor Translation</strong> - Converts indicators into platform-specific query languages (Splunk SPL, Microsoft Defender KQL, etc.) using custom mapping files</li>
+                <li><strong>OSINT Enrichment (Optional)</strong> - When MITRE indicators are insufficient, searches additional threat intelligence sources to enhance detection coverage</li>
+                <li><strong>YAML Construction</strong> - Packages the detection as a standardized YAML file with metadata, tags, references, and query logic</li>
+              </ol>
+            </div>
+
+            <!-- How Correlations are Compiled -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">How Correlations are Compiled</h3>
+              <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
+                Actor correlations combine multiple data points to build comprehensive detection coverage for threat groups:
+              </p>
+              <ol style="margin: 0; padding-left: 24px; color: #475569; font-size: 0.9em; line-height: 1.8;">
+                <li><strong>Direct Procedure Examples</strong> - Extracts indicators from techniques explicitly used by the threat actor in documented campaigns</li>
+                <li><strong>Software/Malware Attribution</strong> - Identifies software and malware families associated with the actor, then retrieves indicators from those software pages even when direct actor-to-indicator links aren't documented</li>
+                <li><strong>Transitive Relationships</strong> - Maps relationships like Actor → Uses Software → Implements Technique → Has Indicators, building detections from the complete chain</li>
+                <li><strong>Cross-Vendor Coverage</strong> - Generates detections across multiple platforms (Splunk, Microsoft Defender, Elastic, etc.) to ensure broad deployment options</li>
+                <li><strong>Deduplication & Merging</strong> - Combines similar detections targeting the same technique to reduce noise and improve query efficiency</li>
+                <li><strong>Confidence Scoring</strong> - Assigns likelihood scores based on indicator quality and the strength of attribution between actor, software, and technique</li>
+              </ol>
+              <div style="margin-top: 12px; padding: 12px; background: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                <p style="margin: 0; color: #475569; font-size: 0.85em; line-height: 1.6;">
+                  <strong>Example:</strong> If an actor uses a specific malware family, but that malware's MITRE page shows technique implementations without direct indicators, Archer will search the malware's software page for indicators, then construct detections that link back to the actor through the software relationship.
+                </p>
+              </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div>
+              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Important Notes</h3>
+              <ul style="margin: 0; padding-left: 24px; color: #475569; font-size: 0.9em; line-height: 1.8;">
+                <li><strong>Review Before Deployment</strong> - All generated detections should be reviewed and tuned for your environment before production deployment</li>
+                <li><strong>False Positives</strong> - Detection rules may require adjustment to reduce false positives based on your organization's baseline activity</li>
+                <li><strong>Data Source Requirements</strong> - Ensure required log sources (process creation, registry changes, network traffic, etc.) are available and properly configured</li>
+                <li><strong>Indicator Freshness</strong> - MITRE ATT&CK and OSINT sources are updated periodically; regenerate detections regularly to incorporate new intelligence</li>
+                <li><strong>Vendor-Specific Syntax</strong> - Queries are optimized for each platform's query language and data model; cross-platform translation may require additional validation</li>
+              </ul>
+            </div>
+
           </div>
         </div>
     </div>
@@ -1193,25 +644,25 @@ body, html {
                   {# Detection Likelihood Badge #}
                   {% set likelihood = detection.detection_likelihood | default(50) %}
                   {% if likelihood >= 75 %}
-                    {% set likelihood_bg = '#4caf50' %}
-                    {% set likelihood_text = 'white' %}
+                    {% set likelihood_bg = '#dcfce7' %}
+                    {% set likelihood_text = '#166534' %}
                     {% set likelihood_label = 'High' %}
                     {% set likelihood_icon = '✓' %}
                   {% elif likelihood >= 50 %}
-                    {% set likelihood_bg = '#ff9800' %}
-                    {% set likelihood_text = 'white' %}
+                    {% set likelihood_bg = '#fef3c7' %}
+                    {% set likelihood_text = '#a16207' %}
                     {% set likelihood_label = 'Medium' %}
                     {% set likelihood_icon = '~' %}
                   {% else %}
-                    {% set likelihood_bg = '#f44336' %}
-                    {% set likelihood_text = 'white' %}
+                    {% set likelihood_bg = '#fee2e2' %}
+                    {% set likelihood_text = '#b91c1c' %}
                     {% set likelihood_label = 'Low' %}
                     {% set likelihood_icon = '!' %}
                   {% endif %}
                   <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}" style="display: inline-block; background: {{ technique_bg }}; color: {{ technique_text }}; padding: 6px 4px; border-radius: 4px; font-weight: 600; margin-left: 4px; margin-right: 8px;">{{ technique_emoji }} {{ detection.technique }} ({{ tactic }})</span>
 
                   {% if detection.osint_enriched %}
-                  <span class="osint-enhanced-badge" title="This detection was enhanced with additional indicators from OSINT sources merged into the query logic.">
+                  <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);" title="This detection was enhanced with additional indicators from OSINT sources merged into the query logic.">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                       <circle cx="12" cy="12" r="10"/>
                       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
@@ -1219,13 +670,13 @@ body, html {
                     Enhanced with OSINT
                   </span>
                   {% elif detection.needs_review %}
-                  <span class="needs-review-badge" title="No threat indicators extracted automatically. This detection may use complex logic, behavioral patterns, or aggregations. Review the query to validate effectiveness.">
+                  <span class="needs-review-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);" title="No threat indicators extracted automatically. This detection may use complex logic, behavioral patterns, or aggregations. Review the query to validate effectiveness.">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="12" y1="8" x2="12" y2="12"/>
-                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
                     </svg>
-                    Needs Review - no indicators extracted
+                    Compared with OSINT
                   </span>
                   {% endif %}
                 </div>
@@ -1237,7 +688,7 @@ body, html {
               </div>
               <div style="margin-top: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                 <span style="margin-left: 26px; font-weight: 400; color: #666;">{{ detection.title.replace(', ', ' | ') }}</span>
-                <span style="display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600;" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">Confidence of detection: <span style="color: {{ likelihood_bg }}; font-weight: 700;">{{ likelihood_label }}</span></span>
+                <span style="background: {{ likelihood_bg }}; color: {{ likelihood_text }}; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; white-space: nowrap;" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">{{ likelihood_label }}</span>
               </div>
               {% if detection.indicators %}
               <div class="detection-indicators">
@@ -1497,6 +948,7 @@ body, html {
             <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}" data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}">
               <div class="detection-title" style="display: flex; justify-content: space-between; align-items: flex-start; position: relative;">
                 <div style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+                <input type="checkbox" class="correlation-checkbox" checked data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
                 <!-- Technique Flow -->
                 {% if correlation.is_merged and correlation.techniques|length >= 2 %}
                   {# Display techniques in the order they appear in correlation.techniques #}
@@ -1677,13 +1129,13 @@ body, html {
 
                 <!-- Needs Review Badge -->
                 {% if correlation.needs_review %}
-                <span class="needs-review-badge" title="At least one detection in this correlation has no threat indicators extracted automatically. Review the queries to validate effectiveness.">
+                <span class="needs-review-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);" title="At least one detection in this correlation has no threat indicators extracted automatically. Review the queries to validate effectiveness.">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
                   </svg>
-                  Needs Review - no indicators extracted
+                  Compared with OSINT
                 </span>
                 {% endif %}
                 </div>
@@ -1691,7 +1143,7 @@ body, html {
                 <!-- OSINT Enhanced Badge (Right-aligned) -->
                 {% if correlation.osint_enriched %}
                 <div style="flex-shrink: 0; margin-left: 12px;">
-                  <span class="osint-enhanced-badge" title="This correlation includes detections enhanced with additional indicators from OSINT sources merged into the query logic.">
+                  <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);" title="This correlation includes detections enhanced with additional indicators from OSINT sources merged into the query logic.">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                       <circle cx="12" cy="12" r="10"/>
                       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
@@ -1925,7 +1377,7 @@ body, html {
       {% endif %}
     </div>
 
-    <!-- Cross-vendor Correlations Section - Coming Soon -->
+    <!-- Cross-Vendor Section - Coming Soon -->
     <div class="detection-section" style="opacity: 0.5; pointer-events: none;">
       <div class="detection-header">
         <h2>
@@ -1938,12 +1390,31 @@ body, html {
               <path d="M2 19 L22 19" stroke-width="2.5"/>
             </svg>
           </div>
-          Cross-vendor Correlations
+          Cross-Vendor
         </h2>
         <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
       </div>
 
       <div class="cross-vendor-content">
+        <p style="text-align: center; color: #999; padding: 40px 0; font-style: italic;">Coming Soon</p>
+      </div>
+    </div>
+
+    <!-- ATT&CK Flow Section - Coming Soon -->
+    <div class="detection-section" style="opacity: 0.5; pointer-events: none;">
+      <div class="detection-header">
+        <h2>
+          <div class="card-icon attack-flow" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+          </div>
+          ATT&CK Flow
+        </h2>
+        <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
+      </div>
+
+      <div class="attack-flow-content">
         <p style="text-align: center; color: #999; padding: 40px 0; font-style: italic;">Coming Soon</p>
       </div>
     </div>
@@ -1964,10 +1435,19 @@ body, html {
           Validation
         </h2>
         <div style="display: flex; align-items: center; gap: 12px;">
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; color: #374151; font-size: 14px; font-weight: 500;">
-            <input type="checkbox" class="validation-checkbox" id="check-all-validation" onchange="toggleAllValidation()" style="margin: 0;">
-            Check All
-          </label>
+          <button class="btn-selection" id="select-all-validation" onclick="selectAllValidation()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 11 12 14 22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            Select All
+          </button>
+          <button class="btn-selection" id="deselect-all-validation" onclick="deselectAllValidation()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            </svg>
+            Deselect All
+          </button>
           <span class="expand-btn" id="validation-toggle" onclick="toggleValidationChecklist()">Expand</span>
         </div>
       </div>
@@ -2088,20 +1568,18 @@ body, html {
           </svg>
           Save to Library
         </button>
-        <button class="btn-action" disabled style="opacity: 0.5; cursor: not-allowed; background: #f5f5f5; color: #999; border-color: #ddd;">
+        <button class="btn-action" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
           </svg>
           Export to VECTR
-          <span style="font-size: 0.75em; margin-left: 6px;">(Coming Soon)</span>
         </button>
-        <button class="btn-action" disabled style="opacity: 0.5; cursor: not-allowed; background: #f5f5f5; color: #999; border-color: #ddd;">
+        <button class="btn-action" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
             <polygon points="10 8 16 12 10 16 10 8"/>
           </svg>
           Run Emulation
-          <span style="font-size: 0.75em; margin-left: 6px;">(Coming Soon)</span>
         </button>
         <button class="btn-action" id="new-analysis-btn" onclick="window.location.href='/'">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2132,11 +1610,11 @@ body, html {
     <div class="footer-content">
       <!-- GitHub Link -->
       <div class="github-link">
-        <a href="https://github.com/cmdshiftd" target="_blank" rel="noopener noreferrer">
+        <a href="https://github.com/cmdaltr" target="_blank" rel="noopener noreferrer">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
           </svg>
-          <span style="font-weight: 500;">@cmdshiftd</span>
+          <span style="font-weight: 500;">@cmdaltr</span>
         </a>
       </div>
 
@@ -2156,7 +1634,7 @@ body, html {
     <div class="timestamp">
       {{ generated_time }}<br>
       <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
-        Vendor logos are stylized representations. Splunk®, Microsoft®, and Elastic® are registered trademarks of their respective companies.
+        Vendor logos are stylized representations. Splunk®, Microsoft®, Google® and Elastic® are registered trademarks of their respective companies.
       </span>
     </div>
   </footer>
@@ -2329,7 +1807,16 @@ function getSelectedDetections() {
   return selected;
 }
 
-// Toggle cross-vendor correlations section
+// Get list of selected correlations (correlation-id)
+function getSelectedCorrelations() {
+  const selected = [];
+  document.querySelectorAll('.correlation-checkbox:checked').forEach(cb => {
+    selected.push(cb.dataset.correlationId);
+  });
+  return selected;
+}
+
+// Toggle cross-vendor section
 let crossVendorExpanded = false;
 function toggleAllCrossVendor() {
   const btn = event.target;
@@ -2354,15 +1841,9 @@ function checkValidationStatus() {
   const checkbox2 = document.getElementById('validation-step-2');
   const checkbox3 = document.getElementById('validation-step-3');
   const checkbox4 = document.getElementById('validation-step-4');
-  const checkAllBox = document.getElementById('check-all-validation');
   const warningMsg = document.getElementById('validation-warning');
 
   const allChecked = checkbox1.checked && checkbox2.checked && checkbox3.checked && checkbox4.checked;
-
-  // Update the "Check All" checkbox state
-  if (checkAllBox) {
-    checkAllBox.checked = allChecked;
-  }
 
   const downloadBtn = document.getElementById('download-all-btn');
   const saveBtn = document.getElementById('save-to-library-btn');
@@ -2393,19 +1874,31 @@ function checkValidationStatus() {
 }
 
 // Toggle all validation checkboxes
-function toggleAllValidation() {
-  const checkAllBox = document.getElementById('check-all-validation');
+function selectAllValidation() {
   const checkbox1 = document.getElementById('validation-step-1');
   const checkbox2 = document.getElementById('validation-step-2');
   const checkbox3 = document.getElementById('validation-step-3');
   const checkbox4 = document.getElementById('validation-step-4');
 
-  const isChecked = checkAllBox.checked;
+  checkbox1.checked = true;
+  checkbox2.checked = true;
+  checkbox3.checked = true;
+  checkbox4.checked = true;
 
-  checkbox1.checked = isChecked;
-  checkbox2.checked = isChecked;
-  checkbox3.checked = isChecked;
-  checkbox4.checked = isChecked;
+  // Update button states
+  checkValidationStatus();
+}
+
+function deselectAllValidation() {
+  const checkbox1 = document.getElementById('validation-step-1');
+  const checkbox2 = document.getElementById('validation-step-2');
+  const checkbox3 = document.getElementById('validation-step-3');
+  const checkbox4 = document.getElementById('validation-step-4');
+
+  checkbox1.checked = false;
+  checkbox2.checked = false;
+  checkbox3.checked = false;
+  checkbox4.checked = false;
 
   // Update button states
   checkValidationStatus();
@@ -2587,9 +2080,25 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
       }
     }
 
-    // Save all correlations
-    for (const correlation of correlations) {
-      try {
+    // Get selected correlations
+    const selectedCorrelations = getSelectedCorrelations();
+    const selectedCorrelationSet = new Set(selectedCorrelations);
+
+    // Save selected correlations
+    let correlationIndex = 0;
+    for (const vendor of correlations) {
+      const vendorCorrelations = vendor.correlations || [];
+      for (let i = 0; i < vendorCorrelations.length; i++) {
+        const correlation = vendorCorrelations[i];
+        const correlationId = `corr-${vendor.name}-${i + 1}`;
+
+        // Check if this correlation is selected
+        if (!selectedCorrelationSet.has(correlationId)) {
+          console.log(`Skipping unselected correlation: ${correlationId}`);
+          continue;
+        }
+
+        try {
         // Safely get correlation title
         const getCorrelationTitle = (corr) => {
           // Check for techniques field
@@ -2667,14 +2176,15 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
             reason: result.error || result.message || 'Unknown error occurred'
           });
         }
-      } catch (error) {
-        console.error('Error saving correlation:', error);
-        errorCount++;
-        const safeName = correlation.title || correlation.name || 'Correlation';
-        failedDetections.push({
-          name: safeName,
-          reason: error.message || 'Network or server error'
-        });
+        } catch (error) {
+          console.error('Error saving correlation:', error);
+          errorCount++;
+          const safeName = correlation.title || correlation.name || 'Correlation';
+          failedDetections.push({
+            name: safeName,
+            reason: error.message || 'Network or server error'
+          });
+        }
       }
     }
 
@@ -2694,7 +2204,7 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
             <div onclick="document.getElementById('failed-list').style.display = document.getElementById('failed-list').style.display === 'none' ? 'block' : 'none'; document.getElementById('arrow-icon').textContent = document.getElementById('arrow-icon').textContent === '▶' ? '▼' : '▶';"
                  style="color: #C53030; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px;">
               <span id="arrow-icon" style="font-size: 0.8em;">▶</span>
-              <span style="font-weight: 600;">${errorCount} detection(s) failed to save</span>
+              <span style="font-weight: 600;">${errorCount} item(s) failed to save</span>
             </div>
             <div id="failed-list" style="display: none; margin-top: 8px; max-height: 300px; overflow-y: auto;">
               ${failedList}
@@ -2704,12 +2214,12 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
       }
       await showModal(
         'Save Complete',
-        `<p>Successfully saved <strong>${savedCount} detection(s)</strong> to library.</p>${errorMsg}`,
+        `<p>Successfully saved <strong>${savedCount} item(s)</strong> to library.</p>${errorMsg}`,
         'OK'
       );
     } else {
       // All saves failed - show error details
-      let errorMsg = 'No detections were saved.';
+      let errorMsg = 'No items were saved.';
       if (failedDetections.length > 0) {
         const failedList = failedDetections.map(f =>
           `<div style="margin: 4px 0; padding: 8px; background: #f8f9fa; border-left: 3px solid #C53030; font-size: 0.9em;">
@@ -2718,12 +2228,12 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
           </div>`
         ).join('');
         errorMsg = `
-          <p>No detections were saved. See errors below:</p>
+          <p>No items were saved. See errors below:</p>
           <div style="margin-top: 16px;">
             <div onclick="document.getElementById('all-failed-list').style.display = document.getElementById('all-failed-list').style.display === 'none' ? 'block' : 'none'; document.getElementById('all-failed-arrow').textContent = document.getElementById('all-failed-arrow').textContent === '▶' ? '▼' : '▶';"
                  style="color: #C53030; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px;">
               <span id="all-failed-arrow" style="font-size: 0.8em;">▶</span>
-              <span style="font-weight: 600;">${failedDetections.length} detection(s) failed to save</span>
+              <span style="font-weight: 600;">${failedDetections.length} item(s) failed to save</span>
             </div>
             <div id="all-failed-list" style="display: none; margin-top: 8px; max-height: 300px; overflow-y: auto;">
               ${failedList}
@@ -2910,25 +2420,6 @@ function toggleValidationChecklist() {
   }
 }
 
-// Toggle Generation Metrics section
-function toggleGenerationMetrics() {
-  const content = document.getElementById('metrics-content');
-  const toggleText = document.getElementById('metrics-toggle-text');
-  const isCollapsed = content.style.maxHeight === '0px';
-
-  if (isCollapsed) {
-    // Expand
-    content.style.maxHeight = content.scrollHeight + 'px';
-    toggleText.textContent = 'Collapse';
-    localStorage.setItem('metricsCollapsed', 'false');
-  } else {
-    // Collapse
-    content.style.maxHeight = '0px';
-    toggleText.textContent = 'Expand';
-    localStorage.setItem('metricsCollapsed', 'true');
-  }
-}
-
 // Toggle Statistics section
 function toggleStatistics() {
   const content = document.getElementById('statistics-content');
@@ -2948,6 +2439,25 @@ function toggleStatistics() {
   }
 }
 
+// Toggle Key section
+function toggleKeyMetrics() {
+  const content = document.getElementById('key-metrics-content');
+  const toggleText = document.getElementById('key-metrics-toggle-text');
+  const isCollapsed = content.style.maxHeight === '0px';
+
+  if (isCollapsed) {
+    // Expand
+    content.style.maxHeight = content.scrollHeight + 'px';
+    toggleText.textContent = 'Collapse';
+    localStorage.setItem('keyMetricsCollapsed', 'false');
+  } else {
+    // Collapse
+    content.style.maxHeight = '0px';
+    toggleText.textContent = 'Expand';
+    localStorage.setItem('keyMetricsCollapsed', 'true');
+  }
+}
+
 // Initialize statistics state on page load
 document.addEventListener('DOMContentLoaded', function() {
   const statsContent = document.getElementById('statistics-content');
@@ -2964,19 +2474,19 @@ document.addEventListener('DOMContentLoaded', function() {
     statsToggleText.textContent = 'Collapse';
   }
 
-  // Initialize metrics state
-  const metricsContent = document.getElementById('metrics-content');
-  const metricsToggleText = document.getElementById('metrics-toggle-text');
-  // Default to collapsed if no localStorage value is set
-  const metricsCollapsed = localStorage.getItem('metricsCollapsed') !== 'false';
+  // Initialize key state
+  const keyMetricsContent = document.getElementById('key-metrics-content');
+  const keyMetricsToggleText = document.getElementById('key-metrics-toggle-text');
+  // Default to collapsed
+  const keyMetricsCollapsed = localStorage.getItem('keyMetricsCollapsed') !== 'false';
 
-  if (metricsCollapsed) {
-    metricsContent.style.maxHeight = '0px';
-    metricsToggleText.textContent = 'Expand';
+  if (keyMetricsCollapsed) {
+    keyMetricsContent.style.maxHeight = '0px';
+    keyMetricsToggleText.textContent = 'Expand';
   } else {
     // Set initial max-height to enable smooth transitions
-    metricsContent.style.maxHeight = metricsContent.scrollHeight + 'px';
-    metricsToggleText.textContent = 'Collapse';
+    keyMetricsContent.style.maxHeight = keyMetricsContent.scrollHeight + 'px';
+    keyMetricsToggleText.textContent = 'Collapse';
   }
 });
 </script>

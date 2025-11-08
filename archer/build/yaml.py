@@ -210,12 +210,13 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, i
 
     # Indent ALL query lines properly for YAML literal block
     # Split query into lines, indent each non-empty line with 2 spaces
+    # Strip existing indentation first to ensure consistent spacing
     query_lines = query.split("\n")
     indented_lines = []
     for line in query_lines:
         if line.strip():  # Non-empty line
-            # Add 2 spaces indentation to all non-empty lines
-            indented_lines.append("  " + line)
+            # Strip existing indentation and add exactly 2 spaces
+            indented_lines.append("  " + line.lstrip())
         else:
             # Empty line - keep it empty
             indented_lines.append(line)
@@ -252,7 +253,33 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, i
         # .replace("  | ", " | ")
         # .replace("\n | ", "\n  | ")
     )
-    yaml_content = re.sub(r"\n\n", r"\n  ", yaml_content)
+    # Fix: Don't add extra indentation to query lines (lines starting with "  |" after blank lines)
+    # Only add indentation to description text after blank lines
+    # Split on double newlines, check if next line is a query pipe, and only add indent if it's not
+    def fix_blank_line_indent(match):
+        # Get the text after the blank line
+        next_char_idx = match.end()
+        if next_char_idx < len(yaml_content):
+            # Check if the next line starts with "  |" (query pipe)
+            remaining = yaml_content[next_char_idx:]
+            if remaining.startswith("  |"):
+                # This is a query line, don't add extra indent
+                return "\n\n"
+        # Not a query line, add indent for description formatting
+        return "\n  "
+
+    # Note: Can't use the function approach above in re.sub easily, so use a simpler fix:
+    # Only apply indentation to description section, not query section
+    # Split at "query: |" marker and only apply regex to the part before it
+    if "query: |" in yaml_content:
+        parts = yaml_content.split("query: |", 1)
+        # Apply regex only to content before query
+        parts[0] = re.sub(r"\n\n", r"\n  ", parts[0])
+        yaml_content = "query: |".join(parts)
+    else:
+        # Fallback: apply to whole content if no query marker found
+        yaml_content = re.sub(r"\n\n", r"\n  ", yaml_content)
+
     yaml_content = re.sub(r"(\(Citation: [^\)]+\))", r"", yaml_content)
     # NOTE: Old pipe reformatting removed - now handled by pre-indenting query lines above
     # yaml_content = yaml_content.replace(" | where ", "\n   | where ").replace("   | ", "  | ")
@@ -315,6 +342,20 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, i
 
         if osint_data.get("enrichment_notes"):
             notes = osint_data["enrichment_notes"].replace("\n", "\n  ")
+
+            # Add explanation if OSINT comparison succeeded but query was not enhanced
+            if not osint_enhanced:
+                # Determine the reason based on available data
+                has_indicators = any(
+                    osint_data.get("osint_indicators", {}).get(ind_type)
+                    for ind_type in ["cmd", "sw", "path", "acct", "reg", "api", "op", "evt"]
+                )
+
+                if not has_indicators:
+                    notes += "; Query not enhanced: no actionable indicators extracted from OSINT sources (only query snippets available)"
+                else:
+                    notes += "; Query not enhanced: extracted indicators may be duplicates or incompatible with target platform"
+
             osint_section += f"enrichment_notes: |\n  {notes}\n"
 
         yaml_content += osint_section

@@ -1977,13 +1977,13 @@ if __name__ == '__main__':
 ## Additional Resources
 
 ### Official Documentation
-- [Archer GitHub Repository](https://github.com/cmdshiftd/archer)
+- [Archer GitHub Repository](https://github.com/cmdaltr/archer)
 - [How Archer Works](http://localhost:8000/how-it-works)
 - [Mapping Files Configuration Guide](docs/guides/MAPPING_FILES_GUIDE.md)
 
 ### Community
-- [GitHub Issues](https://github.com/cmdshiftd/archer/issues)
-- [GitHub Discussions](https://github.com/cmdshiftd/archer/discussions)
+- [GitHub Issues](https://github.com/cmdaltr/archer/issues)
+- [GitHub Discussions](https://github.com/cmdaltr/archer/discussions)
 
 ### Related Resources
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)
@@ -2005,10 +2005,10 @@ if __name__ == '__main__':
 ## Support
 
 For API support and questions:
-- **Email**: [GitHub @cmdshiftd](https://github.com/cmdshiftd)
-- **Issues**: [Report a bug](https://github.com/cmdshiftd/archer/issues)
-- **Discussions**: [Ask a question](https://github.com/cmdshiftd/archer/discussions)
+- **Email**: [GitHub @cmdaltr](https://github.com/cmdaltr)
+- **Issues**: [Report a bug](https://github.com/cmdaltr/archer/issues)
+- **Discussions**: [Ask a question](https://github.com/cmdaltr/archer/discussions)
 
 ---
 
-**© 2025 Archer Detection Generator** | Built with ❤️ by @cmdshiftd
+**© 2025 Archer Detection Generator** | Built with ❤️ by @cmdaltr

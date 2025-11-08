@@ -197,13 +197,13 @@ def extract_sigma_patterns(detection_dict: dict) -> list:
         if isinstance(value, list):
             for item in value:
                 if isinstance(item, str) and item:
-                    # Clean up the value (remove special chars if too many)
-                    cleaned = item.strip()
+                    # Clean up the value (remove backslashes and special chars)
+                    cleaned = item.strip().replace('\\', '')
                     if len(cleaned) > 2 and cleaned not in ['*', '?', '-']:
                         patterns.append(cleaned)
         # Handle string values
         elif isinstance(value, str) and value:
-            cleaned = value.strip()
+            cleaned = value.strip().replace('\\', '')
             if len(cleaned) > 2 and cleaned not in ['*', '?', '-']:
                 patterns.append(cleaned)
         # Handle nested dicts (common in Sigma selection blocks)
@@ -441,15 +441,15 @@ def extract_indicators_from_sources(indicators_data: List[Dict]) -> Dict[str, Li
     for indicator_info in indicators_data:
         source = indicator_info.get("source", "")
 
-        # Extract from Sigma indicators
+        # Extract from Sigma indicators (strip backslashes from all indicators)
         if "cmd" in indicator_info:
-            extracted["cmd"].extend(indicator_info["cmd"])
+            extracted["cmd"].extend([x.replace('\\', '') for x in indicator_info["cmd"]])
         if "file" in indicator_info:
-            extracted["sw"].extend(indicator_info["file"])  # Process images go to sw (software)
+            extracted["sw"].extend([x.replace('\\', '') for x in indicator_info["file"]])  # Process images go to sw (software)
         if "target_files" in indicator_info:
-            extracted["sw"].extend(indicator_info["target_files"])  # Target files also go to sw
+            extracted["sw"].extend([x.replace('\\', '') for x in indicator_info["target_files"]])  # Target files also go to sw
         if "registry" in indicator_info:
-            extracted["reg"].extend(indicator_info["registry"])
+            extracted["reg"].extend([x.replace('\\', '') for x in indicator_info["registry"]])
 
         # Extract from Elastic/Splunk query snippets
         # Format: [Source] snippet|||source_url (using ||| as delimiter)
@@ -768,8 +768,8 @@ def extract_operations_from_osint_snippets(osint_indicators: Dict) -> Dict[str, 
         for pattern in azure_op_patterns:
             matches = re.findall(pattern, snippet)
             for match in matches:
-                # Clean up the operation name
-                op = match.strip()
+                # Clean up the operation name (strip backslashes)
+                op = match.strip().replace('\\', '')
                 if len(op) > 5 and not op.startswith("*"):  # Valid operation names
                     api_patterns.append(op)
 
@@ -782,7 +782,7 @@ def extract_operations_from_osint_snippets(osint_indicators: Dict) -> Dict[str, 
         for pattern in activity_patterns:
             matches = re.findall(pattern, snippet)
             for match in matches:
-                op = match.strip()
+                op = match.strip().replace('\\', '')
                 if len(op) > 5 and not op.startswith("*"):
                     api_patterns.append(op)
 
@@ -796,7 +796,7 @@ def extract_operations_from_osint_snippets(osint_indicators: Dict) -> Dict[str, 
         for pattern in aws_api_patterns:
             matches = re.findall(pattern, snippet)
             for match in matches:
-                api = match.strip()
+                api = match.strip().replace('\\', '')
                 # AWS API calls typically start with uppercase
                 if len(api) > 3 and api[0].isupper():
                     api_patterns.append(api)
@@ -811,7 +811,7 @@ def extract_operations_from_osint_snippets(osint_indicators: Dict) -> Dict[str, 
         for pattern in cmd_field_patterns:
             matches = re.findall(pattern, snippet)
             for match in matches:
-                cmd = match.strip()
+                cmd = match.strip().replace('\\', '')
                 if len(cmd) > 3:
                     cmd_patterns.append(cmd)
 

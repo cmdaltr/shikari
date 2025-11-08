@@ -1251,6 +1251,47 @@ def initialize_database():
     init_db()
 
 
+# Validate required mapping files on startup
+@app.on_event("startup")
+def validate_mapping_files():
+    """
+    Validate that all required mapping files exist in archer/mappings/.
+
+    Exits the application with a clear error message if any required files are missing.
+    """
+    required_files = [
+        "dataSources.json",
+        "entityMappings.json",
+        "indicatorMapping.json",
+        "logSourceCategories.json",
+        "platforms.json",
+        "schemaSplunk.json",
+        "schemaMDE.json",
+    ]
+
+    mappings_dir = Path("archer/mappings")
+    missing_files = []
+
+    for filename in required_files:
+        file_path = mappings_dir / filename
+        if not file_path.exists():
+            missing_files.append(filename)
+
+    if missing_files:
+        error_message = "\n" + "="*80 + "\n"
+        error_message += "ERROR: Required mapping files are missing!\n"
+        error_message += "="*80 + "\n"
+        error_message += f"\nThe following required files are missing from {mappings_dir}:\n\n"
+        for filename in missing_files:
+            error_message += f"  ✗ {filename}\n"
+        error_message += "\nPlease ensure all required mapping files are present before starting the application.\n"
+        error_message += "="*80 + "\n"
+
+        print(error_message, flush=True)
+        import sys
+        sys.exit(1)
+
+
 def get_mitre_lists():
     """
     Helper to return (tactics, techniques) used by templates.
@@ -4032,6 +4073,48 @@ def _get_technique_info(ttp_id: str) -> dict:
     return None
 
 
+def _get_technique_info_by_name(technique_name: str) -> dict:
+    """Get technique information from MITRE ATT&CK bundle by technique name."""
+    # Try to get bundle from app state first (already loaded during startup)
+    bundle = getattr(app.state, "bundle", None)
+
+    # If not available, load from cache
+    if not bundle:
+        from archer.mitre.enterprise import get_stix_data
+        url = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
+        bundle = get_stix_data(url)
+    if not bundle:
+        return None
+
+    # Search for technique in bundle by name
+    for obj in bundle.get("objects", []):
+        if obj.get("type") == "attack-pattern" and obj.get("name") == technique_name:
+            # Extract tactic
+            tactics = []
+            for phase in obj.get("kill_chain_phases", []):
+                tactic_name = phase.get("phase_name", "").replace("-", " ").title()
+                tactics.append(tactic_name)
+
+            # Get technique ID
+            technique_id = ""
+            for ref in obj.get("external_references", []):
+                if ref.get("source_name") == "mitre-attack":
+                    technique_id = ref.get("external_id", "")
+                    break
+
+            return {
+                "tid": technique_id,
+                "name": obj.get("name", technique_name),
+                "tactic": tactics[0] if tactics else "Unknown",
+                "tactics": tactics,
+                "description": obj.get("description", ""),
+                "software_used": [],
+                "platforms": obj.get("x_mitre_platforms", ["windows"]),
+            }
+
+    return None
+
+
 # =============================================================================
 # Results Page and Download API Routes
 # =============================================================================
@@ -4422,7 +4505,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         }
     )
 
-    detections.sort(key=lambda x: x["count"], reverse=True)
+    # Sort vendors: Splunk, MDE, Google SecOps, Elastic, then others
+    vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "google_secops": 2, "elastic": 3}
+    detections.sort(key=lambda x: (vendor_order.get(x["name"], 99), x["name"]))
 
     # Load correlations
     correlations = []
@@ -5681,8 +5766,17 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         # Query all detections for this user
         detections = db.query(LibraryDetection).filter_by(user_id=user.id).all()
 
+        # Helper function to fix query indentation (4 spaces -> 2 spaces before pipes)
+        def fix_query_indentation(query_text):
+            """Fix over-indented pipe operators in KQL queries"""
+            if not query_text:
+                return query_text
+            # Replace "    | " (4 spaces + pipe) with "  | " (2 spaces + pipe)
+            return query_text.replace("    | ", "  | ")
+
         # Group by vendor and collect filter options
         vendors_dict = {}
+        correlations_list = []
         all_groups = set()
         all_tactics = set()
         all_techniques = set()
@@ -5694,11 +5788,6 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             except (json.JSONDecodeError, ValueError):
                 content_data = {}
 
-            # Determine vendor (from platform or content)
-            vendor = (det.platform or "unknown").lower()
-            if vendor not in vendors_dict:
-                vendors_dict[vendor] = []
-
             # Parse JSON fields safely
             tags = parse_json_field(det.tags, [])
 
@@ -5706,10 +5795,37 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             # Content can be a query string or a structured object
             if isinstance(content_data, dict):
                 # Check if this is a detection object from results page (has 'technique' and 'queries' fields)
-                if "technique" in content_data and "queries" in content_data:
-                    # This is a detection saved from results page
-                    technique_name = content_data.get("technique") or det.title
-                    technique_id = ""  # Not stored in detection object
+                # But NOT an imported YAML (which would have 'mde_tables' or 'splunk_indexes' or 'name' field)
+                if "technique" in content_data and "queries" in content_data and "name" not in content_data and "mde_tables" not in content_data and "splunk_indexes" not in content_data:
+                    # This is a detection saved from results page or imported YAML
+                    # The "technique" field could be either technique_id (like "T1555.006") or technique_name
+                    technique_value = content_data.get("technique") or det.title
+
+                    # Check if technique_value looks like a technique ID (starts with T followed by digits)
+                    import re
+                    if re.match(r'^T\d{4}(\.\d{3})?$', technique_value):
+                        # This is a technique ID, look up the name
+                        tech_info = _get_technique_info(technique_value)
+                        if tech_info:
+                            technique_name = tech_info.get("name", technique_value)
+                            technique_id = technique_value
+                            tactics = [tech_info.get("tactic", "Unknown")]
+                        else:
+                            # Lookup failed, use ID as name
+                            technique_name = technique_value
+                            technique_id = technique_value
+                            tactics = []
+                    else:
+                        # This is a technique name, look up the ID
+                        technique_name = technique_value
+                        tech_info = _get_technique_info_by_name(technique_name)
+                        if tech_info:
+                            technique_id = tech_info.get("tid", "")
+                            tactics = tech_info.get("tactics", [])
+                        else:
+                            technique_id = ""
+                            tactics = []
+
                     description = content_data.get("description", "")
                     queries = content_data.get("queries", [])
                     query_content = "\n\n".join(queries) if queries else ""
@@ -5721,42 +5837,88 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     # Extract indicators
                     indicators = parse_json_field(content_data.get("indicators"), [])
 
-                    # Extract tactics (not stored in detection object, get from tags)
-                    tactics = []
-
                     # Group name not in detection object, will extract from tags
                     group_name = "Unknown"
 
                     # Check if OSINT enriched
                     osint_enriched = content_data.get("osint_enriched", False)
+                    osint_data = None  # Results page detections don't have osint_data
+
+                    # No MDE tables/Splunk indexes for results page detections
+                    mde_tables = []
+                    splunk_indexes = []
 
                 # Check if this is a YAML-like structure (has 'name' and 'requiredDataConnectors')
-                elif "name" in content_data or "requiredDataConnectors" in content_data:
-                    # This is a YAML detection
-                    technique_name = content_data.get("name") or content_data.get("technique_name") or det.title
-                    technique_id = content_data.get("technique_id", "")
-                    description = content_data.get("description", "")
-                    query_content = content_data.get("query") or str(content_data)
+                # OR if it's an imported YAML detection (has 'technique', 'queries', and other YAML fields)
+                elif "name" in content_data or "requiredDataConnectors" in content_data or "technique_id" in content_data or ("technique" in content_data and "queries" in content_data and isinstance(content_data.get("queries"), list)):
+                    # This is a YAML detection (either from data/generate or imported via import_yaml_to_library.py)
+                    technique_id = content_data.get("technique", "") or content_data.get("technique_id", "")
 
-                    # Extract data source from requiredDataConnectors
-                    data_source = ""
-                    connectors = content_data.get("requiredDataConnectors", [])
-                    if connectors and isinstance(connectors, list) and len(connectors) > 0:
-                        data_types = connectors[0].get("dataTypes", [])
-                        if data_types and len(data_types) > 0:
-                            data_source = data_types[0]
+                    # Look up technique name and tactics from MITRE ATT&CK using technique ID
+                    tech_info = _get_technique_info(technique_id) if technique_id else None
+                    if tech_info:
+                        technique_name = tech_info.get("name", technique_id)
+                        # We'll extract tactics from content_data below, but tech_info provides fallback
+                    else:
+                        # Fallback to technique ID if lookup fails (don't use detection title)
+                        technique_name = technique_id or content_data.get("name", "Unknown")
 
-                    # Extract indicators
-                    indicators = parse_json_field(content_data.get("indicators"), [])
+                    description = content_data.get("description_html") or content_data.get("description", "")
+                    # Convert markdown links to HTML anchor tags
+                    description = markdown_links_to_html(description)
+
+                    # Get query from queries array or query field
+                    queries = content_data.get("queries", [])
+                    if queries:
+                        query_content = "\n\n".join(queries)
+                    else:
+                        query_content = content_data.get("query") or str(content_data)
+
+                    # Use data_source from imported format (platform name like "mde"), not table names
+                    data_source = content_data.get("data_source") or det.platform or "Unknown"
+
+                    # Get MDE tables and Splunk indexes separately
+                    mde_tables = parse_json_field(content_data.get("mde_tables"), [])
+                    splunk_indexes = parse_json_field(content_data.get("splunk_indexes"), [])
+
+                    # Extract indicators from the indicators dict
+                    indicators_dict = content_data.get("indicators", {})
+                    if isinstance(indicators_dict, dict):
+                        # Flatten all indicator values into a single list
+                        indicators = []
+                        for category, items in indicators_dict.items():
+                            if isinstance(items, list):
+                                indicators.extend(items)
+                            elif items:
+                                indicators.append(str(items))
+                        # Deduplicate while preserving order
+                        indicators = list(dict.fromkeys(indicators))
+                    else:
+                        indicators = parse_json_field(indicators_dict, [])
+                        # Deduplicate while preserving order
+                        indicators = list(dict.fromkeys(indicators))
 
                     # Extract tactics
                     tactics = parse_json_field(content_data.get("tactics"), [])
+                    if not tactics:
+                        # Try extracting from single tactic field
+                        single_tactic = content_data.get("tactic")
+                        if single_tactic and single_tactic != "Unknown":
+                            tactics = [single_tactic]
 
                     # Extract group/threat actor
                     group_name = content_data.get("group") or content_data.get("threat_actor", "Unknown")
 
                     # Check if OSINT enriched
-                    osint_enriched = content_data.get("osint_enriched", False)
+                    osint_enriched = content_data.get("osint_enriched") or content_data.get("osint_enhanced", False)
+
+                    # Extract OSINT data if available
+                    osint_data = None
+                    if osint_enriched and "osint_indicators" in content_data:
+                        osint_data = {
+                            "indicators": content_data.get("osint_indicators", {}),
+                            "enrichment_date": content_data.get("comparison_date", "")
+                        }
 
                 # Check if this is a correlation object (has 'techniques' and 'combined_query')
                 elif "techniques" in content_data and "combined_query" in content_data:
@@ -5771,6 +5933,16 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     tactics = parse_json_field(content_data.get("tactics"), [])
                     group_name = "Unknown"
                     osint_enriched = False
+                    osint_data = None
+                    mde_tables = []
+                    splunk_indexes = []
+
+                # Check if this is old format (has 'technique' and 'title' but NOT 'queries')
+                elif "technique" in content_data and "title" in content_data and "queries" not in content_data:
+                    # This is an old-format stub detection (pre-YAML) - skip it as it has no actual query/indicators
+                    # These are placeholder detections that were created before full YAML generation
+                    # The real YAML detections exist in data/generate/ and should be imported instead
+                    continue
 
                 else:
                     # Unknown structure, use defaults
@@ -5783,6 +5955,9 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     tactics = []
                     group_name = "Unknown"
                     osint_enriched = False
+                    osint_data = None
+                    mde_tables = []
+                    splunk_indexes = []
             else:
                 # Content is just a query string
                 technique_name = det.title
@@ -5794,6 +5969,9 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 tactics = []
                 group_name = "Unknown"
                 osint_enriched = False
+                osint_data = None
+                mde_tables = []
+                splunk_indexes = []
 
             # Extract group from tags if not found in content
             if group_name == "Unknown":
@@ -5802,24 +5980,63 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         group_name = tag.replace("Group:", "").strip()
                         break
 
-            # Build detection data object
+            # Build detection data object to match results.html structure
+            # Format title as comma-separated data sources (matching results page)
+            if mde_tables:
+                formatted_title = ", ".join(mde_tables)
+            elif splunk_indexes:
+                formatted_title = ", ".join(splunk_indexes)
+            else:
+                formatted_title = data_source or det.platform or "Unknown"
+
             detection_data = {
                 "id": det.id,
-                "technique_name": technique_name,
-                "technique_id": technique_id,
+                "technique": technique_name,  # Changed: now the technique name, not ID (matching results page)
+                "title": formatted_title,  # Changed: now the data sources, not technique name (matching results page)
                 "data_source": data_source or det.platform or "Unknown",
-                "description": description,
-                "query": query_content,
+                "description_html": description,
+                "queries": [fix_query_indentation(query_content)] if query_content else [],
                 "indicators": indicators,
+                "mde_tables": mde_tables,
+                "splunk_indexes": splunk_indexes,
                 "tags": tags,
                 "group": group_name,
-                "tactics": tactics,
+                "tactic": tactics[0] if tactics else "Unknown",
                 "saved_date": det.created_at.strftime('%Y-%m-%d') if det.created_at else "",
                 "osint_enriched": osint_enriched,
-                "needs_review": False  # Generated detections always have indicators
+                "osint_data": osint_data,
+                "needs_review": False,  # Generated detections always have indicators
+                "detection_likelihood": content_data.get("detection_likelihood", 75)  # Added to match results page
             }
 
-            vendors_dict[vendor].append(detection_data)
+            # Normalize vendor/platform based on query content and data sources
+            # This fixes cases where data_source was set to index names (mcafee, unix, etc.)
+            normalized_vendor = data_source or det.platform or "unknown"
+
+            # If query starts with "index=", it's a Splunk detection
+            if query_content and query_content.strip().lower().startswith("index="):
+                normalized_vendor = "splunk"
+            # If MDE tables present, it's an MDE detection
+            elif mde_tables and len(mde_tables) > 0:
+                normalized_vendor = "mde"
+            # Normalize common Splunk index names to "splunk"
+            elif normalized_vendor.lower() in ['mcafee', 'unix', 'windows', 'linux', 'network', 'firewall', 'web']:
+                normalized_vendor = "splunk"
+            # Otherwise keep the data_source/platform as-is
+
+            vendor = normalized_vendor.lower()
+            if vendor not in vendors_dict:
+                vendors_dict[vendor] = []
+
+            # Check if this is a correlation (detection_type contains "correlation")
+            is_correlation = det.detection_type and "correlation" in str(det.detection_type).lower()
+
+            if is_correlation:
+                # Add to correlations list instead of vendors
+                correlations_list.append(detection_data)
+            else:
+                # Add to vendors dict
+                vendors_dict[vendor].append(detection_data)
 
             # Collect filter options
             all_groups.add(group_name)
@@ -5831,15 +6048,122 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         # Format vendors for template
         vendors = []
         for vendor_name, vendor_detections in vendors_dict.items():
+            # Group detections by technique and description (like results.html does)
+            grouped = {}
+            for det in vendor_detections:
+                technique = det.get("technique", "")
+                description = det.get("description_html", "")
+                key = (technique, description)
+
+                if key not in grouped:
+                    grouped[key] = {
+                        "technique": technique,
+                        "description_html": description,
+                        "titles": [],
+                        "queries": [],
+                        "indicators": set(),
+                        "mde_tables": set(),
+                        "splunk_indexes": set(),
+                        "tags": set(),
+                        "group": det.get("group", "Unknown"),
+                        "tactic": det.get("tactic", "Unknown"),
+                        "tactics": set(det.get("tactics", [])),
+                        "osint_enriched": det.get("osint_enriched", False),
+                        "osint_data": det.get("osint_data"),
+                        "detection_likelihood": det.get("detection_likelihood", 75),
+                        "data_source": det.get("data_source", "Unknown"),
+                        "ids": []  # Track ALL detection IDs in this group
+                    }
+
+                # Add this detection's ID to the group
+                grouped[key]["ids"].append(det.get("id"))
+
+                # Add title (data source)
+                title = det.get("title", "")
+                if title and title not in grouped[key]["titles"]:
+                    grouped[key]["titles"].append(title)
+
+                # Add queries
+                for query in det.get("queries", []):
+                    if query and query not in grouped[key]["queries"]:
+                        grouped[key]["queries"].append(query)
+
+                # Combine indicators
+                for indicator in det.get("indicators", []):
+                    grouped[key]["indicators"].add(indicator)
+
+                # Combine MDE tables
+                for table in det.get("mde_tables", []):
+                    grouped[key]["mde_tables"].add(table)
+
+                # Combine Splunk indexes
+                for index in det.get("splunk_indexes", []):
+                    grouped[key]["splunk_indexes"].add(index)
+
+                # Combine tags
+                for tag in det.get("tags", []):
+                    grouped[key]["tags"].add(tag)
+
+                # Combine tactics
+                for tactic in det.get("tactics", []):
+                    grouped[key]["tactics"].add(tactic)
+
+            # Convert grouped data to list format
+            detection_list = []
+            for (technique, description), data in sorted(grouped.items(), key=lambda x: x[0][0].lower()):
+                # Sort titles and join with " | "
+                sorted_titles = sorted(data["titles"])
+                combined_title = " | ".join(sorted_titles)
+
+                detection_list.append({
+                    "ids": data["ids"],  # All IDs in this group
+                    "id": data["ids"][0] if data["ids"] else None,  # First ID for backwards compatibility
+                    "technique": technique,
+                    "title": combined_title,
+                    "data_source": data["data_source"],
+                    "description_html": description,
+                    "queries": data["queries"],
+                    "indicators": sorted(list(data["indicators"])),
+                    "mde_tables": sorted(list(data["mde_tables"])),
+                    "splunk_indexes": sorted(list(data["splunk_indexes"])),
+                    "tags": sorted(list(data["tags"])),
+                    "group": data["group"],
+                    "tactic": data["tactic"],
+                    "tactics": sorted(list(data["tactics"])),
+                    "osint_enriched": data["osint_enriched"],
+                    "osint_data": data["osint_data"],
+                    "detection_likelihood": data["detection_likelihood"]
+                })
+
             vendors.append({
                 "name": vendor_name,
                 "display_name": VENDOR_DISPLAY_NAMES.get(vendor_name, vendor_name.title()),
-                "count": len(vendor_detections),
-                "detections": vendor_detections
+                "count": len(detection_list),  # Count of grouped detections (actual checkboxes)
+                "detections": detection_list
             })
 
-        # Sort vendors: splunk, mde/microsoft, elastic, then others
-        vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "elastic": 2, "sentinel": 3}
+        # Add Google SecOps as "Coming Soon" placeholder (if not already present)
+        if not any(v["name"] == "google_secops" for v in vendors):
+            vendors.append({
+                "name": "google_secops",
+                "display_name": "Google SecOps",
+                "count": 0,
+                "detections": [],
+                "coming_soon": True
+            })
+
+        # Add Elastic as "Coming Soon" placeholder (if not already present)
+        if not any(v["name"] == "elastic" for v in vendors):
+            vendors.append({
+                "name": "elastic",
+                "display_name": "Elastic",
+                "count": 0,
+                "detections": [],
+                "coming_soon": True
+            })
+
+        # Sort vendors: Splunk, MDE, Google SecOps, Elastic, then others
+        vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "google_secops": 2, "elastic": 3}
         vendors.sort(key=lambda v: (vendor_order.get(v["name"], 99), v["name"]))
 
         # Calculate summary statistics
@@ -5854,18 +6178,98 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         # Count unique techniques
         technique_count = len(all_techniques)
 
+        # Calculate time saved statistics (matching results page calculation)
+        # Manual approach: 2 hours per detection
+        # Archer approach: 0.1 hours per detection (6 minutes average)
+        manual_hours = round(total_detections * 2, 1)
+        archer_hours = round(total_detections * 0.1, 2)
+        hours_saved = round(manual_hours - archer_hours, 1)
+
+        # Group correlations by vendor (matching results.html structure)
+        correlations_by_vendor = {}
+        for corr in correlations_list:
+            # Normalize vendor based on query content and data sources (same logic as detections)
+            data_source = corr.get("data_source", "Unknown")
+            mde_tables = corr.get("mde_tables", [])
+            splunk_indexes = corr.get("splunk_indexes", [])
+            queries = corr.get("queries", [])
+            query_content = queries[0] if queries else ""
+
+            # Apply same vendor normalization as detections
+            normalized_vendor = data_source
+
+            # If query starts with "index=", it's a Splunk correlation
+            if query_content and query_content.strip().lower().startswith("index="):
+                normalized_vendor = "Splunk"
+            # If MDE tables present, it's an MDE correlation
+            elif mde_tables and len(mde_tables) > 0:
+                normalized_vendor = "MDE"
+            # Check for Splunk indexes
+            elif splunk_indexes and len(splunk_indexes) > 0:
+                normalized_vendor = "Splunk"
+            # Otherwise use data_source
+            else:
+                # Additional normalization for data_source values
+                if data_source.lower() in ["microsoft defender for endpoint", "microsoft 365 defender", "defender"]:
+                    normalized_vendor = "MDE"
+                elif data_source.lower() in ["splunkenterprisesecurity", "splunk"]:
+                    normalized_vendor = "Splunk"
+                elif data_source.lower() in ["google secops", "chronicle"]:
+                    normalized_vendor = "Google SecOps"
+                elif data_source.lower() in ["elastic", "elasticsearch"]:
+                    normalized_vendor = "Elastic"
+
+            vendor = normalized_vendor
+            if vendor not in correlations_by_vendor:
+                correlations_by_vendor[vendor] = []
+            correlations_by_vendor[vendor].append(corr)
+
+        # Convert to list format similar to results.html
+        grouped_correlations = []
+        for vendor, vendor_corrs in correlations_by_vendor.items():
+            grouped_correlations.append({
+                "name": vendor,
+                "count": len(vendor_corrs),
+                "correlations": vendor_corrs
+            })
+
+        # Add Google SecOps as "Coming Soon" placeholder (if not already present)
+        if not any(v["name"] == "Google SecOps" for v in grouped_correlations):
+            grouped_correlations.append({
+                "name": "Google SecOps",
+                "count": 0,
+                "correlations": [],
+                "coming_soon": True
+            })
+
+        # Add Elastic as "Coming Soon" placeholder (if not already present)
+        if not any(v["name"] == "Elastic" for v in grouped_correlations):
+            grouped_correlations.append({
+                "name": "Elastic",
+                "count": 0,
+                "correlations": [],
+                "coming_soon": True
+            })
+
+        # Sort by count descending (but keep coming_soon at the end)
+        grouped_correlations.sort(key=lambda x: (x.get("coming_soon", False), -x["count"]))
+
         template_response = templates.TemplateResponse(
             "library.html",
             {
                 "request": request,
                 "user": user,
-                "vendors": vendors,
+                "detections": vendors,
+                "correlations": grouped_correlations,
                 "total_detections": total_detections,
                 "total_correlations": total_correlations,
                 "technique_count": technique_count,
                 "all_groups": sorted(all_groups),
                 "all_tactics": sorted(all_tactics),
-                "all_techniques": sorted(filter(None, all_techniques))
+                "all_techniques": sorted(filter(None, all_techniques)),
+                "hours_saved": hours_saved,
+                "manual_hours": manual_hours,
+                "archer_hours": archer_hours
             }
         )
         return template_response

@@ -1,5 +1,5 @@
 <div align="center">
-<a href="https://github.com/cmdshiftd/archer">
+<a href="https://github.com/cmdaltr/archer">
 <img src="static/images/archer_banner.png" alt="Archer - Automated Multi-Vendor Threat Hunting & Detection Framework" width="600px" height="600px">
 </a>
 </div>
@@ -91,7 +91,7 @@ Can be enabled via environment variables:
 ## 2️⃣ Clone the repository
 
 ```bash
-git clone https://github.com/cmdshiftd/archer.git
+git clone https://github.com/cmdaltr/archer.git
 cd archer
 ```
 

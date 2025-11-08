@@ -197,7 +197,7 @@ def retrieve_techniques(bundle, group_id):
 
                 # Combine the group's description of using the software
                 # with the software's use of the technique
-                combined_desc = f"{sw_desc}\n\nSoftware technique: {tech_desc}" if tech_desc else sw_desc
+                combined_desc = f"{sw_desc} {tech_desc}" if tech_desc else sw_desc
 
                 techniques.append((combined_desc, tech_ref))
                 sw_tech_count += 1
