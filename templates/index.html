@@ -390,7 +390,7 @@
     </div>
     {% block content %}
     <div id="main-content" class="page-shell">
-    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2em; padding-top: 80px; position: relative;">
+    <div class="container" style="width: 1320px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; position: relative; box-sizing: border-box;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">
         <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1em; margin-top: 28px;">
@@ -406,7 +406,7 @@
 
       <!-- Tabbed interface inspired by VirusTotal -->
       <div class="tabs-container">
-        <div class="tabs-header">
+        <div class="tabs-header" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
           <button class="tab-button active" data-tab="generate">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
               <circle cx="12" cy="12" r="10" stroke="#10b981"/>
@@ -449,7 +449,7 @@
           <div class="tab-pane active" id="tab-generate">
             <form id="generate-form" action="/generate" method="post" autocomplete="off">
               <div class="form-section">
-                <label for="group_name_input" class="form-label">Generate hunt queries based on Threat Group</label>
+                <label for="group_name_input" class="form-label">Generate queries based on Threat Group</label>
                 <input type="text" name="group_name" id="group_name_input" class="form-input"
                        placeholder="e.g., APT29, Scattered Spider" maxlength="200">
                 <div id="group-name-error" class="error-message" style="display:none;">
@@ -467,7 +467,7 @@
               <!-- CVE Input -->
               <div class="form-section">
                 <label for="cve_input" class="form-label">
-                  Generate hunt queries based on CVE(s)
+                  Generate queries based on CVE(s)
                   <span style="font-weight: 400; color: #666; font-size: 0.9em;">(Supports multiple, comma-separated)</span>
                 </label>
                 <input type="text" name="cve_id" id="cve_input" class="form-input"
@@ -488,7 +488,7 @@
                   COMING SOON
                 </div>
                 <label for="technique_input" class="form-label" style="color: #9ca3af;">
-                  Generate hunt queries based on ATT&CK Technique IDs
+                  Generate queries based on ATT&CK Technique IDs
                   <span style="font-weight: 400; color: #9ca3af; font-size: 0.9em;">(Hunt specific techniques)</span>
                 </label>
                 <input type="text" name="technique_ids" id="technique_input" class="form-input"

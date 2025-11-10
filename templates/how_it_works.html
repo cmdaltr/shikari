@@ -10,13 +10,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}">
     <style>
+        html {
+            overflow-y: scroll;
+            overflow-x: hidden;
+        }
+
         html, body {
             margin: 0 !important;
             padding: 0 !important;
-            overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
             zoom: 1.0;
             min-height: 100vh;
             display: flex;
@@ -85,14 +90,16 @@
         [data-theme="dark"] body {
             background: linear-gradient(to bottom, #1a1a1a 0%, #0f0f0f 100%);
         }
-        .container {
-            padding: 2em;
-            padding-top: 80px; /* Consistent top spacing for logo */
-            position: relative;
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
         }
         .header {
             text-align: center;
             margin-bottom: 3em;
+            font-family: 'Roboto', Arial, sans-serif;
         }
         /* Global navigation buttons */
         .global-nav-controls {
@@ -266,13 +273,18 @@
             overflow: hidden;
             border: 1px solid var(--border-color);
             margin-bottom: 2em;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
         }
 
         .tabs-header {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
             background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
             border-bottom: 3px solid var(--accent);
             padding: 0;
+            width: 100%;
         }
 
         [data-theme="dark"] .tabs-header {
@@ -280,7 +292,6 @@
         }
 
         .tab-button {
-            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -295,6 +306,8 @@
             transition: all 0.2s ease;
             position: relative;
             border-bottom: 3px solid transparent;
+            min-width: 0;
+            white-space: nowrap;
         }
 
         .tab-button:hover:not(.active) {
@@ -321,12 +334,29 @@
         .tabs-content {
             padding: 0;
             min-height: 400px;
+            font-family: 'Roboto', Arial, sans-serif;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+            overflow-x: hidden;
         }
 
         .tab-pane {
             display: none;
             animation: fadeIn 0.3s ease;
             padding: 2.5em;
+            font-family: 'Roboto', Arial, sans-serif;
+            font-size: 15.96px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .tab-pane p:not(h1 p):not(h2 p):not(h3 p):not(h4 p),
+        .tab-pane li,
+        .tab-pane td,
+        .tab-pane span:not(.speed-badge):not(.expand-btn) {
+            font-family: 'Roboto', Arial, sans-serif;
+            font-size: 15.96px;
         }
 
         .tab-pane.active {
@@ -370,6 +400,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            font-family: 'Roboto', Arial, sans-serif;
         }
         .diagram img {
             max-width: 100%;
@@ -383,11 +414,13 @@
             color: #666;
             font-style: italic;
             order: 2;
+            font-family: 'Roboto', Arial, sans-serif;
         }
         .library-table {
             width: 100%;
             border-collapse: collapse;
             margin: 1.5em 0;
+            font-family: 'Roboto', Arial, sans-serif;
         }
         .library-table th {
             background: #1f2d35;
@@ -395,10 +428,12 @@
             padding: 12px;
             text-align: left;
             font-weight: 500;
+            font-family: 'Roboto', Arial, sans-serif;
         }
         .library-table td {
             padding: 12px;
             border-bottom: 1px solid #e5e8eb;
+            font-family: 'Roboto', Arial, sans-serif;
         }
         .library-table tr:hover {
             background: #f8f9fa;
@@ -409,26 +444,46 @@
             padding: 1.5em;
             margin: 1em 0;
             border-radius: 4px;
+            font-family: 'Roboto', Arial, sans-serif;
         }
         .workflow-step h4 {
             margin-top: 0;
             color: #C53030;
+            font-family: 'Roboto', Arial, sans-serif;
         }
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5em;
             margin: 2em 0;
+            font-family: 'Roboto', Arial, sans-serif;
         }
         .feature-card {
             background: #f8f9fa;
-            padding: 1.5em;
+            padding: 0.75em;
             border-radius: 8px;
             border: 1px solid #e5e8eb;
+            font-family: 'Roboto', Arial, sans-serif;
+            position: relative;
         }
         .feature-card h4 {
             color: #C53030;
             margin-top: 0;
+            margin-bottom: 0.4em;
+            font-family: 'Roboto', Arial, sans-serif;
+            padding-right: 100px;
+        }
+        .feature-card p {
+            margin: 0.3em 0;
+            line-height: 1.4;
+        }
+        .feature-card ul {
+            margin: 0.3em 0;
+            padding-left: 1.5em;
+        }
+        .feature-card li {
+            margin: 0.2em 0;
+            line-height: 1.4;
         }
         .speed-badge {
             background: #C53030;
@@ -438,7 +493,10 @@
             font-size: 0.9em;
             font-weight: 500;
             display: inline-block;
-            margin: 0.2em;
+            font-family: 'Roboto', Arial, sans-serif;
+            position: absolute;
+            top: 0.75em;
+            right: 0.75em;
         }
         code {
             background: #f4f4f4;
@@ -453,6 +511,8 @@
             padding: 1.5em;
             border-radius: 8px;
             overflow-x: auto;
+            max-width: 100%;
+            box-sizing: border-box;
         }
         pre code {
             background: none;
@@ -559,6 +619,7 @@
             border-radius: 8px;
             margin-bottom: 1em;
             transition: all 0.3s ease;
+            font-family: 'Roboto', Arial, sans-serif;
         }
 
         [data-theme="dark"] .faq-item {
@@ -584,6 +645,7 @@
             list-style: none;
             display: flex;
             align-items: center;
+            font-family: 'Roboto', Arial, sans-serif;
             gap: 12px;
             user-select: none;
             transition: color 0.2s;
@@ -629,6 +691,7 @@
             color: var(--text-secondary);
             line-height: 1.7;
             animation: fadeIn 0.3s ease;
+            font-family: 'Roboto', Arial, sans-serif;
         }
 
         .faq-answer p {
@@ -719,19 +782,21 @@
         </a>
     </div>
 
-    <div class="container">
+    <div class="container" style="width: 1320px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; position: relative; box-sizing: border-box;">
 
-        <div class="header">
+        <div class="header" style="text-align: center; margin-bottom: 3em;">
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1em; margin-top: 28px;">
                 <img src="{{ url_for('static', path='images/icon.png') }}" alt="Archer Logo" style="width: auto; height: auto; max-height: 120px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
-                <h1 style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 90px; font-weight: 700; letter-spacing: 10px; color: var(--text-primary); margin: 0; text-shadow: 0px 2px 4px rgba(0,0,0,0.2);">RCHER</h1>
+                <h1 style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 90px; font-weight: 700; letter-spacing: 10px; color: #1a1a1a; margin: 0; text-shadow: 0px 2px 4px rgba(0,0,0,0.2);">RCHER</h1>
             </div>
-            <p style="color: var(--text-secondary); font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px; text-transform: uppercase; line-height: 1.8;">Architecture, Libraries, and AI-Powered Detection Generation<br>How Archer Works</p>
+            <p style="color: #666666; font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px;">
+                HOW ARCHER WORKS INC. ARCHITECTURE, LIBRARIES AND AI
+            </p>
         </div>
 
         <!-- Tab Navigation -->
         <div class="tabs-container">
-            <div class="tabs-header">
+            <div class="tabs-header" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
                 <button class="tab-button active" data-tab="overview">
                     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -782,10 +847,8 @@
                     <span>Workflow</span>
                 </button>
                 <button class="tab-button" data-tab="attack-flow">
-                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="20" x2="18" y2="10"/>
-                        <line x1="12" y1="20" x2="12" y2="4"/>
-                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                     </svg>
                     <span>Attack Flow</span>
                 </button>
@@ -807,28 +870,34 @@
                 <div class="feature-card">
                     <h4>🎯 What It Does</h4>
                     <ul>
-                        <li>Vendor-specific queries</li>
+                        <li>6 generation modes</li>
+                        <li>Multi-vendor queries</li>
                         <li>Multi-stage attack correlations</li>
-                        <li>Produces attack flow visualizations</li>
-                        <li>Extracts IOCs from threat reports</li>
+                        <li>MITRE ATT&CK Flow visualizations</li>
+                        <li>OSINT enhancement</li>
+                        <li>Adversary emulation integration</li>
                     </ul>
                 </div>
                 <div class="feature-card">
                     <h4>⚡ Why It's Fast</h4>
                     <ul>
+                        <li>Local OSINT repos (no API rate limits)</li>
                         <li>Template caching (90% faster)</li>
                         <li>Parallel processing (4x speedup)</li>
-                        <li>Asynchronous I/O operations</li>
-                        <li>Pre-compiled patterns</li>
+                        <li>Async I/O operations (3x faster)</li>
+                        <li>Pre-compiled regex patterns (10x faster)</li>
+                        <li>Progressive results streaming</li>
                     </ul>
                 </div>
                 <div class="feature-card">
                     <h4>🔧 How It Works</h4>
                     <ul>
-                        <li>Trained on 10,000+ queries</li>
-                        <li>Applies MITRE ATT&CK mappings</li>
-                        <li>Vendor-optimized syntax</li>
-                        <li>Validates and enriches outputs</li>
+                        <li>5 analysis modes inc. AI (inc. Local LLM)</li>
+                        <li>Real-time MITRE ATT&CK integration</li>
+                        <li>Schema-aware field validation</li>
+                        <li>Detection likelihood scoring</li>
+                        <li>Personal detection library with tagging</li>
+                        <li>Role-based access control with MFA</li>
                     </ul>
                 </div>
             </div>
@@ -862,7 +931,7 @@
             <div class="tab-pane" id="tab-architecture">
 
             <h3>CLI/Command-Line Architecture</h3>
-            <p>
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
                 The CLI version provides direct programmatic access to Archer's detection generation engine.
                 It's designed for automation, CI/CD integration, and batch processing of threat groups.
             </p>
@@ -875,22 +944,42 @@
             </div>
 
             <div class="workflow-step">
+                <h4>Available CLI Commands</h4>
+                <pre><code># Generate detections for a threat group
+python archer.py process_group "APT29"
+
+# Generate single technique detection
+python archer.py generate_detection T1003.001
+
+# Build correlation rules
+python archer.py build_correlations "APT29"
+
+# Run adversary emulation (Atomic Red Team)
+python archer.py run_emulation "APT29" --mode simulate
+
+# VECTR integration for hunt tracking
+python archer.py run_vectr_command export "APT29"</code></pre>
+            </div>
+
+            <div class="workflow-step">
                 <h4>CLI Workflow</h4>
                 <ol>
-                    <li><strong>Input:</strong> User provides threat group name via command line</li>
-                    <li><strong>MITRE Lookup:</strong> System queries enterprise-attack.json for techniques</li>
-                    <li><strong>Template Learning:</strong> Parses community repos, extracts patterns, caches templates</li>
-                    <li><strong>Generation:</strong> Applies templates to techniques, generates vendor queries</li>
-                    <li><strong>Correlation:</strong> Finds related techniques, creates multi-stage detections</li>
-                    <li><strong>Visualization:</strong> Generates attack flow diagrams</li>
-                    <li><strong>Output:</strong> Writes YAML files, JSON correlations, flow diagrams</li>
+                    <li><strong>Input:</strong> User provides threat group name or technique ID</li>
+                    <li><strong>MITRE Lookup:</strong> Fetches techniques from STIX 2.0 bundle</li>
+                    <li><strong>OSINT Enhancement:</strong> Searches local repos (Sigma, Elastic, Splunk, MITRE CAR, Azure Sentinel)</li>
+                    <li><strong>Generation:</strong> Extracts indicators, validates schemas, generates platform queries</li>
+                    <li><strong>Correlation:</strong> Analyzes attack paths, scores relationships (0-140 points)</li>
+                    <li><strong>Validation:</strong> Calculates detection likelihood (0-100), syntax checking</li>
+                    <li><strong>Visualization:</strong> Generates MITRE ATT&CK Flow diagrams</li>
+                    <li><strong>Output:</strong> Writes YAML detections, JSON correlations, flow diagrams to data/</li>
                 </ol>
             </div>
 
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
             <h3>Web/GUI Architecture</h3>
-            <p>
-                The web interface adds real-time progress tracking, file uploads, blog analysis, and interactive
-                visualizations. Built with FastAPI for high-performance async operations.
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                The web interface provides 6 generation modes, personal detection library, user authentication with MFA,
+                and role-based access control. Built with FastAPI for high-performance async operations and real-time progress tracking.
             </p>
 
             <div class="diagram">
@@ -901,15 +990,17 @@
             </div>
 
             <div class="workflow-step">
-                <h4>Web Workflow</h4>
-                <ol>
-                    <li><strong>User Interface:</strong> Browser renders HTML with JavaScript for interactivity</li>
-                    <li><strong>API Routes:</strong> FastAPI handles /generate, /upload, /analyze_blog endpoints</li>
-                    <li><strong>Background Processing:</strong> Async tasks run without blocking the UI</li>
-                    <li><strong>Real-Time Updates:</strong> Progress JSON polled every 500ms for live status</li>
-                    <li><strong>File Storage:</strong> Outputs stored in data/ directory structure</li>
-                    <li><strong>Results Delivery:</strong> Download links served via /progress endpoint</li>
-                </ol>
+                <h4>Key Features</h4>
+                <ul>
+                    <li><strong>Authentication:</strong> User registration, login, password reset with email tokens</li>
+                    <li><strong>Multi-Factor Auth:</strong> TOTP-based MFA with backup codes</li>
+                    <li><strong>Detection Library:</strong> Personal storage with tagging, search, export (individual/bulk)</li>
+                    <li><strong>Admin Panel:</strong> User management, role assignment, audit logs (admin-only)</li>
+                    <li><strong>Real-Time Progress:</strong> Progress JSON polled every 500ms for live status updates</li>
+                    <li><strong>Results Page:</strong> Filter by vendor, group, tactic, technique with bulk operations</li>
+                    <li><strong>Emulation:</strong> Atomic Red Team integration (simulate/live modes, SSH/WinRM support)</li>
+                    <li><strong>VECTR Export:</strong> Campaign and test case creation for purple team collaboration</li>
+                </ul>
             </div>
             </div>
             <!-- End Architecture Tab -->
@@ -932,9 +1023,24 @@
                         <td>Async/await support, automatic API docs, modern Python, 3x faster than Flask</td>
                     </tr>
                     <tr>
+                        <td><strong>Uvicorn</strong></td>
+                        <td>ASGI server</td>
+                        <td>Lightning-fast async server, production-ready, powers FastAPI deployment</td>
+                    </tr>
+                    <tr>
                         <td><strong>Starlette</strong></td>
                         <td>ASGI framework</td>
                         <td>High-performance async, WebSocket support, lightweight, powers FastAPI</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pydantic</strong></td>
+                        <td>Data validation</td>
+                        <td>Type-safe data models, automatic validation, powers FastAPI request/response models</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQLAlchemy</strong></td>
+                        <td>Database ORM</td>
+                        <td>User auth, detection library, MFA storage, async support, production-grade SQL toolkit</td>
                     </tr>
                     <tr>
                         <td><strong>BeautifulSoup4</strong></td>
@@ -947,63 +1053,109 @@
                         <td>Query template generation, web UI rendering, powerful templating syntax</td>
                     </tr>
                     <tr>
-                        <td><strong>HTTPX</strong></td>
-                        <td>HTTP client</td>
-                        <td>Async requests, modern alternative to requests, HTTP/2 support</td>
+                        <td><strong>HTTPX / Aiohttp</strong></td>
+                        <td>HTTP clients</td>
+                        <td>Async requests for MITRE/GitHub/OSINT APIs, HTTP/2 support, concurrent fetching</td>
                     </tr>
                     <tr>
-                        <td><strong>PyYAML</strong></td>
+                        <td><strong>PyYAML / ruamel.yaml</strong></td>
                         <td>YAML processing</td>
-                        <td>MITRE data, Sigma rules, config files, detection outputs</td>
+                        <td>MITRE data, Sigma rules, detection outputs, preserves comments and formatting</td>
                     </tr>
                     <tr>
-                        <td><strong>OpenAI</strong></td>
-                        <td>AI enhancement (optional)</td>
-                        <td>Semantic analysis, IOC extraction, behavior understanding</td>
+                        <td><strong>Pandas / NumPy</strong></td>
+                        <td>Data analysis</td>
+                        <td>Correlation matrix computation, statistical analysis, efficient array operations</td>
                     </tr>
                     <tr>
-                        <td><strong>Pandas</strong></td>
-                        <td>Data analysis (optional)</td>
-                        <td>Correlation matrix computation, statistical analysis</td>
+                        <td><strong>NetworkX</strong></td>
+                        <td>Graph analysis</td>
+                        <td>Attack flow graphs, technique relationship mapping, path finding algorithms</td>
+                    </tr>
+                    <tr>
+                        <td><strong>STIX2</strong></td>
+                        <td>Threat intelligence</td>
+                        <td>MITRE ATT&CK data parsing, structured threat information exchange format</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MSticPy</strong></td>
+                        <td>Security tools</td>
+                        <td>Microsoft threat intelligence library, KQL generation support, SOC tooling</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Playwright</strong></td>
+                        <td>Browser automation</td>
+                        <td>JavaScript-rendered blog scraping, dynamic content extraction, headless testing</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bcrypt</strong></td>
+                        <td>Password hashing</td>
+                        <td>Secure password storage, industry-standard hashing, resistant to brute-force</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PyOTP / QRCode</strong></td>
+                        <td>MFA/2FA</td>
+                        <td>TOTP-based multi-factor authentication, QR code generation for authenticator apps</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Azure SDKs</strong></td>
+                        <td>Cloud integration</td>
+                        <td>Azure Sentinel/KQL query execution, Key Vault secrets, identity management</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Requests</strong></td>
+                        <td>HTTP library</td>
+                        <td>GitHub API, OSINT repositories, REST API integrations, battle-tested reliability</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LXML</strong></td>
+                        <td>XML parsing</td>
+                        <td>Fast XML/HTML processing, MITRE STIX parsing, XPath support</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pytest / Playwright-Pytest</strong></td>
+                        <td>Testing framework</td>
+                        <td>Unit and integration testing, browser automation tests, fixture management</td>
                     </tr>
                 </tbody>
             </table>
 
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
             <h3>Speed Optimizations</h3>
 
-            <div class="feature-grid">
+            <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr);">
                 <div class="feature-card">
                     <h4>Template Caching</h4>
-                    <p>Pre-compiled templates cached in <code>data/cache/</code></p>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Pre-compiled templates cached in <code>data/cache/</code></p>
                     <span class="speed-badge">90% Faster</span>
-                    <p style="margin-top: 1em; font-size: 0.9em;">
+                    <p style="margin-top: 1em; color: #666; font-size: 0.9em; line-height: 1.6;">
                         First run: 45 seconds<br>
                         Cached runs: 5 seconds
                     </p>
                 </div>
                 <div class="feature-card">
                     <h4>Parallel Processing</h4>
-                    <p>Multiple queries generated simultaneously</p>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Multiple queries generated simultaneously</p>
                     <span class="speed-badge">4x Speedup</span>
-                    <p style="margin-top: 1em; font-size: 0.9em;">
+                    <p style="margin-top: 1em; color: #666; font-size: 0.9em; line-height: 1.6;">
                         Sequential: 120 seconds<br>
                         Parallel: 30 seconds
                     </p>
                 </div>
                 <div class="feature-card">
                     <h4>Async I/O</h4>
-                    <p>Non-blocking file operations and HTTP requests</p>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Non-blocking file operations and HTTP requests</p>
                     <span class="speed-badge">3x Faster</span>
-                    <p style="margin-top: 1em; font-size: 0.9em;">
+                    <p style="margin-top: 1em; color: #666; font-size: 0.9em; line-height: 1.6;">
                         Sync: 60 seconds<br>
                         Async: 20 seconds
                     </p>
                 </div>
                 <div class="feature-card">
                     <h4>Pre-Compiled Patterns</h4>
-                    <p>Regex patterns compiled once, reused thousands of times</p>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Regex patterns compiled once, reused thousands of times</p>
                     <span class="speed-badge">10x Faster</span>
-                    <p style="margin-top: 1em; font-size: 0.9em;">
+                    <p style="margin-top: 1em; color: #666; font-size: 0.9em; line-height: 1.6;">
                         Runtime compilation: 5ms/query<br>
                         Pre-compiled: 0.5ms/query
                     </p>
@@ -1020,16 +1172,69 @@
             <!-- AI Tab -->
             <div class="tab-pane" id="tab-ai">
 
-            <p style="font-size: 1.1em;">
-                Archer includes <strong>optional AI enhancement</strong> powered by OpenAI's GPT models. When enabled
-                (by setting <code>OPENAI_API_KEY</code>), it provides semantic understanding and intelligent analysis.
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                Archer supports <strong>5 generation modes</strong> ranging from fast heuristics to advanced AI models.
+                Configure via <code>GENAI_MODE</code> environment variable or
+                <a href="http://localhost:8000/profile" target="_blank" style="color: #C53030;">Profile</a>.
             </p>
 
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Generation Modes</h3>
+
+            <table class="library-table">
+                <thead>
+                    <tr>
+                        <th>Mode</th>
+                        <th>Description</th>
+                        <th>Requirements</th>
+                        <th>Best For</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>heuristic</strong></td>
+                        <td>Default mode using regex patterns and rule-based extraction</td>
+                        <td>None - always available</td>
+                        <td>Fast, privacy-preserving, offline operation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>advanced_parsing</strong></td>
+                        <td>Enhanced parsers for complex IOC extraction</td>
+                        <td>Optional parsing libraries</td>
+                        <td>Improved accuracy on malformed data</td>
+                    </tr>
+                    <tr>
+                        <td><strong>semantic</strong></td>
+                        <td>Semantic analysis for behavioral grouping</td>
+                        <td>Advanced parsing + semantic libraries</td>
+                        <td>Behavior-based technique clustering</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ai_generators</strong></td>
+                        <td>Remote AI APIs (OpenAI GPT-4/3.5)</td>
+                        <td><code>OPENAI_API_KEY</code></td>
+                        <td>Highest quality, contextual understanding</td>
+                    </tr>
+                    <tr>
+                        <td><strong>local_llm</strong></td>
+                        <td>Local LLM models (llama-cpp, transformers)</td>
+                        <td>Local model files</td>
+                        <td>Privacy-preserving AI, no API costs</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-info">
+                <strong>💡 Mode Selection:</strong> Archer automatically selects the best available mode. If <code>OPENAI_API_KEY</code>
+                is set, it defaults to <strong>ai_generators</strong>. Otherwise, it gracefully falls back to <strong>heuristic</strong> mode.
+            </div>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
             <h3>What AI Enhances</h3>
 
             <div class="workflow-step">
                 <h4>1. Enhanced IOC Extraction</h4>
-                <p>
+                <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
                     <strong>Without AI:</strong> Regex-based pattern matching (fast but rigid)<br>
                     <strong>With AI:</strong> Contextual understanding of indicators
                 </p>
@@ -1041,7 +1246,7 @@ AI: Understands this is "rundll32.exe dump" with malformed syntax</code></pre>
 
             <div class="workflow-step">
                 <h4>2. Semantic Query Grouping</h4>
-                <p>
+                <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
                     <strong>Without AI:</strong> Keyword-based categorization<br>
                     <strong>With AI:</strong> Behavioral understanding
                 </p>
@@ -1056,7 +1261,7 @@ AI understands these are related behaviors, not just keyword matches</code></pre
 
             <div class="workflow-step">
                 <h4>3. Correlation Analysis</h4>
-                <p>
+                <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
                     <strong>Without AI:</strong> Technique ID proximity<br>
                     <strong>With AI:</strong> Multi-stage attack pattern recognition
                 </p>
@@ -1068,6 +1273,7 @@ AI recognizes this as:
  Compromise credentials → Access remote systems → Dump more credentials"</code></pre>
             </div>
 
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
             <h3>Models Used</h3>
 
             <table class="library-table">
@@ -1091,7 +1297,7 @@ AI recognizes this as:
                     </tr>
                     <tr>
                         <td>Fallback</td>
-                        <td>Regex Engine</td>
+                        <td>Heuristics (regex) Engine</td>
                         <td>Always works without API, no cost, privacy-preserving</td>
                     </tr>
                 </tbody>
@@ -1102,6 +1308,7 @@ AI recognizes this as:
                 enhancement entirely and Archer will fall back to high-quality regex-based extraction.
             </div>
 
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
             <h3>AI vs Non-AI Performance</h3>
 
             <table class="library-table">
@@ -1141,6 +1348,13 @@ AI recognizes this as:
             <!-- Workflow Tab -->
             <div class="tab-pane" id="tab-workflow">
 
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                This section details Archer's complete detection generation workflow, from initial input through final output.
+                It covers the six-stage process including threat intelligence lookup, machine learning-based query generation,
+                correlation analysis, OSINT enhancement, validation, and attack flow visualization.
+            </p>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
             <h3>Step-by-Step Process</h3>
 
             <div class="workflow-step">
@@ -1253,19 +1467,19 @@ data/APT29/
 
             <!-- Attack Flow Tab -->
             <div class="tab-pane" id="tab-attack-flow">
-
-            <p style="font-size: 1.1em;">
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
                 Archer generates <strong>attack flow diagrams</strong> following the
                 <a href="https://github.com/center-for-threat-informed-defense/attack-flow" target="_blank" style="color: #C53030;">
                 MITRE ATT&CK Flow specification</a>. These visualizations show technique sequences and attack paths.
             </p>
-
+            
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
             <h3>Types of Attack Flows</h3>
-
+            
             <div class="feature-grid">
                 <div class="feature-card">
                     <h4>Correlation Flows</h4>
-                    <p>Generated for each multi-stage correlation</p>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Generated for each multi-stage correlation</p>
                     <ul>
                         <li>Shows technique sequence</li>
                         <li>Highlights relationships</li>
@@ -1274,7 +1488,7 @@ data/APT29/
                 </div>
                 <div class="feature-card">
                     <h4>Complete Actor Flow</h4>
-                    <p>Shows all techniques for a threat group</p>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Shows all techniques for a threat group</p>
                     <ul>
                         <li>All possible attack routes</li>
                         <li>Tactical progressions</li>
@@ -1282,32 +1496,33 @@ data/APT29/
                     </ul>
                 </div>
             </div>
-
+            
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
             <h3>Attack Flow Schema</h3>
-
+            
             <div class="workflow-step">
                 <h4>JSON Structure</h4>
                 <pre><code>{
-  "type": "bundle",
-  "spec_version": "2.1",
-  "objects": [
-    {
-      "type": "attack-flow",
-      "name": "APT29 - Complete Attack Flow",
-      "description": "All techniques and possible routes",
-      "scope": "campaign"
-    },
-    {
-      "type": "attack-action",
-      "technique_id": "T1059.001",
-      "name": "PowerShell",
-      "description": "Execution of PowerShell"
-    },
-    ...
-  ]
-}</code></pre>
+              "type": "bundle",
+              "spec_version": "2.1",
+              "objects": [
+                {
+                  "type": "attack-flow",
+                  "name": "APT29 - Complete Attack Flow",
+                  "description": "All techniques and possible routes",
+                  "scope": "campaign"
+                },
+                {
+                  "type": "attack-action",
+                  "technique_id": "T1059.001",
+                  "name": "PowerShell",
+                  "description": "Execution of PowerShell"
+                },
+                ...
+              ]
+            }</code></pre>
             </div>
-
+            
             <div class="callout callout-info">
                 <strong>💡 Interactive Visualization:</strong> Flow JSON files are automatically converted to interactive
                 HTML visualizations that can be viewed in any browser.
