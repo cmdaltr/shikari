@@ -60,6 +60,25 @@
         --accent: #ff6b6b;
       }
 
+      /* Dark header bar at top - matches footer styling */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 75px;
+        background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+        z-index: 999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        border-bottom: 3px solid var(--accent);
+      }
+
+      [data-theme="dark"] body::before {
+        background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      }
+
       #main-content.page-shell,
       #main-content.centered { padding-top: 0 !important; margin-top: 0 !important; position: relative; }
 
@@ -244,7 +263,7 @@
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2em; padding-top: 80px; position: relative;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">
-        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1em;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1em; margin-top: 28px;">
           <!-- Logo replacing "A" -->
           <img src="{{ url_for('static', path='images/icon.png') }}" alt="Archer Logo" style="width: auto; height: auto; max-height: 120px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
           <!-- "RCHER" text -->
@@ -299,6 +318,7 @@
               <!-- Login Form -->
               <form method="post" action="/login" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="next_url" value="{{ next_url }}">
 
                 {% if success %}
                 <div style="background: #d1fae5; color: #065f46; padding: 0.875rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.95rem; border: 1px solid #6ee7b7; width: 50%;">
@@ -696,6 +716,60 @@
     <script src="{{ url_for('static', path='js/tabs.js') }}?v={{ request.app.state.asset_version }}" defer></script>
     <script src="{{ url_for('static', path='js/validation.js') }}?v={{ request.app.state.asset_version }}"></script>
     <script src="{{ url_for('static', path='js/profile.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+
+    <!-- Login Form Redirect Message Script -->
+    <script>
+        // Show redirecting message on successful login
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.querySelector('form[action="/login"]');
+            if (loginForm) {
+                loginForm.addEventListener('submit', (e) => {
+                    // Show redirecting overlay
+                    const overlay = document.createElement('div');
+                    overlay.id = 'redirecting-overlay';
+                    overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.7);
+                        z-index: 99999;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    `;
+
+                    const message = document.createElement('div');
+                    message.style.cssText = `
+                        background: var(--bg-secondary);
+                        border-radius: 12px;
+                        padding: 2rem 3rem;
+                        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                        text-align: center;
+                    `;
+
+                    message.innerHTML = `
+                        <div style="width: 48px; height: 48px; margin: 0 auto 1rem; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p style="color: var(--text-primary); font-size: 1.1rem; font-weight: 600; margin: 0;">Redirecting...</p>
+                    `;
+
+                    // Add spinner animation
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+
+                    overlay.appendChild(message);
+                    document.body.appendChild(overlay);
+                });
+            }
+        });
+    </script>
 
     <!-- Dark Mode Toggle Script -->
     <script>

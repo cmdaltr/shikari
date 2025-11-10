@@ -46,6 +46,25 @@
         --accent: #ff6b6b;
       }
 
+      /* Dark header bar at top - matches footer styling */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 75px;
+        background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+        z-index: 999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        border-bottom: 3px solid var(--accent);
+      }
+
+      [data-theme="dark"] body::before {
+        background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      }
+
       #main-content.page-shell,
       #main-content.centered { padding-top: 0 !important; margin-top: 0 !important; position: relative; }
 
@@ -374,7 +393,7 @@
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2em; padding-top: 80px; position: relative;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">
-        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1em;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1em; margin-top: 28px;">
           <!-- Logo replacing "A" -->
           <img src="{{ url_for('static', path='images/icon.png') }}" alt="Archer Logo" style="width: auto; height: auto; max-height: 120px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
           <!-- "RCHER" text -->
@@ -390,9 +409,15 @@
         <div class="tabs-header">
           <button class="tab-button active" data-tab="generate">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
-              <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" stroke="#10b981"/>
+              <circle cx="12" cy="12" r="10" stroke="#10b981"/>
+              <circle cx="12" cy="12" r="6" stroke="#10b981"/>
+              <circle cx="12" cy="12" r="2" stroke="#10b981"/>
+              <line x1="12" y1="2" x2="12" y2="6" stroke="#10b981"/>
+              <line x1="12" y1="18" x2="12" y2="22" stroke="#10b981"/>
+              <line x1="2" y1="12" x2="6" y2="12" stroke="#10b981"/>
+              <line x1="18" y1="12" x2="22" y2="12" stroke="#10b981"/>
             </svg>
-            <span>Generate</span>
+            <span>Hunt</span>
           </button>
           <button class="tab-button" data-tab="upload">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
@@ -422,12 +447,9 @@
         <div class="tabs-content">
           <!-- GENERATE TAB -->
           <div class="tab-pane active" id="tab-generate">
-            <div class="tab-description">
-              Generate detection queries based on MITRE ATT&CK threat intelligence
-            </div>
             <form id="generate-form" action="/generate" method="post" autocomplete="off">
               <div class="form-section">
-                <label for="group_name_input" class="form-label">Threat Group Name</label>
+                <label for="group_name_input" class="form-label">Generate hunt queries based on Threat Group</label>
                 <input type="text" name="group_name" id="group_name_input" class="form-input"
                        placeholder="e.g., APT29, Scattered Spider" maxlength="200">
                 <div id="group-name-error" class="error-message" style="display:none;">
@@ -445,7 +467,7 @@
               <!-- CVE Input -->
               <div class="form-section">
                 <label for="cve_input" class="form-label">
-                  CVE Identifier
+                  Generate hunt queries based on CVE(s)
                   <span style="font-weight: 400; color: #666; font-size: 0.9em;">(Supports multiple, comma-separated)</span>
                 </label>
                 <input type="text" name="cve_id" id="cve_input" class="form-input"
@@ -466,13 +488,13 @@
                   COMING SOON
                 </div>
                 <label for="technique_input" class="form-label" style="color: #9ca3af;">
-                  ATT&CK Technique IDs
+                  Generate hunt queries based on ATT&CK Technique IDs
                   <span style="font-weight: 400; color: #9ca3af; font-size: 0.9em;">(Hunt specific techniques)</span>
                 </label>
                 <input type="text" name="technique_ids" id="technique_input" class="form-input"
                        placeholder="e.g., T1003, T1021.001, T1078 or T1003, T1021, T1078" disabled>
                 <div style="margin-top: 8px; font-size: 0.85em; color: #9ca3af;">
-                  Enter one or more MITRE ATT&CK technique IDs separated by commas. Supports both parent techniques (T1003) and subtechniques (T1003.001).
+                  Enter one or more MITRE ATT&CK Technique IDs separated by commas. Supports both parent techniques (T1003) and subtechniques (T1003.001).
                 </div>
               </div>
 
@@ -502,11 +524,11 @@
                     </span>
                   </label>
 
-                  <!-- Row 1 Column 3: Cross-Vendor Correlation -->
+                  <!-- Row 1 Column 3: Cross-vendor Correlation -->
                   <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
                     <input type="checkbox" name="cross_vendor_correlation" value="true" id="cross-vendor-checkbox" disabled>
                     <span class="option-label">
-                      Cross-Vendor Correlation
+                      Cross-vendor Correlation
                       <span style="color: #6b7280; font-size: 0.85em; margin-left: 4px;">(Coming Soon)</span>
                     </span>
                   </label>
@@ -668,17 +690,13 @@
               </details>
 
               <button type="submit" class="btn-primary" id="generate_btn" disabled>
-                Generate Detections
+                Hunt Threats
               </button>
             </form>
           </div>
 
           <!-- UPLOAD TAB -->
           <div class="tab-pane" id="tab-upload">
-            <div class="tab-description">
-              Upload threat intelligence files or analyze blog posts to extract TTPs and IOCs
-            </div>
-
             <!-- URL Input Section -->
             <form id="blog-form" action="/analyze_blog" method="post" style="margin-bottom: 2em;">
               <div class="form-section">
@@ -773,11 +791,11 @@
                     </span>
                   </label>
 
-                  <!-- Row 1 Column 3: Cross-Vendor Correlation -->
+                  <!-- Row 1 Column 3: Cross-vendor Correlation -->
                   <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
                     <input type="checkbox" name="cross_vendor_correlation" id="upload_cross_vendor_checkbox" value="true" disabled>
                     <span class="option-label">
-                      Cross-Vendor Correlation
+                      Cross-vendor Correlation
                       <span style="color: #6b7280; font-size: 0.85em; margin-left: 4px;">(Coming Soon)</span>
                     </span>
                   </label>
@@ -929,10 +947,6 @@
 
           <!-- PROFILE TAB -->
           <div class="tab-pane" id="tab-profile">
-            <div class="tab-description">
-              Profile an organization's threat landscape based on domain intelligence
-            </div>
-
             <form id="profile-form" action="/profile" method="post" autocomplete="off">
               <div class="form-section">
                 <label for="domain_input" class="form-label">Enter a company's primary domain to analyze their threat profile</label>
@@ -993,10 +1007,6 @@
 
           <!-- EMULATE TAB -->
           <div class="tab-pane" id="tab-emulate">
-            <div class="tab-description">
-              Execute adversary emulation tests using Atomic Red Team
-            </div>
-
             <div style="text-align: center; padding: 3em 2em; background: #f8f9fa; border-radius: 8px; border: 2px dashed #dee2e6;">
               <svg style="width: 64px; height: 64px; margin: 0 auto 1em; opacity: 0.3;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>

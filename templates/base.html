@@ -114,10 +114,29 @@
             height: 20px;
         }
 
+        /* Dark header bar at top - matches footer styling */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 75px;
+            background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+            z-index: 999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border-bottom: 3px solid var(--accent);
+        }
+
+        [data-theme="dark"] body::before {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
         /* Logo at top center */
         .header-logo-container {
             position: absolute;
-            top: 22px;
+            top: 16px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
@@ -148,7 +167,7 @@
             font-size: 33.6px;
             font-weight: 700;
             letter-spacing: 3px;
-            color: #1a1a1a;
+            color: #ffffff;
             margin: 0;
             text-shadow: 0px 1px 3px rgba(0,0,0,0.15);
         }
@@ -185,7 +204,7 @@
             </svg>
         </a>
         {% else %}
-        <a href="/login" class="nav-icon-btn" aria-label="Login" title="Login">
+        <a href="/login?next_url={{ ((request.url.path + '?' + request.url.query) if request.url.query else request.url.path) | urlencode }}" class="nav-icon-btn" aria-label="Login" title="Login">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
                 <polyline points="10 17 15 12 10 7"/>

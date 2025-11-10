@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response
+from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from archer.security import sanitize_filename, validate_safe_path, sanitize_group_name
@@ -119,8 +119,16 @@ def load_yaml_file(file_path: str) -> Optional[dict]:
     try:
         with open(file_path, 'r') as f:
             return yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        # YAML parsing error - log filename and specific error
+        filename = os.path.basename(file_path)
+        logger.warning(f"Skipping malformed YAML file {filename}: {str(e).split(chr(10))[0]}")
+        return None
+    except FileNotFoundError:
+        logger.error(f"YAML file not found: {file_path}")
+        return None
     except Exception as e:
-        logger.error(f"Failed to load YAML file {file_path}: {e}")
+        logger.error(f"Unexpected error loading YAML file {file_path}: {e}")
         return None
 
 
@@ -803,17 +811,24 @@ def markdown_links_to_plain(text):
     return re.sub(pattern, r"\1", text)
 
 
-def check_osint_enriched(yaml_file):
+def check_osint_enriched(yaml_file, file_content=None):
     """
     Check if a YAML file has OSINT comparison/enhancement metadata.
     Returns tuple: (is_enhanced: bool, osint_data: dict)
+
+    Args:
+        yaml_file: Path to YAML file
+        file_content: Optional pre-read file content (for performance)
 
     - is_enhanced: True if osint_enhanced=true (for orange badge)
     - osint_data: Contains OSINT data if osint_compared=true (for Show Details button)
     """
     try:
-        with open(yaml_file, "r") as f:
-            content = f.read()
+        if file_content is None:
+            with open(yaml_file, "r") as f:
+                content = f.read()
+        else:
+            content = file_content
 
             # Check for OSINT comparison (default behavior - always enabled)
             has_osint_comparison = "osint_compared: true" in content
@@ -852,8 +867,13 @@ def check_osint_enriched(yaml_file):
                         indicators = yaml_data["osint_indicators"]
                         if indicators:
                             osint_data["indicators"] = indicators
+                except yaml_lib.YAMLError as e:
+                    # YAML parsing error - skip with warning
+                    filename = os.path.basename(yaml_file)
+                    logger.debug(f"Skipping OSINT indicators for {filename}: {str(e).split(chr(10))[0]}")
+                    osint_data["indicators"] = {}
                 except Exception as e:
-                    logger.error(f"Error parsing YAML for osint_indicators: {e}")
+                    logger.warning(f"Error extracting OSINT indicators from {os.path.basename(yaml_file)}: {e}")
                     # Fallback to empty indicators
                     osint_data["indicators"] = {}
 
@@ -1096,10 +1116,14 @@ def extract_indicators_from_query(yaml_file):
         return []
 
 
-def get_indicators_from_yaml(yaml_file):
+def get_indicators_from_yaml(yaml_file, yaml_data=None):
     """
     Extract indicators from YAML file, prioritizing the 'indicators' section.
     Falls back to query extraction if no indicators section exists.
+
+    Args:
+        yaml_file: Path to YAML file
+        yaml_data: Optional pre-parsed YAML data (for performance)
 
     Returns:
         List of indicator strings for display
@@ -1109,7 +1133,8 @@ def get_indicators_from_yaml(yaml_file):
 
     try:
         # First, try to load the indicators section from YAML
-        yaml_data = load_yaml_file(yaml_file)
+        if yaml_data is None:
+            yaml_data = load_yaml_file(yaml_file)
         if yaml_data and "indicators" in yaml_data:
             indicators_section = yaml_data["indicators"]
             if indicators_section and isinstance(indicators_section, dict):
@@ -4196,24 +4221,27 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         for yaml_file in yaml_files:
             filename = os.path.basename(yaml_file)
 
-            # Determine vendor from YAML connectorId field (more reliable than filename)
-            vendor = None
-
+            # OPTIMIZATION: Read file content and parse YAML only once
             try:
                 with open(yaml_file, "r") as f:
-                    # Read just enough to find connectorId
-                    for line in f:
-                        if "connectorId:" in line:
-                            connector_value = line.split(":", 1)[1].strip()
-                            if "MicrosoftThreatProtection" in connector_value:
-                                vendor = "mde"
-                            elif "Splunk" in connector_value:
-                                vendor = "splunk"
-                            elif "Elastic" in connector_value:
-                                vendor = "elastic"
-                            break
+                    file_content = f.read()
             except:
-                pass
+                continue  # Skip unreadable files
+
+            yaml_data = load_yaml_file(yaml_file)
+            if not yaml_data:
+                continue  # Skip invalid YAML files
+
+            # Determine vendor from YAML connectorId field (more reliable than filename)
+            vendor = None
+            connector_value = yaml_data.get("connectorId", "")
+            if connector_value:
+                if "MicrosoftThreatProtection" in connector_value:
+                    vendor = "mde"
+                elif "Splunk" in connector_value:
+                    vendor = "splunk"
+                elif "Elastic" in connector_value:
+                    vendor = "elastic"
 
             # Fallback to filename pattern if connectorId not found
             if not vendor:
@@ -4256,51 +4284,21 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             else:
                 title = filename
 
-            # Read description from YAML (handling multiline descriptions)
-            description = ""
-            try:
-                with open(yaml_file, "r") as f:
-                    lines = f.readlines()
-                    in_description = False
-                    desc_lines = []
-
-                    for i, line in enumerate(lines):
-                        # Found description field
-                        if line.strip().startswith("description:"):
-                            content = line.split(":", 1)[1].strip()
-                            # If it's a multiline indicator (| or >)
-                            if content in ("|", ">"):
-                                in_description = True
-                                continue
-                            # If content is on the same line
-                            elif content:
-                                description = content.strip("\"'")
-                                break
-                        # Collect multiline description content
-                        elif in_description:
-                            # Stop if we hit a non-indented line or another field
-                            if line.strip() and not line.startswith(" "):
-                                break
-                            # Add the line (strip leading spaces)
-                            if line.strip():
-                                desc_lines.append(line.strip())
-
-                    # Join collected lines and format with newlines between indicator types
-                    if desc_lines:
-                        raw_desc = " ".join(desc_lines)
-                        # Replace "; " with newlines to separate indicator types
-                        formatted_desc = raw_desc.replace("; ", "\n")
-                        # Limit total length
-                        if len(formatted_desc) > 300:
-                            formatted_desc = formatted_desc[:300] + "..."
-                        description = formatted_desc
-            except:
-                pass
+            # Extract description from YAML data (already parsed)
+            description = yaml_data.get("description", "")
+            if description:
+                # Format description - replace "; " with newlines
+                formatted_desc = description.replace("; ", "\n")
+                # Limit total length
+                if len(formatted_desc) > 300:
+                    formatted_desc = formatted_desc[:300] + "..."
+                description = formatted_desc
+            else:
+                description = ""
 
             # IMPORTANT: Read technique name from YAML file's "name:" field, NOT from filename
             # Filenames are filesystem-safe (no spaces/slashes) but YAML has the correct MITRE ATT&CK name
-            yaml_data_early = load_yaml_file(yaml_file)
-            yaml_technique_name = yaml_data_early.get("name", "") if yaml_data_early else ""
+            yaml_technique_name = yaml_data.get("name", "")
 
             # Get technique name from ATT&CK if available (only for actual technique IDs like T1234)
             technique_name = ""
@@ -4337,21 +4335,20 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             desc_html = markdown_links_to_html(desc_text)
             desc_plain = markdown_links_to_plain(desc_text)
 
-            # Extract indicators from YAML indicators section or query
-            indicators = get_indicators_from_yaml(yaml_file)
+            # Extract indicators from YAML indicators section or query (use pre-parsed data)
+            indicators = get_indicators_from_yaml(yaml_file, yaml_data=yaml_data)
 
-            # Check for OSINT enrichment
-            is_osint_enriched, osint_data = check_osint_enriched(yaml_file)
+            # Check for OSINT enrichment (use pre-read content)
+            is_osint_enriched, osint_data = check_osint_enriched(yaml_file, file_content=file_content)
 
             # Debug: Log what we're passing to template
             if is_osint_enriched or osint_data:
                 print(f"   is_osint_enriched: {is_osint_enriched}")
                 print(f"   osint_data present: {bool(osint_data)}")
 
-            # Extract the query and tactics from YAML for preview
-            yaml_data = load_yaml_file(yaml_file)
-            query_text = yaml_data.get("query", "") if yaml_data else ""
-            tactics_list = yaml_data.get("tactics", []) if yaml_data else []
+            # Extract the query and tactics from YAML for preview (use already-loaded yaml_data)
+            query_text = yaml_data.get("query", "")
+            tactics_list = yaml_data.get("tactics", [])
             # Get primary tactic (first in list)
             primary_tactic = tactics_list[0] if tactics_list else "Unknown"
 
@@ -4459,14 +4456,25 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                 }
             )
 
-        # Keep ungrouped file list for saving to library
+        # Keep ungrouped file list for saving to library (with all fields)
         ungrouped_files = []
         for file_data in files:
             ungrouped_files.append(
                 {
-                    "technique": file_data.get("technique_display", file_data["technique"]),
+                    "technique": file_data.get("technique", ""),
+                    "technique_display": file_data.get("technique_display", file_data.get("technique", "")),
                     "title": file_data["title"],
-                    "description": file_data["description"],
+                    "description": file_data.get("description", ""),
+                    "description_html": file_data.get("description_html", file_data.get("description", "")),
+                    "description_plain": file_data.get("description_plain", file_data.get("description", "")),
+                    "indicators": file_data.get("indicators", []),
+                    "query": file_data.get("query", ""),
+                    "tactic": file_data.get("tactic", "Unknown"),
+                    "tactics": file_data.get("tactics", []),
+                    "osint_enriched": file_data.get("osint_enriched", False),
+                    "osint_data": file_data.get("osint_data", {}),
+                    "detection_likelihood": file_data.get("detection_likelihood", 50),
+                    "needs_review": file_data.get("needs_review", False),
                 }
             )
 
@@ -5183,7 +5191,7 @@ def require_auth(request: Request, archer_session: Optional[str] = Cookie(None))
 
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request, response: Response, registered: Optional[str] = None):
+async def login_page(request: Request, response: Response, registered: Optional[str] = None, next_url: Optional[str] = None):
     """
     Render the login page with CSRF protection.
     """
@@ -5203,7 +5211,7 @@ async def login_page(request: Request, response: Response, registered: Optional[
     # Store temp session ID in a cookie for CSRF validation
     template_response = templates.TemplateResponse(
         "login.html",
-        {"request": request, "error": None, "success": success_message, "csrf_token": csrf_token},
+        {"request": request, "error": None, "success": success_message, "csrf_token": csrf_token, "next_url": next_url or "/"},
     )
 
     template_response.set_cookie(
@@ -5232,6 +5240,7 @@ async def login(
     email: str = Form(...),
     password: str = Form(...),
     remember_me: Optional[str] = Form(None),
+    next_url: Optional[str] = Form("/"),
     csrf_token: str = Form(...),
     archer_csrf_session: Optional[str] = Cookie(None),
 ):
@@ -5248,6 +5257,7 @@ async def login(
         email: User's email address
         password: User's password
         remember_me: "true" if Remember Me checkbox is checked
+        next_url: URL to redirect to after successful login
         csrf_token: CSRF token from form
         archer_csrf_session: CSRF session ID from cookie
 
@@ -5454,8 +5464,14 @@ async def login(
             details=f"Login successful (Remember Me: {remember})",
         )
 
+        # Validate next_url parameter to prevent open redirect vulnerabilities
+        # Only allow relative URLs starting with /
+        redirect_url = "/"
+        if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+            redirect_url = next_url
+
         # Set session cookie
-        redirect_response = RedirectResponse(url="/", status_code=303)
+        redirect_response = RedirectResponse(url=redirect_url, status_code=303)
 
         # Set cookie with appropriate max_age
         if remember:
@@ -5922,7 +5938,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
 
                 # Check if this is a correlation object (has 'techniques' and 'combined_query')
                 elif "techniques" in content_data and "combined_query" in content_data:
-                    # This is a correlation saved from results page
+                    # This is a correlation saved from results page - preserve ALL correlation fields
                     techniques = content_data.get("techniques", [])
                     technique_name = " + ".join([t.get("name", "") for t in techniques])
                     technique_id = " + ".join([t.get("id", "") for t in techniques])
@@ -5937,12 +5953,36 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     mde_tables = []
                     splunk_indexes = []
 
-                # Check if this is old format (has 'technique' and 'title' but NOT 'queries')
-                elif "technique" in content_data and "title" in content_data and "queries" not in content_data:
-                    # This is an old-format stub detection (pre-YAML) - skip it as it has no actual query/indicators
-                    # These are placeholder detections that were created before full YAML generation
-                    # The real YAML detections exist in data/generate/ and should be imported instead
-                    continue
+                    # IMPORTANT: Store the original correlation data for rendering attack flows
+                    # This will be added to detection_data below as correlation-specific fields
+
+                # Check if this is a detection saved from results page
+                # Results page detections have: technique, title, description, and optionally: query, indicators, tactic, etc.
+                # But NOT queries (plural) or technique_id
+                elif "technique" in content_data and "title" in content_data and "queries" not in content_data and "technique_id" not in content_data:
+                    # This is a detection saved from results page (may have full data or minimal data)
+                    technique_name = content_data.get("technique_display", content_data.get("technique", det.title))
+                    technique_id = content_data.get("technique", "") if content_data.get("technique", "").startswith("T") else ""
+                    description = content_data.get("description_html", content_data.get("description", ""))
+                    # Results page has "query" (singular), not "queries" (plural)
+                    query_content = content_data.get("query", "")
+                    # Use platform for vendor, title contains table/index names
+                    data_source = det.platform or "Unknown"
+                    # Store the table/index names separately
+                    title_value = content_data.get("title", "")
+                    if det.platform and det.platform.lower() in ["mde", "microsoft"]:
+                        mde_tables = [title_value] if title_value else []
+                        splunk_indexes = []
+                    else:
+                        mde_tables = []
+                        splunk_indexes = [title_value] if title_value else []
+                    indicators = content_data.get("indicators", [])
+                    # Results page has "tactic" (singular primary tactic) and "tactics" (array)
+                    primary_tactic = content_data.get("tactic", "Unknown")
+                    tactics = content_data.get("tactics", [primary_tactic] if primary_tactic != "Unknown" else [])
+                    group_name = "Unknown"  # Will extract from tags
+                    osint_enriched = content_data.get("osint_enriched", False)
+                    osint_data = content_data.get("osint_data") if osint_enriched else None
 
                 else:
                     # Unknown structure, use defaults
@@ -6006,7 +6046,19 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "osint_enriched": osint_enriched,
                 "osint_data": osint_data,
                 "needs_review": False,  # Generated detections always have indicators
-                "detection_likelihood": content_data.get("detection_likelihood", 75)  # Added to match results page
+                "detection_likelihood": content_data.get("detection_likelihood", 75),  # Added to match results page
+                # Add correlation-specific fields from content_data (for attack flow visualization)
+                "is_merged": content_data.get("is_merged", False),
+                "techniques": content_data.get("techniques", []),
+                "severity": content_data.get("severity"),
+                "attack_chain_length": content_data.get("attack_chain_length"),
+                "relevance_score": content_data.get("relevance_score"),
+                "time_window": content_data.get("time_window"),
+                "primary_tactics": content_data.get("primary_tactics", []),
+                "techniques_by_tactic": content_data.get("techniques_by_tactic", {}),
+                "technique_tactic_map": content_data.get("technique_tactic_map", {}),
+                "tables_indexes": content_data.get("tables_indexes", []),
+                "combined_query": content_data.get("combined_query", "")
             }
 
             # Normalize vendor/platform based on query content and data sources
@@ -6019,6 +6071,12 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             # If MDE tables present, it's an MDE detection
             elif mde_tables and len(mde_tables) > 0:
                 normalized_vendor = "mde"
+            # If data_source is "MDE" or contains "MDE", it's an MDE detection
+            elif normalized_vendor.lower() == "mde" or "mde" in normalized_vendor.lower():
+                normalized_vendor = "mde"
+            # If data_source is "Microsoft" or "microsoft", it's an MDE detection
+            elif normalized_vendor.lower() in ["microsoft", "microsoft defender"]:
+                normalized_vendor = "mde"
             # Normalize common Splunk index names to "splunk"
             elif normalized_vendor.lower() in ['mcafee', 'unix', 'windows', 'linux', 'network', 'firewall', 'web']:
                 normalized_vendor = "splunk"
@@ -6029,7 +6087,10 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 vendors_dict[vendor] = []
 
             # Check if this is a correlation (detection_type contains "correlation")
-            is_correlation = det.detection_type and "correlation" in str(det.detection_type).lower()
+            # Handle both enum value ("sole_correlation") and enum name ("SOLE_CORRELATION")
+            detection_type_str = str(det.detection_type).lower() if det.detection_type else ""
+            detection_type_name = det.detection_type.name.lower() if hasattr(det.detection_type, 'name') else ""
+            is_correlation = "correlation" in detection_type_str or "correlation" in detection_type_name
 
             if is_correlation:
                 # Add to correlations list instead of vendors
@@ -6135,10 +6196,13 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     "detection_likelihood": data["detection_likelihood"]
                 })
 
+            # Count total individual detections (sum of IDs across all groups)
+            total_individual_detections = sum(len(det.get("ids", [])) for det in detection_list)
+
             vendors.append({
                 "name": vendor_name,
                 "display_name": VENDOR_DISPLAY_NAMES.get(vendor_name, vendor_name.title()),
-                "count": len(detection_list),  # Count of grouped detections (actual checkboxes)
+                "count": total_individual_detections,  # Total individual detections (matching results.html)
                 "detections": detection_list
             })
 
@@ -6170,9 +6234,13 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         total_detections = len(detections)
 
         # Count correlations (detections with detection_type=correlation)
+        # Handle both enum value and enum name
         total_correlations = sum(
             1 for d in detections
-            if d.detection_type and "correlation" in str(d.detection_type).lower()
+            if d.detection_type and (
+                "correlation" in str(d.detection_type).lower() or
+                (hasattr(d.detection_type, 'name') and "correlation" in d.detection_type.name.lower())
+            )
         )
 
         # Count unique techniques

@@ -1,0 +1,213 @@
+{# Shared Jinja2 Macros for results.html and library.html #}
+
+{# Macro to render a technique badge (for correlations) #}
+{% macro render_technique_badge(tech_name, tactic) %}
+  {% if tactic == 'Initial Access' %}
+    {% set bg_color = '#E3F2FD' %}
+    {% set text_color = '#01579B' %}
+    {% set emoji = '🚪' %}
+  {% elif tactic == 'Execution' %}
+    {% set bg_color = '#FFF3E0' %}
+    {% set text_color = '#E65100' %}
+    {% set emoji = '💻' %}
+  {% elif tactic == 'Persistence' %}
+    {% set bg_color = '#FCE4EC' %}
+    {% set text_color = '#880E4F' %}
+    {% set emoji = '📌' %}
+  {% elif tactic == 'Privilege Escalation' %}
+    {% set bg_color = '#FFF9C4' %}
+    {% set text_color = '#F57F17' %}
+    {% set emoji = '👑' %}
+  {% elif tactic == 'Defense Evasion' %}
+    {% set bg_color = '#F3E5F5' %}
+    {% set text_color = '#4A148C' %}
+    {% set emoji = '🥷' %}
+  {% elif tactic == 'Credential Access' %}
+    {% set bg_color = '#FFEBEE' %}
+    {% set text_color = '#B71C1C' %}
+    {% set emoji = '🔑' %}
+  {% elif tactic == 'Discovery' %}
+    {% set bg_color = '#E0F2F1' %}
+    {% set text_color = '#004D40' %}
+    {% set emoji = '🔍' %}
+  {% elif tactic == 'Lateral Movement' %}
+    {% set bg_color = '#E8F5E9' %}
+    {% set text_color = '#1B5E20' %}
+    {% set emoji = '🔗' %}
+  {% elif tactic == 'Collection' %}
+    {% set bg_color = '#FFF8E1' %}
+    {% set text_color = '#FF6F00' %}
+    {% set emoji = '📦' %}
+  {% elif tactic == 'Command and Control' %}
+    {% set bg_color = '#E1F5FE' %}
+    {% set text_color = '#006064' %}
+    {% set emoji = '📡' %}
+  {% elif tactic == 'Exfiltration' %}
+    {% set bg_color = '#EFEBE9' %}
+    {% set text_color = '#3E2723' %}
+    {% set emoji = '🚀' %}
+  {% elif tactic == 'Impact' %}
+    {% set bg_color = '#FFCDD2' %}
+    {% set text_color = '#C62828' %}
+    {% set emoji = '💥' %}
+  {% else %}
+    {% set bg_color = '#E3F2FD' %}
+    {% set text_color = '#01579B' %}
+    {% set emoji = '❓' %}
+  {% endif %}
+  <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech_name }}</span>
+{% endmacro %}
+
+{# Macro to render vendor logo #}
+{% macro render_vendor_logo(vendor_name, gradient_id_suffix='') %}
+  {% if vendor_name == 'Splunk' %}
+  <span class="vendor-logo-icon">
+    <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+      <defs>
+        <radialGradient id="splunkGradient{{ gradient_id_suffix }}" cx="30%" cy="30%">
+          <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+          <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="48" fill="url(#splunkGradient{{ gradient_id_suffix }})"/>
+      <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+  </span>
+  {% elif vendor_name == 'MDE' or vendor_name == 'Microsoft' %}
+  <span class="vendor-logo-icon">
+    <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+      <defs>
+        <linearGradient id="defenderGradient{{ gradient_id_suffix }}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+          <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient{{ gradient_id_suffix }})"/>
+    </svg>
+  </span>
+  {% elif vendor_name == 'Google SecOps' %}
+  <span class="vendor-logo-icon">
+    <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+      <defs>
+        <linearGradient id="googleBlue{{ gradient_id_suffix }}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="googleRed{{ gradient_id_suffix }}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="googleYellow{{ gradient_id_suffix }}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="googleGreen{{ gradient_id_suffix }}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <circle cx="30" cy="48" r="16" fill="url(#googleBlue{{ gradient_id_suffix }})"/>
+      <circle cx="50" cy="38" r="20" fill="url(#googleRed{{ gradient_id_suffix }})"/>
+      <circle cx="70" cy="48" r="16" fill="url(#googleYellow{{ gradient_id_suffix }})"/>
+      <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen{{ gradient_id_suffix }})"/>
+    </svg>
+  </span>
+  {% elif vendor_name == 'Elastic' %}
+  <span class="vendor-logo-icon">
+    <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+      <defs>
+        <linearGradient id="elasticYellow{{ gradient_id_suffix }}" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="elasticTeal{{ gradient_id_suffix }}" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="elasticBlue{{ gradient_id_suffix }}" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow{{ gradient_id_suffix }})"/>
+      <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal{{ gradient_id_suffix }})"/>
+      <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue{{ gradient_id_suffix }})"/>
+    </svg>
+  </span>
+  {% endif %}
+{% endmacro %}
+
+{# Macro to render OSINT enhanced badge #}
+{% macro render_osint_badge() %}
+<div style="flex-shrink: 0; margin-left: 12px;">
+  <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);" title="This detection includes additional indicators from OSINT sources merged into the query logic.">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+    </svg>
+    Enhanced with OSINT
+  </span>
+</div>
+{% endmacro %}
+
+{# Macro to render correlation techniques with flow (arrows/slashes) #}
+{% macro render_correlation_techniques(correlation) %}
+  {% if correlation.is_merged and correlation.techniques|length >= 2 %}
+    {# Display techniques in the order they appear (merged correlations) #}
+    {% for tech in correlation.techniques %}
+      {% set tactic = tech.tactic %}
+      {# Add separator before technique (except first) #}
+      {% if not loop.first %}
+        {% set prev_tech = correlation.techniques[loop.index0 - 1] %}
+        {% set prev_tactic = prev_tech.tactic %}
+        {% if tactic == prev_tactic %}
+          {# Same tactic: use slash separator #}
+          <span style="margin: 0 4px; color: #999;">/</span>
+        {% else %}
+          {# Different tactic: use arrow separator #}
+          <span style="margin: 0 8px; color: #999;">→</span>
+        {% endif %}
+      {% endif %}
+      {# Render technique badge #}
+      {{ render_technique_badge(tech.name, tactic) }}
+    {% endfor %}
+  {% else %}
+    {# Display normal (non-merged) correlation - Sort by MITRE ATT&CK order #}
+    {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
+    {% set sorted_techniques = [] %}
+    {% for tactic in tactic_order %}
+      {% for tech in correlation.techniques %}
+        {% if tech.tactic == tactic %}
+          {% set _ = sorted_techniques.append(tech) %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+    {# Fallback: append any techniques not in tactic order #}
+    {% for tech in correlation.techniques %}
+      {% if tech not in sorted_techniques %}
+        {% set _ = sorted_techniques.append(tech) %}
+      {% endif %}
+    {% endfor %}
+
+    {# Display sorted techniques with smart separators #}
+    {% for tech in sorted_techniques %}
+      {% set tactic = tech.tactic %}
+      {# Add separator before technique (except first) #}
+      {% if not loop.first %}
+        {% set prev_tech = sorted_techniques[loop.index0 - 1] %}
+        {% set prev_tactic = prev_tech.tactic %}
+        {% if tactic == prev_tactic %}
+          {# Same tactic: use slash separator #}
+          <span style="margin: 0 4px; color: #999;">/</span>
+        {% else %}
+          {# Different tactic: use arrow separator #}
+          <span style="margin: 0 8px; color: #999;">→</span>
+        {% endif %}
+      {% endif %}
+      {# Render technique badge #}
+      {{ render_technique_badge(tech.name, tactic) }}
+    {% endfor %}
+  {% endif %}
+{% endmacro %}

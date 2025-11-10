@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "shared_macros.html" import render_vendor_logo, render_correlation_techniques %}
 {% block title %}Archer - Results{% endblock %}
 {% block head %}
 {{ super() }}
@@ -284,43 +285,31 @@
             <!-- MITRE ATT&CK Tactics Legend -->
             <div style="margin-bottom: 32px;">
               <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">MITRE ATT&CK Tactics</h3>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #E3F2FD; color: #01579B; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🚪 Initial Access</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #FFF3E0; color: #E65100; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">💻 Execution</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #FCE4EC; color: #880E4F; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">📌 Persistence</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #FFF9C4; color: #F57F17; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">👑 Privilege Escalation</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #F3E5F5; color: #4A148C; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🥷 Defense Evasion</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #FFEBEE; color: #B71C1C; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🔑 Credential Access</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #E0F2F1; color: #004D40; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🔍 Discovery</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #E8F5E9; color: #1B5E20; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🔗 Lateral Movement</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #FFF8E1; color: #FF6F00; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">📦 Collection</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #E1F5FE; color: #006064; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">📡 Command and Control</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #EFEBE9; color: #3E2723; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">🚀 Exfiltration</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #FFCDD2; color: #C62828; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">💥 Impact</span>
-                </div>
+              <p style="margin: 0 0 12px 0; color: #64748b; font-size: 0.9em;">Typical attack progression from initial compromise to final impact</p>
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                <span style="display: inline-block; background: #E3F2FD; color: #01579B; padding: 6px 4px; border-radius: 4px; font-weight: 600;">🚪 Initial Access</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #FFF3E0; color: #E65100; padding: 6px 4px; border-radius: 4px; font-weight: 600;">💻 Execution</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #FCE4EC; color: #880E4F; padding: 6px 4px; border-radius: 4px; font-weight: 600;">📌 Persistence</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #FFF9C4; color: #F57F17; padding: 6px 4px; border-radius: 4px; font-weight: 600;">👑 Privilege Escalation</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #F3E5F5; color: #4A148C; padding: 6px 4px; border-radius: 4px; font-weight: 600;">🥷 Defense Evasion</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #FFEBEE; color: #B71C1C; padding: 6px 4px; border-radius: 4px; font-weight: 600;">🔑 Credential Access</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #E0F2F1; color: #004D40; padding: 6px 4px; border-radius: 4px; font-weight: 600;">🔍 Discovery</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #E8F5E9; color: #1B5E20; padding: 6px 4px; border-radius: 4px; font-weight: 600;">🔗 Lateral Movement</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #FFF8E1; color: #FF6F00; padding: 6px 4px; border-radius: 4px; font-weight: 600;">📦 Collection</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #E1F5FE; color: #006064; padding: 6px 4px; border-radius: 4px; font-weight: 600;">📡 Command and Control</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #EFEBE9; color: #3E2723; padding: 6px 4px; border-radius: 4px; font-weight: 600;">🚀 Exfiltration</span>
+                <span style="color: #999; font-weight: 600;">→</span>
+                <span style="display: inline-block; background: #FFCDD2; color: #C62828; padding: 6px 4px; border-radius: 4px; font-weight: 600;">💥 Impact</span>
               </div>
             </div>
 
@@ -404,7 +393,7 @@
                 <li><strong>Direct Procedure Examples</strong> - Extracts indicators from techniques explicitly used by the threat actor in documented campaigns</li>
                 <li><strong>Software/Malware Attribution</strong> - Identifies software and malware families associated with the actor, then retrieves indicators from those software pages even when direct actor-to-indicator links aren't documented</li>
                 <li><strong>Transitive Relationships</strong> - Maps relationships like Actor → Uses Software → Implements Technique → Has Indicators, building detections from the complete chain</li>
-                <li><strong>Cross-Vendor Coverage</strong> - Generates detections across multiple platforms (Splunk, Microsoft Defender, Elastic, etc.) to ensure broad deployment options</li>
+                <li><strong>Cross-vendor Coverage</strong> - Generates detections across multiple platforms (Splunk, Microsoft Defender, Elastic, etc.) to ensure broad deployment options</li>
                 <li><strong>Deduplication & Merging</strong> - Combines similar detections targeting the same technique to reduce noise and improve query efficiency</li>
                 <li><strong>Confidence Scoring</strong> - Assigns likelihood scores based on indicator quality and the strength of attribution between actor, software, and technique</li>
               </ol>
@@ -437,7 +426,7 @@
     <!-- Detection Rules Section -->
     <div class="detection-section">
       <div class="detection-header">
-        <h2>
+        <h2 onclick="toggleDetectionsSection()" style="cursor: pointer; user-select: none;">
           <div class="card-icon detection" style="width: 40px; height: 40px; margin-right: 12px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
@@ -460,99 +449,17 @@
             Deselect All
           </button>
           <span class="expand-btn" onclick="toggleAllVendors()">Expand All</span>
+          <span id="detections-section-toggle" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleDetectionsSection()">Collapse</span>
         </div>
       </div>
 
+      <div id="detections-section-content" style="transition: all 0.3s ease; overflow: hidden;">
       {% if detections %}
         {% for vendor in detections %}
         <div class="vendor-section">
           <div class="vendor-header" onclick="toggleVendor(this)">
             <div class="vendor-title">
-              {% if vendor.name == 'splunk' %}
-              <span class="vendor-logo-icon">
-                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  <!-- Gradient background circle -->
-                  <defs>
-                    <radialGradient id="splunkGradient" cx="30%" cy="30%">
-                      <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
-                      <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
-                    </radialGradient>
-                  </defs>
-                  <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
-                  <!-- White chevron > -->
-                  <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                </svg>
-              </span>
-              {% elif vendor.name == 'mde' or vendor.name == 'microsoft' %}
-              <span class="vendor-logo-icon">
-                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  <!-- Gradient for shield -->
-                  <defs>
-                    <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
-                      <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
-                    </linearGradient>
-                  </defs>
-                  <!-- Blue gradient shield -->
-                  <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
-                </svg>
-              </span>
-              {% elif vendor.name == 'google_secops' %}
-              <span class="vendor-logo-icon">
-                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  <defs>
-                    <linearGradient id="googleBlue" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="googleRed" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="googleYellow" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="googleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
-                    </linearGradient>
-                  </defs>
-                  <circle cx="30" cy="48" r="16" fill="url(#googleBlue)"/>
-                  <circle cx="50" cy="38" r="20" fill="url(#googleRed)"/>
-                  <circle cx="70" cy="48" r="16" fill="url(#googleYellow)"/>
-                  <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen)"/>
-                </svg>
-              </span>
-              {% elif vendor.name == 'elastic' %}
-              <span class="vendor-logo-icon">
-                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  <!-- Elasticsearch logo - three stacked rounded bars with offset -->
-                  <defs>
-                    <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
-                    </linearGradient>
-                  </defs>
-                  <!-- Three stacked elongated shapes with offset -->
-                  <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
-                  <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
-                  <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
-                </svg>
-              </span>
-              {% else %}
-              <span class="vendor-icon">{{ vendor.icon }}</span>
-              {% endif %}
+              {{ render_vendor_logo(vendor.display_name, 'Det') }}
               <span>{{ vendor.display_name }}</span>
               {% if vendor.get('coming_soon') %}
               <span class="vendor-count" style="background: #666;">Coming Soon</span>
@@ -805,12 +712,13 @@
       {% else %}
         <p style="text-align: center; color: #666; padding: 40px 0;">No detection rules generated yet.</p>
       {% endif %}
+      </div>
     </div>
 
     <!-- Correlations Section -->
     <div id="correlations" class="detection-section">
       <div class="detection-header">
-        <h2>
+        <h2 onclick="toggleCorrelationsSection()" style="cursor: pointer; user-select: none;">
           <div class="card-icon correlation" style="width: 40px; height: 40px; margin-right: 12px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="18" cy="5" r="3"/>
@@ -837,9 +745,11 @@
             Deselect All
           </button>
           <span class="expand-btn" onclick="toggleAllCorrelations()">Expand All</span>
+          <span id="correlations-section-toggle" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleCorrelationsSection()">Collapse</span>
         </div>
       </div>
 
+      <div id="correlations-section-content" style="transition: all 0.3s ease; overflow: hidden;">
       {% if correlations %}
         {% for vendor in correlations %}
         <div class="vendor-section">
@@ -949,176 +859,8 @@
               <div class="detection-title" style="display: flex; justify-content: space-between; align-items: flex-start; position: relative;">
                 <div style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
                 <input type="checkbox" class="correlation-checkbox" checked data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
-                <!-- Technique Flow -->
-                {% if correlation.is_merged and correlation.techniques|length >= 2 %}
-                  {# Display techniques in the order they appear in correlation.techniques #}
-                  {# This preserves the attack flow order from techniques_involved_formatted #}
-                  {% for tech in correlation.techniques %}
-                    {% set tactic = tech.tactic %}
-                    {# Add separator before technique (except first) #}
-                    {% if not loop.first %}
-                      {% set prev_tech = correlation.techniques[loop.index0 - 1] %}
-                      {% set prev_tactic = prev_tech.tactic %}
-                      {% if tactic == prev_tactic %}
-                        {# Same tactic: use slash separator #}
-                        <span style="margin: 0 4px; color: #999;">/</span>
-                      {% else %}
-                        {# Different tactic: use arrow separator #}
-                        <span style="margin: 0 8px; color: #999;">→</span>
-                      {% endif %}
-                    {% endif %}
-
-                    {# Set colors and emoji based on tactic #}
-                    {% if tactic == 'Initial Access' %}
-                      {% set bg_color = '#E3F2FD' %}
-                      {% set text_color = '#01579B' %}
-                      {% set emoji = '🚪' %}
-                    {% elif tactic == 'Execution' %}
-                      {% set bg_color = '#FFF3E0' %}
-                      {% set text_color = '#E65100' %}
-                      {% set emoji = '💻' %}
-                    {% elif tactic == 'Persistence' %}
-                      {% set bg_color = '#FCE4EC' %}
-                      {% set text_color = '#880E4F' %}
-                      {% set emoji = '📌' %}
-                    {% elif tactic == 'Privilege Escalation' %}
-                      {% set bg_color = '#FFF9C4' %}
-                      {% set text_color = '#F57F17' %}
-                      {% set emoji = '👑' %}
-                    {% elif tactic == 'Defense Evasion' %}
-                      {% set bg_color = '#F3E5F5' %}
-                      {% set text_color = '#4A148C' %}
-                      {% set emoji = '🥷' %}
-                    {% elif tactic == 'Credential Access' %}
-                      {% set bg_color = '#FFEBEE' %}
-                      {% set text_color = '#B71C1C' %}
-                      {% set emoji = '🔑' %}
-                    {% elif tactic == 'Discovery' %}
-                      {% set bg_color = '#E0F2F1' %}
-                      {% set text_color = '#004D40' %}
-                      {% set emoji = '🔍' %}
-                    {% elif tactic == 'Lateral Movement' %}
-                      {% set bg_color = '#E8F5E9' %}
-                      {% set text_color = '#1B5E20' %}
-                      {% set emoji = '🔗' %}
-                    {% elif tactic == 'Collection' %}
-                      {% set bg_color = '#FFF8E1' %}
-                      {% set text_color = '#FF6F00' %}
-                      {% set emoji = '📦' %}
-                    {% elif tactic == 'Command and Control' %}
-                      {% set bg_color = '#E1F5FE' %}
-                      {% set text_color = '#006064' %}
-                      {% set emoji = '📡' %}
-                    {% elif tactic == 'Exfiltration' %}
-                      {% set bg_color = '#EFEBE9' %}
-                      {% set text_color = '#3E2723' %}
-                      {% set emoji = '🚀' %}
-                    {% elif tactic == 'Impact' %}
-                      {% set bg_color = '#FFCDD2' %}
-                      {% set text_color = '#C62828' %}
-                      {% set emoji = '💥' %}
-                    {% else %}
-                      {% set bg_color = '#E3F2FD' %}
-                      {% set text_color = '#01579B' %}
-                      {% set emoji = '❓' %}
-                    {% endif %}
-
-                    {# Display technique badge #}
-                    <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech.name }}</span>
-                  {% endfor %}
-                {% else %}
-                  {# Display normal (non-merged) correlation - Sort by MITRE ATT&CK order to match Attack Flow #}
-                  {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
-                  {% set sorted_techniques = [] %}
-                  {% for tactic in tactic_order %}
-                    {% for tech in correlation.techniques %}
-                      {% if tech.tactic == tactic %}
-                        {% set _ = sorted_techniques.append(tech) %}
-                      {% endif %}
-                    {% endfor %}
-                  {% endfor %}
-                  {# Fallback: append any techniques not in tactic order #}
-                  {% for tech in correlation.techniques %}
-                    {% if tech not in sorted_techniques %}
-                      {% set _ = sorted_techniques.append(tech) %}
-                    {% endif %}
-                  {% endfor %}
-
-                  {# Display sorted techniques with smart separators #}
-                  {% for tech in sorted_techniques %}
-                    {% set tactic = tech.tactic %}
-                    {# Add separator before technique (except first) #}
-                    {% if not loop.first %}
-                      {% set prev_tech = sorted_techniques[loop.index0 - 1] %}
-                      {% set prev_tactic = prev_tech.tactic %}
-                      {% if tactic == prev_tactic %}
-                        {# Same tactic: use slash separator #}
-                        <span style="margin: 0 4px; color: #999;">/</span>
-                      {% else %}
-                        {# Different tactic: use arrow separator #}
-                        <span style="margin: 0 8px; color: #999;">→</span>
-                      {% endif %}
-                    {% endif %}
-
-                    {# Set colors and emoji based on tactic #}
-                    {% if tactic == 'Initial Access' %}
-                      {% set bg_color = '#E3F2FD' %}  {# light blue #}
-                      {% set text_color = '#01579B' %}  {# dark blue text #}
-                      {% set emoji = '🚪' %}
-                    {% elif tactic == 'Execution' %}
-                      {% set bg_color = '#FFF3E0' %}  {# light orange #}
-                      {% set text_color = '#E65100' %}  {# dark orange text #}
-                      {% set emoji = '💻' %}
-                    {% elif tactic == 'Persistence' %}
-                      {% set bg_color = '#FCE4EC' %}  {# light pink #}
-                      {% set text_color = '#880E4F' %}  {# dark pink/magenta text #}
-                      {% set emoji = '📌' %}
-                    {% elif tactic == 'Privilege Escalation' %}
-                      {% set bg_color = '#FFF9C4' %}  {# light yellow #}
-                      {% set text_color = '#F57F17' %}  {# dark yellow/gold text #}
-                      {% set emoji = '👑' %}
-                    {% elif tactic == 'Defense Evasion' %}
-                      {% set bg_color = '#F3E5F5' %}  {# light purple #}
-                      {% set text_color = '#4A148C' %}  {# dark purple text #}
-                      {% set emoji = '🥷' %}
-                    {% elif tactic == 'Credential Access' %}
-                      {% set bg_color = '#FFEBEE' %}  {# light red #}
-                      {% set text_color = '#B71C1C' %}  {# dark red text #}
-                      {% set emoji = '🔑' %}
-                    {% elif tactic == 'Discovery' %}
-                      {% set bg_color = '#E0F2F1' %}  {# light teal #}
-                      {% set text_color = '#004D40' %}  {# dark teal text #}
-                      {% set emoji = '🔍' %}
-                    {% elif tactic == 'Lateral Movement' %}
-                      {% set bg_color = '#E8F5E9' %}  {# light green #}
-                      {% set text_color = '#1B5E20' %}  {# dark green text #}
-                      {% set emoji = '🔗' %}
-                    {% elif tactic == 'Collection' %}
-                      {% set bg_color = '#FFF8E1' %}  {# light amber #}
-                      {% set text_color = '#FF6F00' %}  {# dark amber/orange text #}
-                      {% set emoji = '📦' %}
-                    {% elif tactic == 'Command and Control' %}
-                      {% set bg_color = '#E1F5FE' %}  {# light cyan #}
-                      {% set text_color = '#006064' %}  {# dark cyan text #}
-                      {% set emoji = '📡' %}
-                    {% elif tactic == 'Exfiltration' %}
-                      {% set bg_color = '#EFEBE9' %}  {# light brown #}
-                      {% set text_color = '#3E2723' %}  {# dark brown text #}
-                      {% set emoji = '🚀' %}
-                    {% elif tactic == 'Impact' %}
-                      {% set bg_color = '#FFCDD2' %}  {# light red #}
-                      {% set text_color = '#C62828' %}  {# dark red text #}
-                      {% set emoji = '💥' %}
-                    {% else %}
-                      {% set bg_color = '#E3F2FD' %}  {# default light blue #}
-                      {% set text_color = '#01579B' %}  {# default dark blue text #}
-                      {% set emoji = '❓' %}
-                    {% endif %}
-
-                    {# Display technique badge #}
-                    <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech.name }}</span>
-                  {% endfor %}
-                {% endif %}
+                <!-- Technique Flow - using shared macro -->
+                {{ render_correlation_techniques(correlation) }}
 
                 <!-- Severity Badge -->
                 {% if correlation.severity == 'Critical' %}
@@ -1375,9 +1117,10 @@
       {% else %}
         <p style="text-align: center; color: #666; padding: 40px 0;">No correlations detected.</p>
       {% endif %}
+      </div>
     </div>
 
-    <!-- Cross-Vendor Section - Coming Soon -->
+    <!-- Cross-vendor Section - Coming Soon -->
     <div class="detection-section" style="opacity: 0.5; pointer-events: none;">
       <div class="detection-header">
         <h2>
@@ -1390,9 +1133,12 @@
               <path d="M2 19 L22 19" stroke-width="2.5"/>
             </svg>
           </div>
-          Cross-Vendor
+          Cross-vendor
         </h2>
-        <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
+          <span class="expand-btn" style="opacity: 0.5; cursor: not-allowed;">Expand</span>
+        </div>
       </div>
 
       <div class="cross-vendor-content">
@@ -1411,7 +1157,10 @@
           </div>
           ATT&CK Flow
         </h2>
-        <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
+          <span class="expand-btn" style="opacity: 0.5; cursor: not-allowed;">Expand</span>
+        </div>
       </div>
 
       <div class="attack-flow-content">
@@ -1425,7 +1174,7 @@
     <!-- Validation Section -->
     <div id="validation-checklist" class="detection-section">
       <div class="detection-header">
-        <h2>
+        <h2 onclick="toggleValidationChecklist()" style="cursor: pointer; user-select: none;">
           <div class="card-icon validation" style="width: 40px; height: 40px; margin-right: 12px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -1452,7 +1201,7 @@
         </div>
       </div>
 
-      <div id="validation-content" style="display: none;">
+      <div id="validation-content" style="display: none; transition: all 0.3s ease;">
         <!-- Step 1: Review Detection Logic -->
         <div class="validation-step" data-step="1">
           <div style="display: flex; align-items: flex-start; gap: 12px;">
@@ -1589,16 +1338,16 @@
         </button>
       </div>
 
-      <!-- Validation Warning Message -->
-      <div id="validation-warning" style="margin-top: 12px; padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; color: #856404; font-size: 0.9em; display: flex; align-items: center; gap: 8px;">
+      </div>
+
+      <!-- Validation Warning Message (moved outside detection-section, hidden but occupies space) -->
+      <div id="validation-warning" style="margin-top: 12px; padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; color: #856404; font-size: 0.9em; display: flex; align-items: center; gap: 8px; visibility: hidden;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         <span>Archer leverages AI and is not 100% accurate; complete all validation steps above to proceed.</span>
-      </div>
-
       </div>
 
     </div>
@@ -1769,27 +1518,71 @@ function toggleAllCorrelations() {
 // Select/Deselect all detections
 function selectAllDetections() {
   document.querySelectorAll('.detection-checkbox').forEach(cb => {
-    cb.checked = true;
-    cb.closest('.detection-item').classList.remove('unchecked');
+    if (!cb.checked) {  // Only change if currently unchecked
+      cb.checked = true;
+      // Trigger change event to ensure any event listeners are notified
+      cb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   });
 }
 
 function deselectAllDetections() {
   document.querySelectorAll('.detection-checkbox').forEach(cb => {
-    cb.checked = false;
-    cb.closest('.detection-item').classList.add('unchecked');
+    if (cb.checked) {  // Only change if currently checked
+      cb.checked = false;
+      // Trigger change event to ensure any event listeners are notified
+      cb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+}
+
+// Select/Deselect all correlations
+function selectAllCorrelations() {
+  document.querySelectorAll('.correlation-checkbox').forEach(cb => {
+    if (!cb.checked) {  // Only change if currently unchecked
+      cb.checked = true;
+      // Trigger change event to ensure any event listeners are notified
+      cb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+}
+
+function deselectAllCorrelations() {
+  document.querySelectorAll('.correlation-checkbox').forEach(cb => {
+    if (cb.checked) {  // Only change if currently checked
+      cb.checked = false;
+      // Trigger change event to ensure any event listeners are notified
+      cb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   });
 }
 
 // Handle individual checkbox changes
 document.addEventListener('DOMContentLoaded', function() {
+  // Detection checkboxes
   document.querySelectorAll('.detection-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
       const item = this.closest('.detection-item');
-      if (this.checked) {
-        item.classList.remove('unchecked');
-      } else {
-        item.classList.add('unchecked');
+      if (item) {  // Check if item exists
+        if (this.checked) {
+          item.classList.remove('unchecked');
+        } else {
+          item.classList.add('unchecked');
+        }
+      }
+    });
+  });
+
+  // Correlation checkboxes
+  document.querySelectorAll('.correlation-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      const item = this.closest('.detection-item');
+      if (item) {  // Check if item exists
+        if (this.checked) {
+          item.classList.remove('unchecked');
+        } else {
+          item.classList.add('unchecked');
+        }
       }
     });
   });
@@ -1855,9 +1648,9 @@ function checkValidationStatus() {
     saveBtn.disabled = false;
     saveBtn.style.opacity = '1';
     saveBtn.style.cursor = 'pointer';
-    // Hide warning message
+    // Hide warning message (but keep space)
     if (warningMsg) {
-      warningMsg.style.display = 'none';
+      warningMsg.style.visibility = 'hidden';
     }
   } else {
     downloadBtn.disabled = true;
@@ -1868,7 +1661,7 @@ function checkValidationStatus() {
     saveBtn.style.cursor = 'not-allowed';
     // Show warning message
     if (warningMsg) {
-      warningMsg.style.display = 'flex';
+      warningMsg.style.visibility = 'visible';
     }
   }
 }
@@ -1999,6 +1792,8 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
   const cve = isCVE ? groupName : null;
 
   let savedCount = 0;
+  let savedDetections = 0;
+  let savedCorrelations = 0;
   let errorCount = 0;
   const failedDetections = []; // Track failed detections with reasons
 
@@ -2020,7 +1815,9 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
 
       for (const detection of filesToSave) {
         // Check if this detection is selected
-        const key = `${detection.technique}:${vendor.name}`;
+        // Use technique_display for matching (grouped detections use display names in checkboxes)
+        const techniqueForMatch = detection.technique_display || detection.technique;
+        const key = `${techniqueForMatch}:${vendor.name}`;
         if (!selectedSet.has(key)) {
           console.log(`Skipping unselected detection: ${key}`);
           continue;
@@ -2043,7 +1840,19 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
           });
 
           if (!response.ok) {
-            // Handle HTTP error responses
+            // Check for authentication error first
+            if (response.status === 401) {
+              await showModal(
+                'Authentication Required',
+                'You must be logged in to save detections to your library. You will be redirected to the login page.',
+                'OK'
+              );
+              // Redirect to login with return URL (including query parameters)
+              window.location.href = '/login?next_url=' + encodeURIComponent(window.location.pathname + window.location.search);
+              return;
+            }
+
+            // Handle other HTTP error responses
             errorCount++;
             let errorMsg = `HTTP ${response.status}`;
             try {
@@ -2062,6 +1871,7 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
           const result = await response.json();
           if (result.success) {
             savedCount++;
+            savedDetections++;
           } else {
             errorCount++;
             failedDetections.push({
@@ -2150,7 +1960,19 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
         });
 
         if (!response.ok) {
-          // Handle HTTP error responses
+          // Check for authentication error first
+          if (response.status === 401) {
+            await showModal(
+              'Authentication Required',
+              'You must be logged in to save correlations to your library. You will be redirected to the login page.',
+              'OK'
+            );
+            // Redirect to login with return URL (including query parameters)
+            window.location.href = '/login?next_url=' + encodeURIComponent(window.location.pathname + window.location.search);
+            return;
+          }
+
+          // Handle other HTTP error responses
           errorCount++;
           let errorMsg = `HTTP ${response.status}`;
           try {
@@ -2169,6 +1991,7 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
         const result = await response.json();
         if (result.success) {
           savedCount++;
+          savedCorrelations++;
         } else {
           errorCount++;
           failedDetections.push({
@@ -2212,11 +2035,47 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
           </div>
         `;
       }
-      await showModal(
+      // Build detailed breakdown message with icons matching results page style
+      let detailsHtml = '<p style="margin-bottom: 16px;">Successfully saved the following to your Library:</p><ul style="list-style: none; padding-left: 0; margin: 12px 0;">';
+      if (savedDetections > 0) {
+        detailsHtml += `
+          <li style="padding: 8px 0; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2">
+                <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+              </svg>
+            </div>
+            <span><strong>${savedDetections}</strong> detection${savedDetections !== 1 ? 's' : ''}</span>
+          </li>`;
+      }
+      if (savedCorrelations > 0) {
+        detailsHtml += `
+          <li style="padding: 8px 0; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2196f3" stroke-width="2">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </div>
+            <span><strong>${savedCorrelations}</strong> correlation${savedCorrelations !== 1 ? 's' : ''}</span>
+          </li>`;
+      }
+      detailsHtml += '</ul>';
+
+      const result = await showModal(
         'Save Complete',
-        `<p>Successfully saved <strong>${savedCount} item(s)</strong> to library.</p>${errorMsg}`,
-        'OK'
+        `${detailsHtml}${errorMsg}`,
+        'View Library',
+        'Close'
       );
+
+      // If user clicked "View Library", navigate to library
+      if (result) {
+        window.location.href = '/library';
+      }
     } else {
       // All saves failed - show error details
       let errorMsg = 'No items were saved.';
@@ -2303,7 +2162,15 @@ function showModal(title, message, confirmText = 'OK', cancelText = null) {
 
     // Handle message as HTML or text
     if (typeof message === 'string') {
-      modalBody.innerHTML = `<p>${message.replace(/\n/g, '</p><p>')}</p>`;
+      // Check if message already contains HTML tags
+      const hasHTML = /<[^>]+>/.test(message);
+      if (hasHTML) {
+        // Message already contains HTML, use it directly
+        modalBody.innerHTML = message;
+      } else {
+        // Plain text message, wrap in paragraphs
+        modalBody.innerHTML = `<p>${message.replace(/\n/g, '</p><p>')}</p>`;
+      }
     } else {
       modalBody.innerHTML = message;
     }
@@ -2446,8 +2313,8 @@ function toggleKeyMetrics() {
   const isCollapsed = content.style.maxHeight === '0px';
 
   if (isCollapsed) {
-    // Expand
-    content.style.maxHeight = content.scrollHeight + 'px';
+    // Expand - use a large value to ensure all content is visible
+    content.style.maxHeight = '3000px';
     toggleText.textContent = 'Collapse';
     localStorage.setItem('keyMetricsCollapsed', 'false');
   } else {
@@ -2455,6 +2322,44 @@ function toggleKeyMetrics() {
     content.style.maxHeight = '0px';
     toggleText.textContent = 'Expand';
     localStorage.setItem('keyMetricsCollapsed', 'true');
+  }
+}
+
+// Toggle Detections section
+function toggleDetectionsSection() {
+  const content = document.getElementById('detections-section-content');
+  const toggleText = document.getElementById('detections-section-toggle');
+  const isCollapsed = content.style.maxHeight === '0px' || content.style.maxHeight === '';
+
+  if (isCollapsed) {
+    // Expand
+    content.style.maxHeight = '100000px';
+    toggleText.textContent = 'Collapse';
+    localStorage.setItem('detectionsSectionCollapsed', 'false');
+  } else {
+    // Collapse
+    content.style.maxHeight = '0px';
+    toggleText.textContent = 'Expand';
+    localStorage.setItem('detectionsSectionCollapsed', 'true');
+  }
+}
+
+// Toggle Correlations section
+function toggleCorrelationsSection() {
+  const content = document.getElementById('correlations-section-content');
+  const toggleText = document.getElementById('correlations-section-toggle');
+  const isCollapsed = content.style.maxHeight === '0px' || content.style.maxHeight === '';
+
+  if (isCollapsed) {
+    // Expand
+    content.style.maxHeight = '100000px';
+    toggleText.textContent = 'Collapse';
+    localStorage.setItem('correlationsSectionCollapsed', 'false');
+  } else {
+    // Collapse
+    content.style.maxHeight = '0px';
+    toggleText.textContent = 'Expand';
+    localStorage.setItem('correlationsSectionCollapsed', 'true');
   }
 }
 
@@ -2484,9 +2389,35 @@ document.addEventListener('DOMContentLoaded', function() {
     keyMetricsContent.style.maxHeight = '0px';
     keyMetricsToggleText.textContent = 'Expand';
   } else {
-    // Set initial max-height to enable smooth transitions
-    keyMetricsContent.style.maxHeight = keyMetricsContent.scrollHeight + 'px';
+    // Set initial max-height to enable smooth transitions - use large value
+    keyMetricsContent.style.maxHeight = '3000px';
     keyMetricsToggleText.textContent = 'Collapse';
+  }
+
+  // Initialize Detections section state (default to expanded)
+  const detectionsContent = document.getElementById('detections-section-content');
+  const detectionsToggleText = document.getElementById('detections-section-toggle');
+  const detectionsCollapsed = localStorage.getItem('detectionsSectionCollapsed') === 'true';
+
+  if (detectionsCollapsed) {
+    detectionsContent.style.maxHeight = '0px';
+    detectionsToggleText.textContent = 'Expand';
+  } else {
+    detectionsContent.style.maxHeight = '100000px';
+    detectionsToggleText.textContent = 'Collapse';
+  }
+
+  // Initialize Correlations section state (default to expanded)
+  const correlationsContent = document.getElementById('correlations-section-content');
+  const correlationsToggleText = document.getElementById('correlations-section-toggle');
+  const correlationsCollapsed = localStorage.getItem('correlationsSectionCollapsed') === 'true';
+
+  if (correlationsCollapsed) {
+    correlationsContent.style.maxHeight = '0px';
+    correlationsToggleText.textContent = 'Expand';
+  } else {
+    correlationsContent.style.maxHeight = '100000px';
+    correlationsToggleText.textContent = 'Collapse';
   }
 });
 </script>

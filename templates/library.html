@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "shared_macros.html" import render_vendor_logo, render_correlation_techniques %}
 {% block title %}Archer - Library{% endblock %}
 {% block head %}
 {{ super() }}
@@ -22,7 +23,7 @@
         </p>
 
         <!-- Metrics Section -->
-        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px var(--shadow);">
             <div class="detection-header">
                 <h2 onclick="toggleStatistics()" style="cursor: pointer; user-select: none;">
                     <div class="card-icon metrics" style="width: 40px; height: 40px; margin-right: 12px;">
@@ -46,7 +47,7 @@
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Detections</div>
                 <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
-                    {{ detections|length }}
+                    {{ total_detections - total_correlations }}
                 </div>
             </div>
 
@@ -54,7 +55,7 @@
             <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); border-radius: 8px; padding: 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 20px; opacity: 0.9; margin-bottom: 4px;">Correlations</div>
                 <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
-                    {{ correlations|length }}
+                    {{ total_correlations }}
                 </div>
             </div>
 
@@ -258,7 +259,7 @@
         </div>
 
         <!-- Filter and Action Section -->
-        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; margin-bottom: 0; box-shadow: 0 2px 8px var(--shadow);">
             <div class="detection-header">
                 <h2 onclick="toggleFilters()" style="cursor: pointer; user-select: none;">
                     <div class="card-icon filters" style="width: 40px; height: 40px; margin-right: 12px;">
@@ -388,7 +389,7 @@
         <!-- Detection Rules Section -->
     <div class="detection-section">
       <div class="detection-header">
-        <h2>
+        <h2 onclick="toggleDetectionsSection()" style="cursor: pointer; user-select: none;">
           <div class="card-icon detection" style="width: 40px; height: 40px; margin-right: 12px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
@@ -411,9 +412,11 @@
             Deselect All
           </button>
           <span class="expand-btn" onclick="toggleAllVendors()">Expand All</span>
+          <span id="detections-section-toggle" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleDetectionsSection()">Collapse</span>
         </div>
       </div>
 
+      <div id="detections-section-content" style="transition: all 0.3s ease; overflow: hidden;">
       {% if detections %}
         {% for vendor in detections %}
         <div class="vendor-section">
@@ -462,7 +465,7 @@
                       <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
                       <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
                     </linearGradient>
-                    <linearGradient id="googleYellow" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id="googleYellowLibDet" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
                       <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
                     </linearGradient>
@@ -526,7 +529,7 @@
             </div>
             {% else %}
             {% for detection in vendor.detections %}
-            <div class="detection-item library-item{% if detection.needs_review %} unchecked{% endif %}" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}">
+            <div class="detection-item library-item{% if detection.needs_review %} unchecked{% endif %}" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" data-group="{{ detection.group }}" data-tactic="{{ detection.tactic }}">
               <div class="detection-title" style="position: relative; display: flex; justify-content: space-between; align-items: flex-start;">
                 <div style="display: flex; align-items: center; flex: 1;">
                   <input type="checkbox" class="detection-checkbox library-checkbox" data-id="{{ detection.id }}" data-ids="{{ detection.ids | tojson }}" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Select detection">
@@ -756,12 +759,13 @@
       {% else %}
         <p style="text-align: center; color: #666; padding: 40px 0;">No detection rules generated yet.</p>
       {% endif %}
+      </div>
     </div>
 
     <!-- Correlations Section -->
     <div id="correlations" class="detection-section">
       <div class="detection-header">
-        <h2>
+        <h2 onclick="toggleCorrelationsSection()" style="cursor: pointer; user-select: none;">
           <div class="card-icon correlation" style="width: 40px; height: 40px; margin-right: 12px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="18" cy="5" r="3"/>
@@ -787,10 +791,12 @@
             </svg>
             Deselect All
           </button>
-          <span class="expand-btn" onclick="toggleAllCorrelations()">Expand All</span>
+          <span class="expand-btn" onclick="toggleAllCorrelationsVendors()">Expand All</span>
+          <span id="correlations-section-toggle" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleCorrelationsSection()">Collapse</span>
         </div>
       </div>
 
+      <div id="correlations-section-content" style="transition: all 0.3s ease; overflow: hidden;">
       {% if correlations %}
         {% for vendor in correlations %}
         <div class="vendor-section">
@@ -896,88 +902,32 @@
             </div>
             {% elif vendor.correlations %}
             {% for correlation in vendor.correlations %}
-            <div class="detection-item">
+            <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}">
               <div class="detection-title" style="display: flex; justify-content: space-between; align-items: flex-start; position: relative;">
                 <div style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
-                <!-- Technique Flow -->
-                {% if correlation.get('techniques') %}
-                  {% for tech in correlation.techniques %}
-                    {% set tactic = tech.get('tactic', 'Unknown') %}
-                    {# Add separator before technique (except first) #}
-                    {% if not loop.first %}
-                      {% set prev_tech = correlation.techniques[loop.index0 - 1] %}
-                      {% set prev_tactic = prev_tech.get('tactic', 'Unknown') %}
-                      {% if tactic == prev_tactic %}
-                        {# Same tactic: use slash separator #}
-                        <span style="margin: 0 4px; color: #999;">/</span>
-                      {% else %}
-                        {# Different tactic: use arrow separator #}
-                        <span style="margin: 0 8px; color: #999;">→</span>
-                      {% endif %}
-                    {% endif %}
+                <input type="checkbox" class="correlation-checkbox" checked data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
+                <!-- Technique Flow - using shared macro -->
+                {{ render_correlation_techniques(correlation) }}
 
-                    {# Set colors and emoji based on tactic #}
-                    {% if tactic == 'Initial Access' %}
-                      {% set bg_color = '#E3F2FD' %}
-                      {% set text_color = '#01579B' %}
-                      {% set emoji = '🚪' %}
-                    {% elif tactic == 'Execution' %}
-                      {% set bg_color = '#FFF3E0' %}
-                      {% set text_color = '#E65100' %}
-                      {% set emoji = '💻' %}
-                    {% elif tactic == 'Persistence' %}
-                      {% set bg_color = '#FCE4EC' %}
-                      {% set text_color = '#880E4F' %}
-                      {% set emoji = '📌' %}
-                    {% elif tactic == 'Privilege Escalation' %}
-                      {% set bg_color = '#FFF9C4' %}
-                      {% set text_color = '#F57F17' %}
-                      {% set emoji = '👑' %}
-                    {% elif tactic == 'Defense Evasion' %}
-                      {% set bg_color = '#F3E5F5' %}
-                      {% set text_color = '#4A148C' %}
-                      {% set emoji = '🥷' %}
-                    {% elif tactic == 'Credential Access' %}
-                      {% set bg_color = '#FFEBEE' %}
-                      {% set text_color = '#B71C1C' %}
-                      {% set emoji = '🔑' %}
-                    {% elif tactic == 'Discovery' %}
-                      {% set bg_color = '#E0F2F1' %}
-                      {% set text_color = '#004D40' %}
-                      {% set emoji = '🔍' %}
-                    {% elif tactic == 'Lateral Movement' %}
-                      {% set bg_color = '#E8F5E9' %}
-                      {% set text_color = '#1B5E20' %}
-                      {% set emoji = '🔗' %}
-                    {% elif tactic == 'Collection' %}
-                      {% set bg_color = '#FFF8E1' %}
-                      {% set text_color = '#FF6F00' %}
-                      {% set emoji = '📦' %}
-                    {% elif tactic == 'Command and Control' %}
-                      {% set bg_color = '#E1F5FE' %}
-                      {% set text_color = '#006064' %}
-                      {% set emoji = '📡' %}
-                    {% elif tactic == 'Exfiltration' %}
-                      {% set bg_color = '#EFEBE9' %}
-                      {% set text_color = '#3E2723' %}
-                      {% set emoji = '🚀' %}
-                    {% elif tactic == 'Impact' %}
-                      {% set bg_color = '#FFCDD2' %}
-                      {% set text_color = '#C62828' %}
-                      {% set emoji = '💥' %}
-                    {% else %}
-                      {% set bg_color = '#E3F2FD' %}
-                      {% set text_color = '#01579B' %}
-                      {% set emoji = '❓' %}
-                    {% endif %}
-
-                    {# Display technique badge #}
-                    <span style="display: inline-block; background: {{ bg_color }}; color: {{ text_color }}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ emoji }} {{ tech.get('name', 'Unknown') }}</span>
-                  {% endfor %}
-                {% else %}
-                  {# Fallback if no techniques array #}
-                  <span style="display: inline-block; background: #E3F2FD; color: #01579B; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 1em;">{{ correlation.get('technique', 'Unknown Technique') }}</span>
+                <!-- Severity Badge -->
+                {% if correlation.severity == 'Critical' %}
+                <span style="background: #d32f2f; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🔴 Critical</span>
+                {% elif correlation.severity == 'High' %}
+                <span style="background: #f57c00; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🟠 High</span>
                 {% endif %}
+
+                <!-- Needs Review Badge -->
+                {% if correlation.needs_review %}
+                <span class="needs-review-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);" title="At least one detection in this correlation has no threat indicators extracted automatically. Review the queries to validate effectiveness.">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  Compared with OSINT
+                </span>
+                {% endif %}
+                </div>
 
                 <!-- OSINT Enhanced Badge (Right-aligned) -->
                 {% if correlation.get('osint_enriched') %}
@@ -991,54 +941,153 @@
                   </span>
                 </div>
                 {% endif %}
-                </div>
               </div>
 
-              <!-- Description -->
-              {% if correlation.get('description_html') %}
-              <div class="detection-description">
-                {{ correlation.description_html | safe }}
-              </div>
-              {% endif %}
-
-              <!-- Indicators Display (if available) -->
-              {% if correlation.get('indicators') and correlation.indicators|length > 0 %}
-              <div class="detection-indicators">
-                {% for indicator in correlation.indicators[:10] %}
-                <span class="indicator-tag">{{ indicator }}</span>
+              <!-- Correlation Metadata -->
+              <div style="display: flex; gap: 20px; margin-top: 8px; margin-bottom: 12px; font-size: 0.9em; color: #666; flex-wrap: wrap; align-items: center;">
+                <span title="Relevance Score"><strong>Relevance:</strong> {{ correlation.relevance_score }}%</span>
+                <span title="Time Window"><strong>Time Window:</strong> {{ correlation.time_window }}</span>
+                {% if correlation.techniques_by_tactic %}
+                {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
+                {% set ordered_tactics = [] %}
+                {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
+                  {% set _ = ordered_tactics.append(tactic) %}
                 {% endfor %}
-                {% if correlation.indicators|length > 10 %}
-                <span class="indicator-tag" style="background: #f0f0f0; color: #666; border-color: #ddd;">+{{ correlation.indicators|length - 10 }} more</span>
+                <span title="MITRE ATT&CK Tactics"><strong>Tactics:</strong> {{ ordered_tactics|join(', ') }}</span>
                 {% endif %}
+              </div>
+
+              <!-- Attack Flow Diagram (overlaid on tactic columns) -->
+              {% if correlation.techniques_by_tactic and correlation.techniques_by_tactic|length > 1 %}
+              <div style="margin-top: 12px; margin-bottom: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 16px;">
+                <strong style="color: #555; display: block; margin-bottom: 12px;">Attack Flow:</strong>
+                {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
+                {% set displayed_tactics = [] %}
+                {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
+                  {% set _ = displayed_tactics.append(tactic) %}
+                {% endfor %}
+                {# Adjust box size based on number of tactics #}
+                {% set num_tactics = displayed_tactics|length %}
+                {% if num_tactics <= 5 %}
+                  {% set min_box_width = '120px' %}
+                {% elif num_tactics == 6 %}
+                  {% set min_box_width = '100px' %}
+                {% else %}
+                  {% set min_box_width = '90px' %}
+                {% endif %}
+                <div style="display: flex; gap: 8px; align-items: stretch; overflow-x: auto;">
+                {% for tactic in displayed_tactics %}
+                    <!-- Tactic Column (highlighted if primary) -->
+                    {% set is_primary = correlation.primary_tactics and tactic in correlation.primary_tactics %}
+                    <div style="flex: 1; min-width: {{ min_box_width }}; background: white; border: 2px solid {% if is_primary %}#1976d2{% else %}#ddd{% endif %}; border-radius: 4px; padding: 8px; position: relative; {% if is_primary %}box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);{% endif %}">
+                      <!-- Tactic Header -->
+                      <div style="font-size: 0.75em; font-weight: 700; color: {% if is_primary %}#1976d2{% else %}#555{% endif %}; text-align: center; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        {% if tactic == 'Command and Control' %}
+                          Command<br>and Control
+                        {% elif ' ' in tactic %}
+                          {{ tactic.replace(' ', '<br>', 1)|safe }}
+                        {% else %}
+                          {{ tactic }}<br><span style="color: white;">_</span>
+                        {% endif %}
+                      </div>
+                      <!-- Technique Count Badge -->
+                      <div style="text-align: center; margin-bottom: 4px;">
+                        <span style="display: inline-block; background: #4CAF50; color: white; font-size: 0.7em; font-weight: 600; padding: 2px 8px; border-radius: 10px;">
+                          {{ correlation.techniques_by_tactic[tactic]|length }} technique{{ 's' if correlation.techniques_by_tactic[tactic]|length > 1 else '' }}
+                        </span>
+                      </div>
+                      <!-- Tactic Stage Indicator -->
+                      <div style="height: 40px; display: flex; align-items: center; justify-content: center;">
+                        {% if tactic == 'Initial Access' %}
+                          {% set flow_emoji = '🚪' %}
+                          {% set flow_bg = '#E3F2FD' %}
+                          {% set flow_border = '#01579B' %}
+                        {% elif tactic == 'Execution' %}
+                          {% set flow_emoji = '💻' %}
+                          {% set flow_bg = '#FFF3E0' %}
+                          {% set flow_border = '#E65100' %}
+                        {% elif tactic == 'Persistence' %}
+                          {% set flow_emoji = '📌' %}
+                          {% set flow_bg = '#FCE4EC' %}
+                          {% set flow_border = '#880E4F' %}
+                        {% elif tactic == 'Privilege Escalation' %}
+                          {% set flow_emoji = '👑' %}
+                          {% set flow_bg = '#FFF9C4' %}
+                          {% set flow_border = '#F57F17' %}
+                        {% elif tactic == 'Defense Evasion' %}
+                          {% set flow_emoji = '🥷' %}
+                          {% set flow_bg = '#F3E5F5' %}
+                          {% set flow_border = '#4A148C' %}
+                        {% elif tactic == 'Credential Access' %}
+                          {% set flow_emoji = '🔑' %}
+                          {% set flow_bg = '#FFEBEE' %}
+                          {% set flow_border = '#B71C1C' %}
+                        {% elif tactic == 'Discovery' %}
+                          {% set flow_emoji = '🔍' %}
+                          {% set flow_bg = '#E0F2F1' %}
+                          {% set flow_border = '#004D40' %}
+                        {% elif tactic == 'Lateral Movement' %}
+                          {% set flow_emoji = '🔗' %}
+                          {% set flow_bg = '#E8F5E9' %}
+                          {% set flow_border = '#1B5E20' %}
+                        {% elif tactic == 'Collection' %}
+                          {% set flow_emoji = '📦' %}
+                          {% set flow_bg = '#FFF8E1' %}
+                          {% set flow_border = '#FF6F00' %}
+                        {% elif tactic == 'Command and Control' %}
+                          {% set flow_emoji = '📡' %}
+                          {% set flow_bg = '#E1F5FE' %}
+                          {% set flow_border = '#006064' %}
+                        {% elif tactic == 'Exfiltration' %}
+                          {% set flow_emoji = '🚀' %}
+                          {% set flow_bg = '#EFEBE9' %}
+                          {% set flow_border = '#3E2723' %}
+                        {% elif tactic == 'Impact' %}
+                          {% set flow_emoji = '💥' %}
+                          {% set flow_bg = '#FFCDD2' %}
+                          {% set flow_border = '#C62828' %}
+                        {% else %}
+                          {% set flow_emoji = '❓' %}
+                          {% set flow_bg = '#E3F2FD' %}
+                          {% set flow_border = '#01579B' %}
+                        {% endif %}
+                        <div style="width: 32px; height: 32px; background: {{ flow_bg }}; border: 2px solid {{ flow_border }}; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                          <span style="font-size: 1.2em;">{{ flow_emoji }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {% if not loop.last %}
+                    <div style="display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0 4px;">
+                      <svg width="26" height="26" viewBox="0 0 24 24" style="fill: #999;">
+                        <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+                      </svg>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </div>
+                <div style="margin-top: 8px; text-align: center; font-size: 0.75em; color: #666;">
+                  Attack chain progresses through {{ correlation.primary_tactics|length if correlation.primary_tactics else 0 }} primary tactic{{ 's' if (correlation.primary_tactics|length if correlation.primary_tactics else 0) > 1 else '' }}
+                </div>
               </div>
               {% endif %}
 
               <!-- Tables/Indexes Display (if available) -->
-              {% if correlation.get('mde_tables') and correlation.mde_tables|length > 0 %}
+              {% if correlation.tables_indexes %}
               <div style="margin-top: 8px; margin-bottom: 12px; font-size: 0.85em;">
-                <strong style="color: #555;">Tables:</strong>
-                {% for table in correlation.mde_tables %}
-                <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table }}</span>
-                {% endfor %}
-              </div>
-              {% elif correlation.get('splunk_indexes') and correlation.splunk_indexes|length > 0 %}
-              <div style="margin-top: 8px; margin-bottom: 12px; font-size: 0.85em;">
-                <strong style="color: #555;">Indexes:</strong>
-                {% for index in correlation.splunk_indexes %}
-                <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ index }}</span>
+                <strong style="color: #555;">{% if vendor.name == 'MDE' %}Tables:{% else %}Indexes:{% endif %}</strong>
+                {% for table_idx in correlation.tables_indexes %}
+                <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
                 {% endfor %}
               </div>
               {% endif %}
 
-              <!-- Query Preview (Collapsible) -->
-              {% if correlation.get('queries') and correlation.queries|length > 0 %}
+              <!-- Combined Query Preview (Collapsible) -->
               <div style="margin-top: 10px;">
                 <button onclick="toggleQuery('lib-corr-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
-                  <span id="lib-corr-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Query</span>
+                  <span id="lib-corr-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Combined Query</span>
                 </button>
-                <div id="lib-corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.queries|join('\n\n') }}</div>
+                <div id="lib-corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}</div>
               </div>
-              {% endif %}
 
               <!-- OSINT Details (Collapsible) -->
               {% if correlation.get('osint_data') %}
@@ -1076,6 +1125,7 @@
       {% else %}
       <p style="text-align: center; color: #666; padding: 40px 0;">No correlations in library yet.</p>
       {% endif %}
+      </div>
     </div>
 
     <!-- Cross-vendor Section - Coming Soon -->
@@ -1093,7 +1143,10 @@
           </div>
           Cross-vendor
         </h2>
-        <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
+          <span class="expand-btn" style="opacity: 0.5; cursor: not-allowed;">Expand</span>
+        </div>
       </div>
 
       <div class="cross-vendor-content">
@@ -1112,7 +1165,10 @@
           </div>
           ATT&CK Flow
         </h2>
-        <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
+          <span class="expand-btn" style="opacity: 0.5; cursor: not-allowed;">Expand</span>
+        </div>
       </div>
 
       <div class="attack-flow-content">
@@ -1982,6 +2038,69 @@ function toggleFilters() {
     }
 }
 
+// Toggle Detections section
+function toggleDetectionsSection() {
+  const content = document.getElementById('detections-section-content');
+  const toggleText = document.getElementById('detections-section-toggle');
+  const isCollapsed = content.style.maxHeight === '0px' || content.style.maxHeight === '';
+
+  if (isCollapsed) {
+    // Expand
+    content.style.maxHeight = '100000px';
+    toggleText.textContent = 'Collapse';
+    localStorage.setItem('detectionsSectionCollapsed', 'false');
+  } else {
+    // Collapse
+    content.style.maxHeight = '0px';
+    toggleText.textContent = 'Expand';
+    localStorage.setItem('detectionsSectionCollapsed', 'true');
+  }
+}
+
+// Toggle Correlations section
+function toggleCorrelationsSection() {
+  const content = document.getElementById('correlations-section-content');
+  const toggleText = document.getElementById('correlations-section-toggle');
+  const isCollapsed = content.style.maxHeight === '0px' || content.style.maxHeight === '';
+
+  if (isCollapsed) {
+    // Expand
+    content.style.maxHeight = '100000px';
+    toggleText.textContent = 'Collapse';
+    localStorage.setItem('correlationsSectionCollapsed', 'false');
+  } else {
+    // Collapse
+    content.style.maxHeight = '0px';
+    toggleText.textContent = 'Expand';
+    localStorage.setItem('correlationsSectionCollapsed', 'true');
+  }
+}
+
+// Toggle all correlation vendors (fix for Expand All button)
+function toggleAllCorrelationsVendors() {
+  const correlationVendors = document.querySelectorAll('#correlations .vendor-section');
+  const allExpanded = Array.from(correlationVendors).every(section => {
+    const content = section.querySelector('.vendor-content');
+    return content && content.style.maxHeight && content.style.maxHeight !== '0px';
+  });
+
+  correlationVendors.forEach(section => {
+    const header = section.querySelector('.vendor-header');
+    if (header) {
+      const content = section.querySelector('.vendor-content');
+      if (allExpanded) {
+        // Collapse all
+        content.style.maxHeight = '0px';
+        header.classList.remove('active');
+      } else {
+        // Expand all
+        content.style.maxHeight = content.scrollHeight + 'px';
+        header.classList.add('active');
+      }
+    }
+  });
+}
+
 // Initialize statistics and filters state on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize statistics
@@ -2012,6 +2131,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set initial max-height to enable smooth transitions
         filtersContent.style.maxHeight = filtersContent.scrollHeight + 'px';
         filtersToggleText.textContent = 'Collapse';
+    }
+
+    // Initialize Detections section state (default to expanded)
+    const detectionsContent = document.getElementById('detections-section-content');
+    const detectionsToggleText = document.getElementById('detections-section-toggle');
+    if (detectionsContent && detectionsToggleText) {
+        const detectionsCollapsed = localStorage.getItem('detectionsSectionCollapsed') === 'true';
+
+        if (detectionsCollapsed) {
+            detectionsContent.style.maxHeight = '0px';
+            detectionsToggleText.textContent = 'Expand';
+        } else {
+            detectionsContent.style.maxHeight = '100000px';
+            detectionsToggleText.textContent = 'Collapse';
+        }
+    }
+
+    // Initialize Correlations section state (default to expanded)
+    const correlationsContent = document.getElementById('correlations-section-content');
+    const correlationsToggleText = document.getElementById('correlations-section-toggle');
+    if (correlationsContent && correlationsToggleText) {
+        const correlationsCollapsed = localStorage.getItem('correlationsSectionCollapsed') === 'true';
+
+        if (correlationsCollapsed) {
+            correlationsContent.style.maxHeight = '0px';
+            correlationsToggleText.textContent = 'Expand';
+        } else {
+            correlationsContent.style.maxHeight = '100000px';
+            correlationsToggleText.textContent = 'Collapse';
+        }
     }
 
 });
