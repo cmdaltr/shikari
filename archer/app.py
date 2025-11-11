@@ -5743,9 +5743,9 @@ async def profile_page(request: Request, archer_session: Optional[str] = Cookie(
 @app.get("/library", response_class=HTMLResponse)
 async def library_page(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
-    Render the Library page for managing saved detections.
+    Render the Library page for managing saved detections and correlations.
     """
-    from archer.database.models import LibraryDetection
+    from archer.database.models import LibraryDetection, LibraryCorrelation
     import json
 
     # Check authentication
@@ -5762,6 +5762,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             "mde": "MDE",
             "microsoft": "MDE",
             "elastic": "Elastic",
+            "google_secops": "Google SecOps",
             "sentinel": "Azure Sentinel"
         }
 
@@ -5780,8 +5781,9 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     return default
             return default
 
-        # Query all detections for this user
+        # Query all detections and correlations for this user
         detections = db.query(LibraryDetection).filter_by(user_id=user.id).all()
+        correlations_db = db.query(LibraryCorrelation).filter_by(user_id=user.id).all()
 
         # Helper function to fix query indentation (4 spaces -> 2 spaces before pipes)
         def fix_query_indentation(query_text):
@@ -6107,6 +6109,92 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             for tactic in tactics:
                 all_tactics.add(tactic)
 
+        # Process correlations from LibraryCorrelation table
+        for corr in correlations_db:
+            # Parse the content JSON
+            try:
+                content_data = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+            except (json.JSONDecodeError, ValueError):
+                content_data = {}
+
+            # Parse JSON fields safely
+            tags = parse_json_field(corr.tags, [])
+
+            # Extract correlation data from content
+            if isinstance(content_data, dict):
+                technique_name = content_data.get("technique", corr.title)
+                technique_id = content_data.get("technique_id", "")
+                description = content_data.get("description", "")
+                queries = content_data.get("queries", [])
+                query_content = "\n\n".join(queries) if queries else ""
+                data_source = content_data.get("data_source", corr.platform or "Unknown")
+                indicators = parse_json_field(content_data.get("indicators"), [])
+                tactics = content_data.get("tactics", [])
+                mde_tables = content_data.get("mde_tables", [])
+                splunk_indexes = content_data.get("splunk_indexes", [])
+                osint_enriched = content_data.get("osint_enriched", False)
+                osint_data = content_data.get("osint_data")
+                group_name = "Unknown"
+
+                # Extract group from tags
+                for tag in tags:
+                    if tag.startswith("Group:"):
+                        group_name = tag.replace("Group:", "").strip()
+                        break
+
+                # Format title as comma-separated data sources
+                if mde_tables:
+                    formatted_title = ", ".join(mde_tables)
+                elif splunk_indexes:
+                    formatted_title = ", ".join(splunk_indexes)
+                else:
+                    formatted_title = data_source
+
+                # Create correlation data object
+                correlation_data = {
+                    "id": corr.id,
+                    "technique": technique_name,
+                    "title": formatted_title,
+                    "data_source": data_source,
+                    "description_html": description,
+                    "queries": [fix_query_indentation(query_content)] if query_content else [],
+                    "indicators": indicators,
+                    "mde_tables": mde_tables,
+                    "splunk_indexes": splunk_indexes,
+                    "tags": tags,
+                    "group": group_name,
+                    "tactic": tactics[0] if tactics else "Unknown",
+                    "tactics": tactics,
+                    "saved_date": corr.created_at.strftime('%Y-%m-%d') if corr.created_at else "",
+                    "osint_enriched": osint_enriched,
+                    "osint_data": osint_data,
+                    "needs_review": False,
+                    "detection_likelihood": content_data.get("detection_likelihood", 75),
+                    # Correlation-specific fields
+                    "vendor": content_data.get("vendor", "unknown"),  # Query platform (Splunk, MDE, etc.)
+                    "is_merged": content_data.get("is_merged", False),
+                    "techniques": content_data.get("techniques", []),
+                    "severity": content_data.get("severity"),
+                    "attack_chain_length": content_data.get("attack_chain_length"),
+                    "relevance_score": content_data.get("relevance_score"),
+                    "time_window": content_data.get("time_window"),
+                    "primary_tactics": content_data.get("primary_tactics", []),
+                    "techniques_by_tactic": content_data.get("techniques_by_tactic", {}),
+                    "technique_tactic_map": content_data.get("technique_tactic_map", {}),
+                    "tables_indexes": content_data.get("tables_indexes", []),
+                    "combined_query": content_data.get("combined_query", "")
+                }
+
+                # Add to correlations list
+                correlations_list.append(correlation_data)
+
+                # Collect filter options
+                all_groups.add(group_name)
+                if technique_id:
+                    all_techniques.add(technique_id)
+                for tactic in tactics:
+                    all_tactics.add(tactic)
+
         # Format vendors for template
         vendors = []
         for vendor_name, vendor_detections in vendors_dict.items():
@@ -6207,6 +6295,26 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "detections": detection_list
             })
 
+        # Add Splunk as empty placeholder (if not already present)
+        if not any(v["name"] == "splunk" for v in vendors):
+            vendors.append({
+                "name": "splunk",
+                "display_name": "Splunk",
+                "count": 0,
+                "detections": [],
+                "empty_state": True
+            })
+
+        # Add MDE as empty placeholder (if not already present)
+        if not any(v["name"] in ["mde", "microsoft"] for v in vendors):
+            vendors.append({
+                "name": "mde",
+                "display_name": "MDE",
+                "count": 0,
+                "detections": [],
+                "empty_state": True
+            })
+
         # Add Google SecOps as "Coming Soon" placeholder (if not already present)
         if not any(v["name"] == "google_secops" for v in vendors):
             vendors.append({
@@ -6232,17 +6340,24 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         vendors.sort(key=lambda v: (vendor_order.get(v["name"], 99), v["name"]))
 
         # Calculate summary statistics
-        total_detections = len(detections)
+        # Count detections that are NOT correlations (exclude correlation detection_types from LibraryDetection)
+        total_detections = sum(
+            1 for d in detections
+            if not d.detection_type or not (
+                "correlation" in str(d.detection_type).lower() or
+                (hasattr(d.detection_type, 'name') and "correlation" in d.detection_type.name.lower())
+            )
+        )
 
-        # Count correlations (detections with detection_type=correlation)
-        # Handle both enum value and enum name
-        total_correlations = sum(
+        # Count correlations from both tables (LibraryDetection with correlation type + LibraryCorrelation)
+        total_correlations_from_detections = sum(
             1 for d in detections
             if d.detection_type and (
                 "correlation" in str(d.detection_type).lower() or
                 (hasattr(d.detection_type, 'name') and "correlation" in d.detection_type.name.lower())
             )
         )
+        total_correlations = total_correlations_from_detections + len(correlations_db)
 
         # Count unique techniques
         technique_count = len(all_techniques)
@@ -6257,38 +6372,11 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         # Group correlations by vendor (matching results.html structure)
         correlations_by_vendor = {}
         for corr in correlations_list:
-            # Normalize vendor based on query content and data sources (same logic as detections)
-            data_source = corr.get("data_source", "Unknown")
-            mde_tables = corr.get("mde_tables", [])
-            splunk_indexes = corr.get("splunk_indexes", [])
-            queries = corr.get("queries", [])
-            query_content = queries[0] if queries else ""
+            # Use the vendor field from the correlation content
+            # This vendor indicates the query platform (Splunk, MDE, etc.), not the data source
+            # The vendor was already determined during correlation generation
+            vendor = corr.get("vendor", "unknown").lower()
 
-            # Apply same vendor normalization as detections
-            normalized_vendor = data_source
-
-            # If query starts with "index=", it's a Splunk correlation
-            if query_content and query_content.strip().lower().startswith("index="):
-                normalized_vendor = "Splunk"
-            # If MDE tables present, it's an MDE correlation
-            elif mde_tables and len(mde_tables) > 0:
-                normalized_vendor = "MDE"
-            # Check for Splunk indexes
-            elif splunk_indexes and len(splunk_indexes) > 0:
-                normalized_vendor = "Splunk"
-            # Otherwise use data_source
-            else:
-                # Additional normalization for data_source values
-                if data_source.lower() in ["microsoft defender for endpoint", "microsoft 365 defender", "defender"]:
-                    normalized_vendor = "MDE"
-                elif data_source.lower() in ["splunkenterprisesecurity", "splunk"]:
-                    normalized_vendor = "Splunk"
-                elif data_source.lower() in ["google secops", "chronicle"]:
-                    normalized_vendor = "Google SecOps"
-                elif data_source.lower() in ["elastic", "elasticsearch"]:
-                    normalized_vendor = "Elastic"
-
-            vendor = normalized_vendor
             if vendor not in correlations_by_vendor:
                 correlations_by_vendor[vendor] = []
             correlations_by_vendor[vendor].append(corr)
@@ -6296,32 +6384,64 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         # Convert to list format similar to results.html
         grouped_correlations = []
         for vendor, vendor_corrs in correlations_by_vendor.items():
+            # Normalize vendor name to lowercase for lookup
+            vendor_lower = vendor.lower()
             grouped_correlations.append({
-                "name": vendor,
+                "name": vendor_lower,
+                "display_name": VENDOR_DISPLAY_NAMES.get(vendor_lower, vendor),
                 "count": len(vendor_corrs),
                 "correlations": vendor_corrs
             })
 
-        # Add Google SecOps as "Coming Soon" placeholder (if not already present)
-        if not any(v["name"] == "Google SecOps" for v in grouped_correlations):
+        # Add Splunk as empty placeholder (if not already present)
+        if not any(v["name"] in ["Splunk", "splunk"] for v in grouped_correlations):
             grouped_correlations.append({
-                "name": "Google SecOps",
+                "name": "splunk",
+                "display_name": "Splunk",
+                "count": 0,
+                "correlations": [],
+                "empty_state": True
+            })
+
+        # Add MDE as empty placeholder (if not already present)
+        if not any(v["name"] in ["MDE", "mde", "microsoft", "Microsoft"] for v in grouped_correlations):
+            grouped_correlations.append({
+                "name": "mde",
+                "display_name": "MDE",
+                "count": 0,
+                "correlations": [],
+                "empty_state": True
+            })
+
+        # Add Google SecOps as "Coming Soon" placeholder (if not already present)
+        if not any(v["name"] in ["google_secops", "Google SecOps"] for v in grouped_correlations):
+            grouped_correlations.append({
+                "name": "google_secops",
+                "display_name": "Google SecOps",
                 "count": 0,
                 "correlations": [],
                 "coming_soon": True
             })
 
         # Add Elastic as "Coming Soon" placeholder (if not already present)
-        if not any(v["name"] == "Elastic" for v in grouped_correlations):
+        if not any(v["name"] in ["elastic", "Elastic"] for v in grouped_correlations):
             grouped_correlations.append({
-                "name": "Elastic",
+                "name": "elastic",
+                "display_name": "Elastic",
                 "count": 0,
                 "correlations": [],
                 "coming_soon": True
             })
 
-        # Sort by count descending (but keep coming_soon at the end)
-        grouped_correlations.sort(key=lambda x: (x.get("coming_soon", False), -x["count"]))
+        # Sort correlations: Splunk, MDE, Google SecOps, Elastic, then others
+        # Priority: empty_state and coming_soon go after actual data
+        def sort_correlations(v):
+            vendor_order = {"Splunk": 0, "splunk": 0, "MDE": 1, "mde": 1, "google_secops": 2, "Google SecOps": 2, "elastic": 3, "Elastic": 3}
+            is_placeholder = v.get("coming_soon", False) or v.get("empty_state", False)
+            has_data = v["count"] > 0
+            return (not has_data, is_placeholder, vendor_order.get(v["name"], 99), v["name"])
+
+        grouped_correlations.sort(key=sort_correlations)
 
         template_response = templates.TemplateResponse(
             "library.html",
@@ -6634,9 +6754,9 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
 @app.post("/api/library/save")
 async def save_to_library(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
-    Save a new detection to the library.
+    Save a new detection or correlation to the library.
     """
-    from archer.database.models import LibraryDetection, DetectionType, VisibilityType
+    from archer.database.models import LibraryDetection, LibraryCorrelation, DetectionType, VisibilityType
     import json
 
     # Check authentication
@@ -6673,64 +6793,125 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
         all_tags = list(set(tags + auto_tags))  # Remove duplicates
         tags_json = json.dumps(all_tags) if all_tags else None
 
-        # Check if a detection with the same title already exists for this user
-        existing_detection = (
-            db.query(LibraryDetection)
-            .filter(LibraryDetection.user_id == user.id, LibraryDetection.title == title)
-            .first()
-        )
+        # Check if this is a correlation (detection_type contains "correlation")
+        detection_type_lower = detection_type.lower()
+        is_correlation = "correlation" in detection_type_lower
 
-        is_update = False
-        if existing_detection:
-            # Update existing detection
-            is_update = True
-            existing_detection.detection_type = DetectionType(detection_type)
-            existing_detection.visibility = VisibilityType(visibility)
-            existing_detection.content = json.dumps(content) if isinstance(content, dict) else content
-            existing_detection.platform = platform
-            existing_detection.tags = tags_json
-            detection_to_return = existing_detection
+        if is_correlation:
+            # Save as correlation
+            existing_item = (
+                db.query(LibraryCorrelation)
+                .filter(LibraryCorrelation.user_id == user.id, LibraryCorrelation.title == title)
+                .first()
+            )
+
+            is_update = False
+            if existing_item:
+                # Update existing correlation
+                is_update = True
+                existing_item.visibility = VisibilityType(visibility)
+                existing_item.content = json.dumps(content) if isinstance(content, dict) else content
+                existing_item.platform = platform
+                existing_item.tags = tags_json
+                item_to_return = existing_item
+            else:
+                # Create new library correlation
+                new_correlation = LibraryCorrelation(
+                    user_id=user.id,
+                    title=title,
+                    visibility=VisibilityType(visibility),
+                    content=json.dumps(content) if isinstance(content, dict) else content,
+                    platform=platform,
+                    tags=tags_json,
+                )
+                db.add(new_correlation)
+                item_to_return = new_correlation
+
+            db.commit()
+
+            # Log library save activity
+            try:
+                log_activity(
+                    user_id=user.id,
+                    activity_type="library_save" if not is_update else "library_update",
+                    title=f"{'Updated' if is_update else 'Saved'} correlation to library: {title}",
+                    description=f"{'Updated' if is_update else 'Added'} {detection_type} correlation with {visibility} visibility",
+                    metadata={
+                        "correlation_id": item_to_return.id,
+                        "detection_type": detection_type,
+                        "platform": platform,
+                        "visibility": visibility,
+                        "is_update": is_update,
+                    },
+                )
+            except Exception as log_error:
+                print(f"Error logging library save activity: {log_error}")
+
+            return {
+                "success": True,
+                "message": f"Correlation {'updated in' if is_update else 'saved to'} library",
+                "id": item_to_return.id,
+                "is_correlation": True,
+            }
         else:
-            # Create new library detection
-            new_detection = LibraryDetection(
-                user_id=user.id,
-                title=title,
-                detection_type=DetectionType(detection_type),
-                visibility=VisibilityType(visibility),
-                content=json.dumps(content) if isinstance(content, dict) else content,
-                platform=platform,
-                tags=tags_json,
+            # Save as detection
+            existing_detection = (
+                db.query(LibraryDetection)
+                .filter(LibraryDetection.user_id == user.id, LibraryDetection.title == title)
+                .first()
             )
-            db.add(new_detection)
-            detection_to_return = new_detection
 
-        db.commit()
+            is_update = False
+            if existing_detection:
+                # Update existing detection
+                is_update = True
+                existing_detection.detection_type = DetectionType(detection_type)
+                existing_detection.visibility = VisibilityType(visibility)
+                existing_detection.content = json.dumps(content) if isinstance(content, dict) else content
+                existing_detection.platform = platform
+                existing_detection.tags = tags_json
+                detection_to_return = existing_detection
+            else:
+                # Create new library detection
+                new_detection = LibraryDetection(
+                    user_id=user.id,
+                    title=title,
+                    detection_type=DetectionType(detection_type),
+                    visibility=VisibilityType(visibility),
+                    content=json.dumps(content) if isinstance(content, dict) else content,
+                    platform=platform,
+                    tags=tags_json,
+                )
+                db.add(new_detection)
+                detection_to_return = new_detection
 
-        # Log library save activity
-        try:
-            log_activity(
-                user_id=user.id,
-                activity_type="library_save" if not is_update else "library_update",
-                title=f"{'Updated' if is_update else 'Saved'} detection to library: {title}",
-                description=f"{'Updated' if is_update else 'Added'} {detection_type} detection with {visibility} visibility",
-                metadata={
-                    "detection_id": detection_to_return.id,
-                    "detection_type": detection_type,
-                    "platform": platform,
-                    "visibility": visibility,
-                    "is_update": is_update,
-                },
-            )
-        except Exception as log_error:
-            print(f"Error logging library save activity: {log_error}")
+            db.commit()
 
-        return {
-            "success": True,
-            "message": f"Detection {'updated in' if is_update else 'saved to'} library",
-            "id": detection_to_return.id,
-            "tags": all_tags,
-            "is_update": is_update,
-        }
+            # Log library save activity
+            try:
+                log_activity(
+                    user_id=user.id,
+                    activity_type="library_save" if not is_update else "library_update",
+                    title=f"{'Updated' if is_update else 'Saved'} detection to library: {title}",
+                    description=f"{'Updated' if is_update else 'Added'} {detection_type} detection with {visibility} visibility",
+                    metadata={
+                        "detection_id": detection_to_return.id,
+                        "detection_type": detection_type,
+                        "platform": platform,
+                        "visibility": visibility,
+                        "is_update": is_update,
+                    },
+                )
+            except Exception as log_error:
+                print(f"Error logging library save activity: {log_error}")
+
+            return {
+                "success": True,
+                "message": f"Detection {'updated in' if is_update else 'saved to'} library",
+                "id": detection_to_return.id,
+                "tags": all_tags,
+                "is_update": is_update,
+            }
 
     except HTTPException:
         raise
@@ -6858,9 +7039,9 @@ async def update_library_visibility(request: Request, archer_session: Optional[s
 @app.post("/api/library/delete")
 async def delete_library_detections(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
-    Delete multiple detections from the library.
+    Delete multiple detections and/or correlations from the library.
     """
-    from archer.database.models import LibraryDetection
+    from archer.database.models import LibraryDetection, LibraryCorrelation
 
     # Check authentication
     auth_result = require_auth(request, archer_session)
@@ -6872,38 +7053,84 @@ async def delete_library_detections(request: Request, archer_session: Optional[s
     try:
         body = await request.json()
         detection_ids = body.get("ids", [])
+        correlation_ids = body.get("correlation_ids", [])
 
-        if not detection_ids:
-            raise HTTPException(status_code=400, detail="No detection IDs provided")
+        if not detection_ids and not correlation_ids:
+            raise HTTPException(status_code=400, detail="No detection or correlation IDs provided")
 
-        # Validate that all detections belong to the current user
-        detections = (
-            db.query(LibraryDetection)
-            .filter(LibraryDetection.id.in_(detection_ids), LibraryDetection.user_id == user.id)
-            .all()
-        )
+        deleted_count = 0
 
-        if len(detections) != len(detection_ids):
-            raise HTTPException(status_code=403, detail="Some detections not found or unauthorized")
+        # Delete detections
+        if detection_ids:
+            detections = (
+                db.query(LibraryDetection)
+                .filter(LibraryDetection.id.in_(detection_ids), LibraryDetection.user_id == user.id)
+                .all()
+            )
 
-        # Delete all selected detections
-        for detection in detections:
-            db.delete(detection)
+            if len(detections) != len(detection_ids):
+                raise HTTPException(status_code=403, detail="Some detections not found or unauthorized")
+
+            for detection in detections:
+                db.delete(detection)
+            deleted_count += len(detections)
+
+        # Delete correlations
+        if correlation_ids:
+            # Convert string IDs to integers
+            try:
+                correlation_ids = [int(id) for id in correlation_ids]
+            except (ValueError, TypeError) as e:
+                raise HTTPException(status_code=400, detail=f"Invalid correlation ID format: {e}")
+
+            # Try to delete from LibraryCorrelation table first
+            correlations_from_corr_table = (
+                db.query(LibraryCorrelation)
+                .filter(LibraryCorrelation.id.in_(correlation_ids), LibraryCorrelation.user_id == user.id)
+                .all()
+            )
+
+            corr_table_ids = [c.id for c in correlations_from_corr_table]
+
+            # For IDs not found in LibraryCorrelation, try LibraryDetection (backward compatibility)
+            remaining_ids = [id for id in correlation_ids if id not in corr_table_ids]
+            correlations_from_det_table = []
+            if remaining_ids:
+                correlations_from_det_table = (
+                    db.query(LibraryDetection)
+                    .filter(LibraryDetection.id.in_(remaining_ids), LibraryDetection.user_id == user.id)
+                    .all()
+                )
+
+            total_found = len(correlations_from_corr_table) + len(correlations_from_det_table)
+            if total_found != len(correlation_ids):
+                print(f"[DELETE] Expected {len(correlation_ids)} correlations, found {total_found}")
+                print(f"[DELETE] Requested IDs: {correlation_ids}")
+                print(f"[DELETE] Found in LibraryCorrelation: {corr_table_ids}")
+                print(f"[DELETE] Found in LibraryDetection: {[d.id for d in correlations_from_det_table]}")
+                raise HTTPException(status_code=403, detail="Some correlations not found or unauthorized")
+
+            # Delete from both tables
+            for correlation in correlations_from_corr_table:
+                db.delete(correlation)
+            for correlation in correlations_from_det_table:
+                db.delete(correlation)
+            deleted_count += total_found
 
         db.commit()
 
         return {
             "success": True,
-            "message": f"Deleted {len(detections)} detection(s)",
-            "deleted_count": len(detections),
+            "message": f"Deleted {deleted_count} item(s)",
+            "deleted_count": deleted_count,
         }
 
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        logger.error(f"Error deleting detections: {e}")
-        raise HTTPException(status_code=500, detail="Failed to delete detections")
+        logger.error(f"Error deleting items: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete items")
     finally:
         db.close()
 

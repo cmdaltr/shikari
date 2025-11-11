@@ -564,9 +564,9 @@ async function refresh(){
         completeText.style.fontWeight = 'bold';
         correlationInfoEl.appendChild(completeText);
 
-        // "9979 high-fidelity correlations generated" in black (default), normal weight
+        // "9979 merged correlations generated" in black (default), normal weight
         const countSpan = document.createElement('span');
-        countSpan.textContent = `${vendorCount} high-fidelity correlations generated`;
+        countSpan.textContent = `${vendorCount} merged correlations generated`;
         countSpan.style.color = '#495057'; // Default grey/black text
         correlationInfoEl.appendChild(countSpan);
       } else if (correlationStatus === 'merging_correlations') {
@@ -671,9 +671,9 @@ async function refresh(){
         completeText.style.fontWeight = 'bold';
         crossVendorInfoEl.appendChild(completeText);
 
-        // "X high-fidelity correlations generated" in black (default), normal weight
+        // "X merged correlations generated" in black (default), normal weight
         const countSpan = document.createElement('span');
-        countSpan.textContent = `${crossCount} cross-vendor high-fidelity correlations generated`;
+        countSpan.textContent = `${crossCount} cross-vendor merged correlations generated`;
         countSpan.style.color = '#495057';
         crossVendorInfoEl.appendChild(countSpan);
       } else {

@@ -453,7 +453,7 @@
                   <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
                 </svg>
               </span>
-              {% elif vendor.name == 'google_secops' %}
+              {% elif vendor.name == 'google_secops' or vendor.name == 'Google SecOps' %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
                   <defs>
@@ -469,15 +469,15 @@
                       <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
                       <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
                     </linearGradient>
-                    <linearGradient id="googleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id="googleGreenLibDet" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
                       <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
                     </linearGradient>
                   </defs>
                   <circle cx="30" cy="48" r="16" fill="url(#googleBlue)"/>
                   <circle cx="50" cy="38" r="20" fill="url(#googleRed)"/>
-                  <circle cx="70" cy="48" r="16" fill="url(#googleYellow)"/>
-                  <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen)"/>
+                  <circle cx="70" cy="48" r="16" fill="url(#googleYellowLibDet)"/>
+                  <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreenLibDet)"/>
                 </svg>
               </span>
               {% elif vendor.name == 'elastic' %}
@@ -525,6 +525,12 @@
             <div class="detection-item">
               <div class="detection-description" style="text-align: center; padding: 20px; color: #666; font-style: italic;">
                 Detection generation coming soon
+              </div>
+            </div>
+            {% elif vendor.get('empty_state') %}
+            <div class="detection-item">
+              <div class="detection-description" style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+                0 detections stored in the library
               </div>
             </div>
             {% else %}
@@ -802,7 +808,7 @@
         <div class="vendor-section">
           <div class="vendor-header" onclick="toggleVendor(this)">
             <div class="vendor-title">
-              {% if vendor.name == 'Splunk' %}
+              {% if vendor.name == 'splunk' or vendor.name == 'Splunk' %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
                   <defs>
@@ -816,7 +822,7 @@
                   <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                 </svg>
               </span>
-              {% elif vendor.name == 'MDE' or vendor.name == 'Microsoft' %}
+              {% elif vendor.name == 'mde' or vendor.name == 'MDE' or vendor.name == 'Microsoft' or vendor.name == 'microsoft' %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
                   <defs>
@@ -829,7 +835,7 @@
                   <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradientLibCorr)"/>
                 </svg>
               </span>
-              {% elif vendor.name == 'Google SecOps' %}
+              {% elif vendor.name == 'google_secops' or vendor.name == 'Google SecOps' %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
                   <defs>
@@ -857,7 +863,7 @@
                 </svg>
 
               </span>
-              {% elif vendor.name == 'Elastic' %}
+              {% elif vendor.name == 'elastic' or vendor.name == 'Elastic' %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
                   <defs>
@@ -880,7 +886,7 @@
                 </svg>
               </span>
               {% endif %}
-              <span>{{ vendor.name }}</span>
+              <span>{{ vendor.display_name }}</span>
               {% if vendor.get('coming_soon') %}
               <span class="vendor-count" style="background: #666;">Coming Soon</span>
               {% else %}
@@ -900,12 +906,18 @@
                 Correlation generation coming soon
               </div>
             </div>
+            {% elif vendor.get('empty_state') %}
+            <div class="detection-item">
+              <div class="detection-description" style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+                0 correlations stored in the library
+              </div>
+            </div>
             {% elif vendor.correlations %}
             {% for correlation in vendor.correlations %}
             <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}">
               <div class="detection-title" style="display: flex; justify-content: space-between; align-items: flex-start; position: relative;">
                 <div style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
-                <input type="checkbox" class="correlation-checkbox" checked data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
+                <input type="checkbox" class="correlation-checkbox" checked data-correlation-id="{{ correlation.id }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
                 <!-- Technique Flow - using shared macro -->
                 {{ render_correlation_techniques(correlation) }}
 
@@ -1308,7 +1320,7 @@
     <!-- Delete Confirmation Modal -->
     <div id="delete-modal" class="modal-overlay">
         <div class="modal-dialog">
-            <h2>Delete Detections</h2>
+            <h2 id="delete-modal-title">Delete Items</h2>
             <p>Are you sure you want to delete <span id="delete-count">0</span> selected item(s)?</p>
             <p style="color: var(--accent); font-weight: 600;">This action cannot be undone.</p>
 
@@ -1513,47 +1525,35 @@ function updateSelectedCount() {
     }
 }
 
-// Select all items (first expand all sections, then select all)
+// Select all items (without expanding sections)
 function selectAll() {
-    // First, expand all vendor sections to make sure all checkboxes are accessible
-    document.querySelectorAll('.vendor-content:not(.show)').forEach(content => {
-        content.classList.add('show');
-        const header = content.previousElementSibling;
-        if (header) {
-            const icon = header.querySelector('.expand-icon');
-            if (icon) icon.classList.add('expanded');
-        }
-    });
+    // Select all checkboxes without expanding vendor sections
+    const checkboxes = document.querySelectorAll('.library-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = true;
 
-    // Small delay to let the DOM update, then select all checkboxes
-    setTimeout(() => {
-        const checkboxes = document.querySelectorAll('.library-checkbox');
-        checkboxes.forEach(cb => {
-            cb.checked = true;
+        // Get all IDs for this grouped detection
+        const idsJson = cb.dataset.ids;
+        let ids = [];
 
-            // Get all IDs for this grouped detection
-            const idsJson = cb.dataset.ids;
-            let ids = [];
-
-            if (idsJson) {
-                try {
-                    ids = JSON.parse(idsJson);
-                } catch (e) {
-                    // Fallback to single ID
-                    const singleId = parseInt(cb.dataset.id);
-                    if (!isNaN(singleId)) ids = [singleId];
-                }
-            } else {
-                // Fallback to single ID if data-ids not present
+        if (idsJson) {
+            try {
+                ids = JSON.parse(idsJson);
+            } catch (e) {
+                // Fallback to single ID
                 const singleId = parseInt(cb.dataset.id);
                 if (!isNaN(singleId)) ids = [singleId];
             }
+        } else {
+            // Fallback to single ID if data-ids not present
+            const singleId = parseInt(cb.dataset.id);
+            if (!isNaN(singleId)) ids = [singleId];
+        }
 
-            // Add all IDs in this group
-            ids.forEach(id => selectedIds.add(id));
-        });
-        updateSelectedCount();
-    }, 50);
+        // Add all IDs in this group
+        ids.forEach(id => selectedIds.add(id));
+    });
+    updateSelectedCount();
 }
 
 // Wrapper for Detections section buttons
@@ -1808,20 +1808,32 @@ async function exportLibrary(format) {
 
 // Delete Modal Functions
 function openDeleteModal() {
-    // Count selected correlations
-    const selectedCorrelations = document.querySelectorAll('.correlation-checkbox:checked').length;
+    // Get selected correlation IDs
+    const selectedCorrelationCheckboxes = document.querySelectorAll('.correlation-checkbox:checked');
+    const selectedCorrelationIds = Array.from(selectedCorrelationCheckboxes)
+        .map(cb => cb.getAttribute('data-correlation-id'))
+        .filter(id => id); // Filter out any null/undefined IDs
 
-    if (selectedIds.size === 0 && selectedCorrelations > 0) {
-        alert('Correlations are part of detections and cannot be deleted separately. Please select the parent detection to delete.');
+    const totalSelected = selectedIds.size + selectedCorrelationIds.length;
+
+    if (totalSelected === 0) {
+        alert('Please select at least one detection or correlation');
         return;
     }
 
-    if (selectedIds.size === 0) {
-        alert('Please select at least one detection');
-        return;
+    // Update modal title based on what's selected
+    const modalTitle = document.getElementById('delete-modal-title');
+    if (selectedIds.size > 0 && selectedCorrelationIds.length > 0) {
+        modalTitle.textContent = 'Delete Detections & Correlations';
+    } else if (selectedIds.size > 0) {
+        modalTitle.textContent = 'Delete Detections';
+    } else if (selectedCorrelationIds.length > 0) {
+        modalTitle.textContent = 'Delete Correlations';
+    } else {
+        modalTitle.textContent = 'Delete Items';
     }
 
-    document.getElementById('delete-count').textContent = selectedIds.size;
+    document.getElementById('delete-count').textContent = totalSelected;
     document.getElementById('delete-modal').classList.add('show');
 }
 
@@ -1832,18 +1844,26 @@ function closeDeleteModal() {
 async function confirmDelete() {
     closeDeleteModal();
 
+    // Get selected correlation IDs
+    const selectedCorrelationCheckboxes = document.querySelectorAll('.correlation-checkbox:checked');
+    const selectedCorrelationIds = Array.from(selectedCorrelationCheckboxes)
+        .map(cb => cb.getAttribute('data-correlation-id'))
+        .filter(id => id); // Filter out any null/undefined IDs
+
     try {
         const response = await fetch('/api/library/delete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                ids: Array.from(selectedIds)
+                ids: Array.from(selectedIds),
+                correlation_ids: selectedCorrelationIds
             })
         });
 
         const result = await response.json();
         if (result.success) {
-            alert(`Successfully deleted ${selectedIds.size} detection(s)`);
+            const totalDeleted = selectedIds.size + selectedCorrelationIds.length;
+            alert(`Successfully deleted ${totalDeleted} item(s)`);
             selectedIds.clear();
             location.reload();
         } else {

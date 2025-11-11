@@ -205,6 +205,36 @@ class LibraryDetection(Base):
         return f"<LibraryDetection(id={self.id}, title='{self.title}', user_id={self.user_id})>"
 
 
+class LibraryCorrelation(Base):
+    """
+    Library correlation model for storing user-created correlations.
+
+    Stores correlations separately from detections to allow independent management.
+    """
+    __tablename__ = "library_correlations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(500), nullable=False)
+    visibility = Column(Enum(VisibilityType), nullable=False, default=VisibilityType.PRIVATE)
+
+    # Store the actual correlation content
+    content = Column(Text, nullable=False)  # JSON-encoded correlation content
+    platform = Column(String(50), nullable=True)  # splunk, mde, elastic, etc.
+
+    # Custom tags for hunts/incidents (JSON array of strings)
+    tags = Column(Text, nullable=True)  # JSON-encoded array: ["Hunt-2024-01", "Incident-123"]
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    user = relationship("User", backref="library_correlations")
+
+    def __repr__(self):
+        return f"<LibraryCorrelation(id={self.id}, title='{self.title}', user_id={self.user_id})>"
+
+
 class ActivityType(str, enum.Enum):
     """Activity type enumeration"""
     GENERATE = "generate"

@@ -66,7 +66,7 @@
         .global-nav-controls {
             position: fixed;
             top: 20px;
-            right: calc((100vw - 1320px) / 2 + 10px);
+            right: max(2em, calc((100vw - 1320px) / 2 + 2em));
             z-index: 10001;
             display: flex;
             gap: 12px;
@@ -137,7 +137,7 @@
             position: absolute;
             top: 16px;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translateX(-55%);
             z-index: 1000;
         }
 

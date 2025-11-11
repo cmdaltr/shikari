@@ -36,13 +36,14 @@ body::before {
 .global-nav-controls {
     position: fixed;
     top: 20px;
-    right: calc((100vw - 1320px) / 2 + 10px);
+    right: calc((100vw - 1320px) / 2 + 2em);
     z-index: 10001;
     display: flex;
     gap: 12px;
     align-items: center;
 }
 
+/* Adjust for smaller screens */
 @media (max-width: 1400px) {
     .global-nav-controls {
         right: auto;
