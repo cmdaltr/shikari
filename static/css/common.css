@@ -10,7 +10,7 @@ html, body {
     margin: 0 !important;
     padding: 0 !important;
     overflow-y: scroll !important;
-    zoom: 0.9;
+    zoom: 1.0;
 }
 
 /* ========== Dark Header Bar ========== */

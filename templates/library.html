@@ -1808,10 +1808,19 @@ async function exportLibrary(format) {
 
 // Delete Modal Functions
 function openDeleteModal() {
+    // Count selected correlations
+    const selectedCorrelations = document.querySelectorAll('.correlation-checkbox:checked').length;
+
+    if (selectedIds.size === 0 && selectedCorrelations > 0) {
+        alert('Correlations are part of detections and cannot be deleted separately. Please select the parent detection to delete.');
+        return;
+    }
+
     if (selectedIds.size === 0) {
         alert('Please select at least one detection');
         return;
     }
+
     document.getElementById('delete-count').textContent = selectedIds.size;
     document.getElementById('delete-modal').classList.add('show');
 }
