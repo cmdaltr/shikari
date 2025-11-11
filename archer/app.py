@@ -4370,8 +4370,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "description_html": desc_html,
                     "description_plain": desc_plain,
                     "indicators": indicators,
-                    "needs_review": False,  # Generated detections always have indicators
-                    "osint_enriched": is_osint_enriched,  # OSINT enhanced flag (orange badge) - only true if enhancement checkbox was enabled
+                    "needs_review": bool(osint_data) and not is_osint_enriched,  # True if OSINT comparison found results but didn't integrate them
+                    "osint_enriched": is_osint_enriched,  # OSINT enhanced flag (purple badge) - only true if enhancement checkbox was enabled
                     "osint_data": osint_data,  # OSINT comparison data (for Show Details button) - included if OSINT comparison ran
                     "query": query_text,  # Add query for preview
                     "tactic": primary_tactic,  # Primary tactic for color coding
@@ -4437,6 +4437,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             sorted_titles = sorted(data["titles"])
             combined_title = ", ".join(sorted_titles)
             is_osint = data.get("osint_enriched", False)
+            osint_data = data.get("osint_data", {})
             has_indicators = len(data.get("indicators", [])) > 0
             detection_list.append(
                 {
@@ -4446,9 +4447,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "description_html": data.get("description_html", description),
                     "description_plain": data.get("description_plain", description),
                     "indicators": data.get("indicators", []),
-                    "needs_review": False,  # Generated detections always have indicators
-                    "osint_enriched": is_osint,  # Orange badge
-                    "osint_data": data.get("osint_data", {}),
+                    "needs_review": bool(osint_data) and not is_osint,  # True if OSINT comparison found results but didn't integrate them
+                    "osint_enriched": is_osint,  # Purple badge
+                    "osint_data": osint_data,
                     "queries": data.get("queries", []),  # Pass queries for preview
                     "tactic": data.get("tactic", "Unknown"),  # Primary tactic
                     "tactics": data.get("tactics", []),  # All tactics

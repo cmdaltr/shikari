@@ -5,6 +5,83 @@
  * to avoid duplication and maintain consistency.
  */
 
+/* ========== Base HTML Positioning ========== */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-y: scroll !important;
+    zoom: 0.9;
+}
+
+/* ========== Dark Header Bar ========== */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 75px;
+    background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+    z-index: 999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    border-bottom: 3px solid var(--accent);
+}
+
+[data-theme="dark"] body::before {
+    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ========== Global Navigation Controls ========== */
+.global-nav-controls {
+    position: fixed;
+    top: 20px;
+    right: calc((100vw - 1320px) / 2 + 10px);
+    z-index: 10001;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+@media (max-width: 1400px) {
+    .global-nav-controls {
+        right: auto;
+        left: 20px;
+        top: 70px;
+    }
+}
+
+.nav-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    min-height: 40px;
+    padding: 8px;
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+[data-theme="dark"] .nav-icon-btn {
+    background: rgba(45, 45, 45, 0.95);
+}
+
+.nav-icon-btn:hover {
+    background: var(--accent);
+    color: white;
+}
+
+.nav-icon-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
 /* ========== Flexbox Footer Layout ========== */
 /* Ensures footer stays at bottom of viewport or content, whichever is lower */
 html, body {
@@ -94,14 +171,15 @@ html, body {
 .detection-item {
     padding: 16px 20px;
     margin-bottom: 12px;
-    border: 1px solid #C53030;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    transition: background 0.2s;
+    transition: all 0.2s;
     background: var(--bg-primary);
 }
 
 .detection-item:hover {
     background: var(--bg-hover);
+    border-color: #C53030;
 }
 
 .detection-item:last-child {

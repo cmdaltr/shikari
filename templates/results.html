@@ -286,7 +286,7 @@
             <div style="margin-bottom: 32px;">
               <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">MITRE ATT&CK Tactics</h3>
               <p style="margin: 0 0 12px 0; color: #64748b; font-size: 0.9em;">Typical attack progression from initial compromise to final impact</p>
-              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: 20px;">
                 <span style="display: inline-block; background: #E3F2FD; color: #01579B; padding: 6px 4px; border-radius: 4px; font-weight: 600;">🚪 Initial Access</span>
                 <span style="color: #999; font-weight: 600;">→</span>
                 <span style="display: inline-block; background: #FFF3E0; color: #E65100; padding: 6px 4px; border-radius: 4px; font-weight: 600;">💻 Execution</span>
@@ -318,7 +318,7 @@
               <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Label Indicators</h3>
 
               <div style="margin-bottom: 16px;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; margin-left: 20px;">
                   <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                       <circle cx="12" cy="12" r="10"/>
@@ -333,7 +333,7 @@
               </div>
 
               <div style="margin-bottom: 16px;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; margin-left: 20px;">
                   <span style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -355,12 +355,12 @@
               <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
                 Each detection includes a confidence score indicating the estimated probability of successful detection. This likelihood percentage is calculated based on:
               </p>
-              <ul style="margin: 0; padding-left: 24px; color: #475569; font-size: 0.9em; line-height: 1.8;">
+              <ul style="margin: 0; padding-left: 24px; margin-left: 20px; color: #475569; font-size: 0.9em; line-height: 1.8;">
                 <li><strong>Indicator Strength</strong> - Quality and specificity of indicators (file paths, registry keys, command-line patterns, network signatures)</li>
                 <li><strong>Data Source Availability</strong> - Whether the required log sources are commonly available in enterprise environments</li>
                 <li><strong>Query Specificity</strong> - How precisely the detection targets the technique versus generating potential false positives</li>
               </ul>
-              <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">
+              <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; margin-left: 20px;">
                 <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600;">High (75-100%)</span>
                 <span style="background: #fef3c7; color: #a16207; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600;">Medium (50-74%)</span>
                 <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600;">Low (0-49%)</span>
@@ -373,7 +373,7 @@
               <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
                 Archer generates detections through an automated pipeline that transforms threat intelligence into actionable security rules:
               </p>
-              <ol style="margin: 0; padding-left: 24px; color: #475569; font-size: 0.9em; line-height: 1.8;">
+              <ol style="margin: 0; padding-left: 24px; margin-left: 20px; color: #475569; font-size: 0.9em; line-height: 1.8;">
                 <li><strong>MITRE ATT&CK Extraction</strong> - Retrieves technique descriptions, procedure examples, and software/malware behaviors from the MITRE ATT&CK framework</li>
                 <li><strong>Indicator Parsing</strong> - Extracts specific indicators including file paths, registry keys, command-line patterns, process names, network indicators, and behavioral signatures</li>
                 <li><strong>Generic Filtering</strong> - Removes overly broad terms (e.g., "file", "process", "command") that would generate excessive false positives</li>
@@ -389,7 +389,7 @@
               <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
                 Actor correlations combine multiple data points to build comprehensive detection coverage for threat groups:
               </p>
-              <ol style="margin: 0; padding-left: 24px; color: #475569; font-size: 0.9em; line-height: 1.8;">
+              <ol style="margin: 0; padding-left: 24px; margin-left: 20px; color: #475569; font-size: 0.9em; line-height: 1.8;">
                 <li><strong>Direct Procedure Examples</strong> - Extracts indicators from techniques explicitly used by the threat actor in documented campaigns</li>
                 <li><strong>Software/Malware Attribution</strong> - Identifies software and malware families associated with the actor, then retrieves indicators from those software pages even when direct actor-to-indicator links aren't documented</li>
                 <li><strong>Transitive Relationships</strong> - Maps relationships like Actor → Uses Software → Implements Technique → Has Indicators, building detections from the complete chain</li>
@@ -407,7 +407,7 @@
             <!-- Additional Information -->
             <div>
               <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Important Notes</h3>
-              <ul style="margin: 0; padding-left: 24px; color: #475569; font-size: 0.9em; line-height: 1.8;">
+              <ul style="margin: 0; padding-left: 24px; margin-left: 20px; color: #475569; font-size: 0.9em; line-height: 1.8;">
                 <li><strong>Review Before Deployment</strong> - All generated detections should be reviewed and tuned for your environment before production deployment</li>
                 <li><strong>False Positives</strong> - Detection rules may require adjustment to reduce false positives based on your organization's baseline activity</li>
                 <li><strong>Data Source Requirements</strong> - Ensure required log sources (process creation, registry changes, network traffic, etc.) are available and properly configured</li>
@@ -482,10 +482,10 @@
             </div>
             {% else %}
             {% for detection in vendor.detections %}
-            <div class="detection-item{% if detection.needs_review %} unchecked{% endif %}" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}">
+            <div class="detection-item" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}">
               <div class="detection-title" style="position: relative;">
                 <div style="display: flex; align-items: center; flex: 1;">
-                  <input type="checkbox" class="detection-checkbox" {% if not detection.needs_review %}checked{% endif %} data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
+                  <input type="checkbox" class="detection-checkbox" checked data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
 
                   {# Tactic badge with emoji and color #}
                   {% set tactic = detection.tactic %}

@@ -215,8 +215,14 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, i
     indented_lines = []
     for line in query_lines:
         if line.strip():  # Non-empty line
-            # Strip existing indentation and add exactly 2 spaces
-            indented_lines.append("  " + line.lstrip())
+            stripped = line.lstrip()
+            # For KQL queries, ensure pipe operators are properly aligned
+            # If line starts with |, it should have no extra indentation beyond the 2-space YAML indent
+            if stripped.startswith("|"):
+                indented_lines.append("  " + stripped)
+            else:
+                # Non-pipe lines get standard 2-space indent
+                indented_lines.append("  " + stripped)
         else:
             # Empty line - keep it empty
             indented_lines.append(line)

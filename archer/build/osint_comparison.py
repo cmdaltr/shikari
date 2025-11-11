@@ -123,7 +123,9 @@ def search_sigma_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
                         rule_data = yaml_lib.safe_load(rule_content)
 
                     # Convert to GitHub URL
-                    relative_path = file_path.replace(str(Path("data/osint_repos/sigma")), "")
+                    relative_path = file_path.replace(str(Path("data/repos/sigma")), "")
+                    # Ensure forward slashes for URLs (in case of Windows backslashes)
+                    relative_path = relative_path.replace("\\", "/")
                     github_url = f"https://github.com/SigmaHQ/sigma/blob/master{relative_path}"
                     sources.append(github_url)
 
@@ -288,7 +290,9 @@ def search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
                             continue
 
                     # Convert to GitHub URL
-                    relative_path = file_path.replace(str(Path("data/osint_repos/elastic")), "")
+                    relative_path = file_path.replace(str(Path("data/repos/elastic")), "")
+                    # Ensure forward slashes for URLs (in case of Windows backslashes)
+                    relative_path = relative_path.replace("\\", "/")
                     github_url = f"https://github.com/elastic/detection-rules/blob/main{relative_path}"
                     sources.append(github_url)
 
@@ -341,7 +345,9 @@ def search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
                         detection_data = yaml_lib.safe_load(content)
 
                     # Convert to GitHub URL
-                    relative_path = file_path.replace(str(Path("data/osint_repos/splunk")), "")
+                    relative_path = file_path.replace(str(Path("data/repos/splunk")), "")
+                    # Ensure forward slashes for URLs (in case of Windows backslashes)
+                    relative_path = relative_path.replace("\\", "/")
                     github_url = f"https://github.com/splunk/security_content/blob/develop{relative_path}"
                     sources.append(github_url)
 
@@ -398,7 +404,9 @@ def search_azure_sentinel(technique_id: str) -> Tuple[List[str], List[Dict]]:
                         rule_data = json.loads(content)
 
                     # Convert to GitHub URL
-                    relative_path = file_path.replace(str(Path("data/osint_repos/azure_sentinel")), "")
+                    relative_path = file_path.replace(str(Path("data/repos/azure_sentinel")), "")
+                    # Ensure forward slashes for URLs (in case of Windows backslashes)
+                    relative_path = relative_path.replace("\\", "/")
                     github_url = f"https://github.com/Azure/Azure-Sentinel/blob/master{relative_path}"
                     sources.append(github_url)
 

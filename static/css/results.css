@@ -483,9 +483,11 @@
 
 .results-container {
   background: transparent;
-  max-width: 1200px;
+  width: 1320px;
+  max-width: calc(100vw - 4em);
   margin: 0 auto;
-  padding: 0 24px;
+  padding-left: 2em;
+  padding-right: 2em;
   padding-top: 80px;
   padding-bottom: 120px;
   position: relative;

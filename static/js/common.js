@@ -213,3 +213,45 @@ document.addEventListener('DOMContentLoaded', function() {
     subtree: true
   });
 });
+
+/**
+ * Dark Mode Toggle Functionality
+ * Initializes dark mode based on localStorage and provides toggle functionality
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+  if (!darkModeToggle) {
+    return; // Dark mode toggle not present on this page
+  }
+
+  const sunIcon = darkModeToggle.querySelector('.sun-icon');
+  const moonIcon = darkModeToggle.querySelector('.moon-icon');
+  const html = document.documentElement;
+
+  // Update icon visibility based on theme
+  function updateIcons(theme) {
+    if (theme === 'dark') {
+      sunIcon.style.display = 'none';
+      moonIcon.style.display = 'block';
+    } else {
+      sunIcon.style.display = 'block';
+      moonIcon.style.display = 'none';
+    }
+  }
+
+  // Initialize theme from localStorage or default to light
+  const currentTheme = localStorage.getItem('theme') || 'light';
+  html.setAttribute('data-theme', currentTheme);
+  updateIcons(currentTheme);
+
+  // Toggle dark mode on button click
+  darkModeToggle.addEventListener('click', function() {
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateIcons(newTheme);
+  });
+});

@@ -6,12 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
 <style>
 /* Ensure consistent positioning across all browsers */
-html, body {
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
-  zoom: 1.0;
-}
+
 
 /* Single background color throughout - matching How Archer Works page */
 body, html {
@@ -34,58 +29,28 @@ body, html {
 }
 
 /* Global navigation buttons */
-.global-nav-controls {
-  position: fixed;
-  top: 20px;
-  right: calc((100vw - 1200px) / 2 + 10px);
-  z-index: 10001;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
+
 
 @media (max-width: 1400px) {
-  .global-nav-controls {
-    right: auto;
-    left: 20px;
-    top: 70px;
-  }
+  
 }
 
-.nav-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  min-height: 40px;
-  padding: 8px;
-  border: 2px solid #C53030;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #C53030;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  box-sizing: border-box;
-}
 
-.nav-icon-btn:hover {
-  background: #C53030;
-  color: white;
-}
 
-.nav-icon-btn svg {
-  width: 20px;
-  height: 20px;
-}
+
+
+
 
 /* Logo at top center - between Back and How Archer Works */
 .results-container {
   background: transparent !important;
-  max-width: 1200px;
+  width: 1320px;
+  max-width: calc(100vw - 4em);
   margin: 0 auto;
-  padding: 0 24px;
+  padding-left: 2em;
+  padding-right: 2em;
   padding-top: 80px;
+  box-sizing: border-box;
   padding-bottom: 120px;
   position: relative;
   box-sizing: border-box;

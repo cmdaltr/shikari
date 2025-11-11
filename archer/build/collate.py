@@ -130,7 +130,8 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                     # Extract the table name from the query string (assumes first line is the table name)
                     table_name = query.split("\n")[0].strip()
                     mde_mapping = map_defender_tables.get(table_name, "")
-                    appended_query = f"{query}\n{mde_mapping}"
+                    # Strip leading newline from mapping to avoid double newlines, then append
+                    appended_query = f"{query}{mde_mapping}"
                     appended_mde_queries.append(appended_query)
 
                 # Mapping and building Splunk queries
