@@ -146,6 +146,8 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
             vendor = "splunk"
         elif connector_id == "MicrosoftThreatProtection":
             vendor = "mde"
+        elif connector_id == "GoogleChronicle":
+            vendor = "chronicle"
 
     # If connectorId wasn't found, try other methods to find vendor/platform
     if not vendor:
@@ -204,6 +206,9 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
             vendor = "splunk"
         elif query.lstrip().startswith("Device"):
             vendor = "mde"
+        elif "rule " in query.lower() and "events:" in query.lower():
+            # YARA-L rules start with "rule " and contain "events:" sections
+            vendor = "chronicle"
 
     # fallback: try filename hints if vendor not found
     if not vendor:
@@ -212,6 +217,8 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
             vendor = "splunk"
         elif "kql" in name or "mde" in name or "microsoft" in name or "sentinel" in name:
             vendor = "mde"
+        elif "chronicle" in name or "yaral" in name or "google" in name:
+            vendor = "chronicle"
 
     # Normalize vendor names to ensure consistency
     if vendor and vendor.lower() in ["splunk"]:
@@ -224,6 +231,13 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
         "microsoftthreatprotection",
     ]:
         vendor = "mde"
+    elif vendor and vendor.lower() in [
+        "chronicle",
+        "googlechronicle",
+        "google",
+        "yaral",
+    ]:
+        vendor = "chronicle"
 
     # Extract tactics from the YAML
     tactics_marker = False

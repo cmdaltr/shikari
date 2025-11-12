@@ -574,3 +574,90 @@ def construct_yaml(
             )
         else:
             update_yaml(yamlfile, tag)
+
+    # Writing Chronicle YAML file (if Chronicle support is enabled)
+    # Chronicle uses AI-generated YARA-L detection rules
+    try:
+        from archer.build.chronicle import ChronicleGenerator
+
+        chronicle_gen = ChronicleGenerator()
+        chronicle_rule = chronicle_gen.generate_yaral_rule(
+            technique_id=tid,
+            technique_name=name,
+            tactic=tactic,
+            description=tdesc,
+            osint_data=osint_enhancement_data,
+            group_name=tag
+        )
+
+        if chronicle_rule and chronicle_rule.get("yaral_code"):
+            # Create Chronicle YAML file
+            yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_Chronicle.yaml")
+            if not os.path.exists(yamlfile):
+                write_yaml(
+                    yamlfile,
+                    name,
+                    tid,
+                    tdesc,
+                    "GoogleChronicle",
+                    all_tactics,
+                    tag,
+                    chronicle_rule["yaral_code"],
+                    indicators=identifiers,
+                    osint_data=osint_enhancement_data,
+                    osint_enhanced=osint_enhancement,
+                )
+                print(f"  ✅ Generated Chronicle YARA-L rule: {chronicle_rule['rule_name']}")
+            else:
+                update_yaml(yamlfile, tag)
+    except Exception as e:
+        # Chronicle generation is optional - don't fail if it errors
+        print(f"  ⚠️  Chronicle generation failed for {name}: {e}")
+
+    # Writing Elastic YAML file (if Elastic support is enabled)
+    # Elastic uses AI-generated Query DSL with ECS field names
+    try:
+        from archer.build.elastic import ElasticQueryGenerator
+
+        elastic_gen = ElasticQueryGenerator()
+        elastic_query_result = elastic_gen.generate_query(
+            technique_id=tid,
+            technique_name=name,
+            tactic=tactic,
+            description=tdesc,
+            osint_data=osint_enhancement_data,
+            group_name=tag
+        )
+
+        if elastic_query_result and elastic_query_result.get("query_dsl"):
+            # Validate the query
+            is_valid, error = elastic_gen.validate_query(elastic_query_result["query_dsl"])
+
+            if is_valid:
+                # Format query as JSON string for YAML
+                elastic_query_str = elastic_gen.format_query_for_display(elastic_query_result["query_dsl"])
+
+                # Create Elastic YAML file
+                yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_Elastic.yaml")
+                if not os.path.exists(yamlfile):
+                    write_yaml(
+                        yamlfile,
+                        name,
+                        tid,
+                        tdesc,
+                        "Elastic",
+                        all_tactics,
+                        tag,
+                        elastic_query_str,
+                        indicators=identifiers,
+                        osint_data=osint_enhancement_data,
+                        osint_enhanced=osint_enhancement,
+                    )
+                    print(f"  ✅ Generated Elastic Query DSL: {elastic_query_result['query_name']}")
+                else:
+                    update_yaml(yamlfile, tag)
+            else:
+                print(f"  ⚠️  Elastic query validation failed for {name}: {error}")
+    except Exception as e:
+        # Elastic generation is optional - don't fail if it errors
+        print(f"  ⚠️  Elastic generation failed for {name}: {e}")

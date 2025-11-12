@@ -6631,24 +6631,41 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
     try:
         body = await request.json()
         detection_ids = body.get("ids", [])
-        export_format = body.get("format", "json")  # json, csv, xml
+        correlation_ids = body.get("correlation_ids", [])
+        export_format = body.get("format", "json")  # json, csv, xml, docx, pdf
 
-        if not detection_ids:
-            raise HTTPException(status_code=400, detail="No detections selected")
+        if not detection_ids and not correlation_ids:
+            raise HTTPException(status_code=400, detail="No detections or correlations selected")
 
         # Get detections
-        detections = (
-            db.query(LibraryDetection)
-            .filter(
-                LibraryDetection.id.in_(detection_ids),
-                (LibraryDetection.user_id == user.id)
-                | (LibraryDetection.visibility == VisibilityType.SHARED),
+        detections = []
+        if detection_ids:
+            detections = (
+                db.query(LibraryDetection)
+                .filter(
+                    LibraryDetection.id.in_(detection_ids),
+                    (LibraryDetection.user_id == user.id)
+                    | (LibraryDetection.visibility == VisibilityType.SHARED),
+                )
+                .all()
             )
-            .all()
-        )
 
-        if not detections:
-            raise HTTPException(status_code=404, detail="No detections found")
+        # Get correlations
+        correlations = []
+        if correlation_ids:
+            from archer.database.models import LibraryCorrelation
+            correlations = (
+                db.query(LibraryCorrelation)
+                .filter(
+                    LibraryCorrelation.id.in_(correlation_ids),
+                    (LibraryCorrelation.user_id == user.id)
+                    | (LibraryCorrelation.visibility == VisibilityType.SHARED),
+                )
+                .all()
+            )
+
+        if not detections and not correlations:
+            raise HTTPException(status_code=404, detail="No detections or correlations found")
 
         # Prepare data
         export_data = []
@@ -6720,6 +6737,128 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
             content = "\n".join(xml_lines)
             media_type = "application/xml"
             filename = "library_export.xml"
+
+        elif export_format == "docx":
+            # Generate Word document report
+            from archer.reports.generator import WordReportGenerator
+
+            # Prepare detection data for report
+            report_detections = []
+            for item in export_data:
+                content_data = item.get("content", {})
+                detection_dict = {
+                    "technique": content_data.get("technique", item["title"]),
+                    "technique_id": content_data.get("technique", ""),
+                    "tactic": content_data.get("tactic", "Unknown"),
+                    "data_source": item["platform"],
+                    "queries": content_data.get("queries", []),
+                    "description_html": content_data.get("description", ""),
+                    "indicators": content_data.get("indicators", []),
+                    "vendor": item["platform"],
+                    "severity": content_data.get("severity", "Medium"),
+                    "detection_likelihood": content_data.get("detection_likelihood", 75)
+                }
+                report_detections.append(detection_dict)
+
+            # Prepare correlation data for report
+            report_correlations = []
+            for corr in correlations:
+                corr_content = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                correlation_dict = {
+                    "name": corr.title,
+                    "techniques": corr_content.get("techniques", []),
+                    "severity": corr_content.get("severity", "High"),
+                    "time_window": corr_content.get("time_window", "N/A"),
+                    "vendor": corr.platform or "Multi-platform",
+                    "combined_query": corr_content.get("combined_query", "")
+                }
+                report_correlations.append(correlation_dict)
+
+            # Extract group name from detections or correlations
+            group_name = "Detection Library"
+            if report_detections and len(report_detections) > 0:
+                first_content = export_data[0].get("content", {})
+                group_name = first_content.get("group", "Detection Library")
+            elif report_correlations and len(report_correlations) > 0:
+                group_name = "Correlation Rules"
+
+            generator = WordReportGenerator()
+            content_bytes = generator.generate(
+                group_name=group_name,
+                detections=report_detections,
+                correlations=report_correlations if report_correlations else None,
+                metadata={"user": user.full_name if hasattr(user, 'full_name') else "Archer User"}
+            )
+
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            filename = f"{group_name.replace(' ', '_')}_report.docx"
+
+            return StreamingResponse(
+                io.BytesIO(content_bytes),
+                media_type=media_type,
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+
+        elif export_format == "pdf":
+            # Generate PDF report
+            from archer.reports.generator import PDFReportGenerator
+
+            # Prepare detection data for report
+            report_detections = []
+            for item in export_data:
+                content_data = item.get("content", {})
+                detection_dict = {
+                    "technique": content_data.get("technique", item["title"]),
+                    "technique_id": content_data.get("technique", ""),
+                    "tactic": content_data.get("tactic", "Unknown"),
+                    "data_source": item["platform"],
+                    "queries": content_data.get("queries", []),
+                    "description_html": content_data.get("description", ""),
+                    "indicators": content_data.get("indicators", []),
+                    "vendor": item["platform"],
+                    "severity": content_data.get("severity", "Medium"),
+                    "detection_likelihood": content_data.get("detection_likelihood", 75)
+                }
+                report_detections.append(detection_dict)
+
+            # Prepare correlation data for report
+            report_correlations = []
+            for corr in correlations:
+                corr_content = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                correlation_dict = {
+                    "name": corr.title,
+                    "techniques": corr_content.get("techniques", []),
+                    "severity": corr_content.get("severity", "High"),
+                    "time_window": corr_content.get("time_window", "N/A"),
+                    "vendor": corr.platform or "Multi-platform",
+                    "combined_query": corr_content.get("combined_query", "")
+                }
+                report_correlations.append(correlation_dict)
+
+            # Extract group name from detections or correlations
+            group_name = "Detection Library"
+            if report_detections and len(report_detections) > 0:
+                first_content = export_data[0].get("content", {})
+                group_name = first_content.get("group", "Detection Library")
+            elif report_correlations and len(report_correlations) > 0:
+                group_name = "Correlation Rules"
+
+            generator = PDFReportGenerator()
+            content_bytes = generator.generate(
+                group_name=group_name,
+                detections=report_detections,
+                correlations=report_correlations if report_correlations else None,
+                metadata={"user": user.full_name if hasattr(user, 'full_name') else "Archer User"}
+            )
+
+            media_type = "application/pdf"
+            filename = f"{group_name.replace(' ', '_')}_report.pdf"
+
+            return StreamingResponse(
+                io.BytesIO(content_bytes),
+                media_type=media_type,
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
 
         else:
             raise HTTPException(status_code=400, detail="Invalid export format")

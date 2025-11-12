@@ -1301,11 +1301,27 @@
                     </div>
                 </label>
 
-                <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; margin-bottom: 12px; cursor: pointer;">
                     <input type="checkbox" id="export-xml" style="margin-right: 12px;">
                     <div>
                         <div style="font-weight: 600; color: var(--text-primary);">XML</div>
                         <div style="font-size: 0.85em; color: var(--text-secondary);">Extensible Markup Language</div>
+                    </div>
+                </label>
+
+                <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" id="export-word" style="margin-right: 12px;">
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-primary);">Word Document</div>
+                        <div style="font-size: 0.85em; color: var(--text-secondary);">Microsoft Word (.docx) - Full report with formatting</div>
+                    </div>
+                </label>
+
+                <label style="display: flex; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" id="export-pdf" style="margin-right: 12px;">
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-primary);">PDF Report</div>
+                        <div style="font-size: 0.85em; color: var(--text-secondary);">Portable Document Format - Professional report</div>
                     </div>
                 </label>
             </div>
@@ -1763,8 +1779,10 @@ async function downloadExports() {
     const jsonChecked = document.getElementById('export-json').checked;
     const csvChecked = document.getElementById('export-csv').checked;
     const xmlChecked = document.getElementById('export-xml').checked;
+    const wordChecked = document.getElementById('export-word').checked;
+    const pdfChecked = document.getElementById('export-pdf').checked;
 
-    if (!jsonChecked && !csvChecked && !xmlChecked) {
+    if (!jsonChecked && !csvChecked && !xmlChecked && !wordChecked && !pdfChecked) {
         alert('Please select at least one export format');
         return;
     }
@@ -1772,17 +1790,26 @@ async function downloadExports() {
     if (jsonChecked) await exportLibrary('json');
     if (csvChecked) await exportLibrary('csv');
     if (xmlChecked) await exportLibrary('xml');
+    if (wordChecked) await exportLibrary('docx');
+    if (pdfChecked) await exportLibrary('pdf');
 
     closeExportModal();
 }
 
 async function exportLibrary(format) {
     try {
+        // Get selected correlation IDs
+        const selectedCorrelationCheckboxes = document.querySelectorAll('.correlation-checkbox:checked');
+        const selectedCorrelationIds = Array.from(selectedCorrelationCheckboxes)
+            .map(cb => cb.getAttribute('data-correlation-id'))
+            .filter(id => id);
+
         const response = await fetch('/api/library/export', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 ids: Array.from(selectedIds),
+                correlation_ids: selectedCorrelationIds,
                 format: format
             })
         });
