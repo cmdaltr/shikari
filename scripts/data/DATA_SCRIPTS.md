@@ -1,0 +1,206 @@
+# Data Scripts
+
+Data import, OSINT repository management, and MITRE ATT&CK data extraction utilities.
+
+## Scripts
+
+### update_osint.py
+Update OSINT detection rule repositories.
+
+**Usage**:
+```bash
+python scripts/data/update_osint.py
+```
+
+**What it updates**:
+- **Sigma rules** - Universal detection format
+- **Elastic Detection Rules** - Elastic Security rules
+- **Splunk Security Content** - Splunk detection library
+- **Microsoft Defender** - Advanced hunting queries (if configured)
+
+**Process**:
+1. Clones/updates git repositories
+2. Parses detection rules
+3. Extracts MITRE ATT&CK mappings
+4. Indexes rules for query generation
+
+**Frequency**:
+- Initial setup: Automatic (via Docker entrypoint)
+- Updates: Run monthly or when new rules are released
+
+**Example**:
+```bash
+$ python scripts/data/update_osint.py
+Updating OSINT repositories...
+✓ Sigma rules: 2,847 rules updated
+✓ Elastic: 1,234 rules updated
+✓ Splunk: 987 rules updated
+Done. Total: 5,068 rules indexed
+```
+
+---
+
+### extract_mitre_procedures.py
+Extract and process MITRE ATT&CK procedures.
+
+**Usage**:
+```bash
+python scripts/data/extract_mitre_procedures.py
+```
+
+**What it does**:
+- Downloads latest MITRE ATT&CK STIX data
+- Extracts threat group procedures
+- Maps techniques to tactics
+- Creates procedure-based detection opportunities
+
+**Output**: `data/mitre_procedures.json`
+
+**Example**:
+```bash
+$ python scripts/data/extract_mitre_procedures.py
+Downloading MITRE ATT&CK data...
+✓ Enterprise ATT&CK v14.1 downloaded
+Extracting procedures...
+✓ Processed 647 techniques
+✓ Extracted 3,214 procedures
+✓ Mapped 129 threat groups
+Output: data/mitre_procedures.json
+```
+
+**Use cases**:
+- Generating threat-informed detections
+- Understanding technique usage by threat groups
+- Prioritizing detection development
+
+---
+
+### import_yaml_to_library.py
+Import YAML detection files to Archer's detection library.
+
+**Usage**:
+```bash
+python scripts/data/import_yaml_to_library.py <file_or_directory>
+```
+
+**Supported formats**:
+- Sigma YAML
+- Custom Archer YAML format
+- Splunk savedsearches format
+- Elastic detection rule format
+
+**Arguments**:
+- `<file_or_directory>` - Single YAML file or directory of YAML files
+
+**Example**:
+```bash
+# Import single file
+python scripts/data/import_yaml_to_library.py detections/my_detection.yml
+
+# Import directory
+python scripts/data/import_yaml_to_library.py detections/sigma_rules/
+
+# Import with specific platform
+python scripts/data/import_yaml_to_library.py --platform splunk detections/
+```
+
+**YAML Format Example**:
+```yaml
+title: Suspicious PowerShell Download
+id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+status: stable
+description: Detects PowerShell downloading files from the internet
+author: Security Team
+date: 2024/01/15
+modified: 2024/01/20
+mitre:
+  - technique: T1059.001
+    tactic: Execution
+platform: windows
+data_source: ProcessEvents
+query: |
+  DeviceProcessEvents
+  | where FileName =~ "powershell.exe"
+  | where ProcessCommandLine has_any ("DownloadFile", "IEX", "Invoke-WebRequest")
+false_positive_rate: low
+severity: high
+```
+
+---
+
+## Workflows
+
+### Initial Setup
+
+```bash
+# 1. Update OSINT repositories (done automatically by Docker)
+python scripts/data/update_osint.py
+
+# 2. Extract MITRE procedures
+python scripts/data/extract_mitre_procedures.py
+```
+
+### Regular Updates
+
+```bash
+# Monthly: Update OSINT rules
+python scripts/data/update_osint.py
+
+# Quarterly: Update MITRE data
+python scripts/data/extract_mitre_procedures.py
+```
+
+### Importing Custom Detections
+
+```bash
+# Import your team's custom detections
+python scripts/data/import_yaml_to_library.py custom_detections/
+
+# Import Sigma rules from another source
+python scripts/data/import_yaml_to_library.py external_sigma_rules/
+```
+
+### After Major MITRE ATT&CK Updates
+
+```bash
+# 1. Update MITRE procedures
+python scripts/data/extract_mitre_procedures.py
+
+# 2. Regenerate validation matrix
+python scripts/validation/generate_validation_matrix.py
+
+# 3. Update OSINT rules (they may reference new techniques)
+python scripts/data/update_osint.py
+```
+
+## Data Locations
+
+**OSINT Repositories**:
+```
+data/repos/
+├── sigma/                    # SigmaHQ/sigma
+├── elastic/detection_rules/  # elastic/detection-rules
+└── splunk/security_content/  # splunk/security_content
+```
+
+**Processed Data**:
+```
+data/
+├── mitre_procedures.json     # Extracted procedures
+├── osint_index.json          # Indexed OSINT rules
+└── attack_data.json          # MITRE ATT&CK data
+```
+
+**Imported Detections**:
+```
+data/library/
+├── sigma/
+├── custom/
+└── imported/
+```
+
+## Related Documentation
+
+- [OSINT Integration](../../docs/features/OSINT_INTEGRATION.md)
+- [Data Architecture](../../docs/architecture/ARCHITECTURE.md)
+- [Detection Validation](../../docs/features/DETECTION_VALIDATION.md)

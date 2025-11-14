@@ -6,8 +6,8 @@ detection rule generation through few-shot learning.
 
 This module injects contextually relevant examples into prompts based on:
 - MITRE ATT&CK technique being generated
-- Target SIEM platform (Splunk, MDE/KQL, Elastic)
-- Organizational field schema (schemaSplunk.json, schemaMDE.json)
+- Target SIEM platform (Splunk, MDE/KQL, Google SecOps, Elastic)
+- Organizational field schema (schemaSplunk.json, schemaMDE.json, schemaGoogleSecOps.json, schemaElastic.json)
 """
 
 import json
@@ -42,6 +42,8 @@ class QueryPromptEnhancer:
         schema_files = {
             "splunk": "schemaSplunk.json",
             "mde": "schemaMDE.json",
+            "googlesecops": "schemaGoogleSecOps.json",
+            "elastic": "schemaElastic.json",
         }
 
         for vendor, filename in schema_files.items():

@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
 """
-Automatic Splunk Schema Normalizer for Archer
+Automatic Schema Normalizer for Archer
 
-This module automatically normalizes new indexes added to schemaSplunk.json.
+This module automatically normalizes new indexes/sources added to platform schema files.
 It detects unnormalized indexes (those without proper field filtering and normalization)
 and applies consistent field naming and security-focused field filtering.
 
-Detection Strategy:
+Supported Platforms:
+- Splunk: schemaSplunk.json - Applies SPL query normalization
+- Google SecOps: schemaGoogleSecOps.json - Uses UDM standard (no normalization needed)
+- Elastic: schemaElastic.json - Uses ECS standard (no normalization needed)
+
+Detection Strategy (Splunk):
 - Normalized indexes have: | rename ... | fields ... | eval Time=...
 - Unnormalized indexes typically have raw SPL queries without the full normalization pattern
 
 The normalizer:
-1. Reads schemaSplunk.json
+1. Reads schema file (schemaSplunk.json, schemaGoogleSecOps.json, or schemaElastic.json)
 2. Identifies which indexes haven't been normalized by Archer
-3. Applies field normalization, security filtering, and formatting
+3. Applies field normalization, security filtering, and formatting (Splunk only)
 4. Updates only the unnormalized indexes
 5. Preserves all other indexes unchanged
+
+Note: Google SecOps and Elastic schemas use standardized field models (UDM and ECS)
+and don't require the same normalization approach as Splunk.
 """
 
 import json

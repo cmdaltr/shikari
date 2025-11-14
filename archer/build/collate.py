@@ -3,6 +3,7 @@ from archer.build.queries import is_query_applicable
 
 import json
 import os
+import re
 
 
 """def define_vectr_values(payload, technique_descriptions, retrieved_data):
@@ -40,6 +41,61 @@ import os
         log_sources,
     )
 """
+
+
+def merge_queries_for_same_table(query1, query2):
+    """
+    Merge two queries for the same table by combining their WHERE clauses with OR.
+
+    Args:
+        query1: First query string
+        query2: Second query string
+
+    Returns:
+        Merged query string with combined WHERE conditions
+    """
+    # Parse both queries
+    lines1 = query1.split('\n')
+    lines2 = query2.split('\n')
+
+    # Extract table name (first line)
+    table = lines1[0].strip()
+
+    # Extract WHERE clause from each query
+    where_clause1 = None
+    where_clause2 = None
+
+    for i, line in enumerate(lines1):
+        if '| where' in line and 'Timestamp' not in line:
+            # Find the WHERE clause (skip the Timestamp filter)
+            where_clause1 = line.split('| where')[1].strip()
+            break
+
+    for i, line in enumerate(lines2):
+        if '| where' in line and 'Timestamp' not in line:
+            where_clause2 = line.split('| where')[1].strip()
+            break
+
+    if not where_clause1 or not where_clause2:
+        # If we can't find WHERE clauses, return query1
+        return query1
+
+    # Combine WHERE clauses with OR
+    # Remove outer parentheses if they exist to avoid double-wrapping
+    where_clause1 = where_clause1.strip()
+    where_clause2 = where_clause2.strip()
+
+    if where_clause1.startswith('(') and where_clause1.endswith(')'):
+        where_clause1 = where_clause1[1:-1]
+    if where_clause2.startswith('(') and where_clause2.endswith(')'):
+        where_clause2 = where_clause2[1:-1]
+
+    combined_where = f"({where_clause1}) or ({where_clause2})"
+
+    # Build merged query
+    merged_query = f"{table}\n| where Timestamp > ago(1d)\n| where {combined_where}"
+
+    return merged_query
 
 
 def collate_data(identifiers, log_sources, procedure_platforms, software_platforms, detection_name="", technique_id=None, osint_indicators=None):
@@ -110,6 +166,10 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
 
     mde_queries = []
     splunk_queries = []
+    # Use dict to accumulate queries by table name, allowing merging of conditions
+    mde_queries_by_table = {}
+    all_splunk_queries = []  # Accumulate all Splunk queries across indicator types
+
     for indicator_type, indicators in identifiers.items():
         if len(indicators) > 0:
             if indicator_type in indicator_mapping:
@@ -125,14 +185,19 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                     indicator_mapping, indicators, indicator_type, mde_queries, detection_name, platform=platform
                 )
 
-                appended_mde_queries = []
+                # Group queries by table for potential merging
                 for query in mde_queries:
                     # Extract the table name from the query string (assumes first line is the table name)
                     table_name = query.split("\n")[0].strip()
-                    mde_mapping = map_defender_tables.get(table_name, "")
-                    # Strip leading newline from mapping to avoid double newlines, then append
-                    appended_query = f"{query}{mde_mapping}"
-                    appended_mde_queries.append(appended_query)
+
+                    if table_name not in mde_queries_by_table:
+                        # First query for this table
+                        mde_queries_by_table[table_name] = query
+                    else:
+                        # Merge this query with existing query for same table
+                        existing_query = mde_queries_by_table[table_name]
+                        merged_query = merge_queries_for_same_table(existing_query, query)
+                        mde_queries_by_table[table_name] = merged_query
 
                 # Mapping and building Splunk queries
                 # Extract platform from index name for validation (if not already set)
@@ -153,7 +218,7 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                     platform=platform, technique_id=technique_id
                 )
 
-                appended_splunk_queries = []
+                # Accumulate Splunk queries across all indicator types
                 for query in splunk_queries:
                     # Extract the index name from the query string
                     index_name = None
@@ -165,7 +230,7 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                         ):
                             # No need to append anything - compile_splunk_queries() already generates complete queries
                             # with transformation pipelines from schemaSplunk.json included
-                            appended_splunk_queries.append(query)
+                            all_splunk_queries.append(query)
                     else:
                         # Query doesn't start with "index=" - likely an MDE query that got mixed in
                         # Skip it silently (this is expected in mixed query results)
@@ -174,7 +239,11 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
             else:
                 pass
 
-        else:
-            appended_mde_queries, appended_splunk_queries = [], []
+    # Build final list of MDE queries with table mappings appended
+    appended_mde_queries = []
+    for table_name, query in mde_queries_by_table.items():
+        mde_mapping = map_defender_tables.get(table_name, "")
+        appended_query = f"{query}{mde_mapping}"
+        appended_mde_queries.append(appended_query)
 
-    return appended_mde_queries, appended_splunk_queries
+    return appended_mde_queries, all_splunk_queries

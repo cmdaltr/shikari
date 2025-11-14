@@ -1,7 +1,8 @@
 # OSINT Detection Enhancement System
 
-**Last Updated:** 2025-10-29
+**Last Updated:** 2025-11-14
 **Status:** ✅ Fully Operational
+**Version:** 2.0
 
 ---
 
@@ -9,26 +10,32 @@
 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
-3. [Integration with Detection Pipeline](#integration-with-detection-pipeline)
-4. [OSINT Sources](#osint-sources)
-5. [Repository Management](#repository-management)
-6. [Query Snippet Extraction](#query-snippet-extraction)
-7. [Badge System](#badge-system)
-8. [Error Handling](#error-handling)
-9. [Usage and Configuration](#usage-and-configuration)
-10. [Troubleshooting](#troubleshooting)
-11. [Examples and Best Practices](#examples-and-best-practices)
+3. [Detection Generation](#detection-generation)
+4. [Correlation Integration](#correlation-integration)
+5. [OSINT Sources](#osint-sources)
+6. [Repository Management](#repository-management)
+7. [Query Snippet Extraction](#query-snippet-extraction)
+8. [Badge System](#badge-system)
+9. [Reports and Metadata](#reports-and-metadata)
+10. [Error Handling](#error-handling)
+11. [Usage and Configuration](#usage-and-configuration)
+12. [Troubleshooting](#troubleshooting)
+13. [Examples and Best Practices](#examples-and-best-practices)
 
 ---
 
 ## Overview
 
-The OSINT (Open Source Intelligence) Enhancement system automatically searches external threat intelligence sources to improve detection quality. It operates in two modes:
+The OSINT (Open Source Intelligence) Enhancement system automatically searches external threat intelligence sources to improve detection quality. It operates throughout the entire detection lifecycle - from initial rule generation through correlation and reporting.
+
+### Operational Modes
 
 1. **FIND Mode**: When NO indicators are found in MITRE ATT&CK, search OSINT to discover indicators
 2. **ENRICH Mode**: When indicators ARE found in MITRE, enhance them with additional OSINT patterns
+3. **CORRELATE Mode**: Aggregate OSINT metadata across multiple detections in correlation rules
+4. **REPORT Mode**: Display OSINT enrichment information in generated reports
 
-This dual approach ensures all detections benefit from the latest community threat intelligence beyond MITRE ATT&CK.
+This comprehensive approach ensures all detections benefit from the latest community threat intelligence beyond MITRE ATT&CK.
 
 ### Key Features
 
@@ -39,6 +46,8 @@ This dual approach ensures all detections benefit from the latest community thre
 - ✅ **Query Snippets** - Provides actionable detection patterns for cloud platforms
 - ✅ **Badge System** - Visual indicators for OSINT-only detections
 - ✅ **Generic Term Filtering** - Prevents low-quality detections
+- ✅ **Correlation Integration** - OSINT metadata flows through to correlation rules
+- ✅ **Report Generation** - OSINT information included in Word/PDF/HTML reports
 - ✅ **Graceful Degradation** - Works with partial repository availability
 
 ---
@@ -98,13 +107,25 @@ Has Real IOCs            No Real IOCs
                        ▼
               ┌──────────────────┐
               │ Create Detection │
-              │ with IOCs        │
+              │ with OSINT Meta  │
               └─────────┬────────┘
                         │
                         ▼
                  ┌──────────────┐
                  │  YAML File   │
-                 └──────────────┘
+                 └──────┬───────┘
+                        │
+                        ▼
+             ┌────────────────────┐
+             │ Correlation Engine │
+             │ (Aggregate OSINT)  │
+             └──────────┬─────────┘
+                        │
+                        ▼
+                ┌───────────────┐
+                │ Report Export │
+                │ (Show OSINT)  │
+                └───────────────┘
 ```
 
 ### Generic Term Filtering
@@ -128,7 +149,7 @@ generic_terms = {
 
 ---
 
-## Integration with Detection Pipeline
+## Detection Generation
 
 ### New Features Added for Cloud Operations
 
@@ -179,23 +200,11 @@ def extract_operations_from_osint_snippets(osint_indicators: Dict) -> Dict[str, 
     """
 ```
 
-**Test Results:**
-```
-Extracted indicator types: ['api']
-
-API calls (3):
-  - Add member to role          ← Azure operation
-  - DescribeInstances           ← AWS API call
-  - Update role setting in PIM  ← Azure operation
-
-✅ Success! Both Azure operations and AWS API calls unified under 'api' type
-```
-
 #### 3. Pipeline Integration
 
 **Files Updated:**
 1. `collate.py` - Extracts and passes OSINT indicators
-2. `yaml.py` - Passes OSINT indicators when enhancement enabled
+2. `yaml.py` - Passes OSINT indicators and writes metadata
 3. `queries.py` - Merges OSINT indicators into query search clause
 
 **Flow:**
@@ -205,46 +214,116 @@ Structured Indicators → collate_data() → compile_splunk_queries() →
 Query with OSINT operations
 ```
 
-### Multi-Word Indicator Handling
+### OSINT Metadata in Detection YAML Files
 
-OSINT operations with spaces are automatically formatted with implicit AND for Splunk:
+Individual detection YAML files include comprehensive OSINT metadata:
 
-**Input:** `"Add member to role"`
-
-**Output:**
-```splunk
-operation_name IN ("Add ", " member ", " to ", " role")
+```yaml
+# OSINT Comparison Metadata
+osint_compared: true
+osint_enhanced: true
+comparison_date: 2024-11-13
+osint_sources:
+  - Elastic
+  - Splunk
+  - Sigma
+osint_indicators:
+  cmd:
+    - mimikatz.exe
+    - sekurlsa::logonpasswords
+  sw:
+    - powershell.exe
+    - rundll32.exe
+  api:
+    - Add member to role
+osint_query_snippets:
+  - source: Elastic
+    query: 'operation_name:"Add member to role"'
+    url: https://github.com/elastic/detection-rules/...
+  - source: Splunk
+    query: 'Operation IN ("CreatePolicyVersion","AttachUserPolicy")'
+    url: https://github.com/splunk/security_content/...
+enrichment_notes: |
+  Successfully enriched query with 15 OSINT indicators from 3 sources
 ```
 
-This is handled automatically by `compile_search_clause()` in `queries.py`.
+---
 
-### Expected Results
+## Correlation Integration
 
-**Before OSINT Enhancement:**
-```splunk
-# AdditionalCloudRoles_azure_signin.yaml
-| search command IN ("CreatePolicyVersion", "AttachUserPolicy")
+### OSINT Tracking in Correlation JSON
+
+Correlation files automatically include aggregated OSINT metadata from all constituent detection queries:
+
+```json
+{
+  "correlation_id": "CORR-0001",
+  "name": "Correlation: Credential Access + Lateral Movement",
+  "platform": "mde",
+  "query_count": 3,
+  "osint_enriched": true,
+  "osint_sources": [
+    "Elastic",
+    "Sigma",
+    "Splunk"
+  ],
+  "osint_indicators": {
+    "cmd": ["mimikatz.exe", "procdump.exe", "lsass.exe"],
+    "sw": ["powershell.exe", "psexec.exe"],
+    "api": ["Add member to role", "CreatePolicyVersion"]
+  },
+  "osint_enrichment_count": 2,
+  "osint_enriched_queries": [
+    {
+      "name": "OS Credential Dumping: LSASS Memory",
+      "osint_enhanced": true,
+      "osint_sources": ["Elastic", "Splunk"],
+      "osint_indicators": {
+        "cmd": ["mimikatz.exe", "sekurlsa::logonpasswords"],
+        "sw": ["procdump.exe"]
+      }
+    },
+    {
+      "name": "Use Alternate Authentication Material: Pass the Hash",
+      "osint_enhanced": true,
+      "osint_sources": ["Sigma"],
+      "osint_indicators": {
+        "cmd": ["sekurlsa::pth"]
+      }
+    }
+  ]
+}
 ```
-❌ Wrong indicators (AWS commands in Azure query)
 
-**After OSINT Enhancement:**
-```splunk
-# AdditionalCloudRoles_azure_signin.yaml
-| search (operation_name IN ("Add ", " member ", " to ", " role")
-         OR operation_name IN ("Update ", " role ", " setting ", " in ", " PIM")
-         OR operation_name IN ("Add ", " application"))
+### Data Flow for Correlations
+
 ```
-✅ Correct Azure operations from OSINT sources
+Detection Generation:
+MITRE ATT&CK → Extract Indicators → OSINT Search → Merge Indicators →
+Generate Enhanced Query → Write YAML with OSINT Metadata
 
-**New AWS Detections Generated:**
-```splunk
-# AdditionalCloudRoles_aws_cloudtrail.yaml (NEW!)
-| search event_name IN ("CreatePolicyVersion", "AttachUserPolicy", "PutRolePolicy")
+Correlation Generation:
+Read Detection YAMLs → Extract Queries + OSINT Metadata →
+Score Relevance → Generate JOIN Query → Create Correlation JSON with OSINT Data
 
-# AdditionalCloudRoles_aws_guardduty.yaml (NEW!)
-| search api_call IN ("CreatePolicyVersion", "AttachUserPolicy")
-        OR finding_type="*IAM*"
+Report Generation:
+Read Detections/Correlations → Parse OSINT Metadata →
+Generate Report with OSINT Sections → Export to Word/PDF/HTML
 ```
+
+### Benefits for Correlation Analysis
+
+**For Security Analysts:**
+1. **Source Attribution**: Know which indicators came from OSINT vs. MITRE
+2. **Validation Confidence**: Use OSINT source URLs to verify indicator accuracy
+3. **Investigation Context**: Understand which community detections informed the rule
+4. **Quality Assessment**: Identify correlations with strong OSINT backing
+
+**For Detection Engineers:**
+1. **Transparency**: Clear visibility into OSINT contributions to detections
+2. **Maintenance**: Track when OSINT enrichment occurred for update planning
+3. **Coverage**: Identify detections that could benefit from additional OSINT
+4. **Collaboration**: Reference community detection sources for improvement ideas
 
 ---
 
@@ -480,6 +559,54 @@ Operation="Add member to role"
 
 ---
 
+## Reports and Metadata
+
+### OSINT Information in Reports
+
+Generated reports (Word, PDF, HTML) now display OSINT enrichment information:
+
+#### Detection-Level OSINT Information
+- **Enrichment Status**: Visual indicator showing if query was enhanced with OSINT
+- **OSINT Sources**: List of OSINT repositories used (Elastic, Splunk, Sigma, etc.)
+- **Color Coding**:
+  - Green ✓ for queries enriched with OSINT indicators
+  - Blue ℹ for queries compared but not enhanced
+
+#### Correlation-Level OSINT Information
+- **Enrichment Count**: Shows how many of the correlated queries were OSINT-enriched
+- **Aggregated Sources**: Combined list of all OSINT sources across queries
+- **Indicator Summary**: Count of aggregated OSINT indicators by type
+
+### Report Sections
+
+**Word Report Sections:**
+- Detection Rules → OSINT Enrichment (per detection)
+- Correlation Rules → OSINT Enrichment (aggregated)
+
+**HTML Report Sections:**
+- Color-coded OSINT status badges
+- Expandable OSINT source lists
+- Indicator type breakdowns
+
+### Implementation Files
+
+**Modified Files:**
+1. **`archer/build/yaml.py`** (lines 349-371)
+   - Added `osint_query_snippets` section to detection YAML files
+   - Parses and formats OSINT query snippets with source attribution
+
+2. **`archer/genai/engine.py`** (lines 2472-2494, 2713-2803)
+   - Extracts OSINT metadata from detection YAMLs
+   - Aggregates OSINT indicators across multiple detections in correlations
+   - Includes OSINT enrichment data in correlation output JSON
+
+3. **`archer/reports/generator.py`** (lines 229-245, 351-378, 702-710)
+   - Displays OSINT enrichment status in Word reports
+   - Shows OSINT sources and indicator counts in correlation sections
+   - Includes color-coded OSINT indicators in HTML reports
+
+---
+
 ## Error Handling
 
 ### User Experience
@@ -619,6 +746,30 @@ if not identifiers or not has_real_indicators:
     if should_create_detection(has_mitre_indicators=False, osint_found=osint_found):
         # Create detection with OSINT metadata
         construct_yaml(..., osint_enrichment=osint_data)
+```
+
+### Viewing OSINT Data in Correlations
+
+After generating correlations for a threat group:
+
+```bash
+python archer/parsers/correlations.py --threat-group APT29
+```
+
+The output JSON file will include OSINT metadata for analysis:
+
+```python
+import json
+
+with open('data/correlate/APT29.json') as f:
+    data = json.load(f)
+
+for correlation in data['correlations']:
+    if correlation.get('osint_enriched'):
+        print(f"Correlation {correlation['correlation_id']}:")
+        print(f"  - Enriched Queries: {correlation['osint_enrichment_count']}/{correlation['query_count']}")
+        print(f"  - Sources: {', '.join(correlation['osint_sources'])}")
+        print(f"  - Indicators: {sum(len(v) for v in correlation['osint_indicators'].values())} total")
 ```
 
 ### No Configuration Required
@@ -785,8 +936,10 @@ python scripts/update_osint_repos.py --force
 | `archer/build/osint_comparison.py` | Query snippet extraction | Added `extract_operations_from_osint_snippets()` |
 | `archer/build/detections.py` | Detection generation | Added generic term filtering, OSINT integration |
 | `archer/build/collate.py` | Data collation | Added `osint_indicators` parameter |
-| `archer/build/yaml.py` | YAML generation | Added OSINT metadata handling |
+| `archer/build/yaml.py` | YAML generation | Added OSINT metadata handling, query snippets |
 | `archer/build/queries.py` | Query compilation | Added OSINT indicator merging |
+| `archer/genai/engine.py` | Correlation engine | Added OSINT metadata extraction and aggregation |
+| `archer/reports/generator.py` | Report generation | Added OSINT display sections |
 
 ### Mapping Files
 
@@ -814,12 +967,14 @@ python scripts/update_osint_repos.py --force
 
 ## Summary
 
-The OSINT Enhancement System transforms generic MITRE ATT&CK descriptions into actionable detections by:
+The OSINT Enhancement System transforms generic MITRE ATT&CK descriptions into actionable detections throughout the entire detection lifecycle by:
 
 1. **Precision** - Exact field names and values to search
 2. **Context** - How the security community detects each technique
 3. **Validation** - Cross-vendor confirmation of detection patterns
 4. **Tuning** - Known false positive filters and thresholds
+5. **Correlation** - Aggregated OSINT metadata across multiple detections
+6. **Reporting** - Comprehensive OSINT information in generated reports
 
 It is especially critical for cloud detections where traditional endpoint IOCs don't exist, making query snippets the primary "indicators" for Azure, AWS, GCP, and SaaS platform detections.
 
@@ -831,5 +986,6 @@ It is especially critical for cloud detections where traditional endpoint IOCs d
 - ✅ Offline capable after initial clone
 - ✅ Automatic hourly updates
 - ✅ Graceful degradation with partial availability
+- ✅ Full integration with correlations and reports
 
-**Last Updated:** 2025-10-29
+**Last Updated:** 2025-11-14

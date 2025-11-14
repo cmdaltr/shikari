@@ -146,8 +146,10 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
             vendor = "splunk"
         elif connector_id == "MicrosoftThreatProtection":
             vendor = "mde"
-        elif connector_id == "GoogleChronicle":
-            vendor = "chronicle"
+        elif connector_id == "GoogleSecOps":
+            vendor = "googlesecops"
+        elif connector_id == "Elastic":
+            vendor = "elastic"
 
     # If connectorId wasn't found, try other methods to find vendor/platform
     if not vendor:
@@ -208,7 +210,10 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
             vendor = "mde"
         elif "rule " in query.lower() and "events:" in query.lower():
             # YARA-L rules start with "rule " and contain "events:" sections
-            vendor = "chronicle"
+            vendor = "googlesecops"
+        elif query.lstrip().startswith("{") and "query" in query.lower() and "bool" in query.lower():
+            # Elastic Query DSL starts with { and typically contains "query" and "bool"
+            vendor = "elastic"
 
     # fallback: try filename hints if vendor not found
     if not vendor:
@@ -217,8 +222,10 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
             vendor = "splunk"
         elif "kql" in name or "mde" in name or "microsoft" in name or "sentinel" in name:
             vendor = "mde"
-        elif "chronicle" in name or "yaral" in name or "google" in name:
-            vendor = "chronicle"
+        elif "googlesecops" in name or "chronicle" in name or "yaral" in name or "google" in name:
+            vendor = "googlesecops"
+        elif "elastic" in name:
+            vendor = "elastic"
 
     # Normalize vendor names to ensure consistency
     if vendor and vendor.lower() in ["splunk"]:
@@ -232,12 +239,15 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
     ]:
         vendor = "mde"
     elif vendor and vendor.lower() in [
+        "googlesecops",
         "chronicle",
         "googlechronicle",
         "google",
         "yaral",
     ]:
-        vendor = "chronicle"
+        vendor = "googlesecops"
+    elif vendor and vendor.lower() in ["elastic", "elasticsearch"]:
+        vendor = "elastic"
 
     # Extract tactics from the YAML
     tactics_marker = False
@@ -2469,7 +2479,7 @@ def build_correlation_queries(
             if not data or "query" not in data:
                 continue
 
-            # Extract metadata
+            # Extract metadata including OSINT enrichment data
             query_info = {
                 "id": data.get("id", os.path.basename(yaml_path)),
                 "name": data.get("name", "Unknown"),
@@ -2484,6 +2494,13 @@ def build_correlation_queries(
                 "query": data.get("query", ""),
                 "file_path": yaml_path,
                 "metadata": data.get("metadata", {}),
+                # OSINT enrichment metadata
+                "osint_compared": data.get("osint_compared", False),
+                "osint_enhanced": data.get("osint_enhanced", False),
+                "osint_sources": data.get("osint_sources", []),
+                "osint_indicators": data.get("osint_indicators", {}),
+                "osint_query_snippets": data.get("osint_query_snippets", []),
+                "comparison_date": data.get("comparison_date", None),
             }
             queries_data.append(query_info)
 
@@ -2591,6 +2608,10 @@ def _detect_platform(yaml_data: Dict) -> str:
         return "mde"
     elif connector_id == "Splunk":
         return "splunk"
+    elif connector_id in ["GoogleSecOps", "GoogleChronicle"]:
+        return "googlesecops"
+    elif connector_id in ["Elastic", "ElasticSecurity"]:
+        return "elastic"
 
     # Fallback: check query content
     query = yaml_data.get("query", "")
@@ -2598,6 +2619,12 @@ def _detect_platform(yaml_data: Dict) -> str:
         return "splunk"
     elif query.lstrip().startswith("Device"):
         return "mde"
+    elif "rule " in query and ("events:" in query or "match:" in query):  # YARA-L for Google SecOps
+        return "googlesecops"
+    elif query.lstrip().startswith("FROM ") or " FROM " in query.upper()[:100]:  # Elastic EQL/ES|QL
+        return "elastic"
+    elif query.strip().startswith("event."):  # Elastic field pattern
+        return "elastic"
 
     return "unknown"
 
@@ -2703,15 +2730,40 @@ def _build_correlation_search(queries: List[Dict], correlation_id: int) -> Dict:
     # Determine platform
     platform = queries[0].get("platform", "unknown")
 
-    # Collect metadata
+    # Collect metadata including OSINT enrichment
     all_tags = set()
     all_tactics = set()
     all_names = []
+    osint_enriched_queries = []
+    all_osint_sources = set()
+    all_osint_indicators = {}
 
     for q in queries:
         all_tags.update(q.get("tags", []))
         all_tactics.update(q.get("tactics", []))
         all_names.append(q.get("name", "Unknown"))
+
+        # Track OSINT enrichment per query
+        if q.get("osint_compared") or q.get("osint_enhanced"):
+            osint_enriched_queries.append({
+                "name": q.get("name", "Unknown"),
+                "osint_enhanced": q.get("osint_enhanced", False),
+                "osint_sources": q.get("osint_sources", []),
+                "osint_indicators": q.get("osint_indicators", {}),
+                "osint_query_snippets": q.get("osint_query_snippets", []),
+            })
+
+            # Aggregate OSINT sources
+            all_osint_sources.update(q.get("osint_sources", []))
+
+            # Aggregate OSINT indicators by type
+            for indicator_type, values in q.get("osint_indicators", {}).items():
+                if indicator_type not in all_osint_indicators:
+                    all_osint_indicators[indicator_type] = set()
+                if isinstance(values, list):
+                    all_osint_indicators[indicator_type].update(values)
+                elif isinstance(values, str):
+                    all_osint_indicators[indicator_type].add(values)
 
     # Build combined query based on platform
     if platform == "mde":
@@ -2728,7 +2780,14 @@ def _build_correlation_search(queries: List[Dict], correlation_id: int) -> Dict:
     clean_tags = sorted([t for t in all_tags if t is not None])
     clean_tactics = sorted([t for t in all_tactics if t is not None])
 
-    return {
+    # Convert OSINT indicator sets to sorted lists for JSON serialization
+    osint_indicators_serializable = {
+        indicator_type: sorted(list(values))
+        for indicator_type, values in all_osint_indicators.items()
+        if values  # Only include non-empty indicator types
+    }
+
+    correlation_result = {
         "correlation_id": f"CORR-{correlation_id:04d}",
         "name": f"Correlation: {' + '.join(all_names[:3])}{'...' if len(all_names) > 3 else ''}",
         "summary": summary,
@@ -2750,6 +2809,18 @@ def _build_correlation_search(queries: List[Dict], correlation_id: int) -> Dict:
             for j in range(i + 1, min(i + 3, len(queries)))  # Limit pairs for readability
         ],
     }
+
+    # Add OSINT enrichment metadata if any queries were enriched
+    if osint_enriched_queries:
+        correlation_result["osint_enriched"] = True
+        correlation_result["osint_sources"] = sorted(list(all_osint_sources))
+        correlation_result["osint_indicators"] = osint_indicators_serializable
+        correlation_result["osint_enriched_queries"] = osint_enriched_queries
+        correlation_result["osint_enrichment_count"] = len(osint_enriched_queries)
+    else:
+        correlation_result["osint_enriched"] = False
+
+    return correlation_result
 
 
 def _combine_mde_queries(query_list: List[str]) -> str:

@@ -133,6 +133,26 @@ def extract_indicators_from_guidance(op_guidance):
             path_pattern = r'[A-Z]:\\[^\s"]+|/[a-z/]+/[a-z]+'
             path_matches = re.findall(path_pattern, value, re.IGNORECASE)
             indicators.update(path_matches)
+
+            # Network Ports (common format: :port or port/tcp or port/udp)
+            port_pattern = r'\b(?:port\s+)?(\d{1,5})(?:/(?:tcp|udp))?\b|\:(\d{1,5})\b'
+            port_matches = re.findall(port_pattern, value, re.IGNORECASE)
+            for match in port_matches:
+                port = match[0] or match[1]
+                if port and 1 <= int(port) <= 65535:
+                    indicators.add(f"port:{port}")
+
+            # Protocols (HTTP, HTTPS, FTP, SSH, SMB, RDP, DNS, etc.)
+            protocol_pattern = r'\b(HTTP|HTTPS|FTP|FTPS|SSH|SMB|RDP|DNS|LDAP|SMTP|POP3|IMAP|SNMP|TELNET|TFTP|NFS|ICMP|TCP|UDP)\b'
+            protocol_matches = re.findall(protocol_pattern, value, re.IGNORECASE)
+            for proto in protocol_matches:
+                indicators.add(f"protocol:{proto.upper()}")
+
+            # Services (common service names)
+            service_pattern = r'\b(apache|nginx|iis|mysql|postgresql|mongodb|redis|elasticsearch|docker|kubernetes|ssh|ftp|smb|rdp|dns|dhcp|ntp|syslog)\b'
+            service_matches = re.findall(service_pattern, value, re.IGNORECASE)
+            for service in service_matches:
+                indicators.add(f"service:{service.lower()}")
         elif isinstance(value, list):
             # If the value is already a list of indicators, add them
             for item in value:
@@ -304,6 +324,7 @@ def retrieve_procedures(bundle, retrieved_techniques):
                         evidence_needed = True
                     if not op_guidance.get("sw"):
                         evidence_needed = True
+                    # Network indicators are optional - don't require them for evidence
                 else:
                     # If op_guidance is not a dictionary, we definitely need more evidence
                     evidence_needed = True
@@ -349,7 +370,7 @@ def retrieve_procedures(bundle, retrieved_techniques):
                                 if isinstance(op_guidance, dict) and isinstance(
                                     add_op_guidance, dict
                                 ):
-                                    for key in ["cmd", "reg", "evt", "sw"]:
+                                    for key in ["cmd", "reg", "evt", "sw", "port", "protocol", "service"]:
                                         if add_op_guidance.get(
                                             key
                                         ) and not op_guidance.get(key):

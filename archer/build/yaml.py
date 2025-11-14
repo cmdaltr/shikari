@@ -186,7 +186,7 @@ def map_entities(query):
     return (query, entities)
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None):
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None):
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
@@ -194,38 +194,54 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, i
     desc = tdesc.replace("\n  \n", "\n  ").replace("\n* ", "\n  * ")
     desc = re.sub(r"</?code>", r"`", desc)
 
-    # Extract datatype from first non-comment, non-let line
-    datatype = ""
-    for line in query.split("\n"):
-        stripped = line.strip()
-        # Skip empty lines, comments, and let statements
-        if stripped and not stripped.startswith("//") and not stripped.startswith("let "):
-            datatype = stripped.split(" earliest=")[0].replace("index=", "").replace("_prod", "")
-            break
-
-    # Fallback if no valid line found
+    # Extract datatype from first non-comment, non-let line (if not provided)
     if not datatype:
-        datatype = "UnknownDataType"
+        for line in query.split("\n"):
+            stripped = line.strip()
+            # Skip empty lines, comments, and let statements
+            if stripped and not stripped.startswith("//") and not stripped.startswith("let "):
+                datatype = stripped.split(" earliest=")[0].replace("index=", "").replace("_prod", "")
+                break
+
+        # Fallback if no valid line found
+        if not datatype:
+            datatype = "UnknownDataType"
     tactic = str(tactic)[2:-2].replace("', '", "\n  - ")
 
     # Indent ALL query lines properly for YAML literal block
     # Split query into lines, indent each non-empty line with 2 spaces
-    # Strip existing indentation first to ensure consistent spacing
+    # IMPORTANT: For JSON queries (Elastic), preserve internal indentation structure
     query_lines = query.split("\n")
     indented_lines = []
-    for line in query_lines:
-        if line.strip():  # Non-empty line
-            stripped = line.lstrip()
-            # For KQL queries, ensure pipe operators are properly aligned
-            # If line starts with |, it should have no extra indentation beyond the 2-space YAML indent
-            if stripped.startswith("|"):
-                indented_lines.append("  " + stripped)
+
+    # Detect if this is a JSON query (starts with { or whitespace + {)
+    is_json_query = query.strip().startswith("{")
+
+    if is_json_query:
+        # JSON query - preserve existing indentation, just add base 2-space indent
+        for line in query_lines:
+            if line.strip():  # Non-empty line
+                # Keep the existing indentation, just add 2-space base indent
+                indented_lines.append("  " + line)
             else:
-                # Non-pipe lines get standard 2-space indent
-                indented_lines.append("  " + stripped)
-        else:
-            # Empty line - keep it empty
-            indented_lines.append(line)
+                # Empty line - keep it empty
+                indented_lines.append(line)
+    else:
+        # Non-JSON query (KQL, SPL, etc.) - apply standard formatting
+        for line in query_lines:
+            if line.strip():  # Non-empty line
+                stripped = line.lstrip()
+                # For KQL queries, ensure pipe operators are properly aligned
+                # If line starts with |, it should have no extra indentation beyond the 2-space YAML indent
+                if stripped.startswith("|"):
+                    indented_lines.append("  " + stripped)
+                else:
+                    # Non-pipe lines get standard 2-space indent
+                    indented_lines.append("  " + stripped)
+            else:
+                # Empty line - keep it empty
+                indented_lines.append(line)
+
     query = "\n".join(indented_lines)
 
     author = getpass.getuser()
@@ -346,6 +362,32 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, i
                         yaml_value = yaml_str.strip().replace('- ', '', 1).strip()
                         osint_section += f'    - {yaml_value}\n'
 
+        # Add query snippets for correlation tracking
+        if osint_data.get("osint_indicators", {}).get("query_snippets"):
+            import yaml as yaml_module
+            osint_section += "osint_query_snippets:\n"
+            for snippet_entry in osint_data["osint_indicators"]["query_snippets"]:
+                # Parse snippet format: "[Source] query|||url"
+                if "|||" in snippet_entry:
+                    snippet_parts = snippet_entry.split("|||")
+                    snippet_text = snippet_parts[0]
+                    snippet_url = snippet_parts[1].strip() if len(snippet_parts) > 1 else ""
+
+                    # Extract source from "[Source]" prefix
+                    source_match = re.match(r'\[([^\]]+)\]\s*(.*)', snippet_text)
+                    if source_match:
+                        source = source_match.group(1)
+                        query = source_match.group(2).strip()
+
+                        osint_section += f"  - source: {source}\n"
+                        yaml_str = yaml_module.dump([query], default_flow_style=False, width=1000000)
+                        yaml_value = yaml_str.strip().replace('- ', '', 1).strip()
+                        osint_section += f"    query: {yaml_value}\n"
+                        if snippet_url:
+                            # Ensure URL doesn't start with pipe character (which would be a YAML syntax error)
+                            clean_url = snippet_url.lstrip('|')
+                            osint_section += f"    url: {clean_url}\n"
+
         if osint_data.get("enrichment_notes"):
             notes = osint_data["enrichment_notes"].replace("\n", "\n  ")
 
@@ -415,6 +457,7 @@ def construct_yaml(
     software_platforms,
     osint_enhancement_data=None,
     osint_enhancement=False,
+    excluded_vendors=None,
 ):
     """
     Construct a YAML file for a detection
@@ -502,6 +545,9 @@ def construct_yaml(
 
     # Writing MDE YAML file
     for query in appended_mde_queries:
+        # Skip if MDE is excluded
+        if excluded_vendors and "mde" in excluded_vendors:
+            continue
         # Extract the table name from the query, skipping comment lines and let statements
         lines = query.split("\n")
         table_name = None
@@ -554,6 +600,9 @@ def construct_yaml(
 
     # Writing Splunk YAML file
     for query in appended_splunk_queries:
+        # Skip if Splunk is excluded
+        if excluded_vendors and "splunk" in excluded_vendors:
+            continue
         index = query.split("\n")[0].split(" earliest=")[0].replace("index=", "").replace(" ", "")
         query = query.replace(" earliest=-1d\n", " earliest=-1d\n  ")
         # Use filename-safe version for Splunk filenames too
@@ -575,48 +624,58 @@ def construct_yaml(
         else:
             update_yaml(yamlfile, tag)
 
-    # Writing Chronicle YAML file (if Chronicle support is enabled)
-    # Chronicle uses AI-generated YARA-L detection rules
-    try:
+    # Writing Google SecOps YAML file (if Google SecOps support is enabled)
+    # Google SecOps uses template-based YARA-L detection rules with UDM field mappings
+    # Skip if Google SecOps is excluded
+    if not excluded_vendors or "googlesecops" not in excluded_vendors:
+      try:
         from archer.build.chronicle import ChronicleGenerator
 
-        chronicle_gen = ChronicleGenerator()
-        chronicle_rule = chronicle_gen.generate_yaral_rule(
+        googlesecops_gen = ChronicleGenerator()
+        googlesecops_rule = googlesecops_gen.generate_yaral_rule(
             technique_id=tid,
             technique_name=name,
             tactic=tactic,
             description=tdesc,
+            indicators=identifiers,
             osint_data=osint_enhancement_data,
             group_name=tag
         )
 
-        if chronicle_rule and chronicle_rule.get("yaral_code"):
-            # Create Chronicle YAML file
-            yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_Chronicle.yaml")
+        if googlesecops_rule and googlesecops_rule.get("yaral_code"):
+            # Create Google SecOps YAML file
+            yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_GoogleSecOps.yaml")
             if not os.path.exists(yamlfile):
+                # Get event type from the rule (e.g., PROCESS_LAUNCH)
+                event_types = googlesecops_rule.get("event_types", ["PROCESS_LAUNCH"])
+                datatype_str = event_types[0] if event_types else "PROCESS_LAUNCH"
+
                 write_yaml(
                     yamlfile,
                     name,
                     tid,
                     tdesc,
-                    "GoogleChronicle",
+                    "GoogleSecOps",
                     all_tactics,
                     tag,
-                    chronicle_rule["yaral_code"],
+                    googlesecops_rule["yaral_code"],
+                    datatype=datatype_str,
                     indicators=identifiers,
                     osint_data=osint_enhancement_data,
                     osint_enhanced=osint_enhancement,
                 )
-                print(f"  ✅ Generated Chronicle YARA-L rule: {chronicle_rule['rule_name']}")
+                print(f"  ✅ Generated Google SecOps YARA-L rule: {googlesecops_rule['rule_name']}")
             else:
                 update_yaml(yamlfile, tag)
-    except Exception as e:
-        # Chronicle generation is optional - don't fail if it errors
-        print(f"  ⚠️  Chronicle generation failed for {name}: {e}")
+      except Exception as e:
+        # Google SecOps generation is optional - don't fail if it errors
+        print(f"  ⚠️  Google SecOps generation failed for {name}: {e}")
 
     # Writing Elastic YAML file (if Elastic support is enabled)
-    # Elastic uses AI-generated Query DSL with ECS field names
-    try:
+    # Elastic uses template-based Query DSL with ECS field mappings
+    # Skip if Elastic is excluded
+    if not excluded_vendors or "elastic" not in excluded_vendors:
+      try:
         from archer.build.elastic import ElasticQueryGenerator
 
         elastic_gen = ElasticQueryGenerator()
@@ -625,6 +684,7 @@ def construct_yaml(
             technique_name=name,
             tactic=tactic,
             description=tdesc,
+            indicators=identifiers,
             osint_data=osint_enhancement_data,
             group_name=tag
         )
@@ -649,6 +709,7 @@ def construct_yaml(
                         all_tactics,
                         tag,
                         elastic_query_str,
+                        datatype="logs-*-*",
                         indicators=identifiers,
                         osint_data=osint_enhancement_data,
                         osint_enhanced=osint_enhancement,
@@ -658,6 +719,6 @@ def construct_yaml(
                     update_yaml(yamlfile, tag)
             else:
                 print(f"  ⚠️  Elastic query validation failed for {name}: {error}")
-    except Exception as e:
+      except Exception as e:
         # Elastic generation is optional - don't fail if it errors
         print(f"  ⚠️  Elastic generation failed for {name}: {e}")

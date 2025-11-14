@@ -1292,6 +1292,9 @@ def validate_mapping_files():
         "platforms.json",
         "schemaSplunk.json",
         "schemaMDE.json",
+        "schemaElastic.json",
+        "schemaGoogleSecOps.json",
+        "techniquePlatformIndicators.json",
     ]
 
     mappings_dir = Path("archer/mappings")
@@ -1959,6 +1962,10 @@ async def generate(
     osint_comparison: str = Form(None),
     merge_by_tactic: str = Form(None),
     merge_by_parent: str = Form(None),
+    exclude_splunk: str = Form(None),
+    exclude_mde: str = Form(None),
+    exclude_chronicle: str = Form(None),
+    exclude_elastic: str = Form(None),
 ):
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
@@ -1979,6 +1986,17 @@ async def generate(
 
         def _bg():
             try:
+                # Build list of excluded vendors
+                excluded = []
+                if exclude_splunk == "true":
+                    excluded.append("splunk")
+                if exclude_mde == "true":
+                    excluded.append("mde")
+                if exclude_chronicle == "true":
+                    excluded.append("googlesecops")
+                if exclude_elastic == "true":
+                    excluded.append("elastic")
+
                 # Use the modified wrapper instead of direct process_group
                 modified_process_group_wrapper(
                     group_name,
@@ -1990,6 +2008,7 @@ async def generate(
                     osint_comparison=(osint_comparison == "true"),
                     merge_by_tactic=(merge_by_tactic == "true"),
                     merge_by_parent=(merge_by_parent == "true"),
+                    excluded_vendors=excluded if excluded else None,
                 )
 
                 # Run emulation if requested
@@ -2983,7 +3002,7 @@ def start_genai_processing(group_name):
 
 # Modify the orchestrator process to ensure completion
 def modified_process_group_wrapper(
-    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, merge_by_tactic=False, merge_by_parent=False
+    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, merge_by_tactic=False, merge_by_parent=False, excluded_vendors=None
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
@@ -3024,6 +3043,7 @@ def modified_process_group_wrapper(
             run_correlation=run_correlation,
             osint_enhancement=osint_enhancement,
             osint_comparison=osint_comparison,
+            excluded_vendors=excluded_vendors,
         )
 
         # print(f"DEBUG: process_group completed successfully")
@@ -4175,6 +4195,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         "mde": "🛡️",
         "microsoft": "🛡️",
         "elastic": "🔎",
+        "googlesecops": "🔎",
         "qradar": "🎯",
         "sumo": "☁️",
         "chronicle": "📊",
@@ -4185,6 +4206,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         "mde": "MDE",
         "microsoft": "MDE",
         "elastic": "Elastic",
+        "googlesecops": "Google SecOps",
         "qradar": "IBM QRadar",
         "sumo": "Sumo Logic",
         "chronicle": "Google Chronicle",
@@ -4240,6 +4262,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     vendor = "mde"
                 elif "Splunk" in connector_value:
                     vendor = "splunk"
+                elif "GoogleSecOps" in connector_value:
+                    vendor = "googlesecops"
                 elif "Elastic" in connector_value:
                     vendor = "elastic"
 
@@ -4490,32 +4514,11 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             }
         )
 
-    # Add Google SecOps as "Coming Soon" placeholder
-    detections.append(
-        {
-            "name": "google_secops",
-            "display_name": "Google SecOps",
-            "icon": "☁️",
-            "count": 0,
-            "detections": [],
-            "coming_soon": True,
-        }
-    )
-
-    # Add Elastic as "Coming Soon" placeholder
-    detections.append(
-        {
-            "name": "elastic",
-            "display_name": "Elastic",
-            "icon": "🔎",
-            "count": 0,
-            "detections": [],
-            "coming_soon": True,
-        }
-    )
+    # Chronicle and Elastic are now fully supported - no longer "Coming Soon"
+    # They will appear automatically when YAML files are generated for them
 
     # Sort vendors: Splunk, MDE, Google SecOps, Elastic, then others
-    vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "google_secops": 2, "elastic": 3}
+    vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "googlesecops": 2, "elastic": 3}
     detections.sort(key=lambda x: (vendor_order.get(x["name"], 99), x["name"]))
 
     # Load correlations
@@ -4878,24 +4881,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             "correlations": sorted_corrs
         })
 
-    # Add Google SecOps as "Coming Soon" placeholder
-    grouped_correlations.append({
-        "name": "Google SecOps",
-        "count": 0,
-        "correlations": [],
-        "coming_soon": True
-    })
-
-    # Add Elastic as "Coming Soon" placeholder
-    grouped_correlations.append({
-        "name": "Elastic",
-        "count": 0,
-        "correlations": [],
-        "coming_soon": True
-    })
-
-    # Sort by count descending (but keep coming_soon at the end)
-    grouped_correlations.sort(key=lambda x: (x.get("coming_soon", False), -x["count"]))
+    # Sort by count descending
+    grouped_correlations.sort(key=lambda x: -x["count"])
 
     # Check if attack flow exists
     attack_flow_file = os.path.join(ATTACK_FLOWS_DIR, f"{safe_group}_complete_flow.html")
@@ -6315,28 +6302,8 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "empty_state": True
             })
 
-        # Add Google SecOps as "Coming Soon" placeholder (if not already present)
-        if not any(v["name"] == "google_secops" for v in vendors):
-            vendors.append({
-                "name": "google_secops",
-                "display_name": "Google SecOps",
-                "count": 0,
-                "detections": [],
-                "coming_soon": True
-            })
-
-        # Add Elastic as "Coming Soon" placeholder (if not already present)
-        if not any(v["name"] == "elastic" for v in vendors):
-            vendors.append({
-                "name": "elastic",
-                "display_name": "Elastic",
-                "count": 0,
-                "detections": [],
-                "coming_soon": True
-            })
-
         # Sort vendors: Splunk, MDE, Google SecOps, Elastic, then others
-        vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "google_secops": 2, "elastic": 3}
+        vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "googlesecops": 2, "elastic": 3}
         vendors.sort(key=lambda v: (vendor_order.get(v["name"], 99), v["name"]))
 
         # Calculate summary statistics
@@ -6436,7 +6403,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         # Sort correlations: Splunk, MDE, Google SecOps, Elastic, then others
         # Priority: empty_state and coming_soon go after actual data
         def sort_correlations(v):
-            vendor_order = {"Splunk": 0, "splunk": 0, "MDE": 1, "mde": 1, "google_secops": 2, "Google SecOps": 2, "elastic": 3, "Elastic": 3}
+            vendor_order = {"Splunk": 0, "splunk": 0, "MDE": 1, "mde": 1, "googlesecops": 2, "Google SecOps": 2, "elastic": 3, "Elastic": 3}
             is_placeholder = v.get("coming_soon", False) or v.get("empty_state", False)
             has_data = v["count"] > 0
             return (not has_data, is_placeholder, vendor_order.get(v["name"], 99), v["name"])
@@ -6633,50 +6600,58 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
         detection_ids = body.get("ids", [])
         correlation_ids = body.get("correlation_ids", [])
         export_format = body.get("format", "json")  # json, csv, xml, docx, pdf
+        direct_export_data = body.get("export_data", None)  # Direct export data from results page
+        group_name = body.get("group_name", "Report")  # Group name for report title
+        report_metadata = body.get("metadata", {})  # Additional metadata from results page
 
-        if not detection_ids and not correlation_ids:
-            raise HTTPException(status_code=400, detail="No detections or correlations selected")
+        # If direct export data provided (from results page), use it directly
+        if direct_export_data:
+            export_data = direct_export_data
+        else:
+            # Original flow: Get data from library using IDs
+            if not detection_ids and not correlation_ids:
+                raise HTTPException(status_code=400, detail="No detections or correlations selected")
 
-        # Get detections
-        detections = []
-        if detection_ids:
-            detections = (
-                db.query(LibraryDetection)
-                .filter(
-                    LibraryDetection.id.in_(detection_ids),
-                    (LibraryDetection.user_id == user.id)
-                    | (LibraryDetection.visibility == VisibilityType.SHARED),
+            # Get detections
+            detections = []
+            if detection_ids:
+                detections = (
+                    db.query(LibraryDetection)
+                    .filter(
+                        LibraryDetection.id.in_(detection_ids),
+                        (LibraryDetection.user_id == user.id)
+                        | (LibraryDetection.visibility == VisibilityType.SHARED),
+                    )
+                    .all()
                 )
-                .all()
-            )
 
-        # Get correlations
-        correlations = []
-        if correlation_ids:
-            from archer.database.models import LibraryCorrelation
-            correlations = (
-                db.query(LibraryCorrelation)
-                .filter(
-                    LibraryCorrelation.id.in_(correlation_ids),
-                    (LibraryCorrelation.user_id == user.id)
-                    | (LibraryCorrelation.visibility == VisibilityType.SHARED),
+            # Get correlations
+            correlations = []
+            if correlation_ids:
+                from archer.database.models import LibraryCorrelation
+                correlations = (
+                    db.query(LibraryCorrelation)
+                    .filter(
+                        LibraryCorrelation.id.in_(correlation_ids),
+                        (LibraryCorrelation.user_id == user.id)
+                        | (LibraryCorrelation.visibility == VisibilityType.SHARED),
+                    )
+                    .all()
                 )
-                .all()
-            )
 
-        if not detections and not correlations:
-            raise HTTPException(status_code=404, detail="No detections or correlations found")
+            if not detections and not correlations:
+                raise HTTPException(status_code=404, detail="No detections or correlations found")
 
-        # Prepare data
-        export_data = []
-        for detection in detections:
-            creator = db.query(User).filter(User.id == detection.user_id).first()
-            export_data.append(
-                {
-                    "id": detection.id,
-                    "title": detection.title,
-                    "type": detection.detection_type.value,
-                    "visibility": detection.visibility.value,
+            # Prepare data from library
+            export_data = []
+            for detection in detections:
+                creator = db.query(User).filter(User.id == detection.user_id).first()
+                export_data.append(
+                    {
+                        "id": detection.id,
+                        "title": detection.title,
+                        "type": detection.detection_type.value,
+                        "visibility": detection.visibility.value,
                     "creator": creator.full_name if creator else "Unknown",
                     "platform": detection.platform,
                     "content": json.loads(detection.content) if detection.content else {},
@@ -6745,6 +6720,10 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
             # Prepare detection data for report
             report_detections = []
             for item in export_data:
+                # Skip correlations in this loop
+                if item.get("type") == "correlation":
+                    continue
+
                 content_data = item.get("content", {})
                 detection_dict = {
                     "technique": content_data.get("technique", item["title"]),
@@ -6762,36 +6741,60 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
 
             # Prepare correlation data for report
             report_correlations = []
-            for corr in correlations:
-                corr_content = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
-                correlation_dict = {
-                    "name": corr.title,
-                    "techniques": corr_content.get("techniques", []),
-                    "severity": corr_content.get("severity", "High"),
-                    "time_window": corr_content.get("time_window", "N/A"),
-                    "vendor": corr.platform or "Multi-platform",
-                    "combined_query": corr_content.get("combined_query", "")
-                }
-                report_correlations.append(correlation_dict)
+            if direct_export_data:
+                # When using direct export data, extract correlations from export_data
+                for item in export_data:
+                    if item.get("type") == "correlation":
+                        content_data = item.get("content", {})
+                        correlation_dict = {
+                            "name": item.get("title", "Untitled Correlation"),
+                            "techniques": content_data.get("techniques", []),
+                            "severity": content_data.get("severity", "High"),
+                            "time_window": content_data.get("time_window", "N/A"),
+                            "vendor": item.get("platform", "Multi-platform"),
+                            "combined_query": content_data.get("combined_query", "")
+                        }
+                        report_correlations.append(correlation_dict)
+            else:
+                # Original flow: Get correlations from database query result
+                for corr in correlations:
+                    corr_content = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                    correlation_dict = {
+                        "name": corr.title,
+                        "techniques": corr_content.get("techniques", []),
+                        "severity": corr_content.get("severity", "High"),
+                        "time_window": corr_content.get("time_window", "N/A"),
+                        "vendor": corr.platform or "Multi-platform",
+                        "combined_query": corr_content.get("combined_query", "")
+                    }
+                    report_correlations.append(correlation_dict)
 
-            # Extract group name from detections or correlations
-            group_name = "Detection Library"
-            if report_detections and len(report_detections) > 0:
-                first_content = export_data[0].get("content", {})
-                group_name = first_content.get("group", "Detection Library")
-            elif report_correlations and len(report_correlations) > 0:
-                group_name = "Correlation Rules"
+            # Extract group name - use provided group_name first, then from content
+            report_group_name = group_name  # Use provided group_name from request
+            if not report_group_name or report_group_name == "Report":
+                # Fall back to extracting from content
+                report_group_name = "Detection Library"
+                if report_detections and len(report_detections) > 0:
+                    first_content = export_data[0].get("content", {})
+                    report_group_name = first_content.get("group", "Detection Library")
+                elif report_correlations and len(report_correlations) > 0:
+                    report_group_name = "Correlation Rules"
 
             generator = WordReportGenerator()
+            # Merge user info with additional metadata from request
+            full_metadata = {
+                "user": user.full_name if hasattr(user, 'full_name') else "Archer User",
+                **report_metadata  # Include metrics, stats, etc. from results page
+            }
             content_bytes = generator.generate(
-                group_name=group_name,
+                group_name=report_group_name,
                 detections=report_detections,
                 correlations=report_correlations if report_correlations else None,
-                metadata={"user": user.full_name if hasattr(user, 'full_name') else "Archer User"}
+                metadata=full_metadata
             )
 
             media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            filename = f"{group_name.replace(' ', '_')}_report.docx"
+            filename = f"{report_group_name.replace(' ', '_')}_report.docx"
 
             return StreamingResponse(
                 io.BytesIO(content_bytes),
@@ -6806,6 +6809,10 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
             # Prepare detection data for report
             report_detections = []
             for item in export_data:
+                # Skip correlations in this loop
+                if item.get("type") == "correlation":
+                    continue
+
                 content_data = item.get("content", {})
                 detection_dict = {
                     "technique": content_data.get("technique", item["title"]),
@@ -6823,36 +6830,60 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
 
             # Prepare correlation data for report
             report_correlations = []
-            for corr in correlations:
-                corr_content = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
-                correlation_dict = {
-                    "name": corr.title,
-                    "techniques": corr_content.get("techniques", []),
-                    "severity": corr_content.get("severity", "High"),
-                    "time_window": corr_content.get("time_window", "N/A"),
-                    "vendor": corr.platform or "Multi-platform",
-                    "combined_query": corr_content.get("combined_query", "")
-                }
-                report_correlations.append(correlation_dict)
+            if direct_export_data:
+                # When using direct export data, extract correlations from export_data
+                for item in export_data:
+                    if item.get("type") == "correlation":
+                        content_data = item.get("content", {})
+                        correlation_dict = {
+                            "name": item.get("title", "Untitled Correlation"),
+                            "techniques": content_data.get("techniques", []),
+                            "severity": content_data.get("severity", "High"),
+                            "time_window": content_data.get("time_window", "N/A"),
+                            "vendor": item.get("platform", "Multi-platform"),
+                            "combined_query": content_data.get("combined_query", "")
+                        }
+                        report_correlations.append(correlation_dict)
+            else:
+                # Original flow: Get correlations from database query result
+                for corr in correlations:
+                    corr_content = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                    correlation_dict = {
+                        "name": corr.title,
+                        "techniques": corr_content.get("techniques", []),
+                        "severity": corr_content.get("severity", "High"),
+                        "time_window": corr_content.get("time_window", "N/A"),
+                        "vendor": corr.platform or "Multi-platform",
+                        "combined_query": corr_content.get("combined_query", "")
+                    }
+                    report_correlations.append(correlation_dict)
 
-            # Extract group name from detections or correlations
-            group_name = "Detection Library"
-            if report_detections and len(report_detections) > 0:
-                first_content = export_data[0].get("content", {})
-                group_name = first_content.get("group", "Detection Library")
-            elif report_correlations and len(report_correlations) > 0:
-                group_name = "Correlation Rules"
+            # Extract group name - use provided group_name first, then from content
+            report_group_name = group_name  # Use provided group_name from request
+            if not report_group_name or report_group_name == "Report":
+                # Fall back to extracting from content
+                report_group_name = "Detection Library"
+                if report_detections and len(report_detections) > 0:
+                    first_content = export_data[0].get("content", {})
+                    report_group_name = first_content.get("group", "Detection Library")
+                elif report_correlations and len(report_correlations) > 0:
+                    report_group_name = "Correlation Rules"
 
             generator = PDFReportGenerator()
+            # Merge user info with additional metadata from request
+            full_metadata = {
+                "user": user.full_name if hasattr(user, 'full_name') else "Archer User",
+                **report_metadata  # Include metrics, stats, etc. from results page
+            }
             content_bytes = generator.generate(
-                group_name=group_name,
+                group_name=report_group_name,
                 detections=report_detections,
                 correlations=report_correlations if report_correlations else None,
-                metadata={"user": user.full_name if hasattr(user, 'full_name') else "Archer User"}
+                metadata=full_metadata
             )
 
             media_type = "application/pdf"
-            filename = f"{group_name.replace(' ', '_')}_report.pdf"
+            filename = f"{report_group_name.replace(' ', '_')}_report.pdf"
 
             return StreamingResponse(
                 io.BytesIO(content_bytes),

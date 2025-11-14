@@ -4,6 +4,12 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+</style>
 {% endblock %}
 
 {% block main_class %}page-shell{% endblock %}
@@ -693,14 +699,26 @@
               <!-- Query Preview (Collapsible) -->
               {% if detection.queries and detection.queries|length > 0 %}
               <div style="margin-top: 10px;">
-                <button onclick="toggleDetectionQuery('det-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
-                  <span id="det-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Query</span>
-                </button>
-                <div id="det-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{% for query in detection.queries %}{{ query }}{% if not loop.last %}
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <button onclick="toggleDetectionQuery('det-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
+                    <span id="det-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Query</span>
+                  </button>
+                  <button id="det-{{ vendor.name }}-{{ loop.index }}-copy-btn" onclick="copyToClipboard('det-{{ vendor.name }}-{{ loop.index }}-content', this)" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;" title="Copy to clipboard">
+                    📋 Copy Query
+                  </button>
+                </div>
+                <div id="det-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px;">
+                  <div id="det-{{ vendor.name }}-{{ loop.index }}-content" style="position: relative; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{% for query in detection.queries %}{{ query }}{% if not loop.last %}
 
 ---
 
-{% endif %}{% endfor %}</div>
+{% endif %}{% endfor %}<button onclick="expandCodeBlock('det-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 8px; right: 8px; background: rgba(255, 255, 255, 0.9); border: 1px solid #ddd; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75em; color: #666; display: flex; align-items: center; gap: 4px;" title="Expand to full screen">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                      </svg>
+                      Expand
+                    </button></div>
+                </div>
               </div>
               {% endif %}
             </div>
@@ -1037,10 +1055,22 @@
 
               <!-- Combined Query Preview (Collapsible) -->
               <div style="margin-top: 10px;">
-                <button onclick="toggleQuery('corr-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
-                  <span id="corr-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Combined Query</span>
-                </button>
-                <div id="corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <button onclick="toggleQuery('corr-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
+                    <span id="corr-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Combined Query</span>
+                  </button>
+                  <button id="corr-{{ vendor.name }}-{{ loop.index }}-copy-btn" onclick="copyToClipboard('corr-{{ vendor.name }}-{{ loop.index }}-content', this)" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;" title="Copy to clipboard">
+                    📋 Copy Query
+                  </button>
+                </div>
+                <div id="corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px;">
+                  <div id="corr-{{ vendor.name }}-{{ loop.index }}-content" style="position: relative; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}<button onclick="expandCodeBlock('corr-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 8px; right: 8px; background: rgba(255, 255, 255, 0.9); border: 1px solid #ddd; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75em; color: #666; display: flex; align-items: center; gap: 4px;" title="Expand to full screen">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                      </svg>
+                      Expand
+                    </button></div>
+                </div>
               </div>
 
               <!-- OSINT Details (Collapsible) -->
@@ -1304,18 +1334,28 @@
       <!-- Action Buttons - 5 horizontal buttons below Detection Rules -->
       <div class="detection-section">
         <div class="action-buttons">
-        <button class="btn-action" id="download-all-btn">
+        <button class="btn-action" id="download-all-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
           </svg>
           Download All
         </button>
-        <button class="btn-action" id="save-to-library-btn">
+        <button class="btn-action" id="save-to-library-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
           </svg>
           Save to Library
+        </button>
+        <button class="btn-action" id="generate-report-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          Generate Report
         </button>
         <button class="btn-action" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1455,6 +1495,188 @@ function toggleOsintDetails(detId) {
       detailsDiv.style.display = 'none';
     }
   }
+}
+
+// Copy text content to clipboard
+function copyToClipboard(contentId, button) {
+  const contentElement = document.getElementById(contentId);
+  if (!contentElement) return;
+
+  const text = contentElement.textContent || contentElement.innerText;
+
+  // Use modern clipboard API
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      // Show success feedback
+      const originalText = button.innerHTML;
+      button.innerHTML = '✓ Copied!';
+      button.style.background = '#10b981';
+      button.style.color = 'white';
+      button.style.borderColor = '#10b981';
+
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = '#f0f0f0';
+        button.style.color = '#333';
+        button.style.borderColor = '#ddd';
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy to clipboard');
+    });
+  } else {
+    // Fallback for older browsers
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+      document.execCommand('copy');
+      // Show success feedback
+      const originalText = button.innerHTML;
+      button.innerHTML = '✓ Copied!';
+      button.style.background = '#10b981';
+      button.style.color = 'white';
+      button.style.borderColor = '#10b981';
+
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = '#f0f0f0';
+        button.style.color = '#333';
+        button.style.borderColor = '#ddd';
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy to clipboard');
+    }
+
+    document.body.removeChild(textarea);
+  }
+}
+
+// Expand code block to full screen modal
+function expandCodeBlock(contentId) {
+  const contentElement = document.getElementById(contentId);
+  if (!contentElement) return;
+
+  // Get the text content (excluding the expand button)
+  const buttons = contentElement.querySelectorAll('button');
+  buttons.forEach(btn => btn.style.display = 'none');
+  const text = contentElement.textContent || contentElement.innerText;
+  buttons.forEach(btn => btn.style.display = 'flex');
+
+  // Create modal overlay
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  `;
+
+  // Create modal content
+  const modalContent = document.createElement('div');
+  modalContent.style.cssText = `
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 1200px;
+    height: 90%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  `;
+
+  // Create header
+  const header = document.createElement('div');
+  header.style.cssText = `
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #3e3e3e;
+  `;
+
+  const title = document.createElement('div');
+  title.textContent = 'Query Code';
+  title.style.cssText = `
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #fff;
+  `;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '✕';
+  closeBtn.style.cssText = `
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+  `;
+  closeBtn.onmouseover = () => closeBtn.style.background = '#3e3e3e';
+  closeBtn.onmouseout = () => closeBtn.style.background = 'transparent';
+  closeBtn.onclick = () => document.body.removeChild(modal);
+
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+
+  // Create code container
+  const codeContainer = document.createElement('pre');
+  codeContainer.textContent = text;
+  codeContainer.style.cssText = `
+    flex: 1;
+    margin: 0;
+    padding: 20px;
+    overflow: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+  `;
+
+  // Assemble modal
+  modalContent.appendChild(header);
+  modalContent.appendChild(codeContainer);
+  modal.appendChild(modalContent);
+
+  // Close on background click
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  };
+
+  // Close on Escape key
+  const closeOnEscape = (e) => {
+    if (e.key === 'Escape') {
+      document.body.removeChild(modal);
+      document.removeEventListener('keydown', closeOnEscape);
+    }
+  };
+  document.addEventListener('keydown', closeOnEscape);
+
+  // Add to page
+  document.body.appendChild(modal);
 }
 
 // Toggle all vendors
@@ -1640,6 +1862,7 @@ function checkValidationStatus() {
 
   const downloadBtn = document.getElementById('download-all-btn');
   const saveBtn = document.getElementById('save-to-library-btn');
+  const generateReportBtn = document.getElementById('generate-report-btn');
 
   if (allChecked) {
     downloadBtn.disabled = false;
@@ -1648,6 +1871,9 @@ function checkValidationStatus() {
     saveBtn.disabled = false;
     saveBtn.style.opacity = '1';
     saveBtn.style.cursor = 'pointer';
+    generateReportBtn.disabled = false;
+    generateReportBtn.style.opacity = '1';
+    generateReportBtn.style.cursor = 'pointer';
     // Hide warning message (but keep space)
     if (warningMsg) {
       warningMsg.style.visibility = 'hidden';
@@ -1659,6 +1885,9 @@ function checkValidationStatus() {
     saveBtn.disabled = true;
     saveBtn.style.opacity = '0.5';
     saveBtn.style.cursor = 'not-allowed';
+    generateReportBtn.disabled = true;
+    generateReportBtn.style.opacity = '0.5';
+    generateReportBtn.style.cursor = 'not-allowed';
     // Show warning message
     if (warningMsg) {
       warningMsg.style.visibility = 'visible';
@@ -2116,6 +2345,280 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
     );
   }
 });
+
+// Generate Report button handler
+document.getElementById('generate-report-btn').addEventListener('click', async function() {
+  const generateBtn = document.getElementById('generate-report-btn');
+
+  // Get selected detections and correlations
+  const selectedDetections = getSelectedDetections();
+  const selectedCorrelations = getSelectedCorrelations();
+
+  if (selectedDetections.length === 0 && selectedCorrelations.length === 0) {
+    await showModal(
+      'No Selection',
+      'Please select at least one detection or correlation to include in the report.',
+      'OK'
+    );
+    return;
+  }
+
+  // Show format selection modal
+  const result = await showFormatSelectionModal();
+  if (!result) return; // User cancelled
+
+  const format = result.format;
+  const hypothesis = result.hypothesis;
+  const conclusion = result.conclusion;
+
+  // Disable button and show loading state
+  generateBtn.disabled = true;
+  generateBtn.innerHTML = `
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+      <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+      <path d="M12 2 A10 10 0 0 1 12 22" stroke-linecap="round"/>
+    </svg>
+    Generating...
+  `;
+
+  try {
+    // Build export data from selected items
+    const exportData = [];
+    const groupName = '{{ group_name }}';
+    const detections = {{ detections | tojson | safe }};
+    const correlations = {{ correlations | tojson | safe }};
+
+    // Add selected detections
+    for (const vendor of detections) {
+      const filesToExport = vendor.all_files || vendor.detections;
+      for (const detection of filesToExport) {
+        const techniqueForMatch = detection.technique_display || detection.technique;
+        const key = `${techniqueForMatch}:${vendor.name}`;
+
+        if (selectedDetections.some(s => `${s.technique}:${s.vendor}` === key)) {
+          exportData.push({
+            title: `${detection.technique} - ${detection.title}`,
+            platform: vendor.name,
+            content: detection,
+            type: 'detection'
+          });
+        }
+      }
+    }
+
+    // Add selected correlations
+    for (const vendor of correlations) {
+      let corrIndex = 1; // Match Jinja's loop.index which starts at 1
+      for (const corr of vendor.correlations) {
+        const checkboxId = `corr-${vendor.name}-${corrIndex}`;
+        if (selectedCorrelations.includes(checkboxId)) {
+          exportData.push({
+            title: corr.title || 'Untitled Correlation',
+            platform: vendor.name,
+            content: corr,
+            type: 'correlation'
+          });
+        }
+        corrIndex++;
+      }
+    }
+
+    // Collect metadata for the report
+    const metadata = {
+      group_name: groupName,
+      hypothesis: hypothesis,
+      conclusion: conclusion,
+      total_detections: {{ total_detections | default(0) }},
+      technique_count: {{ technique_count | default(0) }},
+      tactic_count: {{ tactic_count | default(0) }},
+      correlation_count: {{ correlation_count | default(0) }},
+      total_hours: {{ total_hours | default(0) }},
+      manual_hours: {{ manual_hours | default(0) }},
+      archer_hours: {{ archer_hours | default(0) }},
+      hours_saved: {{ hours_saved | default(0) }},
+      cost_savings: {{ (hours_saved * 25)|round(0)|int | default(0) }},
+      osint_count: {{ osint_count.count | default(0) }}
+    };
+
+    // Call export API with report format
+    const response = await fetch('/api/library/export', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        ids: [], // Not using library IDs, using direct export data
+        export_data: exportData,
+        format: format,
+        group_name: groupName,
+        metadata: metadata
+      })
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await showModal(
+          'Authentication Required',
+          'You must be logged in to generate reports. You will be redirected to the login page.',
+          'OK'
+        );
+        window.location.href = '/login?next_url=' + encodeURIComponent(window.location.pathname + window.location.search);
+        return;
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    // Download the file
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${groupName.replace(/[^a-zA-Z0-9]/g, '_')}_report.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    await showModal(
+      'Report Generated',
+      `Successfully generated ${format.toUpperCase()} report with ${exportData.length} item(s).`,
+      'OK'
+    );
+
+  } catch (error) {
+    console.error('Report generation error:', error);
+    await showModal(
+      'Generation Failed',
+      `Failed to generate report: ${error.message}`,
+      'OK'
+    );
+  } finally {
+    // Restore button
+    generateBtn.disabled = false;
+    generateBtn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+      Generate Report
+    `;
+  }
+});
+
+// Helper function to show format selection modal with hypothesis input
+async function showFormatSelectionModal() {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+
+    const content = document.createElement('div');
+    content.style.cssText = 'background: white; padding: 32px; border-radius: 12px; max-width: 500px; width: 90%;';
+    content.innerHTML = `
+      <h3 style="margin: 0 0 24px 0; font-size: 1.5em; color: #1a1a1a;">Generate Report</h3>
+
+      <div style="margin-bottom: 24px;">
+        <textarea id="hypothesis-input" placeholder="Describe the hypothesis or rationale for this hunt"
+          style="width: calc(100% - 24px); min-height: 140px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95em; font-family: inherit; resize: vertical;"
+        ></textarea>
+        <p id="hypothesis-counter" style="margin: 6px 0 0 0; font-size: 0.85em; color: #999; text-align: right;">0 / 300 characters</p>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <textarea id="conclusion-input" placeholder="Describe the conclusion and key findings from this hunt"
+          style="width: calc(100% - 24px); min-height: 140px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95em; font-family: inherit; resize: vertical;"
+        ></textarea>
+        <p id="conclusion-counter" style="margin: 6px 0 0 0; font-size: 0.85em; color: #999; text-align: right;">0 / 300 characters</p>
+      </div>
+
+      <p style="margin: 0 0 12px 0; color: #666; font-weight: 600;">Select Format:</p>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; gap: 12px;">
+          <button class="format-btn" data-format="docx" disabled style="flex: 1; padding: 12px 20px; border: 2px solid #2196F3; background: white; color: #2196F3; border-radius: 8px; cursor: not-allowed; font-size: 1em; font-weight: 600; transition: all 0.2s; opacity: 0.5;">
+            📄 Word (.docx)
+          </button>
+          <button class="format-btn" data-format="pdf" disabled style="flex: 1; padding: 12px 20px; border: 2px solid #e91e63; background: white; color: #e91e63; border-radius: 8px; cursor: not-allowed; font-size: 1em; font-weight: 600; transition: all 0.2s; opacity: 0.5;">
+            📕 PDF (.pdf)
+          </button>
+        </div>
+        <button class="cancel-btn" style="padding: 12px 20px; border: 1px solid #ddd; background: white; color: #666; border-radius: 8px; cursor: pointer; font-size: 1em; transition: all 0.2s;">
+          Cancel
+        </button>
+      </div>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    const hypothesisInput = content.querySelector('#hypothesis-input');
+    const conclusionInput = content.querySelector('#conclusion-input');
+    const hypothesisCounter = content.querySelector('#hypothesis-counter');
+    const conclusionCounter = content.querySelector('#conclusion-counter');
+    const formatBtns = content.querySelectorAll('.format-btn');
+
+    // Function to check if both fields are valid
+    function checkValidation() {
+      const hypothesisLength = hypothesisInput.value.trim().length;
+      const conclusionLength = conclusionInput.value.trim().length;
+
+      const hypothesisValid = hypothesisLength >= 300;
+      const conclusionValid = conclusionLength >= 300;
+      const bothValid = hypothesisValid && conclusionValid;
+
+      formatBtns.forEach(btn => {
+        btn.disabled = !bothValid;
+        btn.style.cursor = bothValid ? 'pointer' : 'not-allowed';
+        btn.style.opacity = bothValid ? '1' : '0.5';
+      });
+    }
+
+    // Update hypothesis character counter and validation
+    hypothesisInput.addEventListener('input', function() {
+      const length = this.value.trim().length;
+      hypothesisCounter.textContent = `${length} / 300 characters`;
+      hypothesisCounter.style.color = length >= 300 ? '#4CAF50' : (length > 0 ? '#ff9800' : '#999');
+      checkValidation();
+    });
+
+    // Update conclusion character counter and validation
+    conclusionInput.addEventListener('input', function() {
+      const length = this.value.trim().length;
+      conclusionCounter.textContent = `${length} / 300 characters`;
+      conclusionCounter.style.color = length >= 300 ? '#4CAF50' : (length > 0 ? '#ff9800' : '#999');
+      checkValidation();
+    });
+
+    // Add hover effects (only when enabled)
+    formatBtns.forEach(btn => {
+      btn.addEventListener('mouseenter', function() {
+        if (!this.disabled) {
+          this.style.background = this.style.color;
+          this.style.color = 'white';
+        }
+      });
+      btn.addEventListener('mouseleave', function() {
+        if (!this.disabled) {
+          const color = this.dataset.format === 'docx' ? '#2196F3' : '#e91e63';
+          this.style.background = 'white';
+          this.style.color = color;
+        }
+      });
+      btn.addEventListener('click', function() {
+        if (!this.disabled) {
+          const hypothesis = hypothesisInput.value.trim();
+          const conclusion = conclusionInput.value.trim();
+          document.body.removeChild(modal);
+          resolve({format: this.dataset.format, hypothesis: hypothesis, conclusion: conclusion});
+        }
+      });
+    });
+
+    content.querySelector('.cancel-btn').addEventListener('click', function() {
+      document.body.removeChild(modal);
+      resolve(null);
+    });
+  });
+}
 
 // Dark mode functionality
 const darkModeToggle = document.getElementById('dark-mode-toggle');

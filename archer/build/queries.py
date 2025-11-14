@@ -2,6 +2,7 @@ import os
 import json
 import re
 from pathlib import Path
+from collections import defaultdict
 from archer.build.malware_iocs import enrich_indicators_with_iocs, log_ioc_enrichment
 
 
@@ -238,16 +239,21 @@ def get_valid_indices_for_platform(indicator_mapping_section, vendor, detected_p
         # Legacy flat structure - return all indices
         return indicator_mapping_section
 
-    # Endpoint sources should NOT be used for API indicators
-    # API calls (DescribeInstances, ListBuckets, etc.) can ONLY be detected in cloud-native logs (CloudTrail, Azure Activity Log, GCP Audit)
-    # They cannot be detected in endpoint logs like DeviceProcessEvents or linux_syslog
-    # The only exception would be CLI tool usage, but those should be classified as "cmd" type, not "api" type
-    if indicator_type != "api" and "endpoint" in indicator_mapping_section:
-        valid_indices.update(indicator_mapping_section["endpoint"])
+    # Handle endpoint sources
+    # For non-API indicators: Always include endpoint sources
+    # For API indicators: Include endpoint sources when cloud platforms are detected
+    #   - This covers cloud CLI tools (aws, gcloud, az) where API calls appear in command lines
+    #   - Example: "aws ec2 DescribeInstances" contains the API call "DescribeInstances" in ProcessCommandLine
+    if "endpoint" in indicator_mapping_section:
+        if indicator_type != "api":
+            # Non-API indicators: always include endpoint sources
+            valid_indices.update(indicator_mapping_section["endpoint"])
+        elif detected_platforms or technique_platform:
+            # API indicators with cloud platforms: include endpoint sources for CLI detection
+            # When cloud platforms are detected (AWS, Azure, GCP), API indicators may appear in CLI commands
+            valid_indices.update(indicator_mapping_section["endpoint"])
 
     # If no cloud platforms detected and no technique platform, return what we have so far
-    # For API indicators, this will be empty (no endpoint sources)
-    # For other indicator types, this will include endpoint sources
     if not detected_platforms and not technique_platform:
         return valid_indices
 
@@ -391,10 +397,32 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
     for table, fields in valid_tables.items():
         has_all_indicators = []
         has_any_indicators = []
+        azure_operation_indicators = []  # For Azure operations with has_all + boolean logic
+
         for indicator in indicators_to_use:
             # Escape backslashes for KQL
             escaped_indicator = indicator.replace('\\', '\\\\')
-            if " " in escaped_indicator:
+
+            # Detect Azure operations (e.g., Microsoft.Authorization/elevateAccess/action)
+            # Pattern: Contains dots or slashes (but not backslashes) indicating hierarchical operations
+            if ('.' in escaped_indicator or '/' in escaped_indicator) and not escaped_indicator.startswith('\\'):
+                # Azure API operation or similar hierarchical identifier
+                # Split on dots and slashes to extract components
+                parts = []
+                # Replace delimiters with spaces, then split
+                temp = escaped_indicator.replace('.', ' ').replace('/', ' ')
+                parts = [part.strip() for part in temp.split() if part.strip()]
+
+                if len(parts) >= 2:
+                    # Store as Azure operation for special handling
+                    azure_operation_indicators.append({
+                        'original': escaped_indicator,
+                        'parts': parts
+                    })
+                else:
+                    # Single part after splitting, treat as regular indicator
+                    has_any_indicators.append(escaped_indicator)
+            elif " " in escaped_indicator:
                 # Split into parts for has_all
                 parts = [part.strip() for part in escaped_indicator.split()]
                 has_all_indicators.append(parts)
@@ -403,9 +431,53 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
 
         # Format indicators
         indicator_clauses = []
+
+        # Handle regular has_all indicators (space-separated)
         for parts in has_all_indicators:
             all_str = '", "'.join(parts)
             indicator_clauses.append(f'has_all("{all_str}")')
+
+        # Handle Azure operations with has_all + boolean logic
+        # Group Azure operations by common namespace prefix for optimal queries
+        if azure_operation_indicators:
+            # Group operations by their namespace (first 1-2 parts)
+            # Example: Microsoft.Authorization/elevateAccess/action and Microsoft.Authorization/roleAssignments/write
+            # Both share "Microsoft.Authorization" namespace
+            namespace_groups = defaultdict(list)
+
+            for az_op in azure_operation_indicators:
+                parts = az_op['parts']
+                if len(parts) >= 2:
+                    # Namespace is first 1-2 parts depending on structure
+                    # For "Microsoft.Authorization.X.Y" -> namespace is "Microsoft.Authorization"
+                    # For "service.operation" -> namespace is "service"
+                    namespace_parts = tuple(parts[:2]) if len(parts) > 2 else (parts[0],)
+                    operation_parts = parts[2:] if len(parts) > 2 else [parts[1]]
+                    namespace_groups[namespace_parts].append(operation_parts)
+
+            # Build queries with grouped operations
+            # Use {FIELD} placeholder that will be replaced with actual field name later
+            for namespace_parts, operation_groups in namespace_groups.items():
+                namespace_str = '", "'.join(namespace_parts)
+
+                if len(operation_groups) == 1:
+                    # Single operation for this namespace
+                    operation_str = '", "'.join(operation_groups[0])
+                    clause = f'{{FIELD}} has_all("{namespace_str}") and {{FIELD}} has_all("{operation_str}")'
+                    indicator_clauses.append(clause)
+                else:
+                    # Multiple operations for same namespace - use OR logic
+                    # Example: {FIELD} has_all("Microsoft", "Authorization") and ({FIELD} has_all("elevateAccess", "action") or {FIELD} has_all("roleAssignments", "write"))
+                    operation_clauses = []
+                    for op_parts in operation_groups:
+                        operation_str = '", "'.join(op_parts)
+                        operation_clauses.append(f'{{FIELD}} has_all("{operation_str}")')
+
+                    operations_or = ' or '.join(operation_clauses)
+                    clause = f'{{FIELD}} has_all("{namespace_str}") and ({operations_or})'
+                    indicator_clauses.append(clause)
+
+        # Handle regular has_any/contains indicators
         if has_any_indicators:
             # Use 'contains' for single value, 'has_any' for multiple
             if len(has_any_indicators) == 1:
@@ -425,17 +497,36 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
             # Group both command-line fields for each clause
             dual_conditions = []
             for clause in indicator_clauses:
-                dual_conditions.append(f"(ProcessCommandLine {clause} or InitiatingProcessCommandLine {clause})")
+                # Check if clause contains {FIELD} placeholder (Azure operations)
+                if "{FIELD}" in clause:
+                    # Replace placeholder with field names
+                    proc_clause = clause.replace("{FIELD}", "ProcessCommandLine")
+                    init_proc_clause = clause.replace("{FIELD}", "InitiatingProcessCommandLine")
+                    dual_conditions.append(f"({proc_clause} or {init_proc_clause})")
+                else:
+                    # Standard clause without placeholder
+                    dual_conditions.append(f"(ProcessCommandLine {clause} or InitiatingProcessCommandLine {clause})")
+
             # Handle AdditionalFields if present in DeviceEvents
             if "AdditionalFields" in fields:
                 for clause in indicator_clauses:
-                    dual_conditions.append(f"AdditionalFields {clause}")
+                    if "{FIELD}" in clause:
+                        additional_clause = clause.replace("{FIELD}", "AdditionalFields")
+                        dual_conditions.append(additional_clause)
+                    else:
+                        dual_conditions.append(f"AdditionalFields {clause}")
             condition = " or ".join(dual_conditions)
         else:
             # Standard condition for non-command-line fields
-            condition = " or ".join(
-                [f"{field} {clause}" for field in fields for clause in indicator_clauses]
-            )
+            formatted_conditions = []
+            for field in fields:
+                for clause in indicator_clauses:
+                    if "{FIELD}" in clause:
+                        # Replace placeholder with actual field name
+                        formatted_conditions.append(clause.replace("{FIELD}", field))
+                    else:
+                        formatted_conditions.append(f"{field} {clause}")
+            condition = " or ".join(formatted_conditions)
 
         # Add malware family name as comment if enrichment occurred
         query = f"{table}\n| where Timestamp > ago(1d)\n| where {condition}"

@@ -2,6 +2,18 @@
 
 Complete documentation for the Archer threat detection automation platform.
 
+---
+
+## 🚀 Quick Start
+
+- **[GETTING_STARTED.md](../GETTING_STARTED.md)** - Complete setup and configuration guide
+- **[USAGE.md](USAGE.md)** - Web UI, CLI, and API usage guide
+- **[README.md](../README.md)** - High-level project overview
+- **[UNTESTED.md](UNTESTED.md)** - Features implemented but not validated
+- **[FUTURE.md](FUTURE.md)** - Planned features and roadmap
+
+---
+
 ## 📁 Documentation Structure
 
 ### 🏗️ [`architecture/`](architecture/)
@@ -12,7 +24,7 @@ Technical architecture and design documentation:
 
 ### 📖 [`guides/`](guides/)
 User guides and setup instructions:
-- **[GETTING_STARTED.md](guides/GETTING_STARTED.md)** - Setup and troubleshooting
+- **[USAGE.md](USAGE.md)** - Web UI, CLI, and API usage guide
 - **[CORRELATION_GUIDE.md](guides/CORRELATION_GUIDE.md)** - Correlation query builder guide
 - **[CVE_HUNTING_GUIDE.md](guides/CVE_HUNTING_GUIDE.md)** - CVE-based detection generation
 - **[EMULATION_GUIDE.md](guides/EMULATION_GUIDE.md)** - Adversary emulation and remote execution
@@ -24,17 +36,15 @@ User guides and setup instructions:
 - **[MAPPING_SETUP_GUIDE.md](guides/MAPPING_SETUP_GUIDE.md)** - Configure mapping files for your environment
 - **[MAPPING_FILES_GUIDE.md](guides/MAPPING_FILES_GUIDE.md)** - Detailed mapping file reference
 
-### 📚 [`reference/`](reference/)
-API documentation and technical references:
-- **[API_DOCUMENTATION.md](reference/API_DOCUMENTATION.md)** - Complete REST API documentation with examples
-- **[API_REFERENCE.md](reference/API_REFERENCE.md)** - Authentication and user management API reference
-- **[CORRELATION_QUICK_REFERENCE.md](reference/CORRELATION_QUICK_REFERENCE.md)** ⚙️ **Tunable parameters** (threshold, per-vendor, tech frequency)
-- **[MITRE_PROCEDURES.md](reference/MITRE_PROCEDURES.md)** - MITRE ATT&CK procedure extraction
-- **[SCRIPTS.md](reference/SCRIPTS.md)** - Command-line scripts reference
+### 📚 Technical References
+- **[Scripts Documentation](SCRIPTS.md)** - Command-line scripts and utilities
+- **[Usage Guide](USAGE.md)** - Complete Web UI, CLI, and API reference
+- **[API Integration Guide](guides/API_INTEGRATION_GUIDE.md)** - REST API integration with code examples
+- **[Auto-Generated API Docs](http://localhost:8000/docs)** - Interactive Swagger UI (requires running server)
 
 ### ✨ [`features/`](features/)
 Feature-specific documentation:
-- **[AI_TRAINING.md](features/AI_TRAINING.md)** - AI query training and generation
+- **[AI_TRAINING.md](ai/AI_TRAINING.md)** - AI query training and generation
 - **[DETECTION_VALIDATION.md](features/DETECTION_VALIDATION.md)** - Detection quality validation
 - **[DOCKER.md](features/DOCKER.md)** - Docker deployment guide
 - **[OSINT_INTEGRATION.md](features/OSINT_INTEGRATION.md)** - OSINT repository integration
@@ -47,38 +57,53 @@ Notion-formatted versions of documentation (for Notion import)
 ### 🎨 [`flow/`](flow/)
 Architecture diagrams and flow charts
 
+### 🔮 Status Documentation
+- **[UNTESTED.md](UNTESTED.md)** - Implemented but unvalidated features (Adversary Emulation, Query Execution)
+- **[FUTURE.md](FUTURE.md)** - Planned features and roadmap (VECTR, CALDERA, MACAT)
+
 ---
 
-## 🚀 Quick Start
+## 📚 Documentation by Task
 
-1. **New to Archer?** Start with [Getting Started Guide](guides/GETTING_STARTED.md)
-2. **Want to tune correlation quality?** See [Correlation Quick Reference](reference/CORRELATION_QUICK_REFERENCE.md)
-3. **Need API integration?** Check [API Documentation](reference/API_DOCUMENTATION.md)
-4. **Using custom log sources?** Read [Mapping Setup Guide](guides/MAPPING_SETUP_GUIDE.md)
+### Getting Started
+1. **New to Archer?** Start with [GETTING_STARTED.md](../GETTING_STARTED.md)
+2. **Using Archer?** See [USAGE.md](USAGE.md) for Web UI, CLI, and API guides
+3. **Using custom log sources?** Read [Mapping Setup Guide](guides/MAPPING_SETUP_GUIDE.md)
+4. **Want to tune correlation quality?** See [Correlation Quick Reference](architecture/CORRELATION_QUICK_REFERENCE.md)
+
+### Integration & Advanced Usage
+1. **Need API integration?** Check [API Integration Guide](guides/API_INTEGRATION_GUIDE.md)
+2. **CLI workflows?** See [USAGE.md](USAGE.md#command-line-interface-cli)
+3. **Exploring untested features?** See [UNTESTED.md](UNTESTED.md)
+4. **Planning future deployments?** Review [FUTURE.md](FUTURE.md)
 
 ---
 
 ## 📊 Key Documentation by Use Case
 
 ### For SOC Analysts
-- [Getting Started Guide](guides/GETTING_STARTED.md) - Basic setup
+- [Getting Started Guide](../GETTING_STARTED.md) - Basic setup
+- [Usage Guide](USAGE.md) - Web UI, CLI, and API reference
 - [Correlation Guide](guides/CORRELATION_GUIDE.md) - Using the correlation builder
 - [CVE Hunting Guide](guides/CVE_HUNTING_GUIDE.md) - CVE-based detection
 
 ### For Security Engineers
-- [Correlation Quick Reference](reference/CORRELATION_QUICK_REFERENCE.md) - Tune correlation parameters
+- [Usage Guide](USAGE.md) - Complete usage reference
+- [Correlation Quick Reference](architecture/CORRELATION_QUICK_REFERENCE.md) - Tune correlation parameters
 - [Detection Validation](features/DETECTION_VALIDATION.md) - Validate detection quality
 - [Testing Guide](guides/TESTING_GUIDE.md) - Testing workflows
 
 ### For Platform Administrators
 - [Mapping Setup Guide](guides/MAPPING_SETUP_GUIDE.md) - Configure for your environment
-- [API Documentation](reference/API_DOCUMENTATION.md) - API integration
+- [API Integration Guide](guides/API_INTEGRATION_GUIDE.md) - REST API integration
 - [Security Features](features/SECURITY_FEATURES.md) - User management and security
 
 ### For Developers
+- [Usage Guide](USAGE.md#api-integration) - API usage and workflows
 - [Correlation Engine](architecture/CORRELATION_ENGINE.md) - Engine internals
 - [Performance Architecture](architecture/PERFORMANCE_ARCHITECTURE.md) - System design
 - [Schema Normalization](architecture/SCHEMA_NORMALIZATION.md) - Field mapping
+- [API Integration Guide](guides/API_INTEGRATION_GUIDE.md) - REST API workflows and examples
 
 ---
 

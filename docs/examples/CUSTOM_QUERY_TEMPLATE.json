@@ -1,0 +1,35 @@
+{
+  "queries": [
+    {
+      "name": "Your Detection Name Here",
+      "technique_id": "T1XXX.XXX",
+      "technique_name": "MITRE Technique Name",
+      "platforms": ["Windows"],
+      "platform": "MDE",
+      "query": "DeviceProcessEvents\n| where FileName =~ \"example.exe\"\n| where ProcessCommandLine contains \"malicious\"",
+      "description": "What this detection identifies",
+      "false_positive_rate": "low",
+      "severity": "high",
+      "data_sources": ["Process: Process Creation"],
+      "rationale": "Why this query has high fidelity - describe tuning process",
+      "threat_context": "Real-world threat actor usage and TTPs",
+      "mitigations": ["MITRE Mitigation IDs or techniques"],
+      "detection_requirements": ["Platform features or license requirements"],
+      "tags": ["custom", "high-fidelity", "production-tested"],
+      "author": "Your Name or Team",
+      "version": "1.0",
+      "last_validated": "2024-01-15"
+    },
+    {
+      "name": "Multi-Platform Detection Example",
+      "technique_id": "T1059.001",
+      "technique_name": "PowerShell",
+      "platforms": ["Windows"],
+      "platform": "Splunk",
+      "query": "index=windows sourcetype=WinEventLog:Microsoft-Windows-PowerShell/Operational EventCode=4104\n| search ScriptBlockText=\"*DownloadString*\" OR ScriptBlockText=\"*IEX*\"\n| stats count by ComputerName, User, ScriptBlockText",
+      "description": "Detects suspicious PowerShell download patterns",
+      "false_positive_rate": "low",
+      "severity": "medium"
+    }
+  ]
+}

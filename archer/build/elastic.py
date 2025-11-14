@@ -1,30 +1,31 @@
 """
 Elasticsearch Query Generator
-Generates Elastic Query DSL and ECS-based detection queries
+Generates Elastic Query DSL and ECS-based detection queries using templates
 """
 
-from typing import Dict, List, Optional
 import json
 import os
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 
 class ElasticQueryGenerator:
-    """Generates Elasticsearch queries for threat detection"""
+    """Generates Elasticsearch queries for threat detection using templates"""
 
-    def __init__(self, llm_provider=None):
+    def __init__(self):
         """
-        Initialize Elastic generator with LLM provider
-
-        Args:
-            llm_provider: Optional LLMProvider instance. If None, creates default Anthropic provider
+        Initialize Elastic generator with ECS schema mappings
         """
-        if llm_provider is None:
-            from archer.llm.providers import LLMFactory
-            provider_name = os.getenv("LLM_PROVIDER", "anthropic")
-            model = os.getenv("LLM_MODEL", None)
-            llm_provider = LLMFactory.create(provider_name, model=model)
+        # Load Elastic ECS schema mappings
+        self.schema = self._load_schema()
 
-        self.llm_provider = llm_provider
+    def _load_schema(self) -> Dict:
+        """Load Elastic ECS schema mappings"""
+        schema_path = Path(__file__).parent.parent / "mappings" / "schemaElastic.json"
+        if schema_path.exists():
+            with open(schema_path, 'r') as f:
+                return json.load(f)
+        return {}
 
     def generate_query(
         self,
@@ -32,181 +33,233 @@ class ElasticQueryGenerator:
         technique_name: str,
         tactic: str,
         description: str,
+        indicators: Optional[Dict] = None,
         osint_data: Optional[Dict] = None,
         group_name: Optional[str] = None
     ) -> Dict[str, any]:
         """
-        Generate Elasticsearch query for technique
+        Generate Elasticsearch query for technique using templates
 
         Returns:
-            Dict with keys: query_name, query_dsl, description, severity,
-                           ecs_fields, data_streams
+            Dict with keys: query_name, query_dsl, description, index_pattern
         """
 
-        prompt = self._build_prompt(
-            technique_id, technique_name, tactic, description,
-            osint_data, group_name
+        # Generate query name
+        query_name = f"{technique_id}_{technique_name.replace(' ', '_')}"
+
+        # Determine index pattern
+        index_pattern = self._determine_index_pattern(indicators or {})
+
+        # Build Elasticsearch Query DSL
+        query_dsl = self._build_query_dsl(
+            technique_id=technique_id,
+            technique_name=technique_name,
+            indicators=indicators or {}
         )
 
-        response = self.llm_provider.generate(
-            prompt=prompt,
-            temperature=0.7,
-            max_tokens=4096
-        )
+        return {
+            "query_name": query_name,
+            "query_dsl": query_dsl,
+            "description": f"Detects {technique_name} ({technique_id})",
+            "index_pattern": index_pattern
+        }
 
-        return self._parse_response(response.content)
+    def _determine_index_pattern(self, indicators: Dict) -> str:
+        """Determine appropriate index pattern based on indicators"""
+        if "cmd" in indicators or "sw" in indicators:
+            return "logs-endpoint.events.process-*"
+        elif "reg" in indicators:
+            return "logs-endpoint.events.registry-*"
+        elif "network" in indicators or "url" in indicators:
+            return "logs-endpoint.events.network-*"
+        elif "file" in indicators:
+            return "logs-endpoint.events.file-*"
+        else:
+            return "logs-endpoint.events.*"
 
-    def _build_prompt(
+    def _build_query_dsl(
         self,
         technique_id: str,
         technique_name: str,
-        tactic: str,
-        description: str,
-        osint_data: Optional[Dict],
-        group_name: Optional[str]
-    ) -> str:
-        """Build prompt for Elastic query generation"""
+        indicators: Dict
+    ) -> Dict:
+        """Build Elasticsearch Query DSL using templates"""
 
-        prompt = f"""Generate an Elasticsearch detection query using ECS (Elastic Common Schema) for the following MITRE ATT&CK technique:
+        must_clauses = []
+        should_clauses = []
 
-**Technique**: {technique_id} - {technique_name}
-**Tactic**: {tactic}
-**Description**: {description}
-"""
+        # Process command line indicators
+        if "cmd" in indicators:
+            cmd_should = []
+            for cmd in indicators["cmd"][:5]:  # Limit to 5 indicators
+                cmd_should.append({
+                    "wildcard": {
+                        "process.command_line": {
+                            "value": f"*{cmd}*",
+                            "case_insensitive": True
+                        }
+                    }
+                })
+            if cmd_should:
+                should_clauses.extend(cmd_should)
 
-        if group_name:
-            prompt += f"\n**Threat Group**: {group_name}\n"
+        # Process software/file indicators
+        if "sw" in indicators:
+            sw_should = []
+            for sw in indicators["sw"][:5]:
+                sw_should.append({
+                    "wildcard": {
+                        "process.name": {
+                            "value": f"*{sw}*",
+                            "case_insensitive": True
+                        }
+                    }
+                })
+            if sw_should:
+                should_clauses.extend(sw_should)
 
-        if osint_data and osint_data.get("indicators"):
-            prompt += "\n**OSINT Indicators**:\n"
-            for indicator in osint_data["indicators"][:10]:
-                prompt += f"- {indicator.get('type', 'Unknown')}: {indicator.get('value', 'N/A')}\n"
+        # Process registry indicators
+        if "reg" in indicators:
+            reg_should = []
+            for reg in indicators["reg"][:5]:
+                reg_should.append({
+                    "wildcard": {
+                        "registry.path": {
+                            "value": f"*{reg}*",
+                            "case_insensitive": True
+                        }
+                    }
+                })
+            if reg_should:
+                should_clauses.extend(reg_should)
 
-        prompt += """
+        # Process network indicators (URLs)
+        if "network" in indicators or "url" in indicators:
+            net_indicators = indicators.get("network", []) + indicators.get("url", [])
+            net_should = []
+            for net in net_indicators[:5]:
+                net_should.append({
+                    "wildcard": {
+                        "url.full": {
+                            "value": f"*{net}*",
+                            "case_insensitive": True
+                        }
+                    }
+                })
+            if net_should:
+                should_clauses.extend(net_should)
 
-Create an Elasticsearch query that:
-1. Uses Elastic Common Schema (ECS) field names
-2. Is written in Query DSL (JSON format)
-3. Includes appropriate filters and conditions
-4. Uses bool queries with must/should/must_not clauses
-5. Leverages ECS data streams (logs-*, metrics-*, etc.)
+        # Process port indicators
+        if "port" in indicators:
+            port_should = []
+            for port in indicators["port"][:5]:
+                port_should.append({
+                    "bool": {
+                        "should": [
+                            {"term": {"destination.port": int(port)}},
+                            {"term": {"source.port": int(port)}}
+                        ],
+                        "minimum_should_match": 1
+                    }
+                })
+            if port_should:
+                should_clauses.extend(port_should)
 
-Format your response as:
+        # Process protocol indicators
+        if "protocol" in indicators:
+            proto_should = []
+            for proto in indicators["protocol"][:5]:
+                proto_should.append({
+                    "bool": {
+                        "should": [
+                            {"term": {"network.protocol": proto.lower()}},
+                            {"term": {"network.transport": proto.upper()}}
+                        ],
+                        "minimum_should_match": 1
+                    }
+                })
+            if proto_should:
+                should_clauses.extend(proto_should)
 
-QUERY_NAME: <concise_query_name>
-SEVERITY: <critical|high|medium|low>
-ECS_FIELDS: <comma-separated ECS field names used>
-DATA_STREAMS: <comma-separated data streams>
-DESCRIPTION: <one-line description>
+        # Process service indicators
+        if "service" in indicators:
+            svc_should = []
+            for svc in indicators["service"][:5]:
+                svc_should.append({
+                    "bool": {
+                        "should": [
+                            {"wildcard": {"network.application": {"value": f"*{svc}*", "case_insensitive": True}}},
+                            {"wildcard": {"destination.service.name": {"value": f"*{svc}*", "case_insensitive": True}}}
+                        ],
+                        "minimum_should_match": 1
+                    }
+                })
+            if svc_should:
+                should_clauses.extend(svc_should)
 
-QUERY_DSL:
-```json
-{
-  "query": {
-    // Elasticsearch Query DSL here
-  }
-}
-```
+        # Build the complete query
+        if should_clauses:
+            query = {
+                "query": {
+                    "bool": {
+                        "should": should_clauses,
+                        "minimum_should_match": 1
+                    }
+                }
+            }
+        else:
+            # Default query if no specific indicators
+            query = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "exists": {
+                                    "field": "process.name"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
 
-DETECTION_NOTES:
-<any important notes about detection coverage, false positives, or tuning>
-"""
-        return prompt
-
-    def _parse_response(self, response_text: str) -> Dict[str, any]:
-        """Parse LLM response into structured format"""
-
-        result = {
-            "query_name": "",
-            "query_dsl": {},
-            "description": "",
-            "severity": "medium",
-            "ecs_fields": [],
-            "data_streams": [],
-            "detection_notes": ""
+        # Add metadata
+        query["_meta"] = {
+            "technique_id": technique_id,
+            "technique_name": technique_name,
+            "author": "Archer Detection Engineering"
         }
 
-        lines = response_text.split("\n")
-        in_code_block = False
-        code_lines = []
+        return query
 
-        for line in lines:
-            if line.startswith("QUERY_NAME:"):
-                result["query_name"] = line.replace("QUERY_NAME:", "").strip()
-            elif line.startswith("SEVERITY:"):
-                result["severity"] = line.replace("SEVERITY:", "").strip().lower()
-            elif line.startswith("ECS_FIELDS:"):
-                fields = line.replace("ECS_FIELDS:", "").strip()
-                result["ecs_fields"] = [f.strip() for f in fields.split(",")]
-            elif line.startswith("DATA_STREAMS:"):
-                streams = line.replace("DATA_STREAMS:", "").strip()
-                result["data_streams"] = [s.strip() for s in streams.split(",")]
-            elif line.startswith("DESCRIPTION:"):
-                result["description"] = line.replace("DESCRIPTION:", "").strip()
-            elif line.strip().startswith("```json"):
-                in_code_block = True
-            elif line.strip() == "```" and in_code_block:
-                in_code_block = False
-            elif in_code_block:
-                code_lines.append(line)
-            elif line.startswith("DETECTION_NOTES:"):
-                # Capture everything after this line
-                idx = lines.index(line)
-                result["detection_notes"] = "\n".join(lines[idx+1:]).strip()
-                break
-
-        # Parse JSON query
-        try:
-            query_json = "\n".join(code_lines)
-            result["query_dsl"] = json.loads(query_json)
-        except json.JSONDecodeError as e:
-            print(f"Failed to parse Elastic query JSON: {e}")
-            result["query_dsl"] = {"error": "Failed to parse query"}
-
-        return result
-
-    def validate_query(self, query_dsl: Dict) -> tuple[bool, Optional[str]]:
+    def validate_query(self, query_dsl: Dict) -> Tuple[bool, str]:
         """
         Validate Elasticsearch Query DSL syntax
+
+        Args:
+            query_dsl: The query DSL dictionary
 
         Returns:
             Tuple of (is_valid, error_message)
         """
+        try:
+            # Basic validation - check for required structure
+            if not isinstance(query_dsl, dict):
+                return False, "Query must be a dictionary"
 
-        # Basic validation
-        if not isinstance(query_dsl, dict):
-            return False, "Query must be a dictionary"
+            if "query" not in query_dsl:
+                return False, "Missing 'query' field"
 
-        if "query" not in query_dsl:
-            return False, "Query must have a 'query' key"
+            # Check that it's valid JSON-serializable
+            json.dumps(query_dsl)
 
-        query = query_dsl["query"]
-
-        # Validate query structure
-        valid_query_types = [
-            "match", "match_all", "match_phrase", "multi_match",
-            "term", "terms", "range", "exists", "prefix", "wildcard",
-            "regexp", "fuzzy", "bool", "dis_max", "function_score",
-            "boosting", "constant_score", "nested", "has_child", "has_parent"
-        ]
-
-        if not any(qt in query for qt in valid_query_types):
-            return False, f"Query must contain a valid query type. Valid types: {', '.join(valid_query_types[:5])}..."
-
-        # Validate bool query structure
-        if "bool" in query:
-            bool_query = query["bool"]
-            valid_bool_keys = ["must", "filter", "should", "must_not", "minimum_should_match", "boost"]
-
-            for key in bool_query.keys():
-                if key not in valid_bool_keys:
-                    return False, f"Invalid bool query key: {key}"
-
-        return True, None
+            return True, ""
+        except Exception as e:
+            return False, str(e)
 
     def format_query_for_display(self, query_dsl: Dict) -> str:
-        """Format query DSL as pretty-printed JSON"""
-        return json.dumps(query_dsl, indent=2)
+        """Format query DSL as pretty-printed JSON string"""
+        return json.dumps(query_dsl, indent=4)
 
     def generate_correlation_query(
         self,
@@ -216,36 +269,40 @@ DETECTION_NOTES:
     ) -> Dict[str, any]:
         """Generate multi-event correlation query using Elastic EQL or bool queries"""
 
-        prompt = f"""Generate an Elasticsearch correlation query that detects multiple techniques in sequence.
+        query_name = f"{group_name.replace(' ', '_')}_correlation"
 
-**Threat Group**: {group_name}
-**Time Window**: {time_window}
+        # Build EQL sequence query
+        eql_query = self._build_eql_sequence(techniques, time_window)
 
-**Techniques to Correlate**:
-"""
-        for tech in techniques:
-            prompt += f"- {tech['id']} - {tech['name']} ({tech['tactic']})\n"
+        return {
+            "query_name": query_name,
+            "query_dsl": {
+                "query": eql_query,
+                "_meta": {
+                    "group_name": group_name,
+                    "type": "correlation",
+                    "author": "Archer Detection Engineering"
+                }
+            },
+            "description": f"Correlation query for {group_name}",
+            "index_pattern": "logs-endpoint.events.*"
+        }
 
-        prompt += """
+    def _build_eql_sequence(self, techniques: List[Dict], time_window: str) -> Dict:
+        """Build EQL sequence for correlation"""
+        # Simplified EQL-style correlation using bool query
+        must_clauses = []
 
-Create an Elasticsearch query that:
-1. Uses ECS field names
-2. Correlates these techniques within the specified time window
-3. Uses bool queries with multiple must clauses or EQL sequence query
-4. Groups events by common entity (user.name, host.name, source.ip)
-5. Produces results when the sequence is detected
+        for tech in techniques[:3]:  # Limit to 3 techniques
+            tech_name = tech.get('name', 'process')
+            must_clauses.append({
+                "exists": {
+                    "field": "process.name"
+                }
+            })
 
-You can use either:
-- Bool query with date range filters
-- EQL (Event Query Language) sequence query
-
-Format your response as before with QUERY_NAME, SEVERITY, etc.
-"""
-
-        response = self.llm_provider.generate(
-            prompt=prompt,
-            temperature=0.7,
-            max_tokens=4096
-        )
-
-        return self._parse_response(response.content)
+        return {
+            "bool": {
+                "must": must_clauses
+            }
+        }

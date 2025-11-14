@@ -3,7 +3,7 @@
 Auto-normalization helper for Archer application.
 
 This module provides simple functions to integrate schema normalization
-into Archer's workflow.
+into Archer's workflow for Splunk, Google SecOps, and Elastic schemas.
 """
 
 from pathlib import Path
@@ -12,20 +12,24 @@ from .normalize_manual import SplunkSchemaNormalizer
 
 
 def normalize_auto_schema(
-    schema_path: Optional[Path] = None, force: bool = False, silent: bool = False
+    schema_path: Optional[Path] = None,
+    platform: str = "splunk",
+    force: bool = False,
+    silent: bool = False
 ) -> Dict:
     """
-    Automatically normalize new indexes in the Splunk schema.
+    Automatically normalize new indexes/sources in platform schemas.
 
     This is the main entry point for integrating schema normalization
     into Archer's workflow. It will:
-    1. Detect unnormalized indexes
+    1. Detect unnormalized indexes/sources
     2. Apply field normalization and security filtering
     3. Update the schema file
     4. Return statistics
 
     Args:
-        schema_path: Path to schemaSplunk.json (default: archer/mappings/schemaSplunk.json)
+        schema_path: Path to schema file (default: archer/mappings/schema{Platform}.json)
+        platform: Platform type - "splunk", "googlesecops", or "elastic" (default: "splunk")
         force: Force re-normalization of all indexes (default: False)
         silent: Suppress output (default: False)
 
@@ -39,10 +43,27 @@ def normalize_auto_schema(
 
     Example:
         >>> from archer.mappings import normalize_auto_schema
-        >>> stats = normalize_auto_schema()
+        >>> # Normalize Splunk schema
+        >>> stats = normalize_auto_schema(platform="splunk")
+        >>> # Normalize Google SecOps schema
+        >>> stats = normalize_auto_schema(platform="googlesecops")
+        >>> # Normalize Elastic schema
+        >>> stats = normalize_auto_schema(platform="elastic")
         >>> if stats['new_indexes'] > 0:
         ...     print(f"Normalized {stats['new_indexes']} new indexes")
     """
+    # For now, only Splunk normalization is implemented
+    # Google SecOps and Elastic use different schema structures (UDM and ECS)
+    # which don't require the same normalization approach
+    if platform.lower() != "splunk":
+        return {
+            "total_indexes": 0,
+            "normalized_indexes": 0,
+            "new_indexes": 0,
+            "updated_indexes": 0,
+            "errors": [f"Normalization not required for {platform} - uses standardized schema"]
+        }
+
     normalizer = SplunkSchemaNormalizer(schema_path=schema_path)
 
     # Suppress output if silent mode

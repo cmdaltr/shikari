@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 def load_validation_matrix() -> Dict:
     """Load the technique-platform-indicator validation matrix"""
     matrix_file = (
-        Path(os.path.dirname(__file__)) / ".." / "mappings" / "technique_platform_indicators.json"
+        Path(os.path.dirname(__file__)) / ".." / "mappings" / "techniquePlatformIndicators.json"
     )
 
     if not matrix_file.exists():

@@ -470,14 +470,14 @@ async function refresh(){
         // Stop ellipsis animation if it's still running
         stopEllipsis(true);
       }
-      // Still in progress - show "Searching for indicators" message with ellipsis if no files created yet
+      // Still in progress - show "Finalising" message with ellipsis if no files created yet
       else if (created === 0) {
-        // Show "Searching for indicators..." with animated ellipsis
+        // Show "Finalising..." with animated ellipsis
         lastEl.innerHTML = ''; // Clear existing content
         lastEl.style.display = 'block'; // Show element
         lastEl.style.color = '#666'; // Grey text
 
-        const searchText = document.createTextNode('Searching for indicators');
+        const searchText = document.createTextNode('Finalising...');
         lastEl.appendChild(searchText);
 
         // Start ellipsis animation

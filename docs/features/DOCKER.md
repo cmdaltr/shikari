@@ -301,7 +301,7 @@ For issues:
 | **First run** | 15-20 minutes (clones OSINT repos) |
 | **Subsequent runs** | Seconds (repos already present) |
 | **Disk space** | ~1GB total |
-| **Ports** | 8000 (Archer), 5678 (n8n) |
+| **Ports** | 8000 (Archer) |
 | **Data persistence** | `./data` volume |
 | **OSINT update** | Automatic (hourly check) |
 

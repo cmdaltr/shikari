@@ -1,27 +1,30 @@
 """
-Chronicle/Google SecOps YARA-L Detection Generator
-Converts MITRE ATT&CK techniques into YARA-L detection rules
+Google SecOps YARA-L Detection Generator
+Converts MITRE ATT&CK techniques into YARA-L detection rules for Google SecOps (formerly Chronicle)
+Uses template-based generation with UDM (Unified Data Model) field mappings
 """
 
 import os
+import json
+from pathlib import Path
 from typing import Dict, List, Optional
 
 
 class ChronicleGenerator:
-    def __init__(self, llm_provider=None):
+    def __init__(self):
         """
-        Initialize Chronicle generator with LLM provider
-
-        Args:
-            llm_provider: Optional LLMProvider instance. If None, creates default Anthropic provider
+        Initialize Google SecOps generator with schema mappings
         """
-        if llm_provider is None:
-            from archer.llm.providers import LLMFactory
-            provider_name = os.getenv("LLM_PROVIDER", "anthropic")
-            model = os.getenv("LLM_MODEL", None)
-            llm_provider = LLMFactory.create(provider_name, model=model)
+        # Load Google SecOps schema mappings
+        self.schema = self._load_schema()
 
-        self.llm_provider = llm_provider
+    def _load_schema(self) -> Dict:
+        """Load Google SecOps UDM schema mappings"""
+        schema_path = Path(__file__).parent.parent / "mappings" / "schemaGoogleSecOps.json"
+        if schema_path.exists():
+            with open(schema_path, 'r') as f:
+                return json.load(f)
+        return {}
 
     def generate_yaral_rule(
         self,
@@ -29,127 +32,142 @@ class ChronicleGenerator:
         technique_name: str,
         tactic: str,
         description: str,
+        indicators: Optional[Dict] = None,
         osint_data: Optional[Dict] = None,
         group_name: Optional[str] = None
     ) -> Dict[str, any]:
         """
-        Generate YARA-L detection rule for Chronicle
+        Generate YARA-L detection rule for Google SecOps using templates
 
         Returns:
             Dict with keys: rule_name, yaral_code, description, severity,
                            data_sources, event_types
         """
 
-        # Build prompt with OSINT context if available
-        prompt = self._build_prompt(
-            technique_id, technique_name, tactic, description,
-            osint_data, group_name
+        # Generate rule name
+        rule_name = f"{technique_id.replace('.', '_')}_{technique_name.replace(' ', '_')}"
+
+        # Determine event type based on technique and indicators
+        event_type = self._determine_event_type(indicators or {})
+
+        # Build YARA-L query
+        yaral_code = self._build_yaral_query(
+            technique_id=technique_id,
+            technique_name=technique_name,
+            indicators=indicators or {},
+            event_type=event_type
         )
 
-        # Call LLM provider
-        response = self.llm_provider.generate(
-            prompt=prompt,
-            temperature=0.7,
-            max_tokens=4096
-        )
+        # Determine severity
+        severity = "MEDIUM"
+        if any(keyword in technique_name.lower() for keyword in ['credential', 'privilege', 'persistence', 'lateral']):
+            severity = "HIGH"
 
-        # Parse response into structured format
-        return self._parse_response(response.content)
+        return {
+            "rule_name": rule_name,
+            "yaral_code": yaral_code,
+            "description": f"Detects {technique_name} ({technique_id})",
+            "severity": severity,
+            "data_sources": [event_type],
+            "event_types": [event_type]
+        }
 
-    def _build_prompt(
+    def _determine_event_type(self, indicators: Dict) -> str:
+        """Determine appropriate UDM event type based on indicators"""
+        if "cmd" in indicators or "sw" in indicators:
+            return "PROCESS_LAUNCH"
+        elif "reg" in indicators:
+            return "REGISTRY_MODIFICATION"
+        elif "network" in indicators or "url" in indicators:
+            return "NETWORK_CONNECTION"
+        elif "file" in indicators:
+            return "FILE_CREATION"
+        else:
+            return "PROCESS_LAUNCH"  # Default
+
+    def _build_yaral_query(
         self,
         technique_id: str,
         technique_name: str,
-        tactic: str,
-        description: str,
-        osint_data: Optional[Dict],
-        group_name: Optional[str]
+        indicators: Dict,
+        event_type: str
     ) -> str:
-        """Build prompt for YARA-L generation"""
+        """Build YARA-L query using templates"""
 
-        prompt = f"""Generate a Google SecOps (Chronicle) YARA-L detection rule for the following MITRE ATT&CK technique:
+        # Basic template structure
+        rule_name = technique_id.replace('.', '_')
 
-**Technique**: {technique_id} - {technique_name}
-**Tactic**: {tactic}
-**Description**: {description}
-"""
+        # Build condition based on indicators
+        conditions = []
 
-        if group_name:
-            prompt += f"\n**Threat Group**: {group_name}\n"
+        # Process command line indicators
+        if "cmd" in indicators:
+            cmd_conditions = []
+            for cmd in indicators["cmd"][:5]:  # Limit to 5 indicators
+                # Escape special characters
+                cmd_escaped = cmd.replace('"', '\\"')
+                cmd_conditions.append(f're.regex($e.target.process.command_line, `{cmd_escaped}`) nocase')
+            if cmd_conditions:
+                conditions.append("(" + " or ".join(cmd_conditions) + ")")
 
-        if osint_data and osint_data.get("indicators"):
-            prompt += "\n**OSINT Indicators**:\n"
-            for indicator in osint_data["indicators"][:10]:  # Limit to 10
-                prompt += f"- {indicator.get('type', 'Unknown')}: {indicator.get('value', 'N/A')}\n"
+        # Process software/file indicators
+        if "sw" in indicators:
+            sw_conditions = []
+            for sw in indicators["sw"][:5]:
+                sw_escaped = sw.replace('"', '\\"')
+                sw_conditions.append(f're.regex($e.target.process.file.full_path, `{sw_escaped}`) nocase')
+            if sw_conditions:
+                conditions.append("(" + " or ".join(sw_conditions) + ")")
 
-        prompt += """
+        # Process port indicators
+        if "port" in indicators:
+            port_conditions = []
+            for port in indicators["port"][:5]:
+                port_conditions.append(f'($e.target.port = {port} or $e.principal.port = {port})')
+            if port_conditions:
+                conditions.append("(" + " or ".join(port_conditions) + ")")
 
-Create a YARA-L detection rule that:
-1. Uses Chronicle UDM (Unified Data Model) event types
-2. Includes proper event filtering and correlation logic
-3. Has clear condition statements for detection
-4. Uses appropriate outcome sections for alerting
-5. Includes metadata (author, description, severity)
+        # Process protocol indicators
+        if "protocol" in indicators:
+            proto_conditions = []
+            for proto in indicators["protocol"][:5]:
+                proto_upper = proto.upper()
+                proto_conditions.append(f're.regex($e.network.application_protocol, `{proto_upper}`) nocase')
+            if proto_conditions:
+                conditions.append("(" + " or ".join(proto_conditions) + ")")
 
-Format your response as:
+        # Process service indicators
+        if "service" in indicators:
+            svc_conditions = []
+            for svc in indicators["service"][:5]:
+                svc_escaped = svc.replace('"', '\\"')
+                svc_conditions.append(f're.regex($e.target.application, `{svc_escaped}`) nocase')
+            if svc_conditions:
+                conditions.append("(" + " or ".join(svc_conditions) + ")")
 
-RULE_NAME: <concise_rule_name>
-SEVERITY: <HIGH|MEDIUM|LOW>
-DATA_SOURCES: <comma-separated UDM event types>
-DESCRIPTION: <one-line description>
+        # If no specific conditions, create a generic one
+        if not conditions:
+            conditions.append('$e.metadata.event_type = "PROCESS_LAUNCH"')
 
-YARAL_CODE:
-```yaral
-<full YARA-L rule code here>
-```
+        condition_str = " and ".join(conditions)
 
-DETECTION_NOTES:
-<any important notes about detection coverage, false positives, or tuning>
-"""
-        return prompt
+        # Build complete YARA-L rule
+        yaral_query = f"""rule {rule_name} {{
+  meta:
+    author = "Archer Detection Engineering"
+    description = "Detects {technique_name} ({technique_id})"
+    mitre_attack_technique = "{technique_id}"
+    severity = "MEDIUM"
 
-    def _parse_response(self, response_text: str) -> Dict[str, any]:
-        """Parse Claude's response into structured format"""
+  events:
+    $e.metadata.event_type = "{event_type}"
+    {condition_str}
 
-        result = {
-            "rule_name": "",
-            "yaral_code": "",
-            "description": "",
-            "severity": "MEDIUM",
-            "data_sources": [],
-            "event_types": [],
-            "detection_notes": ""
-        }
+  condition:
+    $e
+}}"""
 
-        lines = response_text.split("\n")
-        in_code_block = False
-        code_lines = []
-
-        for line in lines:
-            if line.startswith("RULE_NAME:"):
-                result["rule_name"] = line.replace("RULE_NAME:", "").strip()
-            elif line.startswith("SEVERITY:"):
-                result["severity"] = line.replace("SEVERITY:", "").strip()
-            elif line.startswith("DATA_SOURCES:"):
-                sources = line.replace("DATA_SOURCES:", "").strip()
-                result["data_sources"] = [s.strip() for s in sources.split(",")]
-                result["event_types"] = result["data_sources"]  # Alias
-            elif line.startswith("DESCRIPTION:"):
-                result["description"] = line.replace("DESCRIPTION:", "").strip()
-            elif line.strip().startswith("```yaral"):
-                in_code_block = True
-            elif line.strip() == "```" and in_code_block:
-                in_code_block = False
-            elif in_code_block:
-                code_lines.append(line)
-            elif line.startswith("DETECTION_NOTES:"):
-                # Capture everything after this line
-                idx = lines.index(line)
-                result["detection_notes"] = "\n".join(lines[idx+1:]).strip()
-                break
-
-        result["yaral_code"] = "\n".join(code_lines)
-        return result
+        return yaral_query
 
     def generate_correlation_rule(
         self,
@@ -159,31 +177,33 @@ DETECTION_NOTES:
     ) -> Dict[str, any]:
         """Generate multi-event correlation YARA-L rule"""
 
-        prompt = f"""Generate a Google SecOps (Chronicle) YARA-L correlation rule that detects multiple techniques in sequence.
+        rule_name = f"{group_name.replace(' ', '_')}_correlation"
 
-**Threat Group**: {group_name}
-**Time Window**: {time_window}
+        # Build multi-event correlation
+        events_section = []
+        for i, tech in enumerate(techniques[:3]):  # Limit to 3 techniques
+            tech_id = tech.get('id', f'T{i}')
+            events_section.append(f'    $e{i+1}.metadata.event_type = "PROCESS_LAUNCH"')
 
-**Techniques to Correlate**:
-"""
-        for tech in techniques:
-            prompt += f"- {tech['id']} - {tech['name']} ({tech['tactic']})\n"
+        yaral_query = f"""rule {rule_name} {{
+  meta:
+    author = "Archer Detection Engineering"
+    description = "Multi-technique correlation for {group_name}"
+    severity = "HIGH"
 
-        prompt += """
+  events:
+{chr(10).join(events_section)}
 
-Create a YARA-L rule that:
-1. Correlates these techniques within the specified time window
-2. Uses Chronicle's multi-event correlation syntax
-3. Groups events by common entity (user, hostname, IP)
-4. Produces a single alert when the sequence is detected
+  match:
+    $e1, $e2 over 5m
 
-Format your response as before with RULE_NAME, SEVERITY, etc.
-"""
+  condition:
+    $e1 and $e2
+}}"""
 
-        response = self.llm_provider.generate(
-            prompt=prompt,
-            temperature=0.7,
-            max_tokens=4096
-        )
-
-        return self._parse_response(response.content)
+        return {
+            "rule_name": rule_name,
+            "yaral_code": yaral_query,
+            "description": f"Correlation rule for {group_name}",
+            "severity": "HIGH"
+        }

@@ -121,7 +121,7 @@ def load_indicator_mappings():
                 print(f"WARNING: Could not parse {mapping_file}: {e}")
 
     # Make sure we have the expected indicator types
-    required_types = ["cmd", "reg", "evt", "sw"]
+    required_types = ["cmd", "reg", "evt", "sw", "port", "protocol", "service"]
     missing_types = [t for t in required_types if t not in mappings]
     if missing_types:
         print(
@@ -195,7 +195,7 @@ def create_indicatorMappings():
     return indicatorMappings
 
 
-def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False):
+def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None):
     from archer.build.queries import is_query_applicable
     from archer.build.platform_validator_v2 import validate_procedure_for_index
     from archer.build.platform_indicator_validator import (
@@ -453,6 +453,7 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                     software_platforms,
                     osint_enhancement_data=osint_enhancement_data,  # Pass OSINT comparison data
                     osint_enhancement=osint_enhancement,  # Pass OSINT comparison flag
+                    excluded_vendors=excluded_vendors,  # Pass excluded vendors list
                 )
             print()  # Empty line after technique
 
@@ -565,6 +566,7 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                                 software_platforms,
                                 osint_enhancement_data=osint_data,  # Pass OSINT metadata
                                 osint_enhancement=osint_enhancement,  # Pass OSINT comparison flag
+                                excluded_vendors=excluded_vendors,  # Pass excluded vendors list
                             )
                         print()
                     else:
