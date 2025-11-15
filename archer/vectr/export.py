@@ -16,7 +16,7 @@ from .testcases import TestCaseManager
 def export_to_vectr(
     threat_group: str,
     campaign_name: Optional[str] = None,
-    yaml_dir: str = "data/generate",
+    yaml_dir: str = "data/groups",
     environment: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -97,7 +97,7 @@ def export_to_vectr(
 
 
 def import_from_vectr(
-    campaign_id: str, update_yamls: bool = False, output_dir: str = "data/generate"
+    campaign_id: str, update_yamls: bool = False, output_dir: str = "data/groups"
 ) -> Dict[str, Any]:
     """
     Import test results from VECTR and update Archer detections.
@@ -220,7 +220,7 @@ def import_from_vectr(
 def sync_with_vectr(
     campaign_id: str,
     threat_group: Optional[str] = None,
-    yaml_dir: str = "data/generate",
+    yaml_dir: str = "data/groups",
     bidirectional: bool = True,
 ) -> Dict[str, Any]:
     """

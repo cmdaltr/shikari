@@ -335,8 +335,8 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
 
         name_clean = name.replace(" ", "").replace("/", "")
         existing_yamls = []
-        if os.path.exists("data/generate"):
-            for fname in os.listdir("data/generate"):
+        if os.path.exists("data/groups"):
+            for fname in os.listdir("data/groups"):
                 if fname.startswith(name_clean) and fname.endswith(".yaml"):
                     existing_yamls.append(fname)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Import YAML detections from data/generate/ into the library database.
+Import YAML detections from data/groups/ into the library database.
 
 This script reads all YAML detection files and imports them into the library
 with proper formatting, indicators, OSINT data, and all metadata.
@@ -107,7 +107,7 @@ def convert_yaml_to_library_format(yaml_data: dict, platform: str) -> dict:
     return detection
 
 
-def import_yaml_detections(yaml_dir: str = "data/generate", user_id: int = 1, delete_old: bool = True):
+def import_yaml_detections(yaml_dir: str = "data/groups", user_id: int = 1, delete_old: bool = True):
     """
     Import all YAML detections from the specified directory into the library.
 
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description='Import YAML detections into library')
-    parser.add_argument('--yaml-dir', default='data/generate', help='Directory containing YAML files')
+    parser.add_argument('--yaml-dir', default='data/groups', help='Directory containing YAML files')
     parser.add_argument('--user-id', type=int, default=1, help='User ID to import for')
     parser.add_argument('--keep-old', action='store_true', help='Keep old stub detections (default: delete them)')
 

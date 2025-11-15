@@ -143,7 +143,7 @@ class TestCaseManager:
     def bulk_create_from_directory(
         self,
         campaign_id: str,
-        yaml_dir: str = "data/generate",
+        yaml_dir: str = "data/groups",
         filter_group: Optional[str] = None,
     ) -> Dict[str, Any]:
         """

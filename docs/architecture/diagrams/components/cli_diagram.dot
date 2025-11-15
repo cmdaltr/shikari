@@ -76,7 +76,7 @@ digraph ArcherCLI {
         fillcolor="#ffccbc";
         fontname="Arial Bold";
 
-        yamls [label="Detection YAMLs\ndata/generate/\n\nReady to deploy"];
+        yamls [label="Detection YAMLs\ndata/groups/\n\nReady to deploy"];
         corr_files [label="Correlation JSONs\ndata/correlate/\n\nMulti-stage detections"];
         flow_files [label="Attack Flow JSONs\ndata/attack_flows/\n\nVisual diagrams"];
     }

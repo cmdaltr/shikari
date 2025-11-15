@@ -2434,7 +2434,7 @@ def build_correlation_queries(
     7. Saves all queries in a single JSON output file
 
     Args:
-        yaml_dir: Directory containing YAML files (default: data/generate)
+        yaml_dir: Directory containing YAML files (default: data/groups)
         output_file: Output JSON file path (default: data/correlate/correlation_queries.json)
         min_queries: Minimum number of queries to include in a correlation (default: 2)
         max_queries: Maximum number of queries to include in a correlation (default: 5)

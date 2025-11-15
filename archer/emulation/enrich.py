@@ -13,7 +13,7 @@ from .parser import EmulationParser
 
 def enrich_detections_with_emulation(
     technique_id: str,
-    yaml_dir: str = "data/generate",
+    yaml_dir: str = "data/groups",
     emulation_dir: str = "data/emulation",
 ) -> Dict[str, Any]:
     """
@@ -82,7 +82,7 @@ def enrich_detections_with_emulation(
 
 
 def bulk_enrich_from_emulation(
-    yaml_dir: str = "data/generate",
+    yaml_dir: str = "data/groups",
     emulation_dir: str = "data/emulation",
     output_file: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -153,7 +153,7 @@ def bulk_enrich_from_emulation(
 
 def enrich_from_group_emulation(
     threat_group: str,
-    yaml_dir: str = "data/generate",
+    yaml_dir: str = "data/groups",
     emulation_dir: str = "data/emulation",
 ) -> Dict[str, Any]:
     """

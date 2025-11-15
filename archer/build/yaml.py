@@ -26,7 +26,7 @@ def create_id():
 def check_id(existing_ids):
     if len(existing_ids) > 0:
         # Check both old queries directory and new generate directory
-        for directory in ["data/queries", "data/generate"]:
+        for directory in ["data/queries", "data/groups"]:
             if os.path.exists(directory):
                 for queryfile in os.listdir(directory):
                     if queryfile.endswith(".yaml"):

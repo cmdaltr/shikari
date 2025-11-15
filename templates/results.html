@@ -2148,7 +2148,7 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
           // Extract technique names from file paths (a and b fields)
           if (corr.a && corr.b) {
             const extractTechniqueName = (path) => {
-              // Extract filename from path like "data/generate/TrustModification_edr_events.yaml"
+              // Extract filename from path like "data/groups/TrustModification_edr_events.yaml"
               const filename = path.split('/').pop();
               // Get technique name before first underscore
               const techName = filename.split('_')[0];

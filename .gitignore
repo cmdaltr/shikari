@@ -59,9 +59,9 @@ data/cache/cve/*
 !data/cache/cve/.gitkeep
 
 # Generated detections (dynamically created)
-data/generate/*
-!data/generate/.gitkeep
-!data/generate/*_example*.yaml
+data/groups/*
+!data/groups/.gitkeep
+!data/groups/*_example*.yaml
 
 # Hunt queries (dynamically generated)
 data/hunt/*

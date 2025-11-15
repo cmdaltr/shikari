@@ -621,7 +621,7 @@ Optional API Keys (for enhanced features):
         help="Threat group name to correlate (e.g., 'Scattered Spider')",
     )
     correlate_parser.add_argument(
-        "--yaml-dir", help="Directory containing YAML files (default: data/generate)"
+        "--yaml-dir", help="Directory containing YAML files (default: data/groups)"
     )
     correlate_parser.add_argument(
         "--output",

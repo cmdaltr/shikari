@@ -105,7 +105,7 @@ digraph ArcherFlow {
     fontsize=12;
 
     // File storage
-    generate_dir [label="data/generate/\n(Detection YAMLs)", shape=folder];
+    generate_dir [label="data/groups/\n(Detection YAMLs)", shape=folder];
     correlate_dir [label="data/correlate/\n(Correlation JSONs)", shape=folder];
     progress_dir [label="data/progress/\n(Progress tracking)", shape=folder];
     cve_cache [label="data/cve_cache/\n(CVE data)", shape=folder];

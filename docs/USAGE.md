@@ -256,8 +256,8 @@ python archer.py generate "APT29"
 # 2. Build correlations
 python archer.py correlate "APT29"
 
-# 3. Results saved in data/generate/ and data/correlate/
-ls data/generate/APT29/
+# 3. Results saved in data/groups/ and data/correlate/
+ls data/groups/APT29/
 ls data/correlate/APT29/
 ```
 

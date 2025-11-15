@@ -5857,7 +5857,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 # Check if this is a YAML-like structure (has 'name' and 'requiredDataConnectors')
                 # OR if it's an imported YAML detection (has 'technique', 'queries', and other YAML fields)
                 elif "name" in content_data or "requiredDataConnectors" in content_data or "technique_id" in content_data or ("technique" in content_data and "queries" in content_data and isinstance(content_data.get("queries"), list)):
-                    # This is a YAML detection (either from data/generate or imported via import_yaml_to_library.py)
+                    # This is a YAML detection (either from data/groups or imported via import_yaml_to_library.py)
                     technique_id = content_data.get("technique", "") or content_data.get("technique_id", "")
 
                     # Look up technique name and tactics from MITRE ATT&CK using technique ID

@@ -346,7 +346,7 @@ def generate_validation_matrix():
 
 **Test Command:**
 ```bash
-grep -l "wmic\|net user\|net.exe" data/generate/*azure_activedirectory*.yaml
+grep -l "wmic\|net user\|net.exe" data/groups/*azure_activedirectory*.yaml
 ```
 **Result:** No matches found
 

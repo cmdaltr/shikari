@@ -84,7 +84,7 @@ digraph ArcherWeb {
         fillcolor="#ffccbc";
         fontname="Arial Bold";
 
-        data_generate [label="data/generate/\nDetection YAMLs\nReady to deploy"];
+        data_generate [label="data/groups/\nDetection YAMLs\nReady to deploy"];
         data_correlate [label="data/correlate/\nCorrelation JSONs\nMulti-stage detections"];
         data_uploads [label="data/uploads/\nUser files\nExtraction results"];
         database [label="data/archer.db\nSQLite Database\n\nUsers, Sessions\nAPI Keys, Library\nAudit Logs"];

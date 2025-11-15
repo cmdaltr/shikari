@@ -61,7 +61,7 @@ by_vendor = group_files_by_vendor(files)
 ```
 
 **Requirements:**
-- ✅ Files must exist in `data/generate/`
+- ✅ Files must exist in `data/groups/`
 - ✅ Files must match group name or contain group tag
 - ✅ Must have valid YAML format
 
@@ -704,8 +704,8 @@ Merged Correlation:
   "vendor_correlations": [
     {
       "vendor": "mde",
-      "a": "data/generate/Multi-FactorAuthentication_DeviceFileEvents.yaml",
-      "b": "data/generate/AdditionalCloudCredentials_DeviceEvents.yaml",
+      "a": "data/groups/Multi-FactorAuthentication_DeviceFileEvents.yaml",
+      "b": "data/groups/AdditionalCloudCredentials_DeviceEvents.yaml",
       "query_a": "DeviceFileEvents | where ...",
       "query_b": "DeviceEvents | where ...",
       "combined_query": "let DeviceFileEvents_... JOIN ...",
@@ -754,7 +754,7 @@ Correlations are displayed in the web UI with:
 ### Issue: No Correlations Generated
 
 **Possible Causes:**
-1. No detection files in `data/generate/`
+1. No detection files in `data/groups/`
 2. Detection quality too low (all below 75% threshold)
 3. No valid technique pairs found
 4. Group name mismatch
@@ -762,7 +762,7 @@ Correlations are displayed in the web UI with:
 **Solution:**
 ```bash
 # Check for detection files
-ls data/generate/
+ls data/groups/
 
 # Check correlation debug output
 # Look for "Kept X/Y after relevance filtering"

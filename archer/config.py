@@ -10,7 +10,7 @@ import os
 # ========== Directory Path Constants ==========
 # These constants are used throughout Archer to maintain consistent paths
 DATA_DIR = "data"
-GENERATE_DIR = os.path.join(DATA_DIR, "generate")
+GENERATE_DIR = os.path.join(DATA_DIR, "groups")
 CORRELATE_DIR = os.path.join(DATA_DIR, "correlate")
 DRAFTS_DIR = os.path.join(DATA_DIR, "drafts")
 UPLOADS_DIR = os.path.join(DATA_DIR, "uploads")
@@ -87,7 +87,7 @@ class CoreConfig:
     """Core Archer configuration."""
 
     # Data directories
-    generate_dir = os.getenv("GENERATE_DIR", "data/generate")
+    generate_dir = os.getenv("GENERATE_DIR", "data/groups")
     correlate_dir = os.getenv("CORRELATE_DIR", "data/correlate")
     hunt_dir = os.getenv("HUNT_DIR", "data/hunt")
     progress_dir = os.getenv("PROGRESS_DIR", "data/progress")

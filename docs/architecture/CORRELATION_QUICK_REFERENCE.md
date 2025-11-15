@@ -220,7 +220,7 @@ Example Score: 46/140 = 33% ❌ FILTERED OUT
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| **No correlations** | No files in data/generate/ | Generate detections first |
+| **No correlations** | No files in data/groups/ | Generate detections first |
 | **Too few correlations** | High quality threshold | ✅ Fixed - lowered to 60% |
 | **Correlations too complex** | Too many techniques | ✅ Fixed - limited to 8 |
 | **Unrelated techniques** | No tactic requirement | ✅ Fixed - requires 2+ tactics |
@@ -477,7 +477,7 @@ elif num_targets > 15:  # Change from 10 to be more aggressive
 |-----------|-----------|
 | **Correlation Engine** | `archer/genai/engine.py` |
 | **Configuration** | `archer/config.py` |
-| **Detection Files** | `data/generate/*.yaml` |
+| **Detection Files** | `data/groups/*.yaml` |
 | **Correlation Output** | `data/correlate/{group_name}.json` |
 | **Full Documentation** | `docs/CORRELATION_ENGINE.md` |
 
@@ -488,7 +488,7 @@ elif num_targets > 15:  # Change from 10 to be more aggressive
 ```bash
 # Generate correlations
 python -c "from archer.genai.engine import generate_correlations; \
-           generate_correlations('Group Name', 'data/generate')"
+           generate_correlations('Group Name', 'data/groups')"
 
 # Check correlation output
 cat data/correlate/Group_Name.json | jq '.vendor_correlations | length'

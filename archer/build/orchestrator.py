@@ -195,7 +195,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 "created_yaml": created,
                 "total_yaml": total,
             })
-            # YAMLs are written to data/generate/ directory
+            # YAMLs are written to data/groups/ directory
             yaml_dir = GENERATE_DIR
             generate_correlations(group_name, yaml_dir)
 
