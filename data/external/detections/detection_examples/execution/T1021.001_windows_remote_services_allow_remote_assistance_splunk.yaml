@@ -1,0 +1,42 @@
+technique_id: T1021.001
+technique_name: Windows Remote Services Allow Remote Assistance
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Registry where Registry.registry_path= "*\\Control\\Terminal
+  Server\\fAllowToGetHelp*" Registry.registry_value_data="0x00000001" by Registry.action
+  Registry.dest Registry.process_guid Registry.process_id Registry.registry_hive Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_data Registry.registry_value_name
+  Registry.registry_value_type Registry.status Registry.user Registry.vendor_product
+  | `drop_dm_object_name(Registry)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_remote_services_allow_remote_assistance_filter`'
+explanation: The following analytic detects modifications in the Windows registry
+  to enable remote desktop assistance on a targeted machine. It leverages data from
+  the Endpoint.Registry datamodel, specifically monitoring changes to the "Control\\Terminal
+  Server\\fAllowToGetHelp" registry path. This activity is significant because enabling
+  remote assistance via registry is uncommon and often associated with adversaries
+  or malware like Azorult. If confirmed malicious, this could allow an attacker to
+  remotely access and control the compromised host, leading to potential data exfiltration
+  or further system compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/9bce3a97-bc97-4e89-a1aa-ead151c82fbb/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: administrators may enable or disable this feature that may cause some
+    false positive.
+  mitigation: Review context and user activity
+references:
+- https://docs.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-remoteassistance-exe-fallowtogethelp
+- https://app.any.run/tasks/a6f2ffe2-e6e2-4396-ae2e-04ea0143f2d8/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/azorult/sysmon.log

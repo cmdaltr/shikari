@@ -1,0 +1,52 @@
+technique_id: T1053.005
+technique_name: Windows Schtasks Create Run As System
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where `process_schtasks` Processes.process="*/create
+  *" AND Processes.process="*/ru *" AND Processes.process="*system*" by Processes.action
+  Processes.dest Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_schtasks_create_run_as_system_filter`'
+explanation: The following analytic detects the creation of a new scheduled task using
+  Schtasks.exe to run as the SYSTEM user. This detection leverages data from Endpoint
+  Detection and Response (EDR) agents, focusing on command-line executions and process
+  details. This activity is significant as it often indicates an attempt to gain elevated
+  privileges or maintain persistence within the environment. If confirmed malicious,
+  an attacker could execute code with SYSTEM-level privileges, potentially leading
+  to data theft, ransomware deployment, or further system compromise. Immediate investigation
+  and mitigation are crucial to prevent further damage.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/41a0e58e-884c-11ec-9976-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives will be limited to legitimate applications creating
+    a task to run as SYSTEM. Filter as needed based on parent process, or modify the
+    query to have world writeable paths to restrict it.
+  mitigation: Review context and user activity
+references:
+- https://pentestlab.blog/2019/11/04/persistence-scheduled-tasks/
+- https://www.ired.team/offensive-security/persistence/t1053-schtask
+- https://thedfirreport.com/2022/02/07/qbot-likes-to-move-it-move-it/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1053.005/schtask_system/windows-sysmon.log

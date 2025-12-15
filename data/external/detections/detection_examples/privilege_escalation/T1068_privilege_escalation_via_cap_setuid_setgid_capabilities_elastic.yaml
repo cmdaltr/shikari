@@ -1,0 +1,65 @@
+technique_id: T1068
+technique_name: Privilege Escalation via CAP_SETUID/SETGID Capabilities
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by host.id, process.entity_id with maxspan=1s\n  [process where host.os.type\
+  \ == \"linux\" and event.type == \"start\" and event.action == \"exec\" and process.name\
+  \ != null and\n   (process.thread.capabilities.effective : \"CAP_SET?ID\" or process.thread.capabilities.permitted\
+  \ : \"CAP_SET?ID\") and\n   user.id != \"0\" and not (\n     process.parent.executable\
+  \ : (\"/tmp/newroot/*\", \"/opt/carbonblack*\") or\n     process.parent.executable\
+  \ in (\n       \"/opt/SolarWinds/Agent/bin/Plugins/JobEngine/SolarWinds.Agent.JobEngine.Plugin\"\
+  , \"/usr/bin/vmware-toolbox-cmd\",\n       \"/usr/bin/dbus-daemon\", \"/usr/bin/update-notifier\"\
+  , \"/usr/share/language-tools/language-options\",\n       \"/opt/SolarWinds/Agent/*\"\
+  , \"/usr/local/sbin/lynis.sh\"\n     ) or\n     process.executable : (\"/opt/dynatrace/*\"\
+  , \"/tmp/newroot/*\", \"/opt/SolarWinds/Agent/*\") or\n     process.executable in\
+  \ (\n       \"/bin/fgrep\", \"/usr/bin/sudo\", \"/usr/bin/pkexec\", \"/usr/lib/cockpit/cockpit-session\"\
+  , \"/usr/sbin/suexec\"\n     ) or\n     process.parent.name in (\"update-notifier\"\
+  , \"language-options\", \"osqueryd\", \"saposcol\", \"dbus-daemon\", \"osqueryi\"\
+  , \"sdbrun\") or\n     process.command_line like (\"sudo*BECOME-SUCCESS*\", \"/bin/sh*sapsysinfo.sh*\"\
+  , \"sudo su\", \"sudo su -\") or\n     process.name in (\"sudo\", \"fgrep\", \"\
+  lsb_release\", \"apt-update\", \"dbus-daemon-launch-helper\", \"man\") or\n    \
+  \ process.parent.command_line like \"/usr/bin/python*ansible*\"\n   )]\n  [process\
+  \ where host.os.type == \"linux\" and event.action == \"uid_change\" and event.type\
+  \ == \"change\" and\n   (process.thread.capabilities.effective : \"CAP_SET?ID\"\
+  \ or process.thread.capabilities.permitted : \"CAP_SET?ID\")\n   and user.id ==\
+  \ \"0\"]"
+explanation: 'Identifies instances where a process (granted CAP_SETUID and/or CAP_SETGID
+  capabilities) is executed, after which the
+
+  user''s access is elevated to UID/GID 0 (root). In Linux, the CAP_SETUID and CAP_SETGID
+  capabilities allow a process to
+
+  change its UID and GID, respectively, providing control over user and group identity
+  management. Attackers may leverage
+
+  a misconfiguration for exploitation in order to escalate their privileges to root.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9b80cb26-9966-44b5-abbf-764fbdbc3586.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Processes related to system management tools like VMware, SolarWinds, and language
+    tools may trigger false positives. Exclude these by adding their executables to
+    the exception list.
+
+    - Scheduled tasks or system updates that involve processes like update-notifier
+    or dbus-daemon can cause false alerts. Consider excluding these parent process
+    names from the detection rule.
+
+    - Automation tools such as Ansible or scripts executed by Python may inadvertently
+    match the rule. E'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

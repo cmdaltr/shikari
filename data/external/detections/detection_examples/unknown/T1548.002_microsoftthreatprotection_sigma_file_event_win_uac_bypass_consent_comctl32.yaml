@@ -1,0 +1,38 @@
+technique_id: T1548.002
+technique_name: UAC Bypass Using Consent and Comctl32 - File
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 62ed5b55-f991-406a-85d9-e8e8fdf18789
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetFilename|endswith: \\comctl32.dll\n  TargetFilename|startswith: C:\\Windows\\\
+  System32\\consent.exe.@\n"
+explanation: Detects the pattern of UAC Bypass using consent.exe and comctl32.dll
+  (UACMe 22)
+false_positives:
+- Unknown
+references:
+- https://github.com/hfiref0x/UACME
+tags:
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1548.002
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|startswith: C:\Windows\System32\consent.exe.@
+    TargetFilename|endswith: \comctl32.dll
+  condition: selection
+metadata:
+  created_date: 2021-08-23
+  modified_date: 2022-10-09
+  author: Christian Burkard (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

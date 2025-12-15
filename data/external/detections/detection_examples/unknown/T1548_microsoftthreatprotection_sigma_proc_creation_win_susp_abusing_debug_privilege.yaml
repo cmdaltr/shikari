@@ -1,0 +1,64 @@
+technique_id: T1548
+technique_name: Abused Debug Privilege by Arbitrary Parent Processes
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: d522eca2-2973-4391-a3e0-ef0374321dae
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_* and\
+  \ not filter\nfilter:\n  CommandLine|contains|all:\n  - ' route '\n  - ' ADD '\n\
+  selection_img:\n- Image|endswith:\n  - \\powershell.exe\n  - \\pwsh.exe\n  - \\\
+  cmd.exe\n- OriginalFileName:\n  - PowerShell.EXE\n  - pwsh.dll\n  - Cmd.Exe\nselection_parent:\n\
+  \  ParentImage|endswith:\n  - \\winlogon.exe\n  - \\services.exe\n  - \\lsass.exe\n\
+  \  - \\csrss.exe\n  - \\smss.exe\n  - \\wininit.exe\n  - \\spoolsv.exe\n  - \\searchindexer.exe\n\
+  \  User|contains:\n  - AUTHORI\n  - AUTORI\n"
+explanation: Detection of unusual child processes by different system processes
+false_positives:
+- Unknown
+references:
+- https://image.slidesharecdn.com/kheirkhabarovoffzonefinal-181117201458/95/hunting-for-privilege-escalation-in-windows-environment-74-638.jpg
+tags:
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1548
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_parent:
+    ParentImage|endswith:
+    - \winlogon.exe
+    - \services.exe
+    - \lsass.exe
+    - \csrss.exe
+    - \smss.exe
+    - \wininit.exe
+    - \spoolsv.exe
+    - \searchindexer.exe
+    User|contains:
+    - AUTHORI
+    - AUTORI
+  selection_img:
+  - Image|endswith:
+    - \powershell.exe
+    - \pwsh.exe
+    - \cmd.exe
+  - OriginalFileName:
+    - PowerShell.EXE
+    - pwsh.dll
+    - Cmd.Exe
+  filter:
+    CommandLine|contains|all:
+    - ' route '
+    - ' ADD '
+  condition: all of selection_* and not filter
+metadata:
+  created_date: 2020-10-28
+  modified_date: 2022-11-11
+  author: Semanur Guneysu @semanurtg, oscd.community
+  status: test
+  imported_date: '2025-11-28'

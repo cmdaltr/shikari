@@ -1,0 +1,43 @@
+technique_id: T1098
+technique_name: Google Workspace Role Modified
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:google_workspace.admin and event.provider:admin and event.category:iam
+  and event.action:(ADD_PRIVILEGE or UPDATE_ROLE)
+explanation: 'Detects when a custom admin role or its permissions are modified. An
+  adversary may modify a custom admin role in order
+
+  to elevate the permissions of other user accounts and persist in their target’s
+  environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6f435062-b7fc-4af9-acea-5b1ead65c5a5.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - After identifying the user account that modified the role, verify the action
+    was intentional.
+
+    - Verify that the user is expected to have administrative privileges in Google
+    Workspace to modify roles.
+
+    - Review organizational units or groups the role might have been added to and
+    ensure the new privileges align properly.
+
+    - Use the `user.name` to filter for `event.action` where `ADD_PRIVILEGE` or `UPDATE_ROLE`
+    has been seen before to check if these actions are new or histo'
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/2406043?hl=en
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 47

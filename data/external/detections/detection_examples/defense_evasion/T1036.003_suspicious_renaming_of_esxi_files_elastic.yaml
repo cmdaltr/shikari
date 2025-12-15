@@ -1,0 +1,49 @@
+technique_id: T1036.003
+technique_name: Suspicious Renaming of ESXI Files
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: 'file where host.os.type == "linux" and event.action == "rename" and
+
+  file.Ext.original.name : ("*.vmdk", "*.vmx", "*.vmxf", "*.vmsd", "*.vmsn", "*.vswp",
+  "*.vmss", "*.nvram", "*.vmem")
+
+  and not file.name : ("*.vmdk", "*.vmx", "*.vmxf", "*.vmsd", "*.vmsn", "*.vswp",
+  "*.vmss", "*.nvram", "*.vmem")'
+explanation: 'Identifies instances where VMware-related files, such as those with
+  extensions like ".vmdk", ".vmx", ".vmxf", ".vmsd",
+
+  ".vmsn", ".vswp", ".vmss", ".nvram", and ".vmem", are renamed on a Linux system.
+  The rule monitors for the "rename"
+
+  event action associated with these file types, which could indicate malicious activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/97db8b42-69d8-4bf3-9fd4-c69a1d895d68.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance or administrative tasks may involve renaming VMware ESXi
+    files for organizational purposes. To manage this, identify and exclude specific
+    users or processes that regularly perform these tasks from triggering alerts.
+
+    - Automated backup or snapshot processes might rename files temporarily as part
+    of their operation. Review and whitelist these processes to prevent unnecessary
+    alerts.
+
+    - Development or testing environments often involve frequent renaming'
+  mitigation: Review investigation guide for details
+references:
+- https://www.bleepingcomputer.com/news/security/massive-esxiargs-ransomware-attack-targets-vmware-esxi-servers-worldwide/
+has_investigation_guide: true
+risk_score: 47

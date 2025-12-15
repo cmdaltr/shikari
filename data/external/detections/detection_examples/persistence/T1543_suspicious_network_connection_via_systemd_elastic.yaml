@@ -1,0 +1,53 @@
+technique_id: T1543
+technique_name: Suspicious Network Connection via systemd
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by host.id with maxspan=5s\n  [process where host.os.type == \"linux\"\
+  \ and event.type == \"start\" and event.action == \"exec\" and\n   process.parent.name\
+  \ == \"systemd\" and process.name in (\n     \"python*\", \"php*\", \"perl\", \"\
+  ruby\", \"lua*\", \"openssl\", \"nc\", \"netcat\", \"ncat\", \"telnet\", \"awk\"\
+  \n   )\n  ] by process.entity_id\n  [network where host.os.type == \"linux\" and\
+  \ event.action == \"connection_attempted\" and event.type == \"start\" and\n   not\
+  \ process.executable == \"/tmp/newroot/bin/curl\"] by process.parent.entity_id"
+explanation: 'Detects suspicious network events executed by systemd, potentially indicating
+  persistence through a systemd backdoor.
+
+  Systemd is a system and service manager for Linux operating systems, used to initialize
+  and manage system processes.
+
+  Attackers can backdoor systemd for persistence by creating or modifying systemd
+  unit files to execute malicious scripts
+
+  or commands, or by replacing legitimate systemd binaries with compromised ones,
+  ensuring that their malicious code is
+
+  automatically executed at system startup or during certain system events.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f3818c85-2207-4b51-8a28-d70fb156ee87.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts or maintenance tasks that use scripting languages
+    like Python, PHP, or Perl may trigger the rule. To handle this, identify and document
+    these scripts, then create exceptions for their specific process names or paths.
+
+    - Automated system monitoring tools that perform network checks using utilities
+    like netcat or telnet might be flagged. Review these tools and whitelist their
+    process names or executable paths to prevent false alerts.
+
+    - Cu'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

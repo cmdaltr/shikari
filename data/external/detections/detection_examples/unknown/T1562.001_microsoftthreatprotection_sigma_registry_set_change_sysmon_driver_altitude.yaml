@@ -1,0 +1,42 @@
+technique_id: T1562.001
+technique_name: Sysmon Driver Altitude Change
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 4916a35e-bfc4-47d0-8e25-a003d7067061
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetObject|contains: \\Services\\\n  TargetObject|endswith: \\Instances\\Sysmon\
+  \ Instance\\Altitude\n"
+explanation: 'Detects changes in Sysmon driver altitude value.
+
+  If the Sysmon driver is configured to load at an altitude of another registered
+  service, it will fail to load at boot.
+
+  '
+false_positives:
+- Legitimate driver altitude change to hide sysmon
+references:
+- https://posts.specterops.io/shhmon-silencing-sysmon-via-driver-unload-682b5be57650
+- https://youtu.be/zSihR3lTf7g
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains: \Services\
+    TargetObject|endswith: \Instances\Sysmon Instance\Altitude
+  condition: selection
+metadata:
+  created_date: 2022-07-28
+  modified_date: 2024-03-25
+  author: B.Talebi
+  status: test
+  imported_date: '2025-11-28'

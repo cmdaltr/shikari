@@ -1,0 +1,41 @@
+technique_id: T1112
+technique_name: Windows Modify Registry ProxyEnable
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Registry where Registry.registry_path = "*\\Internet
+  Settings\\ProxyEnable"  Registry.registry_value_data = 0x00000001 by Registry.action
+  Registry.dest Registry.process_guid Registry.process_id Registry.registry_hive Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_data Registry.registry_value_name
+  Registry.registry_value_type Registry.status Registry.user Registry.vendor_product
+  | `drop_dm_object_name(Registry)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_modify_registry_proxyenable_filter`'
+explanation: The following analytic detects modifications to the Windows registry
+  key "ProxyEnable" to enable proxy settings. It leverages data from the Endpoint.Registry
+  datamodel, specifically monitoring changes to the "Internet Settings\ProxyEnable"
+  registry path. This activity is significant as it is commonly exploited by malware
+  and adversaries to establish proxy communication, potentially connecting to malicious
+  Command and Control (C2) servers. If confirmed malicious, this could allow attackers
+  to redirect network traffic through a proxy, facilitating unauthorized communication
+  and data exfiltration, thereby compromising the security of the affected host.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b27f20bd-ef20-41d1-a1e9-25dedd5bf2f5/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrators may enable or disable this feature that may cause some
+    false positive, however is not common. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://malpedia.caad.fkie.fraunhofer.de/details/win.darkgate
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1112/proxy_enable/proxyenable.log

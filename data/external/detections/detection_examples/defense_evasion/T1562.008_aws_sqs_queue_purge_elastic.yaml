@@ -1,0 +1,48 @@
+technique_id: T1562.008
+technique_name: AWS SQS Queue Purge
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:\"aws.cloudtrail\"\n    and event.provider:\"sqs.amazonaws.com\"\
+  \n    and event.action:\"PurgeQueue\"\n    and event.outcome:\"success\""
+explanation: 'Identifies when an AWS Simple Queue Service (SQS) queue is purged. Adversaries
+  may purge SQS queues to disrupt
+
+  operations, delete messages, or impair monitoring and alerting mechanisms. This
+  action can be used to evade detection
+
+  and cover tracks by removing evidence of malicious activities.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/bab88bb8-cdd9-11ef-bd9a-f661ea17fbcd.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS SQS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance activities by administrators may trigger the purge action.
+    To handle this, identify and whitelist known maintenance operations or specific
+    IAM roles used by trusted personnel.
+
+    - Automated scripts or applications that regularly purge queues as part of their
+    normal operation can cause false positives. Review and document these processes,
+    then create exceptions for these specific actions in your monitoring system.
+
+    - Testing environments where queues ar'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_PurgeQueue.html
+- https://hackingthe.cloud/aws/exploitation/Misconfigured_Resource-Based_Policies/exploting_public_resources_attack_playbook/
+has_investigation_guide: true
+risk_score: 47

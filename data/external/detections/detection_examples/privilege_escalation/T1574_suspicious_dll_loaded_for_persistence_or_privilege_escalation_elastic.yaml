@@ -1,0 +1,98 @@
+technique_id: T1574
+technique_name: Suspicious DLL Loaded for Persistence or Privilege Escalation
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where host.os.type == \"windows\" and\n(event.category : (\"driver\",\
+  \ \"library\") or (event.category == \"process\" and event.action : \"Image loaded*\"\
+  )) and\n(\n  /* compatible with Elastic Endpoint Library Events */\n  (\n    ?dll.name\
+  \ : (\n        \"wlbsctrl.dll\", \"wbemcomn.dll\", \"WptsExtensions.dll\", \"Tsmsisrv.dll\"\
+  , \"TSVIPSrv.dll\", \"Msfte.dll\",\n        \"wow64log.dll\", \"WindowsCoreDeviceInfo.dll\"\
+  , \"Ualapi.dll\", \"wlanhlp.dll\", \"phoneinfo.dll\", \"EdgeGdi.dll\",\n       \
+  \ \"cdpsgshims.dll\", \"windowsperformancerecordercontrol.dll\", \"diagtrack_win.dll\"\
+  , \"TPPCOIPW32.dll\", \n        \"tpgenlic.dll\", \"thinmon.dll\", \"fxsst.dll\"\
+  , \"msTracer.dll\"\n    )\n    and (\n      ?dll.code_signature.trusted != true\
+  \ or\n      ?dll.code_signature.exists != true or\n      (\n        ?dll.code_signature.trusted\
+  \ == true and\n          not ?dll.code_signature.subject_name : (\"Microsoft Windows\"\
+  , \"Microsoft Corporation\", \"Microsoft Windows Publisher\")\n      )\n  ) or\n\
+  \   /* oci.dll is too noisy due to unsigned Oracle related DLL loaded from random\
+  \ dirs */\n  (\n   (?dll.path : \"?:\\\\Windows\\\\*\\\\oci.dll\" and process.executable\
+  \ : \"?:\\\\Windows\\\\*.exe\" and \n    (?dll.code_signature.trusted != true or\
+  \ ?dll.code_signature.exists != true)) or \n    \n   (file.path : \"?:\\\\Windows\\\
+  \\*\\\\oci.dll\" and not file.code_signature.status == \"Valid\" and process.executable\
+  \ : \"?:\\\\Windows\\\\*.exe\")\n   ) or \n\n  /* compatible with Sysmon EventID\
+  \ 7 - Image Load */\n  (file.name : (\"wlbsctrl.dll\", \"wbemcomn.dll\", \"WptsExtensions.dll\"\
+  , \"Tsmsisrv.dll\", \"TSVIPSrv.dll\", \"Msfte.dll\",\n               \"wow64log.dll\"\
+  , \"WindowsCoreDeviceInfo.dll\", \"Ualapi.dll\", \"wlanhlp.dll\", \"phoneinfo.dll\"\
+  , \"EdgeGdi.dll\",\n               \"cdpsgshims.dll\", \"windowsperformancerecordercontrol.dll\"\
+  , \"diagtrack_win.dll\", \"TPPCOIPW32.dll\", \n               \"tpgenlic.dll\",\
+  \ \"thinmon.dll\", \"fxsst.dll\", \"msTracer.dll\") and \n   not file.hash.sha256\
+  \ : \n            (\"6e837794fc282446906c36d681958f2f6212043fc117c716936920be166a700f\"\
+  , \n             \"b14e4954e8cca060ffeb57f2458b6a3a39c7d2f27e94391cbcea5387652f21a4\"\
+  , \n             \"c258d90acd006fa109dc6b748008edbb196d6168bc75ace0de0de54a4db46662\"\
+  ) and \n   not file.code_signature.status == \"Valid\")\n  ) and\n  not\n  (\n \
+  \   ?dll.path : (\n      \"?:\\\\Windows\\\\System32\\\\wbemcomn.dll\",\n      \"\
+  ?:\\\\Windows\\\\SysWOW64\\\\wbemcomn.dll\",\n      \"?:\\\\Windows\\\\System32\\\
+  \\windowsperformancerecordercontrol.dll\",\n      \"?:\\\\Windows\\\\System32\\\\\
+  wlanhlp.dll\", \n      \"\\\\Device\\\\HarddiskVolume?\\\\Windows\\\\SysWOW64\\\\\
+  wbemcomn.dll\", \n      \"\\\\Device\\\\HarddiskVolume?\\\\Windows\\\\System32\\\
+  \\wbemcomn.dll\", \n      \"\\\\Device\\\\HarddiskVolume?\\\\Windows\\\\SysWOW64\\\
+  \\wlanhlp.dll\", \n      \"\\\\Device\\\\HarddiskVolume?\\\\Windows\\\\System32\\\
+  \\wlanhlp.dll\", \n      \"\\\\Device\\\\HarddiskVolume?\\\\Windows\\\\SysWOW64\\\
+  \\windowsperformancerecordercontrol.dll\", \n      \"\\\\Device\\\\HarddiskVolume?\\\
+  \\Windows\\\\System32\\\\windowsperformancerecordercontrol.dll\", \n      \"C:\\\
+  \\ProgramData\\\\docker\\\\windowsfilter\\\\*\\\\Files\\\\Windows\\\\System32\\\\\
+  windowsperformancerecordercontrol.dll\", \n      \"C:\\\\ProgramData\\\\docker\\\
+  \\windowsfilter\\\\*\\\\Files\\\\Windows\\\\System32\\\\windowsperformancerecordercontrol.dll\"\
+  , \n      \"\\\\Device\\\\vmsmb\\\\VSMB-{*}\\\\os\\\\windows\\\\system32\\\\*.dll\"\
+  \n    ) or\n    file.path : (\n      \"?:\\\\Windows\\\\System32\\\\wbemcomn.dll\"\
+  ,\n      \"?:\\\\Windows\\\\SysWOW64\\\\wbemcomn.dll\",\n      \"?:\\\\Windows\\\
+  \\System32\\\\windowsperformancerecordercontrol.dll\",\n      \"?:\\\\Windows\\\\\
+  System32\\\\wlanhlp.dll\", \n      \"C:\\\\ProgramData\\\\docker\\\\windowsfilter\\\
+  \\*\\\\Files\\\\Windows\\\\System32\\\\windowsperformancerecordercontrol.dll\",\
+  \ \n      \"C:\\\\ProgramData\\\\docker\\\\windowsfilter\\\\*\\\\Files\\\\Windows\\\
+  \\System32\\\\wbemcomn.dll\", \n      \"\\\\Device\\\\vmsmb\\\\VSMB-{*}\\\\os\\\\\
+  windows\\\\system32\\\\*.dll\"\n    )\n  )\n)"
+explanation: 'Identifies the loading of a non Microsoft signed DLL that is missing
+  on a default Windows install (phantom DLL) or one
+
+  that can be loaded from a different location by a native Windows process. This may
+  be abused to persist or elevate
+
+  privileges via privileged file write vulnerabilities.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/bfeaf89b-a2a7-48a3-817f-e41829dc61ee.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Any activity that triggered the alert and is not inherently malicious must be\
+    \ monitored by the security team.\n\n### Response and remediation\n\n- Initiate\
+    \ the incident response process based on the outcome of the triage.\n- Isolate\
+    \ the involved host to prevent further post-compromise behavior.\n- If the triage\
+    \ identified malware, search the environment for additional compromised hosts.\n\
+    \  - Implement temporary network rules,"
+  mitigation: Review investigation guide for details
+references:
+- https://itm4n.github.io/windows-dll-hijacking-clarified/
+- http://remoteawesomethoughts.blogspot.com/2019/05/windows-10-task-schedulerservice.html
+- https://googleprojectzero.blogspot.com/2018/04/windows-exploitation-tricks-exploiting.html
+- https://shellz.club/2020/10/16/edgegdi-dll-for-persistence-and-lateral-movement.html
+- https://windows-internals.com/faxing-your-way-to-system/
+- http://waleedassar.blogspot.com/2013/01/wow64logdll.html
+has_investigation_guide: true
+risk_score: 73

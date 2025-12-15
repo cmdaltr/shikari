@@ -1,0 +1,50 @@
+technique_id: T1053.005
+technique_name: Outbound Scheduled Task Activity via PowerShell
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id, process.entity_id with maxspan = 5s\n [any where host.os.type\
+  \ == \"windows\" and (event.category == \"library\" or (event.category == \"process\"\
+  \ and event.action : \"Image loaded*\")) and\n  (?dll.name : \"taskschd.dll\" or\
+  \ file.name : \"taskschd.dll\") and process.name : (\"powershell.exe\", \"pwsh.exe\"\
+  , \"powershell_ise.exe\")]\n [network where host.os.type == \"windows\" and process.name\
+  \ : (\"powershell.exe\", \"pwsh.exe\", \"powershell_ise.exe\") and destination.port\
+  \ == 135 and not destination.address in (\"127.0.0.1\", \"::1\")]"
+explanation: 'Identifies the PowerShell process loading the Task Scheduler COM DLL
+  followed by an outbound RPC network connection
+
+  within a short time period. This may indicate lateral movement or remote discovery
+  via scheduled tasks.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5cd55388-a19c-47c7-8ec4-f41656c2fded.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using PowerShell may trigger the rule if they
+    involve loading the Task Scheduler DLL and making RPC connections. To manage this,
+    identify and whitelist specific scripts or processes that are known to perform
+    these actions regularly.
+
+    - Automated system maintenance or monitoring tools might also load the Task Scheduler
+    DLL and establish RPC connections. Review these tools and exclude their process
+    IDs or hashes from the detection rule to p'
+  mitigation: Review investigation guide for details
+references:
+- https://www.volexity.com/blog/2020/12/14/dark-halo-leverages-solarwinds-compromise-to-breach-organizations/
+- https://www.elastic.co/security-labs/hunting-for-lateral-movement-using-event-query-language
+has_investigation_guide: true
+risk_score: 47

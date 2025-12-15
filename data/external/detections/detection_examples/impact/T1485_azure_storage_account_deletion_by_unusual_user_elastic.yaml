@@ -1,0 +1,48 @@
+technique_id: T1485
+technique_name: Azure Storage Account Deletion by Unusual User
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset: azure.activitylogs and\n    azure.activitylogs.operation_name:\
+  \ \"MICROSOFT.STORAGE/STORAGEACCOUNTS/DELETE\" and\n    azure.activitylogs.identity.claims_initiated_by_user.name:\
+  \ *"
+explanation: 'Identifies when an Azure Storage Account is deleted. Adversaries may
+  delete storage accounts to disrupt operations,
+
+  destroy evidence, or cause denial of service. This activity could indicate an attacker
+  attempting to cover their tracks
+
+  after data exfiltration or as part of a destructive attack. Monitoring storage account
+  deletions is critical for
+
+  detecting potential impact on business operations and data availability.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Azure Activity Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate decommissioning of unused storage accounts may trigger this alert.
+    Document approved storage account cleanup activities and coordinate with infrastructure
+    teams to understand planned deletions.
+
+    - DevOps automation tools might delete temporary storage accounts as part of infrastructure
+    lifecycle management. Identify service principals used by CI/CD pipelines and
+    consider creating exceptions for these automated processes.
+
+    - Testing and development environments'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoft.com/en-us/security/blog/2025/08/27/storm-0501s-evolving-techniques-lead-to-cloud-based-ransomware/
+has_investigation_guide: true
+risk_score: 47

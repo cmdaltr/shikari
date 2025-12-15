@@ -1,0 +1,63 @@
+technique_id: T1059
+technique_name: Suspicious PowerShell Engine ImageLoad
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "host.os.type:windows and event.category:library and\n  dll.name:(\"System.Management.Automation.dll\"\
+  \ or \"System.Management.Automation.ni.dll\") and\n  not (\n    process.code_signature.subject_name:(\n\
+  \      \"Microsoft Corporation\" or\n      \"Microsoft Dynamic Code Publisher\"\
+  \ or\n      \"Microsoft Windows\"\n    ) and process.code_signature.trusted:true\
+  \ and not process.name.caseless:\"regsvr32.exe\"\n  ) and\n  not (\n    process.executable:(C\\\
+  :\\\\Program*Files*\\(x86\\)\\\\*.exe or C\\:\\\\Program*Files\\\\*.exe) and\n \
+  \   process.code_signature.trusted:true\n  ) and\n  not (\n    process.executable:\
+  \ C\\:\\\\Windows\\\\Lenovo\\\\*.exe and process.code_signature.subject_name:\"\
+  Lenovo\" and\n    process.code_signature.trusted:true\n  ) and\n  not (\n    process.executable:\
+  \ C\\:\\\\Windows\\\\AdminArsenal\\\\PDQInventory-Scanner\\\\service-*\\\\exec\\\
+  \\PDQInventoryScanner.exe and\n    process.code_signature.subject_name:\"PDQ.com\
+  \ Corporation\" and\n    process.code_signature.trusted:true\n  ) and\n  not (\n\
+  \    process.executable: C\\:\\\\Windows\\\\Temp\\\\\\{*\\}\\\\_is*.exe and\n  \
+  \  process.code_signature.subject_name:(\"Dell Technologies Inc.\" or \"Dell Inc\"\
+  \ or \"Dell Inc.\") and\n    process.code_signature.trusted:true\n  ) and\n  not\
+  \ (\n    process.executable: C\\:\\\\ProgramData\\\\chocolatey\\\\* and\n    process.code_signature.subject_name:(\"\
+  Chocolatey Software, Inc.\" or \"Chocolatey Software, Inc\") and\n    process.code_signature.trusted:true\n\
+  \  ) and\n  not process.executable : (\n    \"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\
+  \\v1.0\\\\powershell.exe\" or\n    \"C:\\\\Windows\\\\SysWOW64\\\\WindowsPowerShell\\\
+  \\v1.0\\\\powershell.exe\"\n  )"
+explanation: 'Identifies the PowerShell engine being invoked by unexpected processes.
+  Rather than executing PowerShell functionality
+
+  with powershell.exe, some attackers do this to operate more stealthily.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/852c1f19-68e8-43a6-9dce-340771fe1be3.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity can happen legitimately. Some vendors have their own PowerShell
+    implementations that are shipped with some products. These benign true positives
+    (B-TPs) can be added as exceptions if necessary after analysis.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-compromise behavior.
+
+    - If the triage identified malware, search the environment for addit'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/elastic-security-labs-steps-through-the-r77-rootkit
+has_investigation_guide: true
+risk_score: 47

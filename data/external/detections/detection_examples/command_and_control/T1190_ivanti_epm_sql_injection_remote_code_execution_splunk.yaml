@@ -1,0 +1,46 @@
+technique_id: T1190
+technique_name: Ivanti EPM SQL Injection Remote Code Execution
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("/WSStatusEvents/EventHandler.asmx") Web.http_method=POST Web.status=200
+  by Web.http_user_agent, Web.status Web.http_method, Web.url, Web.url_length, Web.src,
+  Web.dest, sourcetype | `drop_dm_object_name("Web")` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `ivanti_epm_sql_injection_remote_code_execution_filter`'
+explanation: This detection identifies potential exploitation of a critical SQL injection
+  vulnerability in Ivanti Endpoint Manager (EPM), identified as CVE-2024-29824. The
+  vulnerability, which has a CVSS score of 9.8, allows for remote code execution through
+  the `RecordGoodApp` function in the `PatchBiz.dll` file. An attacker can exploit
+  this vulnerability by manipulating the `goodApp.md5` value in an HTTP POST request
+  to the `/WSStatusEvents/EventHandler.asmx` endpoint, leading to unauthorized command
+  execution on the server. Monitoring for unusual SQL commands and HTTP requests to
+  this endpoint can help identify exploitation attempts. Note that, the detection
+  is focused on the URI path, HTTP method and status code of 200, indicating potential
+  exploitation. To properly identify if this was successful, TLS inspection and additional
+  network traffic analysis is required as the xp_cmdshell comes in via the request
+  body.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e20564ca-c86c-4e30-acdb-a8486673426f/
+indicators:
+- type: data_source
+  value: Suricata
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives are not expected, as this detection is based on monitoring
+    HTTP POST requests to a specific endpoint with a status code of 200. However,
+    ensure that legitimate requests to the `/WSStatusEvents/EventHandler.asmx` endpoint
+    are accounted for in the environment to avoid false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.horizon3.ai/attack-research/attack-blogs/cve-2024-29824-deep-dive-ivanti-epm-sql-injection-remote-code-execution-vulnerability/
+- https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-29824
+- https://github.com/projectdiscovery/nuclei-templates/pull/10020/files
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/ivanti/suricata_ivanti_epm.log

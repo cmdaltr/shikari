@@ -1,0 +1,75 @@
+technique_id: T1211
+technique_name: Potential Defense Evasion via PRoot
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'process where host.os.type == "linux" and event.type == "start" and event.action
+  in ("exec", "exec_event", "start", "ProcessRollup2") and
+
+  process.parent.name == "proot"'
+explanation: 'Identifies the execution of the PRoot utility, an open-source tool for
+  user-space implementation of chroot, mount
+
+  --bind, and binfmt_misc. Adversaries can leverage an open-source tool PRoot to expand
+  the scope of their operations to
+
+  multiple Linux distributions and simplify their necessary efforts. In a normal threat
+  scenario, the scope of an attack
+
+  is limited by the varying configurations of each Linux distribution. With PRoot,
+  it provides an attacker with a
+
+  consistent operational environment across different Linux distributions, such as
+  Ubuntu, Fedora, and Alpine. PRoot also
+
+  provides emulation capabilities that allow for malware built on other architectures,
+  such as ARM, to be run.The
+
+  post-exploitation technique called bring your own filesystem (BYOF), can be used
+  by the threat actors to execute
+
+  malicious payload or elevate privileges or perform network scans or orchestrate
+  another attack on the environment.
+
+  Although PRoot was originally not developed with malicious intent it can be easily
+  tuned to work for one.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5c9ec990-37fa-4d5c-abfc-8d432f3dedd0.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate use of PRoot for cross-distribution development or testing environments
+    may trigger alerts. Users can create exceptions for known development teams or
+    specific projects that require PRoot for legitimate purposes.
+
+    - System administrators using PRoot for system maintenance or migration tasks
+    might be flagged. To mitigate this, document and whitelist these activities by
+    correlating them with scheduled maintenance windows or specific administrator
+    accounts.
+
+    - Se'
+  mitigation: Review investigation guide for details
+references:
+- https://proot-me.github.io/
+has_investigation_guide: true
+risk_score: 47

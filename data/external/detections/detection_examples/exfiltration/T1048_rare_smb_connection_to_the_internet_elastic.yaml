@@ -1,0 +1,62 @@
+technique_id: T1048
+technique_name: Rare SMB Connection to the Internet
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:network and host.os.type:windows and process.pid:4 and\n  network.transport:tcp\
+  \ and destination.port:(139 or 445) and\n  source.ip:(\n    10.0.0.0/8 or\n    172.16.0.0/12\
+  \ or\n    192.168.0.0/16\n  ) and\n  not destination.ip:(\n    10.0.0.0/8 or\n \
+  \   127.0.0.0/8 or\n    169.254.0.0/16 or\n    172.16.0.0/12 or\n    192.0.0.0/24\
+  \ or\n    192.0.0.0/29 or\n    192.0.0.8/32 or\n    192.0.0.9/32 or\n    192.0.0.10/32\
+  \ or\n    192.0.0.170/32 or\n    192.0.0.171/32 or\n    192.0.2.0/24 or\n    192.31.196.0/24\
+  \ or\n    192.52.193.0/24 or\n    192.168.0.0/16 or\n    192.88.99.0/24 or\n   \
+  \ 224.0.0.0/4 or\n    100.64.0.0/10 or\n    192.175.48.0/24 or\n    198.18.0.0/15\
+  \ or\n    198.51.100.0/24 or\n    203.0.113.0/24 or\n    240.0.0.0/4 or\n    \"\
+  ::1\" or\n    \"FE80::/10\" or\n    \"FF00::/8\"\n  )"
+explanation: 'This rule detects rare internet network connections via the SMB protocol.
+  SMB is commonly used to leak NTLM credentials
+
+  via rogue UNC path injection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f580bf0a-2d23-43bb-b8e1-17548bb947ec.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Internal network scanning tools may trigger alerts if they simulate SMB traffic
+    to external IPs. Exclude IPs associated with these tools from the rule to prevent
+    false positives.
+
+    - Legitimate business applications that require SMB connections to external cloud
+    services might be flagged. Identify and whitelist these specific external IPs
+    or domains to avoid unnecessary alerts.
+
+    - Backup solutions that use SMB for data transfer to offsite locations can be
+    mistaken for exf'
+  mitigation: Review investigation guide for details
+references:
+- https://www.securify.nl/en/blog/living-off-the-land-stealing-netntlm-hashes/
+has_investigation_guide: true
+risk_score: 47

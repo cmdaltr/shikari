@@ -1,0 +1,46 @@
+technique_id: T1556
+technique_name: Microsoft Entra ID Conditional Access Policy (CAP) Modified
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset: \"azure.auditlogs\"\n    and event.action:\"Update conditional\
+  \ access policy\"\n    and event.outcome: \"success\""
+explanation: Identifies a modification to a conditional access policy (CAP) in Microsoft
+  Entra ID. Adversaries may modify existing CAPs to loosen access controls and maintain
+  persistence in the environment with a compromised identity or entity.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/bc48bba7-4a23-4232-b551-eca3ca1e3f20.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Audit Logs
+  confidence: high
+false_positives:
+- description: 'False Positive Considerations
+
+
+    - **Authorized administrative changes:** Some organizations routinely update CAPs
+    as part of policy tuning or role-based access reviews.
+
+    - **Security reviews or automation:** Scripts, CI/CD processes, or third-party
+    compliance tools may programmatically update CAPs.
+
+    - **Employee lifecycle events:** Policy changes during employee onboarding/offboarding
+    may include updates to access policies.
+
+
+    If any of these cases apply and align with the activity''s context, conside'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/azure/active-directory/conditional-access/overview
+- https://www.rezonate.io/blog/microsoft-entra-id-the-complete-guide-to-conditional-access-policies/
+has_investigation_guide: true
+risk_score: 47

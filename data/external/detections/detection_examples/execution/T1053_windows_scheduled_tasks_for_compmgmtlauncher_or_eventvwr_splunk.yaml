@@ -1,0 +1,39 @@
+technique_id: T1053
+technique_name: Windows Scheduled Tasks for CompMgmtLauncher or Eventvwr
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`wineventlog_security` EventCode=4698 TaskContent = "*&lt;Command&gt;C:\\Windows\\System32\\CompMgmtLauncher.exe&lt;/Command&gt;*"
+  OR TaskContent = "*&lt;Command&gt;C:\\Windows\\System32\\zh-CN\\eventvwr.msc&lt;/Command&gt;*"
+  OR TaskContent = "*&lt;Command&gt;C:\\Windows\\System32\\eventvwr.msc&lt;/Command&gt;*"
+  | stats count min(_time) as firstTime max(_time) as lastTime by dest action EventData_Xml
+  TaskContent TaskName | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_scheduled_tasks_for_compmgmtlauncher_or_eventvwr_filter`'
+explanation: The following analytic detects the creation or modification of Windows
+  Scheduled Tasks related to CompMgmtLauncher or Eventvwr. These legitimate system
+  utilities, used for launching the Computer Management Console and Event Viewer,
+  can be abused by attackers to execute malicious payloads under the guise of normal
+  system processes. By leveraging these tasks, adversaries can establish persistence
+  or elevate privileges without raising suspicion. This detection helps security analysts
+  identify unusual or unauthorized scheduled tasks involving these executables, allowing
+  for timely investigation and remediation of potential threats.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/feb43b86-8c38-46cd-865e-20ce8a96c26c/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4698
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.proofpoint.com/us/blog/threat-insight/chinese-malware-appears-earnest-across-cybercrime-threat-landscape
+- https://www.fortinet.com/blog/threat-research/valleyrat-campaign-targeting-chinese-speakers
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1053/valleyrat_schedtask/valleyrat_schedtask.log

@@ -1,0 +1,54 @@
+technique_id: T1003.001
+technique_name: Potential Invoke-Mimikatz PowerShell Script
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:windows and\npowershell.file.script_block_text:(\n\
+  \  (DumpCreds and\n  DumpCerts) or\n  \"sekurlsa::logonpasswords\" or\n  (\"crypto::certificates\"\
+  \ and\n  \"CERT_SYSTEM_STORE_LOCAL_MACHINE\")\n)"
+explanation: 'Mimikatz is a credential dumper capable of obtaining plaintext Windows
+  account logins and passwords, along with many
+
+  other features that make it useful for testing the security of networks. This rule
+  detects Invoke-Mimikatz PowerShell
+
+  script and alike.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ac96ceb8-4399-4191-af1d-4feeac1f1f46.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Related rules
+
+
+    - PowerShell PSReflect Script - 56f2e9b5-4803-4e44-a0a4-a52dc79d57fe
+
+    - Suspicious .NET Reflection via PowerShell - e26f042e-c590-4e82-8e05-41e81bd822ad
+
+    - PowerShell Suspicious Payload Encoded and Compressed - 81fe9dc6-a2d7-4192-a2d8-eed98afc766a
+
+    - Potential Process Injection via PowerShell - 2e29e96a-b67c-455a-afe4-de6183431d0d
+
+    -'
+  mitigation: Review investigation guide for details
+references:
+- https://attack.mitre.org/software/S0002/
+- https://raw.githubusercontent.com/EmpireProject/Empire/master/data/module_source/credentials/Invoke-Mimikatz.ps1
+- https://www.elastic.co/security-labs/detect-credential-access
+has_investigation_guide: true
+risk_score: 73

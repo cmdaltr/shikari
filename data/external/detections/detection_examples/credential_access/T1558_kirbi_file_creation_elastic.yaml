@@ -1,0 +1,58 @@
+technique_id: T1558
+technique_name: Kirbi File Creation
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: 'file where host.os.type == "windows" and event.type == "creation" and file.extension
+  : "kirbi"'
+explanation: 'Identifies the creation of .kirbi files. The creation of this kind of
+  file is an indicator of an attacker running
+
+  Kerberos ticket dump utilities, such as Mimikatz, and precedes attacks such as Pass-The-Ticket
+  (PTT), which allows the
+
+  attacker to impersonate users using Kerberos tickets.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b8f8da2d-a9dc-48c0-90e4-955c0aa1259a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tools or scripts that manage Kerberos tickets may
+    create .kirbi files as part of their normal operations. Review the context of
+    the file creation event to determine if it aligns with expected administrative
+    activities.
+
+    - Scheduled tasks or automated processes that involve Kerberos ticket management
+    might trigger this rule. Identify and document these processes, and consider creating
+    exceptions for known, benign activities.
+
+    - Security software'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

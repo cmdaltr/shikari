@@ -1,0 +1,54 @@
+technique_id: T1547.006
+technique_name: Kernel Module Load via insmod
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and process.name\
+  \ == \"insmod\" and process.args : \"*.ko\" and\nnot process.parent.executable like\
+  \ (\n  \"/opt/ds_agent/*\", \"/usr/sbin/veeamsnap-loader\", \"/opt/TrendMicro/vls_agent/*\"\
+  , \"/opt/intel/oneapi/*\",\n  \"/opt/commvault/Base/linux_drv\", \"/bin/falcoctl\"\
+  \n)"
+explanation: 'Detects the use of the insmod binary to load a Linux kernel object file.
+  Threat actors can use this binary, given they
+
+  have root privileges, to load a rootkit on a system providing them with complete
+  control and the ability to hide from
+
+  security products. Manually loading a kernel module in this manner should not be
+  at all common and can indicate
+
+  suspcious or malicious behavior.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2339f03c-f53f-40fa-834b-40c5983fc41f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- If this activity is related to new benign\
+    \ software installation activity, consider adding exceptions — preferably with\
+    \ a combination of user and command line conditions.\n- If this activity is related\
+    \ to a system administrator who uses cron jobs for administrative purposes, consider\
+    \ adding exceptions for this specific administrator user account. \n- Try to understand\
+    \ the context of the execution by thinking about the user, machine, or business\
+    \ purpose. A small number of"
+  mitigation: Review investigation guide for details
+references:
+- https://decoded.avast.io/davidalvarez/linux-threat-hunting-syslogk-a-kernel-rootkit-found-under-development-in-the-wild/
+has_investigation_guide: true
+risk_score: 47

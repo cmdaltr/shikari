@@ -1,0 +1,40 @@
+technique_id: T1548.002
+technique_name: NET Profiler UAC bypass
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Registry where Registry.registry_path= "*\\Environment\\COR_PROFILER_PATH"
+  Registry.registry_value_data = "*.dll" by Registry.action Registry.dest Registry.process_guid
+  Registry.process_id Registry.registry_hive Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_data Registry.registry_value_name Registry.registry_value_type
+  Registry.status Registry.user Registry.vendor_product | `drop_dm_object_name(Registry)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `net_profiler_uac_bypass_filter`'
+explanation: The following analytic detects modifications to the registry aimed at
+  bypassing the User Account Control (UAC) feature in Windows. It identifies changes
+  to the .NET COR_PROFILER_PATH registry key, which can be exploited to load a malicious
+  DLL via mmc.exe. This detection leverages data from the Endpoint.Registry datamodel,
+  focusing on specific registry paths and values. Monitoring this activity is crucial
+  as it can indicate an attempt to escalate privileges or persist within the environment.
+  If confirmed malicious, this could allow an attacker to execute arbitrary code with
+  elevated privileges, compromising system integrity.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/0252ca80-e30d-11eb-8aa3-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: limited false positive. It may trigger by some windows update that
+    will modify this registry.
+  mitigation: Review context and user activity
+references:
+- https://offsec.almond.consulting/UAC-bypass-dotnet.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1548/uac_bypass/windows-sysmon2.log

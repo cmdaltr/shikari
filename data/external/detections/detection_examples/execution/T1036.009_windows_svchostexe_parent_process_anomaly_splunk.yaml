@@ -1,0 +1,53 @@
+technique_id: T1036.009
+technique_name: Windows Svchost.exe Parent Process Anomaly
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.parent_process_name
+  != "services.exe" AND Processes.process_name = "svchost.exe" AND Processes.process
+  != unknown AND Processes.parent_process_path != "C:\\ProgramData\\Microsoft\\Windows
+  Defender\\Platform\\*\\MsMpEng.exe" AND Processes.parent_process_path != "C:\\Program
+  Files\\Windows Defender\\MsMpEng.exe" by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_svchost_exe_parent_process_anomaly_filter`'
+explanation: The following analytic detects an anomaly where an svchost.exe process
+  is spawned by a parent process other than the standard services.exe. In a typical
+  Windows environment, svchost.exe is a system process that hosts Windows service
+  DLLs, and is expected to be a child of services.exe. A process deviation from this
+  hierarchy may indicate suspicious behavior, such as malicious code attempting to
+  masquerade as a legitimate system process or evade detection. It is essential to
+  investigate the parent process and associated behavior for further signs of compromise
+  or unauthorized activity.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/1d38e5e9-2ff8-4c47-872c-bf1657cefab5/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Windows Update or other Windows Installer processes may launch their
+    own svchost.exe processes that are not directly spawned by services.exe in certain
+    edge cases (e.g., during patches or updates).
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1036/009/
+- https://www.trendmicro.com/en_nl/research/24/k/earth-estries.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1035.009/suspicious_spawn_svchost/susp_svchost_proc.log

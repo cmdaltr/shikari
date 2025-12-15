@@ -1,0 +1,44 @@
+technique_id: T1562.001
+technique_name: Windows Impair Defense Disable Win Defender Compute File Hashes
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Registry where Registry.registry_path= "*\\Windows
+  Defender\\MpEngine\\EnableFileHashComputation" Registry.registry_value_data="0x00000000"
+  by Registry.action Registry.dest Registry.process_guid Registry.process_id Registry.registry_hive
+  Registry.registry_path Registry.registry_key_name Registry.registry_value_data Registry.registry_value_name
+  Registry.registry_value_type Registry.status Registry.user Registry.vendor_product
+  | `drop_dm_object_name(Registry)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_impair_defense_disable_win_defender_compute_file_hashes_filter`'
+explanation: The following analytic detects modifications to the Windows registry
+  that disable Windows Defender's file hash computation by setting the EnableFileHashComputation
+  value to 0. This detection leverages data from the Endpoint.Registry data model,
+  focusing on changes to the specific registry path associated with Windows Defender.
+  Disabling file hash computation can significantly impair Windows Defender's ability
+  to detect and scan for malware, making it a critical behavior to monitor. If confirmed
+  malicious, this activity could allow attackers to bypass Windows Defender, facilitating
+  undetected malware execution and persistence in the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/fe52c280-98bd-4596-b6f6-a13bbf8ac7c6/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: It is unusual to turn this feature off a Windows system since it is
+    a default security control, although it is not rare for some policies to disable
+    it. Although no false positives have been identified, use the provided filter
+    macro to tune the search.
+  mitigation: Review context and user activity
+references:
+- https://x.com/malmoeb/status/1742604217989415386?s=20
+- https://github.com/undergroundwires/privacy.sexy
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.001/disable-windows-security-defender-features/windefender-bypas-2-sysmon.log

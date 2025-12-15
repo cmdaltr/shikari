@@ -1,0 +1,37 @@
+technique_id: T1030
+technique_name: Linux Auditd Data Transfer Size Limits Via Split
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`linux_auditd` execve_command = "*split*" AND execve_command = "*-b *" | rename
+  host as dest | rename comm as process_name | rename exe as process | stats count
+  min(_time) as firstTime max(_time) as lastTime by argc execve_command dest | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `linux_auditd_data_transfer_size_limits_via_split_filter`'
+explanation: The following analytic detects suspicious data transfer activities that
+  involve the use of the `split` syscall, potentially indicating an attempt to evade
+  detection by breaking large files into smaller parts. Attackers may use this technique
+  to bypass size-based security controls, facilitating the covert exfiltration of
+  sensitive data. By monitoring for unusual or unauthorized use of the `split` syscall,
+  this analytic helps identify potential data exfiltration attempts, allowing security
+  teams to intervene and prevent the unauthorized transfer of critical information
+  from the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/4669561d-3bbd-44e3-857c-0e3c6ef2120c/
+indicators:
+- type: data_source
+  value: Linux Auditd Execve
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrator or network operator can use this application for automation
+    purposes. Please update the filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.splunk.com/en_us/blog/security/deep-dive-on-persistence-privilege-escalation-technique-and-detection-in-linux-platform.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1030/linux_auditd_split_b_exec/auditd_execve_split.log

@@ -1,0 +1,53 @@
+technique_id: T1105
+technique_name: Windows Ldifde Directory Object Behavior
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.process_name=ldifde.exe
+  Processes.process IN ("*-i *", "*-f *") by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_ldifde_directory_object_behavior_filter`'
+explanation: The following analytic identifies the use of Ldifde.exe, a command-line
+  utility for creating, modifying, or deleting LDAP directory objects. This detection
+  leverages data from Endpoint Detection and Response (EDR) agents, focusing on process
+  execution and command-line arguments. Monitoring Ldifde.exe is significant because
+  it can be used by attackers to manipulate directory objects, potentially leading
+  to unauthorized changes or data exfiltration. If confirmed malicious, this activity
+  could allow an attacker to gain control over directory services, escalate privileges,
+  or access sensitive information within the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/35cd29ca-f08c-4489-8815-f715c45460d3/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present, filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Ldifde/
+- https://media.defense.gov/2023/May/24/2003229517/-1/-1/0/CSA_Living_off_the_Land.PDF
+- https://twitter.com/0gtweet/status/1564968845726580736?s=20
+- https://strontic.github.io/xcyclopedia/library/ldifde.exe-45D28FB47E9B6ACC5DCA9FDA3E790210.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1069.002/AD_discovery/ldifde_windows-sysmon.log

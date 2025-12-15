@@ -1,0 +1,67 @@
+technique_id: T1003.001
+technique_name: Suspicious Lsass Process Access
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.code == \"10\" and\n \
+  \ winlog.event_data.TargetImage : \"?:\\\\WINDOWS\\\\system32\\\\lsass.exe\" and\n\
+  \  not winlog.event_data.GrantedAccess :\n                (\"0x1000\", \"0x1400\"\
+  , \"0x101400\", \"0x101000\", \"0x101001\", \"0x100000\", \"0x100040\", \"0x3200\"\
+  , \"0x40\", \"0x3200\") and\n  not process.name : (\"procexp64.exe\", \"procmon.exe\"\
+  , \"procexp.exe\", \"Microsoft.Identity.AadConnect.Health.AadSync.Host.ex\") and\n\
+  \  not process.executable : (\n        \"?:\\\\ProgramData\\\\Microsoft\\\\Windows\
+  \ Defender\\\\platform\\\\*\",\n        \"?:\\\\ProgramData\\\\WebEx\\\\webex\\\\\
+  *\",\n        \"?:\\\\Program Files (x86)\\\\*\",\n        \"?:\\\\Program Files\\\
+  \\*\",\n        \"?:\\\\Windows\\\\CCM\\\\CcmExec.exe\",\n        \"?:\\\\Windows\\\
+  \\LTSvc\\\\LTSVC.exe\",\n        \"?:\\\\Windows\\\\Sysmon.exe\",\n        \"?:\\\
+  \\Windows\\\\Sysmon64.exe\",\n        \"C:\\\\Windows\\\\CynetMS.exe\",\n      \
+  \  \"?:\\\\Windows\\\\system32\\\\csrss.exe\",\n        \"?:\\\\Windows\\\\System32\\\
+  \\lsm.exe\",\n        \"?:\\\\Windows\\\\system32\\\\MRT.exe\",\n        \"?:\\\\\
+  Windows\\\\System32\\\\msiexec.exe\",\n        \"?:\\\\Windows\\\\system32\\\\wbem\\\
+  \\wmiprvse.exe\",\n        \"?:\\\\Windows\\\\system32\\\\wininit.exe\",\n     \
+  \   \"?:\\\\Windows\\\\SystemTemp\\\\GUM*.tmp\\\\GoogleUpdate.exe\",\n        \"\
+  ?:\\\\Windows\\\\sysWOW64\\\\wbem\\\\wmiprvse.exe\",\n        \"C:\\\\oracle\\\\\
+  64\\\\02\\\\instantclient_19_13\\\\sqlplus.exe\",\n        \"C:\\\\oracle\\\\64\\\
+  \\02\\\\instantclient_19_13\\\\sqlldr.exe\",\n        \"d:\\\\oracle\\\\product\\\
+  \\19\\\\dbhome1\\\\bin\\\\ORACLE.EXE\",\n        \"C:\\\\wamp\\\\bin\\\\apache\\\
+  \\apache*\\\\bin\\\\httpd.exe\",\n        \"C:\\\\Windows\\\\system32\\\\netstat.exe\"\
+  ,\n        \"C:\\\\PROGRA~1\\\\INFORM~1\\\\apps\\\\jdk\\\\*\\\\jre\\\\bin\\\\java.exe\"\
+  ,\n        \"C:\\\\PROGRA~2\\\\CyberCNSAgentV2\\\\osqueryi.exe\",\n        \"C:\\\
+  \\Utilityw2k19\\\\packetbeat\\\\packetbeat.exe\",\n        \"C:\\\\ProgramData\\\
+  \\Cisco\\\\Cisco AnyConnect Secure Mobility Client\\\\Temp\\\\CloudUpdate\\\\vpndownloader.exe\"\
+  ,\n        \"C:\\\\ProgramData\\\\Cisco\\\\Cisco Secure Client\\\\Temp\\\\CloudUpdate\\\
+  \\vpndownloader.exe\"\n  ) and\n  not winlog.event_data.CallTrace : (\"*mpengine.dll*\"\
+  , \"*appresolver.dll*\", \"*sysmain.dll*\")"
+explanation: Identifies access attempts to LSASS handle, this may indicate an attempt
+  to dump credentials from Lsass memory.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/128468bf-cab1-4637-99ea-fdf3780a4609.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate security tools like Sysinternals Process Explorer and Process Monitor
+    can trigger false positives. Exclude these by adding their process names to the
+    exception list.
+
+    - Windows Defender and other antivirus software may access LSASS for legitimate
+    scanning purposes. Exclude their executable paths from the detection rule to prevent
+    false alerts.
+
+    - System processes such as csrss.exe, lsm.exe, and wmiprvse.exe are known to access
+    LSASS as part of normal operation'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1003.001/T1003.001.md
+has_investigation_guide: true
+risk_score: 47

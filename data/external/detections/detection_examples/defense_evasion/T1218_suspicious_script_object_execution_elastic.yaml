@@ -1,0 +1,60 @@
+technique_id: T1218
+technique_name: Suspicious Script Object Execution
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "any where host.os.type == \"windows\" and\n (event.category : (\"library\"\
+  , \"driver\") or (event.category == \"process\" and event.action : \"Image loaded*\"\
+  )) and\n (?dll.name : \"scrobj.dll\" or ?file.name : \"scrobj.dll\") and\n process.executable\
+  \ : (\"?:\\\\Windows\\\\System32\\\\*.exe\", \"?:\\\\Windows\\\\SysWOW64\\\\*.exe\"\
+  ) and\n not process.executable : (\n       \"?:\\\\Windows\\\\System32\\\\cscript.exe\"\
+  ,\n       \"?:\\\\Windows\\\\SysWOW64\\\\cscript.exe\",\n       \"?:\\\\Windows\\\
+  \\system32\\\\msiexec.exe\",\n       \"?:\\\\Windows\\\\SysWOW64\\\\msiexec.exe\"\
+  ,\n       \"?:\\\\Windows\\\\System32\\\\smartscreen.exe\",\n       \"?:\\\\Windows\\\
+  \\system32\\\\taskhostw.exe\",\n       \"?:\\\\windows\\\\system32\\\\inetsrv\\\\\
+  w3wp.exe\",\n       \"?:\\\\windows\\\\SysWOW64\\\\inetsrv\\\\w3wp.exe\",\n    \
+  \   \"?:\\\\Windows\\\\system32\\\\wscript.exe\",\n       \"?:\\\\Windows\\\\SysWOW64\\\
+  \\wscript.exe\",\n       \"?:\\\\Windows\\\\System32\\\\mshta.exe\",\n       \"\
+  ?:\\\\Windows\\\\system32\\\\mobsync.exe\",\n       \"?:\\\\Windows\\\\SysWOW64\\\
+  \\mobsync.exe\",\n       \"?:\\\\Windows\\\\System32\\\\cmd.exe\",\n       \"?:\\\
+  \\Windows\\\\SysWOW64\\\\cmd.exe\",\n       \"?:\\\\Windows\\\\System32\\\\OpenWith.exe\"\
+  ,\n       \"?:\\\\Windows\\\\System32\\\\wbem\\\\WMIADAP.exe\",\n       \"?:\\\\\
+  Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\")"
+explanation: 'Identifies scrobj.dll loaded into unusual Microsoft processes. This
+  usually means a malicious scriptlet is being
+
+  executed in the target process.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4ed678a9-3a4f-41fb-9fea-f85a6e0a0dff.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts may trigger the rule if they are executed
+    using non-standard processes. To handle this, identify and document regular administrative
+    tasks that use scriptlets and exclude these specific processes from the rule.
+
+    - Custom enterprise applications that utilize scrobj.dll for legitimate automation
+    purposes might be flagged. Review these applications and add them to the exclusion
+    list if they are verified as safe.
+
+    - Scheduled tasks or mainte'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

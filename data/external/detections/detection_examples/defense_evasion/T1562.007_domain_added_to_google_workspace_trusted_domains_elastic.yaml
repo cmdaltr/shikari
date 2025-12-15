@@ -1,0 +1,47 @@
+technique_id: T1562.007
+technique_name: Domain Added to Google Workspace Trusted Domains
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: event.dataset:google_workspace.admin and event.provider:admin and event.category:iam
+  and event.action:ADD_TRUSTED_DOMAINS
+explanation: 'Detects when a domain is added to the list of trusted Google Workspace
+  domains. An adversary may add a trusted domain in
+
+  order to collect and exfiltrate data from their target’s organization with less
+  restrictive security controls.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/cf549724-c577-4fd6-8f9b-d1b8ec519ec0.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Verify that the user account should have administrative privileges that allow
+    them to edit trusted domains in Google Workspace.
+
+    - Talk to the user to evaluate why they added the third-party domain and if the
+    domain has confidentiality risks.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Disable or limit the account during the investigation and response.
+
+    - Identify the possible impact of the incident and pr'
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/6160020?hl=en
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 73

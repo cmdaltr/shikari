@@ -1,0 +1,897 @@
+{% extends "base.html" %}
+{% block title %}Archer - Progress{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+/* Ensure consistent positioning across all browsers */
+
+
+/* Single background color throughout - matching How Archer Works page */
+body, html {
+  background: #f7fafc !important;
+  overflow-x: hidden;
+}
+
+.page-shell {
+  background: #f7fafc !important;
+  flex: 1;
+  padding: 0;  /* Consolidated - no padding */
+  margin: 0;   /* Consolidated - no margin */
+  overflow-x: hidden;
+  max-width: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;  /* Changed from 100% to 100vh for sticky footer */
+  box-sizing: border-box;  /* Consolidated */
+}
+
+/* Global navigation buttons */
+
+
+@media (max-width: 1400px) {
+  
+}
+
+
+
+
+
+
+
+/* Logo at top center - between Back and How Archer Works */
+.results-container {
+  background: transparent !important;
+  width: 1320px;
+  max-width: calc(100vw - 4em);
+  margin: 0 auto;
+  padding-left: 2em;
+  padding-right: 2em;
+  padding-top: 80px;
+  box-sizing: border-box;
+  padding-bottom: 120px;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 400px;
+}
+
+/* Lead text styling - from progress.html.bak */
+.lead {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 2.5px;
+  color: #666666;
+  text-align: center;
+  margin: 0 0 32px 0;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+/* Summary cards - 3-column grid (one row) */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.card-icon.detection { background: #e8f5e9; }
+.card-icon.correlation { background: #e3f2fd; }
+.card-icon.technique { background: #fff3e0; }
+.card-icon.vendor { background: #f3e5f5; }
+
+.card-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.card-icon.detection svg { stroke: #4caf50; }
+.card-icon.correlation svg { stroke: #2196f3; }
+.card-icon.technique svg { stroke: #ff9800; }
+.card-icon.vendor svg { stroke: #9c27b0; }
+
+.card-content h3 {
+  font-size: 2.5em;
+  margin: 0;
+  color: #1a1a1a;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.card-content p {
+  margin: 8px 0 0 0;
+  color: #999;
+  font-size: 1em;
+  font-weight: 400;
+}
+
+/* Detection Rules Section */
+.detection-section {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+}
+
+/* Standardized section heading styles */
+.section-heading {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.detection-header h2 {
+  font-size: 26px;
+  margin: 0;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.expand-btn {
+  color: #C53030;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.expand-btn:hover {
+  background: rgba(197, 48, 48, 0.1);
+}
+
+/* Vendor sections */
+.vendor-section {
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.vendor-section:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.vendor-header {
+  background: #f8f9fa;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.vendor-header:hover {
+  background: #e9ecef;
+}
+
+.vendor-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 1.1em;
+  color: #1a1a1a;
+}
+
+.vendor-icon {
+  font-size: 1.3em;
+}
+
+.vendor-logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+
+.vendor-count {
+  background: #C53030;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.expand-icon {
+  transition: transform 0.3s;
+  color: #666;
+  width: 20px;
+  height: 20px;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.vendor-content {
+  max-height: 0;
+  overflow: hidden;
+  padding: 0;
+  background: white;
+  transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+
+.vendor-content.show {
+  max-height: 5000px;
+  padding: 8px 0;
+  transition: max-height 0.5s ease-in, padding 0.3s ease-in;
+}
+
+/* detection-item uses base styles from common.css, with overrides for progress page */
+
+.detection-item {
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 0;
+  border-radius: 0;
+}
+
+.detection-item:hover {
+  background: #fafafa;
+}
+
+.detection-item:last-child {
+  border-bottom: none;
+}
+
+.detection-title {
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+  font-size: 1em;
+}
+
+.detection-technique {
+  display: inline-block;
+  background: #fff3e0;
+  color: #ff9800;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.detection-description {
+  color: #666;
+  font-size: 0.9em;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+/* Action buttons - 4 horizontal buttons below Detection Rules */
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 24px 0 16px 0;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid #C53030;
+  text-decoration: none;
+  background: white;
+  color: #C53030;
+}
+
+.btn-action:hover {
+  background: #C53030;
+  color: white;
+}
+
+/* Footer - matching index.html - full width */
+.page-footer {
+  margin-top: 60px;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  margin-bottom: 0 !important;
+  padding: 30px 0 30px 0;
+  background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+  border-top: 3px solid #C53030;
+  text-align: center;
+  width: 100vw;
+  box-sizing: border-box;
+}
+
+.page-footer .footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.page-footer .github-link {
+  flex: 1;
+  min-width: 200px;
+  text-align: left;
+}
+
+.page-footer .github-link a {
+  color: #8B9AA3;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95em;
+  transition: color 0.2s;
+}
+
+.page-footer .github-link a:hover {
+  color: #C53030;
+}
+
+.page-footer .timestamp {
+  color: #8B9AA3;
+  font-size: 0.85em;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(139, 154, 163, 0.2);
+}
+
+.page-footer .quote {
+  flex: 2;
+  min-width: 300px;
+  text-align: center;
+}
+
+.page-footer .quote p {
+  color: #a8b5bd;
+  font-style: italic;
+  font-size: 0.95em;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.page-footer .quote span {
+  font-size: 0.9em;
+  color: #8B9AA3;
+}
+
+.page-footer .spacer {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Hide timestamp display - moved to footer */
+.timestamp-display {
+  display: none;
+}
+
+/* Removed duplicate #main-content.page-shell definition - consolidated above */
+
+/* Ensure content cards don't overflow */
+.summary-card,
+.detection-section,
+.success-banner,
+.action-buttons {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Progress Bars - Modern style matching progress.css */
+.progress-bar {
+  width: 100%;
+  background: #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 48px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.5em;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  will-change: width;
+}
+
+.progress-fill.yaml {
+  background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
+}
+
+.progress-fill.genai {
+  background: linear-gradient(90deg, #2196f3 0%, #1976d2 100%);
+}
+
+.progress-fill.cross-vendor {
+  background: linear-gradient(90deg, #e91e63 0%, #c2185b 100%);
+}
+
+.progress-fill.complete {
+  width: 100% !important;
+}
+
+/* Cross-vendor section greyed out state */
+#cross-vendor-section.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#cross-vendor-section.disabled h3 {
+  color: #999;
+}
+
+#cross-vendor-section.disabled .progress-bar {
+  background: #f0f0f0;
+}
+
+#cross-vendor-section.disabled .progress-fill {
+  background: #ccc !important;
+}
+
+/* Progress section icons */
+.progress-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  vertical-align: middle;
+}
+
+.progress-icon.detection {
+  background: transparent;
+}
+
+.progress-icon.correlation {
+  background: transparent;
+}
+
+.progress-icon.cross-vendor {
+  background: transparent;
+}
+
+.progress-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.progress-icon.detection svg {
+  stroke: #4caf50;
+}
+
+.progress-icon.correlation svg {
+  stroke: #2196f3;
+}
+
+.progress-icon.cross-vendor svg {
+  stroke: #e91e63;
+}
+
+/* Loading Indicator - Full Page Overlay */
+.loading-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 1;
+  transition: opacity 0.5s ease-out;
+}
+
+.spinner {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.spinner::before {
+  content: '';
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #8B0000;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  z-index: 1;
+}
+
+.spinner::after {
+  content: attr(data-emoji);
+  font-size: 40px;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.2));
+  animation: none !important;
+  transform: none !important;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Fade out and hide */
+.loading-indicator.fade-out {
+  opacity: 0;
+}
+
+.loading-indicator.hidden {
+  display: none;
+}
+</style>
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+  <div class="results-container">
+    <!-- Page heading -->
+    <p class="lead">
+      Processing<br><span style="color:#8B0000; font-size: 28px;">{{ group_name }}</span>
+    </p>
+
+    <!-- Loading Indicator -->
+    <div class="loading-indicator" id="loading-indicator">
+      <div style="text-align: center;">
+        <div class="spinner" id="loading-spinner"></div>
+        <p id="loading-message" style="margin-top: 1.5em; font-size: 18px; color: #666; font-weight: 500; letter-spacing: 0.5px;">Stand by...</p>
+      </div>
+    </div>
+
+    <!-- Progress Sections -->
+    <div class="detection-section">
+      <div class="detection-header">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 600; color: #1a1a1a;">
+          <div class="progress-icon detection">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+            </svg>
+          </div>
+          Detections
+        </h3>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill yaml" id="yaml-progress"></div>
+      </div>
+      <div id="last-yaml-file" aria-live="polite" style="margin-top: 12px; color: #666;"></div>
+    </div>
+
+    <div class="detection-section">
+      <div class="detection-header">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 600; color: #1a1a1a;">
+          <div class="progress-icon correlation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="18" cy="5" r="3"/>
+              <circle cx="6" cy="12" r="3"/>
+              <circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </div>
+          Correlations
+        </h3>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill genai" id="genai-progress"></div>
+      </div>
+      <div id="last-correlation" aria-live="polite" style="margin-top: 12px; color: #666;"></div>
+    </div>
+
+    <div class="detection-section disabled" id="cross-vendor-section">
+      <div class="detection-header">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 600; color: #1a1a1a;">
+          <div class="progress-icon cross-vendor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2">
+              <path d="M3 16 L3 19 L21 19 L21 16"/>
+              <path d="M6 16 L6 10"/>
+              <path d="M12 16 L12 6"/>
+              <path d="M18 16 L18 10"/>
+              <path d="M2 19 L22 19" stroke-width="2.5"/>
+            </svg>
+          </div>
+          Cross-vendor
+        </h3>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill cross-vendor" id="cross-vendor-progress"></div>
+      </div>
+      <div id="last-cross-vendor" aria-live="polite" style="margin-top: 12px; color: #666;">Coming Soon</div>
+    </div>
+
+  </div>
+
+<!-- Footer - matching index.html with timestamp -->
+<footer class="page-footer">
+  <div class="footer-content">
+    <!-- GitHub Link -->
+    <div class="github-link">
+      <a href="https://github.com/cmdaltr" target="_blank" rel="noopener noreferrer">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+        </svg>
+        <span style="font-weight: 500;">@cmdaltr</span>
+      </a>
+    </div>
+
+    <!-- Quote -->
+    <div class="quote">
+      <p>
+        "Even if you can't see something, it doesn't mean it isn't there"<br>
+        <span>— Archer, Small Soldiers</span>
+      </p>
+    </div>
+
+    <!-- Spacer for balance -->
+    <div class="spacer"></div>
+  </div>
+
+  <!-- Timestamp and Attribution -->
+  <div class="timestamp">
+    {{ generated_time }}<br>
+    <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
+      Vendor logos are stylized representations. Splunk®, Microsoft®, Google® and Elastic® are registered trademarks of their respective companies.
+    </span>
+  </div>
+</footer>
+
+<script>
+// Toggle individual vendor
+function toggleVendor(header) {
+  const content = header.nextElementSibling;
+  const icon = header.querySelector('.expand-icon');
+
+  content.classList.toggle('show');
+  icon.classList.toggle('expanded');
+}
+
+// Toggle all vendors
+let allExpanded = false;
+function toggleAllVendors() {
+  const btn = event.target;
+  const contents = document.querySelectorAll('.vendor-content');
+  const icons = document.querySelectorAll('.expand-icon');
+
+  allExpanded = !allExpanded;
+
+  contents.forEach(content => {
+    if (allExpanded) {
+      content.classList.add('show');
+    } else {
+      content.classList.remove('show');
+    }
+  });
+
+  icons.forEach(icon => {
+    if (allExpanded) {
+      icon.classList.add('expanded');
+    } else {
+      icon.classList.remove('expanded');
+    }
+  });
+
+  btn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+}
+
+// Download all button - only add listener if button exists
+const downloadAllBtn = document.getElementById('download-all-btn');
+if (downloadAllBtn) {
+  downloadAllBtn.addEventListener('click', function() {
+    window.location.href = `/api/download/all?group_name={{ group_name }}`;
+  });
+}
+</script>
+
+<!-- Progress tracking script -->
+<script src="{{ url_for('static', path='js/progress.js') }}?v={{ request.app.state.asset_version }}"></script>
+
+<script>
+// Replace spinner with animal emoji if group name contains animal
+(function() {
+  const groupName = "{{ group_name }}".toLowerCase();
+  const spinner = document.getElementById('loading-spinner');
+
+  const animalMap = {
+    'spider': '🕷️',
+    'panda': '🐼',
+    'kitten': '🐱',
+    'bear': '🐻',
+    'fox': '🦊',
+    'kitsune': '🦊',
+    'tiger': '🐯',
+    'mouse': '🐭',
+    'smilodon': '🐱',
+    'worm': '🪱',
+    'eagle': '🦅',
+    'falcon': '🦅',
+    'wolf': '🐺',
+    'rabbit': '🐰',
+    'snake': '🐍',
+    'dragon': '🐉',
+    'lion': '🦁',
+    'leopard': '🐆'
+  };
+
+  // Find matching animal
+  let selectedAnimal = null;
+  for (const [animal, emoji] of Object.entries(animalMap)) {
+    if (groupName.includes(animal)) {
+      selectedAnimal = emoji;
+      break;
+    }
+  }
+
+  // Set animal emoji (spinner CSS already supports data-emoji attribute)
+  if (selectedAnimal) {
+    spinner.setAttribute('data-emoji', selectedAnimal);
+  }
+})();
+
+// Fade out loading indicator when progress starts
+(function() {
+  const loadingIndicator = document.getElementById('loading-indicator');
+
+  function fadeOutIndicator() {
+    loadingIndicator.classList.add('fade-out');
+    // Remove from DOM after fade animation completes
+    setTimeout(() => {
+      loadingIndicator.classList.add('hidden');
+    }, 500);
+  }
+
+  // Hide loading indicator when any progress bar updates
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.attributeName === 'style' && mutation.target.style.width !== '0%') {
+        fadeOutIndicator();
+        observer.disconnect();
+      }
+    });
+  });
+
+  // Observe all progress bars
+  const progressBars = document.querySelectorAll('.progress-fill');
+  progressBars.forEach(bar => {
+    observer.observe(bar, { attributes: true });
+  });
+
+  // Also hide after 30 seconds as fallback
+  setTimeout(() => {
+    fadeOutIndicator();
+  }, 30000);
+})();
+
+// Rotate loading messages
+(function() {
+  const groupName = "{{ group_name }}";
+  const cveMatch = groupName.match(/CVE-\d{4}-\d+/i);
+
+  const messages = [
+    `Searching for ${cveMatch ? cveMatch[0] : groupName}...`,
+    "Analysing mappings...",
+    "Collecting 1s and 0s...",
+    "Issuing Symlinks...",
+    "Contacting Skynet...",
+    "Assigning variables...",
+    "Downloading more RAM...",
+    "Consulting Internet Elders...",
+    "Turning it off and on again...",
+    "Scoring some CTF points...",
+    "Turning Time Circuits on...",
+    "Beep boop...",
+    "Mining for Bitcoin..."
+  ];
+
+  let currentIndex = 0;
+  const messageElement = document.getElementById('loading-message');
+  const loadingIndicator = document.getElementById('loading-indicator');
+
+  function rotateMessage() {
+    // Only rotate if loading indicator is still visible
+    if (!loadingIndicator.classList.contains('fade-out') &&
+        !loadingIndicator.classList.contains('hidden')) {
+      messageElement.textContent = messages[currentIndex];
+      currentIndex = (currentIndex + 1) % messages.length;
+    }
+  }
+
+  // Initial message
+  rotateMessage();
+
+  // Rotate every 3 seconds
+  const rotationInterval = setInterval(rotateMessage, 3000);
+
+  // Clean up interval when loading is done
+  const observer = new MutationObserver(function(mutations) {
+    if (loadingIndicator.classList.contains('hidden')) {
+      clearInterval(rotationInterval);
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(loadingIndicator, { attributes: true, attributeFilter: ['class'] });
+})();
+</script>
+
+{% endblock %}

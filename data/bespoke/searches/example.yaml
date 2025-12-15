@@ -1,0 +1,54 @@
+# Example Bespoke Sample Search
+# These searches are tailored for your specific environment
+# They will be suggested alongside community detections
+
+# Single search example
+- technique_id: T1003.001
+  platform: MDE
+  description: "Custom LSASS credential dumping detection for our environment"
+  severity: high
+  query: |
+    DeviceProcessEvents
+    | where Timestamp > ago(1h)
+    | where FileName =~ "lsass.exe"
+    | where InitiatingProcessFileName !in~ ("csrss.exe", "wininit.exe", "services.exe")
+    // Custom: Exclude our security tools
+    | where InitiatingProcessFolderPath !startswith "C:\\Program Files\\OurEDR\\"
+    | project Timestamp, DeviceName, InitiatingProcessFileName,
+              InitiatingProcessCommandLine, AccountName
+  notes: |
+    Tuned for our EDR deployment which legitimately accesses LSASS.
+    Last validated: 2024-01-15
+
+# Multiple searches in one file
+- technique_id: T1059.001
+  platform: Splunk
+  description: "PowerShell suspicious execution - tuned for our baseline"
+  severity: medium
+  query: |
+    index=windows sourcetype=WinEventLog:Security EventCode=4688
+    | search process_name="powershell.exe"
+    | search NOT user IN ("svc_automation", "svc_patching")
+    | search CommandLine="*-enc*" OR CommandLine="*-nop*" OR CommandLine="*bypass*"
+    | table _time, host, user, CommandLine
+  notes: |
+    Excludes our automation service accounts which use encoded PowerShell.
+    Baseline established from 30 days of normal activity.
+
+- technique_id: T1021.002
+  platform: MDE
+  description: "SMB lateral movement detection - internal network"
+  severity: high
+  query: |
+    DeviceNetworkEvents
+    | where Timestamp > ago(1h)
+    | where RemotePort == 445
+    | where ActionType == "ConnectionSuccess"
+    // Only alert on cross-subnet movement
+    | where RemoteIP !startswith "10.10.1."  // Same subnet as workstations
+    | summarize ConnectionCount=count(),
+                TargetHosts=dcount(RemoteIP) by DeviceName, AccountName
+    | where TargetHosts > 3
+  notes: |
+    Alerts when a device connects to SMB on more than 3 hosts outside its subnet.
+    Tuned to ignore normal file server access patterns.

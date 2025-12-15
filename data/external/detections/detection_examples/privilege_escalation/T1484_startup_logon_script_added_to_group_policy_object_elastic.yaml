@@ -1,0 +1,59 @@
+technique_id: T1484
+technique_name: Startup/Logon Script added to Group Policy Object
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where host.os.type == \"windows\" and event.code in (\"5136\", \"5145\"\
+  ) and\n(\n  (\n    winlog.event_data.AttributeLDAPDisplayName : (\n      \"gPCMachineExtensionNames\"\
+  ,\n      \"gPCUserExtensionNames\"\n    ) and\n    winlog.event_data.AttributeValue\
+  \ : \"*42B5FAAE-6536-11D2-AE5A-0000F87571E3*\" and\n    winlog.event_data.AttributeValue\
+  \ : (\n      \"*40B66650-4972-11D1-A7CA-0000F87571E3*\",\n      \"*40B6664F-4972-11D1-A7CA-0000F87571E3*\"\
+  \n    )\n  ) or\n  (\n    winlog.event_data.ShareName : \"\\\\\\\\*\\\\SYSVOL\"\
+  \ and\n    winlog.event_data.RelativeTargetName : (\"*\\\\scripts.ini\", \"*\\\\\
+  psscripts.ini\") and\n    winlog.event_data.AccessList:\"*%%4417*\"\n  )\n)"
+explanation: Detects the modification of Group Policy Objects (GPO) to add a startup/logon
+  script to users or computer objects.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/16fac1a1-21ee-4ca6-b720-458e3855d046.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Verify if the execution is legitimately authorized and executed under a change
+    management process.
+
+
+    ### Related rules
+
+
+    - Group Policy Abuse for Privilege Addition - b9554892-5e0e-424b-83a0-5aef95aa43bf
+
+    - Scheduled Task Execution at Scale via GPO - 15a8ba77-1c13-4274-88fe-6bd14133861e
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - The investigation and containment must be performed in every computer controll'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/atc-project/atc-data/blob/master/docs/Logging_Policies/LP_0025_windows_audit_directory_service_changes.md
+- https://github.com/atc-project/atc-data/blob/f2bbb51ecf68e2c9f488e3c70dcdd3df51d2a46b/docs/Logging_Policies/LP_0029_windows_audit_detailed_file_share.md
+- https://labs.f-secure.com/tools/sharpgpoabuse
+has_investigation_guide: true
+risk_score: 47

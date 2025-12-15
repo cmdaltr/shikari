@@ -1,0 +1,50 @@
+technique_id: T1547
+technique_name: Potential LSA Authentication Package Abuse
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\n\
+  \  registry.path : (\n      \"HKLM\\\\SYSTEM\\\\*ControlSet*\\\\Control\\\\Lsa\\\
+  \\Authentication Packages\",\n      \"\\\\REGISTRY\\\\MACHINE\\\\SYSTEM\\\\*ControlSet*\\\
+  \\Control\\\\Lsa\\\\Authentication Packages\"\n  ) and\n  /* exclude SYSTEM SID\
+  \ - look for changes by non-SYSTEM user */\n  not user.id : \"S-1-5-18\""
+explanation: 'Adversaries can use the autostart mechanism provided by the Local Security
+  Authority (LSA) authentication packages for
+
+  privilege escalation or persistence by placing a reference to a binary in the Windows
+  registry. The binary will then be
+
+  executed by SYSTEM when the authentication packages are loaded.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e9abe69b-1deb-4e19-ac4a-5d5ac00f72eb.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may modify the LSA authentication
+    package registry path. Users should verify if recent installations or updates
+    coincide with the detected changes and consider excluding these specific software
+    processes if they are deemed safe.
+
+    - System administrators or IT management tools might perform authorized changes
+    to the registry for maintenance or configuration purposes. Users can create exceptions
+    for known administrative tools o'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

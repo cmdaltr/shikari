@@ -1,0 +1,71 @@
+technique_id: T1003.001
+technique_name: Cred Dump Tools Dropped Files
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 8fbf3271-1ef6-4e94-8210-03c2317947f6
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  - TargetFilename|contains:\n  - \\fgdump-log\n  - \\kirbi\n  - \\pwdump\n  - \\\
+  pwhashes\n  - \\wce_ccache\n  - \\wce_krbtkts\n- TargetFilename|endswith:\n  - \\\
+  cachedump.exe\n  - \\cachedump64.exe\n  - \\DumpExt.dll\n  - \\DumpSvc.exe\n  -\
+  \ \\Dumpy.exe\n  - \\fgexec.exe\n  - \\lsremora.dll\n  - \\lsremora64.dll\n  - \\\
+  NTDS.out\n  - \\procdump64.exe\n  - \\pstgdump.exe\n  - \\pwdump.exe\n  - \\SAM.out\n\
+  \  - \\SECURITY.out\n  - \\servpw.exe\n  - \\servpw64.exe\n  - \\SYSTEM.out\n  -\
+  \ \\test.pwd\n  - \\wceaux.dll\n"
+explanation: Files with well-known filenames (parts of credential dump software or
+  files produced by them) creation
+false_positives:
+- Legitimate Administrator using tool for password recovery
+references:
+- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment
+tags:
+- attack.credential-access
+- attack.t1003.001
+- attack.t1003.002
+- attack.t1003.003
+- attack.t1003.004
+- attack.t1003.005
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+  - TargetFilename|contains:
+    - \fgdump-log
+    - \kirbi
+    - \pwdump
+    - \pwhashes
+    - \wce_ccache
+    - \wce_krbtkts
+  - TargetFilename|endswith:
+    - \cachedump.exe
+    - \cachedump64.exe
+    - \DumpExt.dll
+    - \DumpSvc.exe
+    - \Dumpy.exe
+    - \fgexec.exe
+    - \lsremora.dll
+    - \lsremora64.dll
+    - \NTDS.out
+    - \procdump64.exe
+    - \pstgdump.exe
+    - \pwdump.exe
+    - \SAM.out
+    - \SECURITY.out
+    - \servpw.exe
+    - \servpw64.exe
+    - \SYSTEM.out
+    - \test.pwd
+    - \wceaux.dll
+  condition: selection
+metadata:
+  created_date: 2019-11-01
+  modified_date: 2022-09-21
+  author: Teymur Kheirkhabarov, oscd.community
+  status: test
+  imported_date: '2025-11-28'

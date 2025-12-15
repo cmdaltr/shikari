@@ -1,0 +1,53 @@
+technique_id: T1047
+technique_name: Security Software Discovery using WMIC
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: 'process where host.os.type == "windows" and event.type == "start" and
+
+  (process.name : "wmic.exe" or ?process.pe.original_file_name : "wmic.exe") and
+
+  process.args : "/namespace:\\\\root\\SecurityCenter2" and process.args : "Get"'
+explanation: 'Identifies the use of Windows Management Instrumentation Command (WMIC)
+  to discover certain System Security Settings
+
+  such as AntiVirus or Host Firewall details.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6ea55c81-e2ba-42f2-a134-bccf857ba922.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Discovery activities are not inherently malicious if they occur in isolation.
+    As long as the analyst did not identify suspicious activity related to the user
+    or host, such alerts can be dismissed.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-compromise behavior.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,43 @@
+technique_id: T1218
+technique_name: Curl Download And Execute Combination
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 21dd6d38-2b18-4453-9404-a0fe4a0cc288
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains|all:\n  - 'curl '\n  - http\n  - -o\n  - '&'\n  CommandLine|contains|windash:\
+  \ ' -c '\n"
+explanation: Adversaries can use curl to download payloads remotely and execute them.
+  Curl is included by default in Windows 10 build 17063 and later.
+false_positives:
+- Unknown
+references:
+- https://medium.com/@reegun/curl-exe-is-the-new-rundll32-exe-lolbin-3f79c5f35983
+tags:
+- attack.defense-evasion
+- attack.t1218
+- attack.command-and-control
+- attack.t1105
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains|windash: ' -c '
+    CommandLine|contains|all:
+    - 'curl '
+    - http
+    - -o
+    - '&'
+  condition: selection
+metadata:
+  created_date: 2020-01-13
+  modified_date: 2024-03-05
+  author: Sreeman, Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

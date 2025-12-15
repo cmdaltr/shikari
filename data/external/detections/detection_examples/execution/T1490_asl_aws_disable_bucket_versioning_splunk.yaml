@@ -1,0 +1,43 @@
+technique_id: T1490
+technique_name: ASL AWS Disable Bucket Versioning
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`amazon_security_lake` api.operation=PutBucketVersioning | spath input=api.request.data
+  path=VersioningConfiguration.Status output=Status | spath input=api.request.data
+  path=bucketName output=bucketName | search Status=Suspended | fillnull | stats count
+  min(_time) as firstTime max(_time) as lastTime by actor.user.uid api.operation api.service.name
+  http_request.user_agent src_endpoint.ip actor.user.account.uid cloud.provider cloud.region
+  api.request.data bucketName | rename actor.user.uid as user api.operation as action
+  api.service.name as dest http_request.user_agent as user_agent src_endpoint.ip as
+  src actor.user.account.uid as vendor_account cloud.provider as vendor_product cloud.region
+  as vendor_region | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`|
+  `asl_aws_disable_bucket_versioning_filter`'
+explanation: The following analytic detects when AWS S3 bucket versioning is suspended
+  by a user. It leverages AWS CloudTrail logs to identify `PutBucketVersioning` events
+  with the `VersioningConfiguration.Status` set to `Suspended`. This activity is significant
+  because disabling versioning can prevent recovery of deleted or modified data, which
+  is a common tactic in ransomware attacks. If confirmed malicious, this action could
+  lead to data loss and hinder recovery efforts, severely impacting data integrity
+  and availability.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/f32598bb-fa5f-4afd-8ab3-0263cc28efbc/
+indicators:
+- type: data_source
+  value: ASL AWS CloudTrail
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: It is possible that an AWS Administrator has legitimately disabled
+    versioning on certain buckets to avoid costs.
+  mitigation: Review context and user activity
+references:
+- https://invictus-ir.medium.com/ransomware-in-the-cloud-7f14805bbe82
+- https://bleemb.medium.com/data-exfiltration-with-native-aws-s3-features-c94ae4d13436
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1490/aws_bucket_version/asl_ocsf_cloudtrail.json

@@ -1,0 +1,42 @@
+technique_id: T1216
+technique_name: Suspicious CustomShellHost Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 84b14121-9d14-416e-800b-f3b829c5a14d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_explorer:\n  Image: C:\\Windows\\explorer.exe\nselection:\n\
+  \  ParentImage|endswith: \\CustomShellHost.exe\n"
+explanation: 'Detects the execution of CustomShellHost.exe where the child isn''t
+  located in ''C:\Windows\explorer.exe''. CustomShellHost is a known LOLBin that can
+  be abused by attackers for defense evasion techniques.
+
+  '
+false_positives:
+- False positives are unlikely, investigate matches carefully.
+references:
+- https://github.com/LOLBAS-Project/LOLBAS/pull/180
+- https://lolbas-project.github.io/lolbas/Binaries/CustomShellHost/
+tags:
+- attack.defense-evasion
+- attack.t1216
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \CustomShellHost.exe
+  filter_main_explorer:
+    Image: C:\Windows\explorer.exe
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2022-08-19
+  modified_date: 2025-10-29
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

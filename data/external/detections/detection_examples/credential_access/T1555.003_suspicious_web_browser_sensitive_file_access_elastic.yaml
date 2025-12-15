@@ -1,0 +1,49 @@
+technique_id: T1555.003
+technique_name: Suspicious Web Browser Sensitive File Access
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where event.action == \"open\" and host.os.type == \"macos\" and process.executable\
+  \ != null and\n file.name like~ (\"cookies.sqlite\",\n                  \"key?.db\"\
+  ,\n                  \"logins.json\",\n                  \"Cookies\",\n        \
+  \          \"Cookies.binarycookies\",\n                  \"Login Data\") and\n ((process.code_signature.trusted\
+  \ == false or process.code_signature.exists == false) or process.name == \"osascript\"\
+  ) and\n not process.code_signature.signing_id == \"org.mozilla.firefox\" and\n not\
+  \ Effective_process.executable like \"/Library/Elastic/Endpoint/elastic-endpoint.app/Contents/MacOS/elastic-endpoint\""
+explanation: 'Identifies the access or file open of web browser sensitive files by
+  an untrusted/unsigned process or osascript.
+
+  Adversaries may acquire credentials from web browsers by reading files specific
+  to the target browser.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/20457e4f-d1de-4b92-ae69-142e27a4342a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'false positives.
+
+
+    ### False positive analysis
+
+
+    - Access by legitimate applications: Some legitimate applications may access browser
+    files for valid reasons, such as backup or synchronization tools. Users can create
+    exceptions for these applications by adding their code signatures to the exclusion
+    list.
+
+    - Developer or testing scripts: Developers might use scripts like osascript for
+    testing purposes, which could trigger the rule. To manage this, users can whitelist
+    specific scripts or processes us'
+  mitigation: Review investigation guide for details
+references:
+- https://securelist.com/calisto-trojan-for-macos/86543/
+has_investigation_guide: true
+risk_score: 73

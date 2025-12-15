@@ -1,0 +1,40 @@
+technique_id: T1055
+technique_name: Create Remote Thread In Shell Application
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventCode=8 TargetImage IN ("*\\cmd.exe", "*\\powershell*", "*\\pwsh.exe")
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventID Guid NewThreadId
+  ProcessID SecurityID SourceImage SourceProcessGuid SourceProcessId StartAddress
+  StartFunction StartModule TargetImage TargetProcessGuid TargetProcessId UserID dest
+  parent_process_exec parent_process_guid parent_process_id parent_process_name parent_process_path
+  process_exec process_guid process_id process_name process_path signature signature_id
+  user_id vendor_product | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `create_remote_thread_in_shell_application_filter`'
+explanation: The following analytic detects suspicious process injection in command
+  shell applications, specifically targeting `cmd.exe` and `powershell.exe`. It leverages
+  Sysmon EventCode 8 to identify the creation of remote threads within these shell
+  processes. This activity is significant because it is a common technique used by
+  malware, such as IcedID, to inject malicious code and execute it within legitimate
+  processes. If confirmed malicious, this behavior could allow an attacker to execute
+  arbitrary code, escalate privileges, or maintain persistence within the environment,
+  posing a severe threat to system security.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/10399c1e-f51e-11eb-b920-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 8
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://thedfirreport.com/2021/07/19/icedid-and-cobalt-strike-vs-antivirus/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/icedid/simulated_icedid/windows-sysmon.log

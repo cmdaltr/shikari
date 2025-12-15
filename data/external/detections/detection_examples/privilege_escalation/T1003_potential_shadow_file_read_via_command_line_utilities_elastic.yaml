@@ -1,0 +1,51 @@
+technique_id: T1003
+technique_name: Potential Shadow File Read via Command Line Utilities
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "host.os.type : \"linux\" and event.category : \"process\" and event.action\
+  \ : (\"exec\" or \"exec_event\") and\n(process.args : \"/etc/shadow\" or (process.working_directory:\
+  \ \"/etc\" and process.args: \"shadow\")) and not (\n  (process.executable : (\"\
+  /bin/chown\" or \"/usr/bin/chown\") and process.args : \"root:shadow\") or\n  (process.executable\
+  \ : (\"/bin/chmod\" or \"/usr/bin/chmod\") and process.args : \"640\") or\n  process.executable:(/vz/*\
+  \ or /var/lib/docker/* or /run/containerd/* or /tmp/.criu* or /tmp/newroot/*) or\n\
+  \  process.parent.name:(gen_passwd_sets or scc_* or wazuh-modulesd)\n)"
+explanation: 'Identifies access to the /etc/shadow file via the commandline using
+  standard system utilities. After elevating
+
+  privileges to root, threat actors may attempt to read or dump this file in order
+  to gain valid credentials. They may
+
+  utilize these to move laterally undetected and access additional resources.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9a3a3689-8ed1-4cdb-83fb-9506db54c61f.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System maintenance tasks may trigger alerts when legitimate processes like chown
+    or chmod access the /etc/shadow file. To handle these, consider excluding these
+    specific processes when they are executed by trusted system administrators during
+    scheduled maintenance.
+
+    - Containerized environments might generate false positives if processes within
+    containers access the /etc/shadow file. Exclude paths such as /var/lib/docker/*
+    or /run/containerd/* to reduce noise from conta'
+  mitigation: Review investigation guide for details
+references:
+- https://www.cyberciti.biz/faq/unix-linux-password-cracking-john-the-ripper/
+has_investigation_guide: true
+risk_score: 47

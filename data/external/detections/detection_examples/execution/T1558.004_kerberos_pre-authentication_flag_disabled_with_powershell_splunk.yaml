@@ -1,0 +1,40 @@
+technique_id: T1558.004
+technique_name: Kerberos Pre-Authentication Flag Disabled with PowerShell
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`powershell` EventCode=4104 (ScriptBlockText = "*Set-ADAccountControl*" AND
+  ScriptBlockText="*DoesNotRequirePreAuth:$true*") | fillnull | stats count min(_time)
+  as firstTime max(_time) as lastTime by dest signature signature_id user_id vendor_product
+  EventID Guid Opcode Name Path ProcessID ScriptBlockId ScriptBlockText | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `kerberos_pre_authentication_flag_disabled_with_powershell_filter`'
+explanation: The following analytic detects the use of the `Set-ADAccountControl`
+  PowerShell cmdlet with parameters that disable Kerberos Pre-Authentication. It leverages
+  PowerShell Script Block Logging (EventCode=4104) to identify this specific command
+  execution. Disabling Kerberos Pre-Authentication is significant because it allows
+  adversaries to perform offline brute force attacks against user passwords using
+  the AS-REP Roasting technique. If confirmed malicious, this activity could enable
+  attackers to escalate privileges or maintain persistence within an Active Directory
+  environment, posing a severe security risk.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/59b51620-94c9-11ec-b3d5-acde48001122/
+indicators:
+- type: data_source
+  value: Powershell Script Block Logging 4104
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Although unlikely, Administrators may need to set this flag for legitimate
+    purposes.
+  mitigation: Review context and user activity
+references:
+- https://docs.microsoft.com/en-us/troubleshoot/windows-server/identity/useraccountcontrol-manipulate-account-properties
+- https://m0chan.github.io/2019/07/31/How-To-Attack-Kerberos-101.html
+- https://stealthbits.com/blog/cracking-active-directory-passwords-with-as-rep-roasting/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1558.004/powershell/windows-powershell-xml.log

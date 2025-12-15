@@ -1,0 +1,30 @@
+technique_id: T1562
+technique_name: ESXi Loghost Config Tampering
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`esxi_syslog` Message="*Set called with key*" AND Message IN ("*Syslog.global.logHost*","*Syslog.global.logdir*")
+  | rex field=_raw "key ''(?<key>[^'']+)'', value ''\"(?<value>[^\"]+)\"''" | rex
+  field=_raw "Z (?<dest>[\w\.]+)\s" | stats min(_time) as firstTime max(_time) as
+  lastTime count by dest key value | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `esxi_loghost_config_tampering_filter`'
+explanation: This detection identifies changes to the syslog loghost configuration
+  on an ESXi host, which may indicate an attempt to disrupt log forwarding and evade
+  detection.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/64bc2fa3-c493-44b4-8e94-3e5dbf71377e/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments, however tune as needed
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.003/esxi_loghost_config_tampering/esxi_loghost_config_tampering.log

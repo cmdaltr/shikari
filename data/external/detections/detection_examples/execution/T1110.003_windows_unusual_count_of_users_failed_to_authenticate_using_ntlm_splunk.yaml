@@ -1,0 +1,44 @@
+technique_id: T1110.003
+technique_name: Windows Unusual Count Of Users Failed To Authenticate Using NTLM
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`wineventlog_security`  EventCode=4776 TargetUserName!=*$ Status=0xC000006A
+  | bucket span=2m _time | stats dc(TargetUserName) AS unique_accounts values(TargetUserName)
+  as tried_accounts values(dest) as dest by _time, Workstation | eventstats avg(unique_accounts)
+  as comp_avg , stdev(unique_accounts) as comp_std by Workstation | eval upperBound=(comp_avg+comp_std*3)
+  | eval isOutlier=if(unique_accounts > 10 and unique_accounts >= upperBound, 1, 0)
+  | search isOutlier=1 | `windows_unusual_count_of_users_failed_to_authenticate_using_ntlm_filter`'
+explanation: The following analytic identifies a source endpoint failing to authenticate
+  multiple valid users using the NTLM protocol, potentially indicating a Password
+  Spraying attack. It leverages Event 4776 from Domain Controllers, calculating the
+  standard deviation for each host and applying the 3-sigma rule to detect anomalies.
+  This activity is significant as it may represent an adversary attempting to gain
+  initial access or elevate privileges. If confirmed malicious, the attacker could
+  compromise multiple accounts, leading to unauthorized access and potential lateral
+  movement within the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/6f6c8fd7-6a6b-4af9-a0e9-57cfc47a58b4/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4776
+  confidence: high
+- type: risk_system
+  value: Workstation
+  confidence: high
+false_positives:
+- description: A host failing to authenticate with multiple valid domain users is
+    not a common behavior for legitimate systems. Possible false positive scenarios
+    include but are not limited to vulnerability scanners and missconfigured systems.
+    If this detection triggers on a host other than a Domain Controller, the behavior
+    could represent a password spraying attack against the host's local accounts.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1110/003/
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/audit-credential-validation
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4776
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1110.003/purplesharp_valid_users_ntlm_xml/windows-security.log

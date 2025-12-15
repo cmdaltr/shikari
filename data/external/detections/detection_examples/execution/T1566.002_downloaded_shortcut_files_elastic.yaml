@@ -1,0 +1,39 @@
+technique_id: T1566.002
+technique_name: Downloaded Shortcut Files
+tactic: execution
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: file where host.os.type == "windows" and event.type == "creation" and file.extension
+  == "lnk" and file.Ext.windows.zone_identifier > 1
+explanation: 'Identifies .lnk shortcut file downloaded from outside the local network.
+  These shortcut files are commonly used in
+
+  phishing campaigns.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/39157d52-4035-44a8-9d1a-6f8c5f580a07.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Corporate software deployments may trigger the rule when legitimate .lnk files
+    are distributed across the network. Users can create exceptions for known software
+    distribution servers to prevent these false positives.
+
+    - Automated backup or synchronization tools that create .lnk files as part of
+    their normal operation can be mistaken for threats. Identifying and excluding
+    these tools from the rule can reduce unnecessary alerts.
+
+    - User-created shortcuts for frequently acc'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

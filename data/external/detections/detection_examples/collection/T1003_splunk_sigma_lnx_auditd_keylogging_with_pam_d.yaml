@@ -1,0 +1,47 @@
+technique_id: T1003
+technique_name: Linux Keylogging with Pam.d
+tactic: collection
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 49aae26c-450e-448b-911d-b3c13d178dfc
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_*\nselection_path_events:\n\
+  \  name:\n  - /etc/pam.d/system-auth\n  - /etc/pam.d/password-auth\n  type: PATH\n\
+  selection_tty_events:\n  type:\n  - TTY\n  - USER_TTY\n"
+explanation: Detect attempt to enable auditing of TTY input
+false_positives:
+- Administrative work
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1056.001/T1056.001.md
+- https://linux.die.net/man/8/pam_tty_audit
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/security_guide/sec-configuring_pam_for_auditing
+- https://access.redhat.com/articles/4409591#audit-record-types-2
+tags:
+- attack.collection
+- attack.credential-access
+- attack.t1003
+- attack.t1056.001
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection_path_events:
+    type: PATH
+    name:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+  selection_tty_events:
+    type:
+    - TTY
+    - USER_TTY
+  condition: 1 of selection_*
+metadata:
+  created_date: 2021-05-24
+  modified_date: 2022-12-18
+  author: Pawel Mazur
+  status: test
+  imported_date: '2025-11-28'

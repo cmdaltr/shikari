@@ -1,0 +1,44 @@
+technique_id: T1562.001
+technique_name: Tamper Windows Defender Remove-MpPreference
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 07e3cb2c-0608-410d-be4b-1511cb1a0448
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_remove:\n  CommandLine|contains: Remove-MpPreference\nselection_tamper:\n\
+  \  CommandLine|contains:\n  - '-ControlledFolderAccessProtectedFolders '\n  - '-AttackSurfaceReductionRules_Ids\
+  \ '\n  - '-AttackSurfaceReductionRules_Actions '\n  - '-CheckForSignaturesBeforeRunningScan\
+  \ '\n"
+explanation: Detects attempts to remove Windows Defender configurations using the
+  'MpPreference' cmdlet
+false_positives:
+- Legitimate PowerShell scripts
+references:
+- https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/windows-10-controlled-folder-access-event-search/ba-p/2326088
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_remove:
+    CommandLine|contains: Remove-MpPreference
+  selection_tamper:
+    CommandLine|contains:
+    - '-ControlledFolderAccessProtectedFolders '
+    - '-AttackSurfaceReductionRules_Ids '
+    - '-AttackSurfaceReductionRules_Actions '
+    - '-CheckForSignaturesBeforeRunningScan '
+  condition: all of selection_*
+metadata:
+  created_date: 2022-08-05
+  modified_date: '2025-11-28'
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

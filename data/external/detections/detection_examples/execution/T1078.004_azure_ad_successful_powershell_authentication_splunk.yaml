@@ -1,0 +1,42 @@
+technique_id: T1078.004
+technique_name: Azure AD Successful PowerShell Authentication
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`azure_monitor_aad` category=SignInLogs properties.authenticationDetails{}.succeeded=true
+  properties.appDisplayName="Microsoft Azure PowerShell" | rename properties.* as
+  * | rename userAgent as user_agent | fillnull | stats count min(_time) as firstTime
+  max(_time) as lastTime by dest user src vendor_account vendor_product user_agent
+  signature | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `azure_ad_successful_powershell_authentication_filter`'
+explanation: The following analytic identifies a successful authentication event against
+  an Azure AD tenant using PowerShell cmdlets. This detection leverages Azure AD SignInLogs
+  to identify successful logins where the appDisplayName is "Microsoft Azure PowerShell."
+  This activity is significant because it is uncommon for regular, non-administrative
+  users to authenticate using PowerShell, and it may indicate enumeration and discovery
+  techniques by an attacker. If confirmed malicious, this activity could allow attackers
+  to perform extensive reconnaissance, potentially leading to privilege escalation
+  or further exploitation within the Azure environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/62f10052-d7b3-4e48-b57b-56f8e3ac7ceb/
+indicators:
+- type: data_source
+  value: Azure Active Directory
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Administrative users will likely use PowerShell commandlets to troubleshoot
+    and maintain the environment. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1078/004/
+- https://docs.microsoft.com/en-us/powershell/module/azuread/connect-azuread?view=azureadps-2.0
+- https://securitycafe.ro/2022/04/29/pentesting-azure-recon-techniques/
+- https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Cloud%20-%20Azure%20Pentest.md
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1078.004/azuread_pws/azure-audit.log

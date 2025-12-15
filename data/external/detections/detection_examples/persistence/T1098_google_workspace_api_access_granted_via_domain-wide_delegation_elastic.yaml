@@ -1,0 +1,50 @@
+technique_id: T1098
+technique_name: Google Workspace API Access Granted via Domain-Wide Delegation
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:google_workspace.admin\n  and event.provider:admin\n  and event.category:iam\n\
+  \  and event.action:AUTHORIZE_API_CLIENT_ACCESS\n  and event.outcome:success"
+explanation: 'Detects when a domain-wide delegation of authority is granted to a service
+  account. Domain-wide delegation can be
+
+  configured to grant third-party and internal applications to access the data of
+  Google Workspace users. An adversary may
+
+  configure domain-wide delegation to maintain access to their target’s data.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/acbc8bb9-2486-49a8-8779-45fb5f9a93ee.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Changes to domain-wide delegation require super admin privileges. Check with
+    the user to ensure these changes were expected.
+
+    - Review scheduled maintenance notes related to expected API access changes.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Review the scope of the authorized API client access in Google Workspace.
+
+    - Disable or limit the account during the investigation and response.
+
+    - Identify the po'
+  mitigation: Review investigation guide for details
+references:
+- https://developers.google.com/admin-sdk/directory/v1/guides/delegation
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,46 @@
+technique_id: T1059
+technique_name: Process Started from Process ID (PID) File
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and user.id\
+  \ == \"0\" and\n  process.executable regex~ \"\"\"/var/run/\\w+\\.(pid|lock|reboot)\
+  \ \"\"\""
+explanation: 'Identifies a new process starting from a process ID (PID), lock or reboot
+  file within the temporary file storage
+
+  paradigm (tmpfs) directory /var/run directory. On Linux, the PID files typically
+  hold the process ID to track previous
+
+  copies running and manage other tasks. Certain Linux malware use the /var/run directory
+  for holding data, executables
+
+  and other tasks, disguising itself or these files as legitimate PID files.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3688577a-d196-11ec-90b0-f661ea17fbce.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+references:
+- https://www.sandflysecurity.com/blog/linux-file-masquerading-and-malicious-pids-sandfly-1-2-6-update/
+- https://twitter.com/GossiTheDog/status/1522964028284411907
+- https://exatrack.com/public/Tricephalic_Hellkeeper.pdf
+- https://www.elastic.co/security-labs/a-peek-behind-the-bpfdoor
+has_investigation_guide: true
+risk_score: 73

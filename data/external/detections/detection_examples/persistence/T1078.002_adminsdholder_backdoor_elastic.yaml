@@ -1,0 +1,53 @@
+technique_id: T1078.002
+technique_name: AdminSDHolder Backdoor
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: event.code:5136 and winlog.event_data.ObjectDN:CN=AdminSDHolder,CN=System*
+explanation: 'Detects modifications in the AdminSDHolder object. Attackers can abuse
+  the SDProp process to implement a persistent
+
+  backdoor in Active Directory. SDProp compares the permissions on protected objects
+  with those defined on the
+
+  AdminSDHolder object. If the permissions on any of the protected accounts and groups
+  do not match, the permissions on
+
+  the protected accounts and groups are reset to match those of the domain''s AdminSDHolder
+  object, regaining their
+
+  Administrative Privileges.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6e9130a5-9be6-48e5-943a-9628bfc74b18.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative changes to the AdminSDHolder object can trigger alerts.
+    To manage this, establish a baseline of expected changes and create exceptions
+    for these known activities.
+
+    - Scheduled maintenance or updates to Active Directory may result in temporary
+    modifications to the AdminSDHolder object. Document these events and exclude them
+    from triggering alerts during the maintenance window.
+
+    - Automated scripts or tools used for Active Directory management might'
+  mitigation: Review investigation guide for details
+references:
+- https://adsecurity.org/?p=1906
+- https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/appendix-c--protected-accounts-and-groups-in-active-directory#adminsdholder
+has_investigation_guide: true
+risk_score: 73

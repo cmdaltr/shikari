@@ -1,0 +1,42 @@
+technique_id: T1537
+technique_name: Microsoft 365 Exchange Transport Rule Creation
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:Exchange and event.category:web
+  and event.action:"New-TransportRule" and event.outcome:success
+explanation: 'Identifies a transport rule creation in Microsoft 365. As a best practice,
+  Exchange Online mail transport rules should
+
+  not be set to forward email to domains outside of your organization. An adversary
+  may create transport rules to
+
+  exfiltrate data.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ff4dd44a-0ac6-44c4-8609-3f81bc820f02.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks may trigger alerts when IT staff create or modify
+    transport rules for legitimate purposes. To manage this, establish a baseline
+    of expected rule creation activities and exclude these from alerts.
+
+    - Automated systems or third-party applications that integrate with Microsoft
+    365 might create transport rules as part of their normal operation. Identify these
+    systems and create exceptions for their known actions.
+
+    - Changes in organizational poli'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/powershell/module/exchange/new-transportrule?view=exchange-ps
+- https://docs.microsoft.com/en-us/exchange/security-and-compliance/mail-flow-rules/mail-flow-rules
+has_investigation_guide: true
+risk_score: 47

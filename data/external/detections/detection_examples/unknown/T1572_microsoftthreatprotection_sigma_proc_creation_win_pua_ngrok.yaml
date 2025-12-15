@@ -1,0 +1,71 @@
+technique_id: T1572
+technique_name: PUA - Ngrok Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.87
+validated: true
+source: sigma
+sigma_id: ee37eb7c-a4e7-4cd5-8fa4-efa27f1c3f31
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection*\nselection1:\n\
+  \  CommandLine|contains:\n  - ' tcp 139'\n  - ' tcp 445'\n  - ' tcp 3389'\n  - '\
+  \ tcp 5985'\n  - ' tcp 5986'\nselection2:\n  CommandLine|contains|all:\n  - ' start\
+  \ '\n  - --all\n  - --config\n  - .yml\nselection3:\n  CommandLine|contains:\n \
+  \ - ' tcp '\n  - ' http '\n  - ' authtoken '\n  Image|endswith: ngrok.exe\nselection4:\n\
+  \  CommandLine|contains:\n  - '.exe authtoken '\n  - .exe start --all\n"
+explanation: 'Detects the use of Ngrok, a utility used for port forwarding and tunneling,
+  often used by threat actors to make local protected services publicly available.
+
+  Involved domains are bin.equinox.io for download and *.ngrok.io for connections.
+
+  '
+false_positives:
+- Another tool that uses the command line switches of Ngrok
+- Ngrok http 3978 (https://learn.microsoft.com/en-us/azure/bot-service/bot-service-debug-channel-ngrok?view=azure-bot-service-4.0)
+references:
+- https://ngrok.com/docs
+- https://www.fireeye.com/blog/threat-research/2021/05/shining-a-light-on-darkside-ransomware-operations.html
+- https://stackoverflow.com/questions/42442320/ssh-tunnel-to-ngrok-and-initiate-rdp
+- https://www.virustotal.com/gui/file/58d21840d915aaf4040ceb89522396124c82f325282f805d1085527e1e2ccfa1/detection
+- https://cybleinc.com/2021/02/15/ngrok-platform-abused-by-hackers-to-deliver-a-new-wave-of-phishing-attacks/
+- https://twitter.com/xorJosh/status/1598646907802451969
+- https://www.softwaretestinghelp.com/how-to-use-ngrok/
+tags:
+- attack.command-and-control
+- attack.t1572
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection1:
+    CommandLine|contains:
+    - ' tcp 139'
+    - ' tcp 445'
+    - ' tcp 3389'
+    - ' tcp 5985'
+    - ' tcp 5986'
+  selection2:
+    CommandLine|contains|all:
+    - ' start '
+    - --all
+    - --config
+    - .yml
+  selection3:
+    Image|endswith: ngrok.exe
+    CommandLine|contains:
+    - ' tcp '
+    - ' http '
+    - ' authtoken '
+  selection4:
+    CommandLine|contains:
+    - '.exe authtoken '
+    - .exe start --all
+  condition: 1 of selection*
+metadata:
+  created_date: 2021-05-14
+  modified_date: 2023-02-21
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

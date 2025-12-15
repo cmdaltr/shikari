@@ -1,0 +1,54 @@
+technique_id: T1558.004
+technique_name: Kerberos Pre-authentication Disabled for User
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "any where host.os.type == \"windows\" and event.code == \"4738\" and\n  winlog.event_data.NewUACList\
+  \ == \"USER_DONT_REQUIRE_PREAUTH\""
+explanation: 'Identifies the modification of an account''s Kerberos pre-authentication
+  options. An adversary with
+
+  GenericWrite/GenericAll rights over the account can maliciously modify these settings
+  to perform offline password
+
+  cracking attacks such as AS-REP roasting.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e514d8cd-ed15-4011-84e2-d15147e059f1.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Disabling pre-authentication is a bad security practice and should not be allowed
+    in the domain. The security team should map and monitor any potential benign true
+    positives (B-TPs), especially if the target account is privileged.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Reset the target account''s password if there is any risk of TGTs having been
+    retrieved.
+
+    - Re-enable the preauthentication option or'
+  mitigation: Review investigation guide for details
+references:
+- https://harmj0y.medium.com/roasting-as-reps-e6179a65216b
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4738
+- https://github.com/atc-project/atomic-threat-coverage/blob/master/Atomic_Threat_Coverage/Logging_Policies/LP_0026_windows_audit_user_account_management.md
+has_investigation_guide: true
+risk_score: 47

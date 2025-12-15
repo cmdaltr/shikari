@@ -1,0 +1,34 @@
+technique_id: T1036
+technique_name: Agent Spoofing - Mismatched Agent ID
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: event.agent_id_status:agent_id_mismatch and not host.name:agentless-*
+explanation: 'Detects events that have a mismatch on the expected event agent ID.
+  The status "agent_id_mismatch/mismatch" occurs when
+
+  the expected agent ID associated with the API key does not match the actual agent
+  ID in an event. This could indicate
+
+  attempts to spoof events in order to masquerade actual activity to evade detection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3115bd2c-0baa-4df0-80ea-45e474b5ef93.toml
+query_type: query
+query_language: kuery
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or patches may temporarily cause agent ID mismatches.
+    Users should verify if the mismatches coincide with scheduled updates and consider
+    excluding these events if confirmed.
+
+    - Network configuration changes, such as IP address reassignments, can lead to
+    mismatches. Ensure that network changes are documented and correlate with the
+    mismatched events before excluding them.
+
+    - Virtual machine snapshots or clones might result in duplicate agent IDs'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

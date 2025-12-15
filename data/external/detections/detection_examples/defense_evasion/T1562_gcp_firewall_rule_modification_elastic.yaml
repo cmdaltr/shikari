@@ -1,0 +1,47 @@
+technique_id: T1562
+technique_name: GCP Firewall Rule Modification
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:gcp.audit and event.action:(*.compute.firewalls.patch or google.appengine.*.Firewall.Update*Rule)
+explanation: 'Identifies when a firewall rule is modified in Google Cloud Platform
+  (GCP) for Virtual Private Cloud (VPC) or App
+
+  Engine. These firewall rules can be modified to allow or deny connections to or
+  from virtual machine (VM) instances or
+
+  specific applications. An adversary may modify an existing firewall rule in order
+  to weaken their target''s security
+
+  controls and allow more permissive ingress or egress traffic flows for their benefit.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2783d84f-5091-4d7d-9319-9fceda8fa71b.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: GCP
+  confidence: high
+- type: data_source
+  value: Google Cloud Platform
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine updates or maintenance activities by authorized personnel can trigger
+    alerts. To manage this, create exceptions for known IP addresses or user accounts
+    that regularly perform these tasks.
+
+    - Automated scripts or tools used for infrastructure management might modify firewall
+    rules as part of their normal operation. Identify these scripts and exclude their
+    actions from triggering alerts by using specific service accounts or tags.
+
+    - Changes made during scheduled ma'
+  mitigation: Review investigation guide for details
+references:
+- https://cloud.google.com/vpc/docs/firewalls
+- https://cloud.google.com/appengine/docs/standard/python/understanding-firewalls
+has_investigation_guide: true
+risk_score: 47

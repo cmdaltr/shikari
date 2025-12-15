@@ -1,0 +1,42 @@
+technique_id: T1137.003
+technique_name: Potential Persistence Via Outlook Form
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: c3edc6a5-d9d4-48d8-930e-aab518390917
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith: \\outlook.exe\n  TargetFilename|contains:\n  - \\AppData\\Local\\\
+  Microsoft\\FORMS\\IPM\n  - \\Local Settings\\Application Data\\Microsoft\\Forms\n"
+explanation: Detects the creation of a new Outlook form which can contain malicious
+  code
+false_positives:
+- Legitimate use of outlook forms
+references:
+- https://speakerdeck.com/heirhabarov/hunting-for-persistence-via-microsoft-exchange-server-or-outlook?slide=76
+- https://speakerdeck.com/heirhabarov/hunting-for-persistence-via-microsoft-exchange-server-or-outlook?slide=79
+- https://learn.microsoft.com/en-us/office/vba/outlook/concepts/outlook-forms/create-an-outlook-form
+- https://www.slipstick.com/developer/custom-form/clean-outlooks-forms-cache/
+tags:
+- attack.persistence
+- attack.t1137.003
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection:
+    Image|endswith: \outlook.exe
+    TargetFilename|contains:
+    - \AppData\Local\Microsoft\FORMS\IPM
+    - \Local Settings\Application Data\Microsoft\Forms
+  condition: selection
+metadata:
+  created_date: 2021-06-10
+  modified_date: 2023-02-22
+  author: Tobias Michalski (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

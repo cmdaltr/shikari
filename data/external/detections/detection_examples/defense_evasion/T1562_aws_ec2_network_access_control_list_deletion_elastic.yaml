@@ -1,0 +1,45 @@
+technique_id: T1562
+technique_name: AWS EC2 Network Access Control List Deletion
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:aws.cloudtrail and event.provider:ec2.amazonaws.com and event.action:(DeleteNetworkAcl
+  or DeleteNetworkAclEntry) and event.outcome:success
+explanation: Identifies the deletion of an Amazon Elastic Compute Cloud (EC2) network
+  access control list (ACL) or one of its ingress/egress entries.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8623535c-1e17-44e1-aa97-7a0699c3037d.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS EC2
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance or updates by authorized personnel may trigger deletion
+    events. Verify if the deletion aligns with scheduled maintenance activities and
+    consider excluding these events from alerts.
+
+    - Automated scripts or infrastructure-as-code tools like Terraform or CloudFormation
+    might delete and recreate ACLs as part of normal operations. Identify these tools
+    and exclude their actions from triggering alerts.
+
+    - Changes in network architecture or security policy up'
+  mitigation: Review investigation guide for details
+references:
+- https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/delete-network-acl.html
+- https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DeleteNetworkAcl.html
+- https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/delete-network-acl-entry.html
+- https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DeleteNetworkAclEntry.html
+has_investigation_guide: true
+risk_score: 47

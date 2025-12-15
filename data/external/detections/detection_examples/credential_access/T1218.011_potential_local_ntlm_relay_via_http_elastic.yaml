@@ -1,0 +1,66 @@
+technique_id: T1218.011
+technique_name: Potential Local NTLM Relay via HTTP
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : \"rundll32.exe\" and\n\n  /* Rundll32 WbeDav Client  */\n  process.args\
+  \ : (\"?:\\\\Windows\\\\System32\\\\davclnt.dll,DavSetCookie\", \"?:\\\\Windows\\\
+  \\SysWOW64\\\\davclnt.dll,DavSetCookie\") and\n\n  /* Access to named pipe via http\
+  \ */\n  process.args : (\"http*/print/pipe/*\", \"http*/pipe/spoolss\", \"http*/pipe/srvsvc\"\
+  )"
+explanation: 'Identifies attempt to coerce a local NTLM authentication via HTTP using
+  the Windows Printer Spooler service as a target.
+
+  An adversary may use this primitive in combination with other techniques to elevate
+  privileges on a compromised system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4682fd2c-cfae-47ed-a543-9bed37657aa6.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using rundll32.exe with WebDAV client DLLs may
+    trigger the rule. Review the context of the execution, such as the user account
+    and the timing, to determine if it aligns with expected administrative activities.
+
+    - Automated software deployment or update processes might use similar rundll32.exe
+    calls. Verify if the process is part of a scheduled or known deployment task and
+    consider excluding these specific processes from the rule.
+
+    - Some t'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/med0x2e/NTLMRelay2Self
+- https://github.com/topotam/PetitPotam
+- https://github.com/dirkjanm/krbrelayx/blob/master/printerbug.py
+has_investigation_guide: true
+risk_score: 73

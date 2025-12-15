@@ -1,0 +1,59 @@
+technique_id: T1543.003
+technique_name: Windows Service Installed via an Unusual Client
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "configuration where host.os.type == \"windows\" and\n  event.action == \"\
+  service-installed\" and\n  (winlog.event_data.ClientProcessId == \"0\" or winlog.event_data.ParentProcessId\
+  \ == \"0\") and\n  startswith~(user.domain, winlog.computer_name) and winlog.event_data.ServiceAccount\
+  \ == \"LocalSystem\" and \n  not winlog.event_data.ServiceFileName : (\n    \"?:\\\
+  \\Windows\\\\VeeamVssSupport\\\\VeeamGuestHelper.exe\",\n    \"?:\\\\Windows\\\\\
+  VeeamLogShipper\\\\VeeamLogShipper.exe\",\n    \"%SystemRoot%\\\\system32\\\\Drivers\\\
+  \\Crowdstrike\\\\*-CsInstallerService.exe\",\n    \"\\\"%windir%\\\\AdminArsenal\\\
+  \\PDQInventory-Scanner\\\\service-1\\\\PDQInventory-Scanner-1.exe\\\" \",\n    \"\
+  \\\"%windir%\\\\AdminArsenal\\\\PDQDeployRunner\\\\service-1\\\\PDQDeployRunner-1.exe\\\
+  \" \",\n    \"\\\"%windir%\\\\AdminArsenal\\\\PDQInventoryWakeCommand\\\\service-1\\\
+  \\PDQInventoryWakeCommand-1.exe\\\" \",\n    \"\\\"%SystemRoot%\\\\nsnetpush.exe\\\
+  \"\",\n    \"\\\"C:\\\\WINDOWS\\\\ccmsetup\\\\ccmsetup.exe\\\" /runservice /ignoreskipupgrade\
+  \ /config:MobileClient.tcf\",\n    \"\\\"?:\\\\SMS\\\\bin\\\\x64\\\\srvboot.exe\\\
+  \"\",\n    \"%SystemRoot%\\\\pbpsdeploy.exe\"\n  )"
+explanation: 'Identifies the creation of a Windows service by an unusual client process.
+  Services may be created with administrator
+
+  privileges but are executed under SYSTEM privileges, so an adversary may also use
+  a service to escalate privileges from
+
+  administrator to SYSTEM.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/55c2bf58-2a39-4c58-a384-c8b1978153c2.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may trigger the rule if they create
+    services using unusual client processes. To manage this, identify and whitelist
+    these processes in the detection rule to prevent unnecessary alerts.
+
+    - System management tools like Veeam and PDQ Inventory are already excluded, but
+    other similar tools might not be. Regularly review and update the exclusion list
+    to include any additional legitimate tools used in your environment.
+
+    - Custom scr'
+  mitigation: Review investigation guide for details
+references:
+- https://www.x86matthew.com/view_post?id=create_svc_rpc
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4697
+- https://github.com/atc-project/atomic-threat-coverage/blob/master/Atomic_Threat_Coverage/Logging_Policies/LP_0100_windows_audit_security_system_extension.md
+- https://www.elastic.co/security-labs/siestagraph-new-implant-uncovered-in-asean-member-foreign-ministry
+has_investigation_guide: true
+risk_score: 73

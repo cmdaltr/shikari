@@ -1,0 +1,60 @@
+technique_id: T1127.001
+technique_name: Microsoft Build Engine Started by a System Process
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : \"MSBuild.exe\" and\n  process.parent.name : (\"explorer.exe\"\
+  , \"wmiprvse.exe\")"
+explanation: 'An instance of MSBuild, the Microsoft Build Engine, was started by Explorer
+  or the WMI (Windows Management
+
+  Instrumentation) subsystem. This behavior is unusual and is sometimes used by malicious
+  payloads.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9d110cb3-5f4b-4c9a-b9f5-53f0a1707ae3.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may trigger MSBuild.exe to start
+    from Explorer or WMI. Monitor these events and verify if they coincide with known
+    software changes.
+
+    - Development environments where MSBuild is frequently used might see this behavior
+    as part of normal operations. Identify and document these environments to create
+    exceptions for known development machines.
+
+    - Automated scripts or administrative tools that leverage MSBuild for legitimate
+    tasks'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

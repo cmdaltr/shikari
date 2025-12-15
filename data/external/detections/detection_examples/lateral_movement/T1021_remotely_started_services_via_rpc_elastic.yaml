@@ -1,0 +1,69 @@
+technique_id: T1021
+technique_name: Remotely Started Services via RPC
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence with maxspan=1s\n   [network where host.os.type == \"windows\" and\
+  \ process.name : \"services.exe\" and\n      network.direction : (\"incoming\",\
+  \ \"ingress\") and network.transport == \"tcp\" and\n      source.port >= 49152\
+  \ and destination.port >= 49152 and source.ip != \"127.0.0.1\" and source.ip !=\
+  \ \"::1\"\n   ] by host.id, process.entity_id\n   [process where host.os.type ==\
+  \ \"windows\" and \n       event.type == \"start\" and process.parent.name : \"\
+  services.exe\" and\n       not (process.executable : \"?:\\\\Windows\\\\System32\\\
+  \\msiexec.exe\" and process.args : \"/V\") and\n       not process.executable :\
+  \ (\n                \"?:\\\\Pella Corporation\\\\OSCToGPAutoService\\\\OSCToGPAutoSvc.exe\"\
+  ,\n                \"?:\\\\Pella Corporation\\\\Pella Order Management\\\\GPAutoSvc.exe\"\
+  ,\n                \"?:\\\\Pella Corporation\\\\Pella Order Management\\\\GPAutoSvc.exe\"\
+  ,\n                \"?:\\\\Program Files (x86)\\\\*.exe\",\n                \"?:\\\
+  \\Program Files\\\\*.exe\",\n                \"?:\\\\Windows\\\\ADCR_Agent\\\\adcrsvc.exe\"\
+  ,\n                \"?:\\\\Windows\\\\AdminArsenal\\\\PDQ*.exe\",\n            \
+  \    \"?:\\\\Windows\\\\CAInvokerService.exe\",\n                \"?:\\\\Windows\\\
+  \\ccmsetup\\\\ccmsetup.exe\",\n                \"?:\\\\Windows\\\\eset-remote-install-service.exe\"\
+  ,\n                \"?:\\\\Windows\\\\ProPatches\\\\Scheduler\\\\STSchedEx.exe\"\
+  ,\n                \"?:\\\\Windows\\\\PSEXESVC.EXE\",\n                \"?:\\\\\
+  Windows\\\\RemoteAuditService.exe\",\n                \"?:\\\\Windows\\\\servicing\\\
+  \\TrustedInstaller.exe\",\n                \"?:\\\\Windows\\\\System32\\\\certsrv.exe\"\
+  ,\n                \"?:\\\\Windows\\\\System32\\\\sppsvc.exe\",\n              \
+  \  \"?:\\\\Windows\\\\System32\\\\srmhost.exe\",\n                \"?:\\\\Windows\\\
+  \\System32\\\\svchost.exe\",\n                \"?:\\\\Windows\\\\System32\\\\taskhostex.exe\"\
+  ,\n                \"?:\\\\Windows\\\\System32\\\\upfc.exe\",\n                \"\
+  ?:\\\\Windows\\\\System32\\\\vds.exe\",\n                \"?:\\\\Windows\\\\System32\\\
+  \\VSSVC.exe\",\n                \"?:\\\\Windows\\\\System32\\\\wbem\\\\WmiApSrv.exe\"\
+  ,\n                \"?:\\\\Windows\\\\SysWOW64\\\\NwxExeSvc\\\\NwxExeSvc.exe\",\n\
+  \                \"?:\\\\Windows\\\\Veeam\\\\Backup\\\\VeeamDeploymentSvc.exe\"\
+  ,\n                \"?:\\\\Windows\\\\VeeamLogShipper\\\\VeeamLogShipper.exe\",\n\
+  \                \"?:\\\\Windows\\\\VeeamVssSupport\\\\VeeamGuestHelper.exe\"\n\
+  \       )] by host.id, process.parent.entity_id"
+explanation: 'Identifies remote execution of Windows services over remote procedure
+  call (RPC). This could be indicative of lateral
+
+  movement, but will be noisy if commonly done by administrators.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/aa9a274d-6b53-424d-ac5e-cb8ca4251650.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- Remote management software like SCCM\
+    \ may trigger this rule. If noisy on your environment, consider adding exceptions.\n\
+    \n### Response and remediation\n\n- Initiate the incident response process based\
+    \ on the outcome of the triage.\n- Isolate the involved hosts to prevent further\
+    \ post-compromise behavior.\n- If the triage identified malware, search the environment\
+    \ for additional compromised hosts.\n  - Implement temporary network rules, procedures,\
+    \ and segmentation to contain t"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-scmr/705b624a-13de-43cc-b8a2-99573da3635f
+- https://www.elastic.co/security-labs/elastic-protects-against-data-wiper-malware-targeting-ukraine-hermeticwiper
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,60 @@
+technique_id: T1059.004
+technique_name: Git Hook Egress Network Connection
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id with maxspan=3s\n  [process where host.os.type == \"linux\"\
+  \ and event.type == \"start\" and event.action == \"exec\" and\n   process.parent.name\
+  \ == \"git\" and process.args : \".git/hooks/*\" and\n   process.name in (\"bash\"\
+  , \"dash\", \"sh\", \"tcsh\", \"csh\", \"zsh\", \"ksh\", \"fish\")] by process.entity_id\n\
+  \  [network where host.os.type == \"linux\" and event.type == \"start\" and event.action\
+  \ == \"connection_attempted\" and not (\n     destination.ip == null or destination.ip\
+  \ == \"0.0.0.0\" or cidrmatch(\n       destination.ip, \"10.0.0.0/8\", \"127.0.0.0/8\"\
+  , \"169.254.0.0/16\", \"172.16.0.0/12\", \"192.0.0.0/24\", \"192.0.0.0/29\",\n \
+  \      \"192.0.0.8/32\", \"192.0.0.9/32\", \"192.0.0.10/32\", \"192.0.0.170/32\"\
+  , \"192.0.0.171/32\", \"192.0.2.0/24\",\n       \"192.31.196.0/24\", \"192.52.193.0/24\"\
+  , \"192.168.0.0/16\", \"192.88.99.0/24\", \"224.0.0.0/4\", \"100.64.0.0/10\",\n\
+  \       \"192.175.48.0/24\",\"198.18.0.0/15\", \"198.51.100.0/24\", \"203.0.113.0/24\"\
+  , \"240.0.0.0/4\", \"::1\", \"FE80::/10\",\n       \"FF00::/8\", \"172.31.0.0/16\"\
+  \n     )\n   )\n  ] by process.parent.entity_id"
+explanation: 'This rule detects a suspicious egress network connection attempt from
+  a Git hook script. Git hooks are scripts that Git
+
+  executes before or after events such as: commit, push, and receive. An attacker
+  can abuse these features to execute
+
+  arbitrary commands on the system, establish persistence or to initialize a network
+  connection to a remote server and
+
+  exfiltrate data or download additional payloads.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9822c5a1-1494-42de-b197-487197bb540c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate automated scripts or CI/CD pipelines may trigger Git hooks to perform
+    network operations. Review the source and purpose of these scripts and consider
+    excluding them if they are verified as non-threatening.
+
+    - Development environments often use Git hooks for tasks like fetching dependencies
+    or updating remote services. Identify these common operations and create exceptions
+    for known safe IP addresses or domains.
+
+    - Internal tools or services that rely on Git ho'
+  mitigation: Review investigation guide for details
+references:
+- https://swisskyrepo.github.io/InternalAllTheThings/redteam/persistence/linux-persistence/#backdooring-git
+- https://www.elastic.co/security-labs/sequel-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

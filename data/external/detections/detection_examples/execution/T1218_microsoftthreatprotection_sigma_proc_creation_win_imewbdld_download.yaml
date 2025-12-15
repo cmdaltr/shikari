@@ -1,0 +1,42 @@
+technique_id: T1218
+technique_name: Arbitrary File Download Via IMEWDBLD.EXE
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 863218bd-c7d0-4c52-80cd-0a96c09f54af
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cli:\n  CommandLine|contains:\n  - http://\n  - https://\nselection_img:\n\
+  - Image|endswith: \\IMEWDBLD.exe\n- OriginalFileName: imewdbld.exe\n"
+explanation: Detects usage of "IMEWDBLD.exe" to download arbitrary files
+false_positives:
+- Unknown
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1105/T1105.md#atomic-test-10---windows---powershell-download
+- https://lolbas-project.github.io/lolbas/Binaries/IMEWDBLD/
+tags:
+- attack.defense-evasion
+- attack.execution
+- attack.t1218
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith: \IMEWDBLD.exe
+  - OriginalFileName: imewdbld.exe
+  selection_cli:
+    CommandLine|contains:
+    - http://
+    - https://
+  condition: all of selection_*
+metadata:
+  created_date: 2023-11-09
+  modified_date: '2025-11-28'
+  author: Swachchhanda Shrawan Poudel
+  status: test
+  imported_date: '2025-11-28'

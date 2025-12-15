@@ -1,0 +1,68 @@
+technique_id: T1557.001
+technique_name: Potential Kerberos Coercion via DNS-Based SPN Spoofing
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: '(event.code:4662 and winlog.event_data.AdditionalInfo: *UWhRC*BAAAA*MicrosoftDNS*)
+  or
+
+  (event.code:5137 and winlog.event_data.ObjectDN: *UWhRC*BAAAA*MicrosoftDNS*)'
+explanation: 'Identifies the creation of a DNS record containing a base64-encoded
+  blob matching the pattern "UWhRCA...BAAAA". This
+
+  pattern corresponds to a marshaled CREDENTIAL_TARGET_INFORMATION structure, commonly
+  used in Kerberos coercion attacks.
+
+  It is associated with tools and techniques that exploit SPN spoofing via DNS. Adversaries
+  may abuse this to coerce
+
+  victim systems into authenticating to attacker-controlled hosts while requesting
+  Kerberos tickets for legitimate
+
+  services (often the victim''s own identity). This enables reflective Kerberos relay
+  attacks, potentially resulting in
+
+  privileged access such as NT AUTHORITY\SYSTEM, without relying on NTLM fallback.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f701be14-0a36-4e9a-a851-b3e20ae55f09.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately.
+
+
+    ### Response and remediation
+
+
+    - Review and remove the malicious DNS record containing the embedded CREDENTIAL_TARGET_INFORMATION
+    Base64 payload (UWhRCA...BAAAA). Ensure that no additional coercion records exist
+    in the same DNS zone.
+
+    - Identify the source of the DNS modification by correlating the event with user
+    context and host activity. Investigate whether the account used was compromised
+    or misused.
+
+    - Audit Kerberos'
+  mitigation: Review investigation guide for details
+references:
+- https://www.synacktiv.com/publications/ntlm-reflection-is-dead-long-live-ntlm-reflection-an-in-depth-analysis-of-cve-2025
+- https://blog.redteam-pentesting.de/2025/reflective-kerberos-relay-attack/
+- https://googleprojectzero.blogspot.com/2021/10/using-kerberos-for-authentication-relay.html
+- https://github.com/CICADA8-Research/RemoteKrbRelay/blob/main/README.md
+- https://github.com/Orange-Cyberdefense/ocd-mindmaps/blob/main/excalimap/mindmap/ad/authenticated.md
+has_investigation_guide: true
+risk_score: 73

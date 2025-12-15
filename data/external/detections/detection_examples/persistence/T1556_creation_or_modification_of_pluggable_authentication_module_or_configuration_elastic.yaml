@@ -1,0 +1,71 @@
+technique_id: T1556
+technique_name: Creation or Modification of Pluggable Authentication Module or Configuration
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"linux\" and event.action in (\"rename\", \"creation\"\
+  ) and\nprocess.executable != null and (\n  (file.path like~ (\n    \"/lib/security/*\"\
+  , \"/lib64/security/*\", \"/usr/lib/security/*\", \"/usr/lib64/security/*\",\n \
+  \   \"/lib/x86_64-linux-gnu/security/*\", \"/usr/lib/x86_64-linux-gnu/security/*\"\
+  \n  ) and file.extension == \"so\") or\n  (file.path like~ \"/etc/pam.d/*\" and\
+  \ file.extension == null) or\n  (file.path like~ \"/etc/security/pam_*\" or file.path\
+  \ == \"/etc/pam.conf\")\n) and not (\n  process.executable in (\n    \"/bin/dpkg\"\
+  , \"/usr/bin/dpkg\", \"/bin/dockerd\", \"/usr/bin/dockerd\", \"/usr/sbin/dockerd\"\
+  , \"/bin/microdnf\",\n    \"/usr/bin/microdnf\", \"/bin/rpm\", \"/usr/bin/rpm\"\
+  , \"/bin/snapd\", \"/usr/bin/snapd\", \"/bin/yum\", \"/usr/bin/yum\",\n    \"/bin/dnf\"\
+  , \"/usr/bin/dnf\", \"/bin/podman\", \"/usr/bin/podman\", \"/bin/dnf-automatic\"\
+  , \"/usr/bin/dnf-automatic\",\n    \"/bin/pacman\", \"/usr/bin/pacman\", \"/usr/bin/dpkg-divert\"\
+  , \"/bin/dpkg-divert\", \"/sbin/apk\", \"/usr/sbin/apk\",\n    \"/usr/local/sbin/apk\"\
+  , \"/usr/bin/apt\", \"/usr/sbin/pacman\", \"/bin/podman\", \"/usr/bin/podman\",\
+  \ \"/usr/bin/puppet\",\n    \"/bin/puppet\", \"/opt/puppetlabs/puppet/bin/puppet\"\
+  , \"/usr/bin/chef-client\", \"/bin/chef-client\",\n    \"/bin/autossl_check\", \"\
+  /usr/bin/autossl_check\", \"/proc/self/exe\", \"/dev/fd/*\",  \"/usr/bin/pamac-daemon\"\
+  ,\n    \"/bin/pamac-daemon\", \"/usr/lib/snapd/snapd\", \"/usr/local/bin/dockerd\"\
+  , \"/usr/sbin/pam-auth-update\",\n    \"/usr/lib/systemd/systemd\", \"/usr/libexec/packagekitd\"\
+  , \"/usr/bin/bsdtar\", \"/sbin/pam-auth-update\"\n  ) or\n  file.path like (\n \
+  \   \"/tmp/snap.rootfs_*/pam_*.so\", \"/tmp/newroot/lib/*/pam_*.so\", \"/tmp/newroot/usr/lib64/security/pam_*.so\"\
+  \n  ) or\n  file.extension in (\"swp\", \"swpx\", \"swx\", \"dpkg-remove\") or\n\
+  \  file.Ext.original.extension == \"dpkg-new\" or\n  process.executable like (\n\
+  \    \"/nix/store/*\", \"/var/lib/dpkg/*\", \"/snap/*\", \"/dev/fd/*\", \"/usr/lib/virtualbox/*\"\
+  \n  ) or\n  (process.name == \"sed\" and file.name like~ \"sed*\") or\n  (process.name\
+  \ == \"perl\" and file.name like~ \"e2scrub_all.tmp*\")\n)"
+explanation: 'This rule monitors for the creation or modification of Pluggable Authentication
+  Module (PAM) shared object files or
+
+  configuration files. Attackers may create or modify these files to maintain persistence
+  on a compromised system, or
+
+  harvest account credentials.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f48ecc44-7d02-437d-9562-b838d2c41987.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Package management operations: Legitimate package managers like dpkg, rpm, and
+    yum may trigger the rule during software updates or installations. To handle this,
+    exclude these processes by adding them to the exception list in the rule configuration.
+
+    - System updates and maintenance: Processes such as pam-auth-update and systemd
+    may modify PAM configurations during routine system updates. Exclude these processes
+    to prevent false positives.
+
+    - Temporary files: Files with'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/zephrax/linux-pam-backdoor
+- https://github.com/eurialo/pambd
+- http://0x90909090.blogspot.com/2016/06/creating-backdoor-in-pam-in-5-line-of.html
+- https://www.trendmicro.com/en_us/research/19/i/skidmap-linux-malware-uses-rootkit-capabilities-to-hide-cryptocurrency-mining-payload.html
+has_investigation_guide: true
+risk_score: 47

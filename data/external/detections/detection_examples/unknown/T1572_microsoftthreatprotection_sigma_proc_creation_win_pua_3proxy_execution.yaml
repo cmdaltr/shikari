@@ -1,0 +1,40 @@
+technique_id: T1572
+technique_name: PUA - 3Proxy Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: f38a82d2-fba3-4781-b549-525efbec8506
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_*\nselection_img:\n\
+  \  Image|endswith: \\3proxy.exe\nselection_params:\n  CommandLine|contains: .exe\
+  \ -i127.0.0.1 -p\nselection_pe:\n  Description: 3proxy - tiny proxy server\n"
+explanation: Detects the use of 3proxy, a tiny free proxy server
+false_positives:
+- Administrative activity
+references:
+- https://github.com/3proxy/3proxy
+- https://blog.talosintelligence.com/2022/09/lazarus-three-rats.html
+tags:
+- attack.command-and-control
+- attack.t1572
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+    Image|endswith: \3proxy.exe
+  selection_pe:
+    Description: 3proxy - tiny proxy server
+  selection_params:
+    CommandLine|contains: .exe -i127.0.0.1 -p
+  condition: 1 of selection_*
+metadata:
+  created_date: 2022-09-13
+  modified_date: 2023-02-21
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

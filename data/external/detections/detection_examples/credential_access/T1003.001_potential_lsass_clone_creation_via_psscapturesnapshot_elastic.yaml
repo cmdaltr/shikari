@@ -1,0 +1,47 @@
+technique_id: T1003.001
+technique_name: Potential LSASS Clone Creation via PssCaptureSnapShot
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.code:\"4688\" and\n  process.executable\
+  \ : \"?:\\\\Windows\\\\System32\\\\lsass.exe\" and\n  process.parent.executable\
+  \ : \"?:\\\\Windows\\\\System32\\\\lsass.exe\""
+explanation: 'Identifies the creation of an LSASS process clone via PssCaptureSnapShot
+  where the parent process is the initial LSASS
+
+  process instance. This may indicate an attempt to evade detection and dump LSASS
+  memory for credential access.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a16612dd-b30e-4d41-86a0-ebe70974ec00.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate security software or system management tools may create LSASS process
+    snapshots for monitoring or debugging purposes. Identify these tools and create
+    exceptions for their process creation events to avoid false positives.
+
+    - System administrators or IT personnel might use authorized scripts or tools
+    that interact with LSASS for legitimate reasons. Verify these activities and whitelist
+    the associated processes to prevent unnecessary alerts.
+
+    - During system upda'
+  mitigation: Review investigation guide for details
+references:
+- https://www.matteomalvica.com/blog/2019/12/02/win-defender-atp-cred-bypass/
+- https://medium.com/@Achilles8284/the-birth-of-a-process-part-2-97c6fb9c42a2
+has_investigation_guide: true
+risk_score: 73

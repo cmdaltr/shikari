@@ -1,0 +1,40 @@
+technique_id: T1098.003
+technique_name: O365 Application Available To Other Tenants
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=AzureActiveDirectory Operation IN ("Add
+  application.","Update application.") ModifiedProperties{}.Name=AvailableToOtherTenants
+  | eval result = case(match(mvindex(''ModifiedProperties{}.NewValue'',mvfind(''ModifiedProperties{}.Name'',"AvailableToOtherTenants")),"false"),"removed",true(),"added"),
+  object_name=mvindex(''Target{}.ID'', 3), signature=Operation, object_attrs = "AvailableToOtherTenants",
+  user = case(match(mvindex(''Actor{}.ID'',-1),"User"),mvindex(''Actor{}.ID'',0),match(mvindex(''Actor{}.ID'',-1),"ServicePrincipal"),mvindex(''Actor{}.ID'',3),true(),mvindex(''Actor{}.ID'',0))
+  | search result = "added" | fillnull | stats count min(_time) as firstTime max(_time)
+  as lastTime by signature dest user src vendor_account vendor_product object_attrs
+  object_name | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `o365_application_available_to_other_tenants_filter`'
+explanation: The following analytic identifies the configuration of Azure Active Directory
+  Applications in a manner that allows authentication from external tenants or personal
+  accounts. This configuration can lead to inappropriate or malicious access of any
+  data or capabilities the application is allowed to access. This detection leverages
+  the O365 Universal Audit Log data source.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/942548a3-0273-47a4-8dbd-e5202437395c/
+indicators:
+- type: data_source
+  value: Office 365 Universal Audit Log
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Business approved changes by known administrators.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1098/
+- https://msrc.microsoft.com/blog/2023/03/guidance-on-potential-misconfiguration-of-authorization-of-multi-tenant-applications-that-use-azure-ad/
+- https://www.wiz.io/blog/azure-active-directory-bing-misconfiguration
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1098/o365_azure_workload_events/o365_azure_workload_events.log

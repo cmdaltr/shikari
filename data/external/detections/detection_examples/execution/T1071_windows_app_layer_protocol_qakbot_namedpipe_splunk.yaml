@@ -1,0 +1,44 @@
+technique_id: T1071
+technique_name: Windows App Layer Protocol Qakbot NamedPipe
+tactic: execution
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '`sysmon` EventCode IN (17, 18) EventType IN ( "CreatePipe", "ConnectPipe")
+  Image IN ("*\\calc.exe", "*\\notepad.exe", "*\\rdpclip.exe", "*\\explorer.exe",
+  "*\\wermgr.exe", "*\\ping.exe", "*\\OneDriveSetup.exe", "*\\dxdiag.exe", "*\\mobsync.exe",
+  "*\\msra.exe", "*\\xwizard.exe") | regex PipeName="^\\\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{8}"
+  | stats  min(_time) as firstTime max(_time) as lastTime count by dest dvc pipe_name
+  process_exec process_guid process_id process_name process_path signature signature_id
+  user_id vendor_product Image PipeName | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_app_layer_protocol_qakbot_namedpipe_filter`'
+explanation: The following analytic detects a suspicious process creating or connecting
+  to a potential Qakbot named pipe. It leverages Sysmon EventCodes 17 and 18, focusing
+  on specific processes known to be abused by Qakbot and identifying randomly generated
+  named pipes in GUID form. This activity is significant as Qakbot malware uses named
+  pipes for inter-process communication after code injection, facilitating data theft.
+  If confirmed malicious, this behavior could indicate a Qakbot infection, leading
+  to unauthorized data access and potential exfiltration from the compromised host.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/63a2c15e-9448-43c5-a4a8-9852266aaada/
+indicators:
+- type: data_source
+  value: Sysmon EventID 17
+  confidence: high
+- type: data_source
+  value: Sysmon EventID 18
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://strontic.github.io/xcyclopedia/library/wermgr.exe-0F652BF7ADA772981E8AAB0D108FCC92.html
+- https://www.trellix.com/en-us/about/newsroom/stories/research/demystifying-qbot-malware.html
+- https://www.elastic.co/security-labs/qbot-malware-analysis
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/qakbot/sysmon.log

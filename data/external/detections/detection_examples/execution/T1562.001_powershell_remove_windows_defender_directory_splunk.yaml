@@ -1,0 +1,39 @@
+technique_id: T1562.001
+technique_name: Powershell Remove Windows Defender Directory
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`powershell` EventCode=4104 ScriptBlockText = "*rmdir *" AND ScriptBlockText
+  = "*\\Microsoft\\Windows Defender*" | fillnull | stats count min(_time) as firstTime
+  max(_time) as lastTime by dest signature signature_id user_id vendor_product EventID
+  Guid Opcode Name Path ProcessID ScriptBlockId ScriptBlockText | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `powershell_remove_windows_defender_directory_filter`'
+explanation: The following analytic detects a suspicious PowerShell command attempting
+  to delete the Windows Defender directory. It leverages PowerShell Script Block Logging
+  to identify commands containing "rmdir" and targeting the Windows Defender path.
+  This activity is significant as it may indicate an attempt to disable or corrupt
+  Windows Defender, a key security component. If confirmed malicious, this action
+  could allow an attacker to bypass endpoint protection, facilitating further malicious
+  activities without detection.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/adf47620-79fa-11ec-b248-acde48001122/
+indicators:
+- type: data_source
+  value: Powershell Script Block Logging 4104
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user_id
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.microsoft.com/security/blog/2022/01/15/destructive-malware-targeting-ukrainian-organizations/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059.001/powershell_script_block_logging/sbl_xml.log

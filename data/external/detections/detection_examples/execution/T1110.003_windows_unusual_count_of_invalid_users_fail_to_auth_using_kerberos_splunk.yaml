@@ -1,0 +1,41 @@
+technique_id: T1110.003
+technique_name: Windows Unusual Count Of Invalid Users Fail To Auth Using Kerberos
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`wineventlog_security` EventCode=4768 TargetUserName!=*$ Status=0x6 | bucket
+  span=5m _time | stats dc(TargetUserName) AS unique_accounts values(TargetUserName)
+  as user values(dest) as dest by _time, IpAddress | eventstats avg(unique_accounts)
+  as comp_avg , stdev(unique_accounts) as comp_std by IpAddress | eval upperBound=(comp_avg+comp_std*3)
+  | eval isOutlier=if(unique_accounts > 10 and unique_accounts >= upperBound, 1, 0)
+  | search isOutlier=1 | `windows_unusual_count_of_invalid_users_fail_to_auth_using_kerberos_filter`'
+explanation: The following analytic identifies a source endpoint failing to authenticate
+  with multiple invalid domain users using the Kerberos protocol. It leverages Event
+  ID 4768, which is generated when the Key Distribution Center issues a Kerberos Ticket
+  Granting Ticket (TGT) and detects failure code 0x6, indicating the user is not found
+  in the Kerberos database. This behavior is significant as it may indicate a Password
+  Spraying attack, where an adversary attempts to gain initial access or elevate privileges.
+  If confirmed malicious, this activity could lead to unauthorized access and potential
+  privilege escalation within the Active Directory environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/f122cb2e-d773-4f11-8399-62a3572d8dd7/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4768
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: A host failing to authenticate with multiple invalid domain users is
+    not a common behavior for legitimate systems. Possible false positive scenarios
+    include but are not limited to vulnerability scanners, multi-user systems and
+    missconfigured systems.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1110/003/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1110.003/purplesharp_invalid_users_kerberos_xml/windows-security.log

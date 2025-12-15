@@ -1,0 +1,39 @@
+technique_id: T1558
+technique_name: Windows Kerberos Local Successful Logon
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`wineventlog_security`  EventCode=4624 LogonType=3 AuthenticationPackageName=Kerberos
+  action=success src=127.0.0.1  | fillnull | stats count min(_time) as firstTime max(_time)
+  as lastTime by action app authentication_method dest dvc process process_id process_name
+  process_path signature signature_id src src_port status subject user user_group
+  vendor_product | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_kerberos_local_successful_logon_filter`'
+explanation: The following analytic identifies a local successful authentication event
+  on a Windows endpoint using the Kerberos package. It detects EventCode 4624 with
+  LogonType 3 and source address 127.0.0.1, indicating a login to the built-in local
+  Administrator account. This activity is significant as it may suggest a Kerberos
+  relay attack, a method attackers use to escalate privileges. If confirmed malicious,
+  this could allow an attacker to gain unauthorized access to sensitive systems, execute
+  arbitrary code, or create new accounts in Active Directory, leading to potential
+  system compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8309c3a8-4d34-48ae-ad66-631658214653/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4624
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives are possible, filtering may be required to restrict
+    to workstations vs domain controllers. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://github.com/Dec0ne/KrbRelayUp
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1558/windows_kerberos_local_successful_logon/windows-xml.log

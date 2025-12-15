@@ -1,0 +1,49 @@
+technique_id: T1059.003
+technique_name: Suspicious Execution from a Mounted Device
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\
+  \ process.executable : \"C:\\\\*\" and\n  (process.working_directory : \"?:\\\\\"\
+  \ and not process.working_directory: \"C:\\\\\") and\n  process.parent.name : \"\
+  explorer.exe\" and\n  process.name : (\"rundll32.exe\", \"mshta.exe\", \"powershell.exe\"\
+  , \"pwsh.exe\", \"cmd.exe\", \"regsvr32.exe\",\n                  \"cscript.exe\"\
+  , \"wscript.exe\")"
+explanation: 'Identifies when a script interpreter or signed binary is launched via
+  a non-standard working directory. An attacker may
+
+  use this technique to evade defenses.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8a1d4831-3ce6-4859-9891-28931fa6101d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may trigger the rule if they are
+    executed from a mounted device. Users can create exceptions for known software
+    update processes that are verified as safe.
+
+    - Portable applications running from USB drives or external storage can be flagged.
+    To mitigate this, users should whitelist specific applications that are frequently
+    used and deemed non-threatening.
+
+    - IT administrative scripts executed from network shares or mounted driv'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoft.com/security/blog/2021/05/27/new-sophisticated-email-based-attack-from-nobelium/
+- https://www.volexity.com/blog/2021/05/27/suspected-apt29-operation-launches-election-fraud-themed-phishing-campaigns/
+has_investigation_guide: true
+risk_score: 47

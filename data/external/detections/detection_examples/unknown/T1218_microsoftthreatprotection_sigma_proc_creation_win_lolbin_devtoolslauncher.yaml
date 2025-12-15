@@ -1,0 +1,36 @@
+technique_id: T1218
+technique_name: Devtoolslauncher.exe Executes Specified Binary
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: cc268ac1-42d9-40fd-9ed3-8c4e1a5b87e6
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains: LaunchForDeploy\n  Image|endswith: \\devtoolslauncher.exe\n"
+explanation: The Devtoolslauncher.exe executes other binary
+false_positives:
+- Legitimate use of devtoolslauncher.exe by legitimate user
+references:
+- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Devtoolslauncher/
+- https://twitter.com/_felamos/status/1179811992841797632
+tags:
+- attack.defense-evasion
+- attack.t1218
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \devtoolslauncher.exe
+    CommandLine|contains: LaunchForDeploy
+  condition: selection
+metadata:
+  created_date: 2019-10-12
+  modified_date: 2021-11-27
+  author: Beyu Denis, oscd.community (rule), @_felamos (idea)
+  status: test
+  imported_date: '2025-11-28'

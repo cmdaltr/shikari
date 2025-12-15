@@ -1,0 +1,52 @@
+technique_id: T1059.002
+technique_name: Apple Script Execution followed by Network Connection
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id, process.entity_id with maxspan=30s\n [process where host.os.type\
+  \ == \"macos\" and event.type == \"start\" and process.name == \"osascript\"]\n\
+  \ [network where host.os.type == \"macos\" and event.type == \"start\" and process.name\
+  \ == \"osascript\" and\n   not cidrmatch(destination.ip, \n       \"240.0.0.0/4\"\
+  , \"233.252.0.0/24\", \"224.0.0.0/4\", \"198.19.0.0/16\", \"192.18.0.0/15\", \n\
+  \       \"192.0.0.0/24\", \"10.0.0.0/8\", \"127.0.0.0/8\", \"169.254.0.0/16\", \"\
+  172.16.0.0/12\", \n       \"192.0.2.0/24\", \"192.31.196.0/24\", \"192.52.193.0/24\"\
+  , \"192.168.0.0/16\", \"192.88.99.0/24\", \n       \"100.64.0.0/10\", \"192.175.48.0/24\"\
+  , \"198.18.0.0/15\", \"198.51.100.0/24\", \"203.0.113.0/24\",\n       \"::1\", \"\
+  FE80::/10\", \"FF00::/8\")]"
+explanation: 'Detects execution via the Apple script interpreter (osascript) followed
+  by a network connection from the same process
+
+  within a short time period. Adversaries may use malicious scripts for execution
+  and command and control.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/47f76567-d58a-4fed-b32b-21f571e28910.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate automation scripts may trigger the rule if they execute osascript
+    and establish network connections. Review the script''s purpose and source to
+    determine if it is authorized.
+
+    - System management tools that use AppleScript for remote administration can cause
+    false positives. Identify these tools and consider creating exceptions for their
+    known processes.
+
+    - Software updates or applications that use AppleScript for network communication
+    might be flagged. Verify'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/index.html
+- https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml
+has_investigation_guide: true
+risk_score: 47

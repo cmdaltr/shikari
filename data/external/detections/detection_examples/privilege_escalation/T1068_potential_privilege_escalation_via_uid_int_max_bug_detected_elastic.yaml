@@ -1,0 +1,52 @@
+technique_id: T1068
+technique_name: Potential Privilege Escalation via UID INT_MAX Bug Detected
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and\n\
+  \  event.action in (\"exec\", \"exec_event\", \"ProcessRollup2\") and\n  process.name\
+  \ == \"systemd-run\" and process.args == \"-t\" and process.args_count >= 3 and\
+  \ user.id >= \"1000000000\""
+explanation: 'This rule monitors for the execution of the systemd-run command by a
+  user with a UID that is larger than the maximum
+
+  allowed UID size (INT_MAX). Some older Linux versions were affected by a bug which
+  allows user accounts with a UID
+
+  greater than INT_MAX to escalate privileges by spawning a shell through systemd-run.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d55436a8-719c-445f-92c4-c113ff2f9ba5.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - High UID service accounts: Some legitimate service accounts may have UIDs exceeding
+    INT_MAX for specific operational purposes. Review these accounts and, if verified
+    as non-threatening, add them to an exception list to prevent unnecessary alerts.
+
+    - Custom scripts or automation tools: Organizations may use scripts or tools that
+    invoke systemd-run with high UID accounts for legitimate tasks. Identify these
+    scripts and whitelist their execution paths or specific user IDs'
+  mitigation: Review investigation guide for details
+references:
+- https://twitter.com/paragonsec/status/1071152249529884674
+- https://github.com/mirchr/security-research/blob/master/vulnerabilities/CVE-2018-19788.sh
+- https://gitlab.freedesktop.org/polkit/polkit/-/issues/74
+has_investigation_guide: true
+risk_score: 47

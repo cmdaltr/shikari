@@ -1,0 +1,55 @@
+technique_id: T1562.004
+technique_name: Remote Desktop Enabled in Windows Firewall by Netsh
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ (process.name : \"netsh.exe\" or ?process.pe.original_file_name == \"netsh.exe\"\
+  ) and\n process.args : (\"localport=3389\", \"RemoteDesktop\", \"group=\\\"remote\
+  \ desktop\\\"\") and\n process.args : (\"action=allow\", \"enable=Yes\", \"enable\"\
+  )"
+explanation: 'Identifies use of the network shell utility (netsh.exe) to enable inbound
+  Remote Desktop Protocol (RDP) connections in
+
+  the Windows Firewall.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/074464f9-f30d-4029-8c03-0ed237fffec7.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- The `netsh.exe` utility can be used legitimately.\
+    \ Check whether the user should be performing this kind of activity, whether the\
+    \ user is aware of it, whether RDP should be open, and whether the action exposes\
+    \ the environment to unnecessary risks.\n\n### Response and remediation\n\n- Initiate\
+    \ the incident response process based on the outcome of the triage.\n- If RDP\
+    \ is needed, make sure to secure it:\n  - Allowlist RDP traffic to specific trusted\
+    \ hosts.\n  - Restrict RDP logi"
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

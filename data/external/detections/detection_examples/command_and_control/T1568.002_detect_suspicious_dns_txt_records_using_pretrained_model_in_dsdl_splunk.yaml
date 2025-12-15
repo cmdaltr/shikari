@@ -1,0 +1,35 @@
+technique_id: T1568.002
+technique_name: Detect suspicious DNS TXT records using pretrained model in DSDL
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.8
+validated: false
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Network_Resolution where DNS.message_type=response AND
+  DNS.record_type=TXT by DNS.src DNS.dest DNS.answer DNS.record_type | `drop_dm_object_name("DNS")`
+  | rename answer as text | fields firstTime, lastTime, message_type,record_type,src,dest,
+  text | apply detect_suspicious_dns_txt_records_using_pretrained_model_in_dsdl |
+  rename predicted_is_unknown as is_suspicious_score | where is_suspicious_score >
+  0.5 | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` |
+  table src,dest,text,record_type, firstTime, lastTime,is_suspicious_score | `detect_suspicious_dns_txt_records_using_pretrained_model_in_dsdl_filter`'
+explanation: The following analytic identifies suspicious DNS TXT records using a
+  pre-trained deep learning model. It leverages DNS response data from the Network
+  Resolution data model, categorizing TXT records into known types via regular expressions.
+  Records that do not match known patterns are flagged as suspicious. This activity
+  is significant as DNS TXT records can be used for data exfiltration or command-and-control
+  communication. If confirmed malicious, attackers could use these records to covertly
+  transfer data or receive instructions, posing a severe threat to network security.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/92f65c3a-968c-11ed-a1eb-0242ac120002/
+indicators:
+- type: risk_system
+  value: src
+  confidence: high
+false_positives:
+- description: False positives may be present if DNS TXT record contents are similar
+    to benign DNS TXT record contents.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1071/004/
+- https://unit42.paloaltonetworks.com/dns-tunneling-how-dns-can-be-abused-by-malicious-actors/
+- https://en.wikipedia.org/wiki/TXT_record

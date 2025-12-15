@@ -1,0 +1,65 @@
+technique_id: T1204
+technique_name: MS Office Macro Security Registry Modifications
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\n\
+  \    registry.value : (\"AccessVBOM\", \"VbaWarnings\") and\n    registry.data.strings\
+  \ : (\"0x00000001\", \"1\")\n\n/*\n    Full registry key paths omitted due to data\
+  \ source variations:\n    \"HKCU\\\\S-1-*\\\\SOFTWARE\\\\Microsoft\\\\Office\\\\\
+  *\\\\Security\\\\AccessVBOM\"\n    \"HKCU\\\\S-1-*\\\\SOFTWARE\\\\Microsoft\\\\\
+  Office\\\\*\\\\Security\\\\VbaWarnings\"\n*/"
+explanation: 'Microsoft Office Products offer options for users and developers to
+  control the security settings for running and using
+
+  Macros. Adversaries may abuse these security settings to modify the default behavior
+  of the Office Application to trust
+
+  future macros and/or disable security warnings, which could increase their chances
+  of establishing persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/feeed87c-5e95-4339-aef1-47fd79bcfbe3.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity should not happen legitimately. The security team should address
+    any potential benign true positive (B-TP), as this configuration can put the user
+    and the domain at risk.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Reset the registry key value.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Investigate credential exposure on systems compromised or used by the att'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

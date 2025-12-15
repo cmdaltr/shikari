@@ -1,0 +1,34 @@
+technique_id: T1568.002
+technique_name: Detect DGA domains using pretrained model in DSDL
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.8500000000000001
+validated: false
+query: '| tstats `security_content_summariesonly` values(DNS.answer) as IPs min(_time)
+  as firstTime  max(_time) as lastTime from datamodel=Network_Resolution by DNS.src,
+  DNS.query | `drop_dm_object_name(DNS)` | rename query AS domain | fields IPs, src,
+  domain, firstTime, lastTime | apply pretrained_dga_model_dsdl | rename pred_dga_proba
+  AS dga_score | where dga_score>0.5 | `security_content_ctime(firstTime)`  | `security_content_ctime(lastTime)`
+  | table src, domain, IPs, firstTime, lastTime, dga_score | `detect_dga_domains_using_pretrained_model_in_dsdl_filter`'
+explanation: The following analytic identifies Domain Generation Algorithm (DGA) generated
+  domains using a pre-trained deep learning model. It leverages the Network Resolution
+  data model to analyze domain names and detect unusual character sequences indicative
+  of DGA activity. This behavior is significant as adversaries often use DGAs to generate
+  numerous domain names for command-and-control servers, making it harder to block
+  malicious traffic. If confirmed malicious, this activity could enable attackers
+  to maintain persistent communication with compromised systems, evade detection,
+  and execute further malicious actions.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/92e24f32-9b9a-4060-bba2-2a0eb31f3493/
+indicators:
+- type: risk_system
+  value: src
+  confidence: high
+false_positives:
+- description: False positives may be present if domain name is similar to dga generated
+    domains.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1568/002/
+- https://unit42.paloaltonetworks.com/threat-brief-understanding-domain-generation-algorithms-dga/
+- https://en.wikipedia.org/wiki/Domain_generation_algorithm

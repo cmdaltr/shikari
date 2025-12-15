@@ -1,0 +1,45 @@
+technique_id: T1562
+technique_name: Microsoft 365 Teams Custom Application Interaction Allowed
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: 'event.dataset:o365.audit and event.provider:MicrosoftTeams and
+
+  event.category:web and event.action:TeamsTenantSettingChanged and
+
+  o365.audit.Name:"Allow sideloading and interaction of custom apps" and
+
+  o365.audit.NewValue:True and event.outcome:success'
+explanation: 'Identifies when custom applications are allowed in Microsoft Teams.
+  If an organization requires applications other than
+
+  those available in the Teams app store, custom applications can be developed as
+  packages and uploaded. An adversary may
+
+  abuse this behavior to establish persistence in an environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/bbd1a775-8267-41fa-9232-20e5582596ac.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative changes to Microsoft Teams settings can trigger this
+    rule. If a known and authorized administrator frequently updates tenant settings
+    to allow custom apps, consider creating an exception for their user account to
+    reduce noise.
+
+    - Organizations that regularly develop and deploy custom applications for internal
+    use may see frequent alerts. In such cases, establish a process to document and
+    approve these changes, and use this documentation to create'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/microsoftteams/platform/concepts/deploy-and-publish/apps-upload
+has_investigation_guide: true
+risk_score: 47

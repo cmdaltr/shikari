@@ -1,0 +1,41 @@
+technique_id: T1190
+technique_name: JetBrains TeamCity RCE Attempt
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("/app/rest/users/id:1/tokens/RPC2*") Web.status=200 Web.http_method=POST
+  by Web.http_user_agent, Web.status Web.http_method, Web.url, Web.url_length, Web.src,
+  Web.dest, sourcetype | `drop_dm_object_name("Web")` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `jetbrains_teamcity_rce_attempt_filter`'
+explanation: The following analytic detects attempts to exploit the CVE-2023-42793
+  vulnerability in JetBrains TeamCity On-Premises. It identifies suspicious POST requests
+  to /app/rest/users/id:1/tokens/RPC2, leveraging the Web datamodel to monitor specific
+  URL patterns and HTTP methods. This activity is significant as it may indicate an
+  unauthenticated attacker attempting to gain administrative access via Remote Code
+  Execution (RCE). If confirmed malicious, this could allow the attacker to execute
+  arbitrary code, potentially compromising the entire TeamCity environment and leading
+  to further unauthorized access and data breaches.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/89a58e5f-1365-4793-b45c-770abbb32b6c/
+indicators:
+- type: data_source
+  value: Suricata
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: If TeamCity is not in use, this analytic will not return results. Monitor
+    and tune for your environment.
+  mitigation: Review context and user activity
+references:
+- https://blog.jetbrains.com/teamcity/2023/09/critical-security-issue-affecting-teamcity-on-premises-update-to-2023-05-4-now/
+- https://www.sonarsource.com/blog/teamcity-vulnerability/
+- https://github.com/rapid7/metasploit-framework/pull/18408
+- https://attackerkb.com/topics/1XEEEkGHzt/cve-2023-42793/rapid7-analysis
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/jetbrains/teamcity.log

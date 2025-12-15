@@ -1,0 +1,48 @@
+technique_id: T1537
+technique_name: AWS EC2 Export Task
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"aws.cloudtrail\" and\n    event.provider: \"ec2.amazonaws.com\"\
+  \ and \n    event.action: (\"CreateInstanceExportTask\" or \"ExportImage\" or \"\
+  CreateStoreImageTask\") and \n    event.outcome: \"success\""
+explanation: 'Identifies successful export tasks of EC2 instances via the APIs CreateInstanceExportTask,
+  ExportImage, or
+
+  CreateStoreImageTask. These exports can be used by administrators for legitimate
+  VM migration or backup workflows
+
+  however, an attacker with access to an EC2 instance or AWS credentials can export
+  a VM or its image and then transfer it
+
+  off-account for exfiltration of data.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/deee5856-25ba-438d-ae53-09d66f41b127.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS EC2
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- Legitimate migration or backup workflows\
+    \ may trigger these export/image APIs.  \n- Development/test environments may\
+    \ export VM images or instances for sandbox cloning.  \n- Known automation tools\
+    \ may create exports at scheduled times.  \n\n### Response and remediation\n\n\
+    - Immediately identify and disable or isolate any object/resource created by the\
+    \ export (e.g., the S3 bucket/object, image ID) that is suspected of unauthorized\
+    \ use.  \n- Revoke the access credentials (`aws.c"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/vm-import/latest/userguide/vmexport.html
+- https://docs.aws.amazon.com/vm-import/latest/userguide/vmexport_image.html
+- https://cloud.hacktricks.wiki/en/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/aws-ami-store-s3-exfiltration.html,
+has_investigation_guide: true
+risk_score: 47

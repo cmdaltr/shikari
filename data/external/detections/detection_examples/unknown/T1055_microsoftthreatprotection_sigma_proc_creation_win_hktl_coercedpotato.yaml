@@ -1,0 +1,46 @@
+technique_id: T1055
+technique_name: HackTool - CoercedPotato Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: e8d34729-86a4-4140-adfd-0a29c2106307
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_*\nselection_loader_img:\n\
+  \  Image|endswith: \\CoercedPotato.exe\nselection_loader_imphash:\n  Hashes|contains:\n\
+  \  - IMPHASH=A75D7669DB6B2E107A44C4057FF7F7D6\n  - IMPHASH=F91624350E2C678C5DCBE5E1F24E22C9\n\
+  \  - IMPHASH=14C81850A079A87E83D50CA41C709A15\nselection_params:\n  CommandLine|contains:\
+  \ ' --exploitId '\n"
+explanation: Detects the use of CoercedPotato, a tool for privilege escalation
+false_positives:
+- Unknown
+references:
+- https://github.com/hackvens/CoercedPotato
+- https://blog.hackvens.fr/articles/CoercedPotato.html
+tags:
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1055
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_loader_img:
+    Image|endswith: \CoercedPotato.exe
+  selection_params:
+    CommandLine|contains: ' --exploitId '
+  selection_loader_imphash:
+    Hashes|contains:
+    - IMPHASH=A75D7669DB6B2E107A44C4057FF7F7D6
+    - IMPHASH=F91624350E2C678C5DCBE5E1F24E22C9
+    - IMPHASH=14C81850A079A87E83D50CA41C709A15
+  condition: 1 of selection_*
+metadata:
+  created_date: 2023-10-11
+  modified_date: 2024-11-23
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

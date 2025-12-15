@@ -1,0 +1,41 @@
+technique_id: T1098.002
+technique_name: O365 Elevated Mailbox Permission Assigned
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=Exchange Operation=Add-MailboxPermission
+  (AccessRights=FullAccess OR AccessRights=ChangePermission OR AccessRights=ChangeOwner)
+  | rename Identity AS dest_user | fillnull | stats count min(_time) as firstTime
+  max(_time) as lastTime by signature dest user src vendor_account vendor_product
+  dest_user | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `o365_elevated_mailbox_permission_assigned_filter`'
+explanation: The following analytic identifies the assignment of elevated mailbox
+  permissions in an Office 365 environment via the Add-MailboxPermission operation.
+  It leverages logs from the Exchange workload in the o365_management_activity data
+  source, focusing on permissions such as FullAccess, ChangePermission, or ChangeOwner.
+  This activity is significant as it indicates potential unauthorized access or control
+  over mailboxes, which could lead to data exfiltration or privilege escalation. If
+  confirmed malicious, attackers could gain extensive access to sensitive email data
+  and potentially manipulate mailbox settings, posing a severe security risk.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2246c142-a678-45f8-8546-aaed7e0efd30/
+indicators:
+- type: data_source
+  value: O365 Add-MailboxPermission
+  confidence: high
+- type: risk_user
+  value: dest_user
+  confidence: high
+false_positives:
+- description: FullAccess mailbox delegation may be assigned for legitimate purposes,
+    filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1098/002/
+- https://learn.microsoft.com/en-us/powershell/module/exchange/add-mailboxpermission
+- https://learn.microsoft.com/en-us/exchange/recipients/mailbox-permissions?view=exchserver-2019
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1114.002/suspicious_rights_delegation/suspicious_rights_delegation.json

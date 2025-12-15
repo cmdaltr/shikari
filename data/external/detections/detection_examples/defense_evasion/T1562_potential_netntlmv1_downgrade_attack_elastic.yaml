@@ -1,0 +1,57 @@
+technique_id: T1562
+technique_name: Potential NetNTLMv1 Downgrade Attack
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "registry where host.os.type == \"windows\" and event.action != \"deletion\"\
+  \ and\n registry.value == \"LmCompatibilityLevel\" and registry.data.strings in\
+  \ (\"2\", \"1\", \"0\", \"0x00000002\", \"0x00000001\", \"0x00000000\")"
+explanation: 'Identifies registry modification to force the system to fall back to
+  NTLMv1 for authentication. This modification is
+
+  possible with local administrator privileges and is commonly referred to as a `NetNTLMv1
+  downgrade attack`.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4d169db7-0323-4157-9ad3-ea5ece9019c9.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Administrative changes to LmCompatibilityLevel settings can trigger false positives
+    when IT personnel intentionally modify registry settings for legitimate purposes.
+    To handle this, create exceptions for known administrative activities by documenting
+    and excluding these specific registry changes from alerts.
+
+    - Software updates or installations that modify NTLM settings might be flagged
+    as false positives. To mitigate this, maintain a list of trusted software and
+    their'
+  mitigation: Review investigation guide for details
+references:
+- https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/network-security-lan-manager-authentication-level
+has_investigation_guide: true
+risk_score: 47

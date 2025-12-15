@@ -1,0 +1,37 @@
+technique_id: T1562.001
+technique_name: Windows Excessive Disabled Services Event
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`wineventlog_system` EventCode=7040 "disabled" | stats count values(EventData_Xml)
+  as MessageList dc(EventData_Xml) as MessageCount min(_time) as firstTime max(_time)
+  as lastTime by Computer EventCode UserID | rename Computer as dest | where count
+  >=10 | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_excessive_disabled_services_event_filter`'
+explanation: The following analytic identifies an excessive number of system events
+  where services are modified from start to disabled. It leverages Windows Event Logs
+  (EventCode 7040) to detect multiple service state changes on a single host. This
+  activity is significant as it may indicate an adversary attempting to disable security
+  applications or other critical services, potentially leading to defense evasion
+  or destructive actions. If confirmed malicious, this behavior could allow attackers
+  to disable security defenses, disrupt system operations, and achieve their objectives
+  on the compromised system.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/c3f85976-94a5-11ec-9a58-acde48001122/
+indicators:
+- type: data_source
+  value: Windows Event Log System 7040
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Unknown
+  mitigation: Review context and user activity
+references:
+- https://blog.talosintelligence.com/2018/02/olympic-destroyer.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.001/windows_excessive_disabled_services_event/windows-xml.log

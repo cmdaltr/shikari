@@ -1,0 +1,58 @@
+technique_id: T1222
+technique_name: File made Immutable by Chattr
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and process.parent.executable\
+  \ != null and\nprocess.executable : \"/usr/bin/chattr\" and process.args : (\"-*i*\"\
+  , \"+*i*\") and not (\n  process.parent.executable: (\"/lib/systemd/systemd\", \"\
+  /usr/local/uems_agent/bin/*\", \"/usr/lib/systemd/systemd\") or\n  process.parent.name\
+  \ in (\n    \"systemd\", \"cf-agent\", \"ntpdate\", \"xargs\", \"px\", \"preinst\"\
+  , \"auth\", \"cf-agent\", \"dcservice\", \"dcagentupgrader\",\n    \"sudo\", \"\
+  ephemeral-disk-warning\"\n  )\n)"
+explanation: 'Detects a file being made immutable using the chattr binary. Making
+  a file immutable means it cannot be deleted or
+
+  renamed, no link can be created to this file, most of the file''s metadata can not
+  be modified, and the file can not be
+
+  opened in write mode. Threat actors will commonly utilize this to prevent tampering
+  or modification of their malicious
+
+  files or any system files they have modified for purposes of persistence (e.g .ssh,
+  /etc/passwd, etc.).'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/968ccab9-da51-4a87-9ce2-d3c9782fd759.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System processes like systemd and cf-agent may invoke chattr for legitimate
+    reasons, such as system maintenance or configuration management. To handle these,
+    exclude these processes by adding them to the exception list in the detection
+    rule.
+
+    - Scheduled tasks or scripts that use chattr to manage file attributes for security
+    or operational purposes can trigger false positives. Identify these tasks and
+    exclude their parent processes from the rule.
+
+    - Administrative action'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

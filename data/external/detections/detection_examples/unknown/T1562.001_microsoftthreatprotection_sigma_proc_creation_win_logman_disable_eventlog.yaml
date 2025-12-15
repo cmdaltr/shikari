@@ -1,0 +1,51 @@
+technique_id: T1562.001
+technique_name: Suspicious Windows Trace ETW Session Tamper Via Logman.EXE
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.85
+validated: true
+source: sigma
+sigma_id: cd1f961e-0b96-436b-b7c6-38da4583ec00
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection*\nselection_action:\n\
+  \  CommandLine|contains:\n  - 'stop '\n  - 'delete '\nselection_img:\n- Image|endswith:\
+  \ \\logman.exe\n- OriginalFileName: Logman.exe\nselection_service:\n  CommandLine|contains:\n\
+  \  - Circular Kernel Context Logger\n  - EventLog-\n  - SYSMON TRACE\n  - SysmonDnsEtwSession\n"
+explanation: Detects the execution of "logman" utility in order to disable or delete
+  Windows trace sessions
+false_positives:
+- Legitimate deactivation by administrative staff
+- Installer tools that disable services, e.g. before log collection agent installation
+references:
+- https://twitter.com/0gtweet/status/1359039665232306183?s=21
+- https://ss64.com/nt/logman.html
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+- attack.t1070.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith: \logman.exe
+  - OriginalFileName: Logman.exe
+  selection_action:
+    CommandLine|contains:
+    - 'stop '
+    - 'delete '
+  selection_service:
+    CommandLine|contains:
+    - Circular Kernel Context Logger
+    - EventLog-
+    - SYSMON TRACE
+    - SysmonDnsEtwSession
+  condition: all of selection*
+metadata:
+  created_date: 2021-02-11
+  modified_date: 2023-02-21
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

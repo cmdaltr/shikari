@@ -1,0 +1,39 @@
+technique_id: T1110.003
+technique_name: GCP Multiple Users Failing To Authenticate From Ip
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`gws_reports_login` event.type = login event.name = login_failure | bucket
+  span=5m _time | stats count dc(user) AS unique_accounts values(user) as tried_accounts
+  values(authentication_method) AS authentication_method earliest(_time) as firstTime
+  latest(_time) as lastTime by _time event.name src app id.applicationName | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` |  where unique_accounts > 20 | `gcp_multiple_users_failing_to_authenticate_from_ip_filter`'
+explanation: The following analytic detects a single source IP address failing to
+  authenticate into more than 20 unique Google Workspace user accounts within a 5-minute
+  window. It leverages Google Workspace login failure events to identify potential
+  password spraying attacks. This activity is significant as it may indicate an adversary
+  attempting to gain unauthorized access or elevate privileges within the Google Cloud
+  Platform. If confirmed malicious, this behavior could lead to unauthorized access
+  to sensitive resources, data breaches, or further exploitation within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/da20828e-d6fb-4ee5-afb7-d0ac200923d5/
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+- type: risk_user
+  value: tried_accounts
+  confidence: high
+false_positives:
+- description: No known false postives for this detection. Please review this alert.
+  mitigation: Review context and user activity
+references:
+- https://cloud.google.com/blog/products/identity-security/how-google-cloud-can-help-stop-credential-stuffing-attacks
+- https://www.slideshare.net/dafthack/ok-google-how-do-i-red-team-gsuite
+- https://attack.mitre.org/techniques/T1110/003/
+- https://www.blackhillsinfosec.com/wp-content/uploads/2020/05/Breaching-the-Cloud-Perimeter-Slides.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1110.003/gcp_gws_multiple_login_failure/gws_login.json

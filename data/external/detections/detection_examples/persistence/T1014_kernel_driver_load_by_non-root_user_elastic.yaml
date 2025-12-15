@@ -1,0 +1,50 @@
+technique_id: T1014
+technique_name: Kernel Driver Load by non-root User
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: 'driver where host.os.type == "linux" and event.action == "loaded-kernel-module"
+  and
+
+  auditd.data.syscall in ("init_module", "finit_module") and user.id != "0"'
+explanation: 'Detects the loading of a Linux kernel module by a non-root user through
+  system calls. Threat actors may leverage Linux
+
+  kernel modules to load a rootkit on a system providing them with complete control
+  and the ability to hide from security
+
+  products. As other rules monitor for the addition of Linux kernel modules through
+  system utilities or .ko files, this
+
+  rule covers the gap that evasive rootkits leverage by monitoring for kernel module
+  additions on the lowest level through
+
+  auditd_manager.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ba81c182-4287-489d-af4d-8ae834b06040.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software or system utilities may occasionally load kernel modules
+    as part of their normal operation. Identify these applications and verify their
+    behavior to ensure they are not malicious.
+
+    - Development environments or testing scenarios might involve non-root users loading
+    kernel modules for legitimate purposes. Consider creating exceptions for these
+    specific users or processes after thorough validation.
+
+    - Some system management tools or scripts executed by'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

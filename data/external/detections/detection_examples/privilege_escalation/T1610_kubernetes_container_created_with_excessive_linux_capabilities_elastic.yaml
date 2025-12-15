@@ -1,0 +1,54 @@
+technique_id: T1610
+technique_name: Kubernetes Container Created with Excessive Linux Capabilities
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset: kubernetes.audit_logs\n  and kubernetes.audit.annotations.authorization_k8s_io/decision:\"\
+  allow\"\n  and kubernetes.audit.verb: create\n  and kubernetes.audit.objectRef.resource:\
+  \ pods\n  and kubernetes.audit.requestObject.spec.containers.securityContext.capabilities.add:\
+  \ (\"BPF\" or \"DAC_READ_SEARCH\"  or \"NET_ADMIN\" or \"SYS_ADMIN\" or \"SYS_BOOT\"\
+  \ or \"SYS_MODULE\" or \"SYS_PTRACE\" or \"SYS_RAWIO\"  or \"SYSLOG\")\n  and not\
+  \ kubernetes.audit.requestObject.spec.containers.image : (\"docker.elastic.co/beats/elastic-agent:8.4.0\"\
+  \ or \"rancher/klipper-lb:v0.3.5\" or \"\")"
+explanation: 'This rule detects a container deployed with one or more dangerously
+  permissive Linux capabilities. An attacker with the
+
+  ability to deploy a container with added capabilities could use this for further
+  execution, lateral movement, or
+
+  privilege escalation within a cluster. The capabilities detected in this rule have
+  been used in container escapes to the
+
+  host machine.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7164081a-3930-11ed-a261-0242ac120002.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Kubernetes
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - While these capabilities are not included by default in containers, some legitimate
+    images may need to add them. This rule leaves space for the exception of trusted
+    container images. To add an exception, add the trusted container image name to
+    the query field, kubernetes.audit.requestObject.spec.containers.image.
+
+
+    ## Setup
+
+
+    The Kubernetes Fleet integration with Audit Logs enabled or similarly structured
+    data is required to be compatible with this rule.'
+  mitigation: Review investigation guide for details
+references:
+- https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container
+- https://0xn3va.gitbook.io/cheat-sheets/container/escaping/excessive-capabilities
+- https://man7.org/linux/man-pages/man7/capabilities.7.html
+- https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities
+has_investigation_guide: true
+risk_score: 47

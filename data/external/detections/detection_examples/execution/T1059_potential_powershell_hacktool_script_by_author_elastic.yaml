@@ -1,0 +1,56 @@
+technique_id: T1059
+technique_name: Potential PowerShell HackTool Script by Author
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "host.os.type:windows and event.category:process and\n  powershell.file.script_block_text\
+  \ : (\n      \"mattifestation\" or \"JosephBialek\" or\n      \"harmj0y\" or \"\
+  ukstufus\" or\n      \"SecureThisShit\" or \"Matthew Graeber\" or\n      \"secabstraction\"\
+  \ or \"mgeeky\" or\n      \"oddvarmoe\" or \"am0nsec\" or\n      \"obscuresec\"\
+  \ or \"sixdub\" or\n      \"darkoperator\" or \"funoverip\" or\n      \"rvrsh3ll\"\
+  \ or \"kevin_robertson\" or\n      \"dafthack\" or \"r4wd3r\" or\n      \"danielhbohannon\"\
+  \ or \"OneLogicalMyth\" or\n      \"cobbr_io\" or \"xorrior\" or\n      \"PetrMedonos\"\
+  \ or \"citronneur\" or\n      \"eladshamir\" or \"RastaMouse\" or\n      \"enigma0x3\"\
+  \ or \"FuzzySec\" or\n      \"424f424f\" or \"jaredhaight\" or\n      \"fullmetalcache\"\
+  \ or \"Hubbl3\" or\n      \"curi0usJack\" or \"Cx01N\" or\n      \"itm4n\" or \"\
+  nurfed1\" or\n      \"cfalta\" or \"Scott Sutherland\" or\n      \"_nullbind\" or\
+  \ \"_tmenochet\" or\n      \"jaredcatkinson\" or \"ChrisTruncer\" or\n      \"monoxgas\"\
+  \ or \"TheRealWover\" or\n      \"splinter_code\"\n  ) and\n  not powershell.file.script_block_text\
+  \ : (\"Get-UEFIDatabaseSigner\" or \"Posh-SSH\")"
+explanation: 'Detects known PowerShell offensive tooling author''s name in PowerShell
+  scripts. Attackers commonly use out-of-the-box
+
+  offensive tools without modifying the code, which may still contain the author artifacts.
+  This rule identifies common
+
+  author handles found in popular PowerShell scripts used for red team exercises.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2553a9af-52a4-4a05-bb03-85b2a479a0a0.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Scripts used in legitimate red team exercises may trigger the rule due to the
+    presence of known author names. To manage this, create exceptions for scripts
+    verified as part of authorized security assessments.
+
+    - PowerShell scripts from open-source security tools used for internal testing
+    or training might be flagged. Ensure these tools are documented and approved,
+    then exclude them from the rule.
+
+    - Automated scripts for system administration that include code snippets f'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/atc-project/atc-data/blob/master/docs/Logging_Policies/LP_0109_windows_powershell_script_block_log.md
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,44 @@
+technique_id: T1543.003
+technique_name: First Time Seen Driver Loaded
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.category:"driver" and host.os.type:windows and event.action:"load"
+explanation: 'Identifies the load of a driver with an original file name and signature
+  values that were observed for the first time
+
+  during the last 30 days. This rule type can help baseline drivers installation within
+  your environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/df0fd41e-5590-4965-ad5e-cd079ec22fa9.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Matches derived from these rules are not inherently malicious. The security
+    team should investigate them to ensure they are legitimate and needed, then include
+    them in an allowlist only if required. The security team should address any vulnerable
+    driver installation as it can put the user and the domain at risk.
+
+
+    ### Related Rules
+
+
+    - Untrusted Driver Loaded - d8ab1ec1-feeb-48b9-89e7-c12e189448aa
+
+    - Code Signing Policy Modification Through Registry - da7733b1-fe08-487e-b'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/kr/security-labs/stopping-vulnerable-driver-attacks
+has_investigation_guide: true
+risk_score: 47

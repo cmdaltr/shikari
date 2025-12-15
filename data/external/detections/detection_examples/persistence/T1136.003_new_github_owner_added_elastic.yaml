@@ -1,0 +1,39 @@
+technique_id: T1136.003
+technique_name: New GitHub Owner Added
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: iam where event.dataset == "github.audit" and event.action == "org.add_member"
+  and github.permission == "admin"
+explanation: 'Detects when a new member is added to a GitHub organization as an owner.
+  This role provides admin level privileges. Any
+
+  new owner roles should be investigated to determine it''s validity. Unauthorized
+  owner roles could indicate compromise
+
+  within your organization and provide unlimited access to data and settings.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/24401eca-ad0b-4ff9-9431-487a8e183af9.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Github
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate organizational changes: New owners may be added during legitimate
+    restructuring or team expansions. Regularly review and document organizational
+    changes to differentiate between authorized and unauthorized additions.
+
+    - Automated processes: Some organizations use automated scripts or tools to manage
+    GitHub permissions, which might trigger this rule. Identify and whitelist these
+    processes to prevent unnecessary alerts.
+
+    - Temporary access requirements: Occasion'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

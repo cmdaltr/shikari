@@ -1,0 +1,34 @@
+technique_id: T1546
+technique_name: Unexpected Child Process of macOS Screensaver Engine
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: process where host.os.type == "macos" and event.type == "start" and process.parent.name
+  == "ScreenSaverEngine"
+explanation: 'Identifies when a child process is spawned by the screensaver engine
+  process, which is consistent with an attacker''s
+
+  malicious payload being executed after the screensaver activated on the endpoint.
+  An adversary can maintain persistence
+
+  on a macOS endpoint by creating a malicious screensaver (.saver) file and configuring
+  the screensaver plist file to
+
+  execute code each time the screensaver is activated.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/48d7f54d-c29e-4430-93a9-9db6b5892270.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+references:
+- https://posts.specterops.io/saving-your-access-d562bf5bf90b
+- https://github.com/D00MFist/PersistentJXA
+has_investigation_guide: true
+risk_score: 47

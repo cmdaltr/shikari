@@ -1,0 +1,59 @@
+technique_id: T1552.005
+technique_name: AWS EC2 User Data Retrieval for EC2 Instance
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"aws.cloudtrail\"\n    and event.provider: \"ec2.amazonaws.com\"\
+  \n    and event.action: \"DescribeInstanceAttribute\"\n    and event.outcome: \"\
+  success\"\n    and aws.cloudtrail.flattened.request_parameters.attribute: \"userData\"\
+  \n    and not aws.cloudtrail.user_identity.invoked_by: (\n        \"AWS Internal\"\
+  \ or\n        \"cloudformation.amazonaws.com\"\n    )"
+explanation: 'Identifies discovery request DescribeInstanceAttribute with the attribute
+  userData and instanceId in AWS CloudTrail
+
+  logs. This may indicate an attempt to retrieve user data from an EC2 instance. Adversaries
+  may use this information to
+
+  gather sensitive data from the instance such as hardcoded credentials or to identify
+  potential vulnerabilities. This is
+
+  a New Terms rule that identifies the first time an IAM user or role requests the
+  user data for a specific EC2 instance.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c1e79a70-fa6f-11ee-8bc8-f661ea17fbce.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: Amazon EC2
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - **Automation**: This event is often triggered by legitimate automation tools,
+    such as Terraform or custom scripts, that require access to `userData` during
+    instance initialization.
+
+    - **Maintenance Activity**: Verify whether this event aligns with expected administrative
+    activities, such as debugging or instance configuration updates.
+
+
+    ### Response and Remediation
+
+
+    - **Revoke Excessive Permissions**: If unauthorized, immediately remove `DescribeInstanceAttribute`
+    permis'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeInstanceAttribute.html
+- https://hackingthe.cloud/aws/exploitation/local_ec2_priv_esc_through_user_data
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,56 @@
+technique_id: T1574.011
+technique_name: Suspicious Service DACL Modification Via Set-Service Cmdlet - PS
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.83
+validated: true
+source: sigma
+sigma_id: 22d80745-6f2c-46da-826b-77adaededd74
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_sddl_flag:\n  ScriptBlockText|contains:\n  - '-SecurityDescriptorSddl\
+  \ '\n  - '-sd '\nselection_set_service:\n  ScriptBlockText|contains:\n  - ;;;IU\n\
+  \  - ;;;SU\n  - ;;;BA\n  - ;;;SY\n  - ;;;WD\n  ScriptBlockText|contains|all:\n \
+  \ - 'Set-Service '\n  - D;;\n"
+explanation: Detects usage of the "Set-Service" powershell cmdlet to configure a new
+  SecurityDescriptor that allows a service to be hidden from other utilities such
+  as "sc.exe", "Get-Service"...etc. (Works only in powershell 7)
+false_positives:
+- Rare intended use of hidden services
+- Rare FP could occur due to the non linearity of the ScriptBlockText log
+references:
+- https://twitter.com/Alh4zr3d/status/1580925761996828672
+- https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-service?view=powershell-7.2
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1574.011
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection_sddl_flag:
+    ScriptBlockText|contains:
+    - '-SecurityDescriptorSddl '
+    - '-sd '
+  selection_set_service:
+    ScriptBlockText|contains|all:
+    - 'Set-Service '
+    - D;;
+    ScriptBlockText|contains:
+    - ;;;IU
+    - ;;;SU
+    - ;;;BA
+    - ;;;SY
+    - ;;;WD
+  condition: all of selection_*
+metadata:
+  created_date: 2022-10-24
+  modified_date: '2025-11-28'
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,75 @@
+technique_id: T1098
+technique_name: Microsoft Entra ID Suspicious Cloud Device Registration
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by azure.correlation_id with maxspan=1m\n[any where event.dataset\
+  \ == \"azure.auditlogs\" and\n    azure.auditlogs.identity == \"Device Registration\
+  \ Service\" and\n    azure.auditlogs.operation_name == \"Add device\" and\n    azure.auditlogs.properties.additional_details.value\
+  \ like \"Microsoft.OData.Client/*\" and (\n        `azure.auditlogs.properties.target_resources.0.modified_properties.1.display_name`\
+  \ == \"CloudAccountEnabled\" and\n        `azure.auditlogs.properties.target_resources.0.modified_properties.1.new_value`\
+  \ == \"[true]\"\n    ) and\n    `azure.auditlogs.properties.target_resources.0.modified_properties.3.new_value`\
+  \ like \"*10.0.19041.928*\"]\n[any where event.dataset == \"azure.auditlogs\" and\n\
+  \    azure.auditlogs.operation_name == \"Add registered users to device\" and\n\
+  \    `azure.auditlogs.properties.target_resources.0.modified_properties.2.new_value`\
+  \ like \"*urn:ms-drs:enterpriseregistration.windows.net*\"]\n[any where event.dataset\
+  \ == \"azure.auditlogs\" and\n    azure.auditlogs.operation_name == \"Add registered\
+  \ owner to device\"]"
+explanation: 'Detects a sequence of events in Microsoft Entra ID indicative of a suspicious
+  cloud-based device registration,
+
+  potentially using ROADtools. This behavior involves adding a device via the Device
+  Registration Service, followed by the
+
+  assignment of registered users and owners — a pattern consistent with techniques
+  used to establish persistence or
+
+  acquire a Primary Refresh Token (PRT). ROADtools, a popular red team toolkit, often
+  leaves distinct telemetry signatures
+
+  such as the `Microsoft.OData.Client` user agent and specific OS version values.
+  These sequences are uncommon in typical
+
+  user behavior and may reflect abuse of device trust for session hijacking or silent
+  token replay.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/90efea04-5675-11f0-8f80-f661ea17fbcd.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Some MDM or autopilot provisioning flows may generate similar sequences. Validate
+    against known provisioning tools, expected rollout windows, and device inventory.
+
+    - Investigate whether the device name, OS version, and registration details align
+    with normal IT workflows.
+
+
+    ### Response and remediation
+
+
+    - If confirmed malicious, remove the registered device from Entra ID.
+
+    - Revoke refresh tokens and primary refresh tokens associated with the user and
+    device.
+
+    - Disable th'
+  mitigation: Review investigation guide for details
+references:
+- https://www.volexity.com/blog/2025/04/22/phishing-for-codes-russian-threat-actors-target-microsoft-365-oauth-workflows/
+- https://github.com/dirkjanm/ROADtools
+has_investigation_guide: true
+risk_score: 47

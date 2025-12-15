@@ -1,0 +1,43 @@
+technique_id: T1112
+technique_name: Windows Defender ASR Rule Disabled
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`ms_defender` EventCode IN (5007) | rex field=New_Value "0x(?<New_Registry_Value>\\d+)$"
+  | rex field=Old_Value "0x(?<Old_Registry_Value>\\d+)$" | rex field=New_Value "Rules\\\\(?<ASR_ID>[A-Fa-f0-9\\-]+)\\s*="
+  | eval New_Registry_Value=case(New_Registry_Value=="0", "Disabled", New_Registry_Value=="1",
+  "Block", New_Registry_Value=="2", "Audit", New_Registry_Value=="6", "Warn") | eval
+  Old_Registry_Value=case(Old_Registry_Value=="0", "Disabled", Old_Registry_Value=="1",
+  "Block", Old_Registry_Value=="2", "Audit", Old_Registry_Value=="6", "Warn") | search
+  New_Registry_Value="Disabled" | stats count min(_time) as firstTime max(_time) as
+  lastTime by host, New_Value, Old_Value, Old_Registry_Value, New_Registry_Value,
+  ASR_ID | lookup asr_rules ID AS ASR_ID OUTPUT ASR_Rule | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)`| rename host as dest | `windows_defender_asr_rule_disabled_filter`'
+explanation: The following analytic identifies when a Windows Defender ASR rule disabled
+  events. ASR is a feature of Windows Defender Exploit Guard that prevents actions
+  and apps that are typically used by exploit-seeking malware to infect machines.
+  ASR rules are applied to processes and applications. When a process or application
+  attempts to perform an action that is blocked by an ASR rule, an event is generated.
+  This detection searches for ASR rule disabled events that are generated when an
+  ASR rule is disabled.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/429d611b-3183-49a7-b235-fc4203c4e1cb/
+indicators:
+- type: data_source
+  value: Windows Event Log Defender 5007
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may occur if applications are typically disabling ASR
+    rules in the environment. Monitor for changes to ASR rules to determine if this
+    is a false positive.
+  mitigation: Review context and user activity
+references:
+- https://asrgen.streamlit.app/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059/defender/asr_disabled_registry.log

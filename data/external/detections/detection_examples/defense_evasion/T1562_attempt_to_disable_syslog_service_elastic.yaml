@@ -1,0 +1,55 @@
+technique_id: T1562
+technique_name: Attempt to Disable Syslog Service
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"linux\" and event.action in (\"exec\", \"\
+  exec_event\", \"start\", \"ProcessRollup2\") and\n ( (process.name == \"service\"\
+  \ and process.args == \"stop\") or\n   (process.name == \"chkconfig\" and process.args\
+  \ == \"off\") or\n   (process.name == \"systemctl\" and process.args in (\"disable\"\
+  , \"stop\", \"kill\"))\n ) and process.args in (\"syslog\", \"rsyslog\", \"syslog-ng\"\
+  , \"syslog.service\", \"rsyslog.service\", \"syslog-ng.service\") and\nnot (\n \
+  \ process.parent.name == \"rsyslog-rotate\" or\n  process.args == \"HUP\"\n)"
+explanation: 'Adversaries may attempt to disable the syslog service in an attempt
+  to an attempt to disrupt event logging and evade
+
+  detection by security controls.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2f8a1226-5720-437d-9c20-e0029deb6194.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance activities may trigger this rule, such as scheduled service
+    restarts or system updates. To manage this, create exceptions for known maintenance
+    windows or specific administrative accounts performing these tasks.
+
+    - Automated scripts or configuration management tools like Ansible or Puppet might
+    stop or disable syslog services as part of their operations. Identify these scripts
+    and whitelist their execution paths or associated user accounts.
+
+    - Testing'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/detecting-log4j2-with-elastic-security
+has_investigation_guide: true
+risk_score: 47

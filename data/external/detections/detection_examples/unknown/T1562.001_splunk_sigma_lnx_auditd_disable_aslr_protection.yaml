@@ -1,0 +1,53 @@
+technique_id: T1562.001
+technique_name: ASLR Disabled Via Sysctl or Direct Syscall - Linux
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: e497a24e-9345-4a62-9803-b06d7d7cb132
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_*\nselection_syscall:\n\
+  \  a0: 40000\n  syscall: personality\n  type: SYSCALL\nselection_sysctl:\n  a0:\
+  \ sysctl\n  a1: -w\n  a2: kernel.randomize_va_space=0\n  type: EXECVE\n"
+explanation: "Detects actions that disable Address Space Layout Randomization (ASLR)\
+  \ in Linux, including:\n  - Use of the `personality` syscall with the ADDR_NO_RANDOMIZE\
+  \ flag (0x0040000)\n  - Modification of the /proc/sys/kernel/randomize_va_space\
+  \ file\n  - Execution of the `sysctl` command to set `kernel.randomize_va_space=0`\n\
+  Disabling ASLR is often used by attackers during exploit development or to bypass\
+  \ memory protection mechanisms.\nA successful use of these methods can reduce the\
+  \ effectiveness of ASLR and make memory corruption attacks more reliable.\n"
+false_positives:
+- Debugging or legitimate software testing
+references:
+- https://github.com/CheraghiMilad/bypass-Neo23x0-auditd-config/blob/f1c478a37911a5447d5ffcd580f22b167bf3df14/personality-syscall/README.md
+- https://man7.org/linux/man-pages/man2/personality.2.html
+- https://manual.cs50.io/2/personality
+- https://linux-audit.com/linux-aslr-and-kernelrandomize_va_space-setting/
+tags:
+- attack.privilege-escalation
+- attack.defense-evasion
+- attack.t1562.001
+- attack.t1055.009
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection_syscall:
+    type: SYSCALL
+    syscall: personality
+    a0: 40000
+  selection_sysctl:
+    type: EXECVE
+    a0: sysctl
+    a1: -w
+    a2: kernel.randomize_va_space=0
+  condition: 1 of selection_*
+metadata:
+  created_date: 2025-05-26
+  modified_date: 2025-10-18
+  author: Milad Cheraghi
+  status: experimental
+  imported_date: '2025-11-28'

@@ -1,0 +1,46 @@
+technique_id: T1027
+technique_name: Command Line Obfuscation via Whitespace Padding
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "FROM logs-* metadata _id, _version, _index\n| where event.category == \"process\"\
+  \ and event.type == \"start\" and event.action != \"fork\"\n// more than 100 spaces\
+  \ in process.command_line\n| eval multi_spaces = LOCATE(process.command_line, space(100))\
+  \ \n| where multi_spaces > 0 \n| keep user.name, host.id, host.name, process.command_line,\
+  \ process.executable, process.parent.executable"
+explanation: 'Identifies process execution events where the command line value contains
+  a long sequence of whitespace characters or
+
+  multiple occurrences of contiguous whitespace. Attackers may attempt to evade signature-based
+  detections by padding
+
+  their malicious command with unnecessary whitespace characters. These observations
+  should be investigated for malicious
+
+  behavior.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5a876e0d-d39a-49b9-8ad8-19c9b622203b.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: operating_system
+  value: Windows
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- Alerts derived from this rule are not\
+    \ inherently malicious. Analysts can dismiss the alert if they don't find enough\n\
+    evidence of further suspicious activity.\n\n### Response and remediation\n\n-\
+    \ Initiate the incident response process based on the outcome of the triage.\n\
+    - Isolate the involved host to prevent further post-compromise behavior.\n- If\
+    \ the triage identified malware, search the environment for additional compromised\
+    \ hosts.\n  - Implement temporary network rules, pr"
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

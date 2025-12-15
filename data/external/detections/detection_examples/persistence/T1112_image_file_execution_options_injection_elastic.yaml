@@ -1,0 +1,79 @@
+technique_id: T1112
+technique_name: Image File Execution Options Injection
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\n\
+  \  registry.value : (\"Debugger\", \"MonitorProcess\") and length(registry.data.strings)\
+  \ > 0 and\n  registry.path : (\n    \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\
+  \\CurrentVersion\\\\Image File Execution Options\\\\*.exe\\\\Debugger\",\n    \"\
+  HKLM\\\\SOFTWARE\\\\WOW6432Node\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\\
+  Image File Execution Options\\\\*\\\\Debugger\",\n    \"HKLM\\\\SOFTWARE\\\\Microsoft\\\
+  \\Windows NT\\\\CurrentVersion\\\\SilentProcessExit\\\\*\\\\MonitorProcess\",\n\
+  \    \"HKLM\\\\SOFTWARE\\\\WOW6432Node\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\
+  \\SilentProcessExit\\\\*\\\\MonitorProcess\",\n    \"\\\\REGISTRY\\\\MACHINE\\\\\
+  SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Image File Execution Options\\\
+  \\*.exe\\\\Debugger\",\n    \"\\\\REGISTRY\\\\MACHINE\\\\SOFTWARE\\\\WOW6432Node\\\
+  \\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Image File Execution Options\\\\\
+  *\\\\Debugger\",\n    \"\\\\REGISTRY\\\\MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\
+  \ NT\\\\CurrentVersion\\\\SilentProcessExit\\\\*\\\\MonitorProcess\",\n    \"\\\\\
+  REGISTRY\\\\MACHINE\\\\SOFTWARE\\\\WOW6432Node\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\
+  \\SilentProcessExit\\\\*\\\\MonitorProcess\",\n    \"MACHINE\\\\SOFTWARE\\\\Microsoft\\\
+  \\Windows NT\\\\CurrentVersion\\\\Image File Execution Options\\\\*.exe\\\\Debugger\"\
+  ,\n    \"MACHINE\\\\SOFTWARE\\\\WOW6432Node\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\
+  \\Image File Execution Options\\\\*\\\\Debugger\",\n    \"MACHINE\\\\SOFTWARE\\\\\
+  Microsoft\\\\Windows NT\\\\CurrentVersion\\\\SilentProcessExit\\\\*\\\\MonitorProcess\"\
+  ,\n    \"MACHINE\\\\SOFTWARE\\\\WOW6432Node\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\
+  \\SilentProcessExit\\\\*\\\\MonitorProcess\"\n  ) and\n    /* add FPs here */\n\
+  \  not registry.data.strings regex~ (\"\"\"C:\\\\Program Files( \\(x86\\))?\\\\\
+  ThinKiosk\\\\thinkiosk\\.exe\"\"\", \"\"\".*\\\\PSAppDeployToolkit\\\\.*\"\"\")"
+explanation: 'The Debugger and SilentProcessExit registry keys can allow an adversary
+  to intercept the execution of files, causing a
+
+  different process to be executed. This functionality can be abused by an adversary
+  to establish persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6839c821-011d-43bd-bd5b-acff00257226.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - ThinKiosk and PSAppDeployToolkit are known to trigger false positives due to
+    their legitimate use of the Debugger registry key. Users can mitigate this by
+    adding exceptions for these applications in the detection rule.
+
+    - Regularly review and update the list of exceptions to include any new legitimate
+    applications that may use the Debugger or MonitorProcess registry keys for valid
+    purposes.
+
+    - Monitor the environment for any new software installations or updates that mig'
+  mitigation: Review investigation guide for details
+references:
+- https://oddvar.moe/2018/04/10/persistence-using-globalflags-in-image-file-execution-options-hidden-from-autoruns-exe/
+has_investigation_guide: true
+risk_score: 47

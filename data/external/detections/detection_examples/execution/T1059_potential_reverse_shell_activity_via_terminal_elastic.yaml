@@ -1,0 +1,55 @@
+technique_id: T1059
+technique_name: Potential Reverse Shell Activity via Terminal
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where event.type in (\"start\", \"process_started\") and\n  process.name\
+  \ in (\"sh\", \"bash\", \"zsh\", \"dash\", \"zmodload\") and\n  process.args : (\"\
+  */dev/tcp/*\", \"*/dev/udp/*\", \"*zsh/net/tcp*\", \"*zsh/net/udp*\") and\n\n  /*\
+  \ noisy FPs */\n  not (process.parent.name : \"timeout\" and process.executable\
+  \ : \"/var/lib/docker/overlay*\") and\n  not process.command_line : (\n    \"*/dev/tcp/sirh_db/*\"\
+  , \"*/dev/tcp/remoteiot.com/*\", \"*dev/tcp/elk.stag.one/*\", \"*dev/tcp/kafka/*\"\
+  ,\n    \"*/dev/tcp/$0/$1*\", \"*/dev/tcp/127.*\", \"*/dev/udp/127.*\", \"*/dev/tcp/localhost/*\"\
+  , \"*/dev/tcp/itom-vault/*\") and\n  not process.parent.command_line : \"runc init\""
+explanation: Identifies the execution of a shell process with suspicious arguments
+  which may be indicative of reverse shell activity.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a1a0375f-22c2-48c0-81a4-7c2d11cc6856.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Any activity that triggered
+    the alert and is not inherently malicious must be monitored by the security team.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all compromised accounts are identified.'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md
+- https://github.com/WangYihang/Reverse-Shell-Manager
+- https://www.netsparker.com/blog/web-security/understanding-reverse-shells/
+- https://www.elastic.co/security-labs/detecting-log4j2-with-elastic-security
+has_investigation_guide: true
+risk_score: 73

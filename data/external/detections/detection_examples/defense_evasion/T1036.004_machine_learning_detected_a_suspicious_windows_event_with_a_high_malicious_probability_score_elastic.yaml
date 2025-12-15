@@ -1,0 +1,54 @@
+technique_id: T1036.004
+technique_name: Machine Learning Detected a Suspicious Windows Event with a High Malicious
+  Probability Score
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: 'process where ((problemchild.prediction == 1 and problemchild.prediction_probability
+  > 0.98) or
+
+  blocklist_label == 1) and not process.args : ("*C:\\WINDOWS\\temp\\nessus_*.txt*",
+  "*C:\\WINDOWS\\temp\\nessus_*.tmp*")'
+explanation: 'A supervised machine learning model (ProblemChild) has identified a
+  suspicious Windows process event with high
+
+  probability of it being malicious activity. Alternatively, the model''s blocklist
+  identified the event as being
+
+  malicious.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/994e40aa-8c85-43de-825e-15f665375ee8.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Nessus scan files in the Windows temp directory may trigger false positives
+    due to their temporary nature and frequent legitimate use. Users can mitigate
+    this by adding exceptions for file paths like C:\WINDOWS\temp\nessus_*.txt and
+    C:\WINDOWS\temp\nessus_*.tmp.
+
+    - Legitimate software updates or installations might be flagged if they mimic
+    known malicious patterns. Users should review the process details and whitelist
+    trusted software update processes.
+
+    - System administ'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/guide/en/security/current/prebuilt-ml-jobs.html
+- https://docs.elastic.co/en/integrations/problemchild
+- https://www.elastic.co/security-labs/detecting-living-off-the-land-attacks-with-new-elastic-integration
+has_investigation_guide: true
+risk_score: 73

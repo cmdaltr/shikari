@@ -1,0 +1,26 @@
+technique_id: T1078
+technique_name: CyberArk Privileged Access Security Recommended Monitor
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset:cyberarkpas.audit and\n  event.code:(4 or 22 or 24 or 31 or\
+  \ 38 or 57 or 60 or 130 or 295 or 300 or 302 or\n              308 or 319 or 344\
+  \ or 346 or 359 or 361 or 378 or 380 or 411) and\n  not event.type:error"
+explanation: 'Identifies the occurrence of a CyberArk Privileged Access Security (PAS)
+  non-error level audit event which is
+
+  recommended for monitoring by the vendor. The event.code correlates to the CyberArk
+  Vault Audit Action Code.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c5f81243-56e0-47f9-b5bb-55a5ed89ba57.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: CyberArk PAS
+  confidence: high
+references:
+- https://docs.cyberark.com/Product-Doc/OnlineHelp/PAS/Latest/en/Content/PASREF/Vault%20Audit%20Action%20Codes.htm?tocpath=Administration%7CReferences%7C_____3#RecommendedActionCodesforMonitoring
+has_investigation_guide: true
+risk_score: 73

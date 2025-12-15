@@ -1,0 +1,43 @@
+technique_id: T1110
+technique_name: Entra ID Protection - Risk Detection - Sign-in Risk
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset: \"azure.identity_protection\" and\n    event.action: \"User\
+  \ Risk Detection\" and\n    azure.identityprotection.properties.activity: \"signin\""
+explanation: 'Identifies sign-in risk detection events via Microsofts Entra ID Protection
+  service. Entra ID Protection detects sign-in
+
+  activity such as anonymized IP addresses, unlikely travel, password spray, and more.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/064a2e08-25da-11f0-b1f1-f661ea17fbcd.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Entra ID
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Users accessing their accounts from anonymized IP addresses, such as VPNs or
+    Tor, may trigger this rule. If this is expected behavior in your environment,
+    consider adjusting the rule or adding exceptions for specific users or IP ranges.
+
+    - Users who frequently travel or access their accounts from different geographic
+    locations may trigger this rule due to the unlikely travel detection mechanism.
+    If this is expected behavior, consider adjusting the rule or adding excepti'
+  mitigation: Review investigation guide for details
+references:
+- https://www.volexity.com/blog/2025/04/22/phishing-for-codes-russian-threat-actors-target-microsoft-365-oauth-workflows/
+- https://github.com/dirkjanm/ROADtools
+- https://dirkjanm.io/phishing-for-microsoft-entra-primary-refresh-tokens/
+- https://learn.microsoft.com/en-us/entra/id-protection/concept-identity-protection-risks#risk-types-and-detection
+- https://www.microsoft.com/en-us/security/blog/2025/05/27/new-russia-affiliated-actor-void-blizzard-targets-critical-sectors-for-espionage/
+has_investigation_guide: true
+risk_score: 73

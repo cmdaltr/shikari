@@ -1,0 +1,45 @@
+technique_id: T1059
+technique_name: Cisco Secure Firewall - High Volume of Intrusion Events Per Host
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: "`cisco_secure_firewall` EventType=IntrusionEvent\n| bin _time span=30m\n|\
+  \ stats count as TotalEvents values(signature_id) as signature_id\n        values(signature)\
+  \ as signature\n        values(dest) as dest\n        values(dest_port) as dest_port\n\
+  \        min(_time) as firstTime max(_time) as lastTime \n        by src_ip class_desc\
+  \ MitreAttackGroups InlineResult InlineResultReason rule transport app\n| where\
+  \ TotalEvents >= 15\n| `security_content_ctime(firstTime)`\n| `security_content_ctime(lastTime)`\n\
+  | `cisco_secure_firewall___high_volume_of_intrusion_events_per_host_filter`"
+explanation: The following analytic detects internal systems that generate an unusually
+  high volume of intrusion detections within a 30-minute window. It leverages Cisco
+  Secure Firewall Threat Defense logs, specifically focusing on the IntrusionEvent
+  event type, to identify hosts that trigger more than 15 Snort-based signatures during
+  that time. A sudden spike in intrusion alerts originating from a single host may
+  indicate suspicious or malicious activity such as malware execution, command-and-control
+  communication, vulnerability scanning, or lateral movement. In some cases, this
+  behavior may also be caused by misconfigured or outdated software repeatedly tripping
+  detection rules. Systems exhibiting this pattern should be triaged promptly, as
+  repeated Snort rule matches from a single source are often early indicators of compromise,
+  persistence, or active exploitation attempts.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/9f2295a0-0dcb-4a5f-b013-8a6f2a3c11f6/
+indicators:
+- type: data_source
+  value: Cisco Secure Firewall Threat Defense Intrusion Event
+  confidence: high
+- type: risk_system
+  value: src_ip
+  confidence: high
+false_positives:
+- description: False positives can occur in environments where vulnerability scanners
+    or malware sandboxes are actively generating simulated attacks. Additionally,
+    noisy or overly aggressive Snort rules may produce bursts of alerts from legitimate
+    applications. Review host context before escalating.
+  mitigation: Review context and user activity
+references:
+- https://www.cisco.com/c/en/us/td/docs/security/firepower/741/api/FQE/secure_firewall_estreamer_fqe_guide_740.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/cisco_secure_firewall_threat_defense/intrusion_event/intrusion_events.log

@@ -1,0 +1,59 @@
+technique_id: T1071.001
+technique_name: Suspicious Installer Package Spawns Network Event
+tactic: execution
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: 'sequence by host.id, process.entity_id with maxspan=15s
+
+  [process where host.os.type == "macos" and event.type == "start" and event.action
+  == "exec" and process.parent.name like~ ("installer", "package_script_service")
+  and ((process.name in ("bash", "sh", "zsh") and process.args == "-c") or (process.name
+  like~ ("python*", "osascript", "tclsh*", "curl", "nscurl")))]
+
+  [network where host.os.type == "macos" and event.type == "start"]'
+explanation: 'Detects the execution of a MacOS installer package with an abnormal
+  child process (e.g bash) followed immediately by a
+
+  network connection via a suspicious process (e.g curl). Threat actors will build
+  and distribute malicious MacOS
+
+  installer packages, which have a .pkg extension, many times imitating valid software
+  in order to persuade and infect
+
+  their victims often using the package files (e.g pre/post install scripts etc.)
+  to download additional tools or
+
+  malicious software. If this rule fires it should indicate the installation of a
+  malicious or suspicious package.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/99239e7d-b0d4-46e3-8609-acafcf99f68c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations may trigger this rule if they use scripts
+    to configure network settings or download updates. Users can create exceptions
+    for known safe software by whitelisting specific installer package names or hashes.
+
+    - System administrators often use scripts to automate software deployment and
+    updates, which might involve network activity. To reduce false positives, exclude
+    processes initiated by trusted administrative tools or scripts.
+
+    - Developm'
+  mitigation: Review investigation guide for details
+references:
+- https://redcanary.com/blog/clipping-silver-sparrows-wings
+- https://posts.specterops.io/introducing-mystikal-4fbd2f7ae520
+- https://github.com/D00MFist/Mystikal
+has_investigation_guide: true
+risk_score: 47

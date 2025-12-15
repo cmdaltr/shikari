@@ -1,0 +1,38 @@
+technique_id: T1218
+technique_name: Renamed MegaSync Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.83
+validated: true
+source: sigma
+sigma_id: 643bdcac-8b82-49f4-9fd9-25a90b929f3b
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  Image|endswith: \\megasync.exe\nselection:\n  OriginalFileName: megasync.exe\n"
+explanation: Detects the execution of a renamed MegaSync.exe as seen used by ransomware
+  families like Nefilim, Sodinokibi, Pysa, and Conti.
+false_positives:
+- Software that illegally integrates MegaSync in a renamed form
+- Administrators that have renamed MegaSync
+references:
+- https://redcanary.com/blog/rclone-mega-extortion/
+tags:
+- attack.defense-evasion
+- attack.t1218
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    OriginalFileName: megasync.exe
+  filter:
+    Image|endswith: \megasync.exe
+  condition: selection and not filter
+metadata:
+  created_date: 2021-06-22
+  modified_date: 2023-02-03
+  author: Sittikorn S
+  status: test
+  imported_date: '2025-11-28'

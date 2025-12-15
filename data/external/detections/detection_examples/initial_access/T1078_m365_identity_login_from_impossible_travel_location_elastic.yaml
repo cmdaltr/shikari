@@ -1,0 +1,59 @@
+technique_id: T1078
+technique_name: M365 Identity Login from Impossible Travel Location
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset:o365.audit and\n    event.provider:AzureActiveDirectory and\n\
+  \    event.action:UserLoggedIn and\n    event.outcome:success and\n    o365.audit.Target.Type:(0\
+  \ or 10 or 2 or 3 or 5 or 6) and\n    o365.audit.UserId:(* and not \"Not Available\"\
+  ) and\n    source.geo.region_iso_code:* and\n    not o365.audit.ApplicationId:(\n\
+  \        29d9ed98-a469-4536-ade2-f981bc1d605e or\n        38aa3b87-a06d-4817-b275-7a316988d93b\
+  \ or\n        a809996b-059e-42e2-9866-db24b99a9782\n    ) and not o365.audit.ExtendedProperties.RequestType:(\n\
+  \        \"Cmsi:Cmsi\" or\n        \"Consent:Set\" or\n        \"Login:reprocess\"\
+  \ or\n        \"Login:resume\" or\n        \"MessagePrompt:MessagePrompt\" or\n\
+  \        \"SAS:EndAuth\"\n    )"
+explanation: 'Detects successful Microsoft 365 portal logins from impossible travel
+  locations. Impossible travel locations are defined
+
+  as two different countries within a short time frame. This behavior may indicate
+  an adversary attempting to access a
+
+  Microsoft 365 account from a compromised account or a malicious actor attempting
+  to access a Microsoft 365 account from
+
+  a different location.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3896d4c0-6ad1-11ef-8c7b-f661ea17fbcc.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+- type: data_source
+  value: Microsoft 365 Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Users traveling or using VPNs may trigger this alert. Verify with the user if
+    they were traveling or using a VPN at the time of the login attempt.
+
+    - Mobile access may also result in false positives, as users may log in from various
+    locations while on the go.
+
+
+    ### Response and remediation
+
+
+    - Investigate the login attempt further by checking for any additional context
+    or related events that may provide insight into the user''s behavior.
+
+    - If the login attempt is deemed su'
+  mitigation: Review investigation guide for details
+references:
+- https://www.huntress.com/blog/time-travelers-busted-how-to-detect-impossible-travel-
+has_investigation_guide: true
+risk_score: 47

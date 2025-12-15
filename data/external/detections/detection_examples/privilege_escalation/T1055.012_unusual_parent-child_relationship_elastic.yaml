@@ -1,0 +1,91 @@
+technique_id: T1055.012
+technique_name: Unusual Parent-Child Relationship
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  process.parent.name != null and\n (\n   /* suspicious parent processes */\n   (process.name:\"\
+  autochk.exe\" and not process.parent.name:\"smss.exe\") or\n   (process.name:(\"\
+  fontdrvhost.exe\", \"dwm.exe\") and not process.parent.name:(\"wininit.exe\", \"\
+  winlogon.exe\", \"dwm.exe\")) or\n   (process.name:(\"consent.exe\", \"RuntimeBroker.exe\"\
+  , \"TiWorker.exe\") and not process.parent.name:(\"svchost.exe\", \"Workplace Container\
+  \ Helper.exe\")) or\n   (process.name:\"SearchIndexer.exe\" and not process.parent.name:\"\
+  services.exe\") or\n   (process.name:\"SearchProtocolHost.exe\" and not process.parent.name:(\"\
+  SearchIndexer.exe\", \"dllhost.exe\")) or\n   (process.name:\"dllhost.exe\" and\
+  \ not process.parent.name:(\"services.exe\", \"svchost.exe\")) or\n   (process.name:\"\
+  smss.exe\" and not process.parent.name:(\"System\", \"smss.exe\")) or\n   (process.name:\"\
+  csrss.exe\" and not process.parent.name:(\"smss.exe\", \"svchost.exe\")) or\n  \
+  \ (process.name:\"wininit.exe\" and not process.parent.name:\"smss.exe\") or\n \
+  \  (process.name:\"winlogon.exe\" and not process.parent.name:\"smss.exe\") or\n\
+  \   (process.name:(\"lsass.exe\", \"LsaIso.exe\") and not process.parent.name:\"\
+  wininit.exe\") or\n   (process.name:\"LogonUI.exe\" and not process.parent.name:(\"\
+  wininit.exe\", \"winlogon.exe\")) or\n   (process.name:\"services.exe\" and not\
+  \ process.parent.name:\"wininit.exe\") or\n   (process.name:\"svchost.exe\" and\
+  \ not process.parent.name:(\"MsMpEng.exe\", \"services.exe\", \"svchost.exe\"))\
+  \ or\n   (process.name:\"spoolsv.exe\" and not process.parent.name:(\"services.exe\"\
+  , \"Workplace Starter.exe\")) or\n   (process.name:\"taskhost.exe\" and not process.parent.name:(\"\
+  services.exe\", \"svchost.exe\", \"ngentask.exe\")) or\n   (process.name:\"taskhostw.exe\"\
+  \ and not process.parent.name:(\"services.exe\", \"svchost.exe\")) or\n   (process.name:\"\
+  userinit.exe\" and not process.parent.name:(\"dwm.exe\", \"winlogon.exe\", \"KUsrInit.exe\"\
+  )) or\n   (process.name:(\"wmiprvse.exe\", \"wsmprovhost.exe\", \"winrshost.exe\"\
+  ) and not process.parent.name:\"svchost.exe\") or\n   /* suspicious child processes\
+  \ */\n   (process.parent.name:(\"SearchProtocolHost.exe\", \"taskhost.exe\", \"\
+  csrss.exe\") and not process.name:(\"werfault.exe\", \"wermgr.exe\", \"WerFaultSecure.exe\"\
+  , \"conhost.exe\", \"ngentask.exe\")) or\n   (process.parent.name:\"autochk.exe\"\
+  \ and not process.name:(\"chkdsk.exe\", \"doskey.exe\", \"WerFault.exe\")) or\n\
+  \   (process.parent.name:\"smss.exe\" and not process.name:(\"autochk.exe\", \"\
+  smss.exe\", \"csrss.exe\", \"wininit.exe\", \"winlogon.exe\", \"setupcl.exe\", \"\
+  WerFault.exe\", \"wpbbin.exe\", \"PvsVmBoot.exe\", \"SophosNA.exe\", \"omnissa-ic-nga.exe\"\
+  , \"icarus_rvrt.exe\", \"poqexec.exe\")) or\n   (process.parent.name:\"wermgr.exe\"\
+  \ and not process.name:(\"WerFaultSecure.exe\", \"wermgr.exe\", \"WerFault.exe\"\
+  )) or\n   (process.parent.name:\"conhost.exe\" and not process.name:(\"mscorsvw.exe\"\
+  , \"wermgr.exe\", \"WerFault.exe\", \"WerFaultSecure.exe\"))\n  )"
+explanation: 'Identifies Windows programs run from unexpected parent processes. This
+  could indicate masquerading or other strange
+
+  activity on a system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/35df0dd8-092d-4a83-88c1-5151a804f31b.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Benign true positives (B-TPs) can be added as exceptions if necessary.\n\n###\
+    \ Response and remediation\n\n- Initiate the incident response process based on\
+    \ the outcome of the triage.\n- Isolate the involved host to prevent further post-compromise\
+    \ behavior.\n- If the triage identified malware, search the environment for additional\
+    \ compromised hosts.\n  - Implement temporary network rules, procedures, and segmentation\
+    \ to contain"
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/sbousseaden/Slides/blob/master/Hunting%20MindMaps/PNG/Windows%20Processes%20TH.map.png
+- https://www.andreafortuna.org/2017/06/15/standard-windows-processes-a-brief-reference/
+- https://www.elastic.co/security-labs/elastic-security-labs-steps-through-the-r77-rootkit
+has_investigation_guide: true
+risk_score: 47

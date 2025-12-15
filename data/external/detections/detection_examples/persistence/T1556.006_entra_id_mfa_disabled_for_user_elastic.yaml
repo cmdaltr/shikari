@@ -1,0 +1,49 @@
+technique_id: T1556.006
+technique_name: Entra ID MFA Disabled for User
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "event.dataset: \"azure.auditlogs\" and\n    (azure.auditlogs.operation_name:\
+  \ \"Disable Strong Authentication\" or\n    (\n        azure.auditlogs.operation_name:\
+  \ \"User deleted security info\" and\n        azure.auditlogs.properties.additional_details.key:\
+  \ \"AuthenticationMethod\"\n    )) and event.outcome: (Success or success)"
+explanation: 'Identifies when multi-factor authentication (MFA) is disabled for an
+  Entra ID user account. An adversary may disable MFA
+
+  for a user account in order to weaken the authentication requirements for the account.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/dafa3235-76dc-40e2-9f71-1773b96d24cf.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - While this activity can be done by administrators, all users must use MFA. The
+    security team should address any potential benign true positive (B-TP), as this
+    configuration can risk the user and domain.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Disable or limit the account during the investigation and response.
+
+    - Identify the possible impact of the incident and prioritize accordingly; the
+    following act'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

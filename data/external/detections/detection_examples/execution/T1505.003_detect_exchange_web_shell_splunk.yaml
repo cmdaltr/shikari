@@ -1,0 +1,48 @@
+technique_id: T1505.003
+technique_name: Detect Exchange Web Shell
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Filesystem where Filesystem.file_path IN ("*\\HttpProxy\\owa\\auth\\*",
+  "*\\inetpub\\wwwroot\\aspnet_client\\*", "*\\HttpProxy\\OAB\\*") Filesystem.file_name
+  IN( "*.aspx", "*.ashx") by Filesystem.action Filesystem.dest Filesystem.file_access_time
+  Filesystem.file_create_time Filesystem.file_hash Filesystem.file_modify_time Filesystem.file_name
+  Filesystem.file_path Filesystem.file_acl Filesystem.file_size Filesystem.process_guid
+  Filesystem.process_id Filesystem.user Filesystem.vendor_product | `drop_dm_object_name(Filesystem)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `detect_exchange_web_shell_filter`'
+explanation: The following analytic identifies the creation of suspicious .aspx files
+  in known drop locations for Exchange exploitation, specifically targeting paths
+  associated with HAFNIUM group and vulnerabilities like ProxyShell and ProxyNotShell.
+  It leverages data from the Endpoint datamodel, focusing on process and filesystem
+  events. This activity is significant as it may indicate a web shell deployment,
+  a common method for persistent access and remote code execution. If confirmed malicious,
+  attackers could gain unauthorized access, execute arbitrary commands, and potentially
+  escalate privileges within the Exchange environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8c14eeee-2af1-4a4b-bda8-228da0f4862a/
+indicators:
+- type: data_source
+  value: Sysmon EventID 11
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: The query is structured in a way that `action` (read, create) is not
+    defined. Review the results of this query, filter, and tune as necessary. It may
+    be necessary to generate this query specific to your endpoint product.
+  mitigation: Review context and user activity
+references:
+- https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Sample%20Data/Feeds/MSTICIoCs-ExchangeServerVulnerabilitiesDisclosedMarch2021.csv
+- https://www.zerodayinitiative.com/blog/2021/8/17/from-pwn2own-2021-a-new-attack-surface-on-microsoft-exchange-proxyshell
+- https://www.youtube.com/watch?v=FC6iHw258RI
+- https://www.huntress.com/blog/rapid-response-microsoft-exchange-servers-still-vulnerable-to-proxyshell-exploit#what-should-you-do
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1505.003/windows-sysmon_proxylogon.log

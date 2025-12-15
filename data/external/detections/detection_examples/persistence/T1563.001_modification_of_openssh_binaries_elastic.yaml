@@ -1,0 +1,48 @@
+technique_id: T1563.001
+technique_name: Modification of OpenSSH Binaries
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.category:file and host.os.type:linux and event.type:change and\n  process.name:(*\
+  \ and not (\n    dnf or dnf-automatic or dpkg or yum or rpm or yum-cron or anacron\
+  \ or platform-python* or\n    apk or ansible-admin or systemd or python* or yum\
+  \ or nix-daemon or nix\n    )\n  ) and \n  (file.path:(/usr/bin/scp or \n      \
+  \          /usr/bin/sftp or \n                /usr/bin/ssh or \n               \
+  \ /usr/sbin/sshd) or \n  file.name:libkeyutils.so) and\n  not process.executable:/usr/share/elasticsearch/*"
+explanation: 'Adversaries may modify SSH related binaries for persistence or credential
+  access by patching sensitive functions to
+
+  enable unauthorized access or by logging SSH credentials for exfiltration.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0415f22a-2336-45fa-ba07-618a5942e22c.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Regular users should not need to modify OpenSSH binaries, which makes false
+    positives unlikely. In the case of authorized benign true positives (B-TPs), exceptions
+    can be added.
+
+    - If this activity is related to new benign software installation activity, consider
+    adding exceptions — preferably with a combination of user and command line conditions.
+
+    - If this activity is related to a system administrator that performed these actions
+    for administrative purposes, consider'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.angelalonso.es/2016/09/anatomy-of-real-linux-intrusion-part-ii.html
+has_investigation_guide: true
+risk_score: 47

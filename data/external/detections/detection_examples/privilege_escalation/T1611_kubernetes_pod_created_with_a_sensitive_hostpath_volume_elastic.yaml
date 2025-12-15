@@ -1,0 +1,53 @@
+technique_id: T1611
+technique_name: Kubernetes Pod created with a Sensitive hostPath Volume
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset : \"kubernetes.audit_logs\"\n  and kubernetes.audit.annotations.authorization_k8s_io/decision:\"\
+  allow\"\n  and kubernetes.audit.objectRef.resource:\"pods\"\n  and kubernetes.audit.verb:(\"\
+  create\" or \"update\" or \"patch\")\n  and kubernetes.audit.requestObject.spec.volumes.hostPath.path:\n\
+  \  (\"/\" or\n  \"/proc\" or\n  \"/root\" or\n  \"/var\" or\n  \"/var/run\" or\n\
+  \  \"/var/run/docker.sock\" or\n  \"/var/run/crio/crio.sock\" or\n  \"/var/run/cri-dockerd.sock\"\
+  \ or\n  \"/var/lib/kubelet\" or\n  \"/var/lib/kubelet/pki\" or\n  \"/var/lib/docker/overlay2\"\
+  \ or\n  \"/etc\" or\n  \"/etc/kubernetes\" or\n  \"/etc/kubernetes/manifests\" or\n\
+  \  \"/etc/kubernetes/pki\" or\n  \"/home/admin\")\n  and not kubernetes.audit.requestObject.spec.containers.image:\
+  \ (\"docker.elastic.co/beats/elastic-agent:8.4.0\")"
+explanation: 'This rule detects when a pod is created with a sensitive volume of type
+  hostPath. A hostPath volume type mounts a
+
+  sensitive file or folder from the node to the container. If the container gets compromised,
+  the attacker can use this
+
+  mount for gaining access to the node. There are many ways a container with unrestricted
+  access to the host filesystem
+
+  can escalate privileges, including reading data from other containers, and accessing
+  tokens of more privileged pods.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2abda169-416b-4bb3-9a6b-f8d239fd78ba.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Kubernetes
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Development environments often use hostPath volumes for testing purposes, which
+    can trigger this rule. To manage this, create exceptions for specific namespaces
+    or labels associated with development workloads.
+
+    - Monitoring tools or agents may require access to certain host paths for legitimate
+    reasons. Identify these tools and exclude their specific container images from
+    the rule, similar to the exclusion of the elastic-agent image.
+
+    - Backup or logging applications mig'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.appsecco.com/kubernetes-namespace-breakout-using-insecure-host-path-volume-part-1-b382f2a6e216
+- https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
+has_investigation_guide: true
+risk_score: 47

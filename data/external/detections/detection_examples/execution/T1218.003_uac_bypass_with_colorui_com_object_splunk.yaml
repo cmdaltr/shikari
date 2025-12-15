@@ -1,0 +1,38 @@
+technique_id: T1218.003
+technique_name: UAC Bypass With Colorui COM Object
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventCode=7 ImageLoaded="*\\colorui.dll" process_name != "colorcpl.exe"
+  NOT(Image IN("*\\windows\\*", "*\\program files*")) | fillnull | stats count min(_time)
+  as firstTime max(_time) as lastTime by Image ImageLoaded dest loaded_file loaded_file_path
+  original_file_name process_exec process_guid process_hash process_id process_name
+  process_path service_dll_signature_exists service_dll_signature_verified signature
+  signature_id user_id vendor_product | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `uac_bypass_with_colorui_com_object_filter`'
+explanation: The following analytic detects a potential UAC bypass using the colorui.dll
+  COM Object. It leverages Sysmon EventCode 7 to identify instances where colorui.dll
+  is loaded by a process other than colorcpl.exe, excluding common system directories.
+  This activity is significant because UAC bypass techniques are often used by malware,
+  such as LockBit ransomware, to gain elevated privileges without user consent. If
+  confirmed malicious, this could allow an attacker to execute code with higher privileges,
+  leading to further system compromise and persistence within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2bcccd20-fc2b-11eb-8d22-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 7
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: not so common. but 3rd part app may load this dll.
+  mitigation: Review context and user activity
+references:
+- https://news.sophos.com/en-us/2020/04/24/lockbit-ransomware-borrows-tricks-to-keep-up-with-revil-and-maze/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1546.015/uac_colorui/windows-sysmon.log

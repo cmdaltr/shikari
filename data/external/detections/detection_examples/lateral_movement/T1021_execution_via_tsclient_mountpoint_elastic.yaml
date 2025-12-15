@@ -1,0 +1,59 @@
+technique_id: T1021
+technique_name: Execution via TSClient Mountpoint
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: 'process where host.os.type == "windows" and event.type == "start" and process.executable
+  : "\\Device\\Mup\\tsclient\\*.exe"'
+explanation: 'Identifies execution from the Remote Desktop Protocol (RDP) shared mountpoint
+  tsclient on the target host. This may
+
+  indicate a lateral movement attempt.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4fe9d835-40e1-452d-8230-17c147cafad8.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may trigger the rule if they are
+    executed from a local drive mapped through TSClient. To manage this, create exceptions
+    for known update processes or installation paths that are frequently used in your
+    environment.
+
+    - IT administrative tasks performed via RDP sessions can also cause false positives.
+    Identify and exclude specific administrative tools or scripts that are regularly
+    executed from TSClient paths by trusted personn'
+  mitigation: Review investigation guide for details
+references:
+- https://posts.specterops.io/revisiting-remote-desktop-lateral-movement-8fb905cb46c3
+- https://www.elastic.co/security-labs/hunting-for-lateral-movement-using-event-query-language
+has_investigation_guide: true
+risk_score: 73

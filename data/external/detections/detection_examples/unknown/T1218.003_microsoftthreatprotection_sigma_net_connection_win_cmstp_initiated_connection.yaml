@@ -1,0 +1,53 @@
+technique_id: T1218.003
+technique_name: Outbound Network Connection Initiated By Cmstp.EXE
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: efafe0bf-4238-479e-af8f-797bd3490d2d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_local_ranges:\n  DestinationIp|cidr:\n  - 127.0.0.0/8\n\
+  \  - 10.0.0.0/8\n  - 172.16.0.0/12\n  - 192.168.0.0/16\n  - 169.254.0.0/16\n  -\
+  \ ::1/128\n  - fe80::/10\n  - fc00::/7\nselection:\n  Image|endswith: \\cmstp.exe\n\
+  \  Initiated: 'true'\n"
+explanation: 'Detects a network connection initiated by Cmstp.EXE
+
+  Its uncommon for "cmstp.exe" to initiate an outbound network connection. Investigate
+  the source of such requests to determine if they are malicious.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://web.archive.org/web/20190720093911/http://www.endurant.io/cmstp/detecting-cmstp-enabled-code-execution-and-uac-bypass-with-sysmon/
+tags:
+- attack.defense-evasion
+- attack.t1218.003
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    Image|endswith: \cmstp.exe
+    Initiated: 'true'
+  filter_main_local_ranges:
+    DestinationIp|cidr:
+    - 127.0.0.0/8
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 169.254.0.0/16
+    - ::1/128
+    - fe80::/10
+    - fc00::/7
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2022-08-30
+  modified_date: 2024-05-31
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

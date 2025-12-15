@@ -1,0 +1,53 @@
+technique_id: T1059.001
+technique_name: Bad Opsec Powershell Code Artifacts
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.89
+validated: true
+source: sigma
+sigma_id: 8d31a8ce-46b5-4dd6-bdc3-680931f1db86
+level: critical
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_4103\nselection_4103:\n\
+  \  Payload|contains:\n  - $DoIt\n  - harmj0y\n  - mattifestation\n  - _RastaMouse\n\
+  \  - tifkin_\n  - '0xdeadbeef'\n"
+explanation: 'focuses on trivial artifacts observed in variants of prevalent offensive
+  ps1 payloads, including
+
+  Cobalt Strike Beacon, PoshC2, Powerview, Letmein, Empire, Powersploit, and other
+  attack payloads
+
+  that often undergo minimal changes by attackers due to bad opsec.
+
+  '
+false_positives:
+- Moderate-to-low; Despite the shorter length/lower entropy for some of these, because
+  of high specificity, fp appears to be fairly limited in many environments.
+references:
+- https://newtonpaul.com/analysing-fileless-malware-cobalt-strike-beacon/
+- https://labs.sentinelone.com/top-tier-russian-organized-cybercrime-group-unveils-fileless-stealthy-powertrick-backdoor-for-high-value-targets/
+- https://www.mdeditor.tw/pl/pgRt
+tags:
+- attack.execution
+- attack.t1059.001
+logsource:
+  product: windows
+  category: ps_module
+  definition: 0ad03ef1-f21b-4a79-8ce8-e6900c54b65b
+detection:
+  selection_4103:
+    Payload|contains:
+    - $DoIt
+    - harmj0y
+    - mattifestation
+    - _RastaMouse
+    - tifkin_
+    - '0xdeadbeef'
+  condition: selection_4103
+metadata:
+  created_date: 2020-10-09
+  modified_date: 2022-12-25
+  author: ok @securonix invrep_de, oscd.community
+  status: test
+  imported_date: '2025-11-28'

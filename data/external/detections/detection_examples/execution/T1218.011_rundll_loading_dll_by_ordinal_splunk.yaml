@@ -1,0 +1,54 @@
+technique_id: T1218.011
+technique_name: RunDLL Loading DLL By Ordinal
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` values(Processes.process) as process
+  min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Processes
+  where `process_rundll32` by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | where
+  match(process,"rundll32.+\#\d+") | `rundll_loading_dll_by_ordinal_filter`'
+explanation: The following analytic detects rundll32.exe loading a DLL export function
+  by ordinal value. It leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on process command-line executions. This behavior is significant because
+  adversaries may use rundll32.exe to execute malicious code while evading security
+  tools that do not monitor this process. If confirmed malicious, this activity could
+  allow attackers to execute arbitrary code, potentially leading to system compromise,
+  privilege escalation, or persistent access within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/6c135f8d-5e60-454e-80b7-c56eed739833/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: False positives are possible with native utilities and third party
+    applications. Filtering may be needed based on command-line, or add world writeable
+    paths to restrict query.
+  mitigation: Review context and user activity
+references:
+- https://thedfirreport.com/2022/02/07/qbot-likes-to-move-it-move-it/
+- https://twitter.com/M_haggis/status/1491109262428635136
+- https://twitter.com/pr0xylife/status/1590394227758104576
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1218.011/atomic_red_team/ordinal_windows-sysmon.log

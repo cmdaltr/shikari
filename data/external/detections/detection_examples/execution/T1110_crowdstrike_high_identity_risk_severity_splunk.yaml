@@ -1,0 +1,32 @@
+technique_id: T1110
+technique_name: Crowdstrike High Identity Risk Severity
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`crowdstrike_identities` riskScoreSeverity="HIGH" OR riskScore >= 0.70 | rename
+  riskFactors{}.severity as severity, riskFactors{}.type as risk_type, roles{}.type
+  as role_type, accounts{}.domain as domain, accounts{}.dn as dn, accounts{}.samAccountName
+  as user | stats count min(_time) as firstTime max(_time) as lastTime by  domain
+  dn primaryDisplayName risk_type severity riskScore riskScoreSeverity user role_type
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `crowdstrike_high_identity_risk_severity_filter`'
+explanation: The following analytic detects CrowdStrike alerts for High Identity Risk
+  Severity with a risk score of 70 or higher. These alerts indicate significant vulnerabilities
+  in user identities, such as suspicious behavior or compromised credentials. Promptly
+  investigating and addressing these alerts is crucial to prevent potential security
+  breaches and ensure the integrity and protection of sensitive information and systems.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/0df524ad-6d78-4883-9987-d29418928103/
+indicators:
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.crowdstrike.com/wp-content/uploads/2022/12/CrowdStrike-Falcon-Event-Streams-Add-on-Guide-v3.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/suspicious_behaviour/crowdstrike_stream/high_risk_score/crowdstrike_high_riskscore_cleaned.log

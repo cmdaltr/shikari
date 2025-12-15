@@ -1,0 +1,47 @@
+technique_id: T1531
+technique_name: Google Workspace Admin Role Deletion
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:google_workspace.admin and event.provider:admin and event.category:iam
+  and event.action:DELETE_ROLE
+explanation: 'Detects when a custom admin role is deleted. An adversary may delete
+  a custom admin role in order to impact the
+
+  permissions or capabilities of system administrators.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/93e63c3e-4154-4fc6-9f86-b411e0987bbf.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - After identifying the user account that disabled the admin role, verify the
+    action was intentional.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Discuss with the user the affected users as a result of this action to mitigate
+    operational discrepencies.
+
+    - Disable or limit the account during the investigation and response.
+
+    - Identify the possible impact of the incident and prioritize accordingly; the
+    followi'
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/2406043?hl=en
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 47

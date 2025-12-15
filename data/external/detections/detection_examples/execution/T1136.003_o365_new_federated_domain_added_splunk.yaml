@@ -1,0 +1,44 @@
+technique_id: T1136.003
+technique_name: O365 New Federated Domain Added
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Operation IN ("*add*", "*new*") AND Operation="*domain*"
+  | eval src="NA" | fillnull | stats count values(ModifiedProperties{}.NewValue) as
+  new_value by user user_agent authentication_service signature Workload src vendor_account
+  vendor_product dest | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `o365_new_federated_domain_added_filter`'
+explanation: The following analytic identifies the addition of a new federated domain
+  in an Office 365 environment. This behavior is detected by analyzing Office 365
+  management activity logs, specifically filtering for Workload=Exchange and Operation="Add-FederatedDomain".
+  The addition of a new federated domain is significant as it may indicate unauthorized
+  changes or potential compromises. If confirmed malicious, attackers could establish
+  a backdoor, bypass security measures, or exfiltrate data, leading to data breaches
+  and unauthorized access to sensitive information. Immediate investigation is required
+  to review the details of the added domain and any concurrent suspicious activities.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e155876a-6048-11eb-ae93-0242ac130002/
+indicators:
+- type: data_source
+  value: O365
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: The creation of a new Federated domain is not necessarily malicious,
+    however these events need to be followed closely, as it may indicate federated
+    credential abuse or backdoor via federated identities at a similar or different
+    cloud provider.
+  mitigation: Review context and user activity
+references:
+- https://www.fireeye.com/content/dam/fireeye-www/blog/pdfs/wp-m-unc2452-2021-000343-01.pdf
+- https://www.cisa.gov/uscert/ncas/alerts/aa21-008a
+- https://www.splunk.com/en_us/blog/security/a-golden-saml-journey-solarwinds-continued.html
+- https://blog.sygnia.co/detection-and-hunting-of-golden-saml-attack?hsLang=en
+- https://o365blog.com/post/aadbackdoor/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1136.003/o365_new_federated_domain_added/o365_add_federated_domain.log

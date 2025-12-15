@@ -1,0 +1,58 @@
+technique_id: T1112
+technique_name: ETW Logging Disabled In .NET Processes - Registry
+tactic: persistence
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: a4c90ea1-2634-4ca0-adbb-35eae169b6fc
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_*\nselection_complus:\n\
+  \  EventID: 4657\n  NewValue: 0\n  ObjectName|contains: \\Environment\n  ObjectValueName:\n\
+  \  - COMPlus_ETWEnabled\n  - COMPlus_ETWFlags\nselection_etw_enabled:\n  EventID:\
+  \ 4657\n  NewValue: 0\n  ObjectName|endswith: \\SOFTWARE\\Microsoft\\.NETFramework\n\
+  \  ObjectValueName: ETWEnabled\n"
+explanation: Potential adversaries stopping ETW providers recording loaded .NET assemblies.
+false_positives:
+- Unknown
+references:
+- https://twitter.com/_xpn_/status/1268712093928378368
+- https://social.msdn.microsoft.com/Forums/vstudio/en-US/0878832e-39d7-4eaf-8e16-a729c4c40975/what-can-i-use-e13c0d23ccbc4e12931bd9cc2eee27e4-for?forum=clr
+- https://github.com/dotnet/runtime/blob/ee2355c801d892f2894b0f7b14a20e6cc50e0e54/docs/design/coreclr/jit/viewing-jit-dumps.md#setting-configuration-variables
+- https://github.com/dotnet/runtime/blob/f62e93416a1799aecc6b0947adad55a0d9870732/src/coreclr/src/inc/clrconfigvalues.h#L35-L38
+- https://github.com/dotnet/runtime/blob/7abe42dc1123722ed385218268bb9fe04556e3d3/src/coreclr/src/inc/clrconfig.h#L33-L39
+- https://github.com/dotnet/runtime/search?p=1&q=COMPlus_&unscoped_q=COMPlus_
+- https://bunnyinside.com/?term=f71e8cb9c76a
+- http://managed670.rssing.com/chan-5590147/all_p1.html
+- https://github.com/dotnet/runtime/blob/4f9ae42d861fcb4be2fcd5d3d55d5f227d30e723/docs/coding-guidelines/clr-jit-coding-conventions.md#1412-disabling-code
+- https://i.blackhat.com/EU-21/Wednesday/EU-21-Teodorescu-Veni-No-Vidi-No-Vici-Attacks-On-ETW-Blind-EDRs.pdf
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.t1112
+- attack.t1562
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_etw_enabled:
+    EventID: 4657
+    ObjectName|endswith: \SOFTWARE\Microsoft\.NETFramework
+    ObjectValueName: ETWEnabled
+    NewValue: 0
+  selection_complus:
+    EventID: 4657
+    ObjectName|contains: \Environment
+    ObjectValueName:
+    - COMPlus_ETWEnabled
+    - COMPlus_ETWFlags
+    NewValue: 0
+  condition: 1 of selection_*
+metadata:
+  created_date: 2020-06-05
+  modified_date: 2022-12-20
+  author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)
+  status: test
+  imported_date: '2025-11-28'

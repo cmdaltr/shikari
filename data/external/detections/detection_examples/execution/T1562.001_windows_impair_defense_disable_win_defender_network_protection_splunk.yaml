@@ -1,0 +1,44 @@
+technique_id: T1562.001
+technique_name: Windows Impair Defense Disable Win Defender Network Protection
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Registry where Registry.registry_path= "*\\Windows
+  Defender\\Windows Defender Exploit Guard\\Network Protection\\EnableNetworkProtection"
+  Registry.registry_value_data="0x00000000" by Registry.action Registry.dest Registry.process_guid
+  Registry.process_id Registry.registry_hive Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_data Registry.registry_value_name Registry.registry_value_type
+  Registry.status Registry.user Registry.vendor_product | `drop_dm_object_name(Registry)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_impair_defense_disable_win_defender_network_protection_filter`'
+explanation: The following analytic detects modifications to the Windows registry
+  that disable Windows Defender Network Protection. It leverages data from the Endpoint.Registry
+  data model, specifically monitoring changes to the EnableNetworkProtection registry
+  entry. This activity is significant because disabling Network Protection can leave
+  the system vulnerable to network-based threats by preventing Windows Defender from
+  analyzing and blocking malicious network activity. If confirmed malicious, this
+  action could allow attackers to bypass security measures, potentially leading to
+  unauthorized access, data exfiltration, or further compromise of the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8b6c15c7-5556-463d-83c7-986326c21f12/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: It is unusual to turn this feature off a Windows system since it is
+    a default security control, although it is not rare for some policies to disable
+    it. Although no false positives have been identified, use the provided filter
+    macro to tune the search.
+  mitigation: Review context and user activity
+references:
+- https://x.com/malmoeb/status/1742604217989415386?s=20
+- https://github.com/undergroundwires/privacy.sexy
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.001/disable-windows-security-defender-features/windefender-bypas-2-sysmon.log

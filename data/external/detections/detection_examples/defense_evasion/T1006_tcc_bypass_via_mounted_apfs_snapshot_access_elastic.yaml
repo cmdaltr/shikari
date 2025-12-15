@@ -1,0 +1,45 @@
+technique_id: T1006
+technique_name: TCC Bypass via Mounted APFS Snapshot Access
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and process.name == \"mount_apfs\" and\n process.args like~ \"/System/Volumes/Data\"\
+  \ and process.args like~ \"noowners\""
+explanation: 'Identifies the use of the mount_apfs command to mount the entire file
+  system through Apple File System (APFS) snapshots
+
+  as read-only and with the noowners flag set. This action enables the adversary to
+  access almost any file in the file
+
+  system, including all user data and files protected by Apple’s privacy framework
+  (TCC).'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b00bcd89-000c-4425-b94c-716ef67762f6.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System maintenance tools or backup software may legitimately use the mount_apfs
+    command with the noowners flag for routine operations. Users can create exceptions
+    for these specific tools by identifying their process names or paths and excluding
+    them from the detection rule.
+
+    - Developers or IT administrators might use the mount_apfs command during testing
+    or troubleshooting. To prevent these activities from triggering false positives,
+    users can whitelist specific user'
+  mitigation: Review investigation guide for details
+references:
+- https://theevilbit.github.io/posts/cve_2020_9771/
+has_investigation_guide: true
+risk_score: 73

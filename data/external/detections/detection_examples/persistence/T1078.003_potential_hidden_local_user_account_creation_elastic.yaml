@@ -1,0 +1,44 @@
+technique_id: T1078.003
+technique_name: Potential Hidden Local User Account Creation
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n process.name == \"dscl\" and process.args like~ \"IsHidden\" and process.args\
+  \ like~ \"create\" and \n process.args like~ (\"true\", \"1\", \"yes\")"
+explanation: 'Identifies attempts to create a local account that will be hidden from
+  the macOS logon window. This may indicate an
+
+  attempt to evade user attention while maintaining persistence using a separate local
+  account.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/41b638a1-8ab6-4f8e-86d9-466317ef2db5.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System administrators may use the dscl command to create hidden accounts for
+    legitimate purposes such as maintenance or automated tasks. To manage this, create
+    exceptions for known administrator accounts or scripts that regularly perform
+    these actions.
+
+    - Some third-party applications or management tools might use hidden accounts
+    for functionality or security purposes. Identify these applications and whitelist
+    their processes to prevent unnecessary alerts.
+
+    - During syst'
+  mitigation: Review investigation guide for details
+references:
+- https://support.apple.com/en-us/HT203998
+has_investigation_guide: true
+risk_score: 47

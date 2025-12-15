@@ -1,0 +1,40 @@
+technique_id: T1078
+technique_name: Suspicious Browser Activity
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 944f6adb-7a99-4c69-80c1-b712579e93e6
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  riskEventType: suspiciousBrowser\n"
+explanation: Indicates anomalous behavior based on suspicious sign-in activity across
+  multiple tenants from different countries in the same browser
+false_positives:
+- We recommend investigating the sessions flagged by this detection in the context
+  of other sign-ins from the user.
+references:
+- https://learn.microsoft.com/en-us/entra/id-protection/concept-identity-protection-risks#suspicious-browser
+- https://learn.microsoft.com/en-us/entra/architecture/security-operations-user-accounts#unusual-sign-ins
+tags:
+- attack.t1078
+- attack.persistence
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.initial-access
+logsource:
+  product: azure
+  service: riskdetection
+detection:
+  selection:
+    riskEventType: suspiciousBrowser
+  condition: selection
+metadata:
+  created_date: 2023-09-03
+  modified_date: '2025-11-28'
+  author: Mark Morowczynski '@markmorow', Gloria Lee, '@gleeiamglo'
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,37 @@
+technique_id: T1485
+technique_name: Linux Auditd Dd File Overwrite
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`linux_auditd` proctitle = "*dd *" AND proctitle = "*of=*" AND proctitle =
+  "*if=/dev/zero*" | rename host as dest | stats count min(_time) as firstTime max(_time)
+  as lastTime by  proctitle dest | `security_content_ctime(firstTime)`| `security_content_ctime(lastTime)`
+  |`linux_auditd_dd_file_overwrite_filter`'
+explanation: The following analytic detects the use of the 'dd' command to overwrite
+  files on a Linux system. It leverages data from Linux Auditd telemetry, focusing
+  on process execution logs that include command-line details. This activity is significant
+  because adversaries often use the 'dd' command to destroy or irreversibly overwrite
+  files, disrupting system availability and services. If confirmed malicious, this
+  behavior could lead to data destruction, making recovery difficult and potentially
+  causing significant operational disruptions.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/d1b74420-4cea-4752-a123-9b40dfcca49a/
+indicators:
+- type: data_source
+  value: Linux Auditd Proctitle
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrator or network operator can execute this command. Please
+    update the filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://gtfobins.github.io/gtfobins/dd/
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1485/T1485.md
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1485/linux_auditd_dd_overwrite/auditd_proctitle_dd_overwrite.log

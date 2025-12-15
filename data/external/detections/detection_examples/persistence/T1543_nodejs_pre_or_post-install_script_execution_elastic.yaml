@@ -1,0 +1,38 @@
+technique_id: T1543
+technique_name: Node.js Pre or Post-Install Script Execution
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "sequence by host.id with maxspan=10s\n  [process where host.os.type == \"\
+  linux\" and event.type == \"start\" and event.action in (\"exec\", \"ProcessRollup2\"\
+  ) and process.name == \"node\" and process.args == \"install\"] by process.entity_id\n\
+  \  [process where host.os.type == \"linux\" and event.type == \"start\" and event.action\
+  \ in (\"exec\", \"ProcessRollup2\") and process.parent.name == \"node\"] by process.parent.entity_id"
+explanation: 'This rule detects the execution of Node.js pre or post-install scripts.
+  These scripts are executed
+
+  by the Node.js package manager (npm) during the installation of packages. Adversaries
+  may abuse
+
+  this technique to execute arbitrary commands on the system and establish persistence.
+  This activity
+
+  was observed in the wild as part of the Shai-Hulud worm.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0871a5d8-6b5f-4a12-a568-fd7bc05bd8db.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+references:
+- https://www.elastic.co/blog/shai-hulud-worm-npm-supply-chain-compromise
+risk_score: 47

@@ -1,0 +1,26 @@
+technique_id: T1568.002
+technique_name: Possible FIN7 DGA Command and Control Behavior
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "(event.dataset: (network_traffic.tls OR network_traffic.http) OR\n    (event.category:\
+  \ (network OR network_traffic) AND type: (tls OR http) AND network.transport: tcp))\
+  \ AND\ndestination.domain:/[a-zA-Z]{4,5}\\.(pw|us|club|info|site|top)/ AND NOT destination.domain:zoom.us"
+explanation: 'This rule detects a known command and control pattern in network events.
+  The FIN7 threat group is known to use this
+
+  command and control technique, while maintaining persistence in their target''s
+  network.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4a4e23cf-78a2-449c-bac3-701924c269d3.toml
+query_type: query
+query_language: lucene
+indicators:
+- type: data_source
+  value: PAN-OS
+  confidence: high
+references:
+- https://www.fireeye.com/blog/threat-research/2018/08/fin7-pursuing-an-enigmatic-and-evasive-global-criminal-operation.html
+has_investigation_guide: true
+risk_score: 73

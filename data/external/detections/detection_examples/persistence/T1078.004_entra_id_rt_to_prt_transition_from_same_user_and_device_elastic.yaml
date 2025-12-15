@@ -1,0 +1,71 @@
+technique_id: T1078.004
+technique_name: Entra ID RT to PRT Transition from Same User and Device
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by azure.signinlogs.properties.user_id, azure.signinlogs.properties.device_detail.device_id\
+  \ with maxspan=1h\n  [authentication where\n    event.dataset == \"azure.signinlogs\"\
+  \ and\n    azure.signinlogs.category == \"NonInteractiveUserSignInLogs\" and\n \
+  \   azure.signinlogs.properties.app_id == \"29d9ed98-a469-4536-ade2-f981bc1d605e\"\
+  \ and\n    azure.signinlogs.properties.incoming_token_type == \"refreshToken\" and\n\
+  \    azure.signinlogs.properties.device_detail.trust_type == \"Azure AD joined\"\
+  \ and\n    azure.signinlogs.properties.device_detail.device_id != null and\n   \
+  \ azure.signinlogs.properties.token_protection_status_details.sign_in_session_status\
+  \ == \"unbound\" and\n    azure.signinlogs.properties.user_type == \"Member\" and\n\
+  \    azure.signinlogs.result_signature == \"SUCCESS\"\n  ]\n  [authentication where\n\
+  \    event.dataset == \"azure.signinlogs\" and\n    azure.signinlogs.properties.incoming_token_type\
+  \ == \"primaryRefreshToken\" and\n    azure.signinlogs.properties.resource_display_name\
+  \ != \"Device Registration Service\" and\n    azure.signinlogs.result_signature\
+  \ == \"SUCCESS\"\n  ]"
+explanation: 'Identifies when a user signs in with a refresh token using the Microsoft
+  Authentication Broker (MAB) client, followed by
+
+  a Primary Refresh Token (PRT) sign-in from the same device within 1 hour. This pattern
+  may indicate that an attacker has
+
+  successfully registered a device using ROADtx and transitioned from short-term token
+  access to long-term persistent
+
+  access via PRTs. Excluding access to the Device Registration Service (DRS) ensures
+  the PRT is being used beyond
+
+  registration, often to access Microsoft 365 resources like Outlook or SharePoint.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/40e60816-5122-11f0-9caa-f661ea17fbcd.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Sign-In Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+    - Legitimate device onboarding and sign-ins using hybrid-joined endpoints may
+    trigger this rule.
+
+    - Rapid device provisioning in enterprise environments using MAB could generate
+    similar token behavior.
+
+    - Use supporting signals, such as IP address changes, geolocation, or user agent
+    anomalies, to reduce noise.
+
+
+    ### Response and remediation
+
+    - Investigate other sign-in patterns and assess whether token abuse has occurred.
+
+    - Revoke PRT sessions via Microsoft Entra ID or Condit'
+  mitigation: Review investigation guide for details
+references:
+- https://www.volexity.com/blog/2025/04/22/phishing-for-codes-russian-threat-actors-target-microsoft-365-oauth-workflows/
+- https://dirkjanm.io/abusing-azure-ad-sso-with-the-primary-refresh-token/
+has_investigation_guide: true
+risk_score: 47

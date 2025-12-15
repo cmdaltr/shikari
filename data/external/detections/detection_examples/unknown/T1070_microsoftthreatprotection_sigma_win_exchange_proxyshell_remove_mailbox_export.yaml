@@ -1,0 +1,39 @@
+technique_id: T1070
+technique_name: Remove Exported Mailbox from Exchange Webserver
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 09570ae5-889e-43ea-aac0-0e1221fb3d95
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: keywords\nkeywords:\n\
+  \  '|all':\n  - Remove-MailboxExportRequest\n  - ' -Identity '\n  - ' -Confirm \"\
+  False\"'\n"
+explanation: Detects removal of an exported Exchange mailbox which could be to cover
+  tracks from ProxyShell exploit
+false_positives:
+- Unknown
+references:
+- https://github.com/rapid7/metasploit-framework/blob/1416b5776d963f21b7b5b45d19f3e961201e0aed/modules/exploits/windows/http/exchange_proxyshell_rce.rb#L430
+tags:
+- attack.defense-evasion
+- attack.t1070
+logsource:
+  service: msexchange-management
+  product: windows
+detection:
+  keywords:
+    '|all':
+    - Remove-MailboxExportRequest
+    - ' -Identity '
+    - ' -Confirm "False"'
+  condition: keywords
+metadata:
+  created_date: 2021-08-27
+  modified_date: 2023-01-23
+  author: Christian Burkard (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

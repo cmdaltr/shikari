@@ -1,0 +1,38 @@
+technique_id: T1078.004
+technique_name: PIM Approvals And Deny Elevation
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 039a7469-0296-4450-84c0-f6966b16dc6d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  properties.message: Request Approved/Denied\n"
+explanation: Detects when a PIM elevation is approved or denied. Outside of normal
+  operations should be investigated.
+false_positives:
+- Actual admin using PIM.
+references:
+- https://learn.microsoft.com/en-us/entra/architecture/security-operations-privileged-identity-management#azure-ad-roles-assignment
+tags:
+- attack.persistence
+- attack.initial-access
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1078.004
+logsource:
+  product: azure
+  service: auditlogs
+detection:
+  selection:
+    properties.message: Request Approved/Denied
+  condition: selection
+metadata:
+  created_date: 2022-08-09
+  modified_date: '2025-11-28'
+  author: Mark Morowczynski '@markmorow', Yochana Henderson, '@Yochana-H'
+  status: test
+  imported_date: '2025-11-28'

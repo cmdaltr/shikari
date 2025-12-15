@@ -1,0 +1,80 @@
+technique_id: T1557.001
+technique_name: Potential SMB Relay Attack Tool Execution
+tactic: collection
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.95
+validated: true
+source: sigma
+sigma_id: 5589ab4f-a767-433c-961d-c91f3f704db1
+level: critical
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_* and\
+  \ not 1 of filter_*\nfilter_hotpotatoes:\n  Image|contains:\n  - HotPotatoes6\n\
+  \  - HotPotatoes7\n  - 'HotPotatoes '\nselection_juicypotato_enum:\n  CommandLine|contains:\
+  \ .exe -c \"{\n  CommandLine|endswith: '}\" -z'\nselection_pe:\n  Image|contains:\n\
+  \  - PetitPotam\n  - RottenPotato\n  - HotPotato\n  - JuicyPotato\n  - \\just_dce_\n\
+  \  - Juicy Potato\n  - \\temp\\rot.exe\n  - \\Potato.exe\n  - \\SpoolSample.exe\n\
+  \  - \\Responder.exe\n  - \\smbrelayx\n  - \\ntlmrelayx\n  - \\LocalPotato\nselection_script:\n\
+  \  CommandLine|contains:\n  - Invoke-Tater\n  - ' smbrelay'\n  - ' ntlmrelay'\n\
+  \  - 'cme smb '\n  - ' /ntlm:NTLMhash '\n  - Invoke-PetitPotam\n  - '.exe -t * -p\
+  \ '\n"
+explanation: Detects different hacktools used for relay attacks on Windows for privilege
+  escalation
+false_positives:
+- Legitimate files with these rare hacktool names
+references:
+- https://foxglovesecurity.com/2016/09/26/rotten-potato-privilege-escalation-from-service-accounts-to-system/
+- https://pentestlab.blog/2017/04/13/hot-potato/
+- https://github.com/ohpe/juicy-potato
+- https://hunter2.gitbook.io/darthsidious/other/war-stories/domain-admin-in-30-minutes
+- https://hunter2.gitbook.io/darthsidious/execution/responder-with-ntlm-relay-and-empire
+- https://www.localpotato.com/
+tags:
+- attack.collection
+- attack.execution
+- attack.credential-access
+- attack.t1557.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_pe:
+    Image|contains:
+    - PetitPotam
+    - RottenPotato
+    - HotPotato
+    - JuicyPotato
+    - \just_dce_
+    - Juicy Potato
+    - \temp\rot.exe
+    - \Potato.exe
+    - \SpoolSample.exe
+    - \Responder.exe
+    - \smbrelayx
+    - \ntlmrelayx
+    - \LocalPotato
+  selection_script:
+    CommandLine|contains:
+    - Invoke-Tater
+    - ' smbrelay'
+    - ' ntlmrelay'
+    - 'cme smb '
+    - ' /ntlm:NTLMhash '
+    - Invoke-PetitPotam
+    - '.exe -t * -p '
+  selection_juicypotato_enum:
+    CommandLine|contains: .exe -c "{
+    CommandLine|endswith: '}" -z'
+  filter_hotpotatoes:
+    Image|contains:
+    - HotPotatoes6
+    - HotPotatoes7
+    - 'HotPotatoes '
+  condition: 1 of selection_* and not 1 of filter_*
+metadata:
+  created_date: 2021-07-24
+  modified_date: 2023-02-14
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

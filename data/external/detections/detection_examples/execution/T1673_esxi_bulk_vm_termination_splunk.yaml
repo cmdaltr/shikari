@@ -1,0 +1,33 @@
+technique_id: T1673
+technique_name: ESXi Bulk VM Termination
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`esxi_syslog` | rex field=_raw "\s\[(?<user>[^\]]+)\]:\s(?<shell_command>.+)$"
+  | rex field=_raw "Z (?<dest>[\w\.]+)\s.*:\s(?<esxicli_Command>esxcli\s.+)" | eval
+  command=mvappend(esxicli_Command, shell_Command) | where isnotnull(command) | search
+  (command="pkill -9 vmx-*") OR ( command="*esxcli*" AND command="*--format-param*"
+  AND command="*vm process list*" AND command="*awk*" AND command="*esxcli vm process
+  kill*") | stats min(_time) as firstTime max(_time) as lastTime values(_time) as
+  timeStamp values(command) as commands values(user) as user by dest | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `esxi_bulk_vm_termination_filter`'
+explanation: This detection identifies when all virtual machines on an ESXi host are
+  abruptly terminated, which may indicate malicious activity such as a deliberate
+  denial-of-service, ransomware staging, or an attempt to destroy critical workloads.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/cfe094b4-0737-4a33-9d63-e0562ce2b883/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments, however tune as needed.
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1529/esxi_bulk_vm_termination/esxi_bulk_vm_termination.log

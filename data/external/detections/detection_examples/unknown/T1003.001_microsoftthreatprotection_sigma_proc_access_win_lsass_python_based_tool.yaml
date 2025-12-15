@@ -1,0 +1,47 @@
+technique_id: T1003.001
+technique_name: Credential Dumping Activity By Python Based Tool
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: f8be3e82-46a3-4e4e-ada5-8e538ae8b9c9
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CallTrace|contains:\n  - python27.dll+\n  - python3*.dll+\n  CallTrace|contains|all:\n\
+  \  - _ctypes.pyd+\n  - :\\Windows\\System32\\KERNELBASE.dll+\n  - :\\Windows\\SYSTEM32\\\
+  ntdll.dll+\n  GrantedAccess: '0x1FFFFF'\n  TargetImage|endswith: \\lsass.exe\n"
+explanation: Detects LSASS process access for potential credential dumping by a Python-like
+  tool such as LaZagne or Pypykatz.
+false_positives:
+- Unknown
+references:
+- https://twitter.com/bh4b3sh/status/1303674603819081728
+- https://github.com/skelsec/pypykatz
+tags:
+- attack.credential-access
+- attack.t1003.001
+- attack.s0349
+logsource:
+  category: process_access
+  product: windows
+detection:
+  selection:
+    TargetImage|endswith: \lsass.exe
+    CallTrace|contains|all:
+    - _ctypes.pyd+
+    - :\Windows\System32\KERNELBASE.dll+
+    - :\Windows\SYSTEM32\ntdll.dll+
+    CallTrace|contains:
+    - python27.dll+
+    - python3*.dll+
+    GrantedAccess: '0x1FFFFF'
+  condition: selection
+metadata:
+  created_date: 2023-11-27
+  modified_date: 2023-11-29
+  author: Bhabesh Raj, Jonhnathan Ribeiro
+  status: stable
+  imported_date: '2025-11-28'

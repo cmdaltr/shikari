@@ -1,0 +1,43 @@
+technique_id: T1485
+technique_name: GitHub Repository Deleted
+tactic: impact
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: configuration where event.module == "github" and event.dataset == "github.audit"
+  and event.action == "repo.destroy"
+explanation: 'This rule detects when a GitHub repository is deleted within your organization.
+  Repositories are a critical component
+
+  used within an organization to manage work, collaborate with others and release
+  products to the public. Any delete
+
+  action against a repository should be investigated to determine it''s validity.
+  Unauthorized deletion of organization
+
+  repositories could cause irreversible loss of intellectual property and indicate
+  compromise within your organization.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/345889c4-23a8-4bc0-b7ca-756bd17ce83b.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Github
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine repository clean-up activities by authorized personnel may trigger alerts.
+    To manage this, maintain a list of users or teams responsible for such tasks and
+    create exceptions for their actions.
+
+    - Automated scripts or tools used for repository management might delete repositories
+    as part of their normal operation. Identify these scripts and exclude their actions
+    from triggering alerts by using specific identifiers or tags.
+
+    - Test or temporary repositories that ar'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

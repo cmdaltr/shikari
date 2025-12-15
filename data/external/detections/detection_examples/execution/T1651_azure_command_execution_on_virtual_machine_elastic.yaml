@@ -1,0 +1,47 @@
+technique_id: T1651
+technique_name: Azure Command Execution on Virtual Machine
+tactic: execution
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:azure.activitylogs and azure.activitylogs.operation_name:"MICROSOFT.COMPUTE/VIRTUALMACHINES/RUNCOMMAND/ACTION"
+  and event.outcome:(Success or success)
+explanation: 'Identifies command execution on a virtual machine (VM) in Azure. A Virtual
+  Machine Contributor role lets you manage
+
+  virtual machines, but not access them, nor access the virtual network or storage
+  account they’re connected to. However,
+
+  commands can be run via PowerShell on the VM, which execute as System. Other roles,
+  such as certain Administrator roles
+
+  may be able to execute commands on a VM as well.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/60884af6-f553-4a6c-af13-300047455491.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance tasks executed by IT administrators can trigger the rule.
+    To manage this, create exceptions for known maintenance scripts or scheduled tasks
+    that are regularly executed.
+
+    - Automated deployment processes that use PowerShell scripts to configure or update
+    VMs may be flagged. Identify these processes and exclude them from the rule to
+    prevent unnecessary alerts.
+
+    - Security tools or monitoring solutions that perform regular checks on VMs might
+    execute co'
+  mitigation: Review investigation guide for details
+references:
+- https://adsecurity.org/?p=4277
+- https://posts.specterops.io/attacking-azure-azure-ad-and-introducing-powerzure-ca70b330511a
+- https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#virtual-machine-contributor
+has_investigation_guide: true
+risk_score: 47

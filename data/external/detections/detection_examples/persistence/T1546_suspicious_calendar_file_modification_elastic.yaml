@@ -1,0 +1,48 @@
+technique_id: T1546
+technique_name: Suspicious Calendar File Modification
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "file where host.os.type == \"macos\" and event.action == \"modification\"\
+  \ and\n  file.path like~ \"/Users/*/Library/Calendars/*.calendar/Events/*.ics\"\
+  \ and\n  not process.executable like (\"/System/Library/*\", \"/System/Applications/Calendar.app/Contents/MacOS/*\"\
+  , \n                               \"/System/Applications/Mail.app/Contents/MacOS/Mail\"\
+  , \"/usr/libexec/xpcproxy\",\n                               \"/sbin/launchd\",\
+  \ \"/Applications/*\")"
+explanation: 'Identifies suspicious modifications of the calendar file by an unusual
+  process. Adversaries may create a custom calendar
+
+  notification procedure to execute a malicious program at a recurring interval to
+  establish persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/cb71aa62-55c8-42f0-b0dd-afb0bb0b1f51.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate third-party calendar applications may modify calendar files as part
+    of their normal operation. Users can create exceptions for these known applications
+    by adding their executable paths to the exclusion list.
+
+    - Automated backup or synchronization tools might access and modify calendar files.
+    Identify these tools and exclude their processes to prevent false alerts.
+
+    - User scripts or automation workflows that interact with calendar files for personal
+    productivi'
+  mitigation: Review investigation guide for details
+references:
+- https://labs.f-secure.com/blog/operationalising-calendar-alerts-persistence-on-macos
+- https://github.com/FSecureLABS/CalendarPersist
+- https://github.com/D00MFist/PersistentJXA/blob/master/CalendarPersist.js
+has_investigation_guide: true
+risk_score: 47

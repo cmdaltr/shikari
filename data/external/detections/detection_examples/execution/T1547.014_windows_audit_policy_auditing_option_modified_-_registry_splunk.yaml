@@ -1,0 +1,45 @@
+technique_id: T1547.014
+technique_name: Windows Audit Policy Auditing Option Modified - Registry
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Registry WHERE Registry.registry_path="*\\Control\\Lsa*"
+  Registry.registry_value_name IN ("CrashOnAuditFail", "FullPrivilegeAuditing", "AuditBaseObjects",
+  "AuditBaseDirectories") by Registry.action Registry.dest Registry.process_guid Registry.process_id
+  Registry.registry_hive Registry.registry_path Registry.registry_key_name Registry.registry_value_data
+  Registry.registry_value_name Registry.registry_value_type Registry.status Registry.user
+  Registry.vendor_product | `drop_dm_object_name(Registry)` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_audit_policy_auditing_option_modified___registry_filter`'
+explanation: The following analytic detects potentially suspicious modifications to
+  the Audit Policy auditing options registry values. It leverages data from the Endpoint.Registry
+  data model, focusing on changes to one of the following auditing option values "CrashOnAuditFail",
+  "FullPrivilegeAuditing", "AuditBaseObjects" and "AuditBaseDirectories" within the
+  "HKLM\\System\\CurrentControlSet\\Control\\Lsa\\" registry key. This activity is
+  significant as it could be a sign of a threat actor trying to tamper with the audit
+  policy configuration, and disabling SACLs configuration. If confirmed malicious,
+  this behavior could allow attackers to bypass defenses, and plan further attacks,
+  potentially leading to full machine compromise or lateral movement.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/27914692-9c62-44ea-9129-ceb429b61bd0/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Active setup installer may add or modify this registry.
+  mitigation: Review context and user activity
+references:
+- https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gpac/262a2bed-93d4-4c04-abec-cf06e9ec72fd
+- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/auditpol-set
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.002/auditpol_tampering/auditpol_tampering_sysmon.log

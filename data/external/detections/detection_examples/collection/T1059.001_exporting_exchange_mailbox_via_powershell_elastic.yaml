@@ -1,0 +1,69 @@
+technique_id: T1059.001
+technique_name: Exporting Exchange Mailbox via PowerShell
+tactic: collection
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name: (\"powershell.exe\", \"pwsh.exe\", \"powershell_ise.exe\") and\n\
+  \  process.command_line : (\"*MailboxExportRequest*\", \"*-Mailbox*-ContentFilter*\"\
+  )"
+explanation: 'Identifies the use of the Exchange PowerShell cmdlet, New-MailBoxExportRequest,
+  to export the contents of a primary
+
+  mailbox or archive to a .pst file. Adversaries may target user email to collect
+  sensitive information.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6aace640-e631-4870-ba8e-5fdda09325db.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This mechanism can be used legitimately. Analysts can dismiss the alert if the
+    administrator is aware of the activity and it is done with proper approval.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - If the involved host is not the Exchange server, isolate the host to prevent
+    further post-compromise behavior.
+
+    - Use the `Remove-MailboxExportRequest` cmdlet to remove fully or partially completed
+    export requ'
+  mitigation: Review investigation guide for details
+references:
+- https://www.volexity.com/blog/2020/12/14/dark-halo-leverages-solarwinds-compromise-to-breach-organizations/
+- https://docs.microsoft.com/en-us/powershell/module/exchange/new-mailboxexportrequest?view=exchange-ps
+- https://www.elastic.co/security-labs/siestagraph-new-implant-uncovered-in-asean-member-foreign-ministry
+has_investigation_guide: true
+risk_score: 47

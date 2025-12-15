@@ -1,0 +1,37 @@
+technique_id: T1078
+technique_name: ESXi External Root Login Activity
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`esxi_syslog` Message="*root*" AND Message="*logged in*" | rex field=_raw
+  "root@(?<SrcIpAddr>\d{1,3}(?:\.\d{1,3}){3})" | rex field=_raw "Z (?<dest>[\w\.]+)\s"
+  | search SrcIpAddr != "127.0.0.1" AND SrcIpAddr != 192.168.0.0/16 AND SrcIpAddr
+  != 172.16.0.0/12 AND SrcIpAddr != 10.0.0.0/8 | stats min(_time) as firstTime max(_time)
+  as lastTime count by dest SrcIpAddr | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `esxi_external_root_login_activity_filter`'
+explanation: This detection identifies instances where the ESXi UI is accessed using
+  the root account instead of a delegated administrative user. Direct root access
+  to the UI bypasses role-based access controls and auditing practices, and may indicate
+  risky behavior, misconfiguration, or unauthorized activity by a malicious actor
+  using compromised credentials.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/218bf991-6c63-4c26-a682-6ac1a53ad8f8/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_system
+  value: SrcIpAddr
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments, however tune as needed.
+    Administrators may use the root account for troubleshooting or initial user creation.
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1078/esxi_external_root_login/esxi_external_root_login.log

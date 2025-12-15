@@ -1,0 +1,69 @@
+technique_id: T1127.001
+technique_name: Microsoft Build Engine Started by an Office Application
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : \"MSBuild.exe\" and\n  process.parent.name : (\"eqnedt32.exe\"\
+  ,\n                         \"excel.exe\",\n                         \"fltldr.exe\"\
+  ,\n                         \"msaccess.exe\",\n                         \"mspub.exe\"\
+  ,\n                         \"outlook.exe\",\n                         \"powerpnt.exe\"\
+  ,\n                         \"winword.exe\" )"
+explanation: 'An instance of MSBuild, the Microsoft Build Engine, was started by Excel
+  or Word. This is unusual behavior for the Build
+
+  Engine and could have been caused by an Excel or Word document executing a malicious
+  script payload.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c5dc3223-13a2-44a2-946c-e9dc0aa0449c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all compromised accounts are identified. Reset passwords for these accounts
+    and'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.talosintelligence.com/2020/02/building-bypass-with-msbuild.html
+has_investigation_guide: true
+risk_score: 73

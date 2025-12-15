@@ -1,0 +1,69 @@
+technique_id: T1556.009
+technique_name: OIDC Discovery URL Changed in Entra ID
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-azure.auditlogs-* metadata _id, _version, _index\n| where event.action\
+  \ == \"Authentication Methods Policy Update\"\n| eval Esql.azure_auditlogs_properties_target_resources_modified_properties_new_value_replace\
+  \ = replace(`azure.auditlogs.properties.target_resources.0.modified_properties.0.new_value`,\
+  \ \"\\\\\\\\\", \"\")\n| eval Esql.azure_auditlogs_properties_target_resources_modified_properties_old_value_replace\
+  \ = replace(`azure.auditlogs.properties.target_resources.0.modified_properties.0.old_value`,\
+  \ \"\\\\\\\\\", \"\")\n| dissect Esql.azure_auditlogs_properties_target_resources_modified_properties_new_value_replace\
+  \ \"%{}discoveryUrl\\\":\\\"%{Esql.azure_auditlogs_properties_auth_oidc_discovery_url_new}\\\
+  \"}%{}\"\n| dissect Esql.azure_auditlogs_properties_target_resources_modified_properties_old_value_replace\
+  \ \"%{}discoveryUrl\\\":\\\"%{Esql.azure_auditlogs_properties_auth_oidc_discovery_url_old}\\\
+  \"}%{}\"\n| where Esql.azure_auditlogs_properties_auth_oidc_discovery_url_new is\
+  \ not null and Esql.azure_auditlogs_properties_auth_oidc_discovery_url_old is not\
+  \ null\n| where Esql.azure_auditlogs_properties_auth_oidc_discovery_url_new != Esql.azure_auditlogs_properties_auth_oidc_discovery_url_old\n\
+  | keep\n    @timestamp,\n    event.action,\n    event.outcome,\n    azure.tenant_id,\n\
+  \    azure.correlation_id,\n    azure.auditlogs.properties.activity_datetime,\n\
+  \    azure.auditlogs.properties.operation_type,\n    azure.auditlogs.properties.initiated_by.user.userPrincipalName,\n\
+  \    azure.auditlogs.properties.initiated_by.user.displayName,\n    azure.auditlogs.properties.initiated_by.user.ipAddress,\n\
+  \    source.geo.city_name,\n    source.geo.region_name,\n    source.geo.country_name,\n\
+  \    Esql.azure_auditlogs_properties_auth_oidc_discovery_url_new,\n    Esql.azure_auditlogs_properties_auth_oidc_discovery_url_old"
+explanation: 'Detects a change to the OpenID Connect (OIDC) discovery URL in the Entra
+  ID Authentication Methods Policy. This behavior
+
+  may indicate an attempt to federate Entra ID with an attacker-controlled identity
+  provider, enabling bypass of
+
+  multi-factor authentication (MFA) and unauthorized access through bring-your-own
+  IdP (BYOIDP) methods.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/498e4094-60e7-11f0-8847-f661ea17fbcd.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+    - Entra ID administrators may intentionally reconfigure OIDC trust relationships
+    to support new business requirements.
+
+    - Validate any changes with the identity or security operations team before taking
+    action.
+
+
+    ### Response and remediation
+
+    - If the change is unauthorized, immediately revert the discovery URL to the trusted
+    IdP via the Entra ID portal.
+
+    - Revoke tokens or sessions issued after the configuration change.
+
+    - Investigate how the unauthorized change occurred (e.g'
+  mitigation: Review investigation guide for details
+references:
+- https://dirkjanm.io/persisting-with-federated-credentials-entra-apps-managed-identities/
+has_investigation_guide: true
+risk_score: 73

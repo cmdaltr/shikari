@@ -1,0 +1,62 @@
+technique_id: T1569.002
+technique_name: PUA - NSudo Execution
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 771d1eb5-9587-4568-95fb-9ec44153a012
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cli:\n  CommandLine|contains:\n  - '-U:S '\n  - '-U:T '\n  - '-U:E '\n\
+  \  - '-P:E '\n  - '-M:S '\n  - '-M:H '\n  - '-U=S '\n  - '-U=T '\n  - '-U=E '\n\
+  \  - '-P=E '\n  - '-M=S '\n  - '-M=H '\n  - -ShowWindowMode:Hide\nselection_img:\n\
+  - Image|endswith:\n  - \\NSudo.exe\n  - \\NSudoLC.exe\n  - \\NSudoLG.exe\n- OriginalFileName:\n\
+  \  - NSudo.exe\n  - NSudoLC.exe\n  - NSudoLG.exe\n"
+explanation: Detects the use of NSudo tool for command execution
+false_positives:
+- Legitimate use by administrators
+references:
+- https://web.archive.org/web/20221019044836/https://nsudo.m2team.org/en-us/
+- https://www.winhelponline.com/blog/run-program-as-system-localsystem-account-windows/
+tags:
+- attack.execution
+- attack.t1569.002
+- attack.s0029
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith:
+    - \NSudo.exe
+    - \NSudoLC.exe
+    - \NSudoLG.exe
+  - OriginalFileName:
+    - NSudo.exe
+    - NSudoLC.exe
+    - NSudoLG.exe
+  selection_cli:
+    CommandLine|contains:
+    - '-U:S '
+    - '-U:T '
+    - '-U:E '
+    - '-P:E '
+    - '-M:S '
+    - '-M:H '
+    - '-U=S '
+    - '-U=T '
+    - '-U=E '
+    - '-P=E '
+    - '-M=S '
+    - '-M=H '
+    - -ShowWindowMode:Hide
+  condition: all of selection_*
+metadata:
+  created_date: 2022-01-24
+  modified_date: 2023-02-13
+  author: Florian Roth (Nextron Systems), Nasreddine Bencherchali
+  status: test
+  imported_date: '2025-11-28'

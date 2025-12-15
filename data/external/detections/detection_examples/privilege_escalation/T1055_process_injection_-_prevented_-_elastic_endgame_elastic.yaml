@@ -1,0 +1,36 @@
+technique_id: T1055
+technique_name: Process Injection - Prevented - Elastic Endgame
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: event.kind:alert and event.module:endgame and endgame.metadata.type:prevention
+  and (event.action:kernel_shellcode_event or endgame.event_subtype_full:kernel_shellcode_event)
+explanation: 'Elastic Endgame prevented Process Injection. Click the Elastic Endgame
+  icon in the event.module column or the link in
+
+  the rule.reference column for additional information.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/990838aa-a953-4f3e-b3cb-6ddf7584de9e.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may trigger kernel shellcode events.
+    Users can create exceptions for known update processes by identifying their unique
+    process identifiers or paths.
+
+    - Security tools or monitoring software that perform deep system scans might mimic
+    process injection behavior. Exclude these tools by specifying their executable
+    names or hashes in the exception list.
+
+    - Custom scripts or automation tools that interact with system processes coul'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

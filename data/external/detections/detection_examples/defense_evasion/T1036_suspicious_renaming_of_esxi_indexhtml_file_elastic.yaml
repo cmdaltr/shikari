@@ -1,0 +1,47 @@
+technique_id: T1036
+technique_name: Suspicious Renaming of ESXI index.html File
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'file where host.os.type == "linux" and event.action == "rename" and file.name
+  : "index.html" and
+
+  file.Ext.original.path : "/usr/lib/vmware/*"'
+explanation: 'Identifies instances where the "index.html" file within the "/usr/lib/vmware/*"
+  directory is renamed on a Linux system.
+
+  The rule monitors for the "rename" event action associated with this specific file
+  and path, which could indicate
+
+  malicious activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c125e48f-6783-41f0-b100-c3bf1b114d16.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance or updates on VMware ESXi hosts may involve renaming the
+    index.html file temporarily. Users can create exceptions for known maintenance
+    windows to prevent unnecessary alerts.
+
+    - Automated scripts or backup processes might rename the index.html file as part
+    of their operations. Identify and whitelist these scripts or processes to avoid
+    false positives.
+
+    - System administrators may manually rename the index.html file for legitimate
+    customization or trou'
+  mitigation: Review investigation guide for details
+references:
+- https://www.bleepingcomputer.com/news/security/massive-esxiargs-ransomware-attack-targets-vmware-esxi-servers-worldwide/
+has_investigation_guide: true
+risk_score: 47

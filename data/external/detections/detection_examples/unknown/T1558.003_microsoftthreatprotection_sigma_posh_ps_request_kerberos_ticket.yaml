@@ -1,0 +1,42 @@
+technique_id: T1558.003
+technique_name: Request A Single Ticket via PowerShell
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: a861d835-af37-4930-bcd6-5b178bfb54df
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ScriptBlockText|contains: System.IdentityModel.Tokens.KerberosRequestorSecurityToken\n"
+explanation: 'utilize native PowerShell Identity modules to query the domain to extract
+  the Service Principal Names for a single computer.
+
+  This behavior is typically used during a kerberos or silver ticket attack.
+
+  A successful execution will output the SPNs for the endpoint in question.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1558.003/T1558.003.md#atomic-test-4---request-a-single-ticket-via-powershell
+tags:
+- attack.credential-access
+- attack.t1558.003
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection:
+    ScriptBlockText|contains: System.IdentityModel.Tokens.KerberosRequestorSecurityToken
+  condition: selection
+metadata:
+  created_date: 2021-12-28
+  modified_date: '2025-11-28'
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

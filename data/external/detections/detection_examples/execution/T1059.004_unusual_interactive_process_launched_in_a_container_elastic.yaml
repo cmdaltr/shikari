@@ -1,0 +1,30 @@
+technique_id: T1059.004
+technique_name: Unusual Interactive Process Launched in a Container
+tactic: execution
+platform: Elastic
+fidelity_score: 0.85
+validated: true
+query: 'event.category:process and host.os.type:linux and event.type:start and event.action:exec
+  and
+
+  process.entry_leader.entry_meta.type:container and process.interactive:true'
+explanation: 'This rule detects when an unusual interactive process is launched inside
+  a container. Interactive processes are typically
+
+  run in the foreground and require user input, which is unusual behavior for a containerized
+  environment. This activity
+
+  could indicate an attacker attempting to gain access to the container environment
+  or perform malicious actions.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7020ff25-76d7-4a7d-b95b-266cf27d70e8.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+risk_score: 47

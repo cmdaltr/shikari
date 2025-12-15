@@ -1,0 +1,44 @@
+technique_id: T1543
+technique_name: Service Installed By Unusual Client - Security
+tactic: persistence
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: c4e92a97-a9ff-4392-9d2d-7a4c642768ca
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_eid:\n  EventID: 4697\nselection_pid:\n- ClientProcessId: 0\n- ParentProcessId:\
+  \ 0\n"
+explanation: Detects a service installed by a client which has PID 0 or whose parent
+  has PID 0
+false_positives:
+- Unknown
+references:
+- https://www.elastic.co/guide/en/security/current/windows-service-installed-via-an-unusual-client.html
+- https://www.x86matthew.com/view_post?id=create_svc_rpc
+- https://twitter.com/SBousseaden/status/1490608838701166596
+tags:
+- attack.persistence
+- attack.privilege-escalation
+- attack.t1543
+logsource:
+  service: security
+  product: windows
+  definition: 'Requirements: The System Security Extension audit subcategory need
+    to be enabled to log the EID 4697'
+detection:
+  selection_eid:
+    EventID: 4697
+  selection_pid:
+  - ClientProcessId: 0
+  - ParentProcessId: 0
+  condition: all of selection_*
+metadata:
+  created_date: 2022-09-15
+  modified_date: 2023-01-04
+  author: Tim Rauch (Nextron Systems), Elastic (idea)
+  status: test
+  imported_date: '2025-11-28'

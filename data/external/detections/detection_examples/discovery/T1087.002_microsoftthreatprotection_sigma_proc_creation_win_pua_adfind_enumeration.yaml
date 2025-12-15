@@ -1,0 +1,52 @@
+technique_id: T1087.002
+technique_name: PUA - Suspicious ActiveDirectory Enumeration Via AdFind.EXE
+tactic: discovery
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 455b9d50-15a1-4b99-853f-8d37655a4c1b
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_*\nselection_enum_ad:\n\
+  \  CommandLine|contains: -sc admincountdmp\nselection_enum_exchange:\n  CommandLine|contains:\
+  \ -sc exchaddresses\nselection_password:\n  CommandLine|contains:\n  - lockoutduration\n\
+  \  - lockoutthreshold\n  - lockoutobservationwindow\n  - maxpwdage\n  - minpwdage\n\
+  \  - minpwdlength\n  - pwdhistorylength\n  - pwdproperties\n"
+explanation: Detects active directory enumeration activity using known AdFind CLI
+  flags
+false_positives:
+- Authorized administrative activity
+references:
+- https://www.joeware.net/freetools/tools/adfind/
+- https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1087.002/T1087.002.md
+tags:
+- attack.discovery
+- attack.t1087.002
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_password:
+    CommandLine|contains:
+    - lockoutduration
+    - lockoutthreshold
+    - lockoutobservationwindow
+    - maxpwdage
+    - minpwdage
+    - minpwdlength
+    - pwdhistorylength
+    - pwdproperties
+  selection_enum_ad:
+    CommandLine|contains: -sc admincountdmp
+  selection_enum_exchange:
+    CommandLine|contains: -sc exchaddresses
+  condition: 1 of selection_*
+metadata:
+  created_date: 2021-12-13
+  modified_date: 2023-03-05
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

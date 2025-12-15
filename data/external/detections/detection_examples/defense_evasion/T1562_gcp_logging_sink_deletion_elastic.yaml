@@ -1,0 +1,45 @@
+technique_id: T1562
+technique_name: GCP Logging Sink Deletion
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:gcp.audit and event.action:google.logging.v*.ConfigServiceV*.DeleteSink
+  and event.outcome:success
+explanation: 'Identifies a Logging sink deletion in Google Cloud Platform (GCP). Every
+  time a log entry arrives, Logging compares the
+
+  log entry to the sinks in that resource. Each sink whose filter matches the log
+  entry writes a copy of the log entry to
+
+  the sink''s export destination. An adversary may delete a Logging sink to evade
+  detection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/51859fa0-d86b-4214-bf48-ebb30ed91305.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: GCP
+  confidence: high
+- type: data_source
+  value: Google Cloud Platform
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance or configuration changes by authorized personnel can trigger
+    false positives. To manage this, create exceptions for known maintenance windows
+    or specific user accounts responsible for these tasks.
+
+    - Automated scripts or tools used for managing logging configurations might inadvertently
+    delete sinks as part of their operation. Identify these scripts and exclude their
+    actions from triggering alerts by using specific identifiers or service accounts.
+
+    -'
+  mitigation: Review investigation guide for details
+references:
+- https://cloud.google.com/logging/docs/export
+has_investigation_guide: true
+risk_score: 47

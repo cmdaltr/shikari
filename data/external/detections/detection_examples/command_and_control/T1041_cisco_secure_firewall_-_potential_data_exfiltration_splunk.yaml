@@ -1,0 +1,48 @@
+technique_id: T1041
+technique_name: Cisco Secure Firewall - Potential Data Exfiltration
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: "`cisco_secure_firewall` EventType=ConnectionEvent `cisco_secure_firewall_inside_to_outside`\n\
+  | eval total_bytes = InitiatorBytes + ResponderBytes\n| eval total_mb = round(total_bytes\
+  \ / 1024 / 1024, 2)\n| where total_mb >= 100\n| eval Exfiltrated = total_mb + \"\
+  \ MB\"\n| stats min(_time) as firstTime max(_time) as lastTime\n    Values(url)\
+  \ as url\n    Values(rule) as rule\n    Values(dest_port) as dest_port\n    by src_ip,\
+  \ dest, Exfiltrated, transport, action\n| `security_content_ctime(firstTime)`\n\
+  | `security_content_ctime(lastTime)`\n| `cisco_secure_firewall___potential_data_exfiltration_filter`"
+explanation: The following analytic detects potentially suspicious large outbound
+  data transfers from internal to external networks. It leverages Cisco Secure Firewall
+  Threat Defense logs and calculates the total volume of data exchanged per connection
+  by summing InitiatorBytes and ResponderBytes. Connections exceeding 100 MB are flagged,
+  as these may indicate unauthorized data exfiltration, especially if initiated by
+  unusual users, hosts, or processes. This analytic is scoped to inside-to-outside
+  flows using a macro (cisco_secure_firewall_inside_to_outside) to abstract environment-specific
+  zone definitions. If confirmed malicious, this behavior may reflect data staging
+  and exfiltration over an encrypted or stealthy transport.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/3d8536b6-52b4-4c3e-b695-3f2e90bb22be/
+indicators:
+- type: data_source
+  value: Cisco Secure Firewall Threat Defense Connection Event
+  confidence: high
+- type: risk_system
+  value: src_ip
+  confidence: high
+false_positives:
+- description: 'Large outbound transfers may occur due to legitimate activities such
+    as cloud backups, file syncing, OS or application updates, or developer build
+    deployments.
+
+    Backup servers, CI/CD pipelines, and enterprise sync tools (e.g., OneDrive, Dropbox)
+    may exhibit similar patterns.
+
+    Additional validation using user context, scheduled task windows, or endpoint
+    telemetry is recommended to reduce false positives.'
+  mitigation: Review context and user activity
+references:
+- https://www.cisco.com/c/en/us/td/docs/security/firepower/741/api/FQE/secure_firewall_estreamer_fqe_guide_740.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/cisco_secure_firewall_threat_defense/connection_event/connection_events.log

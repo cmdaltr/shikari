@@ -1,0 +1,44 @@
+technique_id: T1562
+technique_name: GCP Firewall Rule Deletion
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:gcp.audit and event.action:(*.compute.firewalls.delete or google.appengine.*.Firewall.Delete*Rule)
+explanation: 'Identifies when a firewall rule is deleted in Google Cloud Platform
+  (GCP) for Virtual Private Cloud (VPC) or App Engine.
+
+  These firewall rules can be configured to allow or deny connections to or from virtual
+  machine (VM) instances or
+
+  specific applications. An adversary may delete a firewall rule in order to weaken
+  their target''s security controls.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ff9b571e-61d6-4f6c-9561-eb4cca3bafe1.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: GCP
+  confidence: high
+- type: data_source
+  value: Google Cloud Platform
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance or updates by authorized personnel may trigger firewall
+    rule deletions. To manage this, create exceptions for known maintenance windows
+    or specific user accounts responsible for these tasks.
+
+    - Automated scripts or tools used for infrastructure management might delete and
+    recreate firewall rules as part of their normal operation. Identify these scripts
+    and exclude their actions from triggering alerts by using service accounts or
+    tags associated with'
+  mitigation: Review investigation guide for details
+references:
+- https://cloud.google.com/vpc/docs/firewalls
+- https://cloud.google.com/appengine/docs/standard/python/understanding-firewalls
+has_investigation_guide: true
+risk_score: 47

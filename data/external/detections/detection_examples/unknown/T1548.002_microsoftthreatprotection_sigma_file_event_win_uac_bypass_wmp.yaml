@@ -1,0 +1,42 @@
+technique_id: T1548.002
+technique_name: UAC Bypass Using Windows Media Player - File
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 68578b43-65df-4f81-9a9b-92f32711a951
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection*\nselection1:\n\
+  \  TargetFilename|endswith: \\AppData\\Local\\Temp\\OskSupport.dll\n  TargetFilename|startswith:\
+  \ C:\\Users\\\nselection2:\n  Image: C:\\Windows\\system32\\DllHost.exe\n  TargetFilename:\
+  \ C:\\Program Files\\Windows Media Player\\osk.exe\n"
+explanation: Detects the pattern of UAC Bypass using Windows Media Player osksupport.dll
+  (UACMe 32)
+false_positives:
+- Unknown
+references:
+- https://github.com/hfiref0x/UACME
+tags:
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1548.002
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection1:
+    TargetFilename|startswith: C:\Users\
+    TargetFilename|endswith: \AppData\Local\Temp\OskSupport.dll
+  selection2:
+    Image: C:\Windows\system32\DllHost.exe
+    TargetFilename: C:\Program Files\Windows Media Player\osk.exe
+  condition: 1 of selection*
+metadata:
+  created_date: 2021-08-23
+  modified_date: 2022-10-09
+  author: Christian Burkard (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

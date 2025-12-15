@@ -1,0 +1,52 @@
+technique_id: T1569.002
+technique_name: Windows Service Execution RemCom
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where (Processes.process_name=remcom.exe
+  OR Processes.original_file_name=RemCom.exe) Processes.process="*\\*" Processes.process
+  IN ("*/user:*", "*/pwd:*") by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_service_execution_remcom_filter`'
+explanation: The following analytic identifies the execution of RemCom.exe, an open-source
+  alternative to PsExec, used for lateral movement and remote command execution. It
+  leverages data from Endpoint Detection and Response (EDR) agents, focusing on process
+  names, original file names, and command-line arguments. This activity is significant
+  as it indicates potential lateral movement within the network. If confirmed malicious,
+  this could allow an attacker to execute commands remotely, potentially leading to
+  further compromise and control over additional systems within the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/7e3d68db-ea4d-419b-adbd-e14a525ecf09/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present based on Administrative use. Filter
+    as needed.
+  mitigation: Review context and user activity
+references:
+- https://www.crowdstrike.com/blog/bears-midst-intrusion-democratic-national-committee/
+- https://github.com/kavika13/RemCom
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1569.002/remcom/remcom_windows-sysmon.log

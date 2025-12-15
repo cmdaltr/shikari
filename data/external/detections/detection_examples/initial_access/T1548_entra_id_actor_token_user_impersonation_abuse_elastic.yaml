@@ -1,0 +1,68 @@
+technique_id: T1548
+technique_name: Entra ID Actor Token User Impersonation Abuse
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-azure.auditlogs-* metadata _id, _version, _index\n| where azure.auditlogs.properties.initiated_by.user.displayName\
+  \ in (\n    \"Office 365 Exchange Online\",\n    \"Skype for Business Online\",\n\
+  \    \"Dataverse\",\n    \"Office 365 SharePoint Online\",\n    \"Microsoft Dynamics\
+  \ ERP\"\n  ) and\n  not azure.auditlogs.operation_name like \"*group*\" and\n  azure.auditlogs.operation_name\
+  \ != \"Set directory feature on tenant\"\n  and azure.auditlogs.properties.initiated_by.user.userPrincipalName\
+  \ rlike \".+@[A-Za-z0-9.]+\\\\.[A-Za-z]{2,}\"\n| keep\n    _id,\n    @timestamp,\n\
+  \    azure.*,\n    client.*,\n    event.*,\n    source.*"
+explanation: 'Identifies potential abuse of actor tokens in Microsoft Entra ID audit
+  logs. Actor tokens are undocumented backend
+
+  mechanisms used by Microsoft for service-to-service (S2S) operations, allowing services
+  to perform actions on behalf
+
+  of users. These tokens appear in logs with the service''s display name but the impersonated
+  user''s UPN. While some
+
+  legitimate Microsoft operations use actor tokens, unexpected usage may indicate
+  exploitation of CVE-2025-55241, which
+
+  allowed unauthorized access to Azure AD Graph API across tenants before being patched
+  by Microsoft.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8e7a4f2c-9b3d-4e5a-a1b6-c2d8f7e9b3a5.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Entra ID
+  confidence: high
+- type: data_source
+  value: Entra Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate Microsoft service migrations or updates may temporarily exhibit this
+    behavior.
+
+    - Third-party integrations using Microsoft Graph or other APIs might trigger this
+    pattern during normal operations.
+
+    - Automated administrative tools or scripts using service principal authentication
+    could be misconfigured.
+
+
+    ### Response and remediation
+
+
+    - Immediately review and audit all service principal permissions and recent consent
+    grants in your Entra ID tenant.
+
+    - Disable or'
+  mitigation: Review investigation guide for details
+references:
+- https://dirkjanm.io/obtaining-global-admin-in-every-entra-id-tenant-with-actor-tokens/
+- https://msrc.microsoft.com/update-guide/en-US/advisory/CVE-2025-55241
+has_investigation_guide: true
+risk_score: 47

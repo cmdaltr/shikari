@@ -1,0 +1,49 @@
+technique_id: T1059
+technique_name: Wermgr Process Spawned CMD Or Powershell Process
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '| tstats `security_content_summariesonly` values(Processes.process) as cmdline
+  min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Processes
+  where Processes.parent_process_name = "wermgr.exe" `process_cmd` OR `process_powershell`
+  by Processes.action Processes.dest Processes.original_file_name Processes.parent_process
+  Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id
+  Processes.parent_process_name Processes.parent_process_path Processes.process Processes.process_exec
+  Processes.process_guid Processes.process_hash Processes.process_id Processes.process_integrity_level
+  Processes.process_name Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `wermgr_process_spawned_cmd_or_powershell_process_filter`'
+explanation: The following analytic detects the spawning of cmd or PowerShell processes
+  by the wermgr.exe process. It leverages data from Endpoint Detection and Response
+  (EDR) agents, focusing on process telemetry, including parent-child process relationships
+  and command-line executions. This behavior is significant as it is commonly associated
+  with code injection techniques used by malware like TrickBot to execute shellcode
+  or malicious DLL modules. If confirmed malicious, this activity could allow attackers
+  to execute arbitrary code, escalate privileges, or maintain persistence within the
+  environment, posing a severe threat to system security.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e8fc95bc-a107-11eb-a978-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://labs.vipre.com/trickbot-and-its-modules/
+- https://whitehat.eu/incident-response-case-study-featuring-ryuk-and-trickbot-part-2/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/trickbot/infection/windows-sysmon.log

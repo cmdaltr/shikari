@@ -1,0 +1,52 @@
+technique_id: T1563
+technique_name: SSH Authorized Keys File Modification
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.category:file and event.type:(change or creation) and\n file.name:(\"\
+  authorized_keys\" or \"authorized_keys2\" or \"/etc/ssh/sshd_config\" or \"/root/.ssh\"\
+  ) and\n not process.executable:\n             (/Library/Developer/CommandLineTools/usr/bin/git\
+  \ or\n              /usr/local/Cellar/maven/*/libexec/bin/mvn or\n             \
+  \ /Library/Java/JavaVirtualMachines/jdk*.jdk/Contents/Home/bin/java or\n       \
+  \       /usr/bin/vim or\n              /usr/local/Cellar/coreutils/*/bin/gcat or\n\
+  \              /usr/bin/bsdtar or\n              /usr/bin/nautilus or\n        \
+  \      /usr/bin/scp or\n              /usr/bin/touch or\n              /var/lib/docker/*\
+  \ or\n              /usr/bin/google_guest_agent or\n              /opt/jc/bin/jumpcloud-agent\
+  \ or\n              /opt/puppetlabs/puppet/bin/puppet or\n              /usr/bin/chef-client\n\
+  )"
+explanation: 'The Secure Shell (SSH) authorized_keys file specifies which users are
+  allowed to log into a server using public key
+
+  authentication. Adversaries may modify it to maintain persistence on a victim host
+  by adding their own public key(s).'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2215b8bd-1759-4ffa-8ab8-55c8e6b32e7f.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Development tools like git and maven may modify SSH authorized_keys files during
+    legitimate operations. To prevent these from triggering alerts, add their paths
+    to the exclusion list in the detection rule.
+
+    - System utilities such as vim and touch are often used by administrators to manually
+    update authorized_keys files. Consider excluding these processes if they are part
+    of regular maintenance activities.
+
+    - Automation tools like puppet and chef-client might update SSH'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

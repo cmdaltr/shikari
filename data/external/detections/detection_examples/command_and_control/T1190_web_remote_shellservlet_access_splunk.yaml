@@ -1,0 +1,38 @@
+technique_id: T1190
+technique_name: Web Remote ShellServlet Access
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("*plugins/servlet/com.jsos.shell/*") Web.status=200 by Web.http_user_agent,
+  Web.status Web.http_method, Web.url, Web.url_length, Web.src, Web.dest, sourcetype
+  | `drop_dm_object_name("Web")` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `web_remote_shellservlet_access_filter`'
+explanation: The following analytic identifies attempts to access the Remote ShellServlet
+  on a web server, specifically targeting Confluence servers vulnerable to CVE-2023-22518
+  and CVE-2023-22515. It leverages web data to detect URLs containing "*plugins/servlet/com.jsos.shell/*"
+  with a status code of 200. This activity is significant as it is commonly associated
+  with web shells and other malicious behaviors, potentially leading to unauthorized
+  command execution. If confirmed malicious, attackers could gain remote code execution
+  capabilities, compromising the server and potentially the entire network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/c2a332c3-24a2-4e24-9455-0e80332e6746/
+indicators:
+- type: data_source
+  value: Nginx Access
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may occur depending on the web server's configuration.
+    If the web server is intentionally configured to utilize the Remote ShellServlet,
+    then the detections by this analytic would not be considered true positives.
+  mitigation: Review context and user activity
+references:
+- http://www.servletsuite.com/servlets/shell.htm
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/confluence/nginx_shellservlet.log

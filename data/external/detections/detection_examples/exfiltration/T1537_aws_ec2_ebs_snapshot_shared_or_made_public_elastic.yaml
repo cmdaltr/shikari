@@ -1,0 +1,54 @@
+technique_id: T1537
+technique_name: AWS EC2 EBS Snapshot Shared or Made Public
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "info where event.dataset == \"aws.cloudtrail\"\n  and event.action == \"ModifySnapshotAttribute\"\
+  \n  and event.outcome == \"success\"\n  and stringContains (aws.cloudtrail.request_parameters,\
+  \ \"attributeType=CREATE_VOLUME_PERMISSION\")\n  and stringContains (aws.cloudtrail.request_parameters,\
+  \ \"add=\")"
+explanation: 'Detects when an Amazon Elastic Block Store (EBS) snapshot is shared
+  with another AWS account or made public. EBS
+
+  snapshots contain copies of data volumes that may include sensitive or regulated
+  information. Adversaries may exploit
+
+  ModifySnapshotAttribute to share snapshots with external accounts or the public,
+  allowing them to copy and access data
+
+  in an environment they control. This activity often precedes data exfiltration or
+  persistence operations, where the
+
+  attacker transfers stolen data out of the victim account or prepares a staging area
+  for further exploitation.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4182e486-fc61-11ee-a05d-f661ea17fbce.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS EC2
+  confidence: high
+false_positives:
+- description: "False positive analysis:\n\n- **Authorized internal sharing**: Confirm\
+    \ if the snapshot sharing was part of an approved workflow, such as internal replication\
+    \ or migration between AWS Organization accounts.  \n- **Automated replication\
+    \ or tooling**: Infrastructure-as-code or backup automation may temporarily share\
+    \ snapshots for cross-region or cross-account transfers. Verify automation identifiers,\
+    \ source IPs, and tags.  \n- **Self-account addition**: Adding the owner’s own\
+    \ account ID to `createVolum"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/ebs/latest/userguide/ebs-modifying-snapshot-permissions.html
+- https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifySnapshotAttribute.html
+- https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/aws-ebs-snapshot-dump
+- https://hackingthe.cloud/aws/exploitation/Misconfigured_Resource-Based_Policies/exploting_public_resources_attack_playbook/
+has_investigation_guide: true
+risk_score: 47

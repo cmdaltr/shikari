@@ -1,0 +1,58 @@
+technique_id: T1114.001
+technique_name: PowerShell Mailbox Collection Script
+tactic: collection
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:windows and\n  (\n    (\n      powershell.file.script_block_text\
+  \ : (\n        \"Microsoft.Office.Interop.Outlook\" or\n        \"Interop.Outlook.olDefaultFolders\"\
+  \ or\n        \"olFolderInBox\" or\n        \"Outlook.Application\"\n      ) and\
+  \ powershell.file.script_block_text : (\"MAPI\" or \"GetDefaultFolder\" or \"GetNamespace\"\
+  \ or \"Session\" or \"GetSharedDefaultFolder\")\n    ) or\n    (\n      powershell.file.script_block_text\
+  \ : (\n        \"Microsoft.Exchange.WebServices.Data.Folder\" or\n        \"Microsoft.Exchange.WebServices.Data.FileAttachment\"\
+  \ or\n        \"Microsoft.Exchange.WebServices.Data.ExchangeService\"\n      ) and\n\
+  \      powershell.file.script_block_text : (\"FindItems\" or \"Bind\" or \"WellKnownFolderName\"\
+  \ or \"FolderId\" or \"ItemView\" or \"PropertySet\" or \"SearchFilter\" or \"Attachments\"\
+  )\n    )\n  )"
+explanation: 'Detects PowerShell scripts that can be used to collect data from mailboxes.
+  Adversaries may target user email to collect
+
+  sensitive information.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a2d04374-187c-4fd9-b513-3ad4e7fdd67a.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This mechanism can be used legitimately. Analysts can dismiss the alert if the
+    administrator is aware of the activity and it is done with proper approval.
+
+
+    ### Related rules
+
+
+    - Exporting Exchange Mailbox via PowerShell - 6aace640-e631-4870-ba8e-5fdda09325db
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - If the involved host is not the Exchange server, isolate the host to prevent
+    further post-compromise beha'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/dafthack/MailSniper/blob/master/MailSniper.ps1
+- https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/master/apt29/Archive/CALDERA_DIY/evals/payloads/stepSeventeen_email.ps1
+has_investigation_guide: true
+risk_score: 47

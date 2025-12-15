@@ -1,0 +1,42 @@
+technique_id: T1556
+technique_name: Cisco Duo Bypass Code Generation
+tactic: lateral_movement
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`cisco_duo_administrator` action=bypass_create | rename object as user | stats
+  count min(_time) as firstTime max(_time) as lastTime by action actionlabel description
+  user | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `cisco_duo_bypass_code_generation_filter`'
+explanation: "The following analytic detects when a Duo user generates a bypass code,\
+  \ which allows them to circumvent multi-factor authentication (2FA) protections.\
+  \ \nIt works by monitoring Duo activity logs for the 'bypass_create' action, renaming\
+  \ the affected object as the user, and aggregating events to identify \ninstances\
+  \ where a bypass code is issued. This behavior is significant for a Security Operations\
+  \ Center (SOC) because generating a bypass code can enable \nattackers, malicious\
+  \ insiders, or unauthorized administrators to gain access to sensitive systems without\
+  \ the required second authentication factor. \nSuch activity may indicate account\
+  \ compromise, privilege abuse, or attempts to weaken security controls. Early detection\
+  \ of bypass code generation is \ncritical, as it allows the SOC to investigate and\
+  \ respond before an attacker can exploit the reduced authentication requirements,\
+  \ helping to prevent \nunauthorized access, data breaches, or further lateral movement\
+  \ within the environment. Monitoring for this action helps maintain strong authentication\
+  \ \nstandards and reduces the risk of credential-based attacks."
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/446e81ff-ce06-4925-9c7d-4073f9b5abf5/
+indicators:
+- type: data_source
+  value: Cisco Duo Administrator
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://splunkbase.splunk.com/app/7404
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1556/cisco_duo_bypass_code/cisco_duo_activity.json

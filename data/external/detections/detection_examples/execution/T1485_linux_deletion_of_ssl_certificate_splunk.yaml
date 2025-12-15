@@ -1,0 +1,41 @@
+technique_id: T1485
+technique_name: Linux Deletion of SSL Certificate
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Filesystem where Filesystem.action=deleted Filesystem.file_path
+  = "/etc/ssl/certs/*" Filesystem.file_path IN ("*.pem", "*.crt") by Filesystem.action
+  Filesystem.dest Filesystem.file_access_time Filesystem.file_create_time Filesystem.file_hash
+  Filesystem.file_modify_time Filesystem.file_name Filesystem.file_path Filesystem.file_acl
+  Filesystem.file_size Filesystem.process_guid Filesystem.process_id Filesystem.user
+  Filesystem.vendor_product | `drop_dm_object_name(Filesystem)` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)`| `linux_deletion_of_ssl_certificate_filter`'
+explanation: The following analytic detects the deletion of SSL certificates on a
+  Linux machine. It leverages filesystem event logs to identify when files with extensions
+  .pem or .crt are deleted from the /etc/ssl/certs/ directory. This activity is significant
+  because attackers may delete or modify SSL certificates to disable security features
+  or evade defenses on a compromised system. If confirmed malicious, this behavior
+  could indicate an attempt to disrupt secure communications, evade detection, or
+  execute a destructive payload, potentially leading to significant security breaches
+  and data loss.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/839ab790-a60a-4f81-bfb3-02567063f615/
+indicators:
+- type: data_source
+  value: Sysmon for Linux EventID 11
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrator or network operator can execute this command. Please
+    update the filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.sentinelone.com/labs/acidrain-a-modem-wiper-rains-down-on-europe/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/acidrain/sysmon_linux.log

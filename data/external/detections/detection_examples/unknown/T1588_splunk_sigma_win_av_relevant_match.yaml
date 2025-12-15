@@ -1,0 +1,133 @@
+technique_id: T1588
+technique_name: Relevant Anti-Virus Signature Keywords In Application Log
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: 78bc5783-81d9-4d73-ac97-59f6db4f72a8
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: keywords and not 1 of\
+  \ filter_optional_*\nfilter_optional_generic:\n- anti_ransomware_service.exe\n-\
+  \ Anti-Ransomware\n- Crack\n- cyber-protect-service.exe\n- encryptor\n- Keygen\n\
+  filter_optional_information:\n  Level: 4\nfilter_optional_restartmanager:\n  Provider_Name:\
+  \ Microsoft-Windows-RestartManager\nkeywords:\n- Adfind\n- 'ASP/BackDoor '\n- ATK/\n\
+  - Backdoor.ASP\n- Backdoor.Cobalt\n- Backdoor.JSP\n- Backdoor.PHP\n- Blackworm\n\
+  - Brutel\n- BruteR\n- Chopper\n- Cobalt\n- COBEACON\n- Cometer\n- CRYPTES\n- Cryptor\n\
+  - Destructor\n- DumpCreds\n- Exploit.Script.CVE\n- FastReverseProxy\n- Filecoder\n\
+  - 'GrandCrab '\n- HackTool\n- HKTL\n- HTool-\n- /HTool\n- .HTool\n- IISExchgSpawnCMD\n\
+  - Impacket\n- 'JSP/BackDoor '\n- Keylogger\n- Koadic\n- Krypt\n- Lazagne\n- Metasploit\n\
+  - Meterpreter\n- MeteTool\n- mikatz\n- Mimikatz\n- Mpreter\n- MsfShell\n- Nighthawk\n\
+  - Packed.Generic.347\n- PentestPowerShell\n- Phobos\n- 'PHP/BackDoor '\n- Potato\n\
+  - PowerSploit\n- PowerSSH\n- PshlSpy\n- PSWTool\n- PWCrack\n- PWDump\n- Ransom\n\
+  - Rozena\n- Ryzerlo\n- Sbelt\n- Seatbelt\n- 'SecurityTool '\n- SharpDump\n- Shellcode\n\
+  - Sliver\n- Splinter\n- Swrort\n- Tescrypt\n- TeslaCrypt\n- TurtleLoader\n- Valyria\n\
+  - Webshell\n"
+explanation: 'Detects potentially highly relevant antivirus events in the application
+  log based on known virus signature names and malware keywords.
+
+  '
+false_positives:
+- Some software piracy tools (key generators, cracks) are classified as hack tools
+references:
+- https://www.virustotal.com/gui/file/13828b390d5f58b002e808c2c4f02fdd920e236cc8015480fa33b6c1a9300e31
+- https://www.virustotal.com/gui/file/15b57c1b68cd6ce3c161042e0f3be9f32d78151fe95461eedc59a79fc222c7ed
+- https://www.virustotal.com/gui/file/5092b2672b4cb87a8dd1c2e6047b487b95995ad8ed5e9fc217f46b8bfb1b8c01
+- https://www.nextron-systems.com/?s=antivirus
+tags:
+- attack.resource-development
+- attack.t1588
+logsource:
+  product: windows
+  service: application
+detection:
+  keywords:
+  - Adfind
+  - 'ASP/BackDoor '
+  - ATK/
+  - Backdoor.ASP
+  - Backdoor.Cobalt
+  - Backdoor.JSP
+  - Backdoor.PHP
+  - Blackworm
+  - Brutel
+  - BruteR
+  - Chopper
+  - Cobalt
+  - COBEACON
+  - Cometer
+  - CRYPTES
+  - Cryptor
+  - Destructor
+  - DumpCreds
+  - Exploit.Script.CVE
+  - FastReverseProxy
+  - Filecoder
+  - 'GrandCrab '
+  - HackTool
+  - HKTL
+  - HTool-
+  - /HTool
+  - .HTool
+  - IISExchgSpawnCMD
+  - Impacket
+  - 'JSP/BackDoor '
+  - Keylogger
+  - Koadic
+  - Krypt
+  - Lazagne
+  - Metasploit
+  - Meterpreter
+  - MeteTool
+  - mikatz
+  - Mimikatz
+  - Mpreter
+  - MsfShell
+  - Nighthawk
+  - Packed.Generic.347
+  - PentestPowerShell
+  - Phobos
+  - 'PHP/BackDoor '
+  - Potato
+  - PowerSploit
+  - PowerSSH
+  - PshlSpy
+  - PSWTool
+  - PWCrack
+  - PWDump
+  - Ransom
+  - Rozena
+  - Ryzerlo
+  - Sbelt
+  - Seatbelt
+  - 'SecurityTool '
+  - SharpDump
+  - Shellcode
+  - Sliver
+  - Splinter
+  - Swrort
+  - Tescrypt
+  - TeslaCrypt
+  - TurtleLoader
+  - Valyria
+  - Webshell
+  filter_optional_generic:
+  - anti_ransomware_service.exe
+  - Anti-Ransomware
+  - Crack
+  - cyber-protect-service.exe
+  - encryptor
+  - Keygen
+  filter_optional_information:
+    Level: 4
+  filter_optional_restartmanager:
+    Provider_Name: Microsoft-Windows-RestartManager
+  condition: keywords and not 1 of filter_optional_*
+metadata:
+  created_date: 2017-02-19
+  modified_date: 2024-12-25
+  author: Florian Roth (Nextron Systems), Arnim Rupp
+  status: test
+  imported_date: '2025-11-28'

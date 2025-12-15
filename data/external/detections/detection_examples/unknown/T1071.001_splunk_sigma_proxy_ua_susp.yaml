@@ -1,0 +1,70 @@
+technique_id: T1071.001
+technique_name: Suspicious User Agent
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: 7195a772-4b3f-43a4-a210-6a003d65caa1
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection* and not\
+  \ falsepositives\nfalsepositives:\n- c-useragent: Mozilla/3.0 * Acrobat *\n- cs-host|endswith:\n\
+  \  - .acrobat.com\n  - .adobe.com\n  - .adobe.io\nselection1:\n  c-useragent|startswith:\n\
+  \  - user-agent\n  - 'Mozilla/3.0 '\n  - 'Mozilla/2.0 '\n  - 'Mozilla/1.0 '\n  -\
+  \ 'Mozilla '\n  - ' Mozilla/'\n  - Mozila/\n  - Mozilla/4.0 (compatible; MSIE 6.0;\
+  \ MS Web Services Client Protocol\nselection2:\n  c-useragent|contains:\n  - ' (compatible;MSIE\
+  \ '\n  - '.0;Windows NT '\n  - loader\nselection3:\n  c-useragent:\n  - _\n  - CertUtil\
+  \ URL Agent\n  - Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0)\n  - Mozilla/5.0\
+  \ (Windows NT 6.3; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0\n  - HTTPS\n  - Erbium-UA-4ce7c27cb4be9d32e333bf032c88235a\n\
+  \  - x\n  - xxx\n"
+explanation: Detects suspicious malformed user agent strings in proxy logs
+false_positives:
+- Unknown
+references:
+- https://github.com/fastly/waf_testbed/blob/8bfc406551f3045e418cbaad7596cff8da331dfc/templates/default/scanners-user-agents.data.erb
+tags:
+- attack.command-and-control
+- attack.t1071.001
+logsource:
+  category: proxy
+detection:
+  selection1:
+    c-useragent|startswith:
+    - user-agent
+    - 'Mozilla/3.0 '
+    - 'Mozilla/2.0 '
+    - 'Mozilla/1.0 '
+    - 'Mozilla '
+    - ' Mozilla/'
+    - Mozila/
+    - Mozilla/4.0 (compatible; MSIE 6.0; MS Web Services Client Protocol
+  selection2:
+    c-useragent|contains:
+    - ' (compatible;MSIE '
+    - '.0;Windows NT '
+    - loader
+  selection3:
+    c-useragent:
+    - _
+    - CertUtil URL Agent
+    - Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0)
+    - Mozilla/5.0 (Windows NT 6.3; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0
+    - HTTPS
+    - Erbium-UA-4ce7c27cb4be9d32e333bf032c88235a
+    - x
+    - xxx
+  falsepositives:
+  - c-useragent: Mozilla/3.0 * Acrobat *
+  - cs-host|endswith:
+    - .acrobat.com
+    - .adobe.com
+    - .adobe.io
+  condition: 1 of selection* and not falsepositives
+metadata:
+  created_date: 2017-07-08
+  modified_date: 2022-10-31
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

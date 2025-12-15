@@ -1,0 +1,391 @@
+form#main-form .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 0.5em 0.5em;
+  align-items: center;
+  justify-items: stretch;
+  margin-bottom: 1em;
+  max-width: 500px;
+  margin-left: 0%;
+  margin-right: 20%;
+}
+form#main-form .form-grid label {
+  font-weight: 500;
+  font-size: 1em;
+  text-align: left;
+  margin-left: 0;
+  white-space: nowrap;
+  min-width: 90px;
+  padding-right: 0.5em;
+}
+form#main-form .form-grid input[type="submit"] {
+  width: 100%;
+  max-width: 400px;
+  min-width: 400px;
+}
+html {
+  /* Zoom out by 10% - makes all content appear slightly smaller */
+  zoom: 0.9;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 1.05rem;
+  background: linear-gradient(to bottom, #f5f7f8 0%, #e8eef1 100%);
+  min-height: 100vh;
+}
+
+input, select, button {
+  font-size: 1rem;
+  padding: 0.45em 0.7em;
+}
+
+/* Dropdown template - standardized styling for all select elements */
+select.dropdown-styled,
+.dropdown-styled {
+  padding: 12px 16px;
+  border: 2px solid #C53030;
+  border-radius: 8px;
+  font-size: 1em;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  appearance: none;
+  background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg width=\'12\' height=\'8\' viewBox=\'0 0 12 8\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1 1L6 6L11 1\' stroke=\'%23C53030\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/%3E%3C/svg%3E');
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
+}
+
+select.dropdown-styled:focus,
+.dropdown-styled:focus {
+  outline: none;
+  border-color: #C53030;
+  box-shadow: 0 0 0 3px rgba(197, 48, 48, 0.1);
+}
+
+/* Password field with toggle visibility button */
+.password-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.password-wrapper input[type="password"],
+.password-wrapper input[type="text"] {
+  padding-right: 45px !important;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #666);
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: var(--text-primary, #1a1a1a);
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-size: 1.5rem;
+}
+
+form#main-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+form#main-form .form-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  gap: 0.5em;
+  margin-bottom: 1em;
+}
+form#main-form .form-col-label {
+  flex: 1;
+  text-align: right;
+  padding-right: 0.5em;
+}
+form#main-form .form-col-input {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+form#main-form .form-col-btn {
+  flex: 1;
+  text-align: left;
+  padding-left: 0.5em;
+}
+
+
+form#main-form label {
+  text-align: right;
+}
+
+form#main-form input[type="text"],
+form#main-form input[type="submit"] {
+  width: 60%;
+  max-width: 400px;
+  min-width: 400px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.centered {
+  display: flex;
+  justify-content: center;  /* horizontal center */
+  align-items: flex-start;   /* align to top */
+  min-height: 100vh;            /* full viewport height */
+  padding-top: var(--page-top) !important;        /* push content down 40% of viewport height */
+  box-sizing: border-box;
+}
+
+/* Global page top spacing */
+:root {
+  --page-top: 20px;
+
+  /* Shared typography tokens */
+  --subheading-size: 1.1rem;   /* matches h3.subheading on progress */
+  --lead-size: 1.0625rem;       /* matches p.lead on progress */
+}
+
+html, body { margin: 0; padding: 0; }
+
+/* Single source of top spacing for all pages */
+#main-content { padding-top: var(--page-top) !important; margin-top: 0 !important; }
+
+/* Remove hardcoded 25vh push-down from .centered */
+.centered {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;                 /* keep full-height layout */
+  padding-top: var(--page-top) !important;  /* now controlled via variable */
+  box-sizing: border-box;
+}
+
+/* Shared container - standardized 1200px width */
+.page-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* Container variations */
+.container { max-width: 1200px; margin: 0 auto; }
+.tabs-container { width: 100%; margin: 0 auto; }
+.results-container { max-width: 1200px; margin: 0 auto; }
+.progress-container { max-width: 1200px; margin: 0 auto; }
+.manual-group-container { max-width: 1200px; margin: 0 auto; }
+
+/* Titles */
+.page-title,
+h2.page-title {
+  text-align: center;
+  width: 100%;
+  margin: 0 !important;
+  margin-block-start: 0 !important;
+  margin-block-end: 0 !important;
+  padding-top: 0 !important;
+  font-size: calc(1.5em + 2px);
+}
+
+/* Single inner width used by both pages */
+.content-wrap { max-width: 720px; margin: 0 auto; text-align: left; }
+
+/* Normalize the page shell */
+#main-content.page-shell { display: block !important; }
+
+/* The page container should not constrain width */
+#main-content > .page-container {
+  width: 100% !important;
+  max-width: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box;
+}
+
+/* Single inner wrapper used by both pages: exact 552px */
+#main-content > .page-container > .content-wrap {
+  width: 552px !important;
+  max-width: 552px !important;
+  margin: 0 auto;
+  padding: 0;               /* keep padding on inner content blocks instead */
+  box-sizing: border-box;
+}
+
+/* Ensure block flow (no flex shrink surprises) */
+#main-content.page-shell { display: block !important; }
+
+/* Page container fills row; inner wrapper controls width */
+#main-content > .page-container { width: 100% !important; padding-left: 0; padding-right: 0; }
+
+/* Single shared inner wrapper width for BOTH pages */
+.content-wrap {
+  width: 100%;
+  max-width: 584px;     /* match manual’s current width exactly */
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 0 16px 32px; /* matches your computed padding */
+}
+
+#main-content.page-shell,
+#main-content.centered {
+  padding-top: var(--page-top) !important;
+  margin-top: 0 !important;
+}
+
+/* Advanced options styling */
+.advanced-option {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  position: relative;
+}
+
+.advanced-option input[type="checkbox"] {
+  cursor: pointer;
+  width: auto;
+  min-width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.advanced-option .tooltip-icon {
+  color: #666;
+  font-size: 0.95em;
+  cursor: help;
+  user-select: none;
+}
+
+.advanced-option:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* Autocomplete styling */
+.autocomplete-list {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+  width: 400px;
+  max-width: 100%;
+}
+
+.autocomplete-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+  background-color: #f0f7ff;
+}
+
+.autocomplete-item .group-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.autocomplete-item .alias-label {
+  font-size: 0.85em;
+  color: #666;
+  font-style: italic;
+}
+
+/* Position autocomplete relative to input */
+form#main-form .form-grid > div:nth-child(2) {
+  position: relative;
+}
+
+/* Warning Tooltip */
+.warning-tooltip {
+  position: relative;
+  display: inline-block;
+  margin-left: 0.5em;
+  cursor: help;
+  color: #dc3545;
+  font-size: 1.1em;
+  vertical-align: middle;
+}
+
+.warning-tooltip-text {
+  visibility: hidden;
+  width: 450px;
+  background-color: #fff;
+  color: #333;
+  text-align: left;
+  border-radius: 8px;
+  padding: 1em;
+  position: absolute;
+  z-index: 1000;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -225px;
+  opacity: 0;
+  transition: opacity 0.3s, visibility 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid #dc3545;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.warning-tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -8px;
+  border-width: 8px;
+  border-style: solid;
+  border-color: #dc3545 transparent transparent transparent;
+}
+
+.warning-tooltip:hover .warning-tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}

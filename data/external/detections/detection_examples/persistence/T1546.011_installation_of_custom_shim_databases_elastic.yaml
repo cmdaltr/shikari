@@ -1,0 +1,70 @@
+technique_id: T1546.011
+technique_name: Installation of Custom Shim Databases
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\n\
+  \  registry.path : \"*\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\
+  \\AppCompatFlags\\\\Custom\\\\*.sdb\" and\n  not process.executable : (\n      \
+  \  \"?:\\\\Program Files (x86)\\\\DesktopCentral_Agent\\\\*\\\\Setup\\\\NwSapSetup.exe\"\
+  ,\n        \"?:\\\\$WINDOWS.~BT\\\\Sources\\\\SetupPlatform.exe\",\n        \"?:\\\
+  \\Program Files (x86)\\\\SAP\\\\SAPsetup\\\\setup\\\\NwSapSetup.exe\",\n       \
+  \ \"?:\\\\Program Files (x86)\\\\SAP\\\\SapSetup\\\\OnRebootSvc\\\\NWSAPSetupOnRebootInstSvc.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Kaspersky Lab\\\\Kaspersky Security for\
+  \ Windows Server\\\\kavfs.exe\",\n\n        /* Crowdstrike specific exclusion as\
+  \ it uses NT Object paths */\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program\
+  \ Files (x86)\\\\DesktopCentral_Agent\\\\*\\\\Setup\\\\NwSapSetup.exe\",\n     \
+  \   \"\\\\Device\\\\HarddiskVolume*\\\\$WINDOWS.~BT\\\\Sources\\\\SetupPlatform.exe\"\
+  ,\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program Files (x86)\\\\SAP\\\\SAPsetup\\\
+  \\setup\\\\NwSapSetup.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program\
+  \ Files (x86)\\\\SAP\\\\SapSetup\\\\OnRebootSvc\\\\NWSAPSetupOnRebootInstSvc.exe\"\
+  ,\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program Files (x86)\\\\Kaspersky Lab\\\
+  \\Kaspersky Security for Windows Server\\\\kavfs.exe\"\n  )"
+explanation: 'Identifies the installation of custom Application Compatibility Shim
+  databases. This Windows functionality has been
+
+  abused by attackers to stealthily gain persistence and arbitrary code execution
+  in legitimate Windows processes.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c5ce48a6-7f57-4ee8-9313-3d0024caee10.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Known legitimate processes such as SAP and Kaspersky applications may trigger
+    false positives due to their use of shim databases. These processes are already
+    excluded in the detection rule to minimize unnecessary alerts.
+
+    - If additional legitimate applications are identified as causing false positives,
+    users can update the exclusion list by adding the specific process executable
+    paths to the rule.
+
+    - Regularly review and update the exclusion list to ensure it reflects t'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

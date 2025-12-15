@@ -1,0 +1,40 @@
+technique_id: T1071
+technique_name: Windows App Layer Protocol Wermgr Connect To NamedPipe
+tactic: execution
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '`sysmon` EventCode IN (17, 18) Image= "*\\wermgr.exe" EventType IN ( "CreatePipe",
+  "ConnectPipe") | stats  min(_time) as firstTime max(_time) as lastTime count by
+  dest dvc pipe_name process_exec process_guid process_id process_name process_path
+  signature signature_id user_id vendor_product Image PipeName | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_app_layer_protocol_wermgr_connect_to_namedpipe_filter`'
+explanation: The following analytic detects the wermgr.exe process creating or connecting
+  to a named pipe. It leverages Sysmon EventCodes 17 and 18 to identify these actions.
+  This activity is significant because wermgr.exe, a legitimate Windows OS Problem
+  Reporting application, is often abused by malware such as Trickbot and Qakbot to
+  execute malicious code. If confirmed malicious, this behavior could indicate that
+  an attacker has injected code into wermgr.exe, potentially allowing them to communicate
+  covertly, escalate privileges, or persist within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2f3a4092-548b-421c-9caa-84918e1787ef/
+indicators:
+- type: data_source
+  value: Sysmon EventID 17
+  confidence: high
+- type: data_source
+  value: Sysmon EventID 18
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://strontic.github.io/xcyclopedia/library/wermgr.exe-0F652BF7ADA772981E8AAB0D108FCC92.html
+- https://www.trellix.com/en-us/about/newsroom/stories/research/demystifying-qbot-malware.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/qakbot/qbot_wermgr2/sysmon_wermgr2.log

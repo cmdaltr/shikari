@@ -1,0 +1,31 @@
+technique_id: T1021
+technique_name: ESXi Shell Access Enabled
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`esxi_syslog` Message="*ESXi Shell*" Message="*has been enabled*" | rex field=_raw
+  "''(?<user>\w+)@" | rex field=_raw "Z (?<dest>[\w\.]+)\s" | stats min(_time) as
+  firstTime max(_time) as lastTime count by dest user Message | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `esxi_shell_access_enabled_filter`'
+explanation: This detection identifies when the ESXi Shell is enabled on a host, which
+  may indicate that a malicious actor is preparing to execute commands locally or
+  establish persistent access. Enabling the shell outside of approved maintenance
+  windows can be a sign of compromise or unauthorized administrative activity.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/15e79d0a-c659-42fd-9668-94108528f2ec/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments, however tune as needed.
+    Some Administrators may enable this for troubleshooting.
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1021/esxi_shell_enabled/esxi_shell_enabled.log

@@ -1,0 +1,42 @@
+technique_id: T1021.004
+technique_name: Remote SSH Login Enabled via systemsetup Command
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n process.name == \"systemsetup\" and\n process.args like~ \"-setremotelogin\"\
+  \ and \n process.args like~ \"on\" and\n process.parent.executable != null and\n\
+  \ not process.parent.executable like (\"/usr/local/jamf/bin/jamf\", \"/usr/libexec/xpcproxy\"\
+  , \"/usr/bin/sudo\")"
+explanation: Detects use of the systemsetup command to enable remote SSH Login.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5ae4e6f8-d1bf-40fa-96ba-e29645e1e4dc.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'false positive.
+
+    - Check the parent process of the systemsetup command to identify if it was executed
+    by a known administrative tool or script, excluding /usr/local/jamf/bin/jamf as
+    per the rule.
+
+    - Investigate the user account associated with the process execution to determine
+    if it is a legitimate administrator or a potentially compromised account.
+
+    - Examine recent login events and SSH access logs on the host to identify any
+    unauthorized access attempts or successful logins following the enablin'
+  mitigation: Review investigation guide for details
+references:
+- https://documents.trendmicro.com/assets/pdf/XCSSET_Technical_Brief.pdf
+- https://ss64.com/osx/systemsetup.html
+- https://support.apple.com/guide/remote-desktop/about-systemsetup-apd95406b8d/mac
+has_investigation_guide: true
+risk_score: 47

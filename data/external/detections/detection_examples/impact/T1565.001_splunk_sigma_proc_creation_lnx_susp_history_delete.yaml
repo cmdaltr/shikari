@@ -1,0 +1,49 @@
+technique_id: T1565.001
+technique_name: History File Deletion
+tactic: impact
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 1182f3b3-e716-4efa-99ab-d2685d04360f
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection*\nselection:\n\
+  \  Image|endswith:\n  - /rm\n  - /unlink\n  - /shred\nselection_history:\n- CommandLine|contains:\n\
+  \  - /.bash_history\n  - /.zsh_history\n- CommandLine|endswith:\n  - _history\n\
+  \  - .history\n  - zhistory\n"
+explanation: Detects events in which a history file gets deleted, e.g. the ~/bash_history
+  to remove traces of malicious activity
+false_positives:
+- Legitimate administration activities
+references:
+- https://github.com/sleventyeleven/linuxprivchecker/
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.003/T1552.003.md
+tags:
+- attack.impact
+- attack.t1565.001
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    Image|endswith:
+    - /rm
+    - /unlink
+    - /shred
+  selection_history:
+  - CommandLine|contains:
+    - /.bash_history
+    - /.zsh_history
+  - CommandLine|endswith:
+    - _history
+    - .history
+    - zhistory
+  condition: all of selection*
+metadata:
+  created_date: 2022-06-20
+  modified_date: 2022-09-15
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

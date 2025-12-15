@@ -1,0 +1,38 @@
+technique_id: T1552.001
+technique_name: Credentials In Files
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 53b1b378-9b06-4992-b972-dde6e423d2b4
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection*\nselection1:\n\
+  \  CommandLine|contains: password\n  Image|endswith: /grep\nselection2:\n  CommandLine|contains:\
+  \ laZagne\n"
+explanation: Detecting attempts to extract passwords with grep and laZagne
+false_positives:
+- Unknown
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.001/T1552.001.md
+tags:
+- attack.credential-access
+- attack.t1552.001
+logsource:
+  product: macos
+  category: process_creation
+detection:
+  selection1:
+    Image|endswith: /grep
+    CommandLine|contains: password
+  selection2:
+    CommandLine|contains: laZagne
+  condition: 1 of selection*
+metadata:
+  created_date: 2020-10-19
+  modified_date: 2021-11-27
+  author: Igor Fits, Mikhail Larin, oscd.community
+  status: test
+  imported_date: '2025-11-28'

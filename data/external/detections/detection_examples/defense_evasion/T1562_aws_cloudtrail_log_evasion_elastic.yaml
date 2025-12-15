@@ -1,0 +1,44 @@
+technique_id: T1562
+technique_name: AWS CloudTrail Log Evasion
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: 'event.dataset: aws.cloudtrail and event.provider: iam.amazonaws.com and aws.cloudtrail.flattened.request_parameters.reason:
+  "requestParameters too large" and aws.cloudtrail.flattened.request_parameters.omitted
+  : true and event.outcome: success'
+explanation: Identifies the evasion of cloudtrail logging for IAM actions involving
+  policy creation, modification or attachment. When making certain policy-related
+  API calls, an adversary may pad the associated policy document with whitespaces
+  to trigger CloudTrail’s logging size constraints, resulting in incomplete logging
+  where critical details about the policy are omitted. By exploiting this gap, threat
+  actors can bypass monitoring performed through CloudTrail and can effectively obscure
+  unauthorized changes. This rule looks for IAM API calls with the requestParameters
+  property containing reason:”requestParameters too large” and omitted:true.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9ebd48ac-a0e2-430a-a219-fe072a50146b.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS IAM
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- If this rule is noisy in your environment\
+    \ due to expected activity, consider adding exceptions — preferably with a combination\
+    \ of user and IP address conditions. However, this behavior is rarely seen in\
+    \ legitimate operations and should be thoroughly investigated. \n\n### Response\
+    \ and remediation\n\n- Initiate the incident response process based on the outcome\
+    \ of the triage.\n- Disable or limit the account during the investigation and\
+    \ response.\n- Identify the possible impact"
+  mitigation: Review investigation guide for details
+references:
+- https://permiso.io/blog/cloudtrail-logging-evasion-where-policy-size-matters
+has_investigation_guide: true
+risk_score: 47

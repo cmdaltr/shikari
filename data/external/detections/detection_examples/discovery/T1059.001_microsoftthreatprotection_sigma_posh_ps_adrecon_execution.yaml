@@ -1,0 +1,43 @@
+technique_id: T1059.001
+technique_name: PowerShell ADRecon Execution
+tactic: discovery
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: bf72941a-cba0-41ea-b18c-9aca3925690d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ScriptBlockText|contains:\n  - Function Get-ADRExcelComOb\n  - Get-ADRGPO\n \
+  \ - Get-ADRDomainController\n  - ADRecon-Report.xlsx\n"
+explanation: Detects execution of ADRecon.ps1 for AD reconnaissance which has been
+  reported to be actively used by FIN7
+false_positives:
+- Unknown
+references:
+- https://github.com/sense-of-security/ADRecon/blob/11881a24e9c8b207f31b56846809ce1fb189bcc9/ADRecon.ps1
+- https://bi-zone.medium.com/from-pentest-to-apt-attack-cybercriminal-group-fin7-disguises-its-malware-as-an-ethical-hackers-c23c9a75e319
+tags:
+- attack.discovery
+- attack.execution
+- attack.t1059.001
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - Function Get-ADRExcelComOb
+    - Get-ADRGPO
+    - Get-ADRDomainController
+    - ADRecon-Report.xlsx
+  condition: selection
+metadata:
+  created_date: 2021-07-16
+  modified_date: 2022-09-06
+  author: Bhabesh Raj
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,54 @@
+technique_id: T1574.001
+technique_name: Potential SmadHook.DLL Sideloading
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 24b6cf51-6122-469e-861a-22974e9c1e5b
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_legit_path:\n  Image:\n  - C:\\Program Files (x86)\\\
+  SMADAV\\SmadavProtect32.exe\n  - C:\\Program Files (x86)\\SMADAV\\SmadavProtect64.exe\n\
+  \  - C:\\Program Files\\SMADAV\\SmadavProtect32.exe\n  - C:\\Program Files\\SMADAV\\\
+  SmadavProtect64.exe\n  ImageLoaded|startswith:\n  - C:\\Program Files (x86)\\SMADAV\\\
+  \n  - C:\\Program Files\\SMADAV\\\nselection:\n  ImageLoaded|endswith:\n  - \\SmadHook32c.dll\n\
+  \  - \\SmadHook64c.dll\n"
+explanation: Detects potential DLL sideloading of "SmadHook.dll", a DLL used by SmadAV
+  antivirus
+false_positives:
+- Unlikely
+references:
+- https://research.checkpoint.com/2023/malware-spotlight-camaro-dragons-tinynote-backdoor/
+- https://www.qurium.org/alerts/targeted-malware-against-crph/
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1574.001
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    ImageLoaded|endswith:
+    - \SmadHook32c.dll
+    - \SmadHook64c.dll
+  filter_main_legit_path:
+    Image:
+    - C:\Program Files (x86)\SMADAV\SmadavProtect32.exe
+    - C:\Program Files (x86)\SMADAV\SmadavProtect64.exe
+    - C:\Program Files\SMADAV\SmadavProtect32.exe
+    - C:\Program Files\SMADAV\SmadavProtect64.exe
+    ImageLoaded|startswith:
+    - C:\Program Files (x86)\SMADAV\
+    - C:\Program Files\SMADAV\
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2023-06-01
+  modified_date: '2025-11-28'
+  author: X__Junior (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

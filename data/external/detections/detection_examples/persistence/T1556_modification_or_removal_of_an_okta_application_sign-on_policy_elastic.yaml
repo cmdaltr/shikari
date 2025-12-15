@@ -1,0 +1,44 @@
+technique_id: T1556
+technique_name: Modification or Removal of an Okta Application Sign-On Policy
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:okta.system and event.action:(application.policy.sign_on.update
+  or application.policy.sign_on.rule.delete)
+explanation: 'Detects attempts to modify or delete a sign on policy for an Okta application.
+  An adversary may attempt to modify or
+
+  delete the sign on policy for an Okta application in order to remove or weaken an
+  organization''s security controls.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/cd16fb10-0261-46e8-9932-a0336278cdbe.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative updates to sign-on policies by authorized personnel can
+    trigger alerts. To manage this, establish a list of trusted users or roles and
+    create exceptions for their actions.
+
+    - Scheduled maintenance or policy reviews may involve legitimate modifications
+    or deletions. Document these activities and adjust the detection rule to exclude
+    events during known maintenance windows.
+
+    - Automated scripts or tools used for policy management might cause false pos'
+  mitigation: Review investigation guide for details
+references:
+- https://help.okta.com/en/prod/Content/Topics/Security/App_Based_Signon.htm
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

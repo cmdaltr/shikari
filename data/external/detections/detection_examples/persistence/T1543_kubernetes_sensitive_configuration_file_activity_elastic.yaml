@@ -1,0 +1,50 @@
+technique_id: T1543
+technique_name: Kubernetes Sensitive Configuration File Activity
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "file where host.os.type == \"linux\" and event.type != \"deletion\" and file.path\
+  \ like (\n  \"/etc/kubernetes/manifests/*\",\n  \"/etc/kubernetes/pki/*\",\n  \"\
+  /etc/kubernetes/*.conf\"\n) and not process.name in (\"kubeadm\", \"kubelet\", \"\
+  dpkg\", \"sed\")"
+explanation: 'This rule detects the creation or modification of sensitive Kubernetes
+  configuration files on Linux systems. These files
+
+  include Kubernetes manifests, PKI files, and configuration files that are critical
+  for the operation of Kubernetes clusters.
+
+  Monitoring these files helps identify potential unauthorized changes or misconfigurations
+  that could lead to security
+
+  vulnerabilities in Kubernetes environments. Attackers may attempt to modify these
+  files to gain persistence or to
+
+  deploy malicious containers within the Kubernetes cluster.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0fe2290a-2664-4c9c-8263-b88904f12f0d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine updates or maintenance activities by system administrators can trigger
+    alerts. To manage this, consider excluding processes or users known to perform
+    regular maintenance from the rule.
+
+    - Automated scripts or configuration management tools like Ansible or Puppet may
+    modify configuration files as part of their normal operation. Identify these tools
+    and add them to the exclusion list to prevent unnecessary alerts.
+
+    - Scheduled backups or system snapshots might acce'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

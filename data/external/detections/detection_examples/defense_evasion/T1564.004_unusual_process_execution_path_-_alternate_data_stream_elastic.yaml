@@ -1,0 +1,58 @@
+technique_id: T1564.004
+technique_name: Unusual Process Execution Path - Alternate Data Stream
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.args : \"?:\\\\*:*\" and\n  (\n    process.args_count == 1 and\n\n  \
+  \  /* Excludes bug where a missing closing quote sets args_count to 1 despite extra\
+  \ args */\n    not process.command_line regex~ \"\"\"\\\".*\\.exe[^\\\"].* \"\"\"\
+  \  )"
+explanation: 'Identifies processes running from an Alternate Data Stream. This is
+  uncommon for legitimate processes and sometimes done
+
+  by adversaries to hide malware.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4bd1c1af-79d4-4d37-9efa-6e0240640242.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may use alternate data streams
+    to execute processes. Users can create exceptions for known software update paths
+    to prevent unnecessary alerts.
+
+    - Some backup or file synchronization tools might utilize alternate data streams
+    for metadata storage. Identify these tools and exclude their execution paths from
+    the detection rule.
+
+    - Certain system administration scripts or tools may leverage alternate data streams
+    for legitimate p'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

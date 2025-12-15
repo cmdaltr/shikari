@@ -1,0 +1,77 @@
+technique_id: T1543
+technique_name: Systemd Service Created
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"linux\" and event.action in (\"rename\", \"creation\"\
+  ) and file.path : (\n  \"/etc/systemd/system/*\", \"/etc/systemd/user/*\", \"/usr/local/lib/systemd/system/*\"\
+  ,\n  \"/lib/systemd/system/*\", \"/usr/lib/systemd/system/*\", \"/usr/lib/systemd/user/*\"\
+  ,\n  \"/home/*/.config/systemd/user/*\", \"/home/*/.local/share/systemd/user/*\"\
+  ,\n  \"/root/.config/systemd/user/*\", \"/root/.local/share/systemd/user/*\"\n)\
+  \ and file.extension == \"service\" and not (\n  process.executable in (\n    \"\
+  /bin/dpkg\", \"/usr/bin/dpkg\", \"/bin/dockerd\", \"/usr/bin/dockerd\", \"/usr/sbin/dockerd\"\
+  , \"/bin/microdnf\",\n    \"/usr/bin/microdnf\", \"/bin/rpm\", \"/usr/bin/rpm\"\
+  , \"/bin/snapd\", \"/usr/bin/snapd\", \"/bin/yum\", \"/usr/bin/yum\",\n    \"/bin/dnf\"\
+  , \"/usr/bin/dnf\", \"/bin/podman\", \"/usr/bin/podman\", \"/bin/dnf-automatic\"\
+  , \"/usr/bin/dnf-automatic\",\n    \"/usr/bin/dpkg-divert\", \"/bin/dpkg-divert\"\
+  , \"/sbin/apk\", \"/usr/sbin/apk\",\n    \"/usr/local/sbin/apk\", \"/usr/bin/apt\"\
+  , \"/bin/podman\", \"/usr/bin/podman\", \"/usr/bin/puppet\",\n    \"/bin/puppet\"\
+  , \"/opt/puppetlabs/puppet/bin/puppet\", \"/usr/bin/chef-client\", \"/bin/chef-client\"\
+  ,\n    \"/bin/autossl_check\", \"/usr/bin/autossl_check\", \"/proc/self/exe\", \"\
+  /dev/fd/*\",  \"/usr/bin/pamac-daemon\",\n    \"/bin/pamac-daemon\", \"/usr/lib/snapd/snapd\"\
+  , \"/usr/local/bin/dockerd\", \"/usr/bin/crio\", \"/usr/sbin/crond\",\n    \"/opt/puppetlabs/puppet/bin/ruby\"\
+  , \"/usr/libexec/platform-python\", \"/kaniko/kaniko-executor\",\n    \"/usr/local/bin/dockerd\"\
+  , \"/usr/bin/podman\", \"/bin/install\", \"/proc/self/exe\", \"/usr/lib/systemd/systemd\"\
+  ,\n    \"/usr/sbin/sshd\", \"/usr/bin/gitlab-runner\", \"/opt/gitlab/embedded/bin/ruby\"\
+  , \"/usr/sbin/gdm\", \"/usr/bin/install\",\n    \"/usr/local/manageengine/uems_agent/bin/dcregister\"\
+  \n  ) or\n  file.extension in (\"swp\", \"swpx\", \"swx\", \"dpkg-remove\") or\n\
+  \  file.Ext.original.extension == \"dpkg-new\" or\n  process.executable : (\n  \
+  \  \"/nix/store/*\", \"/var/lib/dpkg/*\", \"/tmp/vmis.*\", \"/snap/*\", \"/dev/fd/*\"\
+  , \"/usr/lib/virtualbox/*\"\n  ) or\n  process.executable == null or\n  process.name\
+  \ like (\n    \"ssm-agent-worker\", \"python*\", \"platform-python*\", \"dnf_install\"\
+  , \"cloudflared\", \"lxc-pve-prestart-hook\",\n    \"convert-usrmerge\", \"elastic-agent\"\
+  , \"google_metadata_script_runner\", \"update-alternatives\", \"gitlab-runner\"\
+  ,\n    \"install\", \"crio\", \"apt-get\", \"package-cleanup\", \"dcservice\", \"\
+  dcregister\", \"jumpcloud-agent\", \"executor\",\n    \"pacman\", \"convert2rhel\"\
+  , \"packagekitd\"\n  ) or\n  (process.name == \"sed\" and file.name : \"sed*\")\
+  \ or\n  (process.name == \"perl\" and file.name : \"e2scrub_all.tmp*\") \n)"
+explanation: 'This rule detects the creation or renaming of a new Systemd file in
+  all of the common Systemd service locations for both
+
+  root and regular users. Systemd service files are configuration files in Linux systems
+  used to define and manage system
+
+  services. Malicious actors can leverage systemd service files to achieve persistence
+  by creating or modifying services
+
+  to execute malicious commands or payloads during system startup or at a predefined
+  interval by adding a systemd timer.
+
+  This allows them to maintain unauthorized access, execute additional malicious activities,
+  or evade detection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/17b0a495-4d9f-414c-8ad0-92f018b8e001.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: "False Positive Analysis\n\n- If this activity is related to new benign\
+    \ software installation activity, consider adding exceptions — preferably with\
+    \ a combination of user and command line conditions.\n- If this activity is related\
+    \ to a system administrator who uses systemd services for administrative purposes,\
+    \ consider adding exceptions for this specific administrator user account. \n\
+    - Try to understand the context of the execution by thinking about the user, machine,\
+    \ or business purpose. A small num"
+  mitigation: Review investigation guide for details
+references:
+- https://pberba.github.io/security/2022/01/30/linux-threat-hunting-for-persistence-systemd-timers-cron/
+- https://www.elastic.co/security-labs/primer-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

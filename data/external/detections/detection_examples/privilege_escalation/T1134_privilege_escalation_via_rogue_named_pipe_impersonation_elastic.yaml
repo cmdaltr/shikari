@@ -1,0 +1,46 @@
+technique_id: T1134
+technique_name: Privilege Escalation via Rogue Named Pipe Impersonation
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"windows\" and\n  event.provider == \"Microsoft-Windows-Sysmon\"\
+  \ and\n  \n  /* Named Pipe Creation */\n  event.code == \"17\" and\n  \n  /* Sysmon\
+  \ truncates the \"Pipe\" keyword in normal named pipe creation events */\n  file.name\
+  \ : \"\\\\*\\\\Pipe\\\\*\""
+explanation: 'Identifies a privilege escalation attempt via rogue named pipe impersonation.
+  An adversary may abuse this technique by
+
+  masquerading as a known named pipe and manipulating a privileged process to connect
+  to it.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/76ddb638-abf7-42d5-be22-4a70b0bf7241.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software or system processes may create named pipes that match the
+    detection pattern. Regularly review and whitelist known benign processes that
+    frequently create named pipes to reduce noise.
+
+    - System management tools and monitoring software might generate named pipe creation
+    events as part of their normal operation. Identify these tools and exclude their
+    events from triggering alerts.
+
+    - Custom in-house applications that use named pipes for inter-process com'
+  mitigation: Review investigation guide for details
+references:
+- https://itm4n.github.io/printspoofer-abusing-impersonate-privileges/
+- https://github.com/zcgonvh/EfsPotato
+- https://twitter.com/SBousseaden/status/1429530155291193354
+has_investigation_guide: true
+risk_score: 73

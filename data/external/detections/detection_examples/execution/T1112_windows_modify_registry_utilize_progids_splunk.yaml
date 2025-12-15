@@ -1,0 +1,45 @@
+technique_id: T1112
+technique_name: Windows Modify Registry Utilize ProgIDs
+tactic: execution
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '| tstats `security_content_summariesonly` count FROM datamodel=Endpoint.Registry
+  WHERE Registry.registry_path= "*\\ms-settings\\CurVer\\(Default)" by Registry.action
+  Registry.dest Registry.process_guid Registry.process_id Registry.registry_hive Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_data Registry.registry_value_name
+  Registry.registry_value_type Registry.status Registry.user Registry.vendor_product
+  | `drop_dm_object_name(Registry)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_modify_registry_utilize_progids_filter`'
+explanation: The following analytic detects modifications to the Windows Registry
+  specifically targeting Programmatic Identifier associations to bypass User Account
+  Control (UAC) Windows OS feature. ValleyRAT may create or alter registry entries
+  to targetted progIDs like `.pwn` files with malicious processes, allowing it to
+  execute harmful scripts or commands when these files are opened. By monitoring for
+  unusual changes in registry keys linked to ProgIDs, this detection enables security
+  analysts to identify potential threats like ValleyRAT execution attempts. Early
+  detection of these modifications helps mitigate unauthorized execution and prevents
+  further exploitation of the system.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/64fa82dd-fd11-472a-9e94-c221fffa591d/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.proofpoint.com/us/blog/threat-insight/chinese-malware-appears-earnest-across-cybercrime-threat-landscape
+- https://www.fortinet.com/blog/threat-research/valleyrat-campaign-targeting-chinese-speakers
+- https://v3ded.github.io/redteam/utilizing-programmatic-identifiers-progids-for-uac-bypasses
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1112/pwn_reg/pwn_reg.log

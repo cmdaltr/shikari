@@ -1,0 +1,75 @@
+technique_id: T1027
+technique_name: Potential CommandLine Obfuscation Using Unicode Characters From Suspicious
+  Image
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 584bca0f-3608-4402-80fd-4075ff6072e3
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_img:\n  Image|endswith:\n  - \\cmd.exe\n  - \\cscript.exe\n  - \\powershell.exe\n\
+  \  - \\powershell_ise.exe\n  - \\pwsh.exe\n  - \\wscript.exe\n  OriginalFileName:\n\
+  \  - Cmd.EXE\n  - cscript.exe\n  - PowerShell.EXE\n  - PowerShell_ISE.EXE\n  - pwsh.dll\n\
+  \  - wscript.exe\nselection_special_chars:\n  CommandLine|contains:\n  - \"\\u02E3\"\
+  \n  - \"\\u02EA\"\n  - \"\\u02E2\"\n  - \"\\u2215\"\n  - \"\\u2044\"\n  - \"\\u2015\"\
+  \n  - \"\\u2014\"\n  - \"\\_\"\n  - \"\\xAF\"\n  - \"\\xAE\"\n  - \"\\xB6\"\n  -\
+  \ \"\\u2800\"\n"
+explanation: 'Detects potential commandline obfuscation using unicode characters.
+
+  Adversaries may attempt to make an executable or file difficult to discover or analyze
+  by encrypting, encoding, or otherwise obfuscating its contents on the system or
+  in transit.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://www.wietzebeukema.nl/blog/windows-command-line-obfuscation
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1027/T1027.md#atomic-test-6---dlp-evasion-via-sensitive-data-in-vba-macro-over-http
+tags:
+- attack.defense-evasion
+- attack.t1027
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+    Image|endswith:
+    - \cmd.exe
+    - \cscript.exe
+    - \powershell.exe
+    - \powershell_ise.exe
+    - \pwsh.exe
+    - \wscript.exe
+    OriginalFileName:
+    - Cmd.EXE
+    - cscript.exe
+    - PowerShell.EXE
+    - PowerShell_ISE.EXE
+    - pwsh.dll
+    - wscript.exe
+  selection_special_chars:
+    CommandLine|contains:
+    - ˣ
+    - ˪
+    - ˢ
+    - ∕
+    - ⁄
+    - ―
+    - —
+    -  
+    - ¯
+    - ®
+    - ¶
+    - ⠀
+  condition: all of selection_*
+metadata:
+  created_date: 2024-09-02
+  modified_date: 2025-05-30
+  author: frack113, Florian Roth (Nextron Systems), Josh Nickels
+  status: test
+  imported_date: '2025-11-28'

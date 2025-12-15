@@ -1,0 +1,54 @@
+technique_id: T1036
+technique_name: Forfiles.EXE Child Process Masquerading
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: f53714ec-5077-420e-ad20-907ff9bb2958
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_parent_not_sys:\n  Image|contains:\n  - :\\Windows\\\
+  System32\\\n  - :\\Windows\\SysWOW64\\\n  Image|endswith: \\cmd.exe\n  ParentImage|contains:\n\
+  \  - :\\Windows\\System32\\\n  - :\\Windows\\SysWOW64\\\n  ParentImage|endswith:\
+  \ \\forfiles.exe\nselection:\n  CommandLine|startswith: /c echo \"\n  Image|endswith:\
+  \ \\cmd.exe\n  ParentCommandLine|endswith:\n  - .exe\n  - .exe\"\n"
+explanation: 'Detects the execution of "forfiles" from a non-default location, in
+  order to potentially spawn a custom "cmd.exe" from the current working directory.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://www.hexacorn.com/blog/2023/12/31/1-little-known-secret-of-forfiles-exe/
+tags:
+- attack.defense-evasion
+- attack.t1036
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentCommandLine|endswith:
+    - .exe
+    - .exe"
+    Image|endswith: \cmd.exe
+    CommandLine|startswith: /c echo "
+  filter_main_parent_not_sys:
+    ParentImage|contains:
+    - :\Windows\System32\
+    - :\Windows\SysWOW64\
+    ParentImage|endswith: \forfiles.exe
+    Image|contains:
+    - :\Windows\System32\
+    - :\Windows\SysWOW64\
+    Image|endswith: \cmd.exe
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2024-01-05
+  modified_date: '2025-11-28'
+  author: Nasreddine Bencherchali (Nextron Systems), Anish Bogati
+  status: test
+  imported_date: '2025-11-28'

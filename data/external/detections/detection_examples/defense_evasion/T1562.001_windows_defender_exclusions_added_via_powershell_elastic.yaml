@@ -1,0 +1,68 @@
+technique_id: T1562.001
+technique_name: Windows Defender Exclusions Added via PowerShell
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ (process.name : (\"powershell.exe\", \"pwsh.exe\", \"powershell_ise.exe\") or\
+  \ ?process.pe.original_file_name in (\"PowerShell.EXE\", \"pwsh.dll\", \"powershell_ise.EXE\"\
+  )) and\n  process.args : (\"*Add-MpPreference*\", \"*Set-MpPreference*\") and\n\
+  \  process.args : (\"*-Exclusion*\")"
+explanation: 'Identifies modifications to the Windows Defender configuration settings
+  using PowerShell to add exclusions at the folder
+
+  directory or process level.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2c17e5d7-08b9-43b2-b58a-0270d65ac85b.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This rule has a high chance to produce false positives due to how often network
+    administrators legitimately configure exclusions. In order to validate the activity
+    further, review the specific exclusion and its intent. There are many legitimate
+    reasons for exclusions, so it''s important to gain context.
+
+
+    ### Related rules
+
+
+    - Windows Defender Disabled via Registry Modification - 2ffa1f1e-b6db-47fa-994b-1512743847eb
+
+    - Disabling Windows Defender Security Settings via Power'
+  mitigation: Review investigation guide for details
+references:
+- https://www.bitdefender.com/files/News/CaseStudies/study/400/Bitdefender-PR-Whitepaper-MosaicLoader-creat5540-en-EN.pdf
+- https://www.elastic.co/security-labs/elastic-security-uncovers-blister-malware-campaign
+- https://www.elastic.co/security-labs/operation-bleeding-bear
+- https://www.elastic.co/security-labs/invisible-miners-unveiling-ghostengine
+has_investigation_guide: true
+risk_score: 47

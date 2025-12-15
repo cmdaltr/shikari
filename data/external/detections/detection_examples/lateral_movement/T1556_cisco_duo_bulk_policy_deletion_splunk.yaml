@@ -1,0 +1,43 @@
+technique_id: T1556
+technique_name: Cisco Duo Bulk Policy Deletion
+tactic: lateral_movement
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`cisco_duo_administrator` action=policy_bulk_delete | rename username as user
+  | spath input=description | rex field=policies max_match=0 "(?<policy_name>[^:,]+):\s+"
+  | eval policy_count=mvcount(policy_name) | where policy_count > 3 | stats count
+  min(_time) as firstTime max(_time) as lastTime by action actionlabel description
+  user admin_email policy_count | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `cisco_duo_bulk_policy_deletion_filter`'
+explanation: The following analytic detects instances where a Duo administrator performs
+  a bulk deletion of more than three policies in a single action. It identifies this
+  behavior by searching Duo activity logs for the policy_bulk_delete action, extracting
+  the names of deleted policies, and counting them. If the count exceeds three, the
+  event is flagged. This behavior is significant for a Security Operations Center
+  (SOC) because mass deletion of security policies can indicate malicious activity,
+  such as an attacker or rogue administrator attempting to weaken or disable security
+  controls, potentially paving the way for further compromise. Detecting and investigating
+  such actions promptly is critical, as the impact of this attack could include reduced
+  security posture, increased risk of unauthorized access, and potential data breaches.
+  Monitoring for bulk policy deletions helps ensure that any suspicious or unauthorized
+  changes to security configurations are quickly identified and addressed to protect
+  organizational assets and maintain compliance.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/983be012-e408-4cb0-b87f-6756bb5f7047/
+indicators:
+- type: data_source
+  value: Cisco Duo Administrator
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://splunkbase.splunk.com/app/7404
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1556/cisco_duo_bulk_policy_deletion/cisco_duo_administrator.json

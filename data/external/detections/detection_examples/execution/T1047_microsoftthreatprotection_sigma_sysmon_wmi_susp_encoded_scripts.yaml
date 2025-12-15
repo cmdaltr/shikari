@@ -1,0 +1,42 @@
+technique_id: T1047
+technique_name: Suspicious Encoded Scripts in a WMI Consumer
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 83844185-1c5b-45bc-bcf3-b5bf3084ca5b
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_destination\n\
+  selection_destination:\n  Destination|base64offset|contains:\n  - WriteProcessMemory\n\
+  \  - This program cannot be run in DOS mode\n  - This program must be run under\
+  \ Win32\n"
+explanation: Detects suspicious encoded payloads in WMI Event Consumers
+false_positives:
+- Unknown
+references:
+- https://github.com/RiccardoAncarani/LiquidSnake
+tags:
+- attack.privilege-escalation
+- attack.execution
+- attack.t1047
+- attack.persistence
+- attack.t1546.003
+logsource:
+  product: windows
+  category: wmi_event
+detection:
+  selection_destination:
+    Destination|base64offset|contains:
+    - WriteProcessMemory
+    - This program cannot be run in DOS mode
+    - This program must be run under Win32
+  condition: selection_destination
+metadata:
+  created_date: 2021-09-01
+  modified_date: 2022-10-09
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

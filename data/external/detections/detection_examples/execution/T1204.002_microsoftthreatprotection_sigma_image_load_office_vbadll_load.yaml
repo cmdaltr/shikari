@@ -1,0 +1,48 @@
+technique_id: T1204.002
+technique_name: VBA DLL Loaded Via Office Application
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: e6ce8457-68b1-485b-9bdd-3c2b5d679aa9
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ImageLoaded|endswith:\n  - \\VBE7.DLL\n  - \\VBEUI.DLL\n  - \\VBE7INTL.DLL\n\
+  \  Image|endswith:\n  - \\excel.exe\n  - \\mspub.exe\n  - \\onenote.exe\n  - \\\
+  onenoteim.exe\n  - \\outlook.exe\n  - \\powerpnt.exe\n  - \\winword.exe\n"
+explanation: Detects VB DLL's loaded by an office application. Which could indicate
+  the presence of VBA Macros.
+false_positives:
+- Legitimate macro usage. Add the appropriate filter according to your environment
+references:
+- https://medium.com/threatpunter/detecting-adversary-tradecraft-with-image-load-event-logging-and-eql-8de93338c16
+tags:
+- attack.execution
+- attack.t1204.002
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \excel.exe
+    - \mspub.exe
+    - \onenote.exe
+    - \onenoteim.exe
+    - \outlook.exe
+    - \powerpnt.exe
+    - \winword.exe
+    ImageLoaded|endswith:
+    - \VBE7.DLL
+    - \VBEUI.DLL
+    - \VBE7INTL.DLL
+  condition: selection
+metadata:
+  created_date: 2020-02-19
+  modified_date: 2023-02-10
+  author: Antonlovesdnb
+  status: test
+  imported_date: '2025-11-28'

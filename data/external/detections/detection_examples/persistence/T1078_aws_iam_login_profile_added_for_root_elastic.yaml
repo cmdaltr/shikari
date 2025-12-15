@@ -1,0 +1,42 @@
+technique_id: T1078
+technique_name: AWS IAM Login Profile Added for Root
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where event.dataset == \"aws.cloudtrail\"\n   and event.provider == \"\
+  iam.amazonaws.com\"\n   and event.action == \"CreateLoginProfile\"\n   and aws.cloudtrail.user_identity.type\
+  \ == \"Root\"\n   and event.outcome == \"success\"\n   and not stringContains(aws.cloudtrail.request_parameters,\
+  \ \"userName=\")"
+explanation: Identifies creation of a console login profile for the AWS account root
+  user. While CreateLoginProfile normally applies to IAM users, when performed from
+  a temporary root session (e.g., via AssumeRoot) and the userName parameter is omitted,
+  the profile is created for the root principal (self-assigned). Adversaries with
+  temporary root access may add or reset the root login profile to establish persistent
+  console access even if original access keys are rotated or disabled. Correlate with
+  recent AssumeRoot/STS activity and validate intent with the account owner.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c04be7e0-b0fc-11ef-a826-f661ea17fbce.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS IAM
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\nAlthough rare, legitimate scenarios include:\n\
+    - **Authorized account recovery** : An administrator or AWS Support might temporarily\
+    \ add a root login profile to regain access. Validate against documented recovery\
+    \ workflows.  \n- **Controlled testing or sandbox environments** : Certain sandbox\
+    \ accounts may reuse root credentials for automation or demonstration purposes.\
+    \ Tag and exclude these accounts from this rule where appropriate.  \n- **Automated\
+    \ provisioning** : Review a"
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

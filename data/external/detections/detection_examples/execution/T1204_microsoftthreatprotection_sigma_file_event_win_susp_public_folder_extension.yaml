@@ -1,0 +1,47 @@
+technique_id: T1204
+technique_name: Suspicious Binaries and Scripts in Public Folder
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: b447f7de-1e53-4cbf-bfb4-f1f6d0b04e4e
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetFilename|contains: :\\Users\\Public\\\n  TargetFilename|endswith:\n  -\
+  \ .bat\n  - .dll\n  - .exe\n  - .hta\n  - .js\n  - .ps1\n  - .vbe\n  - .vbs\n"
+explanation: Detects the creation of a file with a suspicious extension in the public
+  folder, which could indicate potential malicious activity.
+false_positives:
+- Administrators deploying legitimate binaries to public folders.
+references:
+- https://intel.thedfirreport.com/events/view/30032
+- https://intel.thedfirreport.com/eventReports/view/70
+- https://thedfirreport.com/2025/01/27/cobalt-strike-and-a-pair-of-socks-lead-to-lockbit-ransomware/
+tags:
+- attack.execution
+- attack.t1204
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|contains: :\Users\Public\
+    TargetFilename|endswith:
+    - .bat
+    - .dll
+    - .exe
+    - .hta
+    - .js
+    - .ps1
+    - .vbe
+    - .vbs
+  condition: selection
+metadata:
+  created_date: 2025-01-23
+  modified_date: '2025-11-28'
+  author: The DFIR Report
+  status: experimental
+  imported_date: '2025-11-28'

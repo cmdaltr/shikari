@@ -1,0 +1,57 @@
+technique_id: T1222
+technique_name: Excessive Usage Of Cacls App
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "| tstats `security_content_summariesonly` \n  min(_time) as firstTime \n \
+  \ max(_time) as lastTime \n  values(Processes.dest) as dest\n  values(Processes.user)\
+  \ as user \n  values(Processes.action) as action \n  values(Processes.original_file_name)\
+  \ as original_file_name \n  values(Processes.parent_process_exec) as parent_process_exec\
+  \ \n  values(Processes.parent_process_guid) as parent_process_guid\n  values(Processes.parent_process_id)\
+  \ as parent_process_id \n  values(Processes.parent_process_path) as parent_process_path\
+  \ \n  values(Processes.process) as process \n  values(Processes.process_exec) as\
+  \ process_exec \n  values(Processes.process_guid) as process_guid \n  values(Processes.process_hash)\
+  \ as process_hash \n  values(Processes.process_id) as process_id \n  values(Processes.process_integrity_level)\
+  \ as process_integrity_level \n  values(Processes.process_name) as process_name\
+  \ \n  values(Processes.process_path) as process_path \n  values(Processes.user_id)\
+  \ as user_id \n  values(Processes.vendor_product) as vendor_product count \nfrom\
+  \ datamodel=Endpoint.Processes where \nProcesses.process_name IN( \"icacls.exe\"\
+  , \"cacls.exe\", \"xcacls.exe\") \nby Processes.parent_process_name Processes.parent_process\
+  \ Processes.dest Processes.user _time span=1m \n| where count >=10 \n| `drop_dm_object_name(Processes)`\n\
+  | `security_content_ctime(firstTime)` \n| `security_content_ctime(lastTime)` \n\
+  | `excessive_usage_of_cacls_app_filter`"
+explanation: "The following analytic identifies excessive usage of `cacls.exe`, `xcacls.exe`,\n\
+  or `icacls.exe` to change file or folder permissions.\nIt looks for 10 or more execution\
+  \ of the aforementioned processes in the span of 1 minute. \nIt leverages data from\
+  \ Endpoint Detection and Response (EDR) agents, \nfocusing on process names and\
+  \ command-line executions.\nThis activity is significant as it may indicate an adversary\
+  \ attempting\nto restrict access to malware components or artifacts on a compromised\
+  \ system.\nIf confirmed malicious, this behavior could prevent users from deleting\
+  \ or accessing\ncritical files, aiding in the persistence and concealment of malicious\
+  \ activities."
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/0bdf6092-af17-11eb-939a-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrators or administrative scripts may use this application.
+    Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://thedfirreport.com/2020/04/20/sqlserver-or-the-miner-in-the-basement/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/xmrig_miner/windows-sysmon.log

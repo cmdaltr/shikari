@@ -1,0 +1,55 @@
+technique_id: T1021
+technique_name: Remote Execution via File Shares
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence with maxspan=1m\n  [file where host.os.type == \"windows\" and event.type\
+  \ in (\"creation\", \"change\") and \n   process.pid == 4 and (file.extension :\
+  \ \"exe\" or file.Ext.header_bytes : \"4d5a*\")] by host.id, file.path\n  [process\
+  \ where host.os.type == \"windows\" and event.type == \"start\" and\n    not (\n\
+  \      (\n        process.code_signature.trusted == true and\n        process.code_signature.subject_name\
+  \ : (\n              \"Veeam Software Group GmbH\",\n              \"Elasticsearch,\
+  \ Inc.\",\n              \"PDQ.com Corporation\",\n              \"CrowdStrike,\
+  \ Inc.\",\n              \"Microsoft Windows Hardware Compatibility Publisher\"\
+  ,\n              \"ZOHO Corporation Private Limited\",\n              \"BeyondTrust\
+  \ Corporation\", \n              \"CyberArk Software Ltd.\", \n              \"\
+  Sophos Ltd\"\n        )\n      ) or\n      (\n        process.executable : (\n \
+  \         \"?:\\\\Windows\\\\ccmsetup\\\\ccmsetup.exe\",\n          \"?:\\\\Windows\\\
+  \\SoftwareDistribution\\\\Download\\\\Install\\\\AM_Delta*.exe\",\n          \"\
+  ?:\\\\Windows\\\\CAInvokerService.exe\"\n        ) and process.code_signature.trusted\
+  \ == true\n      ) or\n      (\n        process.executable : \"G:\\\\SMS_*\\\\srvboot.exe\"\
+  \ and \n        process.code_signature.trusted == true and process.code_signature.subject_name\
+  \ : \"Microsoft Corporation\"\n      )\n    )\n  ] by host.id, process.executable"
+explanation: 'Identifies the execution of a file that was created by the virtual system
+  process. This may indicate lateral movement
+
+  via network file shares.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ab75c24b-2502-43a0-bf7c-e60e662c811e.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity can happen legitimately.\
+    \ Consider adding exceptions if it is expected and noisy in your environment.\n\
+    \n### Response and remediation\n\n- Initiate the incident response process based\
+    \ on the outcome of the triage.\n- Isolate the involved host to prevent further\
+    \ post-compromise behavior.\n- If the triage identified malware, search the environment\
+    \ for additional compromised hosts.\n  - Implement temporary network rules, procedures,\
+    \ and segmentation to contain the m"
+  mitigation: Review investigation guide for details
+references:
+- http://web.archive.org/web/20230329172636/https://blog.menasec.net/2020/08/new-trick-to-detect-lateral-movement.html
+- https://www.elastic.co/security-labs/hunting-for-lateral-movement-using-event-query-language
+has_investigation_guide: true
+risk_score: 47

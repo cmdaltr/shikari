@@ -1,0 +1,76 @@
+technique_id: T1036.005
+technique_name: Program Files Directory Masquerading
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.executable : (\n    \"C:\\\\*Program*Files*\\\\*.exe\",\n    \"\\\\Device\\\
+  \\HarddiskVolume*\\\\*Program*Files*\\\\*.exe\"\n  ) and\n  not process.executable\
+  \ : (\n        \"?:\\\\Program Files\\\\*.exe\",\n        \"?:\\\\Program Files\
+  \ (x86)\\\\*.exe\",\n        \"?:\\\\Users\\\\*.exe\",\n        \"?:\\\\ProgramData\\\
+  \\*.exe\",\n        \"?:\\\\Windows\\\\Downloaded Program Files\\\\*.exe\",\n  \
+  \      \"?:\\\\Windows\\\\Temp\\\\.opera\\\\????????????\\\\CProgram?FilesOpera*\\\
+  \\*.exe\",\n        \"?:\\\\Windows\\\\Temp\\\\.opera\\\\????????????\\\\CProgram?Files?(x86)Opera*\\\
+  \\*.exe\"\n  ) and\n  not (\n    /* Crowdstrike specific exclusion as it uses NT\
+  \ Object paths */\n    event.dataset == \"crowdstrike.fdr\" and\n      process.executable\
+  \ : (\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program Files\\\\*.exe\",\n  \
+  \      \"\\\\Device\\\\HarddiskVolume*\\\\Program Files (x86)\\\\*.exe\",\n    \
+  \    \"\\\\Device\\\\HarddiskVolume*\\\\Users\\\\*.exe\",\n        \"\\\\Device\\\
+  \\HarddiskVolume*\\\\ProgramData\\\\*.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\Downloaded Program Files\\\\*.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\Temp\\\\.opera\\\\????????????\\\\CProgram?FilesOpera*\\\\*.exe\",\n\
+  \        \"\\\\Device\\\\HarddiskVolume*\\\\Windows\\\\Temp\\\\.opera\\\\????????????\\\
+  \\CProgram?Files?(x86)Opera*\\\\*.exe\"\n      )\n  )"
+explanation: 'Identifies execution from a directory masquerading as the Windows Program
+  Files directories. These paths are trusted and
+
+  usually host trusted third party programs. An adversary may leverage masquerading,
+  along with low privileges to bypass
+
+  detections allowlisting those folders.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/32c5cf9c-2ef8-4e87-819e-5ccb7cd18b14.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may create temporary directories
+    resembling Program Files paths. Users can monitor installation logs and exclude
+    these specific paths if they are verified as part of a legitimate process.
+
+    - Some enterprise applications may use custom directories that mimic Program Files
+    for compatibility reasons. IT administrators should document these paths and add
+    them to the exclusion list to prevent false alerts.
+
+    - Development environmen'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

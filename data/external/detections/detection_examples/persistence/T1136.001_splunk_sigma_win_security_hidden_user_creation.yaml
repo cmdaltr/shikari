@@ -1,0 +1,39 @@
+technique_id: T1136.001
+technique_name: Hidden Local User Creation
+tactic: persistence
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 7b449a5e-1db5-4dd0-a2dc-4e3a67282538
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_homegroup:\n  TargetUserName: HomeGroupUser$\nselection:\n\
+  \  EventID: 4720\n  TargetUserName|endswith: $\n"
+explanation: Detects the creation of a local hidden user account which should not
+  happen for event ID 4720.
+false_positives:
+- Unknown
+references:
+- https://twitter.com/SBousseaden/status/1387743867663958021
+tags:
+- attack.persistence
+- attack.t1136.001
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4720
+    TargetUserName|endswith: $
+  filter_main_homegroup:
+    TargetUserName: HomeGroupUser$
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2021-05-03
+  modified_date: 2024-01-16
+  author: Christian Burkard (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

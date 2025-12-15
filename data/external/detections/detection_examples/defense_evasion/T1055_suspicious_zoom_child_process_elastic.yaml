@@ -1,0 +1,54 @@
+technique_id: T1055
+technique_name: Suspicious Zoom Child Process
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ process.parent.name : \"Zoom.exe\" and process.name : (\"cmd.exe\", \"powershell.exe\"\
+  , \"pwsh.exe\", \"powershell_ise.exe\")"
+explanation: 'A suspicious Zoom child process was detected, which may indicate an
+  attempt to run unnoticed. Verify process details
+
+  such as command line, network connections, file writes and associated file signature
+  details as well.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/97aba1ef-6034-4bd3-8c1a-1e0996b27afa.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Benign true positives (B-TPs) can be added as exceptions if necessary.\n\n###\
+    \ Response and remediation\n\n- Initiate the incident response process based on\
+    \ the outcome of the triage.\n- Isolate the involved host to prevent further post-compromise\
+    \ behavior.\n- If the triage identified malware, search the environment for additional\
+    \ compromised hosts.\n  - Implement temporary network rules, procedures, and segmentation\
+    \ to contain"
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

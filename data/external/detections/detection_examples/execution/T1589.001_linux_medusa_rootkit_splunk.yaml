@@ -1,0 +1,40 @@
+technique_id: T1589.001
+technique_name: Linux Medusa Rootkit
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Filesystem where Filesystem.file_path IN ("*/lib/libseconf",
+  "*.backup_ld.so", "*.boot.sh", "*.logpam", "*sshpass.txt", "*sshpass2.txt", "*/lib/libdsx.so",
+  "*rkload", "*/lib/libseconf/local.txt", "*/lib/locate/local.txt", "*/var/log/remote.txt",
+  "*/lib/libseconf/.pts", "*/lib/locate /.pts", "*/libseconf/.ports") by Filesystem.action
+  Filesystem.dest Filesystem.file_access_time Filesystem.file_create_time Filesystem.file_hash
+  Filesystem.file_modify_time Filesystem.file_name Filesystem.file_path Filesystem.file_acl
+  Filesystem.file_size Filesystem.process_guid Filesystem.process_id Filesystem.user
+  Filesystem.vendor_product | `drop_dm_object_name(Filesystem)` | `security_content_ctime(lastTime)`
+  | `security_content_ctime(firstTime)` | `linux_medusa_rootkit_filter`'
+explanation: This detection identifies file creation events associated with the installation
+  of the Medusa rootkit, a userland LD_PRELOAD-based rootkit known for deploying shared
+  objects, loader binaries, and configuration files into specific system directories.
+  These files typically facilitate process hiding, credential theft, and backdoor
+  access. Monitoring for such file creation patterns enables early detection of rootkit
+  deployment before full compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/7add8520-71d5-43aa-b262-ee082b1f0238/
+indicators:
+- type: data_source
+  value: Sysmon for Linux EventID 11
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Little to no false positives in most environments. Tune as needed.
+  mitigation: Review context and user activity
+references:
+- https://cloud.google.com/blog/topics/threat-intelligence/uncovering-unc3886-espionage-operations
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1014/medusa_rootkit/sysmon_linux.log

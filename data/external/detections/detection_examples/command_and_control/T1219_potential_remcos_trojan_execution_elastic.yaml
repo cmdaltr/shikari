@@ -1,0 +1,49 @@
+technique_id: T1219
+technique_name: Potential REMCOS Trojan Execution
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where host.os.type == \"windows\" and\n(\n (event.category == \"file\"\
+  \ and event.type == \"deletion\" and file.path like \"C:\\\\Users\\\\*\\\\AppData\\\
+  \\Local\\\\Temp\\\\TH????.tmp\") or\n\n (event.category == \"file\" and file.path\
+  \ : \"?:\\\\Users\\\\*\\\\AppData\\\\Roaming\\\\remcos\\\\logs.dat\") or\n\n (event.category\
+  \ == \"registry\" and\n  registry.value : (\"Remcos\", \"Rmc-??????\", \"licence\"\
+  ) and\n  registry.path : (\n      \"*\\\\Windows\\\\CurrentVersion\\\\Run\\\\Remcos\"\
+  ,\n      \"*\\\\Windows\\\\CurrentVersion\\\\Run\\\\Rmc-??????\",\n      \"*\\\\\
+  SOFTWARE\\\\Remcos-*\\\\licence\",\n      \"*\\\\Software\\\\Rmc-??????\\\\licence\"\
+  \n  )\n )\n)"
+explanation: Identifies known execution traces of the REMCOS Remote Access Trojan.
+  Remcos RAT is used by attackers to perform actions on infected machines remotely.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d8b2f85a-cf1c-40fc-acf0-bb5d588a8ea6.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+references:
+- https://any.run/malware-trends/remcos
+- https://attack.mitre.org/software/S0332/
+- https://www.elastic.co/security-labs/exploring-the-ref2731-intrusion-set
+has_investigation_guide: true
+risk_score: 73

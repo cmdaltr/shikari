@@ -1,0 +1,43 @@
+technique_id: T1546.014
+technique_name: Emond Rules Creation or Modification
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "file where host.os.type == \"macos\" and event.action == \"modification\"\
+  \ and\n file.path like (\"/private/etc/emond.d/rules/*.plist\", \"/etc/emon.d/rules/*.plist\"\
+  , \"/private/var/db/emondClients/*\")"
+explanation: 'Identifies the creation or modification of the Event Monitor Daemon
+  (emond) rules. Adversaries may abuse this service by
+
+  writing a rule to execute commands when a defined event occurs, such as system start
+  up or user authentication.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a6bf4dd4-743e-4da8-8c03-3ebd753a6c90.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System or application updates may modify emond rule files as part of legitimate
+    maintenance activities. Users can create exceptions for known update processes
+    by identifying the associated process names or hashes and excluding them from
+    alerts.
+
+    - Administrative tasks performed by IT personnel, such as configuring new system
+    policies or settings, might involve legitimate changes to emond rules. To handle
+    these, maintain a list of authorized personnel and their activitie'
+  mitigation: Review investigation guide for details
+references:
+- https://www.xorrior.com/emond-persistence/
+- https://www.sentinelone.com/blog/how-malware-persists-on-macos/
+has_investigation_guide: true
+risk_score: 47

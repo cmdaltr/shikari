@@ -1,0 +1,59 @@
+technique_id: T1059.004
+technique_name: Unusual Execution from Kernel Thread (kthreadd) Parent
+tactic: execution
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "host.os.type:linux and event.category:process and event.type:start and event.action:(exec\
+  \ or ProcessRollup2) and process.parent.name:kthreadd and (\n  process.executable:(/dev/shm/*\
+  \ or /tmp/* or /var/tmp/* or /var/www/*) or\n  process.name:(bash or csh or curl\
+  \ or dash or fish or id or ksh or nohup or setsid or sh or tcsh or wget or whoami\
+  \ or zsh)\n) and\nprocess.command_line:(\n  */dev/shm/* or */dev/tcp/* or */etc/init.d*\
+  \ or */etc/ld.so* or */etc/profile* or */etc/rc.local* or */etc/shadow* or */etc/ssh*\
+  \ or\n  */etc/sudoers* or */home/*/.ssh/* or */root/.ssh* or */tmp/* or */var/log/*\
+  \ or */var/run/* or */var/tmp/* or */var/www/* or\n  *base64* or *cron* or *xxd*\
+  \ or *~/.ssh/*\n) and not (\n  process.name:(true or cifs.upcall or dpkg or flock\
+  \ or gdbus or getopt or grep or mount or touch or umount or uname) or\n  process.command_line:(\n\
+  \    \"sh -c /bin/true\" or */bin/ps* or */usr/bin/find* or */usr/bin/grep* or *ds_agent*\
+  \ or *gitlabrunner* or *nagios* or\n    *omsagent* or *pgrep*\n  ) or\n  process.executable:(\n\
+  \    /lib/systemd/systemd-cgroups-agent or /proc/self/exe or /usr/local/axs-haproxy-monitoring/haproxy_stats.sh\
+  \ or /tmp/newroot/* or\n    /var/lib/docker/overlay2/* or /vz/root/*\n  )\n)"
+explanation: 'This rule detects suspicious child process from the kernel thread (kthreadd)
+  parent process. Attackers may execute payloads from
+
+  kernel space via kthreadd to perform actions on the host and evade detection. Through
+  the usage of the new_terms rule type, this
+
+  rule can identify uncommon child processes that may indicate the presence of a malicious
+  process.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/656739a8-2786-402b-8ee1-22e0762b63ba.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate system maintenance tasks may trigger this rule, such as automated
+    scripts running from temporary directories. Users can create exceptions for specific
+    scripts or processes that are verified as safe.
+
+    - Development or testing environments often use temporary directories for executing
+    scripts. Exclude known development tools or scripts from these environments to
+    reduce noise.
+
+    - Some monitoring or backup tools might use command lines or executables that
+    match th'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

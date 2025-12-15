@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+    <title>Archer - Login</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/profile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/validation.css') }}?v={{ request.app.state.asset_version }}">
+    {% block head %}
+    <style>
+      /* Ensure consistent positioning across all browsers */
+      
+
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      #main-content {
+        flex: 1;
+      }
+
+      /* Dark mode CSS variables */
+      
+
+      
+
+      /* Dark header bar at top - matches footer styling */
+      
+
+      [data-theme="dark"] 
+
+      #main-content.page-shell,
+      #main-content.centered { padding-top: 0 !important; margin-top: 0 !important; position: relative; }
+
+      /* Global navigation buttons */
+      
+
+      @media (max-width: 1400px) {
+        
+      }
+
+      
+
+      [data-theme="dark"] 
+
+      
+
+      
+
+      /* Fixed position buttons - aligned with 1320px content edge */
+      .back-link {
+        position: fixed !important;
+        top: 28px !important;
+        left: calc((100vw - 1320px) / 2) !important;
+        z-index: 10000 !important;
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95em;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        min-height: 40px;
+        border: 2px solid var(--accent);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.95);
+        transition: all 0.2s;
+        box-sizing: border-box;
+      }
+
+      [data-theme="dark"] .back-link {
+        background: rgba(45, 45, 45, 0.95);
+      }
+
+      .back-link:hover {
+        background: var(--accent);
+        color: white;
+      }
+
+      /* Fixed position button - aligned with 1320px content edge */
+      .how-archer-link {
+        position: fixed !important;
+        top: 28px !important;
+        right: calc((100vw - 1320px) / 2 + 52px) !important;
+        z-index: 10000 !important;
+      }
+
+      .how-archer-link:hover {
+        background: var(--accent) !important;
+        color: white !important;
+      }
+
+      /* Override inline styles for dark mode */
+      [data-theme="dark"] body,
+      [data-theme="dark"] .page-shell,
+      [data-theme="dark"] .container {
+        background: var(--bg-primary) !important;
+      }
+
+      [data-theme="dark"] h1 {
+        color: var(--text-primary) !important;
+      }
+
+      [data-theme="dark"] p,
+      [data-theme="dark"] .header p {
+        color: var(--text-secondary) !important;
+      }
+
+      [data-theme="dark"] label,
+      [data-theme="dark"] .form-label,
+      [data-theme="dark"] .option-label {
+        color: var(--text-primary) !important;
+      }
+
+      [data-theme="dark"] .option-hint,
+      [data-theme="dark"] .form-hint {
+        color: var(--text-tertiary) !important;
+      }
+
+      [data-theme="dark"] .how-archer-link {
+        background: rgba(45, 45, 45, 0.95) !important;
+      }
+
+      /* Footer dark mode */
+      [data-theme="dark"] footer {
+        background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%) !important;
+        border-top-color: var(--accent) !important;
+      }
+
+      [data-theme="dark"] footer p,
+      [data-theme="dark"] footer span,
+      [data-theme="dark"] footer a {
+        color: var(--text-secondary) !important;
+      }
+
+      [data-theme="dark"] footer a:hover {
+        color: var(--accent) !important;
+      }
+    </style>
+    {% endblock %}
+</head>
+<body>
+    <!-- Global Navigation Controls (Dark Mode + Profile) -->
+    {% include "partials/nav_controls.html" %}
+    {% block content %}
+    <div style="flex: 1; width: 100%;">
+    <div class="container" style="width: 1320px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
+      <!-- Page title / app name with banner -->
+      <div class="header" style="text-align: center; margin-bottom: 3em;">
+        <div style="margin-bottom: 1em; margin-top: 28px;">
+          <img src="{{ url_for('static', path='images/archer_banner.png') }}" alt="Archer" style="width: auto; height: auto; max-height: 150px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
+        </div>
+        <p style="color: #666666; font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px;">
+          LOGIN
+        </p>
+      </div>
+
+      <!-- Tabbed interface inspired by VirusTotal -->
+      <div class="tabs-container">
+        <div class="tabs-header" style="display: none;">
+          <button class="tab-button active" data-tab="profile">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span>Profile</span>
+          </button>
+          <button class="tab-button" data-tab="timeline">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>Timeline</span>
+          </button>
+          <button class="tab-button" data-tab="apikeys">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+            </svg>
+            <span>API Keys</span>
+          </button>
+          {% if user and user.role.value == 'admin' %}
+          <button class="tab-button" data-tab="users">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>Users</span>
+          </button>
+          {% endif %}
+        </div>
+
+        <div class="tabs-content">
+          <!-- LOGIN TAB -->
+          <div class="tab-pane active" id="tab-profile">
+
+            <div class="profile-container">
+              <!-- Login Form -->
+              <form method="post" action="/login" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="next_url" value="{{ next_url }}">
+
+                {% if success %}
+                <div style="background: #d1fae5; color: #065f46; padding: 0.875rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.95rem; border: 1px solid #6ee7b7; width: 50%;">
+                  {{ success }}
+                </div>
+                {% endif %}
+
+                {% if error %}
+                <div style="background: #fee; color: #c53030; padding: 0.875rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.95rem; border: 1px solid #fcc; width: 50%;">
+                  {{ error }}
+                </div>
+                {% endif %}
+
+                <!-- Email field (50%) -->
+                <div style="width: 50%;">
+                  <div class="form-section" style="margin: 0;">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email"
+                           name="email"
+                           id="email"
+                           class="form-input"
+                           placeholder="you@example.com"
+                           required
+                           autofocus
+                           maxlength="64">
+                  </div>
+                </div>
+
+                <!-- Password field (50%) -->
+                <div style="width: 50%; margin-top: 16px;">
+                  <div class="form-section" style="margin: 0;">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password"
+                           name="password"
+                           id="password"
+                           class="form-input"
+                           placeholder="Enter your password"
+                           required>
+                  </div>
+                </div>
+
+                <!-- Login button (10%) -->
+                <div style="width: 10%; margin-top: 24px;">
+                  <button type="submit" class="btn-primary" style="width: 100%;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                      <polyline points="10 17 15 12 10 7"/>
+                      <line x1="15" y1="12" x2="3" y2="12"/>
+                    </svg>
+                    Login
+                  </button>
+                </div>
+
+                <div style="text-align: center; margin-top: 1rem; width: 50%;">
+                  <a href="/register" style="color: var(--accent); text-decoration: none; font-size: 0.9rem;">Register</a>
+                  <span style="color: var(--text-secondary); margin: 0 0.5rem;">|</span>
+                  <a href="/forgot-password" style="color: var(--accent); text-decoration: none; font-size: 0.9rem;">Forgot your password?</a>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- TIMELINE TAB -->
+          <div class="tab-pane" id="tab-timeline">
+            <div class="tab-description">
+              View historical activity and download previous results
+            </div>
+
+            <div class="timeline-container">
+              <div class="timeline-filters">
+                <button class="filter-btn active" data-filter="all">All Activity</button>
+                <button class="filter-btn" data-filter="actor">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  Threat Actors
+                </button>
+                <button class="filter-btn" data-filter="cve">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  CVEs
+                </button>
+              </div>
+
+              <div class="timeline-items" id="timeline-items">
+                <!-- Timeline items will be loaded dynamically -->
+                <div class="empty-state">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p>No activity yet. Start by generating some detections!</p>
+                  <div class="form-actions" style="justify-content: center;">
+                    <a href="/" class="btn-primary">Go to Generate</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- API KEYS TAB -->
+          <div class="tab-pane" id="tab-apikeys">
+            <div class="tab-description">
+              API keys for SIEM platforms, AI models, and emulation tools
+            </div>
+
+            <div class="apikeys-container">
+              <!-- SIEM Platforms Section -->
+              <div class="apikey-section">
+                <h3 class="section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                  </svg>
+                  SIEM Platforms
+                </h3>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <radialGradient id="splunkGradient" cx="30%" cy="30%">
+                          <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                          <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                        </radialGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
+                      <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                    Splunk API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter Splunk API key"
+                           id="splunk-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('splunk-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                          <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
+                    </svg>
+                    Microsoft Defender API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter MDE API key"
+                           id="mde-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('mde-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
+                      <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
+                      <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
+                    </svg>
+                    Elastic API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter Elastic API key"
+                           id="elastic-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('elastic-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AI Models Section -->
+              <div class="apikey-section">
+                <h3 class="section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v20M2 12h20M17.657 6.343l-11.314 11.314M6.343 6.343l11.314 11.314"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  AI Models
+                </h3>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="openaiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#10A37F;stop-opacity:1" />
+                          <stop offset="50%" style="stop-color:#1A7F64;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#0D8B6C;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <!-- Circular background -->
+                      <circle cx="50" cy="50" r="48" fill="url(#openaiGradient)"/>
+                      <!-- Stylized AI symbol - interconnected nodes -->
+                      <circle cx="35" cy="35" r="6" fill="white"/>
+                      <circle cx="65" cy="35" r="6" fill="white"/>
+                      <circle cx="50" cy="65" r="6" fill="white"/>
+                      <line x1="35" y1="35" x2="65" y2="35" stroke="white" stroke-width="3"/>
+                      <line x1="35" y1="35" x2="50" y2="65" stroke="white" stroke-width="3"/>
+                      <line x1="65" y1="35" x2="50" y2="65" stroke="white" stroke-width="3"/>
+                    </svg>
+                    OpenAI API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="sk-..."
+                           id="openai-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('openai-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="anthropicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#CC785C;stop-opacity:1" />
+                          <stop offset="50%" style="stop-color:#C16A4F;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#B55A3E;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <!-- Square background with rounded corners -->
+                      <rect x="10" y="10" width="80" height="80" rx="16" fill="url(#anthropicGradient)"/>
+                      <!-- Stylized "A" or Claude symbol - diagonal lines forming an "A" -->
+                      <path d="M 35 70 L 50 30 L 65 70" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      <line x1="41" y1="58" x2="59" y2="58" stroke="white" stroke-width="6" stroke-linecap="round"/>
+                    </svg>
+                    Anthropic API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="sk-ant-..."
+                           id="anthropic-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('anthropic-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Emulation Tools Section (Greyed Out) -->
+              <div class="apikey-section disabled">
+                <h3 class="section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                  Emulation Tools
+                  <span class="coming-soon-badge">Coming Soon</span>
+                </h3>
+
+                <div class="apikey-item disabled">
+                  <label class="apikey-label">
+                    Atomic Red Team
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="text"
+                           class="form-input apikey-input"
+                           placeholder="Configuration path"
+                           disabled>
+                  </div>
+                </div>
+
+                <div class="apikey-item disabled">
+                  <label class="apikey-label">
+                    Caldera API Endpoint
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="text"
+                           class="form-input apikey-input"
+                           placeholder="https://..."
+                           disabled>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Save Button -->
+              <div class="form-actions">
+                <button type="button" class="btn-primary" onclick="saveApiKeys()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  Save API Keys
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- USERS TAB (Admin Only) -->
+          {% if user and user.role.value == 'admin' %}
+          <div class="tab-pane" id="tab-users">
+            <div class="tab-description">
+              User account management
+            </div>
+
+            <div id="users-list" style="margin-top: 24px;">
+              <!-- Users will be loaded dynamically via JavaScript -->
+              <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
+                Loading users...
+              </p>
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Footer -->
+    <footer style="margin-top: 80px; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%); padding: 30px 0; background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%); border-top: 3px solid #C53030; text-align: center;">
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+        <!-- GitHub Link -->
+        <div style="flex: 1; min-width: 200px; text-align: left;">
+          <a href="https://github.com/cmdaltr" target="_blank" rel="noopener noreferrer" style="color: #8B9AA3; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95em; transition: color 0.2s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            <span style="font-weight: 500;">@cmdaltr</span>
+          </a>
+        </div>
+
+        <!-- Quote -->
+        <div style="flex: 2; min-width: 300px; text-align: center;">
+          <p style="color: #a8b5bd; font-style: italic; font-size: 0.95em; margin: 0; line-height: 1.5;">
+            "Even if you can't see something, it doesn't mean it isn't there"<br>
+            <span style="font-size: 0.9em; color: #8B9AA3;">— Archer, Small Soldiers</span>
+          </p>
+        </div>
+
+        <!-- Spacer for balance -->
+        <div style="flex: 1; min-width: 200px;"></div>
+      </div>
+    </footer>
+
+    <script src="{{ url_for('static', path='js/common.js') }}?v={{ request.app.state.asset_version }}"></script>
+    <script src="{{ url_for('static', path='js/tabs.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+    <script src="{{ url_for('static', path='js/validation.js') }}?v={{ request.app.state.asset_version }}"></script>
+    <script src="{{ url_for('static', path='js/profile.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+
+    <!-- Login Form Redirect Message Script -->
+    <script>
+        // Show redirecting message on successful login
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.querySelector('form[action="/login"]');
+            if (loginForm) {
+                loginForm.addEventListener('submit', (e) => {
+                    // Show redirecting overlay
+                    const overlay = document.createElement('div');
+                    overlay.id = 'redirecting-overlay';
+                    overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.7);
+                        z-index: 99999;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    `;
+
+                    const message = document.createElement('div');
+                    message.style.cssText = `
+                        background: var(--bg-secondary);
+                        border-radius: 12px;
+                        padding: 2rem 3rem;
+                        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                        text-align: center;
+                    `;
+
+                    message.innerHTML = `
+                        <div style="width: 48px; height: 48px; margin: 0 auto 1rem; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p style="color: var(--text-primary); font-size: 1.1rem; font-weight: 600; margin: 0;">Redirecting...</p>
+                    `;
+
+                    // Add spinner animation
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+
+                    overlay.appendChild(message);
+                    document.body.appendChild(overlay);
+                });
+            }
+        });
+    </script>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
+        // Dark mode functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const sunIcon = darkModeToggle.querySelector('.sun-icon');
+        const moonIcon = darkModeToggle.querySelector('.moon-icon');
+        const html = document.documentElement;
+
+        // Check for saved theme preference or default to 'light'
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', currentTheme);
+        updateIcons(currentTheme);
+
+        darkModeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcons(newTheme);
+        });
+
+        function updateIcons(theme) {
+            if (theme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            }
+        }
+    </script>
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,80 @@
+technique_id: T1016
+technique_name: System Public IP Discovery via DNS Query
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "network where host.os.type == \"windows\" and dns.question.name != null and\
+  \ process.name != null and\n(\n  process.name : (\"MSBuild.exe\", \"mshta.exe\"\
+  , \"wscript.exe\", \"powershell.exe\", \"pwsh.exe\", \"msiexec.exe\", \"rundll32.exe\"\
+  ,\n  \"bitsadmin.exe\", \"InstallUtil.exe\", \"RegAsm.exe\", \"vbc.exe\", \"RegSvcs.exe\"\
+  , \"python.exe\", \"regsvr32.exe\", \"dllhost.exe\",\n  \"node.exe\", \"javaw.exe\"\
+  , \"java.exe\", \"*.pif\", \"*.com\") or\n\n  (?process.code_signature.trusted ==\
+  \ false or ?process.code_signature.exists == false) or\n\n  ?process.code_signature.subject_name\
+  \ : (\"AutoIt Consulting Ltd\", \"OpenJS Foundation\", \"Python Software Foundation\"\
+  ) or\n\n  ?process.executable : (\"?:\\\\Users\\\\*.exe\", \"?:\\\\ProgramData\\\
+  \\*.exe\")\n ) and\n dns.question.name :\n         (\n          \"ip-api.com\",\n\
+  \          \"checkip.dyndns.org\",\n          \"api.ipify.org\",\n          \"api.ipify.com\"\
+  ,\n          \"whatismyip.akamai.com\",\n          \"bot.whatismyipaddress.com\"\
+  ,\n          \"ifcfg.me\",\n          \"ident.me\",\n          \"ipof.in\",\n  \
+  \        \"ip.tyk.nu\",\n          \"icanhazip.com\",\n          \"curlmyip.com\"\
+  ,\n          \"wgetip.com\",\n          \"eth0.me\",\n          \"ipecho.net\",\n\
+  \          \"ip.appspot.com\",\n          \"api.myip.com\",\n          \"geoiptool.com\"\
+  ,\n          \"api.2ip.ua\",\n          \"api.ip.sb\",\n          \"ipinfo.io\"\
+  ,\n          \"checkip.amazonaws.com\",\n          \"wtfismyip.com\",\n        \
+  \  \"iplogger.*\",\n          \"freegeoip.net\",\n          \"freegeoip.app\",\n\
+  \          \"ipinfo.io\",\n          \"geoplugin.net\",\n          \"myip.dnsomatic.com\"\
+  ,\n          \"www.geoplugin.net\",\n          \"api64.ipify.org\",\n          \"\
+  ip4.seeip.org\",\n          \"*.geojs.io\",\n          \"*portmap.io\",\n      \
+  \    \"api.2ip.ua\",\n          \"api.db-ip.com\",\n          \"geolocation-db.com\"\
+  ,\n          \"httpbin.org\",\n          \"myip.opendns.com\"\n         )"
+explanation: Identifies DNS queries to known public IP address lookup web services.
+  Malwares tend to perform this action to assess potential targets.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/642ce354-4252-4d43-80c9-6603f16571c1.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Trusted domain from an expected process running in the environment.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Immediately block the identified indicators of compromise (IoCs).
+
+    - Implement any temporary network rules, procedures, and segmentation required
+    to contain the attack.
+
+    - Investigate credential exposure on systems compromis'
+  mitigation: Review investigation guide for details
+references:
+- https://attack.mitre.org/techniques/T1016/
+has_investigation_guide: true
+risk_score: 73

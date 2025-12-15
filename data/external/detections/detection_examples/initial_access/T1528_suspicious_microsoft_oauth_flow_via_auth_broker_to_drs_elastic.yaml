@@ -1,0 +1,120 @@
+technique_id: T1528
+technique_name: Suspicious Microsoft OAuth Flow via Auth Broker to DRS
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-azure.signinlogs-* metadata _id, _version, _index\n| where\n   \
+  \ event.dataset == \"azure.signinlogs\" and\n    event.outcome == \"success\" and\n\
+  \    azure.signinlogs.properties.user_type == \"Member\" and\n    azure.signinlogs.identity\
+  \ is not null and\n    azure.signinlogs.properties.user_principal_name is not null\
+  \ and\n    source.address is not null and\n    azure.signinlogs.properties.app_id\
+  \ == \"29d9ed98-a469-4536-ade2-f981bc1d605e\" and  // MAB\n    azure.signinlogs.properties.resource_id\
+  \ == \"01cb2876-7ebd-4aa4-9cc9-d28bd4d359a9\"  // DRS\n\n| eval\n    Esql.time_window_date_trunc\
+  \ = date_trunc(30 minutes, @timestamp),\n    Esql.azure_signinlogs_properties_session_id\
+  \ = azure.signinlogs.properties.session_id,\n    Esql.is_browser_case = case(\n\
+  \        to_lower(azure.signinlogs.properties.device_detail.browser) rlike \"(chrome|firefox|edge|safari).*\"\
+  , 1, 0\n    )\n\n| stats\n    Esql_priv.azure_signinlogs_properties_user_display_name_values\
+  \ = values(azure.signinlogs.properties.user_display_name),\n    Esql_priv.azure_signinlogs_properties_user_principal_name_values\
+  \ = values(azure.signinlogs.properties.user_principal_name),\n    Esql.azure_signinlogs_properties_session_id_values\
+  \ = values(azure.signinlogs.properties.session_id),\n    Esql.azure_signinlogs_properties_unique_token_identifier_values\
+  \ = values(azure.signinlogs.properties.unique_token_identifier),\n\n    Esql.source_geo_city_name_values\
+  \ = values(source.geo.city_name),\n    Esql.source_geo_country_name_values = values(source.geo.country_name),\n\
+  \    Esql.source_geo_region_name_values = values(source.geo.region_name),\n    Esql.source_address_values\
+  \ = values(source.address),\n    Esql.source_address_count_distinct = count_distinct(source.address),\n\
+  \    Esql.source_as_organization_name_values = values(source.`as`.organization.name),\n\
+  \n    Esql.azure_signinlogs_properties_authentication_protocol_values = values(azure.signinlogs.properties.authentication_protocol),\n\
+  \    Esql.azure_signinlogs_properties_authentication_requirement_values = values(azure.signinlogs.properties.authentication_requirement),\n\
+  \    Esql.azure_signinlogs_properties_is_interactive_values = values(azure.signinlogs.properties.is_interactive),\n\
+  \n    Esql.azure_signinlogs_properties_incoming_token_type_values = values(azure.signinlogs.properties.incoming_token_type),\n\
+  \    Esql.azure_signinlogs_properties_token_protection_status_details_sign_in_session_status_values\
+  \ = values(azure.signinlogs.properties.token_protection_status_details.sign_in_session_status),\n\
+  \    Esql.azure_signinlogs_properties_session_id_count_distinct = count_distinct(azure.signinlogs.properties.session_id),\n\
+  \    Esql.azure_signinlogs_properties_app_display_name_values = values(azure.signinlogs.properties.app_display_name),\n\
+  \    Esql.azure_signinlogs_properties_app_id_values = values(azure.signinlogs.properties.app_id),\n\
+  \    Esql.azure_signinlogs_properties_resource_id_values = values(azure.signinlogs.properties.resource_id),\n\
+  \    Esql.azure_signinlogs_properties_resource_display_name_values = values(azure.signinlogs.properties.resource_display_name),\n\
+  \n    Esql.azure_signinlogs_properties_app_owner_tenant_id_values = values(azure.signinlogs.properties.app_owner_tenant_id),\n\
+  \    Esql.azure_signinlogs_properties_resource_owner_tenant_id_values = values(azure.signinlogs.properties.resource_owner_tenant_id),\n\
+  \n    Esql.azure_signinlogs_properties_conditional_access_status_values = values(azure.signinlogs.properties.conditional_access_status),\n\
+  \    Esql.azure_signinlogs_properties_risk_state_values = values(azure.signinlogs.properties.risk_state),\n\
+  \    Esql.azure_signinlogs_properties_risk_level_aggregated_values = values(azure.signinlogs.properties.risk_level_aggregated),\n\
+  \n    Esql.azure_signinlogs_properties_device_detail_browser_values = values(azure.signinlogs.properties.device_detail.browser),\n\
+  \    Esql.azure_signinlogs_properties_device_detail_operating_system_values = values(azure.signinlogs.properties.device_detail.operating_system),\n\
+  \    Esql.user_agent_original_values = values(user_agent.original),\n    Esql.is_browser_case_max\
+  \ = max(Esql.is_browser_case),\n\n    Esql.event_count = count(*)\n  by\n    Esql.time_window_date_trunc,\n\
+  \    azure.signinlogs.properties.user_principal_name,\n    azure.signinlogs.properties.session_id\n\
+  \n| keep\n    Esql.time_window_date_trunc,\n    Esql_priv.azure_signinlogs_properties_user_display_name_values,\n\
+  \    Esql_priv.azure_signinlogs_properties_user_principal_name_values,\n    Esql.azure_signinlogs_properties_session_id_values,\n\
+  \    Esql.azure_signinlogs_properties_unique_token_identifier_values,\n    Esql.source_geo_city_name_values,\n\
+  \    Esql.source_geo_country_name_values,\n    Esql.source_geo_region_name_values,\n\
+  \    Esql.source_address_values,\n    Esql.source_address_count_distinct,\n    Esql.source_as_organization_name_values,\n\
+  \    Esql.azure_signinlogs_properties_authentication_protocol_values,\n    Esql.azure_signinlogs_properties_authentication_requirement_values,\n\
+  \    Esql.azure_signinlogs_properties_is_interactive_values,\n    Esql.azure_signinlogs_properties_incoming_token_type_values,\n\
+  \    Esql.azure_signinlogs_properties_token_protection_status_details_sign_in_session_status_values,\n\
+  \    Esql.azure_signinlogs_properties_session_id_count_distinct,\n    Esql.azure_signinlogs_properties_app_display_name_values,\n\
+  \    Esql.azure_signinlogs_properties_app_id_values,\n    Esql.azure_signinlogs_properties_resource_id_values,\n\
+  \    Esql.azure_signinlogs_properties_resource_display_name_values,\n    Esql.azure_signinlogs_properties_app_owner_tenant_id_values,\n\
+  \    Esql.azure_signinlogs_properties_resource_owner_tenant_id_values,\n    Esql.azure_signinlogs_properties_conditional_access_status_values,\n\
+  \    Esql.azure_signinlogs_properties_risk_state_values,\n    Esql.azure_signinlogs_properties_risk_level_aggregated_values,\n\
+  \    Esql.azure_signinlogs_properties_device_detail_browser_values,\n    Esql.azure_signinlogs_properties_device_detail_operating_system_values,\n\
+  \    Esql.user_agent_original_values,\n    Esql.is_browser_case_max,\n    Esql.event_count\n\
+  \n| where\n    Esql.source_address_count_distinct >= 2 and\n    Esql.azure_signinlogs_properties_session_id_count_distinct\
+  \ == 1 and\n    Esql.is_browser_case_max >= 1 and\n    Esql.event_count >= 2"
+explanation: 'Identifies separate OAuth authorization flows in Microsoft Entra ID
+  where the same user principal and session ID are
+
+  observed across multiple IP addresses within a 5-minute window. These flows involve
+  the Microsoft Authentication Broker
+
+  (MAB) as the client application and the Device Registration Service (DRS) as the
+  target resource. This pattern is highly
+
+  indicative of OAuth phishing activity, where an adversary crafts a legitimate Microsoft
+  login URL to trick a user into
+
+  completing authentication and sharing the resulting authorization code, which is
+  then exchanged for an access and
+
+  refresh token by the attacker.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/375132c6-25d5-11f0-8745-f661ea17fbcd.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Entra ID
+  confidence: high
+- type: data_source
+  value: Entra ID Sign-in Logs
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - A legitimate device join from a user switching networks (e.g., mobile hotspot
+    to Wi-Fi) could explain multi-IP usage.
+
+    - Some identity management agents or EDR tools may use MAB for background device
+    registration flows.
+
+    - Developers or IT administrators may access DRS across environments when testing.
+
+
+    ### Response and Remediation
+
+
+    - If confirmed unauthorized, revoke all refresh tokens for the user and disable
+    any suspicious registered devices.
+
+    - Notify the user and ver'
+  mitigation: Review investigation guide for details
+references:
+- https://www.volexity.com/blog/2025/04/22/phishing-for-codes-russian-threat-actors-target-microsoft-365-oauth-workflows/
+- https://github.com/dirkjanm/ROADtools
+- https://dirkjanm.io/phishing-for-microsoft-entra-primary-refresh-tokens/
+has_investigation_guide: true
+risk_score: 73

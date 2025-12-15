@@ -1,0 +1,48 @@
+technique_id: T1185
+technique_name: ASL AWS Concurrent Sessions From Different Ips
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`amazon_security_lake` api.operation=DescribeEventAggregates src_endpoint.domain!="AWS
+  Internal" | bin span=5m _time | stats min(_time) as firstTime max(_time) as lastTime
+  values(api.operation) as api.operation values(api.service.name) as api.service.name
+  values(http_request.user_agent) as http_request.user_agent values(src_endpoint.ip)
+  as src_ip values(actor.user.account.uid) as actor.user.account.uid values(cloud.provider)
+  as cloud.provider values(cloud.region) as cloud.region dc(src_endpoint.ip) as distinct_ip_count
+  by _time actor.user.uid | where distinct_ip_count > 1 | rename actor.user.uid as
+  user api.operation as action api.service.name as dest http_request.user_agent as
+  user_agent src_endpoint.ip as src actor.user.account.uid as vendor_account cloud.provider
+  as vendor_product cloud.region as vendor_region | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `asl_aws_concurrent_sessions_from_different_ips_filter`'
+explanation: The following analytic identifies an AWS IAM account with concurrent
+  sessions originating from more than one unique IP address within a 5-minute span.
+  This detection leverages AWS CloudTrail logs, specifically the `DescribeEventAggregates`
+  API call, to identify multiple IP addresses associated with the same user session.
+  This behavior is significant as it may indicate a session hijacking attack, where
+  an adversary uses stolen session cookies to access AWS resources from a different
+  location. If confirmed malicious, this activity could allow unauthorized access
+  to sensitive corporate resources, leading to potential data breaches or further
+  exploitation.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b3424bbe-3204-4469-887b-ec144483a336/
+indicators:
+- type: data_source
+  value: ASL AWS CloudTrail
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: A user with concurrent sessions from different Ips may also represent
+    the legitimate use of more than one device. Filter as needed and/or customize
+    the threshold to fit your environment.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1185/
+- https://breakdev.org/evilginx-2-next-generation-of-phishing-2fa-tokens/
+- https://github.com/kgretzky/evilginx2
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1185/aws_concurrent_sessions_from_different_ips/asl_ocsf_cloudtrail.json

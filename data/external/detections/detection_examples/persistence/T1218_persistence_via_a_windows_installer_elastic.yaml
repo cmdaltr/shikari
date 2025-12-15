@@ -1,0 +1,48 @@
+technique_id: T1218
+technique_name: Persistence via a Windows Installer
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "any where host.os.type == \"windows\" and\n (process.name : \"msiexec.exe\"\
+  \ or Effective_process.name : \"msiexec.exe\") and\n (\n  (event.category == \"\
+  file\" and event.action == \"creation\" and\n   file.path : (\"?:\\\\Windows\\\\\
+  System32\\\\Tasks\\\\*\",\n                \"?:\\\\programdata\\\\microsoft\\\\\
+  windows\\\\start menu\\\\programs\\\\startup\\\\*\",\n                \"?:\\\\Users\\\
+  \\*\\\\AppData\\\\Roaming\\\\Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\\\
+  Startup\\\\*\")) or\n\n  (event.category == \"registry\" and event.action == \"\
+  modification\" and\n   registry.path : (\"H*\\\\Software\\\\Microsoft\\\\Windows\\\
+  \\CurrentVersion\\\\Run\\\\*\",\n                    \"H*\\\\Software\\\\WOW6432Node\\\
+  \\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\\*\",\n                    \"\
+  H*\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Policies\\\\Explorer\\\
+  \\Run\\\\*\",\n                    \"H*\\\\Software\\\\WOW6432Node\\\\Microsoft\\\
+  \\Windows\\\\CurrentVersion\\\\Policies\\\\Explorer\\\\Run\\\\*\"))\n  )"
+explanation: Identifies when the Windows installer process msiexec.exe creates a new
+  persistence entry via scheduled tasks or startup.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/1719ee47-89b8-4407-9d55-6dff2629dd4c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may trigger the rule when msiexec.exe
+    creates scheduled tasks or startup entries. Users can create exceptions for known
+    software vendors or specific installation paths to reduce noise.
+
+    - System administrators might use msiexec.exe for deploying software across the
+    network, which can appear as suspicious activity. To handle this, exclude specific
+    administrative accounts or IP ranges from the rule.
+
+    - Some enterprise management'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

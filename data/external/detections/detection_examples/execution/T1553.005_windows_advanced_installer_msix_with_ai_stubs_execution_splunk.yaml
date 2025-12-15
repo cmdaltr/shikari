@@ -1,0 +1,59 @@
+technique_id: T1553.005
+technique_name: Windows Advanced Installer MSIX with AI_STUBS Execution
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Processes where Processes.process_path IN ("*\\AI_STUBS\\AiStubX64Elevated.exe",
+  "*\\AI_STUBS\\AiStubX86Elevated.exe", "*\\AI_STUBS\\AiStubX64.exe", "*\\AI_STUBS\\AiStubX86.exe")
+  AND Processes.original_file_name="popupwrapper.exe" by Processes.action Processes.dest
+  Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name("Processes")` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_advanced_installer_msix_with_ai_stubs_execution_filter`'
+explanation: The following analytic identifies the execution of Advanced Installer
+  MSIX Package Support Framework (PSF) components, specifically the AI_STUBS executables
+  with the original filename 'popupwrapper.exe'. This detection leverages data from
+  Endpoint Detection and Response (EDR) agents, focusing on process paths and original
+  filenames. This activity is significant as adversaries have been observed packaging
+  malicious content within MSIX files built with Advanced Installer to bypass security
+  controls. These AI_STUBS executables (with original filename 'popupwrapper.exe')
+  are hallmark artifacts of potentially malicious MSIX packages. If confirmed malicious,
+  this could allow attackers to execute arbitrary code, establish persistence, or
+  deliver malware while evading traditional detection mechanisms.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/56b2e58c-5909-49a3-998e-1f4815186ec2/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Legitimate applications packaged with Advanced Installer using the
+    Package Support Framework may trigger this detection. Verify if the MSIX package
+    is from a trusted source and signed by a trusted publisher before taking action.
+    Organizations that use Advanced Installer for legitimate software packaging may
+    see false positives.
+  mitigation: Review context and user activity
+references:
+- https://redcanary.com/blog/threat-intelligence/msix-installers/
+- https://redcanary.com/threat-detection-report/techniques/installer-packages/
+- https://learn.microsoft.com/en-us/windows/msix/package/package-support-framework
+- https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-behind-the-scenes
+- https://attack.mitre.org/techniques/T1218/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1218/msix_ai_stubs/windows_sysmon.log

@@ -1,0 +1,55 @@
+technique_id: T1105
+technique_name: Remote File Download via MpCmdRun
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  (process.name : \"MpCmdRun.exe\" or ?process.pe.original_file_name == \"MpCmdRun.exe\"\
+  ) and\n   process.args : \"-DownloadFile\" and process.args : \"-url\" and process.args\
+  \ : \"-path\""
+explanation: Identifies the Windows Defender configuration utility (MpCmdRun.exe)
+  being used to download a remote file.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c6453e73-90eb-4fe7-a98c-cde7bbfc504a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Benign true positives (B-TPs) can be added as exceptions if necessary.\n\n###\
+    \ Response and remediation\n\n- Initiate the incident response process based on\
+    \ the outcome of the triage.\n- Isolate the involved host to prevent further post-compromise\
+    \ behavior.\n- If the triage identified malware, search the environment for additional\
+    \ compromised hosts.\n  - Implement temporary network rules, procedures, and segmentation\
+    \ to contain"
+  mitigation: Review investigation guide for details
+references:
+- https://twitter.com/mohammadaskar2/status/1301263551638761477
+- https://www.bleepingcomputer.com/news/microsoft/microsoft-defender-can-ironically-be-used-to-download-malware/
+has_investigation_guide: true
+risk_score: 47

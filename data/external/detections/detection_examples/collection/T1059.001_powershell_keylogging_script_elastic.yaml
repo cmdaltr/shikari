@@ -1,0 +1,56 @@
+technique_id: T1059.001
+technique_name: PowerShell Keylogging Script
+tactic: collection
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:windows and\n  (\n   powershell.file.script_block_text\
+  \ : (GetAsyncKeyState or NtUserGetAsyncKeyState or GetKeyboardState or \"Get-Keystrokes\"\
+  ) or\n   powershell.file.script_block_text : (\n        (SetWindowsHookA or SetWindowsHookW\
+  \ or SetWindowsHookEx or SetWindowsHookExA or NtUserSetWindowsHookEx) and\n    \
+  \    (GetForegroundWindow or GetWindowTextA or GetWindowTextW or \"WM_KEYBOARD_LL\"\
+  \ or \"WH_MOUSE_LL\")\n   )\n   ) and not user.id : \"S-1-5-18\"\n  and not powershell.file.script_block_text\
+  \ : (\n    \"sentinelbreakpoints\" and \"Set-PSBreakpoint\"\n  )"
+explanation: 'Detects the use of Win32 API Functions that can be used to capture user
+  keystrokes in PowerShell scripts. Attackers use
+
+  this technique to capture user input, looking for credentials and/or other valuable
+  data.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/bd2c86a0-8b61-4457-ab38-96943984e889.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Regular users do not have a business justification for using scripting utilities
+    to capture keystrokes, making false positives unlikely. In the case of authorized
+    benign true positives (B-TPs), exceptions can be added.
+
+
+    ### Related rules
+
+
+    - PowerShell PSReflect Script - 56f2e9b5-4803-4e44-a0a4-a52dc79d57fe
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-comp'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/EmpireProject/Empire/blob/master/data/module_source/collection/Get-Keystrokes.ps1
+- https://github.com/MojtabaTajik/FunnyKeylogger/blob/master/FunnyLogger.ps1
+has_investigation_guide: true
+risk_score: 73

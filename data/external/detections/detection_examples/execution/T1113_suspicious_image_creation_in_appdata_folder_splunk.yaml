@@ -1,0 +1,48 @@
+technique_id: T1113
+technique_name: Suspicious Image Creation In Appdata Folder
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '| tstats `security_content_summariesonly` count FROM datamodel=Endpoint.Processes
+  where Processes.process_name=*.exe Processes.process_path="*\\appdata\\Roaming\\*"
+  by _time span=1h Processes.action Processes.dest Processes.original_file_name Processes.parent_process
+  Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id
+  Processes.parent_process_name Processes.parent_process_path Processes.process Processes.process_exec
+  Processes.process_guid Processes.process_hash Processes.process_id Processes.process_integrity_level
+  Processes.process_name Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` |rename process_guid as proc_guid |join proc_guid,
+  _time [| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Filesystem where Filesystem.file_name IN ("*.png","*.jpg","*.bmp","*.gif","*.tiff")
+  Filesystem.file_path= "*\\appdata\\Roaming\\*" by _time span=1h Filesystem.dest
+  Filesystem.file_create_time Filesystem.file_name Filesystem.file_path Filesystem.process_guid
+  | `drop_dm_object_name(Filesystem)` |rename process_guid as proc_guid | fields _time
+  dest file_create_time file_name file_path process_name process_path process proc_guid]
+  | `suspicious_image_creation_in_appdata_folder_filter`'
+explanation: The following analytic detects the creation of image files in the AppData
+  folder by processes that also have a file reference in the same folder. It leverages
+  data from the Endpoint.Processes and Endpoint.Filesystem datamodels to identify
+  this behavior. This activity is significant because it is commonly associated with
+  malware, such as the Remcos RAT, which captures screenshots and stores them in the
+  AppData folder before exfiltrating them to a command-and-control server. If confirmed
+  malicious, this activity could indicate unauthorized data capture and exfiltration,
+  compromising sensitive information and user privacy.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/f6f904c4-1ac0-11ec-806b-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1 AND Sysmon EventID 11
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://success.trendmicro.com/dcx/s/solution/1123281-remcos-malware-information?language=en_US
+- https://blog.malwarebytes.com/threat-intelligence/2021/07/remcos-rat-delivered-via-visual-basic/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/remcos/remcos_agent/sysmon.log

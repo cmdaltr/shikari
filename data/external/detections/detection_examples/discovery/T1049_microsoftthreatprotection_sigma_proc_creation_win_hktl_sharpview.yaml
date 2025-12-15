@@ -1,0 +1,148 @@
+technique_id: T1049
+technique_name: HackTool - SharpView Execution
+tactic: discovery
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: b2317cfa-4a47-4ead-b3ff-297438c0bc2d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  - OriginalFileName: SharpView.exe\n- Image|endswith: \\SharpView.exe\n- CommandLine|contains:\n\
+  \  - Add-RemoteConnection\n  - Convert-ADName\n  - ConvertFrom-SID\n  - ConvertFrom-UACValue\n\
+  \  - Convert-SidToName\n  - Export-PowerViewCSV\n  - Find-DomainObjectPropertyOutlier\n\
+  \  - Find-DomainProcess\n  - Find-DomainShare\n  - Find-DomainUserEvent\n  - Find-DomainUserLocation\n\
+  \  - Find-ForeignGroup\n  - Find-ForeignUser\n  - Find-GPOComputerAdmin\n  - Find-GPOLocation\n\
+  \  - Find-Interesting\n  - Find-LocalAdminAccess\n  - Find-ManagedSecurityGroups\n\
+  \  - Get-CachedRDPConnection\n  - Get-DFSshare\n  - Get-DomainComputer\n  - Get-DomainController\n\
+  \  - Get-DomainDFSShare\n  - Get-DomainDNSRecord\n  - Get-DomainFileServer\n  -\
+  \ Get-DomainForeign\n  - Get-DomainGPO\n  - Get-DomainGroup\n  - Get-DomainGUIDMap\n\
+  \  - Get-DomainManagedSecurityGroup\n  - Get-DomainObject\n  - Get-DomainOU\n  -\
+  \ Get-DomainPolicy\n  - Get-DomainSID\n  - Get-DomainSite\n  - Get-DomainSPNTicket\n\
+  \  - Get-DomainSubnet\n  - Get-DomainTrust\n  - Get-DomainUserEvent\n  - Get-ForestDomain\n\
+  \  - Get-ForestGlobalCatalog\n  - Get-ForestTrust\n  - Get-GptTmpl\n  - Get-GroupsXML\n\
+  \  - Get-LastLoggedOn\n  - Get-LoggedOnLocal\n  - Get-NetComputer\n  - Get-NetDomain\n\
+  \  - Get-NetFileServer\n  - Get-NetForest\n  - Get-NetGPO\n  - Get-NetGroupMember\n\
+  \  - Get-NetLocalGroup\n  - Get-NetLoggedon\n  - Get-NetOU\n  - Get-NetProcess\n\
+  \  - Get-NetRDPSession\n  - Get-NetSession\n  - Get-NetShare\n  - Get-NetSite\n\
+  \  - Get-NetSubnet\n  - Get-NetUser\n  - Get-PathAcl\n  - Get-PrincipalContext\n\
+  \  - Get-RegistryMountedDrive\n  - Get-RegLoggedOn\n  - Get-WMIRegCachedRDPConnection\n\
+  \  - Get-WMIRegLastLoggedOn\n  - Get-WMIRegMountedDrive\n  - Get-WMIRegProxy\n \
+  \ - Invoke-ACLScanner\n  - Invoke-CheckLocalAdminAccess\n  - Invoke-Kerberoast\n\
+  \  - Invoke-MapDomainTrust\n  - Invoke-RevertToSelf\n  - Invoke-Sharefinder\n  -\
+  \ Invoke-UserImpersonation\n  - Remove-DomainObjectAcl\n  - Remove-RemoteConnection\n\
+  \  - Request-SPNTicket\n  - Set-DomainObject\n  - Test-AdminAccess\n"
+explanation: Adversaries may look for details about the network configuration and
+  settings of systems they access or through information discovery of remote systems
+false_positives:
+- Unknown
+references:
+- https://github.com/tevora-threat/SharpView/
+- https://github.com/PowerShellMafia/PowerSploit/blob/d943001a7defb5e0d1657085a77a0e78609be58f/Recon/PowerView.ps1
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1049/T1049.md#atomic-test-4---system-discovery-using-sharpview
+tags:
+- attack.discovery
+- attack.t1049
+- attack.t1069.002
+- attack.t1482
+- attack.t1135
+- attack.t1033
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+  - OriginalFileName: SharpView.exe
+  - Image|endswith: \SharpView.exe
+  - CommandLine|contains:
+    - Add-RemoteConnection
+    - Convert-ADName
+    - ConvertFrom-SID
+    - ConvertFrom-UACValue
+    - Convert-SidToName
+    - Export-PowerViewCSV
+    - Find-DomainObjectPropertyOutlier
+    - Find-DomainProcess
+    - Find-DomainShare
+    - Find-DomainUserEvent
+    - Find-DomainUserLocation
+    - Find-ForeignGroup
+    - Find-ForeignUser
+    - Find-GPOComputerAdmin
+    - Find-GPOLocation
+    - Find-Interesting
+    - Find-LocalAdminAccess
+    - Find-ManagedSecurityGroups
+    - Get-CachedRDPConnection
+    - Get-DFSshare
+    - Get-DomainComputer
+    - Get-DomainController
+    - Get-DomainDFSShare
+    - Get-DomainDNSRecord
+    - Get-DomainFileServer
+    - Get-DomainForeign
+    - Get-DomainGPO
+    - Get-DomainGroup
+    - Get-DomainGUIDMap
+    - Get-DomainManagedSecurityGroup
+    - Get-DomainObject
+    - Get-DomainOU
+    - Get-DomainPolicy
+    - Get-DomainSID
+    - Get-DomainSite
+    - Get-DomainSPNTicket
+    - Get-DomainSubnet
+    - Get-DomainTrust
+    - Get-DomainUserEvent
+    - Get-ForestDomain
+    - Get-ForestGlobalCatalog
+    - Get-ForestTrust
+    - Get-GptTmpl
+    - Get-GroupsXML
+    - Get-LastLoggedOn
+    - Get-LoggedOnLocal
+    - Get-NetComputer
+    - Get-NetDomain
+    - Get-NetFileServer
+    - Get-NetForest
+    - Get-NetGPO
+    - Get-NetGroupMember
+    - Get-NetLocalGroup
+    - Get-NetLoggedon
+    - Get-NetOU
+    - Get-NetProcess
+    - Get-NetRDPSession
+    - Get-NetSession
+    - Get-NetShare
+    - Get-NetSite
+    - Get-NetSubnet
+    - Get-NetUser
+    - Get-PathAcl
+    - Get-PrincipalContext
+    - Get-RegistryMountedDrive
+    - Get-RegLoggedOn
+    - Get-WMIRegCachedRDPConnection
+    - Get-WMIRegLastLoggedOn
+    - Get-WMIRegMountedDrive
+    - Get-WMIRegProxy
+    - Invoke-ACLScanner
+    - Invoke-CheckLocalAdminAccess
+    - Invoke-Kerberoast
+    - Invoke-MapDomainTrust
+    - Invoke-RevertToSelf
+    - Invoke-Sharefinder
+    - Invoke-UserImpersonation
+    - Remove-DomainObjectAcl
+    - Remove-RemoteConnection
+    - Request-SPNTicket
+    - Set-DomainObject
+    - Test-AdminAccess
+  condition: selection
+metadata:
+  created_date: 2021-12-10
+  modified_date: 2023-02-14
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

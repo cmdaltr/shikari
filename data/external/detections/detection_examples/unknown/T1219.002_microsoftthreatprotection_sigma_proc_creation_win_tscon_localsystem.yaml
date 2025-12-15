@@ -1,0 +1,39 @@
+technique_id: T1219.002
+technique_name: Suspicious TSCON Start as SYSTEM
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 9847f263-4a81-424f-970c-875dab15b79b
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith: \\tscon.exe\n  User|contains:\n  - AUTHORI\n  - AUTORI\n"
+explanation: Detects a tscon.exe start as LOCAL SYSTEM
+false_positives:
+- Unknown
+references:
+- http://www.korznikov.com/2017/03/0-day-or-feature-privilege-escalation.html
+- https://medium.com/@networksecurity/rdp-hijacking-how-to-hijack-rds-and-remoteapp-sessions-transparently-to-move-through-an-da2a1e73a5f6
+- https://www.ired.team/offensive-security/lateral-movement/t1076-rdp-hijacking-for-lateral-movement
+tags:
+- attack.command-and-control
+- attack.t1219.002
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    User|contains:
+    - AUTHORI
+    - AUTORI
+    Image|endswith: \tscon.exe
+  condition: selection
+metadata:
+  created_date: 2018-03-17
+  modified_date: 2022-05-27
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

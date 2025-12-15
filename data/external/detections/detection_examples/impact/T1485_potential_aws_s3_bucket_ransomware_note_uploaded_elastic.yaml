@@ -1,0 +1,47 @@
+technique_id: T1485
+technique_name: Potential AWS S3 Bucket Ransomware Note Uploaded
+tactic: impact
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "file where\n  event.dataset == \"aws.cloudtrail\" and\n  event.provider ==\
+  \ \"s3.amazonaws.com\" and\n  event.action == \"PutObject\" and\n  event.outcome\
+  \ == \"success\" and\n  /* Apply regex to match patterns only after the bucket name\
+  \ */\n  aws.cloudtrail.resources.arn regex \"arn:aws:s3:::[^/]+/.*?(ransom|lock|crypt|enc|readme|how_to_decrypt|decrypt_instructions|recovery|datarescue).*\"\
+  \ and\n  not aws.cloudtrail.resources.arn regex \".*(AWSLogs|CloudTrail|access-logs).*\""
+explanation: 'Identifies potential ransomware note being uploaded to an AWS S3 bucket.
+  This rule detects the PutObject S3 API call
+
+  with a common ransomware note file name or extension such as ransom or .lock. Adversaries
+  with access to a misconfigured
+
+  S3 bucket may retrieve, delete, and replace objects with ransom notes to extort
+  victims.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7fda9bb2-fd28-11ee-85f9-f661ea17fbce.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS S3
+  confidence: high
+false_positives:
+- description: "False Positive Analysis:\n- **Planned tests or red-team exercises.**\
+    \ Confirm change tickets or test windows for staging/dev buckets; red teams often\
+    \ drop “ransom-note-like” files during exercises. \n- **Benign automation naming.**\
+    \ Some data-migration or backup tools may use “readme”/“recovery”-style filenames;\
+    \ validate by `user.agent`, principal, and target environment (dev vs prod). \n\
+    - **Log/archive buckets.** Exclude infrastructure/logging buckets (for example,\
+    \ `AWSLogs`, CloudTrail, access logs"
+  mitigation: Review investigation guide for details
+references:
+- https://stratus-red-team.cloud/attack-techniques/AWS/aws.impact.s3-ransomware-batch-deletion/
+- https://rhinosecuritylabs.com/aws/s3-ransomware-part-1-attack-vector/
+has_investigation_guide: true
+risk_score: 47

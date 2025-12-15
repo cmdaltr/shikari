@@ -1,0 +1,49 @@
+technique_id: T1134.002
+technique_name: Interactive Logon by an Unusual Process
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "authentication where\n host.os.type : \"windows\" and winlog.event_data.LogonProcessName\
+  \ : \"Advapi*\" and\n winlog.logon.type == \"Interactive\" and winlog.event_data.SubjectUserSid\
+  \ : (\"S-1-5-21*\", \"S-1-12-*\") and\n winlog.event_data.TargetUserSid : (\"S-1-5-21*\"\
+  , \"S-1-12-*\")  and process.executable : \"C:\\\\*\" and\n not startswith~(winlog.event_data.SubjectUserSid,\
+  \ winlog.event_data.TargetUserSid) and\n not process.executable :\n            (\"\
+  ?:\\\\Windows\\\\System32\\\\winlogon.exe\",\n             \"?:\\\\Windows\\\\System32\\\
+  \\wininit.exe\",\n             \"?:\\\\Program Files\\\\*.exe\",\n             \"\
+  ?:\\\\Program Files (x86)\\\\*.exe\",\n             \"?:\\\\Windows\\\\SysWOW64\\\
+  \\inetsrv\\\\w3wp.exe\",\n             \"?:\\\\Windows\\\\System32\\\\inetsrv\\\\\
+  w3wp.exe\",\n             \"?:\\\\Windows\\\\SysWOW64\\\\msiexec.exe\")"
+explanation: 'Identifies interactive logon attempt with alternate credentials and
+  by an unusual process. Adversaries may create a new
+
+  token to escalate privileges and bypass access controls.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/61766ef9-48a5-4247-ad74-3349de7eb2ad.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tools or scripts may trigger this rule if they use
+    non-standard executables for logon processes. To manage this, identify and whitelist
+    these known tools by adding their executable paths to the exception list.
+
+    - Custom applications developed in-house that require interactive logon might
+    be flagged. Review these applications and, if verified as safe, exclude their
+    executable paths from the detection rule.
+
+    - Automated tasks or services that use'
+  mitigation: Review investigation guide for details
+references:
+- https://attack.mitre.org/techniques/T1134/002/
+has_investigation_guide: true
+risk_score: 73

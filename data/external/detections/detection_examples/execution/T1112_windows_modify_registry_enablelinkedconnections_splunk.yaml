@@ -1,0 +1,40 @@
+technique_id: T1112
+technique_name: Windows Modify Registry EnableLinkedConnections
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path= "*\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\EnableLinkedConnections"
+  Registry.registry_value_data = "0x00000001") by Registry.action Registry.dest Registry.process_guid
+  Registry.process_id Registry.registry_hive Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_data Registry.registry_value_name Registry.registry_value_type
+  Registry.status Registry.user Registry.vendor_product | `drop_dm_object_name(Registry)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_modify_registry_enablelinkedconnections_filter`'
+explanation: The following analytic detects a suspicious modification to the Windows
+  registry setting for EnableLinkedConnections. It leverages data from the Endpoint.Registry
+  datamodel to identify changes where the registry path is "*\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\EnableLinkedConnections"
+  and the value is set to "0x00000001". This activity is significant because enabling
+  linked connections can allow network shares to be accessed with both standard and
+  administrator-level privileges, a technique often abused by malware like BlackByte
+  ransomware. If confirmed malicious, this could lead to unauthorized access to sensitive
+  network resources, escalating the attacker's privileges.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/93048164-3358-4af0-8680-aa5f38440516/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrators may enable or disable this feature that may cause some
+    false positive.
+  mitigation: Review context and user activity
+references:
+- https://www.microsoft.com/en-us/security/blog/2023/07/06/the-five-day-job-a-blackbyte-ransomware-intrusion-case-study/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1112/blackbyte/enablelinkedconnections/blackbyte_sysmon.log

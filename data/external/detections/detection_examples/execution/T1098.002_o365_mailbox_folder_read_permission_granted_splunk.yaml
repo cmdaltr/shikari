@@ -1,0 +1,41 @@
+technique_id: T1098.002
+technique_name: O365 Mailbox Folder Read Permission Granted
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=Exchange (Operation="Set-MailboxFolderPermission"
+  OR Operation="Add-MailboxFolderPermission" ) | eval isReadRole=if(match(AccessRights,"^(ReadItems|Author|NonEditingAuthor|Owner|PublishingAuthor|Reviewer)$"),
+  "true", "false") | search isReadRole="true" | rename UserId as user | fillnull |
+  stats count min(_time) as firstTime max(_time) as lastTime by signature dest user
+  src vendor_account vendor_product Identity AccessRights | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `o365_mailbox_folder_read_permission_granted_filter`'
+explanation: The following analytic identifies instances where read permissions are
+  granted to mailbox folders within an Office 365 environment. It detects this activity
+  by monitoring the `o365_management_activity` data source for the `Set-MailboxFolderPermission`
+  and `Add-MailboxFolderPermission` operations. This behavior is significant as it
+  may indicate unauthorized access or changes to mailbox folder permissions, potentially
+  exposing sensitive email content. If confirmed malicious, an attacker could gain
+  unauthorized access to read email communications, leading to data breaches or information
+  leakage.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/cd15c0a8-470e-4b12-9517-046e4927db30/
+indicators:
+- type: data_source
+  value: O365 ModifyFolderPermissions
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Mailbox folder permissions may be configured for legitimate purposes,
+    filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1098/002/
+- https://learn.microsoft.com/en-us/powershell/module/exchange/add-mailboxfolderpermission?view=exchange-ps
+- https://learn.microsoft.com/en-us/powershell/module/exchange/set-mailboxfolderpermission?view=exchange-ps
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1098.002/o365_mailbox_folder_read_granted/o365_mailbox_folder_read_granted.log

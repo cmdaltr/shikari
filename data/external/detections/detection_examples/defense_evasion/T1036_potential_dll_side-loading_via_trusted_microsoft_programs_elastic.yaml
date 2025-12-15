@@ -1,0 +1,89 @@
+technique_id: T1036
+technique_name: Potential DLL Side-Loading via Trusted Microsoft Programs
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  (\n    process.name : (\"WinWord.exe\", \"EXPLORER.EXE\", \"w3wp.exe\", \"DISM.EXE\"\
+  ) or\n    ?process.pe.original_file_name : (\"WinWord.exe\", \"EXPLORER.EXE\", \"\
+  w3wp.exe\", \"DISM.EXE\")\n  ) and\n  not process.executable : (\n          \"\\\
+  \\\\\\?\\\\Volume{????????-????-????-????-????????????}\\\\Windows\\\\System32\\\
+  \\inetsrv\\\\w3wp.exe\",\n          \"?:\\\\PROGRA~?\\\\MICROS~?\\\\Office??\\\\\
+  winword.exe\",\n          \"?:\\\\Program Files\\\\Microsoft Office\\\\*\\\\winword.exe\"\
+  ,\n          \"?:\\\\Program Files\\\\Microsoft Office ??\\\\*\\\\winword.exe\"\
+  ,\n          \"?:\\\\Program Files\\\\WindowsApps\\\\Microsoft.Office.Desktop.*\\\
+  \\Office??\\\\winword.exe\",\n          \"?:\\\\Program Files (x86)\\\\Microsoft\
+  \ Office\\\\*\\\\winword.exe\",\n          \"?:\\\\Program Files (x86)\\\\Windows\
+  \ Kits\\\\*Assessment and Deployment Kit\\\\Deployment Tools\\\\amd64\\\\DISM\\\\\
+  dism.exe\",\n          \"?:\\\\Windows\\\\explorer.exe\",\n          \"?:\\\\Windows\\\
+  \\System32\\\\Dism.exe\",\n          \"?:\\\\Windows\\\\System32\\\\inetsrv\\\\\
+  w3wp.exe\",\n          \"?:\\\\Windows\\\\SysWOW64\\\\Dism.exe\",\n          \"\
+  ?:\\\\Windows\\\\SysWOW64\\\\explorer.exe\",\n          \"?:\\\\Windows\\\\SysWOW64\\\
+  \\inetsrv\\\\w3wp.exe\"\n  ) and\n  /* Crowdstrike specific exclusion as it uses\
+  \ NT Object paths */\n  not\n  (\n    data_stream.dataset == \"crowdstrike.fdr\"\
+  \ and\n    process.executable : (\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program\
+  \ Files\\\\Microsoft Office\\\\*\\\\winword.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Program Files\\\\Microsoft Office ??\\\\*\\\\winword.exe\",\n        \"\\\\Device\\\
+  \\HarddiskVolume*\\\\Program Files\\\\WindowsApps\\\\Microsoft.Office.Desktop.*\\\
+  \\Office??\\\\winword.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program\
+  \ Files (x86)\\\\Microsoft Office\\\\*\\\\winword.exe\",\n        \"\\\\Device\\\
+  \\HarddiskVolume*\\\\Program Files (x86)\\\\Windows Kits\\\\10\\\\Assessment and\
+  \ Deployment Kit\\\\Deployment Tools\\\\amd64\\\\DISM\\\\dism.exe\",\n        \"\
+  \\\\Device\\\\HarddiskVolume*\\\\Windows\\\\explorer.exe\",\n        \"\\\\Device\\\
+  \\HarddiskVolume*\\\\Windows\\\\System32\\\\Dism.exe\",\n        \"\\\\Device\\\\\
+  HarddiskVolume*\\\\Windows\\\\System32\\\\inetsrv\\\\w3wp.exe\",\n        \"\\\\\
+  Device\\\\HarddiskVolume*\\\\Windows\\\\SysWOW64\\\\Dism.exe\",\n        \"\\\\\
+  Device\\\\HarddiskVolume*\\\\Windows\\\\SysWOW64\\\\explorer.exe\",\n        \"\\\
+  \\Device\\\\HarddiskVolume*\\\\Windows\\\\SysWOW64\\\\inetsrv\\\\w3wp.exe\"\n  \
+  \  )\n  )"
+explanation: 'Identifies an instance of a Windows trusted program that is known to
+  be vulnerable to DLL Search Order Hijacking
+
+  starting after being renamed or from a non-standard path. This is uncommon behavior
+  and may indicate an attempt to evade
+
+  defenses via side loading a malicious DLL within the memory space of one of those
+  processes.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/1160dcdb-0a0a-4a79-91d8-9b84616edebd.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may temporarily execute trusted
+    Microsoft programs from non-standard paths. Users can create exceptions for known
+    update processes to prevent false alerts.
+
+    - Custom enterprise applications might use renamed instances of trusted Microsoft
+    programs for legitimate purposes. Identify and whitelist these specific applications
+    to avoid unnecessary alerts.
+
+    - Virtual environments or sandboxed applications may execute trusted program'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

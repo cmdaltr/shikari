@@ -1,0 +1,43 @@
+technique_id: T1498
+technique_name: Possible Okta DoS Attack
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:okta.system and event.action:(application.integration.rate_limit_exceeded
+  or system.org.rate_limit.warning or system.org.rate_limit.violation or core.concurrency.org.limit.violation)
+explanation: 'Detects possible Denial of Service (DoS) attacks against an Okta organization.
+  An adversary may attempt to disrupt an
+
+  organization''s business operations by performing a DoS attack against its Okta
+  service.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e6e3ecff-03dd-48ec-acbd-54a04de10c68.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - High-volume legitimate user activity can trigger rate limit warnings. Monitor
+    for patterns of normal usage spikes, such as during company-wide meetings or product
+    launches, and consider setting exceptions for these events.
+
+    - Automated processes or integrations that frequently interact with Okta may cause
+    rate limit violations. Identify these processes and adjust their request rates
+    or set exceptions to prevent false positives.
+
+    - Scheduled batch jobs that access Okta se'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

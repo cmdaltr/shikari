@@ -1,0 +1,55 @@
+technique_id: T1059.005
+technique_name: Suspicious Scripting in a WMI Consumer
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: fe21810c-2a8c-478f-8dd3-5a287fb2a0e0
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_destination\n\
+  selection_destination:\n- Destination|contains|all:\n  - new-object\n  - net.webclient\n\
+  \  - .downloadstring\n- Destination|contains|all:\n  - new-object\n  - net.webclient\n\
+  \  - .downloadfile\n- Destination|contains:\n  - ' iex('\n  - ' -nop '\n  - ' -noprofile\
+  \ '\n  - ' -decode '\n  - ' -enc '\n  - WScript.Shell\n  - System.Security.Cryptography.FromBase64Transform\n"
+explanation: Detects suspicious commands that are related to scripting/powershell
+  in WMI Event Consumers
+false_positives:
+- Legitimate administrative scripts
+references:
+- https://in.security/an-intro-into-abusing-and-identifying-wmi-event-subscriptions-for-persistence/
+- https://github.com/Neo23x0/signature-base/blob/615bf1f6bac3c1bdc417025c40c073e6c2771a76/yara/gen_susp_lnk_files.yar#L19
+- https://github.com/RiccardoAncarani/LiquidSnake
+tags:
+- attack.execution
+- attack.t1059.005
+logsource:
+  product: windows
+  category: wmi_event
+detection:
+  selection_destination:
+  - Destination|contains|all:
+    - new-object
+    - net.webclient
+    - .downloadstring
+  - Destination|contains|all:
+    - new-object
+    - net.webclient
+    - .downloadfile
+  - Destination|contains:
+    - ' iex('
+    - ' -nop '
+    - ' -noprofile '
+    - ' -decode '
+    - ' -enc '
+    - WScript.Shell
+    - System.Security.Cryptography.FromBase64Transform
+  condition: selection_destination
+metadata:
+  created_date: 2019-04-15
+  modified_date: 2023-09-09
+  author: Florian Roth (Nextron Systems), Jonhnathan Ribeiro
+  status: test
+  imported_date: '2025-11-28'

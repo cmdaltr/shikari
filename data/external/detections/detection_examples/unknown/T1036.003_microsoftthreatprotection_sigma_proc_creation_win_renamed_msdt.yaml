@@ -1,0 +1,36 @@
+technique_id: T1036.003
+technique_name: Renamed Msdt.EXE Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: bd1c6866-65fc-44b2-be51-5588fcff82b9
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  Image|endswith: \\msdt.exe\nselection:\n  OriginalFileName: msdt.exe\n"
+explanation: Detects the execution of a renamed "Msdt.exe" binary
+false_positives:
+- Unlikely
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Msdt/
+tags:
+- attack.defense-evasion
+- attack.t1036.003
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    OriginalFileName: msdt.exe
+  filter:
+    Image|endswith: \msdt.exe
+  condition: selection and not filter
+metadata:
+  created_date: 2022-06-03
+  modified_date: 2023-02-03
+  author: pH-T (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

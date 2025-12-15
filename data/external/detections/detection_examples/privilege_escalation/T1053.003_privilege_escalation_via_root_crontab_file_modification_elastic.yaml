@@ -1,0 +1,44 @@
+technique_id: T1053.003
+technique_name: Privilege Escalation via Root Crontab File Modification
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"macos\" and event.action == \"modification\"\
+  \ and\n file.path like \"/private/var/at/tabs/root\" and \n not process.executable\
+  \ like \"/usr/bin/crontab\""
+explanation: 'Identifies modifications to the root crontab file. Adversaries may overwrite
+  this file to gain code execution with root
+
+  privileges by exploiting privileged file write or move related vulnerabilities.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0ff84c42-873d-41a2-a4ed-08d74d352d01.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System maintenance tasks or updates may modify the root crontab file. To handle
+    these, users can create exceptions for known maintenance processes that are verified
+    as safe.
+
+    - Administrative scripts that require scheduled tasks might trigger this rule.
+    Users should document and exclude these scripts if they are part of regular, authorized
+    operations.
+
+    - Backup or monitoring software that interacts with crontab files could cause
+    false positives. Verify these applications'
+  mitigation: Review investigation guide for details
+references:
+- https://phoenhex.re/2017-06-09/pwn2own-diskarbitrationd-privesc
+- https://www.exploit-db.com/exploits/42146
+has_investigation_guide: true
+risk_score: 73

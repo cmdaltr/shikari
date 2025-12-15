@@ -1,0 +1,58 @@
+technique_id: T1137
+technique_name: Persistence via Microsoft Outlook VBA
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "file where host.os.type == \"windows\" and event.type != \"deletion\" and\n\
+  \  file.name : \"VbaProject.OTM\" and\n  file.path : (\"?:\\\\Users\\\\*\\\\AppData\\\
+  \\Roaming\\\\Microsoft\\\\Outlook\\\\VbaProject.OTM\", \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Users\\\\*\\\\AppData\\\\Roaming\\\\Microsoft\\\\Outlook\\\\VbaProject.OTM\")"
+explanation: Detects attempts to establish persistence on an endpoint by installing
+  a rogue Microsoft Outlook VBA Template.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/397945f3-d39a-4e6f-8bcb-9656c2031438.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine updates or legitimate changes to the Outlook environment can trigger
+    alerts. Users should verify if recent software updates or administrative changes
+    align with the detected activity.
+
+    - Custom scripts or macros developed by IT departments for legitimate automation
+    tasks may be flagged. Establish a whitelist of known and approved VBA scripts
+    to prevent unnecessary alerts.
+
+    - User-initiated actions such as importing or exporting Outlook settings might
+    modify the V'
+  mitigation: Review investigation guide for details
+references:
+- https://www.mdsec.co.uk/2020/11/a-fresh-outlook-on-mail-based-persistence/
+- https://www.linkedin.com/pulse/outlook-backdoor-using-vba-samir-b-/
+has_investigation_guide: true
+risk_score: 47

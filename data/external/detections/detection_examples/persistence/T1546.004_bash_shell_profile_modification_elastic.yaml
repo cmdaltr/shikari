@@ -1,0 +1,58 @@
+technique_id: T1546.004
+technique_name: Bash Shell Profile Modification
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:file and event.type:change and\n  process.name:(* and not (sudo\
+  \ or vim or zsh or env or nano or bash or Terminal or xpcproxy or login or cat or\
+  \ cp or\n  launchctl or java or dnf or tailwatchd or ldconfig or yum or semodule\
+  \ or cpanellogd or dockerd or authselect or chmod or\n  dnf-automatic or git or\
+  \ dpkg or platform-python)) and\n  not process.executable:(/Applications/* or /private/var/folders/*\
+  \ or /usr/local/* or /opt/saltstack/salt/bin/*) and\n  file.path:(/private/etc/rc.local\
+  \ or\n             /etc/rc.local or\n             /home/*/.profile or\n        \
+  \     /home/*/.profile1 or\n             /home/*/.bash_profile or\n            \
+  \ /home/*/.bash_profile1 or\n             /home/*/.bashrc or\n             /Users/*/.bash_profile\
+  \ or\n             /Users/*/.zshenv)"
+explanation: 'Both ~/.bash_profile and ~/.bashrc are files containing shell commands
+  that are run when Bash is invoked. These files
+
+  are executed in a user''s context, either interactively or non-interactively, when
+  a user logs in so that their
+
+  environment is set correctly. Adversaries may abuse this to establish persistence
+  by executing malicious content
+
+  triggered by a user’s shell.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e6c1a552-7776-44ad-ae0f-8746cc07773c.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Frequent use of text editors like vim or nano may trigger alerts when users
+    legitimately modify their shell profiles. To mitigate this, consider excluding
+    these processes from the detection rule if they are commonly used in your environment.
+
+    - Automated system updates or configuration management tools like dnf or yum might
+    modify shell profiles as part of their operations. Exclude these processes if
+    they are verified as part of routine maintenance.
+
+    - Development tools'
+  mitigation: Review investigation guide for details
+references:
+- https://www.anomali.com/blog/pulling-linux-rabbit-rabbot-malware-out-of-a-hat
+has_investigation_guide: true
+risk_score: 47

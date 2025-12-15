@@ -1,0 +1,57 @@
+technique_id: T1135
+technique_name: Windows Network Enumeration
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  ((process.name : \"net.exe\" or process.pe.original_file_name == \"net.exe\"\
+  ) or\n   ((process.name : \"net1.exe\" or process.pe.original_file_name == \"net1.exe\"\
+  ) and\n       not process.parent.name : \"net.exe\")) and\n  (process.args : \"\
+  view\" or (process.args : \"time\" and process.args : \"\\\\\\\\*\")) and\n  not\
+  \ process.command_line : \"net  view \\\\\\\\localhost \"\n\n\n  /* expand when\
+  \ ancestry is available\n  and not descendant of [process where event.type == \"\
+  start\" and process.name : \"cmd.exe\" and\n                           ((process.parent.name\
+  \ : \"userinit.exe\") or\n                            (process.parent.name : \"\
+  gpscript.exe\") or\n                            (process.parent.name : \"explorer.exe\"\
+  \ and\n                               process.args : \"C:\\\\*\\\\Start Menu\\\\\
+  Programs\\\\Startup\\\\*.bat*\"))]\n  */"
+explanation: Identifies attempts to enumerate hosts in a network using the built-in
+  Windows net.exe tool.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7b8bfc26-81d2-435e-965c-d722ee397ef1.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Discovery activities are not inherently malicious if they occur in isolation.
+    As long as the analyst did not identify suspicious activity related to the user
+    or host, such alerts can be dismissed.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-compromise behavior.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/siestagraph-new-implant-uncovered-in-asean-member-foreign-ministry
+has_investigation_guide: true
+risk_score: 47

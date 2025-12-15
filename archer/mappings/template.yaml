@@ -1,0 +1,30 @@
+id: §id§
+name: §name§
+technique_id: §tid§
+description: |
+  §tdesc§
+severity: §severity§
+requiredDataConnectors:
+  - connectorId: §connectorId§
+    dataTypes:
+      - §dataTypes§
+queryFrequency: 1d
+queryPeriod: 1d
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - §tactic§
+tags:
+  - §group§
+query: |
+§query§
+§entityMappings§
+version: §ver§
+kind: Scheduled
+metadata:
+    source:
+        kind: §source§
+    author:
+        name: §author§
+    support:
+        tier: §support§

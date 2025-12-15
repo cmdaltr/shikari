@@ -1,0 +1,43 @@
+technique_id: T1553
+technique_name: Attempt to Disable Gatekeeper
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n process.name == \"spctl\" and\n process.args like~ \"--master-disable\""
+explanation: 'Detects attempts to disable Gatekeeper on macOS. Gatekeeper is a security
+  feature that''s designed to ensure that only
+
+  trusted software is run. Adversaries may attempt to disable Gatekeeper before executing
+  malicious code.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4da13d6e-904f-4636-81d8-6ab14b4e6ae9.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System administrators or IT personnel may intentionally disable Gatekeeper for
+    legitimate software installations or troubleshooting. To manage this, create exceptions
+    for known administrative accounts or specific maintenance windows.
+
+    - Some legitimate applications may require Gatekeeper to be disabled temporarily
+    for installation. Identify these applications and whitelist their installation
+    processes to prevent false alerts.
+
+    - Development environments on macOS might di'
+  mitigation: Review investigation guide for details
+references:
+- https://support.apple.com/en-us/HT202491
+- https://community.carbonblack.com/t5/Threat-Advisories-Documents/TAU-TIN-Shlayer-OSX/ta-p/68397
+has_investigation_guide: true
+risk_score: 47

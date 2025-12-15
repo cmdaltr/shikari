@@ -1,0 +1,45 @@
+technique_id: T1556
+technique_name: Cisco Duo Set User Status to Bypass 2FA
+tactic: lateral_movement
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`cisco_duo_activity` action.name=user_update | spath input=target.details
+  path=status output=status | spath input=old_target.details path=status output=old_status
+  | search status=Bypass old_status=Active | rename target.name as user access_device.ip.address
+  as src_ip | stats count min(_time) as firstTime max(_time) as lastTime by access_device.browser
+  access_device.browser_version src_ip access_device.location.city access_device.location.country
+  access_device.location.state access_device.os access_device.os_version action.name
+  actor.details actor.name actor.type old_target.details target.details status old_status
+  user | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `cisco_duo_set_user_status_to_bypass_2fa_filter`'
+explanation: "The following analytic detects instances where a Duo user's status is\
+  \ changed to \"Bypass\" for 2FA, specifically when the \nprevious status was \"\
+  Active.\" This behavior is identified by analyzing Duo activity logs for user update\
+  \ actions, extracting \nthe status transitions, and filtering for cases where a\
+  \ user is set to bypass multi-factor authentication. This is a critical \nevent\
+  \ for a Security Operations Center (SOC) to monitor, as bypassing 2FA significantly\
+  \ weakens account security and may \nindicate malicious insider activity or account\
+  \ compromise. Attackers or unauthorized administrators may exploit this change to\
+  \ \ndisable strong authentication controls, increasing the risk of unauthorized\
+  \ access to sensitive systems and data. Early detection \nof such changes enables\
+  \ rapid investigation and response, helping to prevent potential breaches and limit\
+  \ the impact of \ncredential-based attacks."
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8728d224-9cd5-4aa7-b75f-f8520a569979/
+indicators:
+- type: data_source
+  value: Cisco Duo Administrator
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://splunkbase.splunk.com/app/7404
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1556/cisco_duo_bypass_2FA/cisco_duo_activity.json

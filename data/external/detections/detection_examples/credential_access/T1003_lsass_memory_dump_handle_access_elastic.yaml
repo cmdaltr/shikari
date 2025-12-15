@@ -1,0 +1,63 @@
+technique_id: T1003
+technique_name: LSASS Memory Dump Handle Access
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "host.os.type:\"windows\" and event.code:\"4656\" and\n  (\n    winlog.event_data.AccessMask\
+  \ : (\"0x1fffff\" or \"0x1010\" or \"0x120089\" or \"0x1F3FFF\") or\n    winlog.event_data.AccessMaskDescription\
+  \ : (\"READ_CONTROL\" or \"Read from process memory\")\n  ) and\n  winlog.event_data.ObjectName\
+  \ : *\\\\Windows\\\\System32\\\\lsass.exe and\n  not winlog.event_data.ProcessName\
+  \ : (\n      \"C:\\Windows\\System32\\wbem\\WmiPrvSE.exe\" or\n      \"C:\\Windows\\\
+  SysWOW64\\wbem\\WmiPrvSE.exe\" or\n      \"C:\\Windows\\System32\\dllhost.exe\"\
+  \ or\n      \"C:\\Windows\\System32\\svchost.exe\" or\n      \"C:\\Windows\\System32\\\
+  msiexec.exe\" or\n      \"C:\\Windows\\explorer.exe\"\n  )"
+explanation: 'Identifies handle requests for the Local Security Authority Subsystem
+  Service (LSASS) object access with specific access
+
+  masks that many tools with a capability to dump memory to disk use (0x1fffff, 0x1010,
+  0x120089). This rule is tool
+
+  agnostic as it has been validated against a host of various LSASS dump tools such
+  as SharpDump, Procdump, Mimikatz,
+
+  Comsvcs etc. It detects this behavior at a low level and does not depend on a specific
+  tool or dump file name.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/208dbe77-01ed-4954-8d44-1e5751cb20de.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - There should be very few or no false positives for this rule. If this activity
+    is expected or noisy in your environment, consider adding exceptions — preferably
+    with a combination of user and command line conditions.
+
+    - If the process is related to antivirus or endpoint detection and response solutions,
+    validate that it is installed on the correct path and signed with the company''s
+    valid digital signature.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4656
+- https://twitter.com/jsecurity101/status/1227987828534956033?s=20
+- https://attack.mitre.org/techniques/T1003/001/
+- https://threathunterplaybook.com/notebooks/windows/06_credential_access/WIN-170105221010.html
+- http://findingbad.blogspot.com/2017/
+- https://www.elastic.co/security-labs/detect-credential-access
+has_investigation_guide: true
+risk_score: 47

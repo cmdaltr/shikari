@@ -1,0 +1,55 @@
+technique_id: T1098
+technique_name: Google Workspace Admin Role Assigned to a User
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset:\"google_workspace.admin\" and event.category:\"iam\" and event.action:\"\
+  ASSIGN_ROLE\"\n  and google_workspace.event.type:\"DELEGATED_ADMIN_SETTINGS\" and\
+  \ google_workspace.admin.role.name : *_ADMIN_ROLE"
+explanation: 'Assigning the administrative role to a user will grant them access to
+  the Google Admin console and grant them
+
+  administrator privileges which allow them to access and manage various resources
+  and applications. An adversary may
+
+  create a new administrator account for persistence or apply the admin role to an
+  existing user to carry out further
+
+  intrusion efforts. Users with super-admin privileges can bypass single-sign on if
+  enabled in Google Workspace.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/68994a6c-c7ba-4e82-b476-26a26877adf6.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - After identifying user account that added the admin role, verify the action
+    was intentional.
+
+    - Verify that the target user who was assigned the admin role should have administrative
+    privileges in Google Workspace.
+
+    - Review organizational units or groups the target user might have been added
+    to and ensure the admin role permissions align.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Disable or limit the ac'
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/172176?hl=en
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 73

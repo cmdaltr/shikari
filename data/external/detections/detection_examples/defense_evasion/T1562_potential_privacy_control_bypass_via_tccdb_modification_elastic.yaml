@@ -1,0 +1,49 @@
+technique_id: T1562
+technique_name: Potential Privacy Control Bypass via TCCDB Modification
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and process.name == \"sqlite*\" and\n process.args like \"/*/Application Support/com.apple.TCC/TCC.db\"\
+  \ and\n (process.parent.name like~ (\"osascript\", \"bash\", \"sh\", \"zsh\", \"\
+  Terminal\", \"Python*\") or (process.parent.code_signature.exists == false or process.parent.code_signature.trusted\
+  \ == false))"
+explanation: 'Identifies the use of sqlite3 to directly modify the Transparency, Consent,
+  and Control (TCC) SQLite database. This may
+
+  indicate an attempt to bypass macOS privacy controls, including access to sensitive
+  resources like the system camera,
+
+  microphone, address book, and calendar.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/eea82229-b002-470e-a9e1-00be38b14d32.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Security software like Bitdefender may legitimately access the TCC database
+    for scanning purposes. To prevent these from being flagged, ensure that the process
+    parent executable path for such software is added to the exclusion list.
+
+    - System maintenance tools that perform regular checks or backups might access
+    the TCC database. Identify these tools and add their process paths to the exclusion
+    list to avoid false alerts.
+
+    - Developer tools used for testing applications m'
+  mitigation: Review investigation guide for details
+references:
+- https://applehelpwriter.com/2016/08/29/discovering-how-dropbox-hacks-your-mac/
+- https://github.com/bp88/JSS-Scripts/blob/master/TCC.db%20Modifier.sh
+- https://medium.com/@mattshockl/cve-2020-9934-bypassing-the-os-x-transparency-consent-and-control-tcc-framework-for-4e14806f1de8
+has_investigation_guide: true
+risk_score: 47

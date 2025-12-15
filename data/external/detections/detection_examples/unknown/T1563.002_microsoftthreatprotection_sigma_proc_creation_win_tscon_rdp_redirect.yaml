@@ -1,0 +1,38 @@
+technique_id: T1563.002
+technique_name: Suspicious RDP Redirect Using TSCON
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: f72aa3e8-49f9-4c7d-bd74-f8ab84ff9bbb
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains: ' /dest:rdp-tcp#'\n"
+explanation: Detects a suspicious RDP session redirect using tscon.exe
+false_positives:
+- Unknown
+references:
+- http://www.korznikov.com/2017/03/0-day-or-feature-privilege-escalation.html
+- https://medium.com/@networksecurity/rdp-hijacking-how-to-hijack-rds-and-remoteapp-sessions-transparently-to-move-through-an-da2a1e73a5f6
+- https://www.hackingarticles.in/rdp-session-hijacking-with-tscon/
+tags:
+- attack.lateral-movement
+- attack.t1563.002
+- attack.t1021.001
+- car.2013-07-002
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains: ' /dest:rdp-tcp#'
+  condition: selection
+metadata:
+  created_date: 2018-03-17
+  modified_date: 2023-05-16
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

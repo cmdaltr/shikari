@@ -1,0 +1,47 @@
+technique_id: T1036.009
+technique_name: Windows Unusual SysWOW64 Process Run System32 Executable
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.process_path = "*\\Windows\\SysWOW64\\*"
+  AND Processes.process = "*windows\\system32\\*" by Processes.action Processes.dest
+  Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_unusual_syswow64_process_run_system32_executable_filter`'
+explanation: The following analytic detects an unusual process execution pattern where
+  a process running from C:\Windows\SysWOW64\ attempts to execute a binary from C:\Windows\System32\.
+  In a typical Windows environment, 32-bit processes under SysWOW64 should primarily
+  interact with 32-bit binaries within the same directory. However, an execution flow
+  where a 32-bit process spawns a 64-bit binary from System32 can indicate potential
+  process injection, privilege escalation, evasion techniques, or unauthorized execution
+  hijacking.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e4602172-db86-4315-86df-da66fb40bcde/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: some legitimate system processes, software updaters, or compatibility
+    tools may trigger this behavior, occurrences involving unknown, unsigned, or unusual
+    parent processes should be investigated for potential malware activity, persistence
+    mechanisms, or execution flow hijacking.
+  mitigation: Review context and user activity
+references:
+- https://www.trendmicro.com/en_nl/research/24/k/earth-estries.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1036.009/32bit_process_execute_64bit/32bit_spawn_64bit.log

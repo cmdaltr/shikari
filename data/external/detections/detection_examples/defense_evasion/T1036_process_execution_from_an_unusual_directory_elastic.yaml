@@ -1,0 +1,109 @@
+technique_id: T1036
+technique_name: Process Execution from an Unusual Directory
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  /* add suspicious execution paths here */\n  process.executable : (\n    \"?:\\\
+  \\PerfLogs\\\\*.exe\", \"?:\\\\Users\\\\Public\\\\*.exe\", \"?:\\\\Windows\\\\Tasks\\\
+  \\*.exe\",\n    \"?:\\\\Intel\\\\*.exe\", \"?:\\\\AMD\\\\Temp\\\\*.exe\", \"?:\\\
+  \\Windows\\\\AppReadiness\\\\*.exe\",\n    \"?:\\\\Windows\\\\ServiceState\\\\*.exe\"\
+  , \"?:\\\\Windows\\\\security\\\\*.exe\", \"?:\\\\Windows\\\\IdentityCRL\\\\*.exe\"\
+  ,\n    \"?:\\\\Windows\\\\Branding\\\\*.exe\", \"?:\\\\Windows\\\\csc\\\\*.exe\"\
+  , \"?:\\\\Windows\\\\DigitalLocker\\\\*.exe\",\n    \"?:\\\\Windows\\\\en-US\\\\\
+  *.exe\", \"?:\\\\Windows\\\\wlansvc\\\\*.exe\", \"?:\\\\Windows\\\\Prefetch\\\\\
+  *.exe\",\n    \"?:\\\\Windows\\\\Fonts\\\\*.exe\", \"?:\\\\Windows\\\\diagnostics\\\
+  \\*.exe\", \"?:\\\\Windows\\\\TAPI\\\\*.exe\",\n    \"?:\\\\Windows\\\\INF\\\\*.exe\"\
+  , \"?:\\\\Windows\\\\System32\\\\Speech\\\\*.exe\", \"?:\\\\windows\\\\tracing\\\
+  \\*.exe\",\n    \"?:\\\\windows\\\\IME\\\\*.exe\", \"?:\\\\Windows\\\\Performance\\\
+  \\*.exe\", \"?:\\\\windows\\\\intel\\\\*.exe\",\n    \"?:\\\\windows\\\\ms\\\\*.exe\"\
+  , \"?:\\\\Windows\\\\dot3svc\\\\*.exe\", \"?:\\\\Windows\\\\panther\\\\*.exe\",\n\
+  \    \"?:\\\\Windows\\\\RemotePackages\\\\*.exe\", \"?:\\\\Windows\\\\OCR\\\\*.exe\"\
+  , \"?:\\\\Windows\\\\appcompat\\\\*.exe\",\n    \"?:\\\\Windows\\\\apppatch\\\\\
+  *.exe\", \"?:\\\\Windows\\\\addins\\\\*.exe\", \"?:\\\\Windows\\\\Setup\\\\*.exe\"\
+  ,\n    \"?:\\\\Windows\\\\Help\\\\*.exe\", \"?:\\\\Windows\\\\SKB\\\\*.exe\", \"\
+  ?:\\\\Windows\\\\Vss\\\\*.exe\",\n    \"?:\\\\Windows\\\\Web\\\\*.exe\", \"?:\\\\\
+  Windows\\\\servicing\\\\*.exe\", \"?:\\\\Windows\\\\CbsTemp\\\\*.exe\",\n    \"\
+  ?:\\\\Windows\\\\Logs\\\\*.exe\", \"?:\\\\Windows\\\\WaaS\\\\*.exe\", \"?:\\\\Windows\\\
+  \\ShellExperiences\\\\*.exe\",\n    \"?:\\\\Windows\\\\ShellComponents\\\\*.exe\"\
+  , \"?:\\\\Windows\\\\PLA\\\\*.exe\", \"?:\\\\Windows\\\\Migration\\\\*.exe\",\n\
+  \    \"?:\\\\Windows\\\\debug\\\\*.exe\", \"?:\\\\Windows\\\\Cursors\\\\*.exe\"\
+  , \"?:\\\\Windows\\\\Containers\\\\*.exe\",\n    \"?:\\\\Windows\\\\Boot\\\\*.exe\"\
+  , \"?:\\\\Windows\\\\bcastdvr\\\\*.exe\", \"?:\\\\Windows\\\\assembly\\\\*.exe\"\
+  ,\n    \"?:\\\\Windows\\\\TextInput\\\\*.exe\", \"?:\\\\Windows\\\\security\\\\\
+  *.exe\", \"?:\\\\Windows\\\\schemas\\\\*.exe\",\n    \"?:\\\\Windows\\\\SchCache\\\
+  \\*.exe\", \"?:\\\\Windows\\\\Resources\\\\*.exe\", \"?:\\\\Windows\\\\rescache\\\
+  \\*.exe\",\n    \"?:\\\\Windows\\\\Provisioning\\\\*.exe\", \"?:\\\\Windows\\\\\
+  PrintDialog\\\\*.exe\", \"?:\\\\Windows\\\\PolicyDefinitions\\\\*.exe\",\n    \"\
+  ?:\\\\Windows\\\\media\\\\*.exe\", \"?:\\\\Windows\\\\Globalization\\\\*.exe\",\
+  \ \"?:\\\\Windows\\\\L2Schemas\\\\*.exe\",\n    \"?:\\\\Windows\\\\LiveKernelReports\\\
+  \\*.exe\", \"?:\\\\Windows\\\\ModemLogs\\\\*.exe\",\n    \"?:\\\\Windows\\\\ImmersiveControlPanel\\\
+  \\*.exe\"\n  ) and\n  \n  not process.name : (\n    \"SpeechUXWiz.exe\", \"SystemSettings.exe\"\
+  , \"TrustedInstaller.exe\",\n    \"PrintDialog.exe\", \"MpSigStub.exe\", \"LMS.exe\"\
+  , \"mpam-*.exe\"\n  ) and\n  not process.executable :\n            (\"?:\\\\Intel\\\
+  \\Wireless\\\\WUSetupLauncher.exe\",\n             \"?:\\\\Intel\\\\Wireless\\\\\
+  Setup.exe\",\n             \"?:\\\\Intel\\\\Move Mouse.exe\",\n             \"?:\\\
+  \\windows\\\\Panther\\\\DiagTrackRunner.exe\",\n             \"?:\\\\Windows\\\\\
+  servicing\\\\GC64\\\\tzupd.exe\",\n             \"?:\\\\Users\\\\Public\\\\res\\\
+  \\RemoteLite.exe\",\n             \"?:\\\\Users\\\\Public\\\\IBM\\\\ClientSolutions\\\
+  \\*.exe\",\n             \"?:\\\\Users\\\\Public\\\\Documents\\\\syspin.exe\",\n\
+  \             \"?:\\\\Users\\\\Public\\\\res\\\\FileWatcher.exe\")"
+explanation: 'Identifies process execution from suspicious default Windows directories.
+  This is sometimes done by adversaries to hide
+
+  malware in trusted paths.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ebfe1448-7fac-4d59-acea-181bd89b1f7f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - If this activity is expected and noisy in your environment, consider adding
+    exceptions — preferably with a combination of executable and signature conditions.
+
+
+    ### Related Rules
+
+
+    - Unusual Windows Path Activity - 445a342e-03fb-42d0-8656-0367eb2dead5
+
+    - Execution from Unusual Directory - Command Line - cff92c41-2225-4763-b4ce-6f71e5bda5e6
+
+
+    ### Response and Remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hos'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/invisible-miners-unveiling-ghostengine
+- https://www.elastic.co/security-labs/siestagraph-new-implant-uncovered-in-asean-member-foreign-ministry
+has_investigation_guide: true
+risk_score: 47

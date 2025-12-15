@@ -1,0 +1,53 @@
+technique_id: T1485
+technique_name: AWS RDS DB Instance or Cluster Deletion Protection Disabled
+tactic: impact
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "any where event.dataset == \"aws.cloudtrail\"\n    and event.provider == \"\
+  rds.amazonaws.com\"\n    and event.action in (\"ModifyDBInstance\", \"ModifyDBCluster\"\
+  )\n    and event.outcome == \"success\"\n    and stringContains(aws.cloudtrail.request_parameters,\
+  \ \"deletionProtection=false\")"
+explanation: Identifies the modification of an AWS RDS DB instance or cluster to remove
+  the deletionProtection feature. Deletion protection is enabled automatically for
+  instances set up through the console and can be used to protect them from unintentional
+  deletion activity. If disabled an instance or cluster can be deleted, destroying
+  sensitive or critical information. Adversaries with the proper permissions can take
+  advantage of this to set up future deletion events against a compromised environment.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f6652fb5-cd8e-499c-8311-2ce2bb6cac62.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS RDS
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - **Legitimate Instance Modification**: Confirm if the DB instance modification
+    aligns with legitimate tasks.
+
+    - **Consistency Check**: Compare the action against historical data of similar
+    actions performed by the user or within the organization. If the action is consistent
+    with past legitimate activities, it might indicate a false alarm.
+
+
+    ### Response and Remediation
+
+
+    - **Immediate Review and Reversal**: If the change was unauthorized, reset deletionProtection
+    to true.'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBInstance.html
+- https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html
+has_investigation_guide: true
+risk_score: 47

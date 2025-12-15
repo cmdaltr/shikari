@@ -1,0 +1,64 @@
+technique_id: T1197
+technique_name: File Download Via Bitsadmin To A Suspicious Target Folder
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 2ddef153-167b-4e89-86b6-757a9e65dcac
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_flags:\n  CommandLine|contains:\n  - ' /transfer '\n  - ' /create '\n\
+  \  - ' /addfile '\nselection_folder:\n  CommandLine|contains:\n  - :\\Perflogs\n\
+  \  - :\\ProgramData\\\n  - :\\Temp\\\n  - :\\Users\\Public\\\n  - :\\Windows\\\n\
+  \  - \\AppData\\Local\\Temp\\\n  - \\AppData\\Roaming\\\n  - \\Desktop\\\n  - '%ProgramData%'\n\
+  \  - '%public%'\nselection_img:\n- Image|endswith: \\bitsadmin.exe\n- OriginalFileName:\
+  \ bitsadmin.exe\n"
+explanation: Detects usage of bitsadmin downloading a file to a suspicious target
+  folder
+false_positives:
+- Unknown
+references:
+- https://blog.netspi.com/15-ways-to-download-a-file/#bitsadmin
+- https://isc.sans.edu/diary/22264
+- https://lolbas-project.github.io/lolbas/Binaries/Bitsadmin/
+- https://blog.talosintelligence.com/breaking-the-silence-recent-truebot-activity/
+tags:
+- attack.defense-evasion
+- attack.persistence
+- attack.t1197
+- attack.s0190
+- attack.t1036.003
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith: \bitsadmin.exe
+  - OriginalFileName: bitsadmin.exe
+  selection_flags:
+    CommandLine|contains:
+    - ' /transfer '
+    - ' /create '
+    - ' /addfile '
+  selection_folder:
+    CommandLine|contains:
+    - :\Perflogs
+    - :\ProgramData\
+    - :\Temp\
+    - :\Users\Public\
+    - :\Windows\
+    - \AppData\Local\Temp\
+    - \AppData\Roaming\
+    - \Desktop\
+    - '%ProgramData%'
+    - '%public%'
+  condition: all of selection_*
+metadata:
+  created_date: 2022-06-28
+  modified_date: 2023-05-30
+  author: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

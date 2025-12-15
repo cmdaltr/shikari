@@ -1,0 +1,36 @@
+technique_id: T1564.004
+technique_name: Exports Registry Key To an Alternate Data Stream
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 0d7a9363-af70-4e7b-a3b7-1a176b7fbe84
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith: \\regedit.exe\n"
+explanation: Exports the target Registry key and hides it in the specified alternate
+  data stream.
+false_positives:
+- Unknown
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Regedit/
+- https://gist.github.com/api0cradle/cdd2d0d0ec9abb686f0e89306e277b8f
+tags:
+- attack.defense-evasion
+- attack.t1564.004
+logsource:
+  product: windows
+  category: create_stream_hash
+detection:
+  selection:
+    Image|endswith: \regedit.exe
+  condition: selection
+metadata:
+  created_date: 2020-10-07
+  modified_date: 2021-11-27
+  author: Oddvar Moe, Sander Wiebing, oscd.community
+  status: test
+  imported_date: '2025-11-28'

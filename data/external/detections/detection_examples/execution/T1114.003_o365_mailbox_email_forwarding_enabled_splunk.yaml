@@ -1,0 +1,38 @@
+technique_id: T1114.003
+technique_name: O365 Mailbox Email Forwarding Enabled
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Operation=Set-Mailbox | eval match1=mvfind(''Parameters{}.Name'',"ForwardingAddress")
+  | eval match2=mvfind(''Parameters{}.Name'', "ForwardingSmtpAddress") | where match1>=
+  0 OR match2>= 0 | eval ForwardTo=coalesce(ForwardingAddress,ForwardingSmtpAddress)
+  | search ForwardTo!="" | rename user_id as user | stats count earliest(_time) as
+  firstTime latest(_time) as lastTime values(ForwardTo) as ForwardTo by signature
+  dest user src vendor_account vendor_product object ObjectId | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `o365_mailbox_email_forwarding_enabled_filter`'
+explanation: The following analytic identifies instances where email forwarding has
+  been enabled on mailboxes within an Office 365 environment. It detects this activity
+  by monitoring the Set-Mailbox operation within the o365_management_activity logs,
+  specifically looking for changes to the ForwardingAddress or ForwardingSmtpAddress
+  parameters. This activity is significant as unauthorized email forwarding can lead
+  to data exfiltration and unauthorized access to sensitive information. If confirmed
+  malicious, attackers could intercept and redirect emails, potentially compromising
+  confidential communications and leading to data breaches.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/0b6bc75c-05d1-4101-9fc3-97e706168f24/
+indicators:
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Email forwarding may be configured for legitimate purposes, filter
+    as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1114/003/
+- https://learn.microsoft.com/en-us/exchange/recipients/user-mailboxes/email-forwarding?view=exchserver-2019
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1114.003/o365_mailbox_forwarding_enabled/o365_mailbox_forwarding_enabled.json

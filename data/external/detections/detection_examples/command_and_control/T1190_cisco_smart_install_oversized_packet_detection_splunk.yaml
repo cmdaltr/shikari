@@ -1,0 +1,47 @@
+technique_id: T1190
+technique_name: Cisco Smart Install Oversized Packet Detection
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "| tstats `security_content_summariesonly`\n    avg(All_Traffic.packets) as\
+  \ avg_packets,\n    max(All_Traffic.bytes) as max_bytes\n    from datamodel=Network_Traffic\n\
+  \    where All_Traffic.dest_port=4786 AND All_Traffic.transport=tcp\n    by All_Traffic.src_ip,\
+  \ All_Traffic.dest_ip, _time span=1h\n| `drop_dm_object_name(\"All_Traffic\")`\n\
+  | where max_bytes > 500\n| eval severity=case(max_bytes>1400, \"critical\", max_bytes>1000,\
+  \ \"high\", 1=1, \"medium\")\n| `cisco_smart_install_oversized_packet_detection_filter`"
+explanation: 'This analytic detects oversized Cisco Smart Install (SMI) protocol messages
+  by inspecting traffic to TCP port 4786
+
+  within the Network_Traffic data model. Abnormally large SMI payloads have been associated
+  with exploitation and
+
+  protocol abuse (e.g., CVE-2018-0171; activity reported by the "Static Tundra" threat
+  actor). Monitoring message
+
+  sizes over time can help identify possible attempts at remote code execution, denial
+  of service, or reconnaissance
+
+  against Cisco devices exposing Smart Install.'
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/3b8d2b4f-4e1e-4a9e-9b43-8a7a3a9c7e21/
+indicators:
+- type: data_source
+  value: Splunk Stream TCP
+  confidence: high
+- type: risk_system
+  value: dest_ip
+  confidence: high
+false_positives:
+- description: 'Legitimate Smart Install operations (e.g., image/config transfers)
+    can produce larger payloads. Baseline typical sizes
+
+    for your environment and allowlist known management stations when appropriate.'
+  mitigation: Review context and user activity
+references:
+- https://blog.talosintelligence.com/static-tundra/
+- https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20180328-smi2
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/cisco/cisco_smart_install/stream_tcp.log

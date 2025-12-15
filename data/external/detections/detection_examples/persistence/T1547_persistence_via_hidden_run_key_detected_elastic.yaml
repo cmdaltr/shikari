@@ -1,0 +1,62 @@
+technique_id: T1547
+technique_name: Persistence via Hidden Run Key Detected
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "/* Registry Path ends with backslash */\nregistry where host.os.type == \"\
+  windows\" and event.type == \"change\" and length(registry.data.strings) > 0 and\n\
+  \  registry.path : \"*\\\\Run\\\\\" and\n  registry.path : (\n    \"*\\\\Software\\\
+  \\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\\\",\n    \"*\\\\Software\\\\\
+  WOW6432Node\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\\\",\n    \"*\\\\\
+  Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Policies\\\\Explorer\\\\Run\\\
+  \\\"\n  )"
+explanation: 'Identifies a persistence mechanism that utilizes the NtSetValueKey native
+  API to create a hidden (null terminated)
+
+  registry key. An adversary may use this method to hide from system utilities such
+  as the Registry Editor (regedit).'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a9b05c3b-b304-4bf9-970d-acdfaef2944c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may create registry keys in the
+    specified paths, leading to false positives. Users can monitor the installation
+    process and temporarily disable the rule during known software updates to prevent
+    unnecessary alerts.
+
+    - System administrators may intentionally configure startup programs for maintenance
+    or monitoring purposes. Document these configurations and create exceptions in
+    the detection rule to avoid flagging them as threa'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/outflanknl/SharpHide
+- https://github.com/ewhitehats/InvisiblePersistence/blob/master/InvisibleRegValues_Whitepaper.pdf
+has_investigation_guide: true
+risk_score: 73

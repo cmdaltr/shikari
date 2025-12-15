@@ -1,0 +1,69 @@
+technique_id: T1543.003
+technique_name: Suspicious New Service Creation
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection* and susp_binpath\n\
+  selection_posh:\n  CommandLine|contains|all:\n  - New-Service\n  - -BinaryPathName\n\
+  selection_sc:\n  CommandLine|contains|all:\n  - create\n  - binPath=\n  Image|endswith:\
+  \ \\sc.exe\nsusp_binpath:\n  CommandLine|contains:\n  - powershell\n  - mshta\n\
+  \  - wscript\n  - cscript\n  - svchost\n  - dllhost\n  - 'cmd '\n  - cmd.exe /c\n\
+  \  - cmd.exe /k\n  - cmd.exe /r\n  - rundll32\n  - C:\\Users\\Public\n  - \\Downloads\\\
+  \n  - \\Desktop\\\n  - \\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\n \
+  \ - C:\\Windows\\TEMP\\\n  - \\AppData\\Local\\Temp\n"
+explanation: Detects creation of a new service via "sc" command or the powershell
+  "new-service" cmdlet with suspicious binary paths
+false_positives:
+- Unlikely
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1543.003/T1543.003.md
+- https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html
+tags:
+- attack.persistence
+- attack.privilege-escalation
+- attack.t1543.003
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_sc:
+    Image|endswith: \sc.exe
+    CommandLine|contains|all:
+    - create
+    - binPath=
+  selection_posh:
+    CommandLine|contains|all:
+    - New-Service
+    - -BinaryPathName
+  susp_binpath:
+    CommandLine|contains:
+    - powershell
+    - mshta
+    - wscript
+    - cscript
+    - svchost
+    - dllhost
+    - 'cmd '
+    - cmd.exe /c
+    - cmd.exe /k
+    - cmd.exe /r
+    - rundll32
+    - C:\Users\Public
+    - \Downloads\
+    - \Desktop\
+    - \Microsoft\Windows\Start Menu\Programs\Startup\
+    - C:\Windows\TEMP\
+    - \AppData\Local\Temp
+  condition: 1 of selection* and susp_binpath
+metadata:
+  created_date: 2022-07-14
+  modified_date: 2022-11-18
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

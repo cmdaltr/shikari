@@ -1,0 +1,45 @@
+technique_id: T1562
+technique_name: Microsoft 365 Teams External Access Enabled
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: 'event.dataset:o365.audit and event.provider:(SkypeForBusiness or MicrosoftTeams)
+  and
+
+  event.category:web and event.action:"Set-CsTenantFederationConfiguration" and
+
+  o365.audit.Parameters.AllowFederatedUsers:True and event.outcome:success'
+explanation: 'Identifies when external access is enabled in Microsoft Teams. External
+  access lets Teams and Skype for Business users
+
+  communicate with other users that are outside their organization. An adversary may
+  enable external access or add an
+
+  allowed domain to exfiltrate data or maintain persistence in an environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/27f7c15a-91f8-4c3d-8b9e-1f99cc030a51.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative changes to federation settings can trigger alerts. Regularly
+    review and document these changes to differentiate between legitimate and suspicious
+    activities.
+
+    - Organizations with frequent collaboration with external partners may see increased
+    alerts. Consider creating exceptions for known trusted domains to reduce noise.
+
+    - Scheduled updates or policy changes by IT teams might enable external access
+    temporarily. Coordinate with IT to log these act'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/microsoftteams/manage-external-access
+has_investigation_guide: true
+risk_score: 47

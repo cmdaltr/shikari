@@ -1,0 +1,30 @@
+technique_id: T1647
+technique_name: Potential Persistence via Login Hook
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.category:file and host.os.type:macos and not event.type:\"deletion\"\
+  \ and\n file.name:\"com.apple.loginwindow.plist\" and\n not process.name: (systemmigrationd\
+  \ or DesktopServicesHelper or diskmanagementd or rsync or launchd or cfprefsd or\
+  \ xpcproxy or ManagedClient or MCXCompositor or backupd or \"iMazing Profile Editor\"\
+  \ or storagekitd or CloneKitService)"
+explanation: 'Identifies the creation or modification of the login window property
+  list (plist). Adversaries may modify plist files to
+
+  run a program during system boot or user login for persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ac412404-57a5-476f-858f-4e8fbb4f48d8.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+references:
+- https://github.com/D00MFist/PersistentJXA/blob/master/LoginScript.js
+has_investigation_guide: true
+risk_score: 47

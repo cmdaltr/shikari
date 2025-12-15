@@ -1,0 +1,38 @@
+technique_id: T1098.003
+technique_name: Microsoft 365 Exchange Management Group Role Assignment
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:Exchange and event.category:web
+  and event.action:"New-ManagementRoleAssignment" and event.outcome:success
+explanation: 'Identifies when a new role is assigned to a management group in Microsoft
+  365. An adversary may attempt to add a role in
+
+  order to maintain persistence in an environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/98995807-5b09-4e37-8a54-5cae5dc932d7.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative role assignments can trigger alerts. Regularly review
+    and document legitimate role changes to differentiate them from unauthorized activities.
+
+    - Automated scripts or tools used for role management may cause false positives.
+    Identify and whitelist these tools to prevent unnecessary alerts.
+
+    - Changes made during scheduled maintenance windows might be flagged. Establish
+    a process to temporarily suppress alerts during these periods while ensuring pos'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/powershell/module/exchange/new-managementroleassignment?view=exchange-ps
+- https://docs.microsoft.com/en-us/microsoft-365/admin/add-users/about-admin-roles?view=o365-worldwide
+has_investigation_guide: true
+risk_score: 47

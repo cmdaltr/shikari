@@ -1,0 +1,45 @@
+technique_id: T1543.001
+technique_name: Potential Persistence Via PlistBuddy
+tactic: persistence
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 65d506d3-fcfe-4071-b4b2-bcefe721bbbb
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains:\n  - LaunchAgents\n  - LaunchDaemons\n  CommandLine|contains|all:\n\
+  \  - RunAtLoad\n  - 'true'\n  Image|endswith: /PlistBuddy\n"
+explanation: Detects potential persistence activity using LaunchAgents or LaunchDaemons
+  via the PlistBuddy utility
+false_positives:
+- Unknown
+references:
+- https://redcanary.com/blog/clipping-silver-sparrows-wings/
+- https://www.manpagez.com/man/8/PlistBuddy/
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.t1543.001
+- attack.t1543.004
+logsource:
+  category: process_creation
+  product: macos
+detection:
+  selection:
+    Image|endswith: /PlistBuddy
+    CommandLine|contains|all:
+    - RunAtLoad
+    - 'true'
+    CommandLine|contains:
+    - LaunchAgents
+    - LaunchDaemons
+  condition: selection
+metadata:
+  created_date: 2023-02-18
+  modified_date: '2025-11-28'
+  author: Sohan G (D4rkCiph3r)
+  status: test
+  imported_date: '2025-11-28'

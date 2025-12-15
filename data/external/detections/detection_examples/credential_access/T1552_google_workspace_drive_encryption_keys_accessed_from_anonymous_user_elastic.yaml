@@ -1,0 +1,51 @@
+technique_id: T1552
+technique_name: Google Workspace Drive Encryption Key(s) Accessed from Anonymous User
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where event.dataset == \"google_workspace.drive\" and event.action :\
+  \ (\"copy\", \"view\", \"download\") and\n    google_workspace.drive.visibility:\
+  \ \"people_with_link\" and source.user.email == \"\" and\n    file.extension: (\n\
+  \        \"token\",\"assig\", \"pssc\", \"keystore\", \"pub\", \"pgp.asc\", \"ps1xml\"\
+  , \"pem\", \"gpg.sig\", \"der\", \"key\",\n        \"p7r\", \"p12\", \"asc\", \"\
+  jks\", \"p7b\", \"signature\", \"gpg\", \"pgp.sig\", \"sst\", \"pgp\", \"gpgz\"\
+  , \"pfx\", \"crt\",\n        \"p8\", \"sig\", \"pkcs7\", \"jceks\", \"pkcs8\", \"\
+  psc1\", \"p7c\", \"csr\", \"cer\", \"spc\", \"ps2xml\")"
+explanation: 'Detects when an external (anonymous) user has viewed, copied or downloaded
+  an encryption key file from a Google
+
+  Workspace drive. Adversaries may gain access to encryption keys stored in private
+  drives from rogue access links that do
+
+  not have an expiration. Access to encryption keys may allow adversaries to access
+  sensitive data or authenticate on
+
+  behalf of users.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/980b70a0-c820-11ed-8799-f661ea17fbcc.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Shared project files with encryption keys may trigger alerts if accessed by
+    external collaborators. To manage this, ensure that only trusted collaborators
+    have access and consider using Google Workspace''s sharing settings to restrict
+    access to specific users.
+
+    - Automated backup systems that access encryption keys for legitimate purposes
+    might be flagged. Verify the source of access and, if legitimate, create an exception
+    for the backup system''s IP address or service ac'
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/drive/answer/2494822
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 73

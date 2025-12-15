@@ -1,0 +1,62 @@
+technique_id: T1219
+technique_name: Attempt to Establish VScode Remote Tunnel
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.args : \"tunnel\" and (process.args : \"--accept-server-license-terms\"\
+  \ or process.name : \"code*.exe\") and\n  not (process.name == \"code-tunnel.exe\"\
+  \ and process.args == \"status\" and process.parent.name == \"Code.exe\")"
+explanation: 'Detects the execution of the VScode portable binary with the tunnel
+  command line option indicating an attempt to
+
+  establish a remote tunnel session to Github or a remote VScode instance.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0b96dfd8-5b8c-4485-9a1c-69ff7839786a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate remote development activities using VScode''s tunnel feature may
+    trigger the rule. Users can create exceptions for known developer machines or
+    specific user accounts frequently using this feature for authorized purposes.
+
+    - Automated scripts or deployment tools that utilize VScode''s remote tunnel for
+    legitimate operations might be flagged. Consider excluding these processes by
+    identifying their unique command-line arguments or parent processes.
+
+    - Scheduled tas'
+  mitigation: Review investigation guide for details
+references:
+- https://badoption.eu/blog/2023/01/31/code_c2.html
+- https://code.visualstudio.com/docs/remote/tunnels
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,44 @@
+technique_id: T1048
+technique_name: Powershell DNSExfiltration
+tactic: exfiltration
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: d59d7842-9a21-4bc6-ba98-64bfe0091355
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_cmdlet\nselection_cmdlet:\n\
+  - ScriptBlockText|contains: Invoke-DNSExfiltrator\n- ScriptBlockText|contains|all:\n\
+  \  - ' -i '\n  - ' -d '\n  - ' -p '\n  - ' -doh '\n  - ' -t '\n"
+explanation: DNSExfiltrator allows for transferring (exfiltrate) a file over a DNS
+  request covert channel
+false_positives:
+- Legitimate script
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1048/T1048.md#atomic-test-3---dnsexfiltration-doh
+- https://github.com/Arno0x/DNSExfiltrator
+tags:
+- attack.exfiltration
+- attack.t1048
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection_cmdlet:
+  - ScriptBlockText|contains: Invoke-DNSExfiltrator
+  - ScriptBlockText|contains|all:
+    - ' -i '
+    - ' -d '
+    - ' -p '
+    - ' -doh '
+    - ' -t '
+  condition: selection_cmdlet
+metadata:
+  created_date: 2022-01-07
+  modified_date: '2025-11-28'
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

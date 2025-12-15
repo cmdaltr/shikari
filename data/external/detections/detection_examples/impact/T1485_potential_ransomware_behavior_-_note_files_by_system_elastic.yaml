@@ -1,0 +1,58 @@
+technique_id: T1485
+technique_name: Potential Ransomware Behavior - Note Files by System
+tactic: impact
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-endpoint.events.file-* metadata _id, _version, _index\n\n// filter\
+  \ for file creation event done remotely over SMB with common user readable file\
+  \ types used to place ransomware notes\n| where event.category == \"file\" and host.os.type\
+  \ == \"windows\" and event.action == \"creation\" and process.pid == 4 and user.id\
+  \ != \"S-1-5-18\" and \n  file.extension in (\"txt\", \"htm\", \"html\", \"hta\"\
+  , \"pdf\", \"jpg\", \"bmp\", \"png\", \"pdf\")\n\n// truncate the timestamp to a\
+  \ 60-second window\n| eval Esql.time_window_date_trunc = date_trunc(60 seconds,\
+  \ @timestamp)\n\n| keep user.id, user.name, file.path, file.name, process.entity_id,\
+  \ Esql.time_window_date_trunc, host.name, host.ip\n\n// filter for same file name\
+  \ dropped in at least 3 unique paths by the System virtual process\n| stats Esql.file_path_count_distinct\
+  \ = COUNT_DISTINCT(file.path),  Esql.file_path_values = VALUES(file.path), Esql.host_ip_values\
+  \ = values(host.ip) by host.name, user.name, user.id, process.entity_id , file.name,\
+  \ Esql.time_window_date_trunc\n| where Esql.file_path_count_distinct >= 3"
+explanation: 'This rule identifies the creation of multiple files with same name and
+  over SMB by the same user. This behavior may indicate the
+
+  successful remote execution of a ransomware dropping file notes to different folders.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/1397e1b9-0c90-4d24-8d7b-80598eb9bc9a.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Local file modification from a Kernel mode driver.
+
+
+    ### Related rules
+
+
+    - Third-party Backup Files Deleted via Unexpected Process - 11ea6bec-ebde-4d71-a8e9-784948f8e3e9
+
+    - Volume Shadow Copy Deleted or Resized via VssAdmin - b5ea4bfe-a1b2-421f-9d47-22a75a6f2921
+
+    - Volume Shadow Copy Deletion via PowerShell - d99a037b-c8e2-47a5-97b9-170d076827c4
+
+    - Volume Shadow Copy Deletion via WMIC - dc9c1f74-dac3-48e3-b47f-eb79db358f57
+
+    - Potential Ransomware Note File Dropped via SMB -'
+  mitigation: Review investigation guide for details
+references:
+- https://news.sophos.com/en-us/2023/12/21/akira-again-the-ransomware-that-keeps-on-taking/
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,34 @@
+technique_id: T1110
+technique_name: Crowdstrike Privilege Escalation For Non-Admin User
+tactic: execution
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '`crowdstrike_stream` tag=alert | rename event.EndpointIp as src_ip, event.EndpointName
+  as src_host, event.UserName as user, event.IncidentDescription as description, event.IncidentType
+  as type, event.NumbersOfAlerts as count_alerts, event.SeverityName as severity |
+  stats count min(_time) as firstTime max(_time) as lastTime by src_ip, src_host,
+  user, description, type, count_alerts, severity | where LIKE(type,"%Privilege escalation%")
+  AND NOT LIKE(user, "%adm%") AND NOT LIKE(user, "%svc%") AND NOT LIKE(user, "%admin%")
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `crowdstrike_privilege_escalation_for_non_admin_user_filter`'
+explanation: The following analytic detects CrowdStrike alerts for privilege escalation
+  attempts by non-admin users. These alerts indicate unauthorized efforts by regular
+  users to gain elevated permissions, posing a significant security risk. Detecting
+  and addressing these attempts promptly helps prevent potential breaches and ensures
+  that user privileges remain properly managed, maintaining the integrity of the organization's
+  security protocols.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/69e2860c-0e4b-40ae-9dc4-bf9e3bf2a548/
+indicators:
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.crowdstrike.com/wp-content/uploads/2022/12/CrowdStrike-Falcon-Event-Streams-Add-on-Guide-v3.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/suspicious_behaviour/crowdstrike_stream/privilege_escalation/crowdstrike_priv_esc_cleaned.log

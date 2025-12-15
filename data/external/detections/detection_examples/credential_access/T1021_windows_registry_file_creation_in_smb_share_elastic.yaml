@@ -1,0 +1,59 @@
+technique_id: T1021
+technique_name: Windows Registry File Creation in SMB Share
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"windows\" and event.type == \"creation\" and\n\
+  \ /* regf file header */\n file.Ext.header_bytes : \"72656766*\" and file.size >=\
+  \ 30000 and\n process.pid == 4 and user.id : (\"S-1-5-21*\", \"S-1-12-1-*\") and\n\
+  \ not file.path : (\n    \"?:\\\\*\\\\UPM_Profile\\\\NTUSER.DAT\",\n    \"?:\\\\\
+  *\\\\UPM_Profile\\\\NTUSER.DAT.LASTGOODLOAD\",\n    \"?:\\\\*\\\\UPM_Profile\\\\\
+  AppData\\\\Local\\\\Microsoft\\\\Windows\\\\UsrClass.dat*\",\n    \"?:\\\\Windows\\\
+  \\Netwrix\\\\Temp\\\\????????.???.offreg\",\n    \"?:\\\\*\\\\AppData\\\\Local\\\
+  \\Packages\\\\Microsoft.*\\\\Settings\\\\settings.dat*\"\n )"
+explanation: 'Identifies the creation or modification of a medium-size registry hive
+  file on a Server Message Block (SMB) share, which
+
+  may indicate an exfiltration attempt of a previously dumped Security Account Manager
+  (SAM) registry hive for credential
+
+  extraction on an attacker-controlled system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a4c7473a-5cb4-4bc1-9d06-e4a75adbc494.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Administrators can export registry hives for backup purposes. Check whether
+    the user should be performing this kind of activity and is aware of it.
+
+
+    ### Related rules
+
+
+    - Credential Acquisition via Registry Hive Dumping - a7e7bfa3-088e-4f13-b29e-3986e0e756b8
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-compromise behavior.
+
+    - Investigate credential exposure'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/detect-credential-access
+has_investigation_guide: true
+risk_score: 47

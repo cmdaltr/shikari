@@ -1,0 +1,35 @@
+technique_id: T1098
+technique_name: ESXi User Granted Admin Role
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`esxi_syslog` Message="*esxcli system permission set*" AND Message="*role
+  Admin*" | rex field=_raw "\]: \[(?<user>\w+)\]:(?<command>.+)" | rex field=_raw
+  "--id (?<target_user>\w+)" | rex field=_raw "Z (?<dest>[\w\.]+)\s" | stats min(_time)
+  as firstTime max(_time) as lastTime count by dest user command target_user | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `esxi_user_granted_admin_role_filter`'
+explanation: This detection identifies when a user is granted the Administrator role
+  on an ESXi host. Assigning elevated privileges is a critical action that can indicate
+  potential malicious behavior if performed unexpectedly. Adversaries who gain access
+  may use this to escalate privileges, maintain persistence, or disable security controls.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b0c64d6e-cfdf-441a-b6ce-d956e202563e/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: target_user
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments after initial setup, however
+    tune as needed.
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1098/esxi_admin_role/esxi_admin_role.log

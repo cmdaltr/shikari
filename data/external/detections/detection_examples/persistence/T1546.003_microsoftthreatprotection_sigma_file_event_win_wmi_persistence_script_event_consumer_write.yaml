@@ -1,0 +1,35 @@
+technique_id: T1546.003
+technique_name: WMI Persistence - Script Event Consumer File Write
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 33f41cdd-35ac-4ba8-814b-c6a4244a1ad4
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image: C:\\WINDOWS\\system32\\wbem\\scrcons.exe\n"
+explanation: Detects file writes of WMI script event consumer
+false_positives:
+- Dell Power Manager (C:\Program Files\Dell\PowerManager\DpmPowerPlanSetup.exe)
+references:
+- https://www.eideon.com/2018-03-02-THL03-WMIBackdoors/
+tags:
+- attack.privilege-escalation
+- attack.t1546.003
+- attack.persistence
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection:
+    Image: C:\WINDOWS\system32\wbem\scrcons.exe
+  condition: selection
+metadata:
+  created_date: 2018-03-07
+  modified_date: 2021-11-27
+  author: Thomas Patzke
+  status: test
+  imported_date: '2025-11-28'

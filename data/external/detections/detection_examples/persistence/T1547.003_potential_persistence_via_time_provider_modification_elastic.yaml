@@ -1,0 +1,63 @@
+technique_id: T1547.003
+technique_name: Potential Persistence via Time Provider Modification
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\n\
+  \  registry.path: \"*\\\\SYSTEM\\\\*ControlSet*\\\\Services\\\\W32Time\\\\TimeProviders\\\
+  \\*\" and\n  registry.data.strings:\"*.dll\" and\n  not\n  (\n    process.executable\
+  \ : (\"?:\\\\Windows\\\\System32\\\\msiexec.exe\", \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\System32\\\\msiexec.exe\") and\n    registry.data.strings : \"?:\\\\\
+  Program Files\\\\VMware\\\\VMware Tools\\\\vmwTimeProvider\\\\vmwTimeProvider.dll\"\
+  \n  ) and\n  not registry.data.strings : \"C:\\\\Windows\\\\SYSTEM32\\\\w32time.DLL\""
+explanation: 'Identifies modification of the Time Provider. Adversaries may establish
+  persistence by registering and enabling a
+
+  malicious DLL as a time provider. Windows uses the time provider architecture to
+  obtain accurate time stamps from other
+
+  network devices or clients in the network. Time providers are implemented in the
+  form of a DLL file which resides in the
+
+  System32 folder. The service W32Time initiates during the startup of Windows and
+  loads w32time.dll.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/14ed1aa9-ebfd-4cf9-a463-0ac59ec55204.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Benign true positives (B-TPs) can be added as exceptions if necessary.\n\n###\
+    \ Response and Remediation\n\n- Initiate the incident response process based on\
+    \ the outcome of the triage.\n- Isolate the involved host to prevent further post-compromise\
+    \ behavior.\n- If the triage identified malware, search the environment for additional\
+    \ compromised hosts.\n  - Implement temporary network rules, procedures, and segmentation\
+    \ to contain"
+  mitigation: Review investigation guide for details
+references:
+- https://pentestlab.blog/2019/10/22/persistence-time-providers/
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,83 @@
+technique_id: T1557.001
+technique_name: HackTool - Impacket Tools Execution
+tactic: collection
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 4627c6ae-6899-46e2-aa0c-6ebcb1becd19
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  - Image|contains:\n  - \\goldenPac\n  - \\karmaSMB\n  - \\kintercept\n  - \\ntlmrelayx\n\
+  \  - \\rpcdump\n  - \\samrdump\n  - \\secretsdump\n  - \\smbexec\n  - \\smbrelayx\n\
+  \  - \\wmiexec\n  - \\wmipersist\n- Image|endswith:\n  - \\atexec_windows.exe\n\
+  \  - \\dcomexec_windows.exe\n  - \\dpapi_windows.exe\n  - \\findDelegation_windows.exe\n\
+  \  - \\GetADUsers_windows.exe\n  - \\GetNPUsers_windows.exe\n  - \\getPac_windows.exe\n\
+  \  - \\getST_windows.exe\n  - \\getTGT_windows.exe\n  - \\GetUserSPNs_windows.exe\n\
+  \  - \\ifmap_windows.exe\n  - \\mimikatz_windows.exe\n  - \\netview_windows.exe\n\
+  \  - \\nmapAnswerMachine_windows.exe\n  - \\opdump_windows.exe\n  - \\psexec_windows.exe\n\
+  \  - \\rdp_check_windows.exe\n  - \\sambaPipe_windows.exe\n  - \\smbclient_windows.exe\n\
+  \  - \\smbserver_windows.exe\n  - \\sniff_windows.exe\n  - \\sniffer_windows.exe\n\
+  \  - \\split_windows.exe\n  - \\ticketer_windows.exe\n"
+explanation: Detects the execution of different compiled Windows binaries of the impacket
+  toolset (based on names or part of their names - could lead to false positives)
+false_positives:
+- Legitimate use of the impacket tools
+references:
+- https://github.com/ropnop/impacket_static_binaries/releases/tag/0.9.21-dev-binaries
+tags:
+- attack.collection
+- attack.execution
+- attack.credential-access
+- attack.t1557.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+  - Image|contains:
+    - \goldenPac
+    - \karmaSMB
+    - \kintercept
+    - \ntlmrelayx
+    - \rpcdump
+    - \samrdump
+    - \secretsdump
+    - \smbexec
+    - \smbrelayx
+    - \wmiexec
+    - \wmipersist
+  - Image|endswith:
+    - \atexec_windows.exe
+    - \dcomexec_windows.exe
+    - \dpapi_windows.exe
+    - \findDelegation_windows.exe
+    - \GetADUsers_windows.exe
+    - \GetNPUsers_windows.exe
+    - \getPac_windows.exe
+    - \getST_windows.exe
+    - \getTGT_windows.exe
+    - \GetUserSPNs_windows.exe
+    - \ifmap_windows.exe
+    - \mimikatz_windows.exe
+    - \netview_windows.exe
+    - \nmapAnswerMachine_windows.exe
+    - \opdump_windows.exe
+    - \psexec_windows.exe
+    - \rdp_check_windows.exe
+    - \sambaPipe_windows.exe
+    - \smbclient_windows.exe
+    - \smbserver_windows.exe
+    - \sniff_windows.exe
+    - \sniffer_windows.exe
+    - \split_windows.exe
+    - \ticketer_windows.exe
+  condition: selection
+metadata:
+  created_date: 2021-07-24
+  modified_date: 2023-02-07
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

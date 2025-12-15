@@ -1,0 +1,57 @@
+technique_id: T1112
+technique_name: Non-privileged Usage of Reg or Powershell
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 8f02c935-effe-45b3-8fc9-ef8696a9e41d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cli:\n- CommandLine|contains|all:\n  - 'reg '\n  - add\n- CommandLine|contains:\n\
+  \  - powershell\n  - set-itemproperty\n  - ' sp '\n  - new-itemproperty\nselection_data:\n\
+  \  CommandLine|contains:\n  - ImagePath\n  - FailureCommand\n  - ServiceDLL\n  CommandLine|contains|all:\n\
+  \  - ControlSet\n  - Services\n  IntegrityLevel:\n  - Medium\n  - S-1-16-8192\n"
+explanation: Search for usage of reg or Powershell by non-privileged users to modify
+  service configuration in registry
+false_positives:
+- Unknown
+references:
+- https://image.slidesharecdn.com/kheirkhabarovoffzonefinal-181117201458/95/hunting-for-privilege-escalation-in-windows-environment-20-638.jpg
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.t1112
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_cli:
+  - CommandLine|contains|all:
+    - 'reg '
+    - add
+  - CommandLine|contains:
+    - powershell
+    - set-itemproperty
+    - ' sp '
+    - new-itemproperty
+  selection_data:
+    IntegrityLevel:
+    - Medium
+    - S-1-16-8192
+    CommandLine|contains|all:
+    - ControlSet
+    - Services
+    CommandLine|contains:
+    - ImagePath
+    - FailureCommand
+    - ServiceDLL
+  condition: all of selection_*
+metadata:
+  created_date: 2020-10-05
+  modified_date: 2024-12-01
+  author: Teymur Kheirkhabarov (idea), Ryan Plas (rule), oscd.community
+  status: test
+  imported_date: '2025-11-28'

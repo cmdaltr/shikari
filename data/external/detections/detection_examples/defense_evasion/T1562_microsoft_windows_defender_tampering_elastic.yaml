@@ -1,0 +1,103 @@
+technique_id: T1562
+technique_name: Microsoft Windows Defender Tampering
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\
+  \ process.executable != null and\n  (\n    (\n      registry.value : (\n       \
+  \ \"PUAProtection\", \"DisallowExploitProtectionOverride\", \"TamperProtection\"\
+  , \"EnableControlledFolderAccess\",\n        \"SpynetReporting\", \"SubmitSamplesConsent\"\
+  \n      ) and registry.data.strings : (\"0\", \"0x00000000\")\n    ) or\n    (\n\
+  \      registry.value : (\n        \"DisableAntiSpyware\", \"DisableRealtimeMonitoring\"\
+  , \"DisableIntrusionPreventionSystem\", \"DisableScriptScanning\",\n        \"DisableIOAVProtection\"\
+  , \"DisableEnhancedNotifications\", \"DisableBlockAtFirstSeen\", \"DisableBehaviorMonitoring\"\
+  \n      ) and registry.data.strings : (\"1\", \"0x00000001\")\n    )\n  ) and\n\
+  \  not process.executable : (\n    \"?:\\\\Windows\\\\system32\\\\svchost.exe\"\
+  , \n    \"?:\\\\Windows\\\\CCM\\\\CcmExec.exe\", \n    \"?:\\\\Windows\\\\System32\\\
+  \\DeviceEnroller.exe\", \n    \"?:\\\\Program Files (x86)\\\\Trend Micro\\\\Security\
+  \ Agent\\\\tmuninst.exe\",\n    \"\\\\Device\\\\HarddiskVolume*\\\\Windows\\\\system32\\\
+  \\svchost.exe\", \n    \"\\\\Device\\\\HarddiskVolume*\\\\Windows\\\\CCM\\\\CcmExec.exe\"\
+  , \n    \"\\\\Device\\\\HarddiskVolume*\\\\Windows\\\\System32\\\\DeviceEnroller.exe\"\
+  , \n    \"\\\\Device\\\\HarddiskVolume*\\\\Program Files (x86)\\\\Trend Micro\\\\\
+  Security Agent\\\\tmuninst.exe\"\n  )\n\n/*\n    Full registry key paths omitted\
+  \ due to data source variations:\n    \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\
+  \\Windows Defender\\\\DisableAntiSpyware\"\n    \"HKLM\\\\SOFTWARE\\\\Policies\\\
+  \\Microsoft\\\\Windows Defender\\\\Real-Time Protection\\\\DisableRealtimeMonitoring\"\
+  \n    \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows Defender\\\\Real-Time\
+  \ Protection\\\\DisableIntrusionPreventionSystem\"\n    \"HKLM\\\\SOFTWARE\\\\Policies\\\
+  \\Microsoft\\\\Windows Defender\\\\Real-Time Protection\\\\DisableScriptScanning\"\
+  \n    \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows Defender\\\\Real-Time\
+  \ Protection\\\\DisableIOAVProtection\"\n    \"HKLM\\\\SOFTWARE\\\\Policies\\\\\
+  Microsoft\\\\Windows Defender\\\\Reporting\\\\DisableEnhancedNotifications\"\n \
+  \   \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows Defender\\\\SpyNet\\\\\
+  DisableBlockAtFirstSeen\"\n    \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows\
+  \ Defender\\\\Real-Time Protection\\\\DisableBehaviorMonitoring\"\n    \"HKLM\\\\\
+  SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows Defender\\\\PUAProtection\"\n    \"\
+  HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows Defender Security Center\\\\\
+  App and Browser protection\\\\DisallowExploitProtectionOverride\"\n    \"HKLM\\\\\
+  SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows Defender\\\\Features\\\\TamperProtection\"\
+  \n    \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows Defender\\\\Windows\
+  \ Defender Exploit Guard\\\\Controlled Folder Access\\\\EnableControlledFolderAccess\"\
+  \n    \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows Defender\\\\SpyNet\\\
+  \\SpynetReporting\"\n    \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows\
+  \ Defender\\\\SpyNet\\\\SubmitSamplesConsent\"\n*/"
+explanation: 'Identifies when one or more features on Microsoft Defender are disabled.
+  Adversaries may disable or tamper with
+
+  Microsoft Defender features to evade detection and conceal malicious behavior.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/fe794edd-487f-4a90-b285-3ee54f2af2d3.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This mechanism can be used legitimately. Analysts can dismiss the alert if the
+    administrator is aware of the activity, the configuration is justified (for example,
+    it is being used to deploy other security solutions or troubleshooting), and no
+    other suspicious activity has been observed.
+
+
+    ### Related rules
+
+
+    - Windows Defender Disabled via Registry Modification - 2ffa1f1e-b6db-47fa-994b-1512743847eb
+
+    - Disabling Windows Defender Security Settings via PowerShell - c8cccb0'
+  mitigation: Review investigation guide for details
+references:
+- https://thedfirreport.com/2021/10/18/icedid-to-xinglocker-ransomware-in-24-hours/
+- https://www.tenforums.com/tutorials/32236-enable-disable-microsoft-defender-pua-protection-windows-10-a.html
+- https://www.tenforums.com/tutorials/104025-turn-off-core-isolation-memory-integrity-windows-10-a.html
+- https://www.tenforums.com/tutorials/105533-enable-disable-windows-defender-exploit-protection-settings.html
+- https://www.tenforums.com/tutorials/123792-turn-off-tamper-protection-microsoft-defender-antivirus.html
+- https://www.tenforums.com/tutorials/51514-turn-off-microsoft-defender-periodic-scanning-windows-10-a.html
+- https://www.tenforums.com/tutorials/3569-turn-off-real-time-protection-microsoft-defender-antivirus.html
+- https://www.tenforums.com/tutorials/99576-how-schedule-scan-microsoft-defender-antivirus-windows-10-a.html
+- https://www.elastic.co/security-labs/invisible-miners-unveiling-ghostengine
+has_investigation_guide: true
+risk_score: 47

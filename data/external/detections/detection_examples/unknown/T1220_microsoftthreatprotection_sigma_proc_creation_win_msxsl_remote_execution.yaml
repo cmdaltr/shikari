@@ -1,0 +1,37 @@
+technique_id: T1220
+technique_name: Remote XSL Execution Via Msxsl.EXE
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 75d0a94e-6252-448d-a7be-d953dff527bb
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains: http\n  Image|endswith: \\msxsl.exe\n"
+explanation: Detects the execution of the "msxsl" binary with an "http" keyword in
+  the command line. This might indicate a potential remote execution of XSL files.
+false_positives:
+- Msxsl is not installed by default and is deprecated, so unlikely on most systems.
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1220/T1220.md
+- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Msxsl/
+tags:
+- attack.defense-evasion
+- attack.t1220
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \msxsl.exe
+    CommandLine|contains: http
+  condition: selection
+metadata:
+  created_date: 2023-11-09
+  modified_date: '2025-11-28'
+  author: Swachchhanda Shrawan Poudel
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,145 @@
+technique_id: T1219
+technique_name: First Time Seen Commonly Abused Remote Access Tool Execution
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "host.os.type: \"windows\" and\n\n   event.category: \"process\" and event.type\
+  \ : \"start\" and\n\n    (\n        process.code_signature.subject_name : (\n  \
+  \          \"Action1 Corporation\" or\n            \"AeroAdmin LLC\" or\n      \
+  \      \"Ammyy LLC\" or\n            \"Atera Networks Ltd\" or\n            \"AWERAY\
+  \ PTE. LTD.\" or\n            \"BeamYourScreen GmbH\" or\n            \"Bomgar Corporation\"\
+  \ or\n            \"DUC FABULOUS CO.,LTD\" or\n            \"DOMOTZ INC.\" or\n\
+  \            \"DWSNET OÜ\" or\n            \"FleetDeck Inc\" or\n            \"\
+  GlavSoft LLC\" or\n            \"GlavSoft LLC.\" or\n            \"Hefei Pingbo\
+  \ Network Technology Co. Ltd\" or\n            \"IDrive, Inc.\" or\n           \
+  \ \"IMPERO SOLUTIONS LIMITED\" or\n            \"Instant Housecall\" or\n      \
+  \      \"ISL Online Ltd.\" or\n            \"LogMeIn, Inc.\" or\n            \"\
+  Monitoring Client\" or\n            \"MMSOFT Design Ltd.\" or\n            \"Nanosystems\
+  \ S.r.l.\" or\n            \"NetSupport Ltd\" or \n\t    \"NetSupport Ltd.\" or\
+  \ \n\t    \"NETSUPPORT LTD.\" or \n            \"NinjaRMM, LLC\" or\n          \
+  \  \"Parallels International GmbH\" or\n            \"philandro Software GmbH\"\
+  \ or\n            \"Pro Softnet Corporation\" or\n            \"RealVNC\" or\n \
+  \           \"RealVNC Limited\" or\n            \"BreakingSecurity.net\" or\n  \
+  \          \"Remote Utilities LLC\" or\n            \"Rocket Software, Inc.\" or\n\
+  \            \"SAFIB\" or\n            \"Servably, Inc.\" or\n            \"ShowMyPC\
+  \ INC\" or\n            \"Splashtop Inc.\" or\n            \"Superops Inc.\" or\n\
+  \            \"TeamViewer\" or\n            \"TeamViewer GmbH\" or\n           \
+  \ \"TeamViewer Germany GmbH\" or\n            \"Techinline Limited\" or\n      \
+  \      \"uvnc bvba\" or\n            \"Yakhnovets Denis Aleksandrovich IP\" or\n\
+  \            \"Zhou Huabing\"\n        ) or\n\n        process.name.caseless : (\n\
+  \            AA_v*.exe or\n            \"AeroAdmin.exe\" or\n            \"AnyDesk.exe\"\
+  \ or\n            \"apc_Admin.exe\" or\n            \"apc_host.exe\" or\n      \
+  \      \"AteraAgent.exe\" or\n            aweray_remote*.exe or\n            \"\
+  AweSun.exe\" or\n            \"B4-Service.exe\" or\n            \"BASupSrvc.exe\"\
+  \ or\n            \"bomgar-scc.exe\" or\n            \"domotzagent.exe\" or\n  \
+  \          \"domotz-windows-x64-10.exe\" or\n            \"dwagsvc.exe\" or\n  \
+  \          \"DWRCC.exe\" or\n            \"ImperoClientSVC.exe\" or\n          \
+  \  \"ImperoServerSVC.exe\" or\n            \"ISLLight.exe\" or\n            \"ISLLightClient.exe\"\
+  \ or\n            fleetdeck_commander*.exe or\n            \"getscreen.exe\" or\n\
+  \            \"LMIIgnition.exe\" or\n            \"LogMeIn.exe\" or\n          \
+  \  \"ManageEngine_Remote_Access_Plus.exe\" or\n            \"Mikogo-Service.exe\"\
+  \ or\n            \"NinjaRMMAgent.exe\" or\n            \"NinjaRMMAgenPatcher.exe\"\
+  \ or\n            \"ninjarmm-cli.exe\" or\n            \"r_server.exe\" or\n   \
+  \         \"radmin.exe\" or\n            \"radmin3.exe\" or\n            \"RCClient.exe\"\
+  \ or\n            \"RCService.exe\" or\n            \"RemoteDesktopManager.exe\"\
+  \ or\n            \"RemotePC.exe\" or\n            \"RemotePCDesktop.exe\" or\n\
+  \            \"RemotePCService.exe\" or\n            \"rfusclient.exe\" or\n   \
+  \         \"ROMServer.exe\" or\n            \"ROMViewer.exe\" or\n            \"\
+  RPCSuite.exe\" or\n            \"rserver3.exe\" or\n            \"rustdesk.exe\"\
+  \ or\n            \"rutserv.exe\" or\n            \"rutview.exe\" or\n         \
+  \   \"saazapsc.exe\" or\n            ScreenConnect*.exe or\n            \"smpcview.exe\"\
+  \ or\n            \"spclink.exe\" or\n            \"Splashtop-streamer.exe\" or\n\
+  \            \"SRService.exe\" or\n            \"strwinclt.exe\" or\n          \
+  \  \"Supremo.exe\" or\n            \"SupremoService.exe\" or\n            \"teamviewer.exe\"\
+  \ or\n            \"TiClientCore.exe\" or\n            \"TSClient.exe\" or\n   \
+  \         \"tvn.exe\" or\n            \"tvnserver.exe\" or\n            \"tvnviewer.exe\"\
+  \ or\n            UltraVNC*.exe or\n            UltraViewer*.exe or\n          \
+  \  \"vncserver.exe\" or\n            \"vncviewer.exe\" or\n            \"winvnc.exe\"\
+  \ or\n            \"winwvc.exe\" or\n            \"Zaservice.exe\" or\n        \
+  \    \"ZohoURS.exe\"\n        ) or\n        process.name : (\n            AA_v*.exe\
+  \ or\n            \"AeroAdmin.exe\" or\n            \"AnyDesk.exe\" or\n       \
+  \     \"apc_Admin.exe\" or\n            \"apc_host.exe\" or\n            \"AteraAgent.exe\"\
+  \ or\n            aweray_remote*.exe or\n            \"AweSun.exe\" or\n       \
+  \     \"B4-Service.exe\" or\n            \"BASupSrvc.exe\" or\n            \"bomgar-scc.exe\"\
+  \ or\n            \"domotzagent.exe\" or\n            \"domotz-windows-x64-10.exe\"\
+  \ or\n            \"dwagsvc.exe\" or\n            \"DWRCC.exe\" or\n           \
+  \ \"ImperoClientSVC.exe\" or\n            \"ImperoServerSVC.exe\" or\n         \
+  \   \"ISLLight.exe\" or\n            \"ISLLightClient.exe\" or\n            fleetdeck_commander*.exe\
+  \ or\n            \"getscreen.exe\" or\n            \"LMIIgnition.exe\" or\n   \
+  \         \"LogMeIn.exe\" or\n            \"ManageEngine_Remote_Access_Plus.exe\"\
+  \ or\n            \"Mikogo-Service.exe\" or\n            \"NinjaRMMAgent.exe\" or\n\
+  \            \"NinjaRMMAgenPatcher.exe\" or\n            \"ninjarmm-cli.exe\" or\n\
+  \            \"r_server.exe\" or\n            \"radmin.exe\" or\n            \"\
+  radmin3.exe\" or\n            \"RCClient.exe\" or\n            \"RCService.exe\"\
+  \ or\n            \"RemoteDesktopManager.exe\" or\n            \"RemotePC.exe\"\
+  \ or\n            \"RemotePCDesktop.exe\" or\n            \"RemotePCService.exe\"\
+  \ or\n            \"rfusclient.exe\" or\n            \"ROMServer.exe\" or\n    \
+  \        \"ROMViewer.exe\" or\n            \"RPCSuite.exe\" or\n            \"rserver3.exe\"\
+  \ or\n            \"rustdesk.exe\" or\n            \"rutserv.exe\" or\n        \
+  \    \"rutview.exe\" or\n            \"saazapsc.exe\" or\n            ScreenConnect*.exe\
+  \ or\n            \"smpcview.exe\" or\n            \"spclink.exe\" or\n        \
+  \    \"Splashtop-streamer.exe\" or\n            \"SRService.exe\" or\n         \
+  \   \"strwinclt.exe\" or\n            \"Supremo.exe\" or\n            \"SupremoService.exe\"\
+  \ or\n            \"teamviewer.exe\" or\n            \"TiClientCore.exe\" or\n \
+  \           \"TSClient.exe\" or\n            \"tvn.exe\" or\n            \"tvnserver.exe\"\
+  \ or\n            \"tvnviewer.exe\" or\n            UltraVNC*.exe or\n         \
+  \   UltraViewer*.exe or\n            \"vncserver.exe\" or\n            \"vncviewer.exe\"\
+  \ or\n            \"winvnc.exe\" or\n            \"winwvc.exe\" or\n           \
+  \ \"Zaservice.exe\" or\n            \"ZohoURS.exe\"\n        )\n\t) and\n\n\tnot\
+  \ (process.pe.original_file_name : (\"G2M.exe\" or \"Updater.exe\" or \"powershell.exe\"\
+  ) and process.code_signature.subject_name : \"LogMeIn, Inc.\")"
+explanation: 'Adversaries may install legitimate remote access tools (RAT) to compromised
+  endpoints for further command-and-control
+
+  (C2). Adversaries can rely on installed RATs for persistence, execution of native
+  commands and more. This rule detects
+
+  when a process is started whose name or code signature resembles commonly abused
+  RATs. This is a New Terms rule type
+
+  indicating the host has not seen this RAT process started before within the last
+  30 days.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6e1a2cc4-d260-11ed-8829-f661ea17fbcc.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - If an authorized support person or administrator used the tool to conduct legitimate
+    support or remote access, consider reinforcing that only tooling approved by the
+    IT policy should be used. The analyst can dismiss the alert if no other suspicious
+    behavior is observed involving the host or users.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise beh'
+  mitigation: Review investigation guide for details
+references:
+- https://thedfirreport.com/2023/04/03/malicious-iso-file-leads-to-domain-wide-ransomware/
+- https://attack.mitre.org/techniques/T1219/
+- https://github.com/redcanaryco/surveyor/blob/master/definitions/remote-admin.json
+has_investigation_guide: true
+risk_score: 47

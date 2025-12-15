@@ -1,0 +1,87 @@
+technique_id: T1110.001
+technique_name: Microsoft Entra ID MFA TOTP Brute Force Attempts
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-azure.signinlogs-* metadata _id, _version, _index\n\n| where\n \
+  \   // filter for Entra Sign-in Logs\n    event.dataset == \"azure.signinlogs\"\n\
+  \    and azure.signinlogs.operation_name == \"Sign-in activity\"\n    and azure.signinlogs.properties.user_type\
+  \ == \"Member\"\n\n    // filter for MFA attempts with OATH conditional access attempts\
+  \ or TOTP\n    and azure.signinlogs.properties.mfa_detail.auth_method == \"OATH\
+  \ verification code\"\n\n    // filter on failures only from brute-force attempts\n\
+  \    and (\n            (\n                azure.signinlogs.result_signature ==\
+  \ \"FAILURE\" and\n                azure.signinlogs.result_description == \"Authentication\
+  \ failed during strong authentication request.\"\n            ) or azure.signinlogs.properties.status.error_code\
+  \ == 500121\n        )\n\n| stats\n    Esql.event_count = count(*),\n    Esql.azure_signinlogs_properties_session_id_count_distinct\
+  \ = count_distinct(azure.signinlogs.properties.session_id),\n    Esql.source_address_values\
+  \ = values(source.address),\n    Esql.azure_tenant_id_valuues = values(azure.tenant_id),\n\
+  \    Esql_priv.azure_identity_values = values(azure.signinlogs.identity),\n    Esql_priv.azure_signinlogs_properties_user_principal_name_values\
+  \ = values(azure.signinlogs.properties.user_principal_name),\n    Esql.azure_signinlogs_properties_app_id_values\
+  \ = values(azure.signinlogs.properties.app_id),\n    Esql.azure_signinlogs_properties_app_display_name_values\
+  \ = values(azure.signinlogs.properties.app_display_name),\n    Esql.azure_signinlogs_properties_authentication_requirement_values\
+  \ = values(azure.signinlogs.properties.authentication_requirement),\n    Esql.azure_signinlogs_properties_authentication_protocol_values\
+  \ = values(azure.signinlogs.properties.authentication_protocol),\n    Esql.azure_signinlogs_properties_client_app_used_values\
+  \ = values(azure.signinlogs.properties.client_app_used),\n    Esql.azure_signinlogs_properties_client_credential_type_values\
+  \ = values(azure.signinlogs.properties.client_credential_type),\n    Esql.azure_signinlogs_properties_conditional_access_status_values\
+  \ = values(azure.signinlogs.properties.conditional_access_status),\n    Esql.azure_signinlogs_properties_correlation_id_values\
+  \ = values(azure.signinlogs.properties.correlation_id),\n    Esql.azure_signinlogs_properties_is_interactive_values\
+  \ = values(azure.signinlogs.properties.is_interactive),\n    Esql.azure_signinlogs_properties_mfa_detail_auth_method_values\
+  \ = values(azure.signinlogs.properties.mfa_detail.auth_method),\n    Esql.azure_signinlogs_properties_resource_display_name_values\
+  \ = values(azure.signinlogs.properties.resource_display_name),\n    Esql.azure_signinlogs_properties_resource_id_values\
+  \ = values(azure.signinlogs.properties.resource_id),\n    Esql.azure_signinlogs_properties_risk_state_values\
+  \ = values(azure.signinlogs.properties.risk_state),\n    Esql.azure_signinlogs_properties_risk_detail_values\
+  \ = values(azure.signinlogs.properties.risk_detail),\n    Esql.azure_signinlogs_properties_status_error_code_values\
+  \ = values(azure.signinlogs.properties.status.error_code),\n    Esql.azure_signinlogs_properties_original_request_id_values\
+  \ = values(azure.signinlogs.properties.original_request_id),\n    Esql.user_id_values\
+  \ = values(user.id)\n    by user.id\n\n| where Esql.event_count >= 20 and Esql.azure_signinlogs_properties_session_id_count_distinct\
+  \ >= 10\n\n| keep\n    Esql.event_count,\n    Esql.azure_signinlogs_properties_session_id_count_distinct,\n\
+  \    Esql.source_address_values,\n    Esql.azure_tenant_id_valuues,\n    Esql_priv.azure_identity_values,\n\
+  \    Esql_priv.azure_signinlogs_properties_user_principal_name_values,\n    Esql.azure_signinlogs_properties_app_id_values,\n\
+  \    Esql.azure_signinlogs_properties_app_display_name_values,\n    Esql.azure_signinlogs_properties_authentication_requirement_values,\n\
+  \    Esql.azure_signinlogs_properties_authentication_protocol_values,\n    Esql.azure_signinlogs_properties_client_app_used_values,\n\
+  \    Esql.azure_signinlogs_properties_client_credential_type_values,\n    Esql.azure_signinlogs_properties_conditional_access_status_values,\n\
+  \    Esql.azure_signinlogs_properties_correlation_id_values,\n    Esql.azure_signinlogs_properties_is_interactive_values,\n\
+  \    Esql.azure_signinlogs_properties_mfa_detail_auth_method_values,\n    Esql.azure_signinlogs_properties_resource_display_name_values,\n\
+  \    Esql.azure_signinlogs_properties_resource_id_values,\n    Esql.azure_signinlogs_properties_risk_state_values,\n\
+  \    Esql.azure_signinlogs_properties_risk_detail_values,\n    Esql.azure_signinlogs_properties_status_error_code_values,\n\
+  \    Esql.azure_signinlogs_properties_original_request_id_values,\n    Esql.user_id_values"
+explanation: 'Identifies brute force attempts against Azure Entra multi-factor authentication
+  (MFA) Time-based One-Time Password
+
+  (TOTP) verification codes. This rule detects high frequency failed TOTP code attempts
+  for a single user in a short
+
+  time-span with a high number of distinct session IDs. Adversaries may programmatically
+  attemopt to brute-force TOTP
+
+  codes by generating several sessions and attempt to guess the correct code.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3fac01b2-b811-11ef-b25b-f661ea17fbce.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Entra ID
+  confidence: high
+- type: data_source
+  value: Entra ID Sign-in logs
+  confidence: high
+false_positives:
+- description: "False Positive Analysis:\n\n    - Verify if the failed attempts could\
+    \ result from the user’s unfamiliarity with TOTP codes or issues with device synchronization.\n\
+    \    - Check if the user recently switched MFA methods or devices, which could\
+    \ explain multiple failures.\n    - Determine if this is whitebox testing or a\
+    \ developer testing MFA integration.\n\n#### Response and Remediation:\n\n   \
+    \ - If proven malicious, lock the affected account temporarily to prevent further\
+    \ unauthorized attempts.\n    - Notif"
+  mitigation: Review investigation guide for details
+references:
+- https://www.oasis.security/resources/blog/oasis-security-research-team-discovers-microsoft-azure-mfa-bypass
+- https://learn.microsoft.com/en-us/entra/identity/
+- https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-sign-ins
+has_investigation_guide: true
+risk_score: 47

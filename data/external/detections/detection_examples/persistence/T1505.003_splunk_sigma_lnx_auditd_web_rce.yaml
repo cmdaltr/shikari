@@ -1,0 +1,53 @@
+technique_id: T1505.003
+technique_name: Webshell Remote Command Execution
+tactic: persistence
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: c0d3734d-330f-4a03-aae2-65dacc6a8222
+level: critical
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  euid: 33\n  syscall:\n  - execve\n  - execveat\n  type: SYSCALL\n"
+explanation: Detects possible command execution by web application/web shell
+false_positives:
+- Admin activity
+- Crazy web applications
+references:
+- Personal Experience of the Author
+- https://www.vaadata.com/blog/what-is-command-injection-exploitations-and-security-best-practices/
+tags:
+- attack.persistence
+- attack.t1505.003
+logsource:
+  product: linux
+  service: auditd
+  definition: 'Required auditd configuration:
+
+    -a always,exit -F arch=b32 -S execve -F euid=33 -k detect_execve_www
+
+    -a always,exit -F arch=b64 -S execve -F euid=33 -k detect_execve_www
+
+    -a always,exit -F arch=b32 -S execveat -F euid=33 -k detect_execve_www
+
+    -a always,exit -F arch=b64 -S execveat -F euid=33 -k detect_execve_www
+
+    Change the number "33" to the ID of your WebServer user. Default: www-data:x:33:33
+
+    '
+detection:
+  selection:
+    type: SYSCALL
+    syscall:
+    - execve
+    - execveat
+    euid: 33
+  condition: selection
+metadata:
+  created_date: 2019-10-12
+  modified_date: 2025-06-03
+  author: Ilyas Ochkov, Beyu Denis, oscd.community
+  status: test
+  imported_date: '2025-11-28'

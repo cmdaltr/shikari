@@ -1,0 +1,37 @@
+technique_id: T1047
+technique_name: PowerShell Invoke WmiExec Usage
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`powershell` EventCode=4104 ScriptBlockText IN ("*invoke-wmiexec*") | fillnull
+  | stats count min(_time) as firstTime max(_time) as lastTime by dest signature signature_id
+  user_id vendor_product EventID Guid Opcode Name Path ProcessID ScriptBlockId ScriptBlockText
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `powershell_invoke_wmiexec_usage_filter`'
+explanation: The following analytic detects the execution of the Invoke-WMIExec utility
+  within PowerShell Script Block Logging (EventCode 4104). This detection leverages
+  PowerShell script block logs to identify instances where the Invoke-WMIExec command
+  is used. Monitoring this activity is crucial as it indicates potential lateral movement
+  using WMI commands with NTLMv2 pass-the-hash authentication. If confirmed malicious,
+  this activity could allow an attacker to execute commands remotely on target systems,
+  potentially leading to further compromise and lateral spread within the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/0734bd21-2769-4972-a5f1-78bb1e011224/
+indicators:
+- type: data_source
+  value: Powershell Script Block Logging 4104
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives should be limited as this analytic is designed to detect
+    a specific utility. It is recommended to apply appropriate filters as needed to
+    minimize the number of false positives.
+  mitigation: Review context and user activity
+references:
+- https://github.com/Kevin-Robertson/Invoke-TheHash/blob/master/Invoke-WMIExec.ps1
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1047/atomic_red_team/invokewmiexec_windows-powershell.log

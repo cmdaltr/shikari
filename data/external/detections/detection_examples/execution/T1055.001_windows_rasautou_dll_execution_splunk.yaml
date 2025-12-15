@@ -1,0 +1,52 @@
+technique_id: T1055.001
+technique_name: Windows Rasautou DLL Execution
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.process_name=rasautou.exe
+  Processes.process="* -d *"AND Processes.process="* -p *" by Processes.action Processes.dest
+  Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_rasautou_dll_execution_filter`'
+explanation: The following analytic detects the execution of an arbitrary DLL by the
+  Windows Remote Auto Dialer (rasautou.exe). This behavior is identified by analyzing
+  process creation events where rasautou.exe is executed with specific command-line
+  arguments. This activity is significant because it leverages a Living Off The Land
+  Binary (LOLBin) to execute potentially malicious code, bypassing traditional security
+  controls. If confirmed malicious, this technique could allow an attacker to execute
+  arbitrary code, potentially leading to system compromise, privilege escalation,
+  or persistent access within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/6f42b8be-8e96-11ec-ad5a-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives will be limited to applications that require Rasautou.exe
+    to load a DLL from disk. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://github.com/mandiant/DueDLLigence
+- https://github.com/MHaggis/notes/blob/master/utilities/Invoke-SPLDLLigence.ps1
+- https://gist.github.com/NickTyrer/c6043e4b302d5424f701f15baf136513
+- https://www.mandiant.com/resources/staying-hidden-on-the-endpoint-evading-detection-with-shellcode
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1055.001/rasautou/windows-sysmon.log

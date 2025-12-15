@@ -1,0 +1,41 @@
+technique_id: T1059.001
+technique_name: Powershell Load Module in Meterpreter
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`powershell` EventCode=4104 ScriptBlockText IN ("*MSF.Powershell*","*MSF.Powershell.Meterpreter*","*MSF.Powershell.Meterpreter.Kiwi*","*MSF.Powershell.Meterpreter.Transport*")
+  | fillnull | stats count min(_time) as firstTime max(_time) as lastTime by dest
+  signature signature_id user_id vendor_product EventID Guid Opcode Name Path ProcessID
+  ScriptBlockId ScriptBlockText | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `powershell_load_module_in_meterpreter_filter`'
+explanation: The following analytic detects the execution of suspicious PowerShell
+  commands associated with Meterpreter modules, such as "MSF.Powershell" and "MSF.Powershell.Meterpreter".
+  It leverages PowerShell Script Block Logging (EventCode=4104) to capture and analyze
+  the full command sent to PowerShell. This activity is significant as it indicates
+  potential post-exploitation actions, including credential dumping and persistence
+  mechanisms. If confirmed malicious, an attacker could gain extensive control over
+  the compromised system, escalate privileges, and maintain long-term access, posing
+  a severe threat to the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/d5905da5-d050-48db-9259-018d8f034fcf/
+indicators:
+- type: data_source
+  value: Powershell Script Block Logging 4104
+  confidence: high
+- type: risk_user
+  value: user_id
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives should be very limited as this is strict to MetaSploit
+    behavior.
+  mitigation: Review context and user activity
+references:
+- https://github.com/OJ/metasploit-payloads/blob/master/powershell/MSF.Powershell/Scripts.cs
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059/metasploit/msf.powershell.powershell.log

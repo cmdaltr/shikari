@@ -1,0 +1,45 @@
+technique_id: T1543
+technique_name: Finder Sync Plugin Registered and Enabled
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and process.name == \"pluginkit\" and\n  process.args == \"-e\" and process.args\
+  \ like~ \"use\" and process.args == \"-i\" and\n  (process.name like~ (\"python*\"\
+  , \"node\", \"osascript\", \"bash\", \"sh\", \"zsh\") or (process.parent.code_signature.exists\
+  \ == false or process.parent.code_signature.trusted == false))"
+explanation: 'Finder Sync plugins enable users to extend Finder’s functionality by
+  modifying the user interface. Adversaries may abuse
+
+  this feature by adding a rogue Finder Plugin to repeatedly execute malicious payloads
+  for persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/37f638ea-909d-4f94-9248-edd21e4a9906.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Known safe applications like Google Drive, Boxcryptor, Adobe, Microsoft OneDrive,
+    Insync, and Box are already excluded from triggering false positives. Ensure these
+    applications are up-to-date to maintain their exclusion status.
+
+    - If a legitimate application not listed in the exclusions is causing false positives,
+    consider adding its specific Finder Sync plugin identifier to the exclusion list
+    after verifying its safety.
+
+    - Monitor the parent process paths of legitimate'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/specterops/presentations/raw/master/Leo%20Pitt/Hey_Im_Still_in_Here_Modern_macOS_Persistence_SO-CON2020.pdf
+has_investigation_guide: true
+risk_score: 47

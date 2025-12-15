@@ -1,0 +1,40 @@
+technique_id: T1562.001
+technique_name: AWS CloudWatch Log Group Deletion
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:aws.cloudtrail and event.provider:logs.amazonaws.com and event.action:DeleteLogGroup
+  and event.outcome:success
+explanation: 'Identifies the deletion of a specified AWS CloudWatch log group. When
+  a log group is deleted, all the archived log
+
+  events associated with the log group are also permanently deleted.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/68a7a5a5-a2fc-4a76-ba9f-26849de881b4.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS CloudWatch
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- If this rule is noisy in your environment\
+    \ due to expected activity, consider adding exceptions — preferably with a combination\
+    \ of user and IP address conditions.\n\n### Response and remediation\n\n- Initiate\
+    \ the incident response process based on the outcome of the triage.\n- Disable\
+    \ or limit the account during the investigation and response.\n- Identify the\
+    \ possible impact of the incident and prioritize accordingly; the following actions\
+    \ can help you gain context:\n    - Ide"
+  mitigation: Review investigation guide for details
+references:
+- https://awscli.amazonaws.com/v2/documentation/api/latest/reference/logs/delete-log-group.html
+- https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DeleteLogGroup.html
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,43 @@
+technique_id: T1505.003
+technique_name: Windows SharePoint Spinstall0 GET Request
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url="*/_layouts/15/spinstall0.aspx*" Web.http_method="GET" by Web.url
+  Web.src Web.dest Web.status Web.http_user_agent Web.url_length sourcetype | `drop_dm_object_name("Web")`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_sharepoint_spinstall0_get_request_filter`'
+explanation: The following analytic detects potential post-exploitation activity related
+  to the Microsoft SharePoint CVE-2025-53770 vulnerability. After successful exploitation
+  via the ToolPane.aspx endpoint, attackers typically deploy a webshell named "spinstall0.aspx"
+  in the SharePoint layouts directory. This detection identifies GET requests to this
+  webshell, which indicates active use of the backdoor for command execution, data
+  exfiltration, or credential/key extraction. Attackers commonly use these webshells
+  to extract encryption keys, authentication tokens, and other sensitive information
+  from the compromised SharePoint server.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/ac490de2-ee39-421c-b61b-1c4005dde427/
+indicators:
+- type: data_source
+  value: Suricata
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives are expected as spinstall0.aspx is not a legitimate
+    SharePoint component. However, security teams investigating the incident might
+    also access this file for analysis purposes. Verify the source IP addresses against
+    known security team IPs and the timing of the requests in relation to the initial
+    exploitation attempt.
+  mitigation: Review context and user activity
+references:
+- https://research.eye.security/sharepoint-under-siege/
+- https://www.cisa.gov/news-events/alerts/2025/07/20/microsoft-releases-guidance-exploitation-sharepoint-vulnerability-cve-2025-53770
+- https://msrc.microsoft.com/blog/2025/07/customer-guidance-for-sharepoint-vulnerability-cve-2025-53770/
+- https://splunkbase.splunk.com/app/3185
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/sharepoint/spinstall0.log

@@ -1,0 +1,39 @@
+technique_id: T1218.011
+technique_name: RunDLL32 Spawning Explorer
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: caa06de8-fdef-4c91-826a-7f9e163eef4b
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  ParentCommandLine|contains: \\shell32.dll,Control_RunDLL\nselection:\n\
+  \  Image|endswith: \\explorer.exe\n  ParentImage|endswith: \\rundll32.exe\n"
+explanation: Detects RunDLL32.exe spawning explorer.exe as child, which is very uncommon,
+  often observes Gamarue spawning the explorer.exe process in an unusual way
+false_positives:
+- Unknown
+references:
+- https://redcanary.com/blog/intelligence-insights-november-2021/
+tags:
+- attack.defense-evasion
+- attack.t1218.011
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \rundll32.exe
+    Image|endswith: \explorer.exe
+  filter:
+    ParentCommandLine|contains: \shell32.dll,Control_RunDLL
+  condition: selection and not filter
+metadata:
+  created_date: 2022-04-27
+  modified_date: 2022-05-25
+  author: elhoim, CD_ROM_
+  status: test
+  imported_date: '2025-11-28'

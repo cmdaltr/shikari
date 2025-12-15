@@ -1,0 +1,47 @@
+technique_id: T1490
+technique_name: Azure Compute Restore Point Collection Deleted by Unusual User
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset: azure.activitylogs and\n    event.action: \"MICROSOFT.COMPUTE/RESTOREPOINTCOLLECTIONS/DELETE\"\
+  \ and\n    event.outcome: (Success or success)"
+explanation: 'Identifies the deletion of Azure Restore Point Collections by a user
+  who has not previously performed this activity.
+
+  Restore Point Collections contain recovery points for virtual machines, enabling
+  point-in-time recovery capabilities.
+
+  Adversaries may delete these collections to prevent recovery during ransomware attacks
+  or to cover their tracks during
+
+  malicious operations.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c1a3e2f0-8a1b-11ef-9b4a-f661ea17fbce.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Azure Activity Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative activities by infrastructure teams may trigger this alert
+    when team members rotate or new administrators are onboarded. Create exceptions
+    for known administrative accounts after verification.
+
+    - Automated cleanup scripts or Azure policies that periodically remove old restore
+    points may cause alerts. Identify and exclude service accounts used for these
+    automated operations.
+
+    - Planned decommissioning activities or migration projects may involve legi'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoft.com/en-us/security/blog/2023/07/25/storm-0501-ransomware-attacks-expanding-to-hybrid-cloud-environments/
+has_investigation_guide: true
+risk_score: 47

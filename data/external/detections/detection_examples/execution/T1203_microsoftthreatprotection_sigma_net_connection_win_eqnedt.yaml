@@ -1,0 +1,36 @@
+technique_id: T1203
+technique_name: Network Connection Initiated By Eqnedt32.EXE
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: a66bc059-c370-472c-a0d7-f8fd1bf9d583
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith: \\eqnedt32.exe\n"
+explanation: Detects network connections from the Equation Editor process "eqnedt32.exe".
+false_positives:
+- Unlikely
+references:
+- https://twitter.com/forensicitguy/status/1513538712986079238
+- https://forensicitguy.github.io/xloader-formbook-velvetsweatshop-spreadsheet/
+- https://news.sophos.com/en-us/2019/07/18/a-new-equation-editor-exploit-goes-commercial-as-maldoc-attacks-using-it-spike/
+tags:
+- attack.execution
+- attack.t1203
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    Image|endswith: \eqnedt32.exe
+  condition: selection
+metadata:
+  created_date: 2022-04-14
+  modified_date: 2024-05-31
+  author: Max Altgelt (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

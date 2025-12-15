@@ -1,0 +1,45 @@
+technique_id: T1556
+technique_name: Cisco Duo Admin Login Unusual Browser
+tactic: lateral_movement
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`cisco_duo_activity` "action.name"=admin_login NOT access_device.browser IN
+  (Chrome) | rename actor.name as user access_device.ip.address as src_ip | stats
+  count min(_time) as firstTime max(_time) as lastTime by access_device.browser access_device.browser_version
+  src_ip access_device.location.city access_device.location.country access_device.location.state
+  access_device.os access_device.os_version actor.details actor.type outcome.result
+  user | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `cisco_duo_admin_login_unusual_browser_filter`'
+explanation: The following analytic identifies instances where a Duo admin logs in
+  using a browser other than Chrome, which is considered unusual based on typical
+  access patterns. Please adjust as needed to your environment. The detection leverages
+  Duo activity logs ingested via the Cisco Security Cloud App and filters for admin
+  login actions where the browser is not Chrome. By renaming and aggregating relevant
+  fields such as user, browser, IP address, and location, the analytic highlights
+  potentially suspicious access attempts that deviate from the norm. This behavior
+  is significant for a SOC because the use of an unexpected browser may indicate credential
+  compromise, session hijacking, or the use of unauthorized devices by attackers attempting
+  to evade detection. Detecting such anomalies enables early investigation and response,
+  helping to prevent privilege escalation, policy manipulation, or further compromise
+  of sensitive administrative accounts. The impact of this attack could include unauthorized
+  changes to security policies, user access, or the disabling of critical security
+  controls, posing a substantial risk to the organizations security posture.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b38932ad-e663-4e90-bfdf-8446ee5b3f34/
+indicators:
+- type: data_source
+  value: Cisco Duo Activity
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://splunkbase.splunk.com/app/7404
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1556/cisco_duo_unusual_admin_login/cisco_duo_activity.json

@@ -1,0 +1,46 @@
+technique_id: T1570
+technique_name: Remote File Creation in World Writeable Directory
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: 'file where host.os.type == "linux" and event.action == "creation" and
+
+  process.name in ("scp", "sshd", "ssh", "ftp", "sftp", "vsftpd", "sftp-server", "rsync")
+  and
+
+  file.path like~ ("/tmp*", "/var/tmp*", "/dev/shm/*", "/home/.*") and user.id !=
+  "0"'
+explanation: 'This rule detects the creation of a file in a world-writeable directory
+  through a service that is
+
+  commonly used for file transfer. This behavior is often associated with lateral
+  movement and can
+
+  be an indicator of an attacker attempting to move laterally within a network.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3e528511-7316-4a6e-83da-61b5f1c07fd4.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks: System administrators often use file transfer
+    services like scp or rsync to move files for legitimate purposes. To reduce false
+    positives, create exceptions for known administrative accounts or specific file
+    paths that are regularly used for maintenance.
+
+    - Automated scripts and cron jobs: Automated processes may create temporary files
+    in world-writeable directories. Identify and whitelist these scripts or jobs by
+    their process names or use'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

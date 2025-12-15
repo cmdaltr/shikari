@@ -1,0 +1,42 @@
+technique_id: T1036.001
+technique_name: Expired or Revoked Driver Loaded
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "driver where host.os.type == \"windows\" and process.pid == 4 and\n  dll.code_signature.status\
+  \ : (\"errorExpired\", \"errorRevoked\")"
+explanation: 'Identifies an attempt to load a revoked or expired driver. Adversaries
+  may bring outdated drivers with vulnerabilities
+
+  to gain code execution in kernel mode or abuse revoked certificates to sign their
+  drivers.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d12bac54-ab2a-4159-933f-d7bcefa7b61d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates may load drivers with expired or revoked signatures
+    temporarily. Verify the source and purpose of the driver before excluding it.
+
+    - Some older hardware devices may rely on drivers that have expired signatures
+    but are still necessary for functionality. Confirm the device''s necessity and
+    consider excluding these drivers if they are from a trusted source.
+
+    - Security software or system management tools might use drivers with expired
+    signatures f'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/previous-versions/windows/hardware/design/dn653559(v=vs.85)?redirectedfrom=MSDN
+has_investigation_guide: true
+risk_score: 47

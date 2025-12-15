@@ -1,0 +1,50 @@
+technique_id: T1189
+technique_name: Suspicious Browser Child Process
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n  process.parent.name like~ (\"Google Chrome\", \"Google Chrome Helper*\"\
+  , \"firefox\", \"Opera\", \"Safari\", \"com.apple.WebKit.WebContent\", \"Microsoft\
+  \ Edge\") and\n  ((process.name like~ (\"sh\", \"bash\", \"dash\", \"ksh\", \"tcsh\"\
+  , \"zsh\") and process.command_line : (\"*curl*\", \"*nscurl*\", \"*wget*\", \"\
+  *whoami*\", \"*pwd*\")) or\n  process.name like~ (\"curl\", \"wget\", \"python*\"\
+  , \"perl*\", \"php*\", \"osascript\", \"pwsh\")) and\n  process.command_line !=\
+  \ null"
+explanation: 'Identifies the execution of a suspicious browser child process. Adversaries
+  may gain access to a system through a user
+
+  visiting a website over the normal course of browsing. With this technique, the
+  user''s web browser is typically targeted
+
+  for exploitation.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/080bc66a-5d56-4d1f-8071-817671716db9.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may trigger the rule if they use
+    shell scripts or command-line tools. Users can create exceptions for known update
+    paths, such as those related to Microsoft AutoUpdate or Google Chrome installations,
+    to prevent these from being flagged.
+
+    - Development or testing activities involving scripting languages like Python
+    or shell scripts may be mistakenly identified as threats. Users should consider
+    excluding specific development di'
+  mitigation: Review investigation guide for details
+references:
+- https://objective-see.com/blog/blog_0x43.html
+- https://fr.slideshare.net/codeblue_jp/cb19-recent-apt-attack-on-crypto-exchange-employees-by-heungsoo-kang
+has_investigation_guide: true
+risk_score: 73

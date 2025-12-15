@@ -1,0 +1,62 @@
+technique_id: T1570
+technique_name: Scheduled Task Execution at Scale via GPO
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where host.os.type == \"windows\" and event.code in (\"5136\", \"5145\"\
+  ) and\n(\n  (\n    winlog.event_data.AttributeLDAPDisplayName : (\n      \"gPCMachineExtensionNames\"\
+  ,\n      \"gPCUserExtensionNames\"\n    ) and\n    winlog.event_data.AttributeValue\
+  \ : \"*CAB54552-DEEA-4691-817E-ED4A4D1AFC72*\" and\n    winlog.event_data.AttributeValue\
+  \ : \"*AADCED64-746C-4633-A97C-D61349046527*\"\n  ) or\n  (\n    winlog.event_data.ShareName\
+  \ : \"\\\\\\\\*\\\\SYSVOL\" and\n    winlog.event_data.RelativeTargetName : \"*ScheduledTasks.xml\"\
+  \ and\n    winlog.event_data.AccessList:\"*%%4417*\"\n  )\n)"
+explanation: 'Detects the modification of Group Policy Object attributes to execute
+  a scheduled task in the objects controlled by the
+
+  GPO.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/15a8ba77-1c13-4274-88fe-6bd14133861e.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Verify if the execution is allowed and done under change management, and if
+    the execution is legitimate.
+
+
+    ### Related rules
+
+
+    - Group Policy Abuse for Privilege Addition - b9554892-5e0e-424b-83a0-5aef95aa43bf
+
+    - Startup/Logon Script added to Group Policy Object - 16fac1a1-21ee-4ca6-b720-458e3855d046
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - The investigation and containment must be performed in every com'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/atc-project/atc-data/blob/master/docs/Logging_Policies/LP_0025_windows_audit_directory_service_changes.md
+- https://github.com/atc-project/atc-data/blob/f2bbb51ecf68e2c9f488e3c70dcdd3df51d2a46b/docs/Logging_Policies/LP_0029_windows_audit_detailed_file_share.md
+- https://labs.f-secure.com/tools/sharpgpoabuse
+- https://twitter.com/menasec1/status/1106899890377052160
+- https://github.com/SigmaHQ/sigma/blob/master/rules/windows/builtin/security/win_gpo_scheduledtasks.yml
+has_investigation_guide: true
+risk_score: 47

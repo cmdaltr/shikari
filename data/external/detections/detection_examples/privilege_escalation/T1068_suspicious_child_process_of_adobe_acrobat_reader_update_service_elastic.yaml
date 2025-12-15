@@ -1,0 +1,50 @@
+technique_id: T1068
+technique_name: Suspicious Child Process of Adobe Acrobat Reader Update Service
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n  process.parent.name like \"com.adobe.ARMDC.SMJobBlessHelper\" and\n  user.name\
+  \ == \"root\" and\n  not process.executable like (\"/Library/PrivilegedHelperTools/com.adobe.ARMDC.SMJobBlessHelper\"\
+  ,\n                               \"/usr/bin/codesign\",\n                     \
+  \          \"/private/var/folders/zz/*/T/download/ARMDCHammer\",\n             \
+  \                  \"/usr/sbin/pkgutil\",\n                               \"/usr/bin/shasum\"\
+  ,\n                               \"/usr/bin/perl*\",\n                        \
+  \       \"/usr/sbin/spctl\",\n                               \"/usr/sbin/installer\"\
+  ,\n                               \"/usr/bin/csrutil\")"
+explanation: 'Detects attempts to exploit privilege escalation vulnerabilities related
+  to the Adobe Acrobat Reader
+
+  PrivilegedHelperTool responsible for installing updates. For more information, refer
+  to CVE-2020-9615, CVE-2020-9614 and
+
+  CVE-2020-9613 and verify that the impacted system is patched.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f85ce03f-d8a8-4c83-acdc-5c8cd0592be7.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may trigger the rule if they spawn
+    child processes not listed in the known legitimate executables. Users can mitigate
+    this by monitoring update schedules and temporarily excluding these processes
+    during known update windows.
+
+    - Custom scripts or administrative tools executed by system administrators with
+    root privileges might be flagged. To handle this, users can create exceptions
+    for these specific scripts or tools if they a'
+  mitigation: Review investigation guide for details
+references:
+- https://rekken.github.io/2020/05/14/Security-Flaws-in-Adobe-Acrobat-Reader-Allow-Malicious-Program-to-Gain-Root-on-macOS-Silently/
+has_investigation_guide: true
+risk_score: 73

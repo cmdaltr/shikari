@@ -1,0 +1,64 @@
+technique_id: T1539
+technique_name: Potential Cookies Theft via Browser Debugging
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where event.type in (\"start\", \"process_started\", \"info\") and\n\
+  \  process.name in (\n             \"Microsoft Edge\",\n             \"chrome.exe\"\
+  ,\n             \"Google Chrome\",\n             \"google-chrome-stable\",\n   \
+  \          \"google-chrome-beta\",\n             \"google-chrome\",\n          \
+  \   \"msedge.exe\") and\n   process.args : (\"--remote-debugging-port=*\",\n   \
+  \                \"--remote-debugging-targets=*\",\n                   \"--remote-debugging-pipe=*\"\
+  ) and\n   process.args : \"--user-data-dir=*\" and not process.args:\"--remote-debugging-port=0\""
+explanation: 'Identifies the execution of a Chromium based browser with the debugging
+  process argument, which may indicate an attempt
+
+  to steal authentication cookies. An adversary may steal web application or service
+  session cookies and use them to gain
+
+  access web applications or Internet services as an authenticated user without needing
+  credentials.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/027ff9ea-85e7-42e3-99d2-bbb7069e02eb.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Development and testing activities may trigger the rule when developers use
+    debugging features for legitimate purposes. To manage this, create exceptions
+    for known developer machines or user accounts frequently involved in web application
+    development.
+
+    - Automated testing frameworks that utilize browser debugging for testing web
+    applications can also cause false positives. Identify and exclude processes initiated
+    by these frameworks by specifying their unique process na'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/defaultnamehere/cookie_crimes
+- https://embracethered.com/blog/posts/2020/cookie-crimes-on-mirosoft-edge/
+- https://github.com/rapid7/metasploit-framework/blob/master/documentation/modules/post/multi/gather/chrome_cookies.md
+- https://posts.specterops.io/hands-in-the-cookie-jar-dumping-cookies-with-chromiums-remote-debugger-port-34c4f468844e
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,61 @@
+technique_id: T1218
+technique_name: Suspicious Provlaunch.EXE Child Process
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: f9999590-1f94-4a34-a91e-951e47bedefd
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_child:\n- Image|endswith:\n  - \\calc.exe\n  - \\cmd.exe\n  - \\cscript.exe\n\
+  \  - \\mshta.exe\n  - \\notepad.exe\n  - \\powershell.exe\n  - \\pwsh.exe\n  - \\\
+  regsvr32.exe\n  - \\rundll32.exe\n  - \\wscript.exe\n- Image|contains:\n  - :\\\
+  PerfLogs\\\n  - :\\Temp\\\n  - :\\Users\\Public\\\n  - \\AppData\\Temp\\\n  - \\\
+  Windows\\System32\\Tasks\\\n  - \\Windows\\Tasks\\\n  - \\Windows\\Temp\\\nselection_parent:\n\
+  \  ParentImage|endswith: \\provlaunch.exe\n"
+explanation: Detects suspicious child processes of "provlaunch.exe" which might indicate
+  potential abuse to proxy execution.
+false_positives:
+- Unknown
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Provlaunch/
+- https://twitter.com/0gtweet/status/1674399582162153472
+tags:
+- attack.defense-evasion
+- attack.t1218
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_parent:
+    ParentImage|endswith: \provlaunch.exe
+  selection_child:
+  - Image|endswith:
+    - \calc.exe
+    - \cmd.exe
+    - \cscript.exe
+    - \mshta.exe
+    - \notepad.exe
+    - \powershell.exe
+    - \pwsh.exe
+    - \regsvr32.exe
+    - \rundll32.exe
+    - \wscript.exe
+  - Image|contains:
+    - :\PerfLogs\
+    - :\Temp\
+    - :\Users\Public\
+    - \AppData\Temp\
+    - \Windows\System32\Tasks\
+    - \Windows\Tasks\
+    - \Windows\Temp\
+  condition: all of selection_*
+metadata:
+  created_date: 2023-08-08
+  modified_date: '2025-11-28'
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

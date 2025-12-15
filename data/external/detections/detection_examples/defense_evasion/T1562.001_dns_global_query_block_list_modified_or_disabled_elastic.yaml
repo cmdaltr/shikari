@@ -1,0 +1,67 @@
+technique_id: T1562.001
+technique_name: DNS Global Query Block List Modified or Disabled
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\
+  \ registry.data.strings != null and\n(\n  (registry.value : \"EnableGlobalQueryBlockList\"\
+  \ and registry.data.strings : (\"0\", \"0x00000000\")) or\n  (registry.value : \"\
+  GlobalQueryBlockList\" and not registry.data.strings : \"wpad\")\n)"
+explanation: 'Identifies changes to the DNS Global Query Block List (GQBL), a security
+  feature that prevents the resolution of certain
+
+  DNS names often exploited in attacks like WPAD spoofing. Attackers with certain
+  privileges, such as DNSAdmins, can
+
+  modify or disable the GQBL, allowing exploitation of hosts running WPAD with default
+  settings for privilege escalation
+
+  and lateral movement.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/57bfa0a9-37c0-44d6-b724-54bf16787492.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative changes to DNS settings by IT staff can trigger the
+    rule. To manage this, create exceptions for known maintenance windows or authorized
+    personnel making these changes.
+
+    - Automated scripts or software updates that modify DNS settings might be flagged.
+    Identify and whitelist these processes if they are verified as safe and necessary
+    for system operations.
+
+    - Changes made by security tools or network management software that adjust DNS
+    settings fo'
+  mitigation: Review investigation guide for details
+references:
+- https://cube0x0.github.io/Pocing-Beyond-DA/
+- https://www.thehacker.recipes/ad/movement/mitm-and-coerced-authentications/wpad-spoofing
+- https://www.netspi.com/blog/technical-blog/network-penetration-testing/adidns-revisited/
+has_investigation_guide: true
+risk_score: 47

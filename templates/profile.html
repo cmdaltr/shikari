@@ -1,0 +1,2498 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+    <title>Archer - Profile</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/profile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/validation.css') }}?v={{ request.app.state.asset_version }}">
+    {% block head %}
+    <style>
+      /* Ensure consistent positioning across all browsers */
+      
+
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      #main-content {
+        flex: 1;
+      }
+
+      /* Dark mode CSS variables */
+      
+
+      
+
+      /* Dark header bar at top - matches footer styling */
+      
+
+      [data-theme="dark"] 
+
+      #main-content.page-shell,
+      #main-content.centered { padding-top: 0 !important; margin-top: 0 !important; position: relative; }
+
+      /* Global navigation buttons */
+      
+
+      @media (max-width: 1400px) {
+        
+      }
+
+      
+
+      [data-theme="dark"] 
+
+      
+
+      
+
+      /* Fixed position buttons - aligned with 1320px content edge */
+      .back-link {
+        position: fixed !important;
+        top: 28px !important;
+        left: calc((100vw - 1320px) / 2) !important;
+        z-index: 10000 !important;
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95em;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        min-height: 40px;
+        border: 2px solid var(--accent);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.95);
+        transition: all 0.2s;
+        box-sizing: border-box;
+      }
+
+      [data-theme="dark"] .back-link {
+        background: rgba(45, 45, 45, 0.95);
+      }
+
+      .back-link:hover {
+        background: var(--accent);
+        color: white;
+      }
+
+      /* Fixed position button - aligned with 1320px content edge */
+      .how-archer-link {
+        position: fixed !important;
+        top: 28px !important;
+        right: calc((100vw - 1320px) / 2 + 52px) !important;
+        z-index: 10000 !important;
+      }
+
+      .how-archer-link:hover {
+        background: var(--accent) !important;
+        color: white !important;
+      }
+
+      /* Override inline styles for dark mode */
+      [data-theme="dark"] body,
+      [data-theme="dark"] .page-shell,
+      [data-theme="dark"] .container {
+        background: var(--bg-primary) !important;
+      }
+
+      [data-theme="dark"] h1 {
+        color: var(--text-primary) !important;
+      }
+
+      [data-theme="dark"] p,
+      [data-theme="dark"] .header p {
+        color: var(--text-secondary) !important;
+      }
+
+      [data-theme="dark"] label,
+      [data-theme="dark"] .form-label,
+      [data-theme="dark"] .option-label {
+        color: var(--text-primary) !important;
+      }
+
+      [data-theme="dark"] .option-hint,
+      [data-theme="dark"] .form-hint {
+        color: var(--text-tertiary) !important;
+      }
+
+      [data-theme="dark"] .how-archer-link {
+        background: rgba(45, 45, 45, 0.95) !important;
+      }
+
+      /* Footer dark mode */
+      [data-theme="dark"] footer {
+        background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%) !important;
+        border-top-color: var(--accent) !important;
+      }
+
+      [data-theme="dark"] footer p,
+      [data-theme="dark"] footer span,
+      [data-theme="dark"] footer a {
+        color: var(--text-secondary) !important;
+      }
+
+      [data-theme="dark"] footer a:hover {
+        color: var(--accent) !important;
+      }
+    </style>
+    {% endblock %}
+</head>
+<body>
+    <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help) -->
+    {% include "partials/nav_controls.html" %}
+    {% block content %}
+    <div style="flex: 1; width: 100%;">
+    <div class="container" style="width: 1320px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
+      <!-- Page title / app name with banner -->
+      <div class="header" style="text-align: center; margin-bottom: 3em;">
+        <div style="margin-bottom: 1em; margin-top: 28px;">
+          <img src="{{ url_for('static', path='images/archer_banner.png') }}" alt="Archer" style="width: auto; height: auto; max-height: 150px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
+        </div>
+        <p style="color: #666666; font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px;">
+          USER PROFILE & SETTINGS
+        </p>
+      </div>
+
+      <!-- Tabbed interface inspired by VirusTotal -->
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <button class="tab-button active" data-tab="profile">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span>Profile</span>
+          </button>
+          <button class="tab-button" data-tab="security">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>Security</span>
+          </button>
+          <button class="tab-button" data-tab="timeline">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>Timeline</span>
+          </button>
+          <button class="tab-button" data-tab="apikeys">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+            </svg>
+            <span>API Keys</span>
+          </button>
+          <button class="tab-button" data-tab="mappings">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            <span>Config</span>
+          </button>
+          {% if user and user.role.value == 'admin' %}
+          <button class="tab-button" data-tab="users">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>Users</span>
+          </button>
+          {% endif %}
+        </div>
+
+        <div class="tabs-content">
+          <!-- PROFILE TAB -->
+          <div class="tab-pane active" id="tab-profile">
+            <div class="tab-description" style="margin-bottom: 16px;">
+              Profile information and preferences
+            </div>
+
+            <div class="profile-container" style="gap: 20px;">
+              <!-- Profile Picture Section -->
+              <div class="profile-picture-section">
+                <div class="profile-picture-wrapper" onclick="document.getElementById('profile-picture-input').click()">
+                  <img src="{{ profile_picture_url if profile_picture_url else url_for('static', path='images/default-avatar.svg') }}"
+                       alt="Profile Picture"
+                       class="profile-picture"
+                       id="profile-picture-preview">
+                  <div class="change-picture-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    Update
+                  </div>
+                  <input type="file"
+                         id="profile-picture-input"
+                         accept="image/jpeg,image/png"
+                         style="display: none;"
+                         onchange="handleProfilePictureChange(event)">
+                </div>
+              </div>
+
+              <!-- Profile Form -->
+              <form id="profile-form" class="profile-form">
+                <!-- Email + Team + Type row -->
+                <div style="display: flex; gap: 12px;">
+                  <!-- Email field (50%) -->
+                  <div class="form-section" style="flex: 0 0 50%; margin: 0;">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email"
+                           name="email"
+                           id="email"
+                           class="form-input"
+                           placeholder="your.email@example.com"
+                           value="{{ user.email if user else '' }}"
+                           readonly
+                           style="background-color: var(--bg-primary); cursor: not-allowed;">
+                  </div>
+
+                  <!-- Team field (30%) -->
+                  <div class="form-section" style="flex: 0 0 30%; margin: 0;">
+                    <label for="team" class="form-label">Team</label>
+                    <input type="text"
+                           name="team"
+                           id="team"
+                           class="form-input"
+                           placeholder="e.g., Security Operations"
+                           value="{{ user.team if user and user.team else '' }}">
+                  </div>
+
+                  <!-- Type (20%) -->
+                  <div class="form-section" style="flex: 0 0 calc(20% - 24px); margin: 0;">
+                    <label for="user_type" class="form-label">Type</label>
+                    <input type="text"
+                           name="user_type"
+                           id="user_type"
+                           class="form-input"
+                           value="{{ user.role.value|capitalize if user else '' }}"
+                           readonly
+                           style="background-color: var(--bg-primary); cursor: not-allowed;">
+                  </div>
+                </div>
+
+                <!-- Full Name (75%) + Save Changes (25%) row -->
+                <div style="display: flex; gap: 16px; margin-top: 16px;">
+                  <!-- Full Name field (75%) -->
+                  <div class="form-section" style="flex: 0 0 75%; margin: 0;">
+                    <label for="full_name" class="form-label">Full Name</label>
+                    <input type="text"
+                           name="full_name"
+                           id="full_name"
+                           class="form-input"
+                           placeholder="Enter your full name"
+                           value="{{ user.full_name if user else '' }}"
+                           maxlength="64">
+                    <div class="char-counter">
+                      <span id="fullname-counter">0/64 characters</span>
+                    </div>
+                  </div>
+
+                  <!-- Save button (25%) -->
+                  <div style="flex: 0 0 calc(25% - 16px); display: flex; flex-direction: column;">
+                    <!-- Reduced spacer to raise button by 1.3px -->
+                    <div style="height: calc((0.95em * 1.2 + 8px) / 2 - 1.3px);"></div>
+                    <button type="submit" class="btn-primary" style="width: 100%; white-space: nowrap;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                      </svg>
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- TIMELINE TAB -->
+          <div class="tab-pane" id="tab-timeline">
+            <div class="tab-description">
+              View historical activity and download previous results
+            </div>
+
+            <div class="timeline-container">
+              <div class="timeline-filters">
+                <button class="filter-btn active" data-filter="all">All Activity</button>
+                <button class="filter-btn" data-filter="group">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  Groups
+                </button>
+                <button class="filter-btn" data-filter="cve">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  CVEs
+                </button>
+              </div>
+
+              <div class="timeline-items" id="timeline-items">
+                <!-- Timeline items will be loaded dynamically -->
+                <div class="empty-state">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p>No activity yet.</p>
+                </div>
+              </div>
+
+              <!-- Generate Button -->
+              <div class="form-actions">
+                <button type="button" class="btn-primary" onclick="window.location.href='/'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                  </svg>
+                  Generate
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- API KEYS TAB -->
+          <div class="tab-pane" id="tab-apikeys">
+            <div class="tab-description">
+              API keys for SIEM platforms, AI models, and emulation tools
+            </div>
+
+            <div class="apikeys-container">
+              <!-- SIEM Platforms Section -->
+              <div class="apikey-section">
+                <h3 class="section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                  </svg>
+                  SIEM Platforms
+                </h3>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <radialGradient id="splunkGradient" cx="30%" cy="30%">
+                          <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                          <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                        </radialGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
+                      <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                    Splunk API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter Splunk API key"
+                           id="splunk-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('splunk-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                          <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
+                    </svg>
+                    Microsoft Defender API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter MDE API key"
+                           id="mde-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('mde-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
+                      <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
+                      <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
+                    </svg>
+                    Elastic API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter Elastic API key"
+                           id="elastic-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('elastic-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- OSINT Sources Section -->
+              <div class="apikey-section">
+                <h3 class="section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
+                    <polyline points="7.5 19.79 7.5 14.6 3 12"/>
+                    <polyline points="21 12 16.5 14.6 16.5 19.79"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                  </svg>
+                  OSINT Sources
+                </h3>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="shodanGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#E42C64;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#B8174C;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#shodanGradient)"/>
+                      <path d="M30 40 L70 40 M30 50 L70 50 M30 60 L70 60" stroke="white" stroke-width="6" stroke-linecap="round"/>
+                    </svg>
+                    Shodan API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter Shodan API key"
+                           id="shodan-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('shodan-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">Internet-facing assets detection (get free key at <a href="https://account.shodan.io/register" target="_blank">shodan.io</a>)</div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="securitytrailsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#2E5C8A;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#securitytrailsGradient)"/>
+                      <path d="M30 30 L50 50 L70 30 M50 50 L50 70" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    SecurityTrails API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Enter SecurityTrails API key"
+                           id="securitytrails-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('securitytrails-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">DNS history and domain intelligence (get key at <a href="https://securitytrails.com/app/signup" target="_blank">securitytrails.com</a>)</div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="githubGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#6E5494;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#24292E;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#githubGradient)"/>
+                      <path d="M50 20 C33 20 20 33 20 50 C20 63 27 74 38 78 C39.5 78.3 40 77.3 40 76.5 L40 70 C32 72 30 66 30 66 C29 64 27 63 27 63 C24 61 27 61 27 61 C30 61 32 64 32 64 C35 69 40 67 41 66 C41 64 42 63 43 62 C36 61 28 58 28 48 C28 45 29 42 32 40 C32 39 31 36 32 33 C32 33 35 32 40 35 C42 35 45 34 50 34 C55 34 58 35 60 35 C65 32 68 33 68 33 C69 36 68 39 68 40 C71 42 72 45 72 48 C72 58 64 61 57 62 C58 63 59 64 59 66 L59 76.5 C59 77.3 59.5 78.3 61 78 C72 74 79 63 79 50 C80 33 67 20 50 20 Z" fill="white"/>
+                    </svg>
+                    GitHub Token
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="ghp_..."
+                           id="github-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('github-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">Secret scanning and code search (create at <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>)</div>
+                </div>
+              </div>
+
+              <!-- AI Models Section -->
+              <div class="apikey-section">
+                <h3 class="section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v20M2 12h20M17.657 6.343l-11.314 11.314M6.343 6.343l11.314 11.314"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  AI Models
+                </h3>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="openaiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#10A37F;stop-opacity:1" />
+                          <stop offset="50%" style="stop-color:#1A7F64;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#0D8B6C;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <!-- Circular background -->
+                      <circle cx="50" cy="50" r="48" fill="url(#openaiGradient)"/>
+                      <!-- Stylized AI symbol - interconnected nodes -->
+                      <circle cx="35" cy="35" r="6" fill="white"/>
+                      <circle cx="65" cy="35" r="6" fill="white"/>
+                      <circle cx="50" cy="65" r="6" fill="white"/>
+                      <line x1="35" y1="35" x2="65" y2="35" stroke="white" stroke-width="3"/>
+                      <line x1="35" y1="35" x2="50" y2="65" stroke="white" stroke-width="3"/>
+                      <line x1="65" y1="35" x2="50" y2="65" stroke="white" stroke-width="3"/>
+                    </svg>
+                    OpenAI API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="sk-..."
+                           id="openai-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('openai-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="anthropicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#CC785C;stop-opacity:1" />
+                          <stop offset="50%" style="stop-color:#C16A4F;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#B55A3E;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <!-- Square background with rounded corners -->
+                      <rect x="10" y="10" width="80" height="80" rx="16" fill="url(#anthropicGradient)"/>
+                      <!-- Stylized "A" or Claude symbol - diagonal lines forming an "A" -->
+                      <path d="M 35 70 L 50 30 L 65 70" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      <line x1="41" y1="58" x2="59" y2="58" stroke="white" stroke-width="6" stroke-linecap="round"/>
+                    </svg>
+                    Anthropic API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="sk-ant-..."
+                           id="anthropic-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('anthropic-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Emulation Tools Section (Greyed Out) -->
+              <div class="apikey-section disabled">
+                <h3 class="section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                  Emulation Tools
+                  <span class="coming-soon-badge">Coming Soon</span>
+                </h3>
+
+                <div class="apikey-item disabled">
+                  <label class="apikey-label">
+                    Atomic Red Team
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="text"
+                           class="form-input apikey-input"
+                           placeholder="Configuration path"
+                           disabled>
+                  </div>
+                </div>
+
+                <div class="apikey-item disabled">
+                  <label class="apikey-label">
+                    Caldera API Endpoint
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="text"
+                           class="form-input apikey-input"
+                           placeholder="https://..."
+                           disabled>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Save Button -->
+              <div class="form-actions">
+                <button type="button" class="btn-primary" onclick="saveApiKeys()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  Save API Keys
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECURITY TAB -->
+          <div class="tab-pane" id="tab-security">
+            <div class="tab-description">
+              Manage your account security settings
+            </div>
+
+            <!-- Two-column layout for security sections -->
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 40px; margin-top: 24px;">
+
+              <!-- LEFT COLUMN: Change Password -->
+              <div class="security-section">
+                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
+                  Change Password
+                </h3>
+
+                <form id="password-change-form">
+                  <div class="form-section">
+                    <label for="current_password" class="form-label">Current Password</label>
+                    <input type="password" id="current_password" name="current_password" class="form-input" required>
+                  </div>
+
+                  <!-- Divider between Current Password and New Password -->
+                  <div style="height: 1px; background: var(--border-color); margin: 24px 0;"></div>
+
+                  <div class="form-section">
+                    <label for="new_password" class="form-label">New Password</label>
+                    <div style="position: relative;">
+                      <input type="password" id="new_password" name="new_password" class="form-input" required style="padding-right: 40px;">
+                      <svg id="new-password-valid-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #22c55e; display: none; pointer-events: none;">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
+                    <p style="color: var(--text-tertiary); font-size: 0.85rem; margin-top: 0.5rem;">
+                      Minimum 16 characters, including letters, numbers, and special characters
+                    </p>
+                  </div>
+
+                  <div class="form-section">
+                    <label for="confirm_new_password" class="form-label">Confirm New Password</label>
+                    <div style="position: relative;">
+                      <input type="password" id="confirm_new_password" name="confirm_new_password" class="form-input" required style="padding-right: 40px;">
+                      <svg id="confirm-password-valid-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #22c55e; display: none; pointer-events: none;">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div id="password-change-message" style="margin-top: 16px;"></div>
+
+                  <div class="form-actions" style="margin-top: -18px;">
+                    <button type="submit" class="btn-primary">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                      </svg>
+                      Change Password
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- VERTICAL DIVIDER -->
+              <div style="width: 1px; background: var(--border-color); align-self: stretch;"></div>
+
+              <!-- RIGHT COLUMN: MFA and Backup Codes -->
+              <div style="display: flex; flex-direction: column; gap: 40px;">
+
+                <!-- MFA Section -->
+                <div class="security-section">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
+                    Two-Factor Authentication (MFA)
+                  </h3>
+
+                  <div id="mfa-status-section">
+                    <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                      Add an extra layer of security to your account by enabling two-factor authentication.
+                    </p>
+
+                    <div id="mfa-disabled-state">
+                      <button type="button" id="enable-mfa-btn" class="btn-primary" onclick="showMfaSetup()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        Enable MFA
+                      </button>
+                    </div>
+
+                    <div id="mfa-enabled-state" style="display: none;">
+                      <div style="background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px;">
+                        <p style="color: #065f46; margin: 0; font-weight: 500;">
+                          ✓ Two-factor authentication is enabled
+                        </p>
+                      </div>
+                      <button type="button" id="disable-mfa-btn" class="btn-secondary" onclick="disableMfa()">
+                        Disable MFA
+                      </button>
+                    </div>
+
+                    <div id="mfa-setup-message" style="margin-top: 16px;"></div>
+                  </div>
+
+                  <!-- MFA Setup Modal -->
+                  <div id="mfa-setup-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: white; border-radius: 8px; padding: 32px; max-width: 500px; width: 90%;">
+                      <h3 style="margin-top: 0; margin-bottom: 24px;">Set Up Two-Factor Authentication</h3>
+
+                      <div style="text-align: center;">
+                        <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                          Scan this QR code with your authenticator app.
+                        </p>
+                        <div id="mfa-qr-code" style="display: inline-block; padding: 16px; background: white; border: 2px solid var(--border-color); border-radius: 8px; margin-bottom: 16px;">
+                          <!-- QR code will be inserted here -->
+                        </div>
+                        <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 24px;">
+                          Or enter this key manually: <code id="mfa-secret-key" style="background: #f5f5f5; padding: 4px 8px; border-radius: 4px; font-family: monospace;"></code>
+                        </p>
+                      </div>
+
+                      <div style="margin-bottom: 24px;">
+                        <label for="mfa-verification-code" class="form-label">Enter verification code</label>
+                        <input type="text" id="mfa-verification-code" class="form-input" placeholder="000000" maxlength="6" pattern="[0-9]{6}">
+                      </div>
+
+                      <div id="mfa-setup-message" style="margin-bottom: 16px;"></div>
+
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
+                        <button type="button" class="btn-primary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0; vertical-align: top;" onclick="verifyAndEnableMfa()">
+                          Verify & Enable
+                        </button>
+                        <button type="button" class="btn-secondary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0; vertical-align: top;" onclick="hideMfaSetup()">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Divider between MFA and Backup Codes -->
+                <div style="height: 1px; background: var(--border-color); margin: 20px 0;"></div>
+
+                <!-- Backup Codes Section -->
+                <div class="security-section">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
+                    Backup Codes
+                  </h3>
+
+                  <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                    Generate backup codes to access your account if you lose your MFA device. Each code can only be used once.
+                  </p>
+
+                  <div id="backup-codes-section">
+                    <button type="button" id="generate-backup-codes-btn" class="btn-primary" onclick="showBackupCodesModal()">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                      </svg>
+                      Generate New Backup Codes
+                    </button>
+
+                    <!-- Backup Codes Modal -->
+                    <div id="backup-codes-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+                      <div style="background: white; border-radius: 8px; padding: 32px; max-width: 600px; width: 90%;">
+                        <h3 style="margin-top: 0; margin-bottom: 24px;">Your Backup Recovery Codes</h3>
+
+                        <div style="background: #fef3c7; border: 2px solid #fbbf24; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                          <p style="color: #92400e; margin: 0; font-weight: 600;">
+                            ⚠️ Save these codes now! They will only be shown once.
+                          </p>
+                          <p style="color: #92400e; margin: 8px 0 0 0; font-size: 0.9rem;">
+                            Each code can only be used once. If you lose these codes, you'll need to generate new ones.
+                          </p>
+                        </div>
+
+                        <div id="backup-codes-list" style="background: #f5f5f5; border-radius: 6px; padding: 20px; font-family: monospace; font-size: 1.1rem; line-height: 1.8; white-space: pre-line; text-align: center; margin-bottom: 24px;">
+                          <!-- Backup codes will be inserted here -->
+                        </div>
+
+                        <div id="backup-codes-message" style="margin-bottom: 16px;"></div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
+                          <button type="button" class="btn-primary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0; vertical-align: top;" onclick="downloadBackupCodes()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                              <polyline points="7 10 12 15 17 10"/>
+                              <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Download Codes
+                          </button>
+                          <button type="button" class="btn-secondary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0; vertical-align: top;" onclick="copyBackupCodes()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                            </svg>
+                            Copy to Clipboard
+                          </button>
+                        </div>
+
+                        <div style="margin-top: 16px; text-align: center;">
+                          <button type="button" class="btn-secondary" style="width: 100%; height: 50px; box-sizing: border-box; padding: 12px 24px; margin: 0;" onclick="hideBackupCodesModal()">
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- CONFIG TAB (formerly Mappings) -->
+          <div class="tab-pane" id="tab-mappings">
+            <div class="tab-description">
+              System-wide configuration settings
+            </div>
+
+            <div style="margin-top: 24px;">
+              <!-- CORRELATION PARAMETERS SECTION -->
+              <div style="background: white; border-radius: 8px; padding: 24px; border: 1px solid #e5e7eb; margin-bottom: 32px;">
+                <h3 style="margin: 0 0 16px 0; font-size: 1.3em; color: #1a1a1a; display: flex; align-items: center; gap: 10px;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <circle cx="19" cy="5" r="2"/>
+                    <circle cx="5" cy="19" r="2"/>
+                    <line x1="15" y1="9" x2="17.5" y2="6.5"/>
+                    <line x1="9" y1="15" x2="6.5" y2="17.5"/>
+                  </svg>
+                  Correlation Parameters
+                </h3>
+
+                <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+                  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="16" x2="12" y2="12"/>
+                      <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">About Correlation Parameters</span>
+                  </div>
+                  <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                    These parameters control how many and which correlations are generated system-wide. Adjusting these values affects detection quality and quantity. Changes apply to all future correlation generation runs.
+                  </div>
+                </div>
+
+                <!-- Parameter Inputs -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px;">
+                  <!-- Correlation Threshold -->
+                  <div>
+                    <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 1.05em;">
+                      Correlation Threshold
+                      <span style="font-weight: 400; color: #666; font-size: 0.9em;">(0-100%)</span>
+                    </label>
+                    <div style="position: relative;">
+                      <input type="number" id="correlation-threshold" class="form-input" min="0" max="100" step="1" value="40" style="padding-right: 45px;">
+                      <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #999; font-weight: 600;">%</span>
+                    </div>
+                    <p style="margin: 6px 0 0 0; font-size: 0.85em; color: #666; line-height: 1.4;">
+                      Minimum relevance score. Higher = fewer, higher-quality correlations. <strong>Recommended: 30-50%</strong>
+                    </p>
+                  </div>
+
+                  <!-- Per-Vendor Limit -->
+                  <div>
+                    <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 1.05em;">
+                      Per-Vendor Limit
+                      <span style="font-weight: 400; color: #666; font-size: 0.9em;">(correlations)</span>
+                    </label>
+                    <input type="number" id="correlation-per-vendor" class="form-input" min="1" max="500" step="1" value="60">
+                    <p style="margin: 6px 0 0 0; font-size: 0.85em; color: #666; line-height: 1.4;">
+                      Maximum correlations per vendor (MDE, Splunk, etc.). <strong>Recommended: 25-100</strong>
+                    </p>
+                  </div>
+
+                  <!-- Tech Frequency Limit -->
+                  <div>
+                    <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 1.05em;">
+                      Tech Frequency Limit
+                      <span style="font-weight: 400; color: #666; font-size: 0.9em;">(occurrences)</span>
+                    </label>
+                    <input type="number" id="correlation-tech-freq" class="form-input" min="1" max="100" step="1" value="20">
+                    <p style="margin: 6px 0 0 0; font-size: 0.85em; color: #666; line-height: 1.4;">
+                      Max times a technique appears as first technique. <strong>Recommended: 20-40</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Current Values Display -->
+                <div style="background: #f9fafb; border-radius: 6px; padding: 16px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
+                  <div style="font-weight: 600; color: #333; margin-bottom: 12px;">Current Configuration:</div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 0.95em;">
+                    <div>
+                      <span style="color: #666;">Threshold:</span>
+                      <strong id="current-threshold" style="color: #8b5cf6; margin-left: 6px;">40%</strong>
+                    </div>
+                    <div>
+                      <span style="color: #666;">Per-Vendor:</span>
+                      <strong id="current-per-vendor" style="color: #8b5cf6; margin-left: 6px;">60</strong>
+                    </div>
+                    <div>
+                      <span style="color: #666;">Tech Frequency:</span>
+                      <strong id="current-tech-freq" style="color: #8b5cf6; margin-left: 6px;">20</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 12px;">
+                  <button id="save-correlation-params" style="flex: 1; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; border: none; padding: 14px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);">
+                    Save Configuration
+                  </button>
+                  <button id="reset-correlation-params" style="background: #f3f4f6; color: #666; border: 1px solid #e5e7eb; padding: 14px 24px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    Reset to Current
+                  </button>
+                </div>
+
+                <!-- Status Messages -->
+                <div id="correlation-params-status" style="margin-top: 16px; padding: 12px; border-radius: 6px; display: none;"></div>
+              </div>
+
+              <!-- MAPPINGS SECTION -->
+              <h3 style="margin: 0 0 16px 0; font-size: 1.3em; color: #1a1a1a; display: flex; align-items: center; gap: 10px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                SIEM Mappings
+              </h3>
+
+              <!-- Info Banner -->
+              <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">About Mapping Files</span>
+                </div>
+                <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                  Mapping files tell Archer how to map indicator types (commands, files, registry, network) to your actual index/source names and field schemas. Configure these to match your SIEM environment.
+                </div>
+              </div>
+
+              <!-- Platform Selector -->
+              <div style="margin-bottom: 24px; opacity: 0.6; pointer-events: none;">
+                <label style="display: block; font-weight: 600; color: #9ca3af; margin-bottom: 12px; font-size: 1.05em;">
+                  Select Platform
+                </label>
+                <div style="display: flex; gap: 12px;">
+                  <button class="platform-btn active" data-platform="splunk" style="opacity: 0.6; cursor: not-allowed;" disabled>
+                    <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+                      <circle cx="50" cy="50" r="48" fill="#E91E8C"/>
+                      <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                    Splunk
+                  </button>
+                  <button class="platform-btn" data-platform="mde" style="opacity: 0.6; cursor: not-allowed;" disabled>
+                    <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+                      <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="#0078D4"/>
+                    </svg>
+                    Microsoft Defender
+                  </button>
+                  <button class="platform-btn" data-platform="elastic" style="opacity: 0.6; cursor: not-allowed;" disabled>
+                    <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+                      <rect x="10" y="20" width="70" height="12" rx="6" fill="#FED10A"/>
+                      <rect x="20" y="44" width="70" height="12" rx="6" fill="#00BFB3"/>
+                      <rect x="10" y="68" width="70" height="12" rx="6" fill="#0077CC"/>
+                    </svg>
+                    Elastic
+                  </button>
+                </div>
+              </div>
+
+              <!-- Mapping Configuration -->
+              <div id="mapping-config" style="background: #f9fafb; border-radius: 8px; padding: 24px; border: 1px solid #e5e7eb; opacity: 0.6; pointer-events: none; position: relative;">
+                <!-- Coming Soon Badge -->
+                <div style="position: absolute; top: 16px; right: 16px; background: #6b7280; color: white; padding: 6px 16px; border-radius: 20px; font-size: 0.85em; font-weight: 600; letter-spacing: 0.5px;">
+                  COMING SOON
+                </div>
+
+                <h3 style="margin: 0 0 16px 0; font-size: 1.2em; color: #9ca3af;">
+                  <span id="platform-name">Splunk</span> Mapping Configuration
+                </h3>
+
+                <div style="margin-bottom: 16px;">
+                  <label style="display: block; font-weight: 500; color: #9ca3af; margin-bottom: 8px;">
+                    Index/Source Names
+                    <span style="font-weight: 400; color: #9ca3af; font-size: 0.9em;">(comma-separated)</span>
+                  </label>
+
+                  <!-- Command-line logs -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.9em; color: #9ca3af; margin-bottom: 4px;">Command-line logs:</label>
+                    <input type="text" id="mapping-cmd" class="form-input" placeholder="e.g., windows_security, sysmon, process_events" disabled>
+                  </div>
+
+                  <!-- File activity logs -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.9em; color: #9ca3af; margin-bottom: 4px;">File activity logs:</label>
+                    <input type="text" id="mapping-file" class="form-input" placeholder="e.g., file_events, sysmon_file" disabled>
+                  </div>
+
+                  <!-- Registry logs -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.9em; color: #9ca3af; margin-bottom: 4px;">Registry logs:</label>
+                    <input type="text" id="mapping-reg" class="form-input" placeholder="e.g., registry_events, sysmon_registry" disabled>
+                  </div>
+
+                  <!-- Network logs -->
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.9em; color: #9ca3af; margin-bottom: 4px;">Network logs:</label>
+                    <input type="text" id="mapping-network" class="form-input" placeholder="e.g., network_events, firewall" disabled>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                  <button disabled style="flex: 1; background: #d1d5db; color: #9ca3af; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: not-allowed; transition: all 0.2s;">
+                    Save Configuration
+                  </button>
+                  <button disabled style="flex: 1; background: #d1d5db; color: #9ca3af; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: not-allowed; transition: all 0.2s;">
+                    Test Configuration
+                  </button>
+                  <button disabled style="background: #d1d5db; color: #9ca3af; border: none; padding: 12px 24px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: not-allowed; transition: all 0.2s;">
+                    Load Current
+                  </button>
+                </div>
+
+                <!-- Status Messages -->
+                <div id="mapping-status" style="margin-top: 16px; padding: 12px; border-radius: 6px; display: none;"></div>
+              </div>
+
+              <!-- Documentation Link -->
+              <div style="margin-top: 24px; padding: 16px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+                <p style="margin: 0; color: #666; font-size: 0.95em; line-height: 1.6;">
+                  <strong>Need help?</strong> Check out the
+                  <a href="/docs/MAPPING_SETUP_GUIDE.md" target="_blank" style="color: #8b5cf6; text-decoration: none; font-weight: 500;">Mapping Setup Guide</a>
+                  for detailed instructions on configuring mapping files.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- USERS TAB (Admin Only) -->
+          {% if user and user.role.value == 'admin' %}
+          <div class="tab-pane" id="tab-users">
+            <div class="tab-description">
+              User account management
+            </div>
+
+            <div id="users-list" style="margin-top: 24px;">
+              <!-- Users will be loaded dynamically via JavaScript -->
+              <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
+                Loading users...
+              </p>
+            </div>
+          </div>
+
+          <script>
+          // Load users when the Users tab is clicked
+          async function loadUsers() {
+            try {
+              const response = await fetch('/api/users');
+              const data = await response.json();
+
+              if (data.success && data.users) {
+                displayUsers(data.users);
+              } else {
+                document.getElementById('users-list').innerHTML = `
+                  <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
+                    ${data.error || 'Failed to load users'}
+                  </p>
+                `;
+              }
+            } catch (error) {
+              console.error('Error loading users:', error);
+              document.getElementById('users-list').innerHTML = `
+                <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
+                  Error loading users
+                </p>
+              `;
+            }
+          }
+
+          function displayUsers(users) {
+            if (users.length === 0) {
+              document.getElementById('users-list').innerHTML = `
+                <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
+                  No users found
+                </p>
+              `;
+              return;
+            }
+
+            let html = '<div style="overflow-x: auto;">';
+            html += '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<thead><tr style="border-bottom: 2px solid var(--border-color);">';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Full Name</th>';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Email</th>';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Team</th>';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Role</th>';
+            html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Status</th>';
+            html += '<th style="padding: 12px; text-align: center; font-weight: 600;">Actions</th>';
+            html += '</tr></thead>';
+            html += '<tbody>';
+
+            users.forEach(user => {
+              const youLabel = user.is_current_user ? ' <span style="color: var(--accent); font-weight: 600;">(You)</span>' : '';
+              const statusBadge = user.is_active
+                ? '<span style="color: #10b981;">Active</span>'
+                : '<span style="color: #ef4444;">Inactive</span>';
+              const teamDisplay = user.team ? escapeHtml(user.team) : '<span style="color: var(--text-tertiary);">—</span>';
+
+              // Only show cog icon for users that are not the current user
+              const actionsCell = user.is_current_user
+                ? '<td style="padding: 12px; text-align: center;">—</td>'
+                : `<td style="padding: 12px; text-align: center;">
+                    <button onclick="manageUser(${user.id})" style="background: none; border: none; cursor: pointer; padding: 4px; display: inline-flex; align-items: center; justify-content: center;" title="Manage User">
+                      <svg viewBox="0 0 512 512" fill="var(--text-secondary)" style="width: 20px; height: 20px;">
+                        <path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/>
+                      </svg>
+                    </button>
+                  </td>`;
+
+              html += '<tr style="border-bottom: 1px solid var(--border-color);">';
+              html += `<td style="padding: 12px;">${escapeHtml(user.full_name)}${youLabel}</td>`;
+              html += `<td style="padding: 12px;">${escapeHtml(user.email)}</td>`;
+              html += `<td style="padding: 12px;">${teamDisplay}</td>`;
+              html += `<td style="padding: 12px; text-transform: capitalize;">${escapeHtml(user.role)}</td>`;
+              html += `<td style="padding: 12px;">${statusBadge}</td>`;
+              html += actionsCell;
+              html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            document.getElementById('users-list').innerHTML = html;
+          }
+
+          function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+          }
+
+          // Function to manage a user
+          async function manageUser(userId) {
+            // Fetch user details
+            const response = await fetch('/api/admin/users');
+            const data = await response.json();
+            const user = data.users.find(u => u.id === userId);
+
+            if (!user) {
+              alert('User not found');
+              return;
+            }
+
+            // Show user management modal
+            showUserManagementModal(user);
+          }
+
+          function showUserManagementModal(user) {
+            const modal = document.getElementById('user-management-modal');
+
+            // Populate form fields
+            document.getElementById('manage-user-id').value = user.id;
+            document.getElementById('manage-user-email').value = user.email;
+            document.getElementById('manage-user-name').value = user.full_name;
+            document.getElementById('manage-user-role').value = user.role.toLowerCase();
+            document.getElementById('manage-user-active').checked = user.is_active;
+            document.getElementById('manage-user-title').textContent = `Manage User: ${user.full_name}`;
+
+            // Update the state label
+            updateAccountStateLabel();
+
+            // Show modal
+            modal.style.display = 'flex';
+          }
+
+          function hideUserManagementModal() {
+            document.getElementById('user-management-modal').style.display = 'none';
+            document.getElementById('manage-user-form').reset();
+          }
+
+          function updateAccountStateLabel() {
+            const checkbox = document.getElementById('manage-user-active');
+            const label = document.getElementById('account-state-label');
+
+            if (checkbox.checked) {
+              label.textContent = 'Active';
+              label.style.color = '#10b981'; // Green color for active
+            } else {
+              label.textContent = 'Inactive';
+              label.style.color = '#ef4444'; // Red color for inactive
+            }
+          }
+
+          async function saveUserChanges() {
+            const userId = document.getElementById('manage-user-id').value;
+            const email = document.getElementById('manage-user-email').value.trim();
+            const fullName = document.getElementById('manage-user-name').value.trim();
+            const role = document.getElementById('manage-user-role').value;
+            const isActive = document.getElementById('manage-user-active').checked;
+
+            try {
+              const response = await fetch(`/api/admin/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  email: email,
+                  full_name: fullName,
+                  role: role,
+                  is_active: isActive
+                })
+              });
+
+              const data = await response.json();
+
+              if (data.success) {
+                alert('User updated successfully');
+                hideUserManagementModal();
+                loadUsers(); // Reload the user list
+              } else {
+                alert('Error: ' + (data.error || 'Failed to update user'));
+              }
+            } catch (error) {
+              console.error('Error updating user:', error);
+              alert('An error occurred while updating the user');
+            }
+          }
+
+          async function resetUserPassword() {
+            const userId = document.getElementById('manage-user-id').value;
+            const userName = document.getElementById('manage-user-name').value;
+
+            // Confirmation dialog
+            const confirmed = confirm(`⚠️ Reset Password\n\nAre you sure you want to reset the password for "${userName}"?\n\nThis action will require the user to set a new password.`);
+
+            if (!confirmed) {
+              return;
+            }
+
+            // Use password modal instead of prompt
+            showPasswordInputModal(
+              'Reset Password',
+              `Enter new password for ${userName}:`,
+              async function(newPassword) {
+                if (!newPassword) {
+                  return;
+                }
+
+                try {
+                  const response = await fetch('/api/admin/reset-password', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      user_id: parseInt(userId),
+                      new_password: newPassword
+                    })
+                  });
+
+                  const data = await response.json();
+
+                  if (data.success) {
+                    alert('Password reset successfully');
+                  } else {
+                    alert('Error: ' + (data.error || 'Failed to reset password'));
+                  }
+                } catch (error) {
+                  console.error('Error resetting password:', error);
+                  alert('An error occurred while resetting the password');
+                }
+              }
+            );
+          }
+
+          async function deleteUser() {
+            const userId = document.getElementById('manage-user-id').value;
+            const userName = document.getElementById('manage-user-name').value;
+            const userEmail = document.getElementById('manage-user-email').value;
+
+            // Confirmation dialog
+            const confirmed = confirm(`⚠️ Delete User\n\nAre you sure you want to delete the account: "${userName}"?\n\nThis action cannot be undone.`);
+
+            if (!confirmed) {
+              return;
+            }
+
+            try {
+              const response = await fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              const data = await response.json();
+
+              if (data.success) {
+                alert(`User "${userName}" has been permanently deleted.`);
+                hideUserManagementModal();
+                loadUsers();
+              } else {
+                alert('Error: ' + (data.error || 'Failed to delete user'));
+              }
+            } catch (error) {
+              console.error('Error deleting user:', error);
+              alert('An error occurred while deleting the user');
+            }
+          }
+
+          // Load users when the Users tab is first shown
+          document.addEventListener('DOMContentLoaded', function() {
+            const usersTab = document.querySelector('[data-tab="users"]');
+            if (usersTab) {
+              usersTab.addEventListener('click', function() {
+                // Only load once
+                if (document.getElementById('users-list').querySelector('table') === null) {
+                  loadUsers();
+                }
+              });
+            }
+
+            // Load timeline when Timeline tab is clicked
+            const timelineTab = document.querySelector('[data-tab="timeline"]');
+            if (timelineTab) {
+              timelineTab.addEventListener('click', function() {
+                loadTimeline();
+              });
+            }
+          });
+          </script>
+
+          <!-- User Management Modal -->
+          <div id="user-management-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+            <div style="background: var(--bg-secondary); border-radius: 8px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+              <h3 id="manage-user-title" style="margin-top: 0; margin-bottom: 24px; color: var(--text-primary);">Manage User</h3>
+
+              <form id="manage-user-form" onsubmit="event.preventDefault();">
+                <input type="hidden" id="manage-user-id">
+
+                <div style="padding: 0 2px 0 0;">
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">Email Address</label>
+                    <input type="email" id="manage-user-email" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; background: var(--bg-primary); color: var(--text-primary); box-sizing: border-box;">
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">Full Name</label>
+                    <input type="text" id="manage-user-name" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; background: var(--bg-primary); color: var(--text-primary); box-sizing: border-box;">
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px; align-items: start; margin-bottom: 24px;">
+                  <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">Role</label>
+                    <select id="manage-user-role" class="dropdown-styled" style="width: 100%;">
+                      <option value="standard">Standard User</option>
+                      <option value="admin">Administrator</option>
+                    </select>
+                  </div>
+                  <div style="width: 1px; background: var(--border-color); height: 100%; align-self: stretch; margin: 0 10px;"></div>
+                  <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">State</label>
+                    <label style="display: flex; align-items: center; cursor: pointer; color: var(--text-primary); white-space: nowrap;">
+                      <input type="checkbox" id="manage-user-active" style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;" onchange="updateAccountStateLabel()">
+                      <span id="account-state-label" style="font-weight: 600;">Active</span>
+                    </label>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 4px 0 0 28px; white-space: nowrap;">Inactive accounts cannot log in</p>
+                  </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-bottom: 32px;"></div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; align-items: center;">
+                  <button type="button" class="btn-primary" onclick="saveUserChanges()" style="width: 100%; height: 56px; font-size: 1.1rem; font-weight: 600; padding: 0 24px; margin: 0;">
+                    Save Changes
+                  </button>
+                  <button type="button" class="btn-secondary" onclick="hideUserManagementModal()" style="width: 100%; height: 56px; font-size: 1.1rem; font-weight: 600; padding: 0 24px; margin: 0;">
+                    Cancel
+                  </button>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 20px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <button type="button" class="btn-secondary" onclick="resetUserPassword()" style="width: 100%;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0110 0v4"/>
+                      </svg>
+                      Reset Password
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="deleteUser()" style="width: 100%;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                      </svg>
+                      Delete User
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {% endif %}
+
+          <!-- Security Tab JavaScript -->
+          <script>
+          // ========================================
+          // PASSWORD CHANGE FUNCTIONALITY
+          // ========================================
+
+          // Password validation
+          function validatePasswordStrengthSecurity(password) {
+            if (!password || password.length < 16) return false;
+            if (password.length > 40) return false;
+            if (!/[a-zA-Z]/.test(password)) return false;
+            if (!/[0-9]/.test(password)) return false;
+            if (!/[!@£$%^&()\-_+=\[\]{}:|<>?]/.test(password)) return false;
+            return true;
+          }
+
+          // Check if new passwords match
+          function checkNewPasswordMatch() {
+            const newPassword = document.getElementById('new_password');
+            const confirmPassword = document.getElementById('confirm_new_password');
+            const newValidIcon = document.getElementById('new-password-valid-icon');
+            const confirmValidIcon = document.getElementById('confirm-password-valid-icon');
+
+            if (!newPassword || !confirmPassword) return;
+
+            // Check new password strength
+            if (newPassword.value && validatePasswordStrengthSecurity(newPassword.value)) {
+              newValidIcon.style.display = 'block';
+            } else {
+              newValidIcon.style.display = 'none';
+            }
+
+            // Check if passwords match
+            if (newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value) {
+              confirmValidIcon.style.display = 'block';
+            } else {
+              confirmValidIcon.style.display = 'none';
+            }
+          }
+
+          // Handle password change form submission
+          async function handlePasswordChange(event) {
+            event.preventDefault();
+
+            const currentPassword = document.getElementById('current_password').value;
+            const newPassword = document.getElementById('new_password').value;
+            const confirmPassword = document.getElementById('confirm_new_password').value;
+            const messageDiv = document.getElementById('password-change-message');
+
+            // Validation
+            if (!currentPassword || !newPassword || !confirmPassword) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">All fields are required</div>';
+              return;
+            }
+
+            if (!validatePasswordStrengthSecurity(newPassword)) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">New password must be 16-40 characters and contain letters, numbers, and special characters</div>';
+              return;
+            }
+
+            if (newPassword !== confirmPassword) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">New passwords do not match</div>';
+              return;
+            }
+
+            if (currentPassword === newPassword) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">New password must be different from current password</div>';
+              return;
+            }
+
+            // Submit to server
+            try {
+              const response = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  current_password: currentPassword,
+                  new_password: newPassword
+                })
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                messageDiv.innerHTML = '<div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 6px;">Password changed successfully!</div>';
+                document.getElementById('password-change-form').reset();
+                document.getElementById('new-password-valid-icon').style.display = 'none';
+                document.getElementById('confirm-password-valid-icon').style.display = 'none';
+              } else {
+                messageDiv.innerHTML = `<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">${result.detail || 'Failed to change password'}</div>`;
+              }
+            } catch (error) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">An error occurred. Please try again.</div>';
+            }
+          }
+
+          // ========================================
+          // MFA FUNCTIONALITY
+          // ========================================
+
+          let mfaEnabled = false; // Will be loaded from server
+
+          // Show MFA setup modal
+          function showMfaSetup() {
+            document.getElementById('mfa-setup-modal').style.display = 'flex';
+            loadMfaQrCode();
+          }
+
+          // Hide MFA setup modal
+          function hideMfaSetup() {
+            document.getElementById('mfa-setup-modal').style.display = 'none';
+            document.getElementById('mfa-verification-code').value = '';
+            document.getElementById('mfa-setup-message').innerHTML = '';
+          }
+
+          // Load MFA QR code from server
+          async function loadMfaQrCode() {
+            const qrContainer = document.getElementById('mfa-qr-code');
+            const secretContainer = document.getElementById('mfa-secret-key');
+
+            qrContainer.innerHTML = '<p style="color: #8B9AA3;">Loading QR code...</p>';
+
+            try {
+              const response = await fetch('/api/mfa/setup', {
+                method: 'POST'
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                qrContainer.innerHTML = `<img src="${result.qr_code}" alt="MFA QR Code" style="max-width: 100%; height: auto; border-radius: 8px;">`;
+                secretContainer.textContent = result.secret;
+              } else {
+                qrContainer.innerHTML = `<p style="color: #C53030;">Failed to load QR code</p>`;
+              }
+            } catch (error) {
+              qrContainer.innerHTML = `<p style="color: #C53030;">Error loading QR code</p>`;
+            }
+          }
+
+          // Verify and enable MFA
+          async function verifyAndEnableMfa() {
+            const code = document.getElementById('mfa-verification-code').value;
+            const messageDiv = document.getElementById('mfa-setup-message');
+
+            if (!code || code.length !== 6) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">Please enter a 6-digit code</div>';
+              return;
+            }
+
+            try {
+              const response = await fetch('/api/mfa/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code: code })
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                messageDiv.innerHTML = '<div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 6px;">MFA enabled successfully!</div>';
+                mfaEnabled = true;
+                updateMfaButtons();
+                setTimeout(() => {
+                  hideMfaSetup();
+                }, 2000);
+              } else {
+                messageDiv.innerHTML = `<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">${result.detail || 'Invalid verification code'}</div>`;
+              }
+            } catch (error) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">An error occurred. Please try again.</div>';
+            }
+          }
+
+          // Disable MFA
+          async function disableMfa() {
+            if (!confirm('Are you sure you want to disable Multi-Factor Authentication?')) {
+              return;
+            }
+
+            try {
+              const response = await fetch('/api/mfa/disable', {
+                method: 'POST'
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                mfaEnabled = false;
+                updateMfaButtons();
+                alert('MFA has been disabled');
+              } else {
+                alert('Failed to disable MFA');
+              }
+            } catch (error) {
+              alert('An error occurred. Please try again.');
+            }
+          }
+
+          // Update MFA button states
+          function updateMfaButtons() {
+            const enableBtn = document.getElementById('enable-mfa-btn');
+            const disableBtn = document.getElementById('disable-mfa-btn');
+
+            if (mfaEnabled) {
+              enableBtn.style.display = 'none';
+              disableBtn.style.display = 'inline-flex';
+            } else {
+              enableBtn.style.display = 'inline-flex';
+              disableBtn.style.display = 'none';
+            }
+          }
+
+          // Load MFA status
+          async function loadMfaStatus() {
+            try {
+              const response = await fetch('/api/mfa/status');
+              const result = await response.json();
+
+              if (response.ok) {
+                mfaEnabled = result.enabled;
+                updateMfaButtons();
+              }
+            } catch (error) {
+              console.error('Failed to load MFA status:', error);
+            }
+          }
+
+          // ========================================
+          // BACKUP CODES FUNCTIONALITY
+          // ========================================
+
+          let currentBackupCodes = [];
+
+          // Show backup codes modal
+          function showBackupCodesModal() {
+            if (!confirm('Generating new backup codes will invalidate any existing codes. Continue?')) {
+              return;
+            }
+            document.getElementById('backup-codes-modal').style.display = 'flex';
+            generateBackupCodes();
+          }
+
+          // Hide backup codes modal
+          function hideBackupCodesModal() {
+            document.getElementById('backup-codes-modal').style.display = 'none';
+            document.getElementById('backup-codes-list').textContent = '';
+            document.getElementById('backup-codes-message').innerHTML = '';
+            currentBackupCodes = [];
+          }
+
+          // Generate backup codes
+          async function generateBackupCodes() {
+            const messageDiv = document.getElementById('backup-codes-message');
+            const codesArea = document.getElementById('backup-codes-list');
+
+            codesArea.textContent = 'Generating codes...';
+
+            try {
+              const response = await fetch('/api/backup-codes/generate', {
+                method: 'POST'
+              });
+
+              const result = await response.json();
+
+              if (response.ok) {
+                currentBackupCodes = result.codes;
+
+                // Display codes
+                codesArea.textContent = currentBackupCodes.join('\n');
+              } else {
+                messageDiv.innerHTML = `<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">${result.detail || 'Failed to generate backup codes'}</div>`;
+                codesArea.textContent = '';
+              }
+            } catch (error) {
+              messageDiv.innerHTML = '<div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px;">An error occurred. Please try again.</div>';
+              codesArea.textContent = '';
+            }
+          }
+
+          // Download backup codes as text file
+          function downloadBackupCodes() {
+            if (currentBackupCodes.length === 0) return;
+
+            const text = 'Archer Account Backup Codes\n' +
+                        '================================\n\n' +
+                        'Each code can only be used once.\n' +
+                        'Store these codes in a secure location.\n\n' +
+                        currentBackupCodes.join('\n') + '\n';
+
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'archer-backup-codes.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          }
+
+          // Copy backup codes to clipboard
+          function copyBackupCodes() {
+            if (currentBackupCodes.length === 0) return;
+
+            const text = currentBackupCodes.join('\n');
+
+            navigator.clipboard.writeText(text).then(() => {
+              const copyBtn = document.getElementById('copy-codes-btn');
+              const originalText = copyBtn.innerHTML;
+              copyBtn.innerHTML = '<svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!';
+
+              setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+              }, 2000);
+            }).catch(err => {
+              alert('Failed to copy to clipboard');
+            });
+          }
+
+          // ========================================
+          // TIMELINE FUNCTIONALITY
+          // ========================================
+
+          let currentFilter = 'all';
+          let allActivities = [];
+
+          // Load timeline activities
+          async function loadTimeline() {
+            try {
+              const response = await fetch('/api/activities');
+              const result = await response.json();
+
+              if (response.ok && result.success) {
+                allActivities = result.activities;
+                renderTimeline(allActivities);
+              } else {
+                console.error('Failed to load activities:', result);
+              }
+            } catch (error) {
+              console.error('Error loading timeline:', error);
+            }
+          }
+
+          // Render timeline items
+          function renderTimeline(activities) {
+            const container = document.getElementById('timeline-items');
+
+            if (!activities || activities.length === 0) {
+              container.innerHTML = `
+                <div class="empty-state">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p>No activity yet.</p>
+                </div>
+              `;
+              return;
+            }
+
+            // Build timeline HTML
+            let html = '';
+            activities.forEach(activity => {
+              const icon = getActivityIcon(activity.type);
+              const timestamp = formatTimestamp(activity.created_at);
+              const metadata = activity.metadata || {};
+
+              html += `
+                <div class="timeline-item" data-type="${activity.type}">
+                  <div class="timeline-icon ${activity.type}">
+                    ${icon}
+                  </div>
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <span class="timeline-title">${escapeHtml(activity.title)}</span>
+                      <span class="timeline-time">${timestamp}</span>
+                    </div>
+                    ${activity.description ? `<p class="timeline-description">${escapeHtml(activity.description)}</p>` : ''}
+                    ${renderActivityMetadata(activity.type, metadata)}
+                  </div>
+                </div>
+              `;
+            });
+
+            container.innerHTML = html;
+          }
+
+          // Get activity icon based on type
+          function getActivityIcon(type) {
+            const icons = {
+              'generate': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>',
+              'correlate': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>',
+              'upload': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
+              'library_save': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+              'library_export': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>'
+            };
+            return icons[type] || icons['generate'];
+          }
+
+          // Render activity-specific metadata
+          function renderActivityMetadata(type, metadata) {
+            if (!metadata || Object.keys(metadata).length === 0) {
+              return '';
+            }
+
+            let html = '<div class="timeline-metadata">';
+
+            if (type === 'generate' || type === 'correlate') {
+              if (metadata.detection_count) {
+                html += `<span class="metadata-badge">📊  ${metadata.detection_count} detections</span>`;
+              }
+              if (metadata.correlation_count) {
+                html += `<span class="metadata-badge">🔗  ${metadata.correlation_count} correlations</span>`;
+              }
+              if (metadata.platform) {
+                // Use vendor icons for Splunk and MDE
+                let platformIcon = '';
+                const platform = metadata.platform.toLowerCase();
+
+                if (platform === 'splunk') {
+                  platformIcon = `<svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                    <defs>
+                      <radialGradient id="splunkGradient-${metadata.detection_count}" cx="30%" cy="30%">
+                        <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                        <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                      </radialGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="48" fill="url(#splunkGradient-${metadata.detection_count})"/>
+                    <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  </svg>`;
+                } else if (platform === 'microsoft defender' || platform === 'mde') {
+                  platformIcon = `<svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                    <defs>
+                      <linearGradient id="defenderGradient-${metadata.detection_count}" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                        <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient-${metadata.detection_count})"/>
+                  </svg>`;
+                } else {
+                  platformIcon = '🖥️  ';
+                }
+
+                html += `<span class="metadata-badge">${platformIcon}${metadata.platform}</span>`;
+              }
+            } else if (type === 'upload') {
+              if (metadata.filename) {
+                html += `<span class="metadata-badge">📄  ${escapeHtml(metadata.filename)}</span>`;
+              }
+            } else if (type === 'library_save' || type === 'library_export') {
+              if (metadata.count) {
+                html += `<span class="metadata-badge">📦  ${metadata.count} items</span>`;
+              }
+            }
+
+            html += '</div>';
+            return html;
+          }
+
+          // Format timestamp
+          function formatTimestamp(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+            if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          }
+
+          // Escape HTML to prevent XSS
+          function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+          }
+
+          // Filter timeline by activity type
+          function filterTimeline(filter) {
+            currentFilter = filter;
+
+            // Update active filter button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+              btn.classList.remove('active');
+            });
+            document.querySelector(`[data-filter="${filter}"]`)?.classList.add('active');
+
+            // Filter activities
+            let filtered = allActivities;
+            if (filter !== 'all') {
+              // Map filter types to activity types
+              const filterMap = {
+                'actor': 'generate',
+                'cve': 'generate'
+              };
+              // For now, just show all since we need to add more metadata to distinguish
+              // In the future, we can filter based on metadata.source_type or similar
+            }
+
+            renderTimeline(filtered);
+          }
+
+          // Setup timeline filter buttons
+          document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(btn => {
+              btn.addEventListener('click', function() {
+                const filter = this.getAttribute('data-filter');
+                filterTimeline(filter);
+              });
+            });
+          });
+
+          // ========================================
+          // INITIALIZATION
+          // ========================================
+
+          document.addEventListener('DOMContentLoaded', function() {
+            // Password change event listeners
+            const newPasswordInput = document.getElementById('new_password');
+            const confirmPasswordInput = document.getElementById('confirm_new_password');
+            const passwordForm = document.getElementById('password-change-form');
+
+            if (newPasswordInput) {
+              newPasswordInput.addEventListener('input', checkNewPasswordMatch);
+            }
+
+            if (confirmPasswordInput) {
+              confirmPasswordInput.addEventListener('input', checkNewPasswordMatch);
+            }
+
+            if (passwordForm) {
+              passwordForm.addEventListener('submit', handlePasswordChange);
+            }
+
+            // Load MFA status when Security tab is clicked
+            const securityTab = document.querySelector('[data-tab="security"]');
+            if (securityTab) {
+              securityTab.addEventListener('click', function() {
+                loadMfaStatus();
+              });
+            }
+
+            // Close MFA modal when clicking outside
+            const mfaModal = document.getElementById('mfa-setup-modal');
+            if (mfaModal) {
+              mfaModal.addEventListener('click', function(e) {
+                if (e.target === mfaModal) {
+                  hideMfaSetup();
+                }
+              });
+            }
+
+            // Close backup codes modal when clicking outside
+            const backupCodesModal = document.getElementById('backup-codes-modal');
+            if (backupCodesModal) {
+              backupCodesModal.addEventListener('click', function(e) {
+                if (e.target === backupCodesModal) {
+                  hideBackupCodesModal();
+                }
+              });
+            }
+          });
+          </script>
+
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Footer -->
+    <footer style="margin-top: 80px; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%); padding: 30px 0; background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%); border-top: 3px solid #C53030; text-align: center;">
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+        <!-- GitHub Link -->
+        <div style="flex: 1; min-width: 200px; text-align: left;">
+          <a href="https://github.com/cmdaltr" target="_blank" rel="noopener noreferrer" style="color: #8B9AA3; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95em; transition: color 0.2s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            <span style="font-weight: 500;">@cmdaltr</span>
+          </a>
+        </div>
+
+        <!-- Quote -->
+        <div style="flex: 2; min-width: 300px; text-align: center;">
+          <p style="color: #a8b5bd; font-style: italic; font-size: 0.95em; margin: 0; line-height: 1.5;">
+            "Even if you can't see something, it doesn't mean it isn't there"<br>
+            <span style="font-size: 0.9em; color: #8B9AA3;">— Archer, Small Soldiers</span>
+          </p>
+        </div>
+
+        <!-- Spacer for balance -->
+        <div style="flex: 1; min-width: 200px;"></div>
+      </div>
+
+      <!-- Timestamp and Attribution -->
+      <div style="text-align: center; margin-top: 20px; color: #8B9AA3; font-size: 0.9em;">
+        <br>
+        <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
+          Vendor logos are stylized representations. Splunk®, Microsoft®, Google® and Elastic® are registered trademarks of their respective companies.
+        </span>
+      </div>
+    </footer>
+
+    <script src="{{ url_for('static', path='js/common.js') }}?v={{ request.app.state.asset_version }}"></script>
+    <script src="{{ url_for('static', path='js/tabs.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+    <script src="{{ url_for('static', path='js/validation.js') }}?v={{ request.app.state.asset_version }}"></script>
+    <script src="{{ url_for('static', path='js/profile.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
+        // Dark mode functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const sunIcon = darkModeToggle.querySelector('.sun-icon');
+        const moonIcon = darkModeToggle.querySelector('.moon-icon');
+        const html = document.documentElement;
+
+        // Check for saved theme preference or default to 'light'
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', currentTheme);
+        updateIcons(currentTheme);
+
+        darkModeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcons(newTheme);
+        });
+
+        function updateIcons(theme) {
+            if (theme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            }
+        }
+    </script>
+
+    <!-- Mappings Tab Styling and Functionality -->
+    <style>
+        .platform-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            background: white;
+            color: #1f2937;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .platform-btn:hover {
+            border-color: #8b5cf6;
+            background: #f3f4f6;
+        }
+
+        .platform-btn.active {
+            border-color: #8b5cf6;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            color: #6d28d9;
+        }
+
+        [data-theme="dark"] .platform-btn {
+            background: #2d2d2d;
+            border-color: #404040;
+            color: #f0f0f0;
+        }
+
+        [data-theme="dark"] .platform-btn:hover {
+            background: #3d3d3d;
+            border-color: #8b5cf6;
+        }
+
+        [data-theme="dark"] .platform-btn.active {
+            background: linear-gradient(135deg, #667eea25 0%, #764ba225 100%);
+            border-color: #8b5cf6;
+            color: #a78bfa;
+        }
+    </style>
+
+    <script>
+        // Correlation Parameters Functionality
+        async function loadCorrelationParams() {
+            try {
+                const response = await fetch('/api/correlation/params');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update input fields
+                    document.getElementById('correlation-threshold').value = Math.round(data.threshold * 100);
+                    document.getElementById('correlation-per-vendor').value = data.per_vendor;
+                    document.getElementById('correlation-tech-freq').value = data.tech_freq;
+
+                    // Update current values display
+                    document.getElementById('current-threshold').textContent = Math.round(data.threshold * 100) + '%';
+                    document.getElementById('current-per-vendor').textContent = data.per_vendor;
+                    document.getElementById('current-tech-freq').textContent = data.tech_freq;
+                }
+            } catch (error) {
+                console.error('Error loading correlation parameters:', error);
+            }
+        }
+
+        async function saveCorrelationParams() {
+            const threshold = parseFloat(document.getElementById('correlation-threshold').value) / 100;
+            const perVendor = parseInt(document.getElementById('correlation-per-vendor').value);
+            const techFreq = parseInt(document.getElementById('correlation-tech-freq').value);
+
+            // Validate inputs
+            if (threshold < 0 || threshold > 1) {
+                showCorrelationStatus('Threshold must be between 0-100%', 'error');
+                return;
+            }
+
+            if (perVendor < 1) {
+                showCorrelationStatus('Per-vendor limit must be at least 1', 'error');
+                return;
+            }
+
+            if (techFreq < 1) {
+                showCorrelationStatus('Tech frequency limit must be at least 1', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/correlation/params', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        threshold: threshold,
+                        per_vendor: perVendor,
+                        tech_freq: techFreq
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showCorrelationStatus('Configuration saved successfully! Changes will apply to future correlation generation runs.', 'success');
+                    // Reload to update current values
+                    loadCorrelationParams();
+                } else {
+                    showCorrelationStatus(data.message || 'Failed to save configuration', 'error');
+                }
+            } catch (error) {
+                showCorrelationStatus('Error saving configuration: ' + error.message, 'error');
+            }
+        }
+
+        function resetCorrelationParams() {
+            loadCorrelationParams();
+            showCorrelationStatus('Reset to current configuration', 'info');
+        }
+
+        function showCorrelationStatus(message, type) {
+            const statusDiv = document.getElementById('correlation-params-status');
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = message;
+
+            // Style based on type
+            if (type === 'success') {
+                statusDiv.style.background = '#d1fae5';
+                statusDiv.style.color = '#065f46';
+                statusDiv.style.border = '1px solid #6ee7b7';
+            } else if (type === 'error') {
+                statusDiv.style.background = '#fee2e2';
+                statusDiv.style.color = '#991b1b';
+                statusDiv.style.border = '1px solid #fca5a5';
+            } else {
+                statusDiv.style.background = '#dbeafe';
+                statusDiv.style.color = '#1e40af';
+                statusDiv.style.border = '1px solid #93c5fd';
+            }
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Event listeners for correlation parameters
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load current params when page loads
+            loadCorrelationParams();
+
+            // Save button
+            document.getElementById('save-correlation-params')?.addEventListener('click', saveCorrelationParams);
+
+            // Reset button
+            document.getElementById('reset-correlation-params')?.addEventListener('click', resetCorrelationParams);
+        });
+
+        // Mappings Tab Functionality
+        let currentPlatform = 'splunk';
+
+        function selectPlatform(platform) {
+            currentPlatform = platform;
+
+            // Update button states
+            document.querySelectorAll('.platform-btn').forEach(btn => {
+                if (btn.dataset.platform === platform) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Update platform name
+            const platformNames = {
+                'splunk': 'Splunk',
+                'mde': 'Microsoft Defender',
+                'elastic': 'Elastic'
+            };
+            document.getElementById('platform-name').textContent = platformNames[platform];
+
+            // Load configuration for this platform
+            loadMappingConfig();
+        }
+
+        async function loadMappingConfig() {
+            try {
+                const response = await fetch(`/api/mappings/load?platform=${currentPlatform}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Populate fields with current configuration
+                    document.getElementById('mapping-cmd').value = data.mappings.cmd || '';
+                    document.getElementById('mapping-file').value = data.mappings.file || '';
+                    document.getElementById('mapping-reg').value = data.mappings.reg || '';
+                    document.getElementById('mapping-network').value = data.mappings.network || '';
+
+                    showMappingStatus('Configuration loaded successfully', 'success');
+                } else {
+                    showMappingStatus('No existing configuration found. Please configure and save.', 'info');
+                }
+            } catch (error) {
+                showMappingStatus('Error loading configuration: ' + error.message, 'error');
+            }
+        }
+
+        async function saveMappingConfig() {
+            const mappings = {
+                platform: currentPlatform,
+                cmd: document.getElementById('mapping-cmd').value,
+                file: document.getElementById('mapping-file').value,
+                reg: document.getElementById('mapping-reg').value,
+                network: document.getElementById('mapping-network').value
+            };
+
+            try {
+                const formData = new FormData();
+                formData.append('platform', mappings.platform);
+                formData.append('cmd', mappings.cmd);
+                formData.append('file', mappings.file);
+                formData.append('reg', mappings.reg);
+                formData.append('network', mappings.network);
+
+                const response = await fetch('/api/mappings/save', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMappingStatus('Configuration saved successfully! Detections will now use your custom mappings.', 'success');
+                } else {
+                    showMappingStatus('Error saving configuration: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showMappingStatus('Error saving configuration: ' + error.message, 'error');
+            }
+        }
+
+        async function testMappingConfig() {
+            const mappings = {
+                platform: currentPlatform,
+                cmd: document.getElementById('mapping-cmd').value,
+                file: document.getElementById('mapping-file').value,
+                reg: document.getElementById('mapping-reg').value,
+                network: document.getElementById('mapping-network').value
+            };
+
+            // Validate that at least one field is filled
+            const hasValues = mappings.cmd || mappings.file || mappings.reg || mappings.network;
+            if (!hasValues) {
+                showMappingStatus('Please enter at least one index/source name to test', 'error');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('platform', mappings.platform);
+                formData.append('cmd', mappings.cmd);
+                formData.append('file', mappings.file);
+                formData.append('reg', mappings.reg);
+                formData.append('network', mappings.network);
+
+                const response = await fetch('/api/mappings/test', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMappingStatus('Configuration is valid! All index names are properly formatted.', 'success');
+                } else {
+                    showMappingStatus('Validation error: ' + (data.error || 'Invalid configuration'), 'error');
+                }
+            } catch (error) {
+                showMappingStatus('Error testing configuration: ' + error.message, 'error');
+            }
+        }
+
+        function showMappingStatus(message, type) {
+            const statusDiv = document.getElementById('mapping-status');
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = message;
+
+            const colors = {
+                'success': { bg: '#d1fae5', border: '#10b981', text: '#065f46' },
+                'error': { bg: '#fee2e2', border: '#ef4444', text: '#991b1b' },
+                'info': { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' }
+            };
+
+            const color = colors[type] || colors['info'];
+            statusDiv.style.background = color.bg;
+            statusDiv.style.borderLeft = `4px solid ${color.border}`;
+            statusDiv.style.color = color.text;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+
+    {% endblock %}
+</body>
+</html>

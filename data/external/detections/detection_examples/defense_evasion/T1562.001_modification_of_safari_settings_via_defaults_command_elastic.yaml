@@ -1,0 +1,46 @@
+technique_id: T1562.001
+technique_name: Modification of Safari Settings via Defaults Command
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n  process.name == \"defaults\" and process.args like~ (\"com.apple.Safari\"\
+  , \"write\") and \n  not process.args like~ (\"UniversalSearchEnabled\", \"SuppressSearchSuggestions\"\
+  , \"WebKitTabToLinksPreferenceKey\", \n                          \"ShowFullURLInSmartSearchField\"\
+  , \"com.apple.Safari.ContentPageGroupIdentifier.WebKit2TabsToLinks\")"
+explanation: 'Identifies changes to the Safari configuration using the built-in defaults
+  command. Adversaries may attempt to enable or
+
+  disable certain Safari settings, such as enabling JavaScript from Apple Events to
+  ease in the hijacking of the users
+
+  browser.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6482255d-f468-45ea-a5b3-d3a7de1331ae.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Changes to Safari settings for legitimate user preferences can trigger alerts,
+    such as enabling or disabling search suggestions. Users can create exceptions
+    for these specific settings by excluding them from the detection rule.
+
+    - System administrators may use the defaults command to configure Safari settings
+    across multiple devices for compliance or user experience improvements. These
+    actions can be whitelisted by identifying the specific process arguments used
+    in thes'
+  mitigation: Review investigation guide for details
+references:
+- https://objectivebythesea.com/v2/talks/OBTS_v2_Zohar.pdf
+has_investigation_guide: true
+risk_score: 47

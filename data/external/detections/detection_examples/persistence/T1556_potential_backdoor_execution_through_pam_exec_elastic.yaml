@@ -1,0 +1,59 @@
+technique_id: T1556
+technique_name: Potential Backdoor Execution Through PAM_EXEC
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by process.entity_id with maxspan=3s\n  [process where host.os.type\
+  \ == \"linux\" and event.type == \"change\" and event.action == \"session_id_change\"\
+  \ and process.name in (\"ssh\", \"sshd\")]\n  [process where host.os.type == \"\
+  linux\" and event.type == \"start\" and event.action == \"exec\" and process.parent.name\
+  \ in (\"ssh\", \"sshd\") and\n   process.args_count == 2 and (\n     process.name\
+  \ like (\"perl*\", \"python*\", \"php*\", \"ruby*\", \"lua*\") or\n     process.executable\
+  \ like (\n       \"/tmp/*\", \"/var/tmp/*\", \"/dev/shm/*\", \"./*\", \"/boot/*\"\
+  , \"/sys/*\", \"/lost+found/*\", \"/media/*\", \"/proc/*\",\n       \"/var/backups/*\"\
+  , \"/var/log/*\", \"/var/mail/*\", \"/var/spool/*\") or\n     process.name like\
+  \ \".*\"\n   )]"
+explanation: 'This rule detects SSH session ID change followed by a suspicious SSHD
+  child process, this may
+
+  indicate the successful execution of a potentially malicious process through the
+  Pluggable
+
+  Authentication Module (PAM) utility. PAM is a framework used by Linux systems to
+  authenticate
+
+  users. Adversaries may create malicious PAM modules that grant them persistence
+  onto the
+
+  target every time a user logs in by executing a backdoor script or command.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/96f29282-ffcc-4ce7-834b-b17aee905568.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts executed via SSH may trigger the rule if they
+    use scripting languages like Perl, Python, or PHP. To handle this, identify and
+    whitelist known administrative scripts and their execution paths.
+
+    - Automated backup or maintenance processes that run from directories like /var/backups
+    or /var/log can be mistaken for malicious activity. Exclude these processes by
+    specifying their exact paths and names in the exception list.
+
+    - Development or t'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/approaching-the-summit-on-persistence
+- https://www.group-ib.com/blog/pluggable-authentication-module/
+has_investigation_guide: true
+risk_score: 47

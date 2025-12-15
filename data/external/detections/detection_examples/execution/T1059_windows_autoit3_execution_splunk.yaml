@@ -1,0 +1,53 @@
+technique_id: T1059
+technique_name: Windows AutoIt3 Execution
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "| tstats `security_content_summariesonly` \n  count min(_time) as firstTime\
+  \ \n  max(_time) as lastTime \nfrom datamodel=Endpoint.Processes where \n(\n  Processes.process_name\
+  \ = \"autoit*.exe\" \n  OR \n  Processes.original_file_name = \"autoit*.exe\"\n\
+  )\nby Processes.action Processes.dest Processes.original_file_name \n   Processes.parent_process\
+  \ Processes.parent_process_exec \n   Processes.parent_process_guid Processes.parent_process_id\n\
+  \   Processes.parent_process_name Processes.parent_process_path \n   Processes.process\
+  \ Processes.process_exec Processes.process_guid \n   Processes.process_hash Processes.process_id\
+  \ Processes.process_integrity_level\n   Processes.process_name Processes.process_path\
+  \ Processes.user \n   Processes.user_id Processes.vendor_product\n| `drop_dm_object_name(Processes)`\
+  \ \n| `security_content_ctime(firstTime)` \n| `security_content_ctime(lastTime)`\n\
+  | `windows_autoit3_execution_filter`"
+explanation: "The following analytic detects the execution of AutoIt3, a scripting\n\
+  language often used for automating Windows GUI tasks and general scripting. \nIt\
+  \ identifies instances where AutoIt3 or its variants are executed by searching for\
+  \ process names\nor original file names matching 'autoit3.exe'. \nThis activity\
+  \ is significant because attackers frequently use AutoIt3 to automate malicious\
+  \ actions, such as executing malware. \nIf confirmed malicious, this activity could\
+  \ lead to unauthorized code execution, \nsystem compromise, or further propagation\
+  \ of malware within the environment."
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/0ecb40d9-492b-4a57-9f87-515dd742794c/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: False positives may be present if the application is legitimately used,
+    filter by user or endpoint as needed.
+  mitigation: Review context and user activity
+references:
+- https://github.com/PaloAltoNetworks/Unit42-timely-threat-intel/blob/main/2023-10-25-IOCs-from-DarkGate-activity.txt
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059/autoit/sysmon.log

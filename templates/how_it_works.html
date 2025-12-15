@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+    <title>Archer - Help</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}">
+    <style>
+        html {
+            overflow-y: scroll;
+            overflow-x: hidden;
+        }
+
+        
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        #main-content {
+            flex: 1;
+        }
+
+        /* Dark mode CSS variables */
+        
+
+        
+
+      /* Dark header bar at top - matches footer styling */
+      
+
+      [data-theme="dark"] 
+
+        body {
+            background: linear-gradient(to bottom, #f5f7f8 0%, #e8eef1 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+
+        [data-theme="dark"] body {
+            background: linear-gradient(to bottom, #1a1a1a 0%, #0f0f0f 100%);
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 3em;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        /* Global navigation buttons */
+        
+
+        @media (max-width: 1400px) {
+            
+        }
+
+        
+
+        [data-theme="dark"] 
+
+        
+
+        
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: calc((100vw - 1320px) / 2);
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.95);
+            transition: all 0.2s;
+            z-index: 1000;
+        }
+
+        [data-theme="dark"] .back-link {
+            background: rgba(45, 45, 45, 0.95);
+        }
+
+        .back-link:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .how-archer-link {
+            position: fixed;
+            top: 20px;
+            right: calc((100vw - 1320px) / 2);
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.95em;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            min-height: 40px;
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.95);
+            transition: all 0.2s;
+            z-index: 1000;
+            box-sizing: border-box;
+        }
+
+        [data-theme="dark"] .how-archer-link {
+            background: rgba(45, 45, 45, 0.95);
+        }
+
+        .how-archer-link:hover {
+            background: var(--accent);
+            color: white;
+        }
+        .section {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 2.5em;
+            margin-bottom: 2em;
+            box-shadow: 0 4px 12px rgba(31, 45, 53, 0.15);
+        }
+
+        [data-theme="dark"] .section {
+            background: rgba(45, 45, 45, 0.7);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .section h2 {
+            color: #1f2d35;
+            border-bottom: 3px solid #C53030;
+            padding-bottom: 0.5em;
+            margin-top: 0;
+            font-size: 1.8em;
+        }
+
+        [data-theme="dark"] .section h2 {
+            color: var(--text-primary);
+            border-bottom-color: var(--accent);
+        }
+
+        .section h3 {
+            color: #2a3a44;
+            margin-top: 1.5em;
+            font-size: 1.4em;
+        }
+
+        [data-theme="dark"] .section h3 {
+            color: var(--text-primary);
+        }
+
+        .section h4 {
+            color: #3a4a54;
+            margin-top: 1.2em;
+            font-size: 1.2em;
+        }
+
+        [data-theme="dark"] .section h4 {
+            color: var(--text-secondary);
+        }
+
+        [data-theme="dark"] .section p,
+        [data-theme="dark"] .section li {
+            color: var(--text-secondary);
+        }
+
+        [data-theme="dark"] code {
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+        }
+
+        /* Tab Navigation Styling */
+        .tabs-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(31, 45, 53, 0.15);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            margin-bottom: 2em;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        .tabs-header {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+            border-bottom: 3px solid var(--accent);
+            padding: 0;
+            width: 100%;
+        }
+
+        [data-theme="dark"] .tabs-header {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+        }
+
+        .tab-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 1.2em 1.5em;
+            border: none;
+            background: transparent;
+            color: #8B9AA3;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            border-bottom: 3px solid transparent;
+            min-width: 0;
+            white-space: nowrap;
+        }
+
+        .tab-button:hover:not(.active) {
+            background: rgba(197, 48, 48, 0.15);
+            color: #a8b5bd;
+        }
+
+        .tab-button.active {
+            background: var(--bg-secondary);
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-button.active:hover {
+            background: var(--bg-secondary);
+        }
+
+        .tab-icon {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
+        }
+
+        .tabs-content {
+            padding: 0;
+            min-height: 400px;
+            font-family: 'Roboto', Arial, sans-serif;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .tab-pane {
+            display: none;
+            animation: fadeIn 0.3s ease;
+            padding: 2.5em;
+            font-family: 'Roboto', Arial, sans-serif;
+            font-size: 15.96px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .tab-pane p:not(h1 p):not(h2 p):not(h3 p):not(h4 p),
+        .tab-pane li,
+        .tab-pane td,
+        .tab-pane span:not(.speed-badge):not(.expand-btn) {
+            font-family: 'Roboto', Arial, sans-serif;
+            font-size: 15.96px;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .tab-pane {
+                padding: 1.5em;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .tabs-header {
+                flex-direction: column;
+            }
+
+            .tab-button {
+                border-bottom: 1px solid var(--border-color);
+                border-left: 3px solid transparent;
+            }
+
+            .tab-button.active {
+                border-bottom: 1px solid var(--border-color);
+                border-left-color: var(--accent);
+            }
+
+            .tab-pane {
+                padding: 1.5em;
+            }
+        }
+
+        .diagram {
+            margin: 2em 0;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        .diagram img {
+            max-width: 100%;
+            border: 1px solid #e5e8eb;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            order: 1;
+        }
+        .diagram-caption {
+            margin-top: 1em;
+            color: #666;
+            font-style: italic;
+            order: 2;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        .library-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        .library-table th {
+            background: #1f2d35;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 500;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        .library-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e8eb;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        .library-table tr:hover {
+            background: #f8f9fa;
+        }
+        .workflow-step {
+            background: #f8f9fa;
+            border-left: 4px solid #C53030;
+            padding: 1.5em;
+            margin: 1em 0;
+            border-radius: 4px;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        .workflow-step h4 {
+            margin-top: 0;
+            color: #C53030;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5em;
+            margin: 2em 0;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        .feature-card {
+            background: #f8f9fa;
+            padding: 0.75em;
+            border-radius: 8px;
+            border: 1px solid #e5e8eb;
+            font-family: 'Roboto', Arial, sans-serif;
+            position: relative;
+        }
+        .feature-card h4 {
+            color: #C53030;
+            margin-top: 0;
+            margin-bottom: 0.4em;
+            font-family: 'Roboto', Arial, sans-serif;
+            padding-right: 100px;
+        }
+        .feature-card p {
+            margin: 0.3em 0;
+            line-height: 1.4;
+        }
+        .feature-card ul {
+            margin: 0.3em 0;
+            padding-left: 1.5em;
+        }
+        .feature-card li {
+            margin: 0.2em 0;
+            line-height: 1.4;
+        }
+        .speed-badge {
+            background: #C53030;
+            color: white;
+            padding: 0.3em 0.8em;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: 500;
+            display: inline-block;
+            font-family: 'Roboto', Arial, sans-serif;
+            position: absolute;
+            top: 0.75em;
+            right: 0.75em;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 0.2em 0.5em;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #C53030;
+        }
+        pre {
+            background: #1f2d35;
+            color: #e0e0e0;
+            padding: 1.5em;
+            border-radius: 8px;
+            overflow-x: auto;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        pre code {
+            background: none;
+            color: #e0e0e0;
+            padding: 0;
+        }
+        .callout {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1em 1.5em;
+            margin: 1.5em 0;
+            border-radius: 4px;
+        }
+        .callout-success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        .callout-info {
+            background: #d1ecf1;
+            border-left-color: #17a2b8;
+        }
+
+        /* Footer Styling */
+        .page-footer {
+            margin-top: 60px;
+            margin-left: calc(-50vw + 50%);
+            margin-right: calc(-50vw + 50%);
+            margin-bottom: 0 !important;
+            padding: 30px 0 30px 0;
+            background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+            border-top: 3px solid #C53030;
+            text-align: center;
+            width: 100vw;
+            box-sizing: border-box;
+        }
+
+        .page-footer .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .page-footer .github-link {
+            flex: 1;
+            min-width: 200px;
+            text-align: left;
+        }
+
+        .page-footer .github-link a {
+            color: #8B9AA3;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+            transition: color 0.2s;
+        }
+
+        .page-footer .github-link a:hover {
+            color: #C53030;
+        }
+
+        .page-footer .timestamp {
+            color: #8B9AA3;
+            font-size: 0.85em;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(139, 154, 163, 0.2);
+        }
+
+        .page-footer .quote {
+            flex: 2;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .page-footer .quote p {
+            color: #a8b5bd;
+            font-style: italic;
+            font-size: 0.95em;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .page-footer .quote span {
+            font-size: 0.9em;
+            color: #8B9AA3;
+        }
+
+        .page-footer .spacer {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        /* FAQ Styling */
+        .faq-item {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1em;
+            transition: all 0.3s ease;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+
+        [data-theme="dark"] .faq-item {
+            background: rgba(45, 45, 45, 0.5);
+        }
+
+        .faq-item:hover {
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] .faq-item:hover {
+            background: rgba(45, 45, 45, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .faq-question {
+            padding: 1.2em 1.5em;
+            font-weight: 600;
+            font-size: 1.05em;
+            color: var(--text-primary);
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            font-family: 'Roboto', Arial, sans-serif;
+            gap: 12px;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .faq-question::-webkit-details-marker {
+            display: none;
+        }
+
+        .faq-question::before {
+            content: '+';
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #C53030;
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        [data-theme="dark"] .faq-question::before {
+            color: var(--accent);
+        }
+
+        .faq-item[open] .faq-question::before {
+            content: '−';
+            transform: rotate(180deg);
+        }
+
+        .faq-question:hover {
+            color: #C53030;
+        }
+
+        [data-theme="dark"] .faq-question:hover {
+            color: var(--accent);
+        }
+
+        .faq-answer {
+            padding: 0 1.5em 1.5em 3.5em;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            animation: fadeIn 0.3s ease;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+
+        .faq-answer p {
+            margin: 0.5em 0;
+        }
+
+        .faq-answer ul, .faq-answer ol {
+            margin: 0.5em 0;
+            padding-left: 1.5em;
+        }
+
+        .faq-answer li {
+            margin: 0.3em 0;
+        }
+
+        .faq-answer strong {
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <a id="top"></a>
+    <!-- Global Navigation Controls (Profile|Logout|Home|Dark for authenticated, Login|Home|Dark for guests) -->
+    {% include "partials/nav_controls.html" %}
+
+    <div style="flex: 1; width: 100%;">
+    <div class="container" style="width: 1320px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
+
+        <div class="header" style="text-align: center; margin-bottom: 3em;">
+            <div style="margin-bottom: 1em; margin-top: 28px;">
+                <img src="{{ url_for('static', path='images/archer_banner.png') }}" alt="Archer" style="width: auto; height: auto; max-height: 220px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
+            </div>
+            <p style="color: #666666; font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px;">
+                HOW ARCHER WORKS INC. ARCHITECTURE, LIBRARIES AND AI
+            </p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tabs-container">
+            <div class="tabs-header" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
+                <button class="tab-button active" data-tab="overview">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    <span>Overview</span>
+                </button>
+                <button class="tab-button" data-tab="architecture">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="4" y="4" width="6" height="6"/>
+                        <rect x="14" y="4" width="6" height="6"/>
+                        <rect x="4" y="14" width="6" height="6"/>
+                        <rect x="14" y="14" width="6" height="6"/>
+                    </svg>
+                    <span>Architecture</span>
+                </button>
+                <button class="tab-button" data-tab="libraries">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    <span>Libraries</span>
+                </button>
+                <button class="tab-button" data-tab="ai">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6"/>
+                        <path d="m4.93 4.93 4.24 4.24m5.66 5.66 4.24 4.24"/>
+                        <path d="M1 12h6m6 0h6"/>
+                        <path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24"/>
+                    </svg>
+                    <span>AI</span>
+                </button>
+                <button class="tab-button" data-tab="workflow">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6"/>
+                        <path d="m15.4 17.4 3.2 3.2"/>
+                        <path d="M6.4 20.6 3.2 17.4"/>
+                        <path d="M1 12h6"/>
+                        <path d="M17 12h6"/>
+                        <path d="m5.6 6.4-3.2-3.2"/>
+                        <path d="M20.6 3.2l-3.2 3.2"/>
+                    </svg>
+                    <span>Workflow</span>
+                </button>
+                <button class="tab-button" data-tab="attack-flow">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                    </svg>
+                    <span>Attack Flow</span>
+                </button>
+            </div>
+
+            <!-- Tab Content Panes -->
+            <div class="tabs-content">
+            <!-- Overview Tab -->
+            <div class="tab-pane active" id="tab-overview">
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                Archer is an <strong>automated threat detection generator</strong> that transforms MITRE ATT&CK threat intelligence
+                into production-ready detection queries for Splunk and Microsoft Defender for Endpoint (MDE). It combines <strong>machine learning from community queries</strong>, <strong>MITRE ATT&CK intelligence</strong>,
+                and <strong>optional AI enhancement</strong> to automatically generate comprehensive, correlated detection coverage in minutes.
+                Its architecture prioritizes speed through caching, parallel processing, and async operations, while maintaining
+                high accuracy through intelligent validation and correlation.
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🎯 What It Does</h4>
+                    <ul>
+                        <li>6 generation modes</li>
+                        <li>Multi-vendor queries</li>
+                        <li>Multi-stage attack correlations</li>
+                        <li>MITRE ATT&CK Flow visualizations</li>
+                        <li>OSINT enhancement</li>
+                        <li>Adversary emulation integration</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>⚡ Why It's Fast</h4>
+                    <ul>
+                        <li>Local OSINT repos (no API rate limits)</li>
+                        <li>Template caching (90% faster)</li>
+                        <li>Parallel processing (4x speedup)</li>
+                        <li>Async I/O operations (3x faster)</li>
+                        <li>Pre-compiled regex patterns (10x faster)</li>
+                        <li>Progressive results streaming</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>🔧 How It Works</h4>
+                    <ul>
+                        <li>5 analysis modes inc. AI (inc. Local LLM)</li>
+                        <li>Real-time MITRE ATT&CK integration</li>
+                        <li>Schema-aware field validation</li>
+                        <li>Detection likelihood scoring</li>
+                        <li>Personal detection library with tagging</li>
+                        <li>Role-based access control with MFA</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="feature-card">
+                    <h4>Use Cases</h4>
+                    <ul>
+                        <li>🎯 Threat hunting operations</li>
+                        <li>🎯 Incident response preparation</li>
+                        <li>🎯 Detection engineering</li>
+                        <li>🎯 Purple team exercises</li>
+                        <li>🎯 SIEM content development</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Future Enhancements</h4>
+                    <ul>
+                        <li>🔜 VECTR integration</li>
+                        <li>🔜 Atomic Red Team emulation</li>
+                        <li>🔜 Additional SIEM platforms</li>
+                        <li>🔜 Real-time threat feeds</li>
+                        <li>🔜 Custom query templates</li>
+                    </ul>
+                </div>
+            </div>
+            </div>
+            <!-- End Overview Tab -->
+
+            <!-- Architecture Tab -->
+            <div class="tab-pane" id="tab-architecture">
+
+            <h3>CLI/Command-Line Architecture</h3>
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                The CLI version provides direct programmatic access to Archer's detection generation engine.
+                It's designed for automation, CI/CD integration, and batch processing of threat groups.
+            </p>
+
+            <div class="diagram">
+                <img src="{{ url_for('static', path='images/architecture/cli_diagram.png') }}" alt="CLI Architecture Diagram">
+                <div class="diagram-caption">
+                    Figure 1: CLI architecture showing data flow from user input through processing to output files
+                </div>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Available CLI Commands</h4>
+                <pre><code># Generate detections for a threat group
+python archer.py process_group "APT29"
+
+# Generate single technique detection
+python archer.py generate_detection T1003.001
+
+# Build correlation rules
+python archer.py build_correlations "APT29"
+
+# Run adversary emulation (Atomic Red Team)
+python archer.py run_emulation "APT29" --mode simulate
+
+# VECTR integration for hunt tracking
+python archer.py run_vectr_command export "APT29"</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>CLI Workflow</h4>
+                <ol>
+                    <li><strong>Input:</strong> User provides threat group name or technique ID</li>
+                    <li><strong>MITRE Lookup:</strong> Fetches techniques from STIX 2.0 bundle</li>
+                    <li><strong>OSINT Enhancement:</strong> Searches local repos (Sigma, Elastic, Splunk, MITRE CAR, Azure Sentinel)</li>
+                    <li><strong>Generation:</strong> Extracts indicators, validates schemas, generates platform queries</li>
+                    <li><strong>Correlation:</strong> Analyzes attack paths, scores relationships (0-140 points)</li>
+                    <li><strong>Validation:</strong> Calculates detection likelihood (0-100), syntax checking</li>
+                    <li><strong>Visualization:</strong> Generates MITRE ATT&CK Flow diagrams</li>
+                    <li><strong>Output:</strong> Writes YAML detections, JSON correlations, flow diagrams to data/</li>
+                </ol>
+            </div>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Web/GUI Architecture</h3>
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                The web interface provides 6 generation modes, personal detection library, user authentication with MFA,
+                and role-based access control. Built with FastAPI for high-performance async operations and real-time progress tracking.
+            </p>
+
+            <div class="diagram">
+                <img src="{{ url_for('static', path='images/architecture/web_diagram.png') }}" alt="Web Architecture Diagram">
+                <div class="diagram-caption">
+                    Figure 2: Web architecture showing frontend-backend separation and async processing
+                </div>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Key Features</h4>
+                <ul>
+                    <li><strong>Authentication:</strong> User registration, login, password reset with email tokens</li>
+                    <li><strong>Multi-Factor Auth:</strong> TOTP-based MFA with backup codes</li>
+                    <li><strong>Detection Library:</strong> Personal storage with tagging, search, export (individual/bulk)</li>
+                    <li><strong>Admin Panel:</strong> User management, role assignment, audit logs (admin-only)</li>
+                    <li><strong>Real-Time Progress:</strong> Progress JSON polled every 500ms for live status updates</li>
+                    <li><strong>Results Page:</strong> Filter by vendor, group, tactic, technique with bulk operations</li>
+                    <li><strong>Emulation:</strong> Atomic Red Team integration (simulate/live modes, SSH/WinRM support)</li>
+                    <li><strong>VECTR Export:</strong> Campaign and test case creation for purple team collaboration</li>
+                </ul>
+            </div>
+            </div>
+            <!-- End Architecture Tab -->
+
+            <!-- Libraries Tab -->
+            <div class="tab-pane" id="tab-libraries">
+
+            <table class="library-table">
+                <thead>
+                    <tr>
+                        <th>Library</th>
+                        <th>Purpose</th>
+                        <th>Why This Choice</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>FastAPI</strong></td>
+                        <td>Web framework</td>
+                        <td>Async/await support, automatic API docs, modern Python, 3x faster than Flask</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Uvicorn</strong></td>
+                        <td>ASGI server</td>
+                        <td>Lightning-fast async server, production-ready, powers FastAPI deployment</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Starlette</strong></td>
+                        <td>ASGI framework</td>
+                        <td>High-performance async, WebSocket support, lightweight, powers FastAPI</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pydantic</strong></td>
+                        <td>Data validation</td>
+                        <td>Type-safe data models, automatic validation, powers FastAPI request/response models</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQLAlchemy</strong></td>
+                        <td>Database ORM</td>
+                        <td>User auth, detection library, MFA storage, async support, production-grade SQL toolkit</td>
+                    </tr>
+                    <tr>
+                        <td><strong>BeautifulSoup4</strong></td>
+                        <td>HTML parsing</td>
+                        <td>Robust HTML/XML parsing for blog analysis, handles malformed HTML gracefully</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Jinja2</strong></td>
+                        <td>Template engine</td>
+                        <td>Query template generation, web UI rendering, powerful templating syntax</td>
+                    </tr>
+                    <tr>
+                        <td><strong>HTTPX / Aiohttp</strong></td>
+                        <td>HTTP clients</td>
+                        <td>Async requests for MITRE/GitHub/OSINT APIs, HTTP/2 support, concurrent fetching</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PyYAML / ruamel.yaml</strong></td>
+                        <td>YAML processing</td>
+                        <td>MITRE data, Sigma rules, detection outputs, preserves comments and formatting</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pandas / NumPy</strong></td>
+                        <td>Data analysis</td>
+                        <td>Correlation matrix computation, statistical analysis, efficient array operations</td>
+                    </tr>
+                    <tr>
+                        <td><strong>NetworkX</strong></td>
+                        <td>Graph analysis</td>
+                        <td>Attack flow graphs, technique relationship mapping, path finding algorithms</td>
+                    </tr>
+                    <tr>
+                        <td><strong>STIX2</strong></td>
+                        <td>Threat intelligence</td>
+                        <td>MITRE ATT&CK data parsing, structured threat information exchange format</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MSticPy</strong></td>
+                        <td>Security tools</td>
+                        <td>Microsoft threat intelligence library, KQL generation support, SOC tooling</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Playwright</strong></td>
+                        <td>Browser automation</td>
+                        <td>JavaScript-rendered blog scraping, dynamic content extraction, headless testing</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bcrypt</strong></td>
+                        <td>Password hashing</td>
+                        <td>Secure password storage, industry-standard hashing, resistant to brute-force</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PyOTP / QRCode</strong></td>
+                        <td>MFA/2FA</td>
+                        <td>TOTP-based multi-factor authentication, QR code generation for authenticator apps</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Azure SDKs</strong></td>
+                        <td>Cloud integration</td>
+                        <td>Azure Sentinel/KQL query execution, Key Vault secrets, identity management</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Requests</strong></td>
+                        <td>HTTP library</td>
+                        <td>GitHub API, OSINT repositories, REST API integrations, battle-tested reliability</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LXML</strong></td>
+                        <td>XML parsing</td>
+                        <td>Fast XML/HTML processing, MITRE STIX parsing, XPath support</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pytest / Playwright-Pytest</strong></td>
+                        <td>Testing framework</td>
+                        <td>Unit and integration testing, browser automation tests, fixture management</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Speed Optimizations</h3>
+
+            <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="feature-card">
+                    <h4>Template Caching</h4>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Pre-compiled templates cached in <code>data/cache/</code></p>
+                    <span class="speed-badge">90% Faster</span>
+                    <p style="margin-top: 1em; color: #666; font-size: 0.9em; line-height: 1.6;">
+                        First run: 45 seconds<br>
+                        Cached runs: 5 seconds
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <h4>Parallel Processing</h4>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Multiple queries generated simultaneously</p>
+                    <span class="speed-badge">4x Speedup</span>
+                    <p style="margin-top: 1em; color: #666; font-size: 0.9em; line-height: 1.6;">
+                        Sequential: 120 seconds<br>
+                        Parallel: 30 seconds
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <h4>Async I/O</h4>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Non-blocking file operations and HTTP requests</p>
+                    <span class="speed-badge">3x Faster</span>
+                    <p style="margin-top: 1em; color: #666; font-size: 0.9em; line-height: 1.6;">
+                        Sync: 60 seconds<br>
+                        Async: 20 seconds
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <h4>Pre-Compiled Patterns</h4>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Regex patterns compiled once, reused thousands of times</p>
+                    <span class="speed-badge">10x Faster</span>
+                    <p style="margin-top: 1em; color: #666; font-size: 0.9em; line-height: 1.6;">
+                        Runtime compilation: 5ms/query<br>
+                        Pre-compiled: 0.5ms/query
+                    </p>
+                </div>
+            </div>
+
+            <div class="callout callout-info">
+                <strong>💡 Performance Benchmark:</strong> Generating 200 detection queries for APT29 takes approximately
+                <strong>30 seconds</strong> with caching enabled, compared to 4-5 minutes without optimization.
+            </div>
+            </div>
+            <!-- End Libraries Tab -->
+
+            <!-- AI Tab -->
+            <div class="tab-pane" id="tab-ai">
+
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                Archer supports <strong>5 generation modes</strong> ranging from fast heuristics to advanced AI models.
+                Configure via <code>GENAI_MODE</code> environment variable or
+                <a href="http://localhost:8000/profile" target="_blank" style="color: #C53030;">Profile</a>.
+            </p>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Generation Modes</h3>
+
+            <table class="library-table">
+                <thead>
+                    <tr>
+                        <th>Mode</th>
+                        <th>Description</th>
+                        <th>Requirements</th>
+                        <th>Best For</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>heuristic</strong></td>
+                        <td>Default mode using regex patterns and rule-based extraction</td>
+                        <td>None - always available</td>
+                        <td>Fast, privacy-preserving, offline operation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>advanced_parsing</strong></td>
+                        <td>Enhanced parsers for complex IOC extraction</td>
+                        <td>Optional parsing libraries</td>
+                        <td>Improved accuracy on malformed data</td>
+                    </tr>
+                    <tr>
+                        <td><strong>semantic</strong></td>
+                        <td>Semantic analysis for behavioral grouping</td>
+                        <td>Advanced parsing + semantic libraries</td>
+                        <td>Behavior-based technique clustering</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ai_generators</strong></td>
+                        <td>Remote AI APIs (OpenAI GPT-4/3.5)</td>
+                        <td><code>OPENAI_API_KEY</code></td>
+                        <td>Highest quality, contextual understanding</td>
+                    </tr>
+                    <tr>
+                        <td><strong>local_llm</strong></td>
+                        <td>Local LLM models (llama-cpp, transformers)</td>
+                        <td>Local model files</td>
+                        <td>Privacy-preserving AI, no API costs</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-info">
+                <strong>💡 Mode Selection:</strong> Archer automatically selects the best available mode. If <code>OPENAI_API_KEY</code>
+                is set, it defaults to <strong>ai_generators</strong>. Otherwise, it gracefully falls back to <strong>heuristic</strong> mode.
+            </div>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>What AI Enhances</h3>
+
+            <div class="workflow-step">
+                <h4>1. Enhanced IOC Extraction</h4>
+                <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                    <strong>Without AI:</strong> Regex-based pattern matching (fast but rigid)<br>
+                    <strong>With AI:</strong> Contextual understanding of indicators
+                </p>
+                <pre><code>Example:
+Input: "The adversary used rundll32.exe dump) or (.exe .dll dump)))"
+Regex: Extracts literal string with syntax errors
+AI: Understands this is "rundll32.exe dump" with malformed syntax</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>2. Semantic Query Grouping</h4>
+                <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                    <strong>Without AI:</strong> Keyword-based categorization<br>
+                    <strong>With AI:</strong> Behavioral understanding
+                </p>
+                <pre><code>Example Grouping:
+Authentication Group:
+- "Login attempts from ServiceAccount"
+- "Kerberos ticket requests"
+- "NTLM authentication failures"
+
+AI understands these are related behaviors, not just keyword matches</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>3. Correlation Analysis</h4>
+                <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                    <strong>Without AI:</strong> Technique ID proximity<br>
+                    <strong>With AI:</strong> Multi-stage attack pattern recognition
+                </p>
+                <pre><code>Example:
+T1078 (Valid Accounts) + T1021 (Remote Services) + T1003 (Credential Dumping)
+
+AI recognizes this as:
+"Lateral movement attack chain:
+ Compromise credentials → Access remote systems → Dump more credentials"</code></pre>
+            </div>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Models Used</h3>
+
+            <table class="library-table">
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Model</th>
+                        <th>Why</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Complex Analysis</td>
+                        <td><code>gpt-4-turbo-preview</code></td>
+                        <td>Better reasoning, correlation understanding, fewer errors</td>
+                    </tr>
+                    <tr>
+                        <td>Quick Extractions</td>
+                        <td><code>gpt-3.5-turbo</code></td>
+                        <td>Fast IOC extraction, cost-effective, good for simple tasks</td>
+                    </tr>
+                    <tr>
+                        <td>Fallback</td>
+                        <td>Heuristics (regex) Engine</td>
+                        <td>Always works without API, no cost, privacy-preserving</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-success">
+                <strong>✅ Privacy Note:</strong> OpenAI API does not retain data sent via API. You can disable AI
+                enhancement entirely and Archer will fall back to high-quality regex-based extraction.
+            </div>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>AI vs Non-AI Performance</h3>
+
+            <table class="library-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Without AI</th>
+                        <th>With AI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>IOC Accuracy</td>
+                        <td>85%</td>
+                        <td>95%</td>
+                    </tr>
+                    <tr>
+                        <td>False Positives</td>
+                        <td>15%</td>
+                        <td>5%</td>
+                    </tr>
+                    <tr>
+                        <td>Processing Time</td>
+                        <td>5 seconds</td>
+                        <td>15 seconds</td>
+                    </tr>
+                    <tr>
+                        <td>Cost</td>
+                        <td>Free</td>
+                        <td>~$0.01-0.05 per report</td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+            <!-- End AI Tab -->
+
+            <!-- Workflow Tab -->
+            <div class="tab-pane" id="tab-workflow">
+
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                This section details Archer's complete detection generation workflow, from initial input through final output.
+                It covers the six-stage process including threat intelligence lookup, machine learning-based query generation,
+                correlation analysis, OSINT enhancement, validation, and attack flow visualization.
+            </p>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Step-by-Step Process</h3>
+
+            <div class="workflow-step">
+                <h4>Stage 1: Input & Lookup</h4>
+                <pre><code>User → Threat Group Name (e.g., "APT29")
+     ↓
+MITRE ATT&CK Lookup → enterprise-attack.json
+     ↓
+Extract Techniques → [T1059.001, T1078, T1003.001, ...]</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 2: Query Learning</h4>
+                <pre><code>Community Repositories
+     ↓
+Parse Queries (Splunk SPL, KQL, Sigma)
+     ↓
+Extract Patterns & Variables
+     ↓
+Create Jinja2 Templates
+     ↓
+Cache in data/cache/ for future use</code></pre>
+                <p style="margin-top: 1em;">
+                    <strong>Example Template:</strong>
+                </p>
+                <pre><code>Template: powershell_execution
+Variables: {process_name}, {command_line}
+SPL: index=wineventlog EventCode=4688
+     Image=*{{ process_name }}*
+     CommandLine=*{{ command_line }}*</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 3: Detection Generation</h4>
+                <pre><code>For each technique:
+    1. Load relevant templates
+    2. Apply technique-specific values
+    3. Generate Splunk query (SPL)
+    4. Generate MDE query (KQL)
+    5. Validate syntax
+    6. Write to YAML file
+
+Output: data/APT29/splunk/T1059_001_PowerShell.yml</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 4: Semantic Grouping (Optional)</h4>
+                <pre><code>All queries → Semantic analyzer
+    ↓
+Group by behavior:
+    - Authentication behaviors
+    - Network connections
+    - File system operations
+    - Process execution
+    - Registry modifications
+
+Output: Organized YAML files in subdirectories</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 5: Correlation Analysis</h4>
+                <pre><code>Find related techniques:
+    T1078 (Valid Accounts)
+         ↓ often followed by
+    T1021 (Remote Services)
+         ↓ enables
+    T1003 (Credential Dumping)
+
+Create multi-stage detection:
+    - Stage 1: Detect valid account abuse
+    - Stage 2: Monitor remote service usage
+    - Stage 3: Alert on credential access
+
+Output: data/APT29/correlations/vendor_correlations.json</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 6: Attack Flow Visualization</h4>
+                <pre><code>Generate Attack Flow diagrams:
+    1. Correlation flows (per correlation)
+    2. Complete actor flow (all techniques)
+
+Format: ATT&CK Flow JSON schema
+Output: data/attack_flows/APT29_complete_flow.json
+        data/attack_flows/APT29_complete_flow.html</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 7: Output & Delivery</h4>
+                <pre><code>Final structure:
+data/APT29/
+├── splunk/
+│   ├── T1059_001_PowerShell.yml
+│   ├── T1078_Valid_Accounts.yml
+│   └── ...
+├── mde/
+│   ├── T1059_001_PowerShell.yml
+│   ├── T1078_Valid_Accounts.yml
+│   └── ...
+├── correlations/
+│   ├── vendor_correlations.json
+│   └── cross_vendor_correlations.json
+└── attack_flows/
+    ├── APT29_complete_flow.json
+    ├── APT29_complete_flow.html
+    └── correlation_flows/</code></pre>
+            </div>
+            </div>
+            <!-- End Workflow Tab -->
+
+            <!-- Attack Flow Tab -->
+            <div class="tab-pane" id="tab-attack-flow">
+            <p style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                Archer generates <strong>attack flow diagrams</strong> following the
+                <a href="https://github.com/center-for-threat-informed-defense/attack-flow" target="_blank" style="color: #C53030;">
+                MITRE ATT&CK Flow specification</a>. These visualizations show technique sequences and attack paths.
+            </p>
+            
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Types of Attack Flows</h3>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Correlation Flows</h4>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Generated for each multi-stage correlation</p>
+                    <ul>
+                        <li>Shows technique sequence</li>
+                        <li>Highlights relationships</li>
+                        <li>Per-correlation diagram</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Complete Actor Flow</h4>
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Shows all techniques for a threat group</p>
+                    <ul>
+                        <li>All possible attack routes</li>
+                        <li>Tactical progressions</li>
+                        <li>Comprehensive coverage</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Attack Flow Schema</h3>
+            
+            <div class="workflow-step">
+                <h4>JSON Structure</h4>
+                <pre><code>{
+              "type": "bundle",
+              "spec_version": "2.1",
+              "objects": [
+                {
+                  "type": "attack-flow",
+                  "name": "APT29 - Complete Attack Flow",
+                  "description": "All techniques and possible routes",
+                  "scope": "campaign"
+                },
+                {
+                  "type": "attack-action",
+                  "technique_id": "T1059.001",
+                  "name": "PowerShell",
+                  "description": "Execution of PowerShell"
+                },
+                ...
+              ]
+            }</code></pre>
+            </div>
+            
+            <div class="callout callout-info">
+                <strong>💡 Interactive Visualization:</strong> Flow JSON files are automatically converted to interactive
+                HTML visualizations that can be viewed in any browser.
+            </div>
+            </div>
+            <!-- End Attack Flow Tab -->
+            </div>
+            <!-- End Tab Content -->
+        </div>
+        <!-- End Tabs Container -->
+
+        <!-- FAQ Section -->
+        <div class="section" style="margin-top: 3em;">
+            <h2>Frequently Asked Questions</h2>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is Archer and what does it do?</summary>
+                <div class="faq-answer">
+                    <p style="color: #666; font-size: 0.95em; line-height: 1.6;">Archer is an automated threat detection generator that transforms MITRE ATT&CK threat intelligence into production-ready detection queries for Splunk and Microsoft Defender for Endpoint (MDE). It combines machine learning from community queries, MITRE ATT&CK intelligence, and optional AI enhancement to automatically generate comprehensive, correlated detection coverage in minutes.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Do I need an OpenAI API key to use Archer?</summary>
+                <div class="faq-answer">
+                    <p>No, Archer works perfectly fine without an OpenAI API key. The AI enhancement is entirely optional and only improves certain features like IOC extraction accuracy and semantic understanding. Without AI, Archer uses high-quality regex-based extraction and pattern matching which is fast, free, and privacy-preserving.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Why is Archer so fast? Is it using AI or machine learning?</summary>
+                <div class="faq-answer">
+                    <p><strong>Archer is fast because it uses deterministic algorithms, not AI/ML inference.</strong> Here's exactly how speed is achieved:</p>
+
+                    <h4>1. Pre-Computed Intelligence (No AI Required)</h4>
+                    <ul>
+                        <li><strong>MITRE ATT&CK Cache:</strong> Downloads and caches the entire STIX bundle once (enterprise-attack.json), then reads from local filesystem</li>
+                        <li><strong>Pattern Matching:</strong> Uses compiled regex patterns and dictionary lookups instead of neural networks</li>
+                        <li><strong>Template-Based Generation:</strong> Queries are generated from predefined templates, not generated token-by-token by LLMs</li>
+                        <li><strong>Rule-Based Logic:</strong> All correlation scoring uses mathematical formulas (0-140 point scale) instead of ML models</li>
+                    </ul>
+
+                    <h4>2. Parallel Processing Architecture</h4>
+                    <ul>
+                        <li><strong>Background Threading:</strong> Detection generation runs in daemon threads, keeping UI responsive</li>
+                        <li><strong>Async I/O:</strong> FastAPI handles concurrent requests without blocking</li>
+                        <li><strong>Lock-Based Deduplication:</strong> Prevents duplicate correlation processing with thread-safe locks</li>
+                        <li><strong>Streaming Progress Updates:</strong> Real-time progress tracking via JSON file updates (no polling delays)</li>
+                    </ul>
+
+                    <h4>3. Smart Filtering (Not Machine Learning)</h4>
+                    <ul>
+                        <li><strong>Attack Progression Filter:</strong> Simple dictionary lookup against 35 predefined tactic pairs</li>
+                        <li><strong>Semantic Overlap:</strong> Set intersection math (Jaccard similarity), not word embeddings</li>
+                        <li><strong>High-Impact Techniques:</strong> Hardcoded set of 30+ critical techniques, O(1) lookups</li>
+                        <li><strong>Correlation Grouping:</strong> Hash-based deduplication using technique IDs as keys</li>
+                    </ul>
+
+                    <h4>4. Efficient Data Structures</h4>
+                    <ul>
+                        <li><strong>In-Memory Caching:</strong> Techniques, tactics, and procedures loaded once at startup (app.state)</li>
+                        <li><strong>Dictionary Lookups:</strong> O(1) average-case complexity for technique/group mapping</li>
+                        <li><strong>Set Operations:</strong> Fast indicator deduplication and overlap calculations</li>
+                        <li><strong>SQLite Database:</strong> Local file-based storage, no network round-trips</li>
+                    </ul>
+
+                    <h4>5. Optional AI Enhancement (When Enabled)</h4>
+                    <p>When you enable "AI-Powered Correlations", Archer CAN use OpenAI GPT models, but this is:</p>
+                    <ul>
+                        <li><strong>Completely Optional:</strong> Disabled by default, requires explicit checkbox + API key</li>
+                        <li><strong>Limited Scope:</strong> Only used for advanced semantic analysis and IOC enrichment</li>
+                        <li><strong>Async Execution:</strong> AI calls don't block main generation pipeline</li>
+                        <li><strong>Fallback Logic:</strong> If AI fails or isn't configured, uses deterministic methods</li>
+                    </ul>
+
+                    <h4>Performance Benchmarks (Typical Hardware)</h4>
+                    <ul>
+                        <li><strong>100 detections generated:</strong> 15-30 seconds (no AI)</li>
+                        <li><strong>500 correlation pairs evaluated:</strong> 2-5 seconds</li>
+                        <li><strong>OSINT comparison (Sigma/Elastic):</strong> 5-10 seconds per technique</li>
+                        <li><strong>Full threat group (30-50 techniques):</strong> 2-5 minutes total</li>
+                    </ul>
+
+                    <h4>What Makes This Different from AI-Based Tools</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1em;">
+                        <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                            <th style="padding: 8px; text-align: left;">Aspect</th>
+                            <th style="padding: 8px; text-align: left;">Archer (Deterministic)</th>
+                            <th style="padding: 8px; text-align: left;">AI/ML Tools</th>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Speed</strong></td>
+                            <td style="padding: 8px;">✅ <1 second per detection</td>
+                            <td style="padding: 8px;">❌ 5-30 seconds per LLM call</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Cost</strong></td>
+                            <td style="padding: 8px;">✅ $0 (runs locally)</td>
+                            <td style="padding: 8px;">❌ $0.01-0.50 per query</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Privacy</strong></td>
+                            <td style="padding: 8px;">✅ All data stays local</td>
+                            <td style="padding: 8px;">❌ Sends to cloud APIs</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Reliability</strong></td>
+                            <td style="padding: 8px;">✅ Deterministic output</td>
+                            <td style="padding: 8px;">❌ Non-deterministic results</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Offline Use</strong></td>
+                            <td style="padding: 8px;">✅ Works without internet</td>
+                            <td style="padding: 8px;">❌ Requires API connectivity</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px;"><strong>Explainability</strong></td>
+                            <td style="padding: 8px;">✅ Every decision has clear logic</td>
+                            <td style="padding: 8px;">❌ "Black box" reasoning</td>
+                        </tr>
+                    </table>
+
+                    <p style="margin-top: 1em;"><strong>Bottom Line:</strong> Archer achieves speed through intelligent engineering and algorithmic efficiency, not by avoiding AI (though that helps). When AI is optionally enabled, it's used surgically for specific enhancements, not as the core engine.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What's the difference between OSINT Enhancement and OSINT Comparison?</summary>
+                <div class="faq-answer">
+                    <p><strong>OSINT Enhancement:</strong> Automatically incorporates battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk community rules) directly into your queries. This is enabled by default on the Generate tab and enriches your detections with proven indicators.</p>
+                    <p><strong>OSINT Comparison:</strong> Compares techniques against OSINT databases and adds metadata to YAML files (visible in the "Show Details" button). This is reference-only and doesn't modify the queries themselves.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Correlations and Cross-vendor?</summary>
+                <div class="faq-answer">
+                    <p><strong>Correlations:</strong> Combines similar queries from the same vendor (either Splunk or MDE) into multi-stage detections. This is enabled by default and helps create detection chains that track attack progressions within a single SIEM platform.</p>
+                    <p><strong>Cross-vendor:</strong> (Coming Soon) Will correlate queries across different vendors (Splunk + MDE) to create unified detection workflows across multiple security platforms.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How does Semantic Analysis work?</summary>
+                <div class="faq-answer">
+                    <p>Semantic Analysis groups queries by behavioral categories (authentication, network, file activity, process execution, etc.) rather than just by technique ID. This is enabled by default and helps organize detections logically, making them easier to review, deploy, and maintain. It includes advanced query parsing for intelligent syntax-aware merging.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What file formats does the Upload feature support?</summary>
+                <div class="faq-answer">
+                    <p>The Upload feature supports multiple threat intelligence file formats including: PDF, TXT, Markdown (MD), JSON, CSV, Excel (XLSX/XLS), Word (DOCX/DOC), and YARA rules (.yar/.yara). Archer automatically extracts TTPs (Tactics, Techniques, and Procedures) and IOCs (Indicators of Compromise) from these files.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is the Profile tab used for?</summary>
+                <div class="faq-answer">
+                    <p>The Profile tab lets you analyze an organization's threat landscape based on their domain. It automatically identifies industry-specific threats, geographic threat actors, technology stack vulnerabilities, and optionally supply chain dependencies. It then recommends relevant threat groups and can auto-generate detection queries for them.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How fast is Archer at generating detections?</summary>
+                <div class="faq-answer">
+                    <p>Archer is optimized for speed with template caching, parallel processing, and async operations. Generating 200 detection queries for a threat group like APT29 takes approximately 30 seconds with caching enabled (compared to 4-5 minutes without optimization). First-time runs take about 45 seconds while subsequent cached runs complete in about 5 seconds.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What output formats does Archer generate?</summary>
+                <div class="faq-answer">
+                    <p>Archer generates multiple output formats:</p>
+                    <ul>
+                        <li><strong>YAML files:</strong> Individual detection rules in standardized YAML format</li>
+                        <li><strong>Vendor queries:</strong> Splunk SPL and Microsoft KQL queries</li>
+                        <li><strong>Correlation JSON:</strong> Multi-stage detection relationships</li>
+                        <li><strong>Attack Flow diagrams:</strong> JSON and HTML visualizations following the MITRE ATT&CK Flow specification</li>
+                        <li><strong>Library view:</strong> Interactive web interface to browse and export detections</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Can I customize the generated detection queries?</summary>
+                <div class="faq-answer">
+                    <p>Yes! All generated detections are saved as YAML files that you can review, modify, and customize before deploying to your SIEM. The queries are designed to be production-ready but should always be tested in your environment and tuned to reduce false positives based on your specific infrastructure.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do I customize mapping files for my environment?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses three mapping files to control detection generation for different environments:</p>
+                    <ul>
+                        <li><strong>indicatorMapping.json:</strong> Maps indicator types (cmd, file, ip, domain, etc.) to data sources and fields</li>
+                        <li><strong>platformMapping.json:</strong> Defines which platforms (Windows, Linux, AWS, Azure) are supported by each data source</li>
+                        <li><strong>fieldMapping.json:</strong> Maps generic field names to vendor-specific field names (e.g., process_name → ProcessName for MDE)</li>
+                    </ul>
+                    <p><strong>Common customization scenarios:</strong></p>
+                    <ul>
+                        <li>Using custom Splunk indexes: Update <code>indicatorMapping.json</code> to replace default indexes with your own (e.g., <code>index=custom_windows_logs</code>)</li>
+                        <li>Multi-cloud environments: Add AWS/Azure/GCP data sources to appropriate indicator types</li>
+                        <li>Custom EDR solutions: Add new vendor mappings for CrowdStrike, Carbon Black, SentinelOne, etc.</li>
+                        <li>Disabling unused sources: Remove or comment out data sources you don't have</li>
+                    </ul>
+                    <p><strong>Best practices:</strong> Always backup mapping files before modifying, validate JSON syntax, test with small groups first, and document your changes. See the <a href="https://github.com/cmdaltr/archer/blob/main/docs/guides/MAPPING_FILES_GUIDE.md" target="_blank" style="color: #8B0000; text-decoration: underline;">Mapping Files Configuration Guide</a> for detailed instructions and examples.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What data sources does Archer pull from?</summary>
+                <div class="faq-answer">
+                    <p>Archer pulls from multiple authoritative sources:</p>
+                    <ul>
+                        <li><strong>MITRE ATT&CK:</strong> Official enterprise-attack.json for technique mappings</li>
+                        <li><strong>Community repositories:</strong> Sigma rules, Elastic detection rules, Splunk security content</li>
+                        <li><strong>OSINT sources:</strong> 5+ open-source security repositories with 7,500+ detection rules</li>
+                        <li><strong>Threat reports:</strong> Uploaded files or analyzed blog posts/reports</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Is Archer suitable for production use?</summary>
+                <div class="faq-answer">
+                    <p>Archer generates production-quality detection queries, but as with any automated tool, you should review and test all detections in your environment before deploying to production. Different organizations have different baselines, and tuning is essential to reduce false positives and ensure the detections work correctly with your specific data sources and infrastructure.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do I get started with Archer?</summary>
+                <div class="faq-answer">
+                    <p>Getting started is easy:</p>
+                    <ol>
+                        <li>Go to the <strong>Generate</strong> tab and enter a threat group name (e.g., "APT29") or MITRE technique ID</li>
+                        <li>Optionally enable AI-Powered Correlations if you have an OpenAI API key</li>
+                        <li>Click "Generate Detections" and wait for processing to complete</li>
+                        <li>Download the generated detections as a ZIP file</li>
+                        <li>Review the YAML files and deploy queries to your SIEM</li>
+                    </ol>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Does Archer work offline?</summary>
+                <div class="faq-answer">
+                    <p>Archer requires internet access for the initial setup to download MITRE ATT&CK data and OSINT repositories. Once cached, it can generate detections offline without requiring external API calls (unless you enable AI enhancement). All OSINT sources are cloned locally, so Archer doesn't rely on external APIs for core functionality.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How does Archer handle software (malware/tools) in threat groups?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses <strong>software-to-technique traversal</strong> to extract actionable indicators from malware and tools. Instead of just detecting software names like "BlackCat" or "Mimikatz", Archer automatically:</p>
+                    <ol>
+                        <li>Identifies which techniques the software employs (e.g., BlackCat uses T1083 File Discovery, T1486 Data Encryption)</li>
+                        <li>Extracts technical indicators from those techniques (e.g., <code>net use</code>, <code>fsutil behavior set</code>)</li>
+                        <li>Merges these with the group's direct technique indicators</li>
+                        <li>Removes duplicates to create comprehensive detections</li>
+                    </ol>
+                    <p><strong>Example:</strong> For Scattered Spider using BlackCat ransomware, detections include specific commands BlackCat runs (like <code>fsutil</code>, <code>vssadmin</code>) rather than just looking for the "BlackCat" string.</p>
+                    <p>This implements two indicator extraction paths:</p>
+                    <ul>
+                        <li><strong>Direct:</strong> Group → Techniques → Indicators</li>
+                        <li><strong>Software:</strong> Group → Software → Techniques → Indicators</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How are correlations scored and prioritized?</summary>
+                <div class="faq-answer">
+                    <p>Archer scores correlations on a 140-point scale based on six key factors:</p>
+                    <ul>
+                        <li><strong>Technique Criticality (30 points):</strong> High-impact techniques like credential dumping, lateral movement, and data exfiltration score higher</li>
+                        <li><strong>Tactic Priority (20 points):</strong> Correlations involving critical tactics (Credential Access, Lateral Movement, Exfiltration, Impact) score significantly higher than lower-priority tactics (Execution, Discovery)</li>
+                        <li><strong>Query Specificity (20 points):</strong> More specific queries with detailed indicators score better than generic ones</li>
+                        <li><strong>False Positive Rate (25 points):</strong> Lower estimated false positive rates increase the score</li>
+                        <li><strong>Attack Progression (25 points):</strong> Correlations that follow logical attack chains (e.g., Credential Access → Lateral Movement) score highest</li>
+                        <li><strong>Data Source Diversity (-10 to +20 points):</strong> Correlations spanning multiple data sources (e.g., process + network) get bonus points</li>
+                    </ul>
+                    <p><strong>Tactic Priority Weights:</strong></p>
+                    <ul style="margin-left: 20px; font-size: 0.95em;">
+                        <li><strong>Critical (10 pts):</strong> Credential Access, Lateral Movement, Exfiltration, Impact</li>
+                        <li><strong>High (8 pts):</strong> Privilege Escalation, Persistence, Command & Control</li>
+                        <li><strong>Medium (6 pts):</strong> Defense Evasion, Collection, Initial Access</li>
+                        <li><strong>Lower (3-4 pts):</strong> Execution, Discovery, Reconnaissance</li>
+                    </ul>
+                    <p><strong>Note:</strong> Semantic overlap (query field similarity) is calculated and displayed as <em>informational metadata</em> but does NOT affect scoring. What matters is whether the techniques form a meaningful attack chain, not whether they use similar log fields.</p>
+                    <p><strong>Minimum Threshold:</strong> Only correlations with 75% or higher relevance (score ≥ 105/140) are included by default. This threshold can be adjusted by setting <code>CORRELATION_MIN_RELEVANCE</code> in your <code>.env</code> file (range: 0.0 to 1.0).</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How does Archer handle multi-cloud environments (AWS/Azure/GCP)?</summary>
+                <div class="faq-answer">
+                    <p>Archer includes sophisticated <strong>cloud platform separation</strong> to prevent mixing AWS, Azure, and GCP indicators incorrectly:</p>
+                    <ul>
+                        <li><strong>Cloud-native logs:</strong> AWS CloudTrail, Azure Activity Log, and GCP Audit logs are only used for their respective cloud platforms</li>
+                        <li><strong>Endpoint detection:</strong> Endpoint logs (Windows, Linux, MDE tables) can detect cloud CLI tools running on endpoints (e.g., <code>aws</code>, <code>az</code>, <code>gcloud</code> commands)</li>
+                        <li><strong>Automatic filtering:</strong> Detection queries automatically select appropriate log sources based on cloud platform context</li>
+                        <li><strong>No cross-contamination:</strong> AWS API calls won't generate Azure AD detections, and vice versa</li>
+                    </ul>
+                    <p>This ensures clean, platform-specific detections while maintaining the ability to detect cloud CLI usage on endpoints.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do correlation filters work?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses multiple intelligent filters to ensure only high-quality correlations are generated:</p>
+                    <ul>
+                        <li><strong>Attack Progression Filter:</strong> Only correlates techniques that follow logical kill chain sequences (e.g., Initial Access → Execution → Privilege Escalation)</li>
+                        <li><strong>Semantic Overlap Filters:</strong> Removes near-duplicates (>75% overlap) and completely unrelated pairs (<20% overlap)</li>
+                        <li><strong>Same-Table Deduplication:</strong> Prevents low-value correlations between detections querying identical data sources</li>
+                        <li><strong>High-Impact Requirement:</strong> Prioritizes correlations involving at least one high-value MITRE ATT&CK technique</li>
+                        <li><strong>Data Source Diversity:</strong> Awards bonus points to correlations spanning multiple data sources for better coverage</li>
+                        <li><strong>Correlation Grouping:</strong> Automatically deduplicates similar technique pairs, keeping only the highest-quality correlation</li>
+                    </ul>
+                    <p><strong>Result:</strong> 75-85% reduction in correlation noise while maintaining attack chain detection fidelity.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is "Merge by Tactic" and when should I use it?</summary>
+                <div class="faq-answer">
+                    <p><strong>Merge by Tactic</strong> combines all detections under the same MITRE ATT&CK tactic (e.g., all Credential Access techniques), then correlates across tactics.</p>
+
+                    <p><strong>When to use:</strong></p>
+                    <ul>
+                        <li>Executive dashboards requiring simple, high-level view</li>
+                        <li>Low-noise alerting for SOC environments</li>
+                        <li>Phase-based threat hunting campaigns</li>
+                        <li>Incident response workflows focused on attack progression</li>
+                    </ul>
+
+                    <p><strong>Benefits:</strong></p>
+                    <ul>
+                        <li>Generates 8-15 high-level correlations instead of hundreds</li>
+                        <li>Represents entire attack phases (e.g., "All Credential Access → All Lateral Movement")</li>
+                        <li>Broader detection coverage - catches ANY technique in the tactic</li>
+                        <li>Reduces alert fatigue significantly</li>
+                    </ul>
+
+                    <p><strong>Trade-off:</strong> Less granular - you won't see which specific techniques triggered, but you'll know which attack phases occurred.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is "Merge by Parent Technique"?</summary>
+                <div class="faq-answer">
+                    <p><strong>Merge by Parent Technique</strong> groups subtechniques under their parent (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlates parent techniques.</p>
+
+                    <p><strong>When to use:</strong></p>
+                    <ul>
+                        <li>Mid-level granularity between tactic-level and subtechnique-level</li>
+                        <li>Tracking specific attack patterns without excessive detail</li>
+                        <li>Correlating technique families (all OS Credential Dumping methods)</li>
+                    </ul>
+
+                    <p><strong>Benefits:</strong></p>
+                    <ul>
+                        <li>Moderate correlation reduction (~50-70% fewer than default)</li>
+                        <li>Maintains technique-level context</li>
+                        <li>Groups related attack methods logically</li>
+                        <li>Good balance between detail and simplicity</li>
+                    </ul>
+
+                    <p><strong>Example:</strong> Instead of 9 correlations for every LSASS dumping variant, you get 1 correlation for "OS Credential Dumping (T1003)".</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How can I test which correlation settings work best for me?</summary>
+                <div class="faq-answer">
+                    <p>Archer includes a test script to evaluate different filter combinations:</p>
+
+                    <pre><code>python test_correlation_filters.py "Scattered Spider"</code></pre>
+
+                    <p>The script will:</p>
+                    <ul>
+                        <li>Run correlations with baseline, merge-by-tactic, and merge-by-parent modes</li>
+                        <li>Compare total correlation counts</li>
+                        <li>Calculate average relevance scores</li>
+                        <li>Identify high-quality correlation counts</li>
+                        <li>Measure execution time for each configuration</li>
+                        <li>Provide recommendations based on your specific threat group</li>
+                    </ul>
+
+                    <p>Results are saved to a JSON file for further analysis. Use this to determine which mode produces the most actionable results for your environment.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What are the various approaches to building correlations available in Archer and how do I invoke each one?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses <strong>one correlation engine</strong> that automatically runs after detection generation. However, you can influence the quality of correlations by choosing different <strong>detection generation modes</strong>:</p>
+
+                    <h4>The Correlation Engine (Always Enabled)</h4>
+                    <p>Archer's correlation engine uses a <strong>rule-based heuristic scoring system</strong> with 6 factors (0-140 points) to intelligently pair detections within each vendor. This engine:</p>
+                    <ul>
+                        <li>Automatically runs after detection generation completes</li>
+                        <li>Cannot be disabled (always generates correlations)</li>
+                        <li>Works entirely offline without AI</li>
+                        <li>Provides deterministic, consistent results</li>
+                        <li><strong>Includes semantic analysis by default</strong>: Calculates semantic overlap between queries (0-100%) to filter duplicates and ensure diversity</li>
+                    </ul>
+
+                    <p><strong>Scoring factors:</strong> Technique Criticality (0-30 pts), Tactic Priority (0-20 pts), Query Specificity (0-20 pts), False Positive Rate (0-25 pts), Attack Progression (0-25 pts), Data Source Diversity (-10 to +20 pts)</p>
+
+                    <p><strong>Built-in semantic analysis:</strong> Always calculates token-based semantic overlap (Jaccard similarity) to filter correlations with >80% overlap (too similar)</p>
+
+                    <p><strong>Tunable parameters</strong> (Profile → Config):</p>
+                    <ul>
+                        <li><strong>Threshold:</strong> 40% (minimum relevance score to include correlation)</li>
+                        <li><strong>Per-Vendor Limit:</strong> 60 (max correlations per vendor)</li>
+                        <li><strong>Tech Frequency:</strong> 20 (max appearances of a technique in simple correlations)</li>
+                    </ul>
+
+                    <h4>Detection Generation Modes (Affect Correlation Quality)</h4>
+                    <p>The quality and types of correlations depend on what detections you generate. Choose a generation mode:</p>
+
+                    <h5>1. Standard Generation (Default)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Don't check any boxes (default)</li>
+                        <li><strong>What it does:</strong> Generates detections using template-based approach</li>
+                        <li><strong>Correlation result:</strong> Standard correlations based on templates</li>
+                    </ul>
+
+                    <h5>2. Advanced Parsing (Semantic Analysis)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Check "Advanced Parsing" in Web UI</li>
+                        <li><strong>What it does:</strong> Groups detections by behavioral categories during generation (authentication, network, file, process)</li>
+                        <li><strong>Correlation result:</strong> More semantically-related correlations that understand behavioral context</li>
+                        <li><strong>When to use:</strong> Complex attack chains where behavioral relationships matter</li>
+                    </ul>
+
+                    <h5>3. AI Generators (Optional)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Check "AI Generators" checkbox in Web UI</li>
+                        <li><strong>What it does:</strong> Uses LLMs to enhance detection generation quality</li>
+                        <li><strong>Effect on correlations:</strong> AI-enhanced detections → better quality input for correlation engine</li>
+                        <li><strong>AI Providers:</strong> OpenAI GPT (cloud) or local LLMs via Ollama/LM Studio</li>
+                        <li><strong>Requirements:</strong> OPENAI_API_KEY for cloud AI, or local LLM server for offline AI</li>
+                        <li><strong>When to use:</strong> Experimental AI-enhanced detection quality</li>
+                    </ul>
+
+                    <h5>4. AI Correlations (Optional)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Check "AI Correlations" checkbox in Web UI (requires "AI Generators" also enabled)</li>
+                        <li><strong>What it does:</strong> Uses LLMs to improve correlation JOIN query combination strategies</li>
+                        <li><strong>What it does NOT do:</strong> Detection pairing and scoring remain rule-based (6-factor, 0-140 points). AI cannot change which detections get paired or their relevance scores</li>
+                        <li><strong>Effect on correlations:</strong> Smarter JOIN query logic for combining detection queries</li>
+                        <li><strong>Requirements:</strong> "AI Generators" enabled + OPENAI_API_KEY</li>
+                        <li><strong>When to use:</strong> Experimental AI-enhanced correlation query combination</li>
+                    </ul>
+
+                    <h4>The Complete Flow</h4>
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 1em 0; font-family: monospace; font-size: 0.9em;">
+                        <strong>Step 1: Detection Generation</strong> (choose one mode)<br>
+                        &nbsp;&nbsp;├─ Standard (default)<br>
+                        &nbsp;&nbsp;├─ Advanced Parsing (semantic grouping)<br>
+                        &nbsp;&nbsp;└─ AI Generators (AI-enhanced)<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                        <strong>Step 2: Generated Detections</strong> (YAML files)<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                        <strong>Step 3: Correlation Engine</strong> (ALWAYS runs automatically)<br>
+                        &nbsp;&nbsp;├─ Score all detection pairs (0-140)<br>
+                        &nbsp;&nbsp;├─ Filter by threshold (40%)<br>
+                        &nbsp;&nbsp;├─ Apply per-vendor limit (60)<br>
+                        &nbsp;&nbsp;├─ Merge related correlations<br>
+                        &nbsp;&nbsp;└─ Generate JOIN queries<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                        <strong>Step 4: Correlation Results</strong> (JSON file)
+                    </div>
+
+                    <h4>Quick Reference</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;">
+                        <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                            <th style="padding: 8px; text-align: left;">Option</th>
+                            <th style="padding: 8px; text-align: left;">Invocation</th>
+                            <th style="padding: 8px; text-align: left;">Offline?</th>
+                            <th style="padding: 8px; text-align: left;">Effect on Correlations</th>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Standard</strong></td>
+                            <td style="padding: 8px;">Default (no boxes)</td>
+                            <td style="padding: 8px;">✅ Yes</td>
+                            <td style="padding: 8px;">Standard template-based correlations</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Advanced Parsing</strong></td>
+                            <td style="padding: 8px;">Check "Advanced Parsing"</td>
+                            <td style="padding: 8px;">✅ Yes</td>
+                            <td style="padding: 8px;">Semantically-grouped correlations</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>AI Generators</strong></td>
+                            <td style="padding: 8px;">Check "AI Generators"</td>
+                            <td style="padding: 8px;">❌ No (requires API)</td>
+                            <td style="padding: 8px;">AI-enhanced detections → better input quality</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>AI Correlations</strong></td>
+                            <td style="padding: 8px;">Check "AI Correlations"</td>
+                            <td style="padding: 8px;">❌ No (requires API)</td>
+                            <td style="padding: 8px;">Smarter JOIN query combination logic</td>
+                        </tr>
+                    </table>
+
+                    <h4>Advanced Correlation Options</h4>
+                    <p>These options modify how the correlation engine processes results:</p>
+                    <ul>
+                        <li><strong>Merge by Parent Technique:</strong> Groups correlations by parent technique (e.g., T1003.001, T1003.002 → T1003) - Check "Merge by Parent Technique" in UI</li>
+                        <li><strong>OSINT Enhancement:</strong> Incorporate battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk) - Check "OSINT Enhancement" in UI</li>
+                        <li><strong>OSINT Comparison:</strong> Compare generated correlations with open-source repos to show alignment with community detection rules - Check "OSINT Comparison" in UI</li>
+                    </ul>
+
+                    <h4>Key Takeaways</h4>
+                    <ul>
+                        <li><strong>ONE correlation engine</strong>: Rule-based heuristic with built-in semantic analysis (always active)</li>
+                        <li><strong>Detection generation modes</strong>: Affect the INPUT to correlation (quality of detections)</li>
+                        <li><strong>AI Generators</strong>: Enhances detection quality, providing better input for correlation engine</li>
+                        <li><strong>AI Correlations</strong>: Improves JOIN query combination logic, but scoring/pairing remain rule-based</li>
+                        <li><strong>Semantic analysis</strong>: Token-based overlap calculation (0-100%) is default, "Advanced Parsing" adds deep behavioral categorization</li>
+                        <li><strong>All correlations</strong>: Scored identically (6 factors, 0-140 points) regardless of generation mode or AI options</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What's coming in future versions?</summary>
+                <div class="faq-answer">
+                    <p>Planned enhancements include:</p>
+                    <ul>
+                        <li>VECTR integration for purple team exercises</li>
+                        <li>Atomic Red Team emulation capabilities</li>
+                        <li>Additional SIEM platforms (Sentinel, QRadar, etc.)</li>
+                        <li>Real-time threat intelligence feeds</li>
+                        <li>Custom query template support</li>
+                        <li>Cross-vendor correlation workflows</li>
+                    </ul>
+                </div>
+            </details>
+        </div>
+        <!-- End FAQ Section -->
+
+    </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="page-footer">
+            <div class="footer-content">
+                <!-- GitHub Link -->
+                <div class="github-link">
+                    <a href="https://github.com/cmdaltr" target="_blank" rel="noopener noreferrer">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                        <span style="font-weight: 500;">@cmdaltr</span>
+                    </a>
+                </div>
+
+                <!-- Quote -->
+                <div class="quote">
+                    <p>
+                        "Even if you can't see something, it doesn't mean it isn't there"<br>
+                        <span>— Archer, Small Soldiers</span>
+                    </p>
+                </div>
+
+                <!-- Spacer for balance -->
+                <div class="spacer"></div>
+            </div>
+
+            <!-- Timestamp and Attribution -->
+            <div class="timestamp">
+                <br>
+                <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
+                    Vendor logos are stylized representations. Splunk®, Microsoft®, Google® and Elastic® are registered trademarks of their respective companies.
+                </span>
+            </div>
+    </footer>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
+        // Dark mode functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const sunIcon = darkModeToggle.querySelector('.sun-icon');
+        const moonIcon = darkModeToggle.querySelector('.moon-icon');
+        const html = document.documentElement;
+
+        // Check for saved theme preference or default to 'light'
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', currentTheme);
+        updateIcons(currentTheme);
+
+        darkModeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcons(newTheme);
+        });
+
+        function updateIcons(theme) {
+            if (theme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            }
+        }
+
+        // Tab switching functionality
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                // Remove active class from all tabs and panes
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+                // Add active class to clicked tab and corresponding pane
+                button.classList.add('active');
+                document.getElementById('tab-' + tabName).classList.add('active');
+
+                // Scroll to top of content smoothly
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>

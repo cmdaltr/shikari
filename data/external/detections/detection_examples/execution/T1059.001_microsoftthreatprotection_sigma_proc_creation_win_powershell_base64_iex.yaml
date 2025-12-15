@@ -1,0 +1,62 @@
+technique_id: T1059.001
+technique_name: PowerShell Base64 Encoded IEX Cmdlet
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 88f680b8-070e-402c-ae11-d2914f2257f1
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  - CommandLine|base64offset|contains:\n  - IEX ([\n  - iex ([\n  - iex (New\n  -\
+  \ IEX (New\n  - IEX([\n  - iex([\n  - iex(New\n  - IEX(New\n  - IEX(('\n  - iex(('\n\
+  - CommandLine|contains:\n  - SQBFAFgAIAAoAFsA\n  - kARQBYACAAKABbA\n  - JAEUAWAAgACgAWw\n\
+  \  - aQBlAHgAIAAoAFsA\n  - kAZQB4ACAAKABbA\n  - pAGUAeAAgACgAWw\n  - aQBlAHgAIAAoAE4AZQB3A\n\
+  \  - kAZQB4ACAAKABOAGUAdw\n  - pAGUAeAAgACgATgBlAHcA\n  - SQBFAFgAIAAoAE4AZQB3A\n\
+  \  - kARQBYACAAKABOAGUAdw\n  - JAEUAWAAgACgATgBlAHcA\n"
+explanation: Detects usage of a base64 encoded "IEX" cmdlet in a process command line
+false_positives:
+- Unknown
+references:
+- Internal Research
+tags:
+- attack.execution
+- attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+  - CommandLine|base64offset|contains:
+    - IEX ([
+    - iex ([
+    - iex (New
+    - IEX (New
+    - IEX([
+    - iex([
+    - iex(New
+    - IEX(New
+    - IEX(('
+    - iex(('
+  - CommandLine|contains:
+    - SQBFAFgAIAAoAFsA
+    - kARQBYACAAKABbA
+    - JAEUAWAAgACgAWw
+    - aQBlAHgAIAAoAFsA
+    - kAZQB4ACAAKABbA
+    - pAGUAeAAgACgAWw
+    - aQBlAHgAIAAoAE4AZQB3A
+    - kAZQB4ACAAKABOAGUAdw
+    - pAGUAeAAgACgATgBlAHcA
+    - SQBFAFgAIAAoAE4AZQB3A
+    - kARQBYACAAKABOAGUAdw
+    - JAEUAWAAgACgATgBlAHcA
+  condition: selection
+metadata:
+  created_date: 2019-08-23
+  modified_date: 2023-04-06
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

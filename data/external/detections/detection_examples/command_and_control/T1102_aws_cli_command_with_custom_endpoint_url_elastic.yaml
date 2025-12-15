@@ -1,0 +1,47 @@
+technique_id: T1102
+technique_name: AWS CLI Command with Custom Endpoint URL
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'host.os.type: "linux" and event.category: "process" and process.name: "aws"
+  and process.args:  "--endpoint-url"'
+explanation: Detects the use of the AWS CLI with the `--endpoint-url` argument, which
+  allows users to specify a custom endpoint URL for AWS services. This can be leveraged
+  by adversaries to redirect API requests to non-standard or malicious endpoints,
+  potentially bypassing typical security controls and logging mechanisms. This behavior
+  may indicate an attempt to interact with unauthorized or compromised infrastructure,
+  exfiltrate data, or perform other malicious activities under the guise of legitimate
+  AWS operations.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/349276c0-5fcf-11ef-b1a9-f661ea17fbce.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Internal testing environments may use custom endpoint URLs for development purposes.
+    To manage this, create exceptions for known internal IP addresses or domain names
+    associated with these environments.
+
+    - Organizations using AWS CLI with custom endpoints for legitimate third-party
+    integrations might trigger this rule. Identify and whitelist these specific integrations
+    by their endpoint URLs to prevent false positives.
+
+    - Automated scripts or tools that interact with AWS'
+  mitigation: Review investigation guide for details
+references:
+- https://sysdig.com/blog/scarleteel-2-0/
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,51 @@
+technique_id: T1550
+technique_name: AWS EC2 Instance Console Login via Assumed Role
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where event.dataset == \"aws.cloudtrail\"\n   and event.provider == \"\
+  signin.amazonaws.com\"\n   and event.action in (\"ConsoleLogin\", \"GetSigninToken\"\
+  )\n   and event.outcome == \"success\"\n   and aws.cloudtrail.user_identity.type\
+  \ == \"AssumedRole\"\n   and stringContains (user.id, \":i-\")"
+explanation: Identifies a successful console login activity by an EC2 instance profile
+  using an assumed role. This is uncommon behavior and could indicate an attacker
+  using compromised credentials to further exploit an environment. An EC2 instance
+  assumes a role using their EC2 ID as the session name. This rule looks for the pattern
+  "i-" which is the beginning pattern for assumed role sessions started by an EC2
+  instance and a successful `ConsoleLogin` or `GetSigninToken` API call.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d1e5e410-3e34-412e-9b1f-dd500b3b55cd.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS EC2
+  confidence: high
+- type: data_source
+  value: AWS STS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks: EC2 instances may assume roles for legitimate
+    administrative purposes, such as automated deployments or maintenance tasks. To
+    manage this, identify and whitelist known administrative session patterns or specific
+    instance IDs that regularly perform these tasks.
+
+    - Monitoring and logging services: Some monitoring or logging services might use
+    assumed roles to access AWS resources for data collection. Review and exclude
+    these services by ident'
+  mitigation: Review investigation guide for details
+references:
+- https://redcanary.com/blog/aws-sts/
+- https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html/
+has_investigation_guide: true
+risk_score: 73

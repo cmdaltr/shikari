@@ -1,0 +1,84 @@
+technique_id: T1218
+technique_name: Suspicious MS Office Child Process
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.parent.name : (\n      \"eqnedt32.exe\", \"excel.exe\", \"fltldr.exe\"\
+  , \"msaccess.exe\",\n      \"mspub.exe\", \"powerpnt.exe\", \"winword.exe\", \"\
+  outlook.exe\"\n  ) and\n  process.name : (\n      \"Microsoft.Workflow.Compiler.exe\"\
+  , \"arp.exe\", \"atbroker.exe\", \"bginfo.exe\", \"bitsadmin.exe\", \"cdb.exe\"\
+  ,\n      \"certutil.exe\", \"cmd.exe\", \"cmstp.exe\", \"control.exe\", \"cscript.exe\"\
+  , \"csi.exe\", \"dnx.exe\", \"dsget.exe\",\n      \"dsquery.exe\", \"forfiles.exe\"\
+  , \"fsi.exe\", \"ftp.exe\", \"gpresult.exe\", \"hostname.exe\", \"ieexec.exe\",\
+  \ \"iexpress.exe\",\n      \"installutil.exe\", \"ipconfig.exe\", \"mshta.exe\"\
+  , \"msxsl.exe\", \"nbtstat.exe\", \"net.exe\", \"net1.exe\", \"netsh.exe\",\n  \
+  \    \"netstat.exe\", \"nltest.exe\", \"odbcconf.exe\", \"ping.exe\", \"powershell.exe\"\
+  , \"pwsh.exe\", \"qprocess.exe\",\n      \"quser.exe\", \"qwinsta.exe\", \"rcsi.exe\"\
+  , \"reg.exe\", \"regasm.exe\", \"regsvcs.exe\", \"regsvr32.exe\", \"sc.exe\",\n\
+  \      \"schtasks.exe\", \"systeminfo.exe\", \"tasklist.exe\", \"tracert.exe\",\
+  \ \"whoami.exe\", \"wmic.exe\", \"wscript.exe\",\n      \"xwizard.exe\", \"explorer.exe\"\
+  , \"rundll32.exe\", \"hh.exe\", \"msdt.exe\"\n  ) and\n  not (\n    process.parent.name\
+  \ : \"outlook.exe\" and\n    process.name : \"rundll32.exe\" and\n    process.args\
+  \ : \"shell32.dll,Control_RunDLL\" and\n    process.args : \"srchadmin.dll\"\n \
+  \ )"
+explanation: 'Identifies suspicious child processes of frequently targeted Microsoft
+  Office applications (Word, PowerPoint, Excel).
+
+  These child processes are often launched during exploitation of Office applications
+  or from documents with malicious
+
+  macros.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a624863f-a70d-417f-a7d2-7a404638d47f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all compromised accounts are identified. Reset passwords for these accounts
+    and'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/blog/vulnerability-summary-follina
+has_investigation_guide: true
+risk_score: 47

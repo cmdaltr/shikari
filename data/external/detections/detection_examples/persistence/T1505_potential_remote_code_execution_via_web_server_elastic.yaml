@@ -1,0 +1,58 @@
+technique_id: T1505
+technique_name: Potential Remote Code Execution via Web Server
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and\n\
+  event.action in (\"exec\", \"exec_event\", \"start\") and process.parent.executable\
+  \ : (\n  \"/usr/sbin/nginx\", \"/usr/local/sbin/nginx\",\n  \"/usr/sbin/apache\"\
+  , \"/usr/local/sbin/apache\",\n  \"/usr/sbin/apache2\", \"/usr/local/sbin/apache2\"\
+  ,\n  \"/usr/sbin/php*\", \"/usr/local/sbin/php*\",\n  \"/usr/sbin/lighttpd\", \"\
+  /usr/local/sbin/lighttpd\",\n  \"/usr/sbin/hiawatha\", \"/usr/local/sbin/hiawatha\"\
+  ,\n  \"/usr/local/bin/caddy\", \n  \"/usr/local/lsws/bin/lswsctrl\",\n  \"*/bin/catalina.sh\"\
+  \n) and\nprocess.name : (\n  \"bash\", \"dash\", \"sh\", \"tcsh\", \"csh\", \"zsh\"\
+  , \"ksh\", \"fish\", \"python*\", \"php*\", \"perl\", \"ruby\", \"lua*\", \"openssl\"\
+  , \"nc\",\n  \"netcat\", \"ncat\", \"telnet\", \"awk\", \"socat\"\n  ) and process.args\
+  \ : (\n  \"whoami\", \"id\", \"uname\", \"cat\", \"hostname\", \"ip\", \"curl\"\
+  , \"wget\", \"pwd\", \"ls\", \"cd\", \"python*\", \"php*\", \"perl\",\n  \"ruby\"\
+  , \"lua*\", \"openssl\", \"nc\", \"netcat\", \"ncat\", \"telnet\", \"awk\", \"socat\"\
+  \n  ) and not process.name == \"phpquery\""
+explanation: 'Identifies suspicious commands executed via a web server, which may
+  suggest a vulnerability and remote shell access.
+
+  Attackers may exploit a vulnerability in a web application to execute commands via
+  a web server, or place a backdoor
+
+  file that can be abused to gain code execution as a mechanism for persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f16fca20-4d6c-43f9-aec1-20b6de3b0aeb.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Any activity that triggered the alert and is not inherently malicious must be\
+    \ monitored by the security team.\n\n### Response and remediation\n\n- Initiate\
+    \ the incident response process based on the outcome of the triage.\n- Isolate\
+    \ the involved host to prevent further post-compromise behavior.\n- If the triage\
+    \ identified malware, search the environment for additional compromised hosts.\n\
+    \  - Implement temporary network rules,"
+  mitigation: Review investigation guide for details
+references:
+- https://pentestlab.blog/tag/web-shell/
+- https://www.elastic.co/security-labs/elastic-response-to-the-the-spring4shell-vulnerability-cve-2022-22965
+has_investigation_guide: true
+risk_score: 73

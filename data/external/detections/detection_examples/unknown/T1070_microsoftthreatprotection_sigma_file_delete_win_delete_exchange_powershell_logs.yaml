@@ -1,0 +1,37 @@
+technique_id: T1070
+technique_name: Exchange PowerShell Cmdlet History Deleted
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: a55349d8-9588-4c5a-8e3b-1925fe2a4ffe
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetFilename|contains: _Cmdlet_\n  TargetFilename|startswith: \\Logging\\CmdletInfra\\\
+  LocalPowerShell\\Cmdlet\\\n"
+explanation: Detects the deletion of the Exchange PowerShell cmdlet History logs which
+  may indicate an attempt to destroy forensic evidence
+false_positives:
+- Possible FP during log rotation
+references:
+- https://m365internals.com/2022/10/07/hunting-in-on-premises-exchange-server-logs/
+tags:
+- attack.defense-evasion
+- attack.t1070
+logsource:
+  category: file_delete
+  product: windows
+detection:
+  selection:
+    TargetFilename|startswith: \Logging\CmdletInfra\LocalPowerShell\Cmdlet\
+    TargetFilename|contains: _Cmdlet_
+  condition: selection
+metadata:
+  created_date: 2022-10-26
+  modified_date: 2022-12-30
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

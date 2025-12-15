@@ -1,0 +1,44 @@
+technique_id: T1543
+technique_name: Authentication via Unusual PAM Grantor
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: 'event.category:authentication and host.os.type:linux and event.action:authenticated
+  and event.outcome:success and
+
+  auditd.data.grantors:(* and not (pam_rootok or *pam_cap* or *pam_permit*))'
+explanation: 'This rule detects successful authentications via PAM grantors that are
+  not commonly used. This could indicate an
+
+  attacker is attempting to escalate privileges or maintain persistence on the system
+  by modifying the default PAM
+
+  configuration.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a8aaa49d-9834-462d-bf8f-b1255cebc004.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Custom PAM modules: Organizations may use custom PAM modules for specific applications
+    or security policies. Review these modules to ensure they are legitimate and add
+    them to an exception list if they are frequently triggering alerts.
+
+    - Administrative scripts: Some administrative scripts might use non-standard PAM
+    grantors for automation purposes. Verify the scripts'' legitimacy and consider
+    excluding them from the rule if they are part of routine operations.
+
+    - Third-p'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

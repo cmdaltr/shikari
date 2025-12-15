@@ -1,0 +1,43 @@
+technique_id: T1562.001
+technique_name: Disable Defender Spynet Reporting
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path = "*\\Microsoft\\Windows
+  Defender\\SpyNet*" Registry.registry_value_name = SpynetReporting Registry.registry_value_data
+  = 0x00000000) by Registry.action Registry.dest Registry.process_guid Registry.process_id
+  Registry.registry_hive Registry.registry_path Registry.registry_key_name Registry.registry_value_data
+  Registry.registry_value_name Registry.registry_value_type Registry.status Registry.user
+  Registry.vendor_product | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data)
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `disable_defender_spynet_reporting_filter`'
+explanation: The following analytic detects the modification of the registry to disable
+  Windows Defender SpyNet reporting. It leverages data from the Endpoint.Registry
+  data model, specifically monitoring changes to the registry path associated with
+  Windows Defender SpyNet settings. This activity is significant because disabling
+  SpyNet reporting can prevent Windows Defender from sending telemetry data, potentially
+  allowing malicious activities to go undetected. If confirmed malicious, this action
+  could enable an attacker to evade detection, maintain persistence, and carry out
+  further attacks without being flagged by Windows Defender.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/898debf4-3021-11ec-ba7c-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: admin or user may choose to disable windows defender product
+  mitigation: Review context and user activity
+references:
+- https://thedfirreport.com/2021/10/18/icedid-to-xinglocker-ransomware-in-24-hours/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/icedid/disable_av/sysmon.log

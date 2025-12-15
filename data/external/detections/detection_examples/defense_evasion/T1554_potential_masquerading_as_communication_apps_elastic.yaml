@@ -1,0 +1,69 @@
+technique_id: T1554
+technique_name: Potential Masquerading as Communication Apps
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and\n  event.type == \"start\" and\n\
+  \  (\n    /* Slack */\n    (process.name : \"slack.exe\" and not\n      (process.code_signature.subject_name\
+  \ : (\n        \"Slack Technologies, Inc.\",\n        \"Slack Technologies, LLC\"\
+  \n       ) and process.code_signature.trusted == true)\n    ) or\n\n    /* WebEx\
+  \ */\n    (process.name : \"WebexHost.exe\" and not\n      (process.code_signature.subject_name\
+  \ : (\"Cisco WebEx LLC\", \"Cisco Systems, Inc.\") and process.code_signature.trusted\
+  \ == true)\n    ) or\n\n    /* Teams */\n    (process.name : \"Teams.exe\" and not\n\
+  \      (process.code_signature.subject_name : \"Microsoft Corporation\" and process.code_signature.trusted\
+  \ == true)\n    ) or\n\n    /* Discord */\n    (process.name : \"Discord.exe\" and\
+  \ not\n      (process.code_signature.subject_name : \"Discord Inc.\" and process.code_signature.trusted\
+  \ == true)\n    ) or\n\n    /* RocketChat */\n    (process.name : \"Rocket.Chat.exe\"\
+  \ and not\n      (process.code_signature.subject_name : \"Rocket.Chat Technologies\
+  \ Corp.\" and process.code_signature.trusted == true)\n    ) or\n\n    /* Mattermost\
+  \ */\n    (process.name : \"Mattermost.exe\" and not\n      (process.code_signature.subject_name\
+  \ : \"Mattermost, Inc.\" and process.code_signature.trusted == true)\n    ) or\n\
+  \n    /* WhatsApp */\n    (process.name : \"WhatsApp.exe\" and not\n      (process.code_signature.subject_name\
+  \ : (\n        \"WhatsApp LLC\",\n        \"WhatsApp, Inc\",\n        \"24803D75-212C-471A-BC57-9EF86AB91435\"\
+  \n       ) and process.code_signature.trusted == true)\n    ) or\n\n    /* Zoom\
+  \ */\n    (process.name : \"Zoom.exe\" and not\n      (process.code_signature.subject_name\
+  \ : \"Zoom Video Communications, Inc.\" and process.code_signature.trusted == true)\n\
+  \    ) or\n\n    /* Outlook */\n    (process.name : \"outlook.exe\" and not\n  \
+  \    (process.code_signature.subject_name : \"Microsoft Corporation\" and process.code_signature.trusted\
+  \ == true)\n    ) or\n\n    /* Thunderbird */\n    (process.name : \"thunderbird.exe\"\
+  \ and not\n      (process.code_signature.subject_name : \"Mozilla Corporation\"\
+  \ and process.code_signature.trusted == true)\n    )\n  )"
+explanation: 'Identifies suspicious instances of communications apps, both unsigned
+  and renamed ones, that can indicate an attempt to
+
+  conceal malicious activity, bypass security features such as allowlists, or trick
+  users into executing malware.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c9482bfa-a553-4226-8ea2-4959bd4f7923.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may temporarily result in unsigned
+    or improperly signed processes. Users can create exceptions for known update processes
+    to prevent false positives during these periods.
+
+    - Custom or internally developed communication tools that mimic the names of popular
+    apps might trigger alerts. Ensure these tools are properly signed and add them
+    to an allowlist if they are trusted.
+
+    - Some third-party security or monitoring tools may inte'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

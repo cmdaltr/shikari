@@ -1,0 +1,47 @@
+technique_id: T1047
+technique_name: HackTool - CrackMapExec Execution Patterns
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 058f4380-962d-40a5-afce-50207d36d7e2
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains:\n  - cmd.exe /Q /c * 1> \\\\\\\\*\\\\*\\\\* 2>&1\n  - cmd.exe\
+  \ /C * > \\\\\\\\*\\\\*\\\\* 2>&1\n  - cmd.exe /C * > *\\\\Temp\\\\* 2>&1\n  - powershell.exe\
+  \ -exec bypass -noni -nop -w 1 -C \"\n  - 'powershell.exe -noni -nop -w 1 -enc '\n"
+explanation: Detects various execution patterns of the CrackMapExec pentesting framework
+false_positives:
+- Unknown
+references:
+- https://github.com/byt3bl33d3r/CrackMapExec
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.execution
+- attack.t1047
+- attack.t1053
+- attack.t1059.003
+- attack.t1059.001
+- attack.s0106
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - cmd.exe /Q /c * 1> \\\\*\\*\\* 2>&1
+    - cmd.exe /C * > \\\\*\\*\\* 2>&1
+    - cmd.exe /C * > *\\Temp\\* 2>&1
+    - powershell.exe -exec bypass -noni -nop -w 1 -C "
+    - 'powershell.exe -noni -nop -w 1 -enc '
+  condition: selection
+metadata:
+  created_date: 2020-05-22
+  modified_date: 2023-11-06
+  author: Thomas Patzke
+  status: stable
+  imported_date: '2025-11-28'

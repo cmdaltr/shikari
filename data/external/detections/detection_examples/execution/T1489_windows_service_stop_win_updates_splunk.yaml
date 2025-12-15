@@ -1,0 +1,39 @@
+technique_id: T1489
+technique_name: Windows Service Stop Win Updates
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`wineventlog_system` EventCode=7040 (service_name IN ("Update Orchestrator
+  Service for Windows Update", "WaaSMedicSvc", "Windows Update") OR param1 IN ("UsoSvc",
+  "WaaSMedicSvc", "wuauserv")) AND (param3=disabled OR start_mode = disabled) | stats
+  count min(_time) as firstTime max(_time) as lastTime by Computer Error_Code service_name
+  start_mode param1 param2 param3 param4 | rename Computer as dest | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_service_stop_win_updates_filter`'
+explanation: The following analytic detects the disabling of Windows Update services,
+  such as "Update Orchestrator Service for Windows Update," "WaaSMedicSvc," and "Windows
+  Update." It leverages Windows System Event ID 7040 logs to identify changes in service
+  start modes to 'disabled.' This activity is significant as it can indicate an adversary's
+  attempt to evade defenses by preventing critical updates, leaving the system vulnerable
+  to exploits. If confirmed malicious, this could allow attackers to maintain persistence
+  and exploit unpatched vulnerabilities, compromising the integrity and security of
+  the affected host.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/0dc25c24-6fcf-456f-b08b-dd55a183e4de/
+indicators:
+- type: data_source
+  value: Windows Event Log System 7040
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Network administrator may disable this services as part of its audit
+    process within the network. Filter is needed.
+  mitigation: Review context and user activity
+references:
+- https://malpedia.caad.fkie.fraunhofer.de/details/win.redline_stealer
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/redline/win_update_services_stop/system.log

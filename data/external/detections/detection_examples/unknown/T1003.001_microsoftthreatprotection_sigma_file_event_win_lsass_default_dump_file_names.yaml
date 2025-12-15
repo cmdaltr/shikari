@@ -1,0 +1,73 @@
+technique_id: T1003.001
+technique_name: LSASS Process Memory Dump Files
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: a5a2d357-1ab8-4675-a967-ef9990a59391
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_*\nselection_1:\n\
+  \  TargetFilename|endswith:\n  - \\Andrew.dmp\n  - \\Coredump.dmp\n  - \\lsass.dmp\n\
+  \  - \\lsass.rar\n  - \\lsass.zip\n  - \\NotLSASS.zip\n  - \\PPLBlade.dmp\n  - \\\
+  rustive.dmp\nselection_2:\n  TargetFilename|contains:\n  - \\lsass_2\n  - \\lsassdmp\n\
+  \  - \\lsassdump\nselection_3:\n  TargetFilename|contains|all:\n  - \\lsass\n  -\
+  \ .dmp\nselection_4:\n  TargetFilename|contains: SQLDmpr\n  TargetFilename|endswith:\
+  \ .mdmp\nselection_5:\n  TargetFilename|contains:\n  - \\nanodump\n  - \\proc_\n\
+  \  TargetFilename|endswith: .dmp\n"
+explanation: Detects creation of files with names used by different memory dumping
+  tools to create a memory dump of the LSASS process memory, which contains user credentials.
+false_positives:
+- Unknown
+references:
+- https://www.google.com/search?q=procdump+lsass
+- https://medium.com/@markmotig/some-ways-to-dump-lsass-exe-c4a75fdc49bf
+- https://github.com/elastic/detection-rules/blob/c76a39796972ecde44cb1da6df47f1b6562c9770/rules/windows/credential_access_lsass_memdump_file_created.toml
+- https://www.whiteoaksecurity.com/blog/attacks-defenses-dumping-lsass-no-mimikatz/
+- https://github.com/helpsystems/nanodump
+- https://github.com/CCob/MirrorDump
+- https://github.com/safedv/RustiveDump/blob/1a9b026b477587becfb62df9677cede619d42030/src/main.rs#L35
+- https://github.com/ricardojoserf/NativeDump/blob/01d8cd17f31f51f5955a38e85cd3c83a17596175/NativeDump/Program.cs#L258
+tags:
+- attack.credential-access
+- attack.t1003.001
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection_1:
+    TargetFilename|endswith:
+    - \Andrew.dmp
+    - \Coredump.dmp
+    - \lsass.dmp
+    - \lsass.rar
+    - \lsass.zip
+    - \NotLSASS.zip
+    - \PPLBlade.dmp
+    - \rustive.dmp
+  selection_2:
+    TargetFilename|contains:
+    - \lsass_2
+    - \lsassdmp
+    - \lsassdump
+  selection_3:
+    TargetFilename|contains|all:
+    - \lsass
+    - .dmp
+  selection_4:
+    TargetFilename|contains: SQLDmpr
+    TargetFilename|endswith: .mdmp
+  selection_5:
+    TargetFilename|contains:
+    - \nanodump
+    - \proc_
+    TargetFilename|endswith: .dmp
+  condition: 1 of selection_*
+metadata:
+  created_date: 2021-11-15
+  modified_date: 2024-10-08
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

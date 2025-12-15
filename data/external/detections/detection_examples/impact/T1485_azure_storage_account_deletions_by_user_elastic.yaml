@@ -1,0 +1,47 @@
+technique_id: T1485
+technique_name: Azure Storage Account Deletions by User
+tactic: impact
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset: azure.activitylogs and\n    azure.activitylogs.operation_name:\
+  \ \"MICROSOFT.STORAGE/STORAGEACCOUNTS/DELETE\" and\n    azure.activitylogs.identity.claims_initiated_by_user.name:\
+  \ *"
+explanation: 'Identifies when a single user or service principal deletes multiple
+  Azure Storage Accounts within a short time period.
+
+  This behavior may indicate an adversary attempting to cause widespread service disruption,
+  destroy evidence, or execute
+
+  a destructive attack such as ransomware. Mass deletion of storage accounts can have
+  severe business impact and is rarely
+
+  performed by legitimate administrators except during controlled decommissioning
+  activities.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b2c3d4e5-6f7a-8b9c-0d1e-2f3a4b5c6d7e.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Azure Activity Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate bulk decommissioning of storage accounts during infrastructure cleanup
+    may trigger this alert. Document approved resource cleanup activities and coordinate
+    with infrastructure teams to create exceptions during planned maintenance windows.
+
+    - Infrastructure-as-Code (IaC) automation tools or CI/CD pipelines may delete
+    multiple test or temporary storage accounts. Identify service principals used
+    by automation tools and consider creating exceptions for these iden'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoft.com/en-us/security/blog/2025/08/27/storm-0501s-evolving-techniques-lead-to-cloud-based-ransomware/
+has_investigation_guide: true
+risk_score: 73

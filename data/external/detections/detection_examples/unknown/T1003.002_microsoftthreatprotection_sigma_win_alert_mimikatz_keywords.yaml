@@ -1,0 +1,69 @@
+technique_id: T1003.002
+technique_name: Mimikatz Use
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.8
+validated: true
+source: sigma
+sigma_id: 06d71506-7beb-4f22-8888-e2e5e2ca7fd8
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: keywords and not filter\n\
+  filter:\n  EventID: 15\nkeywords:\n- dpapi::masterkey\n- eo.oe.kiwi\n- event::clear\n\
+  - event::drop\n- gentilkiwi.com\n- kerberos::golden\n- kerberos::ptc\n- kerberos::ptt\n\
+  - kerberos::tgt\n- Kiwi Legit Printer\n- 'lsadump::'\n- mimidrv.sys\n- \\mimilib.dll\n\
+  - misc::printnightmare\n- misc::shadowcopies\n- misc::skeleton\n- privilege::backup\n\
+  - privilege::debug\n- privilege::driver\n- 'sekurlsa::'\n"
+explanation: This method detects mimikatz keywords in different Eventlogs (some of
+  them only appear in older Mimikatz version that are however still used by different
+  threat groups)
+false_positives:
+- Naughty administrators
+- AV Signature updates
+- Files with Mimikatz in their filename
+references:
+- https://tools.thehacker.recipes/mimikatz/modules
+tags:
+- attack.s0002
+- attack.lateral-movement
+- attack.credential-access
+- car.2013-07-001
+- car.2019-04-004
+- attack.t1003.002
+- attack.t1003.004
+- attack.t1003.001
+- attack.t1003.006
+logsource:
+  product: windows
+detection:
+  keywords:
+  - dpapi::masterkey
+  - eo.oe.kiwi
+  - event::clear
+  - event::drop
+  - gentilkiwi.com
+  - kerberos::golden
+  - kerberos::ptc
+  - kerberos::ptt
+  - kerberos::tgt
+  - Kiwi Legit Printer
+  - 'lsadump::'
+  - mimidrv.sys
+  - \mimilib.dll
+  - misc::printnightmare
+  - misc::shadowcopies
+  - misc::skeleton
+  - privilege::backup
+  - privilege::debug
+  - privilege::driver
+  - 'sekurlsa::'
+  filter:
+    EventID: 15
+  condition: keywords and not filter
+metadata:
+  created_date: 2017-01-10
+  modified_date: 2022-01-05
+  author: Florian Roth (Nextron Systems), David ANDRE (additional keywords)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,41 @@
+technique_id: T1204.002
+technique_name: HackTool - LittleCorporal Generated Maldoc Injection
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 7bdde3bf-2a42-4c39-aa31-a92b3e17afac
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CallTrace|contains|all:\n  - :\\Windows\\Microsoft.NET\\Framework64\\v2.\n  -\
+  \ UNKNOWN\n  SourceImage|endswith: \\winword.exe\n"
+explanation: Detects the process injection of a LittleCorporal generated Maldoc.
+false_positives:
+- Unknown
+references:
+- https://github.com/connormcgarr/LittleCorporal
+tags:
+- attack.defense-evasion
+- attack.execution
+- attack.privilege-escalation
+- attack.t1204.002
+- attack.t1055.003
+logsource:
+  category: process_access
+  product: windows
+detection:
+  selection:
+    SourceImage|endswith: \winword.exe
+    CallTrace|contains|all:
+    - :\Windows\Microsoft.NET\Framework64\v2.
+    - UNKNOWN
+  condition: selection
+metadata:
+  created_date: 2021-08-09
+  modified_date: 2023-11-28
+  author: Christian Burkard (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,40 @@
+technique_id: T1190
+technique_name: Cisco IOS XE Implant Access
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("/webui/logoutconfirm.html?logon_hash=*") Web.http_method=POST
+  Web.status=200 by Web.http_user_agent, Web.status Web.http_method, Web.url, Web.url_length,
+  Web.src, Web.dest, sourcetype | `drop_dm_object_name("Web")` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)`| `cisco_ios_xe_implant_access_filter`'
+explanation: The following analytic identifies the potential exploitation of a vulnerability
+  (CVE-2023-20198) in the Web User Interface of Cisco IOS XE software. It detects
+  suspicious account creation and subsequent actions, including the deployment of
+  a non-persistent implant configuration file. The detection leverages the Web datamodel,
+  focusing on specific URL patterns and HTTP methods. This activity is significant
+  as it indicates unauthorized administrative access, which can lead to full control
+  of the device. If confirmed malicious, attackers could maintain privileged access,
+  compromising the device's integrity and security.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/07c36cda-6567-43c3-bc1a-89dff61e2cd9/
+indicators:
+- type: data_source
+  value: Suricata
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present, restrict to Cisco IOS XE devices or
+    perimeter appliances. Modify the analytic as needed based on hunting for successful
+    exploitation of CVE-2023-20198.
+  mitigation: Review context and user activity
+references:
+- https://blog.talosintelligence.com/active-exploitation-of-cisco-ios-xe-software/
+- https://github.com/vulncheck-oss/cisco-ios-xe-implant-scanner
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/cisco/iosxe/ciscocve202320198.log

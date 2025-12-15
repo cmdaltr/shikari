@@ -1,0 +1,44 @@
+technique_id: T1027
+technique_name: Invoke-Obfuscation CLIP+ Launcher
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: b222df08-0e07-11eb-adc1-0242ac120002
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains:\n  - /c\n  - /r\n  CommandLine|contains|all:\n  - cmd\n\
+  \  - '&&'\n  - 'clipboard]::'\n  - -f\n"
+explanation: Detects Obfuscated use of Clip.exe to execute PowerShell
+false_positives:
+- Unknown
+references:
+- https://github.com/SigmaHQ/sigma/issues/1009
+tags:
+- attack.defense-evasion
+- attack.t1027
+- attack.execution
+- attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains|all:
+    - cmd
+    - '&&'
+    - 'clipboard]::'
+    - -f
+    CommandLine|contains:
+    - /c
+    - /r
+  condition: selection
+metadata:
+  created_date: 2020-10-13
+  modified_date: 2022-11-17
+  author: Jonathan Cheong, oscd.community
+  status: test
+  imported_date: '2025-11-28'

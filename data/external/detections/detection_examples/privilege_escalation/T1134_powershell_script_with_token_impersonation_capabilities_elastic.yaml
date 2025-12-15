@@ -1,0 +1,69 @@
+technique_id: T1134
+technique_name: PowerShell Script with Token Impersonation Capabilities
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:windows and\n  powershell.file.script_block_text:(\n\
+  \    \"Invoke-TokenManipulation\" or\n    \"ImpersonateNamedPipeClient\" or\n  \
+  \  \"NtImpersonateThread\" or\n    (\n      \"STARTUPINFOEX\" and\n      \"UpdateProcThreadAttribute\"\
+  \n    ) or\n    (\n      \"AdjustTokenPrivileges\" and\n      \"SeDebugPrivilege\"\
+  \n    ) or\n    (\n      (\"DuplicateToken\" or\n      \"DuplicateTokenEx\") and\n\
+  \      (\"SetThreadToken\" or\n      \"ImpersonateLoggedOnUser\" or\n      \"CreateProcessWithTokenW\"\
+  \ or\n      \"CreatePRocessAsUserW\" or\n      \"CreateProcessAsUserA\")\n    )\
+  \ \n  ) and\n  not (\n    user.id:(\"S-1-5-18\" or \"S-1-5-19\" or \"S-1-5-20\"\
+  ) and\n    file.directory: \"C:\\\\ProgramData\\\\Microsoft\\\\Windows Defender\
+  \ Advanced Threat Protection\\\\Downloads\"\n  ) and\n  not powershell.file.script_block_text\
+  \ : (\n    \"sentinelbreakpoints\" and \"Set-PSBreakpoint\" and \"PowerSploitIndicators\"\
+  \n  ) and\n  not (\n    powershell.file.script_block_text : \"New-HPPrivateToastNotificationLogo\"\
+  \ and\n    file.path : \"C:\\Program Files\\HPConnect\\hp-cmsl-wl\\modules\\HP.Notifications\\\
+  HP.Notifications.psm1\"\n  )"
+explanation: 'Detects scripts that contain PowerShell functions, structures, or Windows
+  API functions related to token
+
+  impersonation/theft. Attackers may duplicate then impersonate another user''s token
+  to escalate privileges and bypass
+
+  access controls.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/11dd9713-0ec6-4110-9707-32daae1ee68c.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Regular users should not need to impersonate other users, which makes false
+    positives unlikely. In the case of authorized benign true positives (B-TPs), exceptions
+    can be added.
+
+
+    ### Related Rules
+
+
+    - PowerShell PSReflect Script - 56f2e9b5-4803-4e44-a0a4-a52dc79d57fe
+
+    - Potential Process Injection via PowerShell - 2e29e96a-b67c-455a-afe4-de6183431d0d
+
+
+    ### Response and Remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/decoder-it/psgetsystem
+- https://github.com/PowerShellMafia/PowerSploit/blob/master/Privesc/Get-System.ps1
+- https://github.com/EmpireProject/Empire/blob/master/data/module_source/privesc/Invoke-MS16032.ps1
+- https://github.com/atc-project/atc-data/blob/master/docs/Logging_Policies/LP_0109_windows_powershell_script_block_log.md
+has_investigation_guide: true
+risk_score: 47

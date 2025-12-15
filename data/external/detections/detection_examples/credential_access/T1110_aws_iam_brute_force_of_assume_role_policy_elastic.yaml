@@ -1,0 +1,49 @@
+technique_id: T1110
+technique_name: AWS IAM Brute Force of Assume Role Policy
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:aws.cloudtrail and\n  event.provider:iam.amazonaws.com and event.action:UpdateAssumeRolePolicy\
+  \ and\n  aws.cloudtrail.error_code:MalformedPolicyDocumentException and event.outcome:failure"
+explanation: 'Identifies a high number of failed attempts to assume an AWS Identity
+  and Access Management (IAM) role. IAM roles are
+
+  used to delegate access to users or services. An adversary may attempt to enumerate
+  IAM roles in order to determine if a
+
+  role exists before attempting to assume or hijack the discovered role.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ea248a02-bc47-4043-8e94-2885b19b2636.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Verify the roles targeted in the failed attempts, and whether the subject role
+    previously existed in the environment. If only one role was targeted in the requests
+    and that role previously existed, it may be a false positive, since automations
+    can continue targeting roles that existed in the environment in the past and cause
+    false positives (FPs).
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Disable or li'
+  mitigation: Review investigation guide for details
+references:
+- https://www.praetorian.com/blog/aws-iam-assume-role-vulnerabilities
+- https://rhinosecuritylabs.com/aws/assume-worst-aws-assume-role-enumeration/
+has_investigation_guide: true
+risk_score: 47

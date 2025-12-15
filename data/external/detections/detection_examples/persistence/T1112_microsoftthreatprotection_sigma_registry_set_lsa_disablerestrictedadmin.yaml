@@ -1,0 +1,45 @@
+technique_id: T1112
+technique_name: RestrictedAdminMode Registry Value Tampering
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: d6ce7ebd-260b-4323-9768-a9631c8d4db2
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetObject|endswith: System\\CurrentControlSet\\Control\\Lsa\\DisableRestrictedAdmin\n"
+explanation: 'Detects changes to the "DisableRestrictedAdmin" registry value in order
+  to disable or enable RestrictedAdmin mode.
+
+  RestrictedAdmin mode prevents the transmission of reusable credentials to the remote
+  system to which you connect using Remote Desktop.
+
+  This prevents your credentials from being harvested during the initial connection
+  process if the remote server has been compromise
+
+  '
+false_positives:
+- Unknown
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/a8e3cf63e97b973a25903d3df9fd55da6252e564/atomics/T1112/T1112.md
+- https://social.technet.microsoft.com/wiki/contents/articles/32905.remote-desktop-services-enable-restricted-admin-mode.aspx
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.t1112
+logsource:
+  product: windows
+  category: registry_set
+detection:
+  selection:
+    TargetObject|endswith: System\CurrentControlSet\Control\Lsa\DisableRestrictedAdmin
+  condition: selection
+metadata:
+  created_date: 2023-01-13
+  modified_date: 2024-08-23
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

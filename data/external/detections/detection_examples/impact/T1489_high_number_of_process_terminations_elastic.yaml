@@ -1,0 +1,51 @@
+technique_id: T1489
+technique_name: High Number of Process Terminations
+tactic: impact
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: event.category:process and host.os.type:linux and event.type:start and process.name:"pkill"
+  and process.args:"-f"
+explanation: This rule identifies a high number (10) of process terminations via pkill
+  from the same host within a short time period.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/67f8443a-4ff3-4a70-916d-3cfa3ae9f02b.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further destructive behavior, which is
+    commonly associated with this activity.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all compromised accounts are identi'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

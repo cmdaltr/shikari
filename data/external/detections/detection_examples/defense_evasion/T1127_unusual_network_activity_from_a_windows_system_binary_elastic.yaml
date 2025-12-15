@@ -1,0 +1,78 @@
+technique_id: T1127
+technique_name: Unusual Network Activity from a Windows System Binary
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by process.entity_id with maxspan=1m\n  [process where host.os.type\
+  \ == \"windows\" and event.type == \"start\" and\n\n     /* known applocker bypasses\
+  \ */\n     (process.name : \"bginfo.exe\" or\n      process.name : \"cdb.exe\" or\n\
+  \      process.name : \"control.exe\" or\n      process.name : \"cmstp.exe\" or\n\
+  \      process.name : \"csi.exe\" or\n      process.name : \"dnx.exe\" or\n    \
+  \  process.name : \"fsi.exe\" or\n      process.name : \"ieexec.exe\" or\n     \
+  \ process.name : \"iexpress.exe\" or\n      process.name : \"installutil.exe\" or\n\
+  \      process.name : \"Microsoft.Workflow.Compiler.exe\" or\n      process.name\
+  \ : \"MSBuild.exe\" or\n      process.name : \"msdt.exe\" or\n      process.name\
+  \ : \"mshta.exe\" or\n      process.name : \"wscript.exe\" or\n      process.name\
+  \ : \"msiexec.exe\" or\n      process.name : \"msxsl.exe\" or\n      process.name\
+  \ : \"odbcconf.exe\" or\n      process.name : \"rcsi.exe\" or\n      process.name\
+  \ : \"regsvr32.exe\" or\n      process.name : \"xwizard.exe\") and\n\n  not (process.name\
+  \ : \"mshta.exe\" and\n       process.parent.executable : (\"C:\\\\Program Files\
+  \ (x86)\\\\Bentley\\\\*.exe\",\n                                    \"C:\\\\Program\
+  \ Files\\\\Bentley\\\\*.exe\",\n                                    \"C:\\\\Program\
+  \ Files (x86)\\\\Amazon\\\\Amazon Assistant\\\\amazonAssistantService.exe\",\n \
+  \                                   \"C:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Temp\\\
+  \\TeamViewer\\\\TeamViewer.exe\"))\n  ]\n  [network where dns.question.name != null\
+  \ and\n      not dns.question.name : (\"localhost\", \"setup.officetimeline.com\"\
+  , \"us.deployment.endpoint.ingress.rapid7.com\", \n        \"ctldl.windowsupdate.com\"\
+  , \"crl?.digicert.com\", \"ocsp.digicert.com\", \"addon-cms-asl.eu.goskope.com\"\
+  , \"crls.ssl.com\", \n        \"evcs-ocsp.ws.symantec.com\", \"s.symcd.com\", \"\
+  s?.symcb.com\", \"crl.verisign.com\", \"oneocsp.microsoft.com\", \"crl.verisign.com\"\
+  , \n        \"aka.ms\", \"crl.comodoca.com\", \"acroipm2.adobe.com\", \"sv.symcd.com\"\
+  , \"_ldap._tcp.*\", \"..localmachine\", \"secure.globalsign.com\",\n        \"acroipm2.adobe.com\"\
+  , \"www.ssl.com\", \"ocsp.digicert.com\", \"ocsp.verisign.com\", \"ocsp.comodoca.com\"\
+  , \"ocsp.entrust.net\", \"ocsp.usertrust.com\",\n        \"ocsp.godaddy.com\", \"\
+  ocsp.camerfirma.com\", \"ocsp.globalsign.com\", \"ocsp.sectigo.com\", \"*.local\"\
+  ) and\n\n      not (process.name : \"mshta.exe\" and\n           dns.question.name\
+  \ : (\"client.teamviewer.com\", \"www.teamviewer.com\", \"images-na.ssl-images-amazon.com\"\
+  , \"searcherbar.tilda.ws\")) and\n\n      /* host query itself */\n      not startswith~(dns.question.name,\
+  \ host.name)\n      ]"
+explanation: 'Identifies network activity from unexpected system applications. This
+  may indicate adversarial activity as these
+
+  applications are often leveraged by adversaries to execute code and evade detection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/1fe3b299-fbb5-4657-a937-1d746f2c711a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - As trusted developer utilities have dual-use purposes, alerts derived from this
+    rule are not essentially malicious. If these utilities are contacting internal
+    or known trusted domains, review their security and consider creating exceptions
+    if the domain is safe.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Investigate credential expo'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

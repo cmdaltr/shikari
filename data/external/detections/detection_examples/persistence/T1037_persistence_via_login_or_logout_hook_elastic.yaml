@@ -1,0 +1,49 @@
+technique_id: T1037
+technique_name: Persistence via Login or Logout Hook
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"macos\" and event.type == \"start\" and\n\
+  \ process.name == \"defaults\" and process.args == \"write\" and process.args :\
+  \ (\"LoginHook\", \"LogoutHook\") and\n not process.args :\n       (\n         \"\
+  Support/JAMF/ManagementFrameworkScripts/logouthook.sh\",\n         \"Support/JAMF/ManagementFrameworkScripts/loginhook.sh\"\
+  ,\n         \"/Library/Application Support/JAMF/ManagementFrameworkScripts/logouthook.sh\"\
+  ,\n         \"/Library/Application Support/JAMF/ManagementFrameworkScripts/loginhook.sh\"\
+  \n       )"
+explanation: 'Identifies use of the Defaults command to install a login or logoff
+  hook in MacOS. An adversary may abuse this
+
+  capability to establish persistence in an environment by inserting code to be executed
+  at login or logout.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5d0265bf-dea9-41a9-92ad-48a8dcd05080.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Known false positives include legitimate scripts used by system management tools
+    like JAMF, which are often set as login or logout hooks.
+
+    - To handle these, users can create exceptions for known legitimate scripts by
+    adding their paths to the exclusion list in the detection rule.
+
+    - Regularly review and update the exclusion list to ensure it includes all authorized
+    scripts used in your environment.
+
+    - Monitor for any changes in the behavior of these scripts to ensure the'
+  mitigation: Review investigation guide for details
+references:
+- https://www.virusbulletin.com/uploads/pdf/conference_slides/2014/Wardle-VB2014.pdf
+- https://www.manpagez.com/man/1/defaults/
+has_investigation_guide: true
+risk_score: 47

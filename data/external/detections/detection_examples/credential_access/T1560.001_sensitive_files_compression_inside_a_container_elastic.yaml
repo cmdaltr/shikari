@@ -1,0 +1,44 @@
+technique_id: T1560.001
+technique_name: Sensitive Files Compression Inside A Container
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and event.action\
+  \ == \"exec\" and\nprocess.entry_leader.entry_meta.type == \"container\" and process.name\
+  \ in (\"zip\", \"tar\", \"gzip\", \"hdiutil\", \"7z\") and\nprocess.command_line\
+  \ like~ (\n  \"*/root/.ssh/*\", \"*/home/*/.ssh/*\", \"*/root/.bash_history*\",\
+  \ \"*/etc/hosts*\", \"*/root/.aws/*\", \"*/home/*/.aws/*\",\n  \"*/root/.docker/*\"\
+  , \"*/home/*/.docker/*\", \"*/etc/group*\", \"*/etc/passwd*\", \"*/etc/shadow*\"\
+  , \"*/etc/gshadow*\"\n)"
+explanation: 'Identifies the use of a compression utility to collect known files containing
+  sensitive information, such as credentials
+
+  and system configurations inside a container.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d9faf1ba-a216-4c29-b8e0-a05a9d14b027.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine backup operations may trigger the rule if they involve compressing sensitive
+    files for storage. To handle this, identify and exclude backup processes or scripts
+    that are known and trusted.
+
+    - Automated configuration management tools might compress configuration files
+    as part of their normal operation. Exclude these tools by specifying their process
+    names or paths in the exception list.
+
+    - Developers or system administrators might compress sensitive files during l'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,45 @@
+technique_id: T1543.003
+technique_name: Vulnerable WinRing0 Driver Load
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 1a42dfa6-6cb2-4df9-9b48-295be477e835
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  - Hashes|contains: IMPHASH=D41FA95D4642DC981F10DE36F4DC8CD7\n- ImageLoaded|endswith:\n\
+  \  - \\WinRing0x64.sys\n  - \\WinRing0.sys\n  - \\WinRing0.dll\n  - \\WinRing0x64.dll\n\
+  \  - \\winring00x64.sys\n"
+explanation: Detects the load of a signed WinRing0 driver often used by threat actors,
+  crypto miners (XMRIG) or malware for privilege escalation
+false_positives:
+- Unknown
+references:
+- https://github.com/xmrig/xmrig/tree/master/bin/WinRing0
+- https://www.rapid7.com/blog/post/2021/12/13/driver-based-attacks-past-and-present/
+tags:
+- attack.persistence
+- attack.privilege-escalation
+- attack.t1543.003
+logsource:
+  product: windows
+  category: driver_load
+detection:
+  selection:
+  - Hashes|contains: IMPHASH=D41FA95D4642DC981F10DE36F4DC8CD7
+  - ImageLoaded|endswith:
+    - \WinRing0x64.sys
+    - \WinRing0.sys
+    - \WinRing0.dll
+    - \WinRing0x64.dll
+    - \winring00x64.sys
+  condition: selection
+metadata:
+  created_date: 2022-07-26
+  modified_date: 2024-11-23
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

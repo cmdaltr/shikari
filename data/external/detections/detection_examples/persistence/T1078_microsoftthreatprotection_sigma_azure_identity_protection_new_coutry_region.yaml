@@ -1,0 +1,40 @@
+technique_id: T1078
+technique_name: New Country
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: adf9f4d2-559e-4f5c-95be-c28dff0b1476
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  riskEventType: newCountry\n"
+explanation: Detects sign-ins from new countries. The detection considers past activity
+  locations to determine new and infrequent locations.
+false_positives:
+- We recommend investigating the sessions flagged by this detection in the context
+  of other sign-ins from the user.
+references:
+- https://learn.microsoft.com/en-us/entra/id-protection/concept-identity-protection-risks#new-country
+- https://learn.microsoft.com/en-us/entra/architecture/security-operations-user-accounts#unusual-sign-ins
+tags:
+- attack.t1078
+- attack.persistence
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.initial-access
+logsource:
+  product: azure
+  service: riskdetection
+detection:
+  selection:
+    riskEventType: newCountry
+  condition: selection
+metadata:
+  created_date: 2023-09-03
+  modified_date: '2025-11-28'
+  author: Mark Morowczynski '@markmorow', Gloria Lee, '@gleeiamglo'
+  status: test
+  imported_date: '2025-11-28'

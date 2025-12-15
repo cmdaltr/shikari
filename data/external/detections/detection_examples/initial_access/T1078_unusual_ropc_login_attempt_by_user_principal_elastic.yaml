@@ -1,0 +1,64 @@
+technique_id: T1078
+technique_name: Unusual ROPC Login Attempt by User Principal
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"azure.signinlogs\" and\n    azure.signinlogs.properties.authentication_protocol:\
+  \ \"ropc\" and\n    azure.signinlogs.properties.authentication_requirement: \"singleFactorAuthentication\"\
+  \ and\n    azure.signinlogs.properties.user_type: \"Member\" and\n    event.outcome:\
+  \ \"success\""
+explanation: 'Detects unusual resource owner password credential (ROPC) login attempts
+  by a user principal in Microsoft Entra ID. ROPC
+
+  is a legacy authentication flow that allows applications to obtain tokens by directly
+  providing user credentials. This
+
+  method is less secure and can be exploited by adversaries to gain access to user
+  accounts without requiring multi-factor
+
+  authentication (MFA), especially during enumeration or password spraying. This is
+  a New Terms rule that identifies when
+
+  user principals are involved in ROPC login attempts, not seen before in the last
+  10 days, indicating potential abuse or
+
+  unusual activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8d696bd0-5756-11f0-8e3b-f661ea17fbcd.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Sign-In Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+    - Legitimate applications or scripts that use ROPC for automation purposes may
+    trigger this rule.
+
+    - Some legacy applications may still rely on ROPC for authentication, especially
+    in environments where modern authentication methods are not fully implemented.
+
+    - Internal security tools or scripts that perform automated tasks using ROPC may
+    generate false positives if they are not properly whitelisted or excluded from
+    the rule.
+
+
+    ### Response and remediation
+
+    - If the ROPC logi'
+  mitigation: Review investigation guide for details
+references:
+- https://www.proofpoint.com/us/blog/threat-insight/attackers-unleash-teamfiltration-account-takeover-campaign
+- https://dirkjanm.io/assets/raw/Finding%20Entra%20ID%20CA%20Bypasses%20-%20the%20structured%20way.pdf
+- https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth-ropc
+has_investigation_guide: true
+risk_score: 47

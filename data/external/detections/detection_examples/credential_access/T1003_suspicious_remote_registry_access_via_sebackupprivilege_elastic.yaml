@@ -1,0 +1,58 @@
+technique_id: T1003
+technique_name: Suspicious Remote Registry Access via SeBackupPrivilege
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by winlog.computer_name, winlog.event_data.SubjectLogonId with maxspan=1m\n\
+  \ [iam where event.action == \"logged-in-special\"  and\n  winlog.event_data.PrivilegeList\
+  \ : \"SeBackupPrivilege\" and\n\n  /* excluding accounts with existing privileged\
+  \ access */\n  not winlog.event_data.PrivilegeList : \"SeDebugPrivilege\"]\n [any\
+  \ where event.code == \"5145\" and winlog.event_data.RelativeTargetName : \"winreg\"\
+  ]"
+explanation: 'Identifies remote access to the registry using an account with Backup
+  Operators group membership. This may indicate an
+
+  attempt to exfiltrate credentials by dumping the Security Account Manager (SAM)
+  registry hive in preparation for
+
+  credential access and privileges elevation.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/47e22836-4a16-4b35-beee-98f6c4ee9bf2.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - If this activity is expected and noisy in your environment, benign true positives
+    (B-TPs) can be added as exceptions if necessary.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Limit or disable the involved user account to prevent further post-compromise
+    behavior.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all compromised accounts are identified. Reset passwo'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/mpgn/BackupOperatorToDA
+- https://raw.githubusercontent.com/Wh04m1001/Random/main/BackupOperators.cpp
+- https://www.elastic.co/security-labs/detect-credential-access
+has_investigation_guide: true
+risk_score: 47

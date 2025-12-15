@@ -1,0 +1,41 @@
+technique_id: T1112
+technique_name: Windows Modify Registry DontShowUI
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Registry where Registry.registry_path = "*\\SOFTWARE\\Microsoft\\Windows\\Windows
+  Error Reporting\\DontShowUI"  Registry.registry_value_data = 0x00000001 by Registry.action
+  Registry.dest Registry.process_guid Registry.process_id Registry.registry_hive Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_data Registry.registry_value_name
+  Registry.registry_value_type Registry.status Registry.user Registry.vendor_product
+  | `drop_dm_object_name(Registry)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_modify_registry_dontshowui_filter`'
+explanation: The following analytic detects modifications to the Windows Error Reporting
+  registry key "DontShowUI" to suppress error reporting dialogs. It leverages data
+  from the Endpoint datamodel's Registry node to identify changes where the registry
+  value is set to 0x00000001. This activity is significant as it is commonly associated
+  with DarkGate malware, which uses this modification to avoid detection during its
+  installation. If confirmed malicious, this behavior could allow attackers to maintain
+  a low profile, avoiding user alerts and potentially enabling further malicious activities
+  without user intervention.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/4ff9767b-fdf2-489c-83a5-c6c34412d72e/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrators may enable or disable this feature that may cause some
+    false positive, however is not common. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://malpedia.caad.fkie.fraunhofer.de/details/win.darkgate
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1112/wer_dontshowui/dontshowui_sys.log

@@ -1,0 +1,64 @@
+technique_id: T1059
+technique_name: Shell Execution via Rsync - Linux
+tactic: execution
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: e2326866-609f-4015-aea9-7ec634e8aa04
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cli:\n  CommandLine|contains:\n  - '/ash '\n  - '/bash '\n  - '/dash '\n\
+  \  - '/csh '\n  - '/sh '\n  - '/zsh '\n  - '/tcsh '\n  - '/ksh '\n  - '''ash '\n\
+  \  - '''bash '\n  - '''dash '\n  - '''csh '\n  - '''sh '\n  - '''zsh '\n  - '''tcsh\
+  \ '\n  - '''ksh '\nselection_img:\n  CommandLine|contains: ' -e '\n  Image|endswith:\n\
+  \  - /rsync\n  - /rsyncd\n"
+explanation: 'Detects the use of the "rsync" utility to execute a shell. Such behavior
+  may be associated with privilege escalation, unauthorized command execution, or
+  to break out from restricted environments.
+
+  '
+false_positives:
+- Legitimate cases in which "rsync" is used to execute a shell
+references:
+- https://gtfobins.github.io/gtfobins/rsync/#shell
+tags:
+- attack.execution
+- attack.t1059
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection_img:
+    Image|endswith:
+    - /rsync
+    - /rsyncd
+    CommandLine|contains: ' -e '
+  selection_cli:
+    CommandLine|contains:
+    - '/ash '
+    - '/bash '
+    - '/dash '
+    - '/csh '
+    - '/sh '
+    - '/zsh '
+    - '/tcsh '
+    - '/ksh '
+    - '''ash '
+    - '''bash '
+    - '''dash '
+    - '''csh '
+    - '''sh '
+    - '''zsh '
+    - '''tcsh '
+    - '''ksh '
+  condition: all of selection_*
+metadata:
+  created_date: 2024-09-02
+  modified_date: 2025-01-18
+  author: Li Ling, Andy Parkidomo, Robert Rakowski, Blake Hartstein (Bloomberg L.P.),
+    Florian Roth
+  status: experimental
+  imported_date: '2025-11-28'

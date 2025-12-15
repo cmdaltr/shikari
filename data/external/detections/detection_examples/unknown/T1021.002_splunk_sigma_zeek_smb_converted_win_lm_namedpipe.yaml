@@ -1,0 +1,56 @@
+technique_id: T1021.002
+technique_name: First Time Seen Remote Named Pipe - Zeek
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 021310d9-30a6-480a-84b7-eaa69aeb92bb
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_*\nfilter_keywords:\n- samr\n- lsarpc\n- winreg\n- netlogon\n- srvsvc\n\
+  - protected_storage\n- wkssvc\n- browser\n- netdfs\n- svcctl\n- spoolss\n- ntsvcs\n\
+  - LSM_API_service\n- HydraLsPipe\n- TermSrv_API_service\n- MsFteWds\nselection:\n\
+  \  path: \\\\\\\\\\*\\\\IPC$\n"
+explanation: This detection excludes known namped pipes accessible remotely and notify
+  on newly observed ones, may help to detect lateral movement and remote exec using
+  named pipes
+false_positives:
+- Update the excluded named pipe to filter out any newly observed legit named pipe
+references:
+- https://twitter.com/menasec1/status/1104489274387451904
+tags:
+- attack.lateral-movement
+- attack.t1021.002
+logsource:
+  product: zeek
+  service: smb_files
+detection:
+  selection:
+    path: \\\\\*\\IPC$
+  filter_keywords:
+  - samr
+  - lsarpc
+  - winreg
+  - netlogon
+  - srvsvc
+  - protected_storage
+  - wkssvc
+  - browser
+  - netdfs
+  - svcctl
+  - spoolss
+  - ntsvcs
+  - LSM_API_service
+  - HydraLsPipe
+  - TermSrv_API_service
+  - MsFteWds
+  condition: selection and not 1 of filter_*
+metadata:
+  created_date: 2020-04-02
+  modified_date: 2022-12-27
+  author: Samir Bousseaden, @neu5ron, Tim Shelton
+  status: test
+  imported_date: '2025-11-28'

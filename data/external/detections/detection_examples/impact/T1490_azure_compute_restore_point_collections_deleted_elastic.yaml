@@ -1,0 +1,50 @@
+technique_id: T1490
+technique_name: Azure Compute Restore Point Collections Deleted
+tactic: impact
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset: azure.activitylogs and\n    event.action: \"MICROSOFT.COMPUTE/RESTOREPOINTCOLLECTIONS/DELETE\"\
+  \ and\n    event.outcome: (Success or success)"
+explanation: 'Identifies multiple Azure Restore Point Collections being deleted by
+  a single user within a short time period. Restore
+
+  Point Collections contain recovery points for virtual machines, enabling point-in-time
+  recovery capabilities. Mass
+
+  deletion of these collections is a common tactic used by adversaries during ransomware
+  attacks to prevent victim
+
+  recovery or to maximize impact during destructive operations. Multiple deletions
+  in rapid succession may indicate
+
+  malicious intent.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d8f4e3b0-8a1b-11ef-9b4a-f661ea17fbce.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Azure Activity Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Large-scale decommissioning projects may involve legitimate deletion of multiple
+    Restore Point Collections. Verify with change management records and create temporary
+    exceptions during documented maintenance windows.
+
+    - Infrastructure migrations from Azure to another platform or between Azure regions
+    may involve cleanup of old restore points. Confirm these activities are planned
+    and documented before excluding them from monitoring.
+
+    - Automated cleanup scripts designed t'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoft.com/en-us/security/blog/2023/07/25/storm-0501-ransomware-attacks-expanding-to-hybrid-cloud-environments/
+has_investigation_guide: true
+risk_score: 73

@@ -1,0 +1,49 @@
+technique_id: T1055
+technique_name: Windows Process With NamedPipe CommandLine
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.process = "*\\\\.\\pipe\\*"
+  NOT Processes.process_path IN ("C:\\Program Files\\*", "C:\\Program Files (x86)\\*")
+  by Processes.action Processes.dest Processes.original_file_name Processes.parent_process
+  Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id
+  Processes.parent_process_name Processes.parent_process_path Processes.process Processes.process_exec
+  Processes.process_guid Processes.process_hash Processes.process_id Processes.process_integrity_level
+  Processes.process_name Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_process_with_namedpipe_commandline_filter`'
+explanation: The following analytic detects processes with command lines containing
+  named pipes. It leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on process command-line executions. This behavior is significant as it
+  is often used by adversaries, such as those behind the Olympic Destroyer malware,
+  for inter-process communication post-injection, aiding in defense evasion and privilege
+  escalation. If confirmed malicious, this activity could allow attackers to maintain
+  persistence, escalate privileges, or evade defenses, potentially leading to further
+  compromise of the system.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e64399d4-94a8-11ec-a9da-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Normal browser application may use this technique. Please update the
+    filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://blog.talosintelligence.com/2018/02/olympic-destroyer.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/olympic_destroyer/sysmon.log

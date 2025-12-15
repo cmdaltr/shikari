@@ -1,0 +1,44 @@
+technique_id: T1550
+technique_name: Potential Kerberos Attack via Bifrost
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n process.args like~ \"-action\" and (process.args like~ (\"-kerberoast\"\
+  , \"askhash\", \"asktgs\", \"asktgt\", \"s4u\") or process.args like~ (\"-ticket\"\
+  , \"ptt\") or process.args like~ \"dump\") and process.args like~ (\"tickets\",\
+  \ \"keytab\")"
+explanation: 'Identifies use of Bifrost, a known macOS Kerberos pentesting tool, which
+  can be used to dump cached Kerberos tickets or
+
+  attempt unauthorized authentication techniques such as pass-the-ticket/hash and
+  kerberoasting.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/16904215-2c95-4ac8-bf5c-12354e047192.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks on macOS systems may trigger the rule if they
+    involve Kerberos ticket management. To handle this, identify and document routine
+    administrative processes that use similar command-line arguments and create exceptions
+    for these specific activities.
+
+    - Security tools or scripts designed for Kerberos ticket management or testing
+    may mimic Bifrost''s behavior. Review and whitelist these tools if they are part
+    of authorized security assessments o'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/its-a-feature/bifrost
+has_investigation_guide: true
+risk_score: 73

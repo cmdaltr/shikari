@@ -1,0 +1,54 @@
+technique_id: T1078
+technique_name: First Occurrence of Entra ID Auth via DeviceCode Protocol
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset:(azure.activitylogs or azure.signinlogs)\n    and (\n      \
+  \      azure.signinlogs.properties.authentication_protocol:deviceCode or\n     \
+  \       azure.signinlogs.properties.original_transfer_method: \"Device code flow\"\
+  \ or\n            azure.activitylogs.properties.authentication_protocol:deviceCode\n\
+  \        )\n    and event.outcome:success"
+explanation: 'Identifies when a user is observed for the first time in the last 14
+  days authenticating using the device code
+
+  authentication workflow. This authentication workflow can be abused by attackers
+  to phish users and steal access tokens
+
+  to impersonate the victim. By its very nature, device code should only be used when
+  logging in to devices without
+
+  keyboards, where it is difficult to enter emails and passwords.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/af22d970-7106-45b4-b5e3-460d15333727.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - **Legitimate Device Enrollment**: If the user is setting up a new device (e.g.,
+    a smart TV or kiosk), this authentication may be expected.
+
+    - **Automation or Scripting**: Some legitimate applications or scripts may leverage
+    the `DeviceCode` authentication protocol for non-interactive logins.
+
+    - **Shared Devices in Organizations**: In cases where shared workstations or conference
+    room devices are in use, legitimate users may trigger alerts.
+
+    - **Travel and Remote Work**: I'
+  mitigation: Review investigation guide for details
+references:
+- https://aadinternals.com/post/phishing/
+- https://www.blackhillsinfosec.com/dynamic-device-code-phishing/
+- https://www.volexity.com/blog/2025/02/13/multiple-russian-threat-actors-targeting-microsoft-device-code-authentication/
+- https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-authentication-flows
+has_investigation_guide: true
+risk_score: 47

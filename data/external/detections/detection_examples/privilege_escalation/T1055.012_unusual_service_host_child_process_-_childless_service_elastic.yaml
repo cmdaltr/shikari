@@ -1,0 +1,67 @@
+technique_id: T1055.012
+technique_name: Unusual Service Host Child Process - Childless Service
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.parent.name : \"svchost.exe\" and\n\n  /* based on svchost service arguments\
+  \ -s svcname where the service is known to be childless */\n  process.parent.args\
+  \ : (\n    \"WdiSystemHost\", \"LicenseManager\", \"StorSvc\", \"CDPSvc\", \"cdbhsvc\"\
+  , \"BthAvctpSvc\", \"SstpSvc\", \"WdiServiceHost\",\n    \"imgsvc\", \"TrkWks\"\
+  , \"WpnService\", \"IKEEXT\", \"PolicyAgent\", \"CryptSvc\", \"netprofm\", \"ProfSvc\"\
+  , \"StateRepository\",\n    \"camsvc\", \"LanmanWorkstation\", \"NlaSvc\", \"EventLog\"\
+  , \"hidserv\", \"DisplayEnhancementService\", \"ShellHWDetection\",\n    \"AppHostSvc\"\
+  , \"fhsvc\", \"CscService\", \"PushToInstall\"\n  ) and\n\n  /* unknown FPs can\
+  \ be added here */\n  not process.name : (\"WerFault.exe\", \"WerFaultSecure.exe\"\
+  , \"wermgr.exe\") and\n  not (process.executable : \"?:\\\\Windows\\\\System32\\\
+  \\RelPost.exe\" and process.parent.args : \"WdiSystemHost\") and\n  not (\n    process.name\
+  \ : \"rundll32.exe\" and\n    process.args : \"?:\\\\WINDOWS\\\\System32\\\\winethc.dll,ForceProxyDetectionOnNextRun\"\
+  \ and\n    process.parent.args : \"WdiServiceHost\"\n  ) and\n  not (\n    process.executable\
+  \ : (\n      \"?:\\\\Program Files\\\\*\",\n      \"?:\\\\Program Files (x86)\\\\\
+  *\",\n      \"?:\\\\Windows\\\\System32\\\\Kodak\\\\kds_?????\\\\lib\\\\lexexe.exe\"\
+  \n    ) and process.parent.args : \"imgsvc\"\n  )"
+explanation: 'Identifies unusual child processes of Service Host (svchost.exe) that
+  traditionally do not spawn any child processes.
+
+  This may indicate a code injection or an equivalent form of exploitation.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6a8ab9cc-4023-4d17-b5df-1a3e16882ce7.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'false positives listed in the query to rule out benign activities.
+
+    - Utilize threat intelligence sources to determine if the child process or its
+    executable path is associated with known malware or attack patterns.
+
+
+    ### False positive analysis
+
+
+    - Processes like WerFault.exe, WerFaultSecure.exe, and wermgr.exe are known to
+    be legitimate Windows error reporting tools that may occasionally be spawned by
+    svchost.exe. To handle these, add them to the exclusion list in the detection
+    rule to prevent un'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

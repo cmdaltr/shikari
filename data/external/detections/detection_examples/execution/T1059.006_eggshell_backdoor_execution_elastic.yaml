@@ -1,0 +1,42 @@
+technique_id: T1059.006
+technique_name: EggShell Backdoor Execution
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: event.category:process and event.type:(process_started or start) and process.name:espl
+  and process.args:eyJkZWJ1ZyI6*
+explanation: Identifies the execution of and EggShell Backdoor. EggShell is a known
+  post exploitation tool for macOS and Linux.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/41824afb-d68c-4d0e-bfee-474dac1fa56e.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts or tools that use similar command patterns
+    to EggShell may trigger false positives. Review the process arguments and context
+    to determine if the activity is expected and authorized.
+
+    - Development or testing environments where EggShell or similar tools are used
+    for legitimate purposes can cause alerts. Implement exceptions for these environments
+    by excluding specific user accounts or process paths.
+
+    - Automated scripts or monitoring tool'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/neoneggplant/EggShell
+has_investigation_guide: true
+risk_score: 73

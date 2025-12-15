@@ -1,0 +1,55 @@
+technique_id: T1611
+technique_name: Potential Privilege Escalation via Container Misconfiguration
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and event.action\
+  \ == \"exec\" and (\n  (process.name == \"runc\" and process.args == \"run\") or\n\
+  \  (process.name == \"ctr\" and process.args == \"run\" and process.args in (\"\
+  --privileged\", \"--mount\"))\n) and not user.Ext.real.id == \"0\" and not group.Ext.real.id\
+  \ == \"0\" and\nprocess.interactive == true and process.parent.interactive == true"
+explanation: 'This rule monitors for the execution of processes that interact with
+  Linux containers through an interactive shell
+
+  without root permissions. Utilities such as runc and ctr are universal command-line
+  utilities leveraged to interact with
+
+  containers via root permissions. On systems where the access to these utilities
+  are misconfigured, attackers might be
+
+  able to create and run a container that mounts the root folder or spawn a privileged
+  container vulnerable to a container
+
+  escape attack, which might allow them to escalate privileges and gain further access
+  onto the host file system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/afe6b0eb-dd9d-4922-b08a-1910124d524d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Non-root users in development environments may frequently use runc or ctr for
+    legitimate container management tasks. To mitigate this, consider creating exceptions
+    for specific user IDs or groups known to perform these actions regularly.
+
+    - Automated scripts or CI/CD pipelines might execute container commands interactively
+    without root permissions. Identify these scripts and exclude their associated
+    user accounts or process names from triggering the rule.
+
+    - Some system'
+  mitigation: Review investigation guide for details
+references:
+- https://book.hacktricks.xyz/linux-hardening/privilege-escalation/runc-privilege-escalation
+- https://book.hacktricks.xyz/linux-hardening/privilege-escalation/containerd-ctr-privilege-escalation
+has_investigation_guide: true
+risk_score: 47

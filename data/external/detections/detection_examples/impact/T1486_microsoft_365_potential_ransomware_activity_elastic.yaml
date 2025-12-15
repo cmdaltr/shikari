@@ -1,0 +1,39 @@
+technique_id: T1486
+technique_name: Microsoft 365 Potential ransomware activity
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:SecurityComplianceCenter and event.category:web
+  and event.action:"Potential ransomware activity" and event.outcome:success
+explanation: 'Identifies when Microsoft Cloud App Security reports that a user has
+  uploaded files to the cloud that might be infected
+
+  with ransomware.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/721999d0-7ab2-44bf-b328-6e63367b9b29.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate file uploads by trusted users may trigger alerts if the files are
+    mistakenly flagged as ransomware. To manage this, create exceptions for specific
+    users or groups who frequently upload large volumes of files.
+
+    - Automated backup processes that upload encrypted files to the cloud can be misidentified
+    as ransomware activity. Exclude these processes by identifying and whitelisting
+    the associated service accounts or IP addresses.
+
+    - Certain file types or extension'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/cloud-app-security/anomaly-detection-policy
+- https://docs.microsoft.com/en-us/cloud-app-security/policy-template-reference
+has_investigation_guide: true
+risk_score: 47

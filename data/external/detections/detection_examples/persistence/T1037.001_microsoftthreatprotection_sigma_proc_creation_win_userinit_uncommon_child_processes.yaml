@@ -1,0 +1,69 @@
+technique_id: T1037.001
+technique_name: Uncommon Userinit Child Process
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: 0a98a10c-685d-4ab0-bddc-b6bdd1d48458
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_* and not 1 of filter_optional_*\nfilter_main_explorer:\n  Image|endswith:\
+  \ :\\WINDOWS\\explorer.exe\nfilter_optional_citrix:\n  Image|endswith:\n  - :\\\
+  Program Files (x86)\\Citrix\\HDX\\bin\\cmstart.exe\n  - :\\Program Files (x86)\\\
+  Citrix\\HDX\\bin\\icast.exe\n  - :\\Program Files (x86)\\Citrix\\System32\\icast.exe\n\
+  \  - :\\Program Files\\Citrix\\HDX\\bin\\cmstart.exe\n  - :\\Program Files\\Citrix\\\
+  HDX\\bin\\icast.exe\n  - :\\Program Files\\Citrix\\System32\\icast.exe\nfilter_optional_image_null:\n\
+  \  Image: null\nfilter_optional_logonscripts:\n  CommandLine|contains:\n  - netlogon.bat\n\
+  \  - UsrLogon.cmd\nfilter_optional_proquota:\n  Image|endswith:\n  - :\\Windows\\\
+  System32\\proquota.exe\n  - :\\Windows\\SysWOW64\\proquota.exe\nfilter_optional_windows_core:\n\
+  \  CommandLine: PowerShell.exe\nselection:\n  ParentImage|endswith: \\userinit.exe\n"
+explanation: Detects uncommon "userinit.exe" child processes, which could be a sign
+  of uncommon shells or login scripts used for persistence.
+false_positives:
+- Legitimate logon scripts or custom shells may trigger false positives. Apply additional
+  filters accordingly.
+references:
+- https://cocomelonc.github.io/persistence/2022/12/09/malware-pers-20.html
+- https://learn.microsoft.com/en-us/windows-server/administration/server-core/server-core-sconfig#powershell-is-the-default-shell-on-server-core
+tags:
+- attack.privilege-escalation
+- attack.t1037.001
+- attack.persistence
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \userinit.exe
+  filter_main_explorer:
+    Image|endswith: :\WINDOWS\explorer.exe
+  filter_optional_logonscripts:
+    CommandLine|contains:
+    - netlogon.bat
+    - UsrLogon.cmd
+  filter_optional_windows_core:
+    CommandLine: PowerShell.exe
+  filter_optional_proquota:
+    Image|endswith:
+    - :\Windows\System32\proquota.exe
+    - :\Windows\SysWOW64\proquota.exe
+  filter_optional_citrix:
+    Image|endswith:
+    - :\Program Files (x86)\Citrix\HDX\bin\cmstart.exe
+    - :\Program Files (x86)\Citrix\HDX\bin\icast.exe
+    - :\Program Files (x86)\Citrix\System32\icast.exe
+    - :\Program Files\Citrix\HDX\bin\cmstart.exe
+    - :\Program Files\Citrix\HDX\bin\icast.exe
+    - :\Program Files\Citrix\System32\icast.exe
+  filter_optional_image_null:
+    Image: null
+  condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*
+metadata:
+  created_date: 2019-01-12
+  modified_date: 2023-11-14
+  author: Tom Ueltschi (@c_APT_ure), Tim Shelton
+  status: test
+  imported_date: '2025-11-28'

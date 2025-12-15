@@ -1,0 +1,64 @@
+technique_id: T1078.004
+technique_name: Microsoft 365 OAuth Phishing via Visual Studio Code Client
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"o365.audit\"\n    and event.action: \"UserLoggedIn\"\n  \
+  \  and o365.audit.ApplicationId: \"aebc6443-996d-45c2-90f0-388ff96faa56\"\n    and\
+  \ o365.audit.Target.ID: \"00000003-0000-0000-c000-000000000000\"\n    and o365.audit.ExtendedProperties.RequestType:\
+  \ \"OAuth2:Authorize\"\n    and o365.audit.ExtendedProperties.ResultStatusDetail:\
+  \ \"Redirect\"\n    and o365.audit.UserType: (\"0\" or \"2\" or \"3\" or \"5\" or\
+  \ \"6\" or \"10\")"
+explanation: 'Detects potentially suspicious OAuth authorization activity in Microsoft
+  365 where the Visual Studio Code first-party
+
+  application (client_id = aebc6443-996d-45c2-90f0-388ff96faa56) is used to request
+  access to Microsoft Graph resources.
+
+  While this client ID is legitimately used by Visual Studio Code, threat actors have
+  been observed abusing it in phishing
+
+  campaigns to make OAuth requests appear trustworthy. These attacks rely on redirect
+  URIs such as VSCode Insiders
+
+  redirect location, prompting victims to return an OAuth authorization code that
+  can be exchanged for access tokens. This
+
+  rule may help identify unauthorized use of the VS Code OAuth flow as part of social
+  engineering or credential phishing
+
+  activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/929d0766-204b-11f0-9c1f-f661ea17fbcd.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+- type: data_source
+  value: Microsoft 365 Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Developers or IT users intentionally using Visual Studio Code to connect to
+    Microsoft 365 may trigger this rule.
+
+    - Legitimate Visual Studio Code extensions that sync or query Graph API data (e.g.,
+    calendars, tasks, cloud-hosted notebooks).
+
+    - Enterprise use cases where VS Code is used for integrated identity workflows.
+
+    - Exclude known user agents and hosts that regularly use Visual Studio Code against
+    Graph.
+
+    - Whitelist specific source IPs or devices tied to developer m'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/azure/active-directory/reports-monitoring/reference-azure-monitor-sign-ins-log-schema
+- https://www.volexity.com/blog/2025/04/22/phishing-for-codes-russian-threat-actors-target-microsoft-365-oauth-workflows/
+has_investigation_guide: true
+risk_score: 47

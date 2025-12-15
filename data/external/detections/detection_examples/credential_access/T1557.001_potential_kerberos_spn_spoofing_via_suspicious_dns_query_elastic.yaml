@@ -1,0 +1,70 @@
+technique_id: T1557.001
+technique_name: Potential Kerberos SPN Spoofing via Suspicious DNS Query
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: 'network where host.os.type == "windows" and dns.question.name : "*UWhRC*BAAAA*"'
+explanation: 'Identifies queries to a DNS record containing a base64-encoded blob
+  matching the pattern "UWhRCA...BAAAA". This pattern
+
+  corresponds to a marshaled CREDENTIAL_TARGET_INFORMATION structure, commonly used
+  in Kerberos coercion attacks. It is
+
+  associated with tools and techniques that exploit SPN spoofing via DNS. Adversaries
+  may abuse this to coerce victim
+
+  systems into authenticating to attacker-controlled hosts while requesting Kerberos
+  tickets for legitimate services
+
+  (often the victim''s own identity), enabling attacks such as NTLM reflection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/99ac5005-8a9e-4625-a0af-5f7bb447204b.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately.
+
+
+    ### Response and remediation
+
+
+    - Review and remove malicious DNS records containing the embedded CREDENTIAL_TARGET_INFORMATION
+    Base64 payload (UWhRCA...BAAAA). Ensure that no additional coercion records exist
+    in the same DNS zone.
+
+    - Isolate involved systems if signs of compromise or lateral movement are detected,
+    especially if the record was successfully resolved and used for coercion.
+
+    - Monitor network traffic for sign'
+  mitigation: Review investigation guide for details
+references:
+- https://www.synacktiv.com/publications/ntlm-reflection-is-dead-long-live-ntlm-reflection-an-in-depth-analysis-of-cve-2025
+- https://blog.redteam-pentesting.de/2025/reflective-kerberos-relay-attack/
+- https://googleprojectzero.blogspot.com/2021/10/using-kerberos-for-authentication-relay.html
+- https://github.com/CICADA8-Research/RemoteKrbRelay/blob/main/README.md
+- https://github.com/Orange-Cyberdefense/ocd-mindmaps/blob/main/excalimap/mindmap/ad/authenticated.md
+has_investigation_guide: true
+risk_score: 73

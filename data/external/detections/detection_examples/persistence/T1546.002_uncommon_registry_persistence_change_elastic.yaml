@@ -1,0 +1,125 @@
+technique_id: T1546.002
+technique_name: Uncommon Registry Persistence Change
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\n\
+  \ length(registry.data.strings) > 0 and\n registry.path : (\n      \"HKLM\\\\SOFTWARE\\\
+  \\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Terminal Server\\\\Install\\\\SOFTWARE\\\
+  \\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\\*\",\n      \"HKLM\\\\SOFTWARE\\\
+  \\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Terminal Server\\\\Install\\\\SOFTWARE\\\
+  \\Microsoft\\\\Windows\\\\CurrentVersion\\\\Runonce\\\\*\",\n      \"HKEY_USERS\\\
+  \\*\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Windows\\\\Load\"\
+  ,\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\
+  \\Windows\\\\Run\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\
+  \\Windows\\\\IconServiceLib\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows\
+  \ NT\\\\CurrentVersion\\\\Winlogon\\\\Shell\",\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\
+  \\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Winlogon\\\\Shell\",\n      \"HKLM\\\
+  \\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Winlogon\\\\AppSetup\"\
+  ,\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Winlogon\\\
+  \\Taskman\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\
+  \\Winlogon\\\\Userinit\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\
+  \\CurrentVersion\\\\Winlogon\\\\VmApplet\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\
+  \\Windows\\\\CurrentVersion\\\\Policies\\\\Explorer\\\\Run\\\\*\",\n      \"HKLM\\\
+  \\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Policies\\\\System\\\\Shell\"\
+  ,\n      \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows\\\\System\\\\Scripts\\\
+  \\Logoff\\\\Script\",\n      \"HKLM\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows\\\
+  \\System\\\\Scripts\\\\Logon\\\\Script\",\n      \"HKLM\\\\SOFTWARE\\\\Policies\\\
+  \\Microsoft\\\\Windows\\\\System\\\\Scripts\\\\Shutdown\\\\Script\",\n      \"HKLM\\\
+  \\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows\\\\System\\\\Scripts\\\\Startup\\\
+  \\Script\",\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\
+  \\Policies\\\\Explorer\\\\Run\\\\*\",\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\\Microsoft\\\
+  \\Windows\\\\CurrentVersion\\\\Policies\\\\System\\\\Shell\",\n      \"HKEY_USERS\\\
+  \\*\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows\\\\System\\\\Scripts\\\\Logoff\\\
+  \\Script\",\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows\\\
+  \\System\\\\Scripts\\\\Logon\\\\Script\",\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\
+  \\Policies\\\\Microsoft\\\\Windows\\\\System\\\\Scripts\\\\Shutdown\\\\Script\"\
+  ,\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\\Policies\\\\Microsoft\\\\Windows\\\\System\\\
+  \\Scripts\\\\Startup\\\\Script\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Active\
+  \ Setup\\\\Installed Components\\\\*\\\\ShellComponent\",\n      \"HKLM\\\\SOFTWARE\\\
+  \\Microsoft\\\\Windows CE Services\\\\AutoStartOnConnect\\\\MicrosoftActiveSync\"\
+  ,\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows CE Services\\\\AutoStartOnDisconnect\\\
+  \\MicrosoftActiveSync\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Ctf\\\\LangBarAddin\\\
+  \\*\\\\FilePath\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Internet Explorer\\\
+  \\Extensions\\\\*\\\\Exec\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Internet\
+  \ Explorer\\\\Extensions\\\\*\\\\Script\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\
+  \\Command Processor\\\\Autorun\",\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\\Microsoft\\\
+  \\Ctf\\\\LangBarAddin\\\\*\\\\FilePath\",\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\
+  \\Microsoft\\\\Internet Explorer\\\\Extensions\\\\*\\\\Exec\",\n      \"HKEY_USERS\\\
+  \\*\\\\SOFTWARE\\\\Microsoft\\\\Internet Explorer\\\\Extensions\\\\*\\\\Script\"\
+  ,\n      \"HKEY_USERS\\\\*\\\\SOFTWARE\\\\Microsoft\\\\Command Processor\\\\Autorun\"\
+  ,\n      \"HKEY_USERS\\\\*\\\\Control Panel\\\\Desktop\\\\scrnsave.exe\",\n    \
+  \  \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Image File\
+  \ Execution Options\\\\*\\\\VerifierDlls\",\n      \"HKLM\\\\SOFTWARE\\\\Microsoft\\\
+  \\Windows NT\\\\CurrentVersion\\\\Winlogon\\\\GpExtensions\\\\*\\\\DllName\",\n\
+  \      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\SafeBoot\\\\AlternateShell\"\
+  ,\n      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\Terminal Server\\\\Wds\\\\\
+  rdpwd\\\\StartupPrograms\",\n      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\\
+  Terminal Server\\\\WinStations\\\\RDP-Tcp\\\\InitialProgram\",\n      \"HKLM\\\\\
+  SYSTEM\\\\ControlSet*\\\\Control\\\\Session Manager\\\\BootExecute\",\n      \"\
+  HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\Session Manager\\\\BootExecuteNoPnpSync\"\
+  ,\n      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\Session Manager\\\\SetupExecute\"\
+  ,\n      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\Session Manager\\\\SetupExecuteNoPnpSync\"\
+  ,\n      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\Session Manager\\\\PlatformExecute\"\
+  ,\n      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\Session Manager\\\\Execute\"\
+  ,\n      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\Session Manager\\\\S0InitialCommand\"\
+  ,\n      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\ServiceControlManagerExtension\"\
+  ,\n      \"HKLM\\\\SYSTEM\\\\ControlSet*\\\\Control\\\\BootVerificationProgram\\\
+  \\ImagePath\",\n      \"HKLM\\\\SYSTEM\\\\Setup\\\\CmdLine\",\n      \"HKEY_USERS\\\
+  \\*\\\\Environment\\\\UserInitMprLogonScript\") and\n\n not registry.data.strings\
+  \ : (\"C:\\\\Windows\\\\system32\\\\userinit.exe\", \"cmd.exe\", \"C:\\\\Program\
+  \ Files (x86)\\\\*.exe\",\n                              \"C:\\\\Program Files\\\
+  \\*.exe\") and\n not (process.name : \"rundll32.exe\" and registry.path : \"*\\\\\
+  Software\\\\Microsoft\\\\Internet Explorer\\\\Extensions\\\\*\\\\Script\") and\n\
+  \ not process.executable : (\"C:\\\\Windows\\\\System32\\\\msiexec.exe\",\n    \
+  \                       \"C:\\\\Windows\\\\SysWOW64\\\\msiexec.exe\",\n        \
+  \                   \"C:\\\\ProgramData\\\\Microsoft\\\\Windows Defender\\\\Platform\\\
+  \\*\\\\MsMpEng.exe\",\n                           \"C:\\\\Program Files\\\\*.exe\"\
+  ,\n                           \"C:\\\\Program Files (x86)\\\\*.exe\") and\n not\
+  \ (process.name : (\"TiWorker.exe\", \"poqexec.exe\") and registry.value : \"SetupExecute\"\
+  \ and\n      registry.data.strings : (\n        \"C:\\\\windows\\\\System32\\\\\
+  poqexec.exe /display_progress \\\\SystemRoot\\\\WinSxS\\\\pending.xml\",\n     \
+  \   \"C:\\\\Windows\\\\System32\\\\poqexec.exe /skip_critical_poq /display_progress\
+  \ \\\\SystemRoot\\\\WinSxS\\\\pending.xml\"\n      )\n     ) and\n not (process.name\
+  \ : \"svchost.exe\" and registry.value : \"SCRNSAVE.EXE\" and\n      registry.data.strings\
+  \ : (\n        \"%windir%\\\\system32\\\\rundll32.exe user32.dll,LockWorkStation\"\
+  ,\n        \"scrnsave.scr\",\n        \"%windir%\\\\system32\\\\Ribbons.scr\"\n\
+  \      )\n     )"
+explanation: 'Detects changes to registry persistence keys that are not commonly used
+  or modified by legitimate programs. This could
+
+  be an indication of an adversary''s attempt to persist in a stealthy manner.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/54902e45-3467-49a4-8abc-529f2c8cfb80.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may modify registry keys for setup
+    or configuration purposes. Users can create exceptions for known software paths
+    like C:\Program Files\*.exe to reduce noise.
+
+    - System maintenance processes such as Windows Update might trigger changes in
+    registry keys like SetupExecute. Exclude processes like TiWorker.exe and poqexec.exe
+    when they match known update patterns.
+
+    - Administrative scripts or tools that automate system configurat'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoftpressstore.com/articles/article.aspx?p=2762082&seqNum=2
+- https://github.com/rad9800/BootExecuteEDR
+has_investigation_guide: true
+risk_score: 47

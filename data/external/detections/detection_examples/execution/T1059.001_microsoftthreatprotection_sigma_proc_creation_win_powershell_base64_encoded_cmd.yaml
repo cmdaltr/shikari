@@ -1,0 +1,67 @@
+technique_id: T1059.001
+technique_name: Suspicious Encoded PowerShell Command Line
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.95
+validated: true
+source: sigma
+sigma_id: ca2092a1-c273-4878-9b4b-0d60115bf5ea
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_img and (all\
+  \ of selection_cli_* or selection_standalone) and\n  not 1 of filter_optional_*\n\
+  filter_optional_remote_signed:\n  CommandLine|contains: ' -ExecutionPolicy remotesigned\
+  \ '\nselection_cli_content:\n  CommandLine|contains:\n  - ' JAB'\n  - ' SUVYI'\n\
+  \  - ' SQBFAFgA'\n  - ' aQBlAHgA'\n  - ' aWV4I'\n  - ' IAA'\n  - ' IAB'\n  - ' UwB'\n\
+  \  - ' cwB'\nselection_cli_enc:\n  CommandLine|contains: ' -e'\nselection_img:\n\
+  - Image|endswith:\n  - \\powershell.exe\n  - \\pwsh.exe\n- OriginalFileName:\n \
+  \ - PowerShell.EXE\n  - pwsh.dll\nselection_standalone:\n  CommandLine|contains:\n\
+  \  - '.exe -ENCOD '\n  - ' BA^J e-'\n"
+explanation: Detects suspicious powershell process starts with base64 encoded commands
+  (e.g. Emotet)
+false_positives: []
+references:
+- https://app.any.run/tasks/6217d77d-3189-4db2-a957-8ab239f3e01e
+tags:
+- attack.execution
+- attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith:
+    - \powershell.exe
+    - \pwsh.exe
+  - OriginalFileName:
+    - PowerShell.EXE
+    - pwsh.dll
+  selection_cli_enc:
+    CommandLine|contains: ' -e'
+  selection_cli_content:
+    CommandLine|contains:
+    - ' JAB'
+    - ' SUVYI'
+    - ' SQBFAFgA'
+    - ' aQBlAHgA'
+    - ' aWV4I'
+    - ' IAA'
+    - ' IAB'
+    - ' UwB'
+    - ' cwB'
+  selection_standalone:
+    CommandLine|contains:
+    - '.exe -ENCOD '
+    - ' BA^J e-'
+  filter_optional_remote_signed:
+    CommandLine|contains: ' -ExecutionPolicy remotesigned '
+  condition: selection_img and (all of selection_cli_* or selection_standalone) and
+    not 1 of filter_optional_*
+metadata:
+  created_date: 2018-09-03
+  modified_date: 2023-04-06
+  author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil
+    Yugoslavskiy, Anton Kutepov, oscd.community
+  status: test
+  imported_date: '2025-11-28'

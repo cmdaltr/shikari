@@ -1,0 +1,48 @@
+technique_id: T1047
+technique_name: Suspicious WMIC XSL Script Execution
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by process.entity_id with maxspan = 2m\n[process where host.os.type\
+  \ == \"windows\" and event.type == \"start\" and\n   (process.name : \"WMIC.exe\"\
+  \ or process.pe.original_file_name : \"wmic.exe\") and\n   process.args : (\"format*:*\"\
+  , \"/format*:*\", \"*-format*:*\") and\n   not process.command_line : (\"* /format:table\
+  \ *\", \"* /format:table\")]\n[any where host.os.type == \"windows\" and (event.category\
+  \ == \"library\" or (event.category == \"process\" and event.action : \"Image loaded*\"\
+  )) and\n (?dll.name : (\"jscript.dll\", \"vbscript.dll\") or file.name : (\"jscript.dll\"\
+  , \"vbscript.dll\"))]"
+explanation: 'Identifies WMIC allowlist bypass techniques by alerting on suspicious
+  execution of scripts. When WMIC loads scripting
+
+  libraries it may be indicative of an allowlist bypass.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7f370d54-c0eb-4270-ac5a-9a6020585dc6.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using WMIC with custom scripts may trigger alerts.
+    Review the command line arguments and context to determine if the execution is
+    part of routine system management.
+
+    - Automated scripts or software updates that utilize WMIC for legitimate purposes
+    might load scripting libraries like jscript.dll or vbscript.dll. Identify these
+    processes and consider adding them to an allowlist to prevent future false positives.
+
+    - Security tools or monitori'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

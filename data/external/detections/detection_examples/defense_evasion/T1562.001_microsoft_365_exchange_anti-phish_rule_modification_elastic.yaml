@@ -1,0 +1,43 @@
+technique_id: T1562.001
+technique_name: Microsoft 365 Exchange Anti-Phish Rule Modification
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:Exchange and event.category:web
+  and event.action:("Remove-AntiPhishRule" or "Disable-AntiPhishRule") and event.outcome:success
+explanation: 'Identifies the modification of an anti-phishing rule in Microsoft 365.
+  By default, Microsoft 365 includes built-in
+
+  features that help protect users from phishing attacks. Anti-phishing rules increase
+  this protection by refining
+
+  settings to better detect and prevent attacks.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/97314185-2568-4561-ae81-f3e480e5e695.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Administrative changes: Legitimate administrative tasks may involve modifying
+    or disabling anti-phishing rules for testing or configuration purposes. To manage
+    this, create exceptions for known administrative accounts or scheduled maintenance
+    windows.
+
+    - Security audits: Regular security audits might require temporary adjustments
+    to anti-phishing rules. Document these activities and exclude them from alerts
+    by correlating with audit logs.
+
+    - Third-party integrations: Som'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/powershell/module/exchange/remove-antiphishrule?view=exchange-ps
+- https://docs.microsoft.com/en-us/powershell/module/exchange/disable-antiphishrule?view=exchange-ps
+has_investigation_guide: true
+risk_score: 47

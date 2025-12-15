@@ -1,0 +1,45 @@
+technique_id: T1548.002
+technique_name: Eventvwr UAC Bypass
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count FROM datamodel=Endpoint.Registry
+  WHERE (Registry.registry_path="*mscfile\\shell\\open\\command\\*") by Registry.action
+  Registry.dest Registry.process_guid Registry.process_id Registry.registry_hive Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_data Registry.registry_value_name
+  Registry.registry_value_type Registry.status Registry.user Registry.vendor_product
+  | `drop_dm_object_name(Registry)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `eventvwr_uac_bypass_filter`'
+explanation: The following analytic detects an Eventvwr UAC bypass by identifying
+  suspicious registry modifications in the path that Eventvwr.msc references upon
+  execution. This detection leverages data from Endpoint Detection and Response (EDR)
+  agents, focusing on registry changes and process execution details. This activity
+  is significant because it indicates a potential privilege escalation attempt, allowing
+  an attacker to execute arbitrary commands with elevated privileges. If confirmed
+  malicious, this could lead to unauthorized code execution, persistence, and further
+  compromise of the affected system.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/9cf8fe08-7ad8-11eb-9819-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Some false positives may be present and will need to be filtered.
+  mitigation: Review context and user activity
+references:
+- https://blog.malwarebytes.com/malwarebytes-news/2021/02/lazyscripter-from-empire-to-double-rat/
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1548.002/T1548.002.md
+- https://attack.mitre.org/techniques/T1548/002/
+- https://enigma0x3.net/2016/08/15/fileless-uac-bypass-using-eventvwr-exe-and-registry-hijacking/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1548.002/atomic_red_team/windows-sysmon.log

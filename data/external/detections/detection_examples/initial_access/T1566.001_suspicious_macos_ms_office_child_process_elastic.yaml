@@ -1,0 +1,68 @@
+technique_id: T1566.001
+technique_name: Suspicious macOS MS Office Child Process
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where event.action == \"exec\" and host.os.type == \"macos\" and\n\
+  \    process.parent.name: (\n      \"Microsoft Word\",\n      \"Microsoft Outlook\"\
+  ,\n      \"Microsoft Excel\",\n      \"Microsoft PowerPoint\",\n      \"Microsoft\
+  \ OneNote\"\n    ) and\n  process.name : (\n    \"curl\",\n    \"nscurl\",\n   \
+  \ \"bash\",\n    \"sh\",\n    \"osascript\",\n    \"python*\",\n    \"perl*\",\n\
+  \    \"mktemp\",\n    \"chmod\",\n    \"php\",\n    \"nohup\",\n    \"openssl\"\
+  ,\n    \"plutil\",\n    \"PlistBuddy\",\n    \"xattr\",\n    \"mktemp\",\n    \"\
+  sqlite3\",\n    \"funzip\",\n    \"popen\"\n  ) and\n\n  // Filter FPs related to\
+  \ product version discovery and Office error reporting behavior\n  not process.args:\n\
+  \    (\n      \"ProductVersion\",\n      \"hw.model\",\n      \"ioreg\",\n     \
+  \ \"ProductName\",\n      \"ProductUserVisibleVersion\",\n      \"ProductBuildVersion\"\
+  ,\n      \"/Library/Application Support/Microsoft/MERP*/Microsoft Error Reporting.app/Contents/MacOS/Microsoft\
+  \ Error Reporting\",\n      \"open -a Safari *\",\n      \"defaults read *\",\n\
+  \      \"sysctl hw.model*\",\n      \"ioreg -d2 -c IOPlatformExpertDevice *\",\n\
+  \      \"ps aux | grep 'ToDesk_Desktop' | grep -v grep\",\n      \"PIPE=\\\"$CFFIXED_USER_HOME/.zoteroIntegrationPipe*\"\
+  \n    ) and\n\n   not process.parent.executable :\n        (\n          \"/Applications/ToDesk.app/Contents/MacOS/ToDesk_Service\"\
+  ,\n          \"/usr/local/Privacy-i/PISupervisor\",\n          \"/Library/Addigy/lan-cache\"\
+  ,\n          \"/Library/Elastic/Agent/*\",\n          \"/opt/jc/bin/jumpcloud-agent\"\
+  ,\n          \"/usr/sbin/networksetup\"\n        ) and\n   not (process.name : \"\
+  sh\" and process.command_line : \"*$CFFIXED_USER_HOME/.zoteroIntegrationPipe*\"\
+  ) and\n\n   not process.Ext.effective_parent.executable : (\n        \"/Applications/ToDesk.app/Contents/MacOS/ToDesk_Service\"\
+  ,\n        \"/usr/local/Privacy-i/PISupervisor\",\n        \"/Library/Addigy/auditor\"\
+  ,\n        \"/Library/Elastic/Agent/*\",\n        \"/opt/jc/bin/jumpcloud-agent\"\
+  ,\n        \"/usr/sbin/networksetup\"\n      )"
+explanation: 'Identifies suspicious child processes of frequently targeted Microsoft
+  Office applications (Word, PowerPoint, and
+
+  Excel). These child processes are often launched during exploitation of Office applications
+  or by documents with
+
+  malicious macros.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/66da12b1-ac83-40eb-814c-07ed1d82b7b9.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'false positives, thus helping to pinpoint potential threats.
+
+
+    ### Possible investigation steps
+
+
+    - Review the parent process name and executable path to confirm if the Office
+    application is legitimate and expected on the host.
+
+    - Examine the child process name and command line arguments to identify any potentially
+    malicious or unexpected behavior, such as the use of scripting languages or network
+    utilities like curl or nscurl.
+
+    - Check the process arguments for any indicators of compromise or suspi'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.malwarebytes.com/cybercrime/2017/02/microsoft-office-macro-malware-targets-macs/
+has_investigation_guide: true
+risk_score: 47

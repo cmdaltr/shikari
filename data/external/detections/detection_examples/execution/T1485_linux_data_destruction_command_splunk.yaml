@@ -1,0 +1,45 @@
+technique_id: T1485
+technique_name: Linux Data Destruction Command
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.process_name = "rm"  AND
+  Processes.process IN ("* -rf*", "* -fr*") AND Processes.process = "* --no-preserve-root"
+  by Processes.action Processes.dest Processes.original_file_name Processes.parent_process
+  Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id
+  Processes.parent_process_name Processes.parent_process_path Processes.process Processes.process_exec
+  Processes.process_guid Processes.process_hash Processes.process_id Processes.process_integrity_level
+  Processes.process_name Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `linux_data_destruction_command_filter`'
+explanation: The following analytic detects the execution of a Unix shell command
+  designed to wipe root directories on a Linux host. It leverages data from Endpoint
+  Detection and Response (EDR) agents, focusing on the 'rm' command with force recursive
+  deletion and the '--no-preserve-root' option. This activity is significant as it
+  indicates potential data destruction attempts, often associated with malware like
+  Awfulshred. If confirmed malicious, this behavior could lead to severe data loss,
+  system instability, and compromised integrity of the affected Linux host. Immediate
+  investigation and response are crucial to mitigate potential damage.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b11d3979-b2f7-411b-bb1a-bd00e642173b/
+indicators:
+- type: data_source
+  value: Sysmon for Linux EventID 1
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://cert.gov.ua/article/3718487
+- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/overview-of-the-cyber-weapons-used-in-the-ukraine-russia-war/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/awfulshred/test1/sysmon_linux.log

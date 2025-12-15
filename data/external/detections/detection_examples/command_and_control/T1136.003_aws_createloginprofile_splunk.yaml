@@ -1,0 +1,41 @@
+technique_id: T1136.003
+technique_name: AWS CreateLoginProfile
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`cloudtrail` eventName = CreateLoginProfile | rename requestParameters.userName
+  as new_login_profile | table src_ip eventName new_login_profile userIdentity.userName
+  | join new_login_profile src_ip [| search `cloudtrail` eventName = ConsoleLogin
+  | rename userIdentity.userName  as new_login_profile | stats count values(eventName)
+  min(_time) as firstTime max(_time) as lastTime by eventSource aws_account_id errorCode
+  user_agent eventID awsRegion userIdentity.principalId user_arn new_login_profile
+  src_ip dest vendor_account vendor_region vendor_product | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)`] | rename user_arn as user | `aws_createloginprofile_filter`'
+explanation: The following analytic identifies the creation of a login profile for
+  one AWS user by another, followed by a console login from the same source IP. It
+  uses AWS CloudTrail logs to correlate the `CreateLoginProfile` and `ConsoleLogin`
+  events based on the source IP and user identity. This activity is significant as
+  it may indicate privilege escalation, where an attacker creates a new login profile
+  to gain unauthorized access. If confirmed malicious, this could allow the attacker
+  to escalate privileges and maintain persistent access to the AWS environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2a9b80d3-6340-4345-11ad-212bf444d111/
+indicators:
+- type: data_source
+  value: AWS CloudTrail CreateLoginProfile AND AWS CloudTrail ConsoleLogin
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: While this search has no known false positives, it is possible that
+    an AWS admin has legitimately created a login profile for another user.
+  mitigation: Review context and user activity
+references:
+- https://bishopfox.com/blog/privilege-escalation-in-aws
+- https://rhinosecuritylabs.com/aws/aws-privilege-escalation-methods-mitigation-part-2/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1078/aws_createloginprofile/aws_cloudtrail_events.json

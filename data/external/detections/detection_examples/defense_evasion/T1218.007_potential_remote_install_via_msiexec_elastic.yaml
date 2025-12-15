@@ -1,0 +1,64 @@
+technique_id: T1218.007
+technique_name: Potential Remote Install via MsiExec
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : \"msiexec.exe\" and process.args : (\"-i\", \"/i\") and process.command_line\
+  \ : \"*http*\" and\n  process.args : (\"/qn\", \"-qn\", \"-q\", \"/q\", \"/quiet\"\
+  ) and\n  process.parent.name : (\"sihost.exe\", \"explorer.exe\", \"cmd.exe\", \"\
+  wscript.exe\", \"mshta.exe\", \"powershell.exe\", \"wmiprvse.exe\", \"pcalua.exe\"\
+  , \"forfiles.exe\", \"conhost.exe\") and\n  not process.command_line : (\"*--set-server=*\"\
+  , \"*UPGRADEADD=*\" , \"*--url=*\",\n                              \"*USESERVERCONFIG=*\"\
+  , \"*RCTENTERPRISESERVER=*\", \"*app.ninjarmm.com*\", \"*zoom.us/client*\",\n  \
+  \                            \"*SUPPORTSERVERSTSURI=*\", \"*START_URL=*\", \"*AUTOCONFIG=*\"\
+  , \"*awscli.amazonaws.com*\")"
+explanation: Identifies attempts to install a file from a remote server using MsiExec.
+  Adversaries may abuse Windows Installers for initial access and delivery of malware.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c9847fe9-3bed-4e6b-b319-f9956d6dd02a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may trigger the rule if they involve
+    network activity. Users can create exceptions for known software update processes
+    that are verified as safe.
+
+    - Custom enterprise applications that use MsiExec for deployment and require network
+    access might be flagged. Identify these applications and exclude their specific
+    executable paths from the rule.
+
+    - Automated deployment tools that utilize MsiExec and perform network operations
+    coul'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

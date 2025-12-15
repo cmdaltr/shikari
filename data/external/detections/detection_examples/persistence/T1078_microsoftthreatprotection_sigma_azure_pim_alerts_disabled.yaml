@@ -1,0 +1,37 @@
+technique_id: T1078
+technique_name: PIM Alert Setting Changes To Disabled
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: aeaef14c-e5bf-4690-a9c8-835caad458bd
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  properties.message: Disable PIM Alert\n"
+explanation: Detects when PIM alerts are set to disabled.
+false_positives:
+- Administrator disabling PIM alerts as an active choice.
+references:
+- https://learn.microsoft.com/en-us/entra/architecture/security-operations-privileged-identity-management#azure-ad-roles-assignment
+tags:
+- attack.initial-access
+- attack.defense-evasion
+- attack.persistence
+- attack.privilege-escalation
+- attack.t1078
+logsource:
+  product: azure
+  service: auditlogs
+detection:
+  selection:
+    properties.message: Disable PIM Alert
+  condition: selection
+metadata:
+  created_date: 2022-08-09
+  modified_date: '2025-11-28'
+  author: Mark Morowczynski '@markmorow', Yochana Henderson, '@Yochana-H'
+  status: test
+  imported_date: '2025-11-28'

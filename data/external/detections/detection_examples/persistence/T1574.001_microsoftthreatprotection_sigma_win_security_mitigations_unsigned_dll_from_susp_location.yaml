@@ -1,0 +1,48 @@
+technique_id: T1574.001
+technique_name: Unsigned Binary Loaded From Suspicious Location
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 8289bf8c-4aca-4f5a-9db3-dc3d7afe5c10
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  EventID:\n  - 11\n  - 12\n  ImageName|contains:\n  - \\Users\\Public\\\n  - \\\
+  PerfLogs\\\n  - \\Desktop\\\n  - \\Downloads\\\n  - \\AppData\\Local\\Temp\\\n \
+  \ - C:\\Windows\\TEMP\\\n"
+explanation: Detects Code Integrity (CI) engine blocking processes from loading unsigned
+  DLLs residing in suspicious locations
+false_positives:
+- Unknown
+references:
+- https://github.com/nasbench/EVTX-ETW-Resources/blob/45fd5be71a51aa518b1b36d4e1f36af498084e27/ETWEventsList/CSV/Windows11/21H2/W11_21H2_Pro_20220719_22000.795/Providers/Microsoft-Windows-Security-Mitigations.csv
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.defense-evasion
+- attack.t1574.001
+logsource:
+  product: windows
+  service: security-mitigations
+detection:
+  selection:
+    EventID:
+    - 11
+    - 12
+    ImageName|contains:
+    - \Users\Public\
+    - \PerfLogs\
+    - \Desktop\
+    - \Downloads\
+    - \AppData\Local\Temp\
+    - C:\Windows\TEMP\
+  condition: selection
+metadata:
+  created_date: 2022-08-03
+  modified_date: 2022-09-28
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

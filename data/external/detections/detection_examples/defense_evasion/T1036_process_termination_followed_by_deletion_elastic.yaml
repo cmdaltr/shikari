@@ -1,0 +1,77 @@
+technique_id: T1036
+technique_name: Process Termination followed by Deletion
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by host.id with maxspan=5s\n   [process where host.os.type == \"\
+  windows\" and event.type == \"end\" and\n    process.code_signature.trusted != true\
+  \ and\n    not process.executable like\n             (\"C:\\\\Windows\\\\SoftwareDistribution\\\
+  \\*.exe\",\n              \"C:\\\\Windows\\\\WinSxS\\\\*.exe\",\n              \"\
+  ?:\\\\Windows\\\\Postillion\\\\Office\\\\*.exe\") and\n    not (\n      process.name\
+  \ : \"infinst.exe\" and process.parent.name: \"dxsetup.exe\" and\n      process.parent.code_signature.subject_name\
+  \ == \"NVIDIA Corporation\" and\n      process.parent.code_signature.status == \"\
+  trusted\"\n    )\n   ] by process.executable\n   [file where host.os.type == \"\
+  windows\" and event.type == \"deletion\" and file.extension in~ (\"exe\", \"scr\"\
+  , \"com\") and\n    not process.executable like\n             (\"?:\\\\Program Files\\\
+  \\*.exe\",\n              \"?:\\\\Program Files (x86)\\\\*.exe\",\n            \
+  \  \"?:\\\\Windows\\\\System32\\\\svchost.exe\",\n              \"?:\\\\Windows\\\
+  \\System32\\\\drvinst.exe\",\n              \"?:\\\\Windows\\\\Postillion\\\\Office\\\
+  \\*.exe\") and\n    not file.path like (\n          \"?:\\\\Program Files\\\\*.exe\"\
+  ,\n          \"?:\\\\Program Files (x86)\\\\*.exe\",\n          \"?:\\\\Windows\\\
+  \\Temp\\\\*\\\\DismHost.exe\",\n          \"?:\\\\$WINDOWS.~BT\\\\Work\\\\*\\\\\
+  DismHost.exe\",\n          \"?:\\\\$WinREAgent\\\\Scratch\\\\*\\\\DismHost.exe\"\
+  ,\n          \"?:\\\\Windows\\\\tenable_mw_scan_*.exe\",\n          \"?:\\\\Users\\\
+  \\*\\\\AppData\\\\Local\\\\Temp\\\\LogiUI\\\\Pak\\\\uninstall.exe\",\n         \
+  \ \"?:\\\\ProgramData\\\\chocolatey\\\\*.exe\"\n    ) and\n    not (process.name\
+  \ : \"OktaVerifySetup-*.exe\" and process.code_signature.subject_name == \"Okta,\
+  \ Inc.\") and\n    not (\n      process.executable : \"?:\\\\Windows\\\\SysWOW64\\\
+  \\config\\\\systemprofile\\\\Citrix\\\\UpdaterBinaries\\\\CitrixReceiver\\\\*\"\
+  \ and\n      process.code_signature.subject_name == \"Citrix Systems, Inc.\" and\n\
+  \      file.path : \"?:\\\\Windows\\\\SysWOW64\\\\config\\\\systemprofile\\\\Citrix\\\
+  \\UpdaterBinaries\\\\CitrixReceiver\\\\*\\\\bootstrapperhelper.exe\"\n    )\n  \
+  \ ] by file.path"
+explanation: 'Identifies a process termination event quickly followed by the deletion
+  of its executable file. Malware tools and other
+
+  non-native files dropped or created on a system by an adversary may leave traces
+  to indicate to what occurred. Removal
+
+  of these files can occur during an intrusion, or as part of a post-intrusion process
+  to minimize the adversary''s
+
+  footprint.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/09443c92-46b3-45a4-8f25-383b028b258d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately, as programs that exhibit this
+    behavior, such as installers and similar utilities, should be signed. Benign true
+    positives (B-TPs) can be added as exceptions if necessary.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - If the triage identified malware, search the environment for addition'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

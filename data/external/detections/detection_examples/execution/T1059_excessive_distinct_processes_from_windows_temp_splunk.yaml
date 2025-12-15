@@ -1,0 +1,54 @@
+technique_id: T1059
+technique_name: Excessive distinct processes from Windows Temp
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` distinct_count(Processes.process)
+  as distinct_process_count min(_time) as firstTime max(_time) as lastTime values(Processes.action)
+  as action values(Processes.original_file_name) as original_file_name values(Processes.parent_process)
+  as parent_process values(Processes.parent_process_exec) as parent_process_exec values(Processes.parent_process_guid)
+  as parent_process_guid values(Processes.parent_process_id) as parent_process_id
+  values(Processes.parent_process_name) as parent_process_name values(Processes.parent_process_path)
+  as parent_process_path values(Processes.process) as process values(Processes.process_exec)
+  as process_exec values(Processes.process_guid) as process_guid values(Processes.process_hash)
+  as process_hash values(Processes.process_id) as process_id values(Processes.process_integrity_level)
+  as process_integrity_level values(Processes.process_name) as process_name values(Processes.process_path)
+  as process_path values(Processes.user_id) as user_id values(Processes.vendor_product)
+  as vendor_product from datamodel=Endpoint.Processes where Processes.process_path
+  = "*\\Windows\\Temp\\*" by Processes.dest Processes.user _time span=20m |  where
+  distinct_process_count > 37 | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `excessive_distinct_processes_from_windows_temp_filter`'
+explanation: The following analytic identifies an excessive number of distinct processes
+  executing from the Windows\Temp directory. It leverages data from Endpoint Detection
+  and Response (EDR) agents, focusing on process paths and counts within a 20-minute
+  window. This behavior is significant as it often indicates the presence of post-exploit
+  frameworks like Koadic and Meterpreter, which use this technique to execute malicious
+  actions. If confirmed malicious, this activity could allow attackers to execute
+  arbitrary code, escalate privileges, and maintain persistence within the environment,
+  posing a severe threat to system integrity and security.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/23587b6a-c479-11eb-b671-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Many benign applications will create processes from executables in
+    Windows\Temp, although unlikely to exceed the given threshold.  Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://www.offensive-security.com/metasploit-unleashed/about-meterpreter/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059/excessive_distinct_processes_from_windows_temp/windows-xml.log

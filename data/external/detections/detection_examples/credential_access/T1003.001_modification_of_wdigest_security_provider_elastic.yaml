@@ -1,0 +1,72 @@
+technique_id: T1003.001
+technique_name: Modification of WDigest Security Provider
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type in (\"creation\"\
+  , \"change\") and\n    registry.value : \"UseLogonCredential\" and\n    registry.path\
+  \ : \"*\\\\SYSTEM\\\\*ControlSet*\\\\Control\\\\SecurityProviders\\\\WDigest\\\\\
+  UseLogonCredential\" and\n    registry.data.strings : (\"1\", \"0x00000001\") and\n\
+  \    not (process.executable : \"?:\\\\Windows\\\\System32\\\\svchost.exe\" and\
+  \ user.id : \"S-1-5-18\")"
+explanation: 'Identifies attempts to modify the WDigest security provider in the registry
+  to force the user''s password to be stored in
+
+  clear text in memory. This behavior can be indicative of an adversary attempting
+  to weaken the security configuration of
+
+  an endpoint. Once the UseLogonCredential value is modified, the adversary may attempt
+  to dump clear text passwords from
+
+  memory.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d703a5af-d5b0-43bd-8ddb-7a5d500b7da5.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This modification should not happen legitimately. Any potential benign true
+    positive (B-TP) should be mapped and monitored by the security team, as these
+    modifications expose the entire domain to credential compromises and consequently
+    unauthorized access.
+
+
+    ### Related rules
+
+
+    - Mimikatz Powershell Module Activity - ac96ceb8-4399-4191-af1d-4feeac1f1f46
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate t'
+  mitigation: Review investigation guide for details
+references:
+- https://www.csoonline.com/article/3438824/how-to-detect-and-halt-credential-theft-via-windows-wdigest.html
+- https://www.praetorian.com/blog/mitigating-mimikatz-wdigest-cleartext-credential-theft?edition=2019
+- https://frsecure.com/compromised-credentials-response-playbook
+- https://www.elastic.co/security-labs/detect-credential-access
+has_investigation_guide: true
+risk_score: 73

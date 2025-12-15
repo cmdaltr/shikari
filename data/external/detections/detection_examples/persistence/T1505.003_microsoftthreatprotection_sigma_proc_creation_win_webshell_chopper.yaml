@@ -1,0 +1,53 @@
+technique_id: T1505.003
+technique_name: Chopper Webshell Process Pattern
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: fa3c117a-bc0d-416e-a31b-0c0e80653efb
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cmdline:\n  CommandLine|contains:\n  - '&ipconfig&echo'\n  - '&quser&echo'\n\
+  \  - '&whoami&echo'\n  - '&c:&echo'\n  - '&cd&echo'\n  - '&dir&echo'\n  - '&echo\
+  \ [E]'\n  - '&echo [S]'\nselection_origin:\n- Image|endswith: \\w3wp.exe\n- ParentImage|endswith:\
+  \ \\w3wp.exe\n"
+explanation: Detects patterns found in process executions cause by China Chopper like
+  tiny (ASPX) webshells
+false_positives:
+- Unknown
+references:
+- https://www.microsoft.com/security/blog/2022/09/30/analyzing-attacks-using-the-exchange-vulnerabilities-cve-2022-41040-and-cve-2022-41082/
+tags:
+- attack.persistence
+- attack.discovery
+- attack.t1505.003
+- attack.t1018
+- attack.t1033
+- attack.t1087
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_origin:
+  - Image|endswith: \w3wp.exe
+  - ParentImage|endswith: \w3wp.exe
+  selection_cmdline:
+    CommandLine|contains:
+    - '&ipconfig&echo'
+    - '&quser&echo'
+    - '&whoami&echo'
+    - '&c:&echo'
+    - '&cd&echo'
+    - '&dir&echo'
+    - '&echo [E]'
+    - '&echo [S]'
+  condition: all of selection_*
+metadata:
+  created_date: 2022-10-01
+  modified_date: '2025-11-28'
+  author: Florian Roth (Nextron Systems), MSTI (query)
+  status: test
+  imported_date: '2025-11-28'

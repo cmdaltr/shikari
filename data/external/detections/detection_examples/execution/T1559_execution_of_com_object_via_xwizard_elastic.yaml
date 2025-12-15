@@ -1,0 +1,71 @@
+technique_id: T1559
+technique_name: Execution of COM object via Xwizard
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ (process.name : \"xwizard.exe\" or ?process.pe.original_file_name : \"xwizard.exe\"\
+  ) and\n (\n   (process.args : \"RunWizard\" and process.args : \"{*}\") or\n   (process.executable\
+  \ != null and\n     not process.executable : (\n        \"C:\\\\Windows\\\\SysWOW64\\\
+  \\xwizard.exe\",\n        \"C:\\\\Windows\\\\System32\\\\xwizard.exe\",\n\n    \
+  \    /* Crowdstrike specific exclusion as it uses NT Object paths */\n        \"\
+  \\\\Device\\\\HarddiskVolume*\\\\Windows\\\\SysWOW64\\\\xwizard.exe\",\n       \
+  \ \"\\\\Device\\\\HarddiskVolume*\\\\Windows\\\\System32\\\\xwizard.exe\"\n    \
+  \ )\n   )\n )"
+explanation: 'Windows Component Object Model (COM) is an inter-process communication
+  (IPC) component of the native Windows application
+
+  programming interface (API) that enables interaction between software objects or
+  executable code. Xwizard can be used to
+
+  run a COM object created in registry to evade defensive counter measures.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/1a6075b0-7479-450e-8fe7-b8b8438ac570.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may trigger the rule if they use
+    Xwizard to execute COM objects. Users can create exceptions for known software
+    update processes by verifying the executable paths and arguments.
+
+    - System administrators might use Xwizard for legitimate configuration tasks.
+    To handle this, identify and document regular administrative activities and exclude
+    these from the rule by specifying the expected process arguments and executable
+    paths.
+
+    -'
+  mitigation: Review investigation guide for details
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Xwizard/
+- http://www.hexacorn.com/blog/2017/07/31/the-wizard-of-x-oppa-plugx-style/
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,47 @@
+technique_id: T1068
+technique_name: Potential Privilege Escalation via OverlayFS
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by process.parent.entity_id, host.id with maxspan=5s\n  [process\
+  \ where host.os.type == \"linux\" and event.type == \"start\" and event.action ==\
+  \ \"exec\" and\n    process.name == \"unshare\" and process.args : (\"-r\", \"-rm\"\
+  , \"m\") and process.args : \"*cap_setuid*\"  and user.id != \"0\"]\n  [process\
+  \ where host.os.type == \"linux\" and event.action == \"uid_change\" and event.type\
+  \ == \"change\" and\n    user.id == \"0\"]"
+explanation: 'Identifies an attempt to exploit a local privilege escalation (CVE-2023-2640
+  and CVE-2023-32629) via a flaw in Ubuntu''s
+
+  modifications to OverlayFS. These flaws allow the creation of specialized executables,
+  which, upon execution, grant the
+
+  ability to escalate privileges to root on the affected machine.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b51dbc92-84e2-4af1-ba47-65183fcd0c57.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using the ''unshare'' command with similar arguments
+    may trigger the rule. Review the context of the command execution and verify if
+    it aligns with routine system maintenance or configuration changes.
+
+    - Automated scripts or system management tools that utilize ''unshare'' for containerization
+    or namespace isolation might cause false positives. Identify these scripts and
+    consider excluding their specific process names or paths from the rule.'
+  mitigation: Review investigation guide for details
+references:
+- https://www.wiz.io/blog/ubuntu-overlayfs-vulnerability
+- https://twitter.com/liadeliyahu/status/1684841527959273472
+has_investigation_guide: true
+risk_score: 73

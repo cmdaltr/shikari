@@ -1,0 +1,60 @@
+technique_id: T1574.001
+technique_name: Potential JLI.dll Side-Loading
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 7a3b6d1f-4a2b-4f8c-9d7e-e9f8cbf21a35
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_* and not 1 of filter_optional_*\nfilter_main_legitimate_install_paths:\n\
+  \  Description: OpenJDK Platform binary\n  ImageLoaded|startswith:\n  - C:\\Program\
+  \ Files\\\n  - C:\\Program Files (x86)\\\n  OriginalFileName: jli.dll\n  Product|startswith:\
+  \ OpenJDK Platform\n  Signed: 'true'\nfilter_optional_eclipse:\n  ImageLoaded|startswith:\
+  \ C:\\eclipse\\plugins\\\nselection:\n  ImageLoaded|endswith: \\jli.dll\n"
+explanation: 'Detects potential DLL side-loading of jli.dll.
+
+  JLI.dll has been observed being side-loaded by Java processes by various threat
+  actors, including APT41, XWorm,
+
+  and others in order to load malicious payloads in context of legitimate Java processes.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://securelist.com/apt41-in-africa/116986/
+- https://lab52.io/blog/snake-keylogger-in-geopolitical-affairs-abuse-of-trusted-java-utilities-in-cybercrime-operations/
+- https://hijacklibs.net/entries/3rd_party/oracle/jli.html
+- https://www.proofpoint.com/us/blog/threat-insight/phish-china-aligned-espionage-actors-ramp-up-taiwan-semiconductor-targeting
+tags:
+- attack.defense-evasion
+- attack.persistence
+- attack.privilege-escalation
+- attack.t1574.001
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    ImageLoaded|endswith: \jli.dll
+  filter_main_legitimate_install_paths:
+    ImageLoaded|startswith:
+    - C:\Program Files\
+    - C:\Program Files (x86)\
+    Description: OpenJDK Platform binary
+    OriginalFileName: jli.dll
+    Product|startswith: OpenJDK Platform
+    Signed: 'true'
+  filter_optional_eclipse:
+    ImageLoaded|startswith: C:\eclipse\plugins\
+  condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*
+metadata:
+  created_date: 2025-07-25
+  modified_date: 2025-10-06
+  author: Swachchhanda Shrawan Poudel (Nextron Systems)
+  status: experimental
+  imported_date: '2025-11-28'

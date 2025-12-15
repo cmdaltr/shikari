@@ -1,0 +1,75 @@
+technique_id: T1068
+technique_name: Unusual Print Spooler Child Process
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ process.parent.name : \"spoolsv.exe\" and process.command_line != null and\n (?process.Ext.token.integrity_level_name\
+  \ : \"System\" or ?winlog.event_data.IntegrityLevel : \"System\") and\n\n /* exclusions\
+  \ for FP control below */\n not process.name : (\"splwow64.exe\", \"PDFCreator.exe\"\
+  , \"acrodist.exe\", \"spoolsv.exe\", \"msiexec.exe\", \"route.exe\", \"WerFault.exe\"\
+  ) and\n not process.command_line : \"*\\\\WINDOWS\\\\system32\\\\spool\\\\DRIVERS*\"\
+  \ and\n not (process.name : \"net.exe\" and process.command_line : (\"*stop*\",\
+  \ \"*start*\")) and\n not (process.name : (\"cmd.exe\", \"powershell.exe\") and\
+  \ process.command_line : (\"*.spl*\", \"*\\\\program files*\", \"*route add*\"))\
+  \ and\n not (process.name : \"netsh.exe\" and process.command_line : (\"*add portopening*\"\
+  , \"*rule name*\")) and\n not (process.name : \"regsvr32.exe\" and process.command_line\
+  \ : \"*PrintConfig.dll*\") and\n not process.executable : (\n    \"?:\\\\Program\
+  \ Files (x86)\\\\CutePDF Writer\\\\CPWriter2.exe\",\n    \"?:\\\\Program Files (x86)\\\
+  \\GPLGS\\\\gswin32c.exe\",\n\n    /* Crowdstrike specific condition as it uses NT\
+  \ Object paths */\n    \"\\\\Device\\\\HarddiskVolume*\\\\Program Files (x86)\\\\\
+  CutePDF Writer\\\\CPWriter2.exe\",\n    \"\\\\Device\\\\HarddiskVolume*\\\\Program\
+  \ Files (x86)\\\\GPLGS\\\\gswin32c.exe\"\n )"
+explanation: 'Detects unusual Print Spooler service (spoolsv.exe) child processes.
+  This may indicate an attempt to exploit privilege
+
+  escalation vulnerabilities related to the Printing Service on Windows.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ee5300a7-7e31-4a72-a258-250abb8b3aa1.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'false positive, especially if the executable is not listed in the
+    exclusion paths.
+
+    - Analyze recent system logs and security events around the time of the alert
+    to identify any other anomalous activities or patterns that could be related to
+    the potential exploitation attempt.
+
+    - If the process is confirmed suspicious, isolate the affected system to prevent
+    further exploitation and conduct a deeper forensic analysis to understand the
+    scope and impact of the incident.
+
+
+    ### False positive analysis'
+  mitigation: Review investigation guide for details
+references:
+- https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-34527
+has_investigation_guide: true
+risk_score: 47

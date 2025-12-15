@@ -1,0 +1,52 @@
+technique_id: T1218
+technique_name: Incoming DCOM Lateral Movement via MSHTA
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence with maxspan=1m\n  [process where host.os.type == \"windows\" and\
+  \ event.type == \"start\" and\n     process.name : \"mshta.exe\" and process.args\
+  \ : \"-Embedding\"\n  ] by host.id, process.entity_id\n  [network where host.os.type\
+  \ == \"windows\" and event.type == \"start\" and process.name : \"mshta.exe\" and\n\
+  \     network.direction : (\"incoming\", \"ingress\") and network.transport == \"\
+  tcp\" and\n     source.port > 49151 and destination.port > 49151 and source.ip !=\
+  \ \"127.0.0.1\" and source.ip != \"::1\"\n  ] by host.id, process.entity_id"
+explanation: 'Identifies the use of Distributed Component Object Model (DCOM) to execute
+  commands from a remote host, which are
+
+  launched via the HTA Application COM Object. This behavior may indicate an attacker
+  abusing a DCOM application to move
+
+  laterally while attempting to evade detection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/622ecb68-fa81-4601-90b5-f8cd661e4520.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using MSHTA for remote management can trigger
+    the rule. Identify and document these tasks, then create exceptions for known
+    administrative IP addresses or specific user accounts.
+
+    - Automated software updates or deployments that utilize MSHTA may appear as suspicious
+    activity. Monitor and whitelist the IP addresses and ports associated with these
+    updates to prevent false positives.
+
+    - Internal network scanning tools or security assessments'
+  mitigation: Review investigation guide for details
+references:
+- https://codewhitesec.blogspot.com/2018/07/lethalhta.html
+has_investigation_guide: true
+risk_score: 73

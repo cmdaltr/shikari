@@ -1,0 +1,57 @@
+technique_id: T1218.004
+technique_name: Windows DotNet Binary in Non Standard Path
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Processes where NOT (Processes.process_path
+  IN ("*\\Windows\\ADWS\\*","*\\Windows\\SysWOW64*", "*\\Windows\\system32*", "*\\Windows\\NetworkController\\*",
+  "*\\Windows\\SystemApps\\*", "*\\WinSxS\\*", "*\\Windows\\Microsoft.NET\\*")) by
+  Processes.action Processes.dest Processes.original_file_name Processes.parent_process
+  Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id
+  Processes.parent_process_name Processes.parent_process_path Processes.process Processes.process_exec
+  Processes.process_guid Processes.process_hash Processes.process_id Processes.process_integrity_level
+  Processes.process_name Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name("Processes")` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `is_net_windows_file_macro` | `windows_dotnet_binary_in_non_standard_path_filter`'
+explanation: The following analytic detects the execution of native .NET binaries
+  from non-standard directories within the Windows operating system. It leverages
+  Endpoint Detection and Response (EDR) telemetry, comparing process names and original
+  file names against a predefined lookup using the `is_net_windows_file_macro` macro.
+  This activity is significant because adversaries may move .NET binaries to unconventional
+  paths to evade detection and execute malicious code. If confirmed malicious, this
+  behavior could allow attackers to execute arbitrary code, escalate privileges, or
+  maintain persistence within the environment, posing a significant security risk.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/fddf3b56-7933-11ec-98a6-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present and filtering may be required. Certain
+    utilities will run from non-standard paths based on the third-party application
+    in use.
+  mitigation: Review context and user activity
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1036.003/T1036.003.yaml
+- https://attack.mitre.org/techniques/T1036/003/
+- https://www.microsoft.com/security/blog/2022/01/15/destructive-malware-targeting-ukrainian-organizations/
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1218.004/T1218.004.md
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1218.004/atomic_red_team/windows-sysmon_installutil_path.log

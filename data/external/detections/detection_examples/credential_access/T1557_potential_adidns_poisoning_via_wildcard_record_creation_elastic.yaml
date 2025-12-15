@@ -1,0 +1,57 @@
+technique_id: T1557
+technique_name: Potential ADIDNS Poisoning via Wildcard Record Creation
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where host.os.type == \"windows\" and event.code == \"5137\" and\n   \
+  \ startsWith(winlog.event_data.ObjectDN, \"DC=*,\")"
+explanation: 'Active Directory Integrated DNS (ADIDNS) is one of the core components
+  of AD DS, leveraging AD''s access control and
+
+  replication to maintain domain consistency. It stores DNS zones as AD objects, a
+  feature that, while robust, introduces
+
+  some security issues, such as wildcard records, mainly because of the default permission
+  (Any authenticated users) to
+
+  create DNS-named records. Attackers can create wildcard records to redirect traffic
+  that doesn''t explicitly match
+
+  records contained in the zone, becoming the Man-in-the-Middle and being able to
+  abuse DNS similarly to LLMNR/NBNS
+
+  spoofing.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8f242ffb-b191-4803-90ec-0f19942e17fd.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative changes to DNS records by IT staff can trigger alerts.
+    To manage this, create exceptions for known administrative accounts or specific
+    ObjectDN patterns that correspond to legitimate changes.
+
+    - Automated systems or scripts that update DNS records as part of regular maintenance
+    may cause false positives. Identify these systems and exclude their activity from
+    triggering alerts by filtering based on their unique identifiers or event sources.
+
+    - Softw'
+  mitigation: Review investigation guide for details
+references:
+- https://www.netspi.com/blog/technical/network-penetration-testing/exploiting-adidns/
+- https://www.thehacker.recipes/a-d/movement/mitm-and-coerced-authentications/adidns-spoofing
+has_investigation_guide: true
+risk_score: 73

@@ -1,0 +1,45 @@
+technique_id: T1555.001
+technique_name: SystemKey Access via Command Line
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n  process.args in (\"/private/var/db/SystemKey\", \"/var/db/SystemKey\")\
+  \ and\n  not process.Ext.effective_parent.executable like \"/Library/Elastic/Endpoint/elastic-endpoint.app/Contents/MacOS/elastic-endpoint\""
+explanation: 'Keychains are the built-in way for macOS to keep track of users'' passwords
+  and credentials for many services and
+
+  features, including Wi-Fi and website passwords, secure notes, certificates, and
+  Kerberos. Adversaries may collect the
+
+  keychain storage data from a system to acquire credentials.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d75991f2-b989-419d-b797-ac1e54ec2d61.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Security software updates or scans may trigger the rule by accessing SystemKey
+    paths. Users can create exceptions for known security applications that frequently
+    access these paths, ensuring they are not flagged as threats.
+
+    - System maintenance scripts or backup processes might access SystemKey paths
+    as part of routine operations. Identify these processes and add them to an exclusion
+    list to prevent false alerts.
+
+    - Administrative tools used by IT departments for legiti'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/AlessandroZ/LaZagne/blob/master/Mac/lazagne/softwares/system/chainbreaker.py
+has_investigation_guide: true
+risk_score: 73

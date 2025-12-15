@@ -1,0 +1,48 @@
+technique_id: T1078.003
+technique_name: Potential Admin Group Account Addition
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n process.name in (\"dscl\", \"dseditgroup\") and process.args like~ (\"/Groups/admin\"\
+  , \"admin\") and process.args like (\"-a\", \"-append\") and\n not process.Ext.effective_parent.executable\
+  \ like (\"/Library/Application Support/JAMF/Jamf.app/Contents/MacOS/JamfDaemon.app/Contents/MacOS/JamfDaemon\"\
+  ,\n                                                   \"/Library/Application Support/JAMF/Jamf.app/Contents/MacOS/JamfManagementService.app/Contents/MacOS/JamfManagementService\"\
+  ,\n                                                   \"/opt/jc/bin/jumpcloud-agent\"\
+  ,\n                                                   \"/Library/Addigy/go-agent\"\
+  )"
+explanation: 'Identifies attempts to add an account to the admin group via the command
+  line. This could be an indication of privilege
+
+  escalation activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/565c2b44-7a21-4818-955f-8d4737967d2e.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate management services like JAMF and JumpCloud may trigger false positives
+    when they manage user group memberships. These services are already excluded in
+    the rule, but ensure any additional management tools used in your environment
+    are similarly excluded.
+
+    - Automated scripts or maintenance tasks that require temporary admin access might
+    be flagged. Review these scripts and consider adding them to the exclusion list
+    if they are verified as safe.
+
+    - System update'
+  mitigation: Review investigation guide for details
+references:
+- https://managingosx.wordpress.com/2010/01/14/add-a-user-to-the-admin-group-via-command-line-3-0/
+has_investigation_guide: true
+risk_score: 47

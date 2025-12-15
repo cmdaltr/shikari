@@ -1,0 +1,58 @@
+technique_id: T1110.003
+technique_name: Potential Successful Linux FTP Brute Force Attack Detected
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by host.id, auditd.data.addr, related.user with maxspan=5s\n  [authentication\
+  \ where host.os.type == \"linux\" and event.action == \"authenticated\" and\n  \
+  \ auditd.data.terminal == \"ftp\" and event.outcome == \"failure\" and auditd.data.addr\
+  \ != null and\n   auditd.data.addr != \"0.0.0.0\" and auditd.data.addr != \"::\"\
+  ] with runs=10\n  [authentication where host.os.type == \"linux\" and event.action\
+  \  == \"authenticated\" and\n   auditd.data.terminal == \"ftp\" and event.outcome\
+  \ == \"success\" and auditd.data.addr != null and\n   auditd.data.addr != \"0.0.0.0\"\
+  \ and auditd.data.addr != \"::\"] | tail 1"
+explanation: 'An FTP (file transfer protocol) brute force attack is a method where
+  an attacker systematically tries different
+
+  combinations of usernames and passwords to gain unauthorized access to an FTP server,
+  and if successful, the impact can
+
+  include unauthorized data access, manipulation, or theft, compromising the security
+  and integrity of the server and
+
+  potentially exposing sensitive information. This rule identifies multiple consecutive
+  authentication failures targeting
+
+  a specific user account from the same source address and within a short time interval,
+  followed by a successful
+
+  authentication.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/66712812-e7f2-4a1d-bbda-dd0b5cf20c5d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Repeated failed logins from automated scripts or monitoring tools can trigger
+    false positives. Identify and whitelist IP addresses of known internal systems
+    or services that perform regular FTP checks.
+
+    - Users with incorrect credentials saved in FTP clients may cause multiple failed
+    attempts before a successful login. Educate users on updating saved credentials
+    and consider excluding specific user accounts from the rule if they frequently
+    trigger alerts.
+
+    - Scheduled ta'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

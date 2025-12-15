@@ -1,0 +1,49 @@
+technique_id: T1557
+technique_name: Potential WPAD Spoofing via DNS Record Creation
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'any where host.os.type == "windows" and event.code == "5137" and winlog.event_data.ObjectDN
+  : "DC=wpad,*"'
+explanation: 'Identifies the creation of a DNS record that is potentially meant to
+  enable WPAD spoofing. Attackers can disable the
+
+  Global Query Block List (GQBL) and create a "wpad" record to exploit hosts running
+  WPAD with default settings for
+
+  privilege escalation and lateral movement.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/894326d2-56c0-4342-b553-4abfaf421b5b.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate network changes may trigger alerts if a new WPAD DNS record is created
+    intentionally for network configuration. Verify with network administrators if
+    such changes were planned.
+
+    - Automated scripts or software updates that modify DNS records can cause false
+    positives. Review the source of the change and consider excluding known benign
+    scripts or update processes.
+
+    - Test environments often simulate DNS changes, including WPAD entries, for development
+    purposes.'
+  mitigation: Review investigation guide for details
+references:
+- https://www.thehacker.recipes/ad/movement/mitm-and-coerced-authentications/wpad-spoofing#through-adidns-spoofing
+- https://cube0x0.github.io/Pocing-Beyond-DA/
+has_investigation_guide: true
+risk_score: 47

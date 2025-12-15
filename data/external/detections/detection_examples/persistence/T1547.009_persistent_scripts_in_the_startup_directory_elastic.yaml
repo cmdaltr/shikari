@@ -1,0 +1,68 @@
+technique_id: T1547.009
+technique_name: Persistent Scripts in the Startup Directory
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "file where host.os.type == \"windows\" and event.type != \"deletion\" and\n\
+  \n  /* Call attention to file extensions that may be used for malicious purposes\
+  \ */\n  /* Optionally, Windows scripting engine processes targeting shortcut files\
+  \ */\n  (\n    file.extension : (\"vbs\", \"vbe\", \"wsh\", \"wsf\", \"js\") or\n\
+  \    process.name : (\"wscript.exe\", \"cscript.exe\")\n  ) and not (startsWith(user.domain,\
+  \ \"NT\") or endsWith(user.domain, \"NT\"))\n\n  /* Identify files created or changed\
+  \ in the startup folder */\n  and file.path : (\n        \"?:\\\\Users\\\\*\\\\\
+  AppData\\\\Roaming\\\\Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\\Startup\\\
+  \\*\",\n        \"?:\\\\ProgramData\\\\Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\
+  \\StartUp\\\\*\")"
+explanation: 'Identifies script engines creating files in the Startup folder, or the
+  creation of script files in the Startup folder.
+
+  Adversaries may abuse this technique to maintain persistence in an environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f7c4dc5a-a58d-491d-9f14-9b66507121c0.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Related rules
+
+
+    - Suspicious Startup Shell Folder Modification - c8b150f0-0164-475b-a75e-74b47800a9ff
+
+    - Startup Folder Persistence via Unsigned Process - 2fba96c0-ade5-4bce-b92f-a5df2509da3f
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further po'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

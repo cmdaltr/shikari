@@ -1,0 +1,45 @@
+technique_id: T1003
+technique_name: Potential Invoke-Mimikatz PowerShell Script
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 189e3b02-82b2-4b90-9662-411eb64486d4
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection*\nselection_1:\n\
+  \  ScriptBlockText|contains|all:\n  - DumpCreds\n  - DumpCerts\nselection_2:\n \
+  \ ScriptBlockText|contains: sekurlsa::logonpasswords\nselection_3:\n  ScriptBlockText|contains|all:\n\
+  \  - crypto::certificates\n  - CERT_SYSTEM_STORE_LOCAL_MACHINE\n"
+explanation: Detects Invoke-Mimikatz PowerShell script and alike. Mimikatz is a credential
+  dumper capable of obtaining plaintext Windows account logins and passwords.
+false_positives:
+- Mimikatz can be useful for testing the security of networks
+references:
+- https://www.elastic.co/guide/en/security/current/potential-invoke-mimikatz-powershell-script.html#potential-invoke-mimikatz-powershell-script
+tags:
+- attack.credential-access
+- attack.t1003
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection_1:
+    ScriptBlockText|contains|all:
+    - DumpCreds
+    - DumpCerts
+  selection_2:
+    ScriptBlockText|contains: sekurlsa::logonpasswords
+  selection_3:
+    ScriptBlockText|contains|all:
+    - crypto::certificates
+    - CERT_SYSTEM_STORE_LOCAL_MACHINE
+  condition: 1 of selection*
+metadata:
+  created_date: 2022-09-28
+  modified_date: '2025-11-28'
+  author: Tim Rauch, Elastic (idea)
+  status: test
+  imported_date: '2025-11-28'

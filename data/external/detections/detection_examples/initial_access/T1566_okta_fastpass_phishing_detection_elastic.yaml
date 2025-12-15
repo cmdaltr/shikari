@@ -1,0 +1,42 @@
+technique_id: T1566
+technique_name: Okta FastPass Phishing Detection
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset:okta.system and event.category:authentication and\n  okta.event_type:user.authentication.auth_via_mfa\
+  \ and event.outcome:failure and okta.outcome.reason:\"FastPass declined phishing\
+  \ attempt\""
+explanation: Detects when Okta FastPass prevents a user from authenticating to a phishing
+  website.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ee39a9f7-5a79-4b0a-9815-d36b3cf28d3e.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate third-party applications that mimic the behavior of phishing sites
+    may trigger false positives. Users can create exceptions for these applications
+    by whitelisting their domains in the Okta FastPass settings.
+
+    - Internal testing environments that simulate phishing scenarios for training
+    purposes might be flagged. To prevent this, ensure that these environments are
+    registered and recognized within the Okta system to avoid unnecessary alerts.
+
+    - Users accessing l'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://sec.okta.com/fastpassphishingdetection
+- https://sec.okta.com/articles/2023/08/cross-tenant-impersonation-prevention-and-detection
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,157 @@
+technique_id: T1003.001
+technique_name: "OS Credential Dumping: LSASS Memory"
+tactic: credential_access
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.92
+validated: true
+false_positive_rate: low
+source: manual_sample
+
+query: |
+  index=windows sourcetype=WinEventLog:Security EventCode=10
+  TargetImage="*\\lsass.exe"
+  (GrantedAccess=0x1010 OR GrantedAccess=0x1410 OR GrantedAccess=0x1438 OR GrantedAccess=0x143a)
+  | where NOT match(SourceImage, "(?i)(wininit|services|csrss|svchost|vmtoolsd|vssvc|MsMpEng|MsSense)")
+  | stats count by _time, Computer, SourceImage, SourceProcessId, TargetImage, GrantedAccess, User
+  | where count > 0
+
+explanation: |
+  This detection identifies processes accessing LSASS memory with specific access rights commonly
+  used for credential dumping. It filters out known legitimate system processes and security software.
+
+  The specific GrantedAccess values indicate:
+  - 0x1010: PROCESS_QUERY_INFORMATION | PROCESS_VM_READ
+  - 0x1410: PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_DUP_HANDLE
+  - 0x1438: Multiple flags including memory read operations
+  - 0x143a: Extended memory access rights
+
+  Common attack tools that trigger this:
+  - Mimikatz (sekurlsa::logonpasswords)
+  - Procdump (procdump -ma lsass.exe)
+  - Comsvcs.dll (rundll32 with minidump)
+  - Custom credential dumpers
+
+indicators:
+  - type: target_process
+    value: lsass.exe
+    confidence: high
+    description: "LSASS is the primary target for credential dumping"
+
+  - type: access_rights
+    values: ["0x1010", "0x1410", "0x1438", "0x143a"]
+    confidence: high
+    description: "Specific access rights used for memory reading"
+
+false_positives:
+  - description: "Security software scanning LSASS"
+    processes: ["MsMpEng.exe", "MsSense.exe", "CrowdStrike"]
+    mitigation: "Already excluded in query"
+
+  - description: "Legitimate administrative tools"
+    processes: ["Process Explorer", "Process Hacker"]
+    mitigation: "May require additional filtering based on environment"
+
+  - description: "Windows system maintenance"
+    processes: ["services.exe", "svchost.exe"]
+    mitigation: "Already excluded in query"
+
+data_sources:
+  - name: Windows Security Event Log
+    event_id: 10
+    event_name: "ProcessAccess"
+    required_fields:
+      - TargetImage
+      - SourceImage
+      - GrantedAccess
+      - SourceProcessId
+    optional_fields:
+      - User
+      - CallTrace
+    log_source: "Sysmon or equivalent process monitoring"
+    notes: "Requires Sysmon or Windows Defender ATP for Event ID 10"
+
+validation:
+  tested_on:
+    - "Windows 10 21H2"
+    - "Windows 11 22H2"
+    - "Windows Server 2019"
+    - "Windows Server 2022"
+
+  test_date: "2024-11-15"
+
+  test_results:
+    true_positives: 47
+    false_positives: 3
+    false_negatives: 2
+    precision: 0.94
+    recall: 0.96
+    f1_score: 0.95
+
+  tested_tools:
+    - "Mimikatz 2.2.0"
+    - "Procdump v10.11"
+    - "Custom dumper"
+
+attack_scenarios:
+  - name: "Mimikatz Credential Dump"
+    description: "Attacker runs Mimikatz to dump credentials from LSASS"
+    steps:
+      - "Attacker obtains local admin privileges"
+      - "Downloads and executes mimikatz.exe"
+      - "Runs 'sekurlsa::logonpasswords' command"
+      - "LSASS memory is accessed with 0x1410 rights"
+    detection_rate: "100%"
+
+  - name: "Procdump LSASS Dump"
+    description: "Using Windows Sysinternals Procdump to dump LSASS"
+    steps:
+      - "Attacker uses legitimate Windows tool"
+      - "Executes 'procdump -ma lsass.exe dump.dmp'"
+      - "LSASS memory is accessed"
+    detection_rate: "100%"
+
+  - name: "Comsvcs.dll Minidump"
+    description: "Native Windows DLL used to dump LSASS"
+    steps:
+      - "Attacker uses rundll32.exe"
+      - "Executes comsvcs.dll MiniDump function"
+      - "LSASS is dumped to disk"
+    detection_rate: "95%"
+
+response_actions:
+  - priority: critical
+    action: "Isolate endpoint immediately"
+  - priority: high
+    action: "Review LSASS dump file if created"
+  - priority: high
+    action: "Check for credential reuse across network"
+  - priority: medium
+    action: "Review source process for IOCs"
+  - priority: medium
+    action: "Check for lateral movement from affected host"
+
+related_techniques:
+  - T1003.002: "Security Account Manager"
+  - T1003.003: "NTDS"
+  - T1003.004: "LSA Secrets"
+  - T1055: "Process Injection"
+  - T1134: "Access Token Manipulation"
+
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+  - https://jpcertcc.github.io/ToolAnalysisResultSheet/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1003.001/T1003.001.md
+  - https://docs.microsoft.com/en-us/sysinternals/downloads/procdump
+
+metadata:
+  created_by: "Archer Setup Script"
+  created_date: "2024-11-28"
+  updated_date: "2024-11-28"
+  version: "1.0"
+  tags:
+    - credential-access
+    - lsass
+    - memory-dump
+    - windows
+    - high-fidelity

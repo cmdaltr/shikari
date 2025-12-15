@@ -1,0 +1,44 @@
+technique_id: T1071.001
+technique_name: HTTP Possible Request Smuggling
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`suricata` (http.request_headers{}.name="*Content-Length*" http.request_headers{}.name="*Transfer-Encoding*")
+  OR (http.request_headers{}.name="*Content-Length*" http.request_headers{}.value="*Transfer-Encoding*")
+  OR (http.request_headers{}.value="*Content-Length*" http.request_headers{}.name="*Transfer-Encoding*")
+  OR (http.request_headers{}.name="*Content-Length*" http.request_headers{}.value="0")
+  | rename dest_ip as dest | rex field=_raw "request_headers.:\[(?<headers>.*)\]"
+  | stats count min(_time) as firstTime max(_time) as lastTime by dest, dest_port,
+  src_ip, http.url, http.http_method, http.http_user_agent, http.protocol, http.status,
+  headers | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `http_possible_request_smuggling_filter`'
+explanation: HTTP request smuggling is a technique for interfering with the way a
+  web site processes sequences of HTTP requests that are received from one or more
+  users. Request smuggling vulnerabilities are often critical in nature, allowing
+  an attacker to bypass security controls, gain unauthorized access to sensitive data,
+  and directly compromise other application users. This detection identifies a common
+  request smuggling technique of using both Content-Length and Transfer-Encoding headers
+  to cause a parsing confusion between the frontend and backend.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/97d85f98-9d15-41a0-8682-7030454875e7/
+indicators:
+- type: data_source
+  value: Suricata
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives are not expected, however, monitor, filter, and tune
+    as needed based on organization log sources.
+  mitigation: Review context and user activity
+references:
+- https://portswigger.net/web-security/request-smuggling#what-is-http-request-smuggling
+- https://portswigger.net/research/http1-must-die
+- https://www.vaadata.com/blog/what-is-http-request-smuggling-exploitations-and-security-best-practices/
+- https://www.securityweek.com/new-http-request-smuggling-attacks-impacted-cdns-major-orgs-millions-of-websites/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/request_smuggling/suricata_request_smuggling.log

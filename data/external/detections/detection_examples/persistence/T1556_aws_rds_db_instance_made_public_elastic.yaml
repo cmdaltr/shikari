@@ -1,0 +1,56 @@
+technique_id: T1556
+technique_name: AWS RDS DB Instance Made Public
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "any where event.dataset == \"aws.cloudtrail\"\n    and event.provider == \"\
+  rds.amazonaws.com\"\n    and event.outcome == \"success\"\n    and (\n        (event.action\
+  \ == \"ModifyDBInstance\" and stringContains(aws.cloudtrail.request_parameters,\
+  \ \"publiclyAccessible=true\"))\n        or\n        (event.action in (\"CreateDBInstance\"\
+  , \"CreateDBCluster\") and stringContains(aws.cloudtrail.request_parameters, \"\
+  publiclyAccessible=true\"))\n    )"
+explanation: Identifies the creation or modification of an AWS RDS DB instance to
+  enable public access. DB instances may contain sensitive data that can be abused
+  if shared with unauthorized accounts or made public. Adversaries may enable public
+  access on a DB instance to maintain persistence or evade defenses by bypassing access
+  controls.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9efb3f79-b77b-466a-9fa0-3645d22d1e7f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS RDS
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - **Legitimate Instance Configuration**: Confirm if the DB instance creation or
+    modification aligns with legitimate tasks.
+
+    - **Consistency Check**: Compare the action against historical data of similar
+    actions performed by the user or within the organization. If the action is consistent
+    with past legitimate activities, it might indicate a false alarm.
+
+
+    ### Response and Remediation
+
+
+    - **Immediate Review and Reversal**: If the change was unauthorized, update the
+    instance a'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBInstance.html
+- https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.DBInstance.Modifying.html
+- https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-persistence/aws-rds-persistence#make-instance-publicly-accessible-rds-modifydbinstance
+- https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc#rds-createdbinstance
+has_investigation_guide: true
+risk_score: 47

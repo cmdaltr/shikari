@@ -1,0 +1,52 @@
+technique_id: T1071
+technique_name: Potential Meterpreter Reverse Shell
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sample by host.id, process.pid, user.id\n  [file where host.os.type == \"\
+  linux\" and auditd.data.syscall == \"open\" and auditd.data.a2 == \"1b6\" and file.path\
+  \ == \"/etc/machine-id\"]\n  [file where host.os.type == \"linux\" and auditd.data.syscall\
+  \ == \"open\" and auditd.data.a2 == \"1b6\" and file.path == \"/etc/passwd\"]\n\
+  \  [file where host.os.type == \"linux\" and auditd.data.syscall == \"open\" and\
+  \ auditd.data.a2 == \"1b6\" and file.path == \"/proc/net/route\"]\n  [file where\
+  \ host.os.type == \"linux\" and auditd.data.syscall == \"open\" and auditd.data.a2\
+  \ == \"1b6\" and file.path == \"/proc/net/ipv6_route\"]\n  [file where host.os.type\
+  \ == \"linux\" and auditd.data.syscall == \"open\" and auditd.data.a2 == \"1b6\"\
+  \ and file.path == \"/proc/net/if_inet6\"]"
+explanation: 'This detection rule identifies a sample of suspicious Linux system file
+  reads used for system fingerprinting, leveraged
+
+  by the Metasploit Meterpreter shell to gather information about the target that
+  it is executing its shell on. Detecting
+
+  this pattern is indicative of a successful meterpreter shell connection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5c895b4f-9133-4e68-9e23-59902175355c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System administration scripts or tools that perform regular checks on system
+    files like /etc/machine-id or /etc/passwd may trigger this rule. To manage this,
+    identify and whitelist these legitimate processes by their process ID or user
+    ID.
+
+    - Backup or monitoring software that accesses network configuration files such
+    as /proc/net/route or /proc/net/ipv6_route can cause false positives. Exclude
+    these applications by adding exceptions for their specific file access patte'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/primer-on-persistence-mechanisms
+- https://www.elastic.co/security-labs/linux-detection-engineering-with-auditd
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,53 @@
+technique_id: T1562.001
+technique_name: O365 Mailbox Audit Logging Bypass
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:Exchange and event.action:Set-MailboxAuditBypassAssociation
+  and event.outcome:success
+explanation: 'Detects the occurrence of mailbox audit bypass associations. The mailbox
+  audit is responsible for logging specified
+
+  mailbox events (like accessing a folder or a message or permanently deleting a message).
+  However, actions taken by some
+
+  authorized accounts, such as accounts used by third-party tools or accounts used
+  for lawful monitoring, can create a
+
+  large number of mailbox audit log entries and may not be of interest to your organization.
+  Because of this,
+
+  administrators can create bypass associations, allowing certain accounts to perform
+  their tasks without being logged.
+
+  Attackers can abuse this allowlist mechanism to conceal actions taken, as the mailbox
+  audit will log no activity done by
+
+  the account.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/675239ea-c1bc-4467-a6d3-b9e2cc7f676d.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Authorized third-party tools may generate a high volume of mailbox audit log
+    entries, leading to bypass associations being set. Review and document these tools
+    to ensure they are legitimate and necessary for business operations.
+
+    - Accounts used for lawful monitoring might be exempted from logging to reduce
+    noise. Verify that these accounts are properly documented and that their activities
+    align with organizational policies.
+
+    - Regularly review the list of accounts with'
+  mitigation: Review investigation guide for details
+references:
+- https://twitter.com/misconfig/status/1476144066807140355
+has_investigation_guide: true
+risk_score: 47

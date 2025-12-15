@@ -1,0 +1,44 @@
+technique_id: T1548.003
+technique_name: Linux Node Privilege Escalation
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.process="*sudo*node*"
+  AND Processes.process="*-e*" AND Processes.process="*child_process.spawn*" AND Processes.process="*stdio*"
+  by Processes.action Processes.dest Processes.original_file_name Processes.parent_process
+  Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id
+  Processes.parent_process_name Processes.parent_process_path Processes.process Processes.process_exec
+  Processes.process_guid Processes.process_hash Processes.process_id Processes.process_integrity_level
+  Processes.process_name Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `linux_node_privilege_escalation_filter`'
+explanation: The following analytic identifies the execution of Node.js with elevated
+  privileges using sudo, specifically when spawning child processes. It leverages
+  data from Endpoint Detection and Response (EDR) agents, focusing on command-line
+  executions that include specific Node.js commands. This activity is significant
+  because running Node.js as a superuser without dropping privileges can allow unauthorized
+  access to the file system and potential privilege escalation. If confirmed malicious,
+  this could enable an attacker to maintain privileged access, execute arbitrary code,
+  and compromise sensitive data within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2e58a4ff-398f-42f4-8fd0-e01ebfe2a8ce/
+indicators:
+- type: data_source
+  value: Sysmon for Linux EventID 1
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives are present based on automated tooling or system administrative
+    usage. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://gtfobins.github.io/gtfobins/docker/
+- https://en.wikipedia.org/wiki/Node.js
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1548/node/sysmon_linux.log

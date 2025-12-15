@@ -1,0 +1,41 @@
+technique_id: T1556.006
+technique_name: Azure AD New MFA Method Registered For User
+tactic: lateral_movement
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`azure_monitor_aad` category=AuditLogs operationName="User registered security
+  info" properties.operationType=Add | rename properties.* as * | rename targetResources{}.*
+  as * | rename userAgent as user_agent | fillnull | stats count min(_time) as firstTime
+  max(_time) as lastTime by action dest user src vendor_account vendor_product user_agent
+  result resultDescription signature | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `azure_ad_new_mfa_method_registered_for_user_filter`'
+explanation: The following analytic detects the registration of a new Multi-Factor
+  Authentication (MFA) method for an Azure AD account. It leverages Azure AD AuditLogs
+  to identify when a user registers new security information. This activity is significant
+  because adversaries who gain unauthorized access to an account may add their own
+  MFA method to maintain persistence. If confirmed malicious, this could allow attackers
+  to bypass existing security controls, maintain long-term access, and potentially
+  escalate their privileges within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2628b087-4189-403f-9044-87403f777a1b/
+indicators:
+- type: data_source
+  value: Azure Active Directory User registered security info
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Newly onboarded users who are registering an MFA method for the first
+    time will also trigger this detection.
+  mitigation: Review context and user activity
+references:
+- https://docs.microsoft.com/en-us/azure/active-directory/authentication/concept-mfa-howitworks
+- https://attack.mitre.org/techniques/T1556/
+- https://attack.mitre.org/techniques/T1556/006/
+- https://twitter.com/jhencinski/status/1618660062352007174
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1556.006/azure_ad_new_mfa_method_registered_for_user/azuread.log

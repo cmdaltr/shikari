@@ -1,0 +1,50 @@
+technique_id: T1059.001
+technique_name: PowerShell PSReflect Script
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:windows and\n  powershell.file.script_block_text:(\n\
+  \    \"New-InMemoryModule\" or\n    \"Add-Win32Type\" or\n    psenum or\n    DefineDynamicAssembly\
+  \ or\n    DefineDynamicModule or\n    \"Reflection.TypeAttributes\" or\n    \"Reflection.Emit.OpCodes\"\
+  \ or\n    \"Reflection.Emit.CustomAttributeBuilder\" or\n    \"Runtime.InteropServices.DllImportAttribute\"\
+  \n  ) and\n  not user.id : \"S-1-5-18\""
+explanation: 'Detects the use of PSReflect in PowerShell scripts. Attackers leverage
+  PSReflect as a library that enables PowerShell to
+
+  access win32 API functions.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/56f2e9b5-4803-4e44-a0a4-a52dc79d57fe.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Related rules
+
+
+    - PowerShell Suspicious Discovery Related Windows API Functions - 61ac3638-40a3-44b2-855a-985636ca985e
+
+    - PowerShell Keylogging Script - bd2c86a0-8b61-4457-ab38-96943984e889
+
+    - PowerShell Suspicious Script with Audio Capture Capabilities - 2f2f4939-0b34-40c2-a0a3-844eb7889f43
+
+    - Potential Process Injection via PowerShell - 2e29e96a-b'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/mattifestation/PSReflect/blob/master/PSReflect.psm1
+- https://github.com/atc-project/atc-data/blob/master/docs/Logging_Policies/LP_0109_windows_powershell_script_block_log.md
+has_investigation_guide: true
+risk_score: 73

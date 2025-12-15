@@ -1,0 +1,49 @@
+technique_id: T1070.003
+technique_name: RunMRU Registry Key Deletion
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: c11aecef-9c37-45a6-9c07-bc0782f963fd
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cli:\n  CommandLine|contains|all:\n  - ' del'\n  - \\Software\\Microsoft\\\
+  Windows\\CurrentVersion\\Explorer\\RunMRU\nselection_img:\n- Image|endswith: \\\
+  reg.exe\n- OriginalFileName: reg.exe\n"
+explanation: 'Detects deletion of the RunMRU registry key, which stores the history
+  of commands executed via the Run dialog.
+
+  In the clickfix techniques, the phishing lures instruct users to open a run dialog
+  through (Win + R) and execute malicious commands.
+
+  Adversaries may delete this key to cover their tracks after executing commands.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://www.zscaler.com/blogs/security-research/coldriver-updates-arsenal-baitswitch-and-simplefix
+tags:
+- attack.defense-evasion
+- attack.t1070.003
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith: \reg.exe
+  - OriginalFileName: reg.exe
+  selection_cli:
+    CommandLine|contains|all:
+    - ' del'
+    - \Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU
+  condition: all of selection_*
+metadata:
+  created_date: 2025-09-25
+  modified_date: '2025-11-28'
+  author: Swachchhanda Shrawan Poudel (Nextron Systems)
+  status: experimental
+  imported_date: '2025-11-28'

@@ -1,0 +1,63 @@
+technique_id: T1003.001
+technique_name: HackTool - CrackMapExec Process Patterns
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: f26307d8-14cd-47e3-a26b-4b4769f24af6
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection*\nselection_lsass_dump1:\n\
+  \  CommandLine|contains:\n  - 'cmd.exe /c '\n  - 'cmd.exe /r '\n  - 'cmd.exe /k\
+  \ '\n  - 'cmd /c '\n  - 'cmd /r '\n  - 'cmd /k '\n  CommandLine|contains|all:\n\
+  \  - 'tasklist /fi '\n  - Imagename eq lsass.exe\n  User|contains:\n  - AUTHORI\n\
+  \  - AUTORI\nselection_lsass_dump2:\n  CommandLine|contains|all:\n  - do rundll32.exe\
+  \ C:\\windows\\System32\\comsvcs.dll, MiniDump\n  - \\Windows\\Temp\\\n  - ' full'\n\
+  \  - '%%B'\nselection_procdump:\n  CommandLine|contains|all:\n  - tasklist /v /fo\
+  \ csv\n  - findstr /i \"lsass\"\n"
+explanation: Detects suspicious process patterns found in logs when CrackMapExec is
+  used
+false_positives:
+- Unknown
+references:
+- https://mpgn.gitbook.io/crackmapexec/smb-protocol/obtaining-credentials/dump-lsass
+tags:
+- attack.credential-access
+- attack.t1003.001
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_lsass_dump1:
+    CommandLine|contains|all:
+    - 'tasklist /fi '
+    - Imagename eq lsass.exe
+    CommandLine|contains:
+    - 'cmd.exe /c '
+    - 'cmd.exe /r '
+    - 'cmd.exe /k '
+    - 'cmd /c '
+    - 'cmd /r '
+    - 'cmd /k '
+    User|contains:
+    - AUTHORI
+    - AUTORI
+  selection_lsass_dump2:
+    CommandLine|contains|all:
+    - do rundll32.exe C:\windows\System32\comsvcs.dll, MiniDump
+    - \Windows\Temp\
+    - ' full'
+    - '%%B'
+  selection_procdump:
+    CommandLine|contains|all:
+    - tasklist /v /fo csv
+    - findstr /i "lsass"
+  condition: 1 of selection*
+metadata:
+  created_date: 2022-03-12
+  modified_date: 2023-02-13
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

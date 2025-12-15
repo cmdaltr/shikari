@@ -1,0 +1,46 @@
+technique_id: T1098
+technique_name: AWS User Login Profile Was Modified
+tactic: persistence
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 055fb148-60f8-462d-ad16-26926ce050f1
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_user_identity:\n  userIdentity.arn|fieldref: requestParameters.userName\n\
+  selection:\n  eventName: UpdateLoginProfile\n  eventSource: iam.amazonaws.com\n"
+explanation: 'Detects activity when someone is changing passwords on behalf of other
+  users.
+
+  An attacker with the "iam:UpdateLoginProfile" permission on other users can change
+  the password used to login to the AWS console on any user that already has a login
+  profile setup.
+
+  '
+false_positives:
+- Legitimate user account administration
+references:
+- https://github.com/RhinoSecurityLabs/AWS-IAM-Privilege-Escalation
+tags:
+- attack.persistence
+- attack.privilege-escalation
+- attack.t1098
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventSource: iam.amazonaws.com
+    eventName: UpdateLoginProfile
+  filter_main_user_identity:
+    userIdentity.arn|fieldref: requestParameters.userName
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2021-08-09
+  modified_date: 2024-04-26
+  author: toffeebr33k
+  status: test
+  imported_date: '2025-11-28'

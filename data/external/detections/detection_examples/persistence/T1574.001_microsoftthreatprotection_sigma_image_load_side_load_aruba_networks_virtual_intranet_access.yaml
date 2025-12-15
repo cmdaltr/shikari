@@ -1,0 +1,63 @@
+technique_id: T1574.001
+technique_name: Aruba Network Service Potential DLL Sideloading
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 90ae0469-0cee-4509-b67f-e5efcef040f7
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  ImageLoaded|startswith:\n  - C:\\Windows\\System32\\\n  - C:\\Windows\\\
+  SysWOW64\\\n  - C:\\Windows\\WinSxS\\\nselection:\n  ImageLoaded|endswith:\n  -\
+  \ \\wtsapi32.dll\n  - \\msvcr100.dll\n  - \\msvcp100.dll\n  - \\dbghelp.dll\n  -\
+  \ \\dbgcore.dll\n  - \\wininet.dll\n  - \\iphlpapi.dll\n  - \\version.dll\n  - \\\
+  cryptsp.dll\n  - \\cryptbase.dll\n  - \\wldp.dll\n  - \\profapi.dll\n  - \\sspicli.dll\n\
+  \  - \\winsta.dll\n  - \\dpapi.dll\n  Image|endswith: \\arubanetsvc.exe\n"
+explanation: Detects potential DLL sideloading activity via the Aruba Networks Virtual
+  Intranet Access "arubanetsvc.exe" process using DLL Search Order Hijacking
+false_positives:
+- Unknown
+references:
+- https://twitter.com/wdormann/status/1616581559892545537?t=XLCBO9BziGzD7Bmbt8oMEQ&s=09
+tags:
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.persistence
+- attack.t1574.001
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    Image|endswith: \arubanetsvc.exe
+    ImageLoaded|endswith:
+    - \wtsapi32.dll
+    - \msvcr100.dll
+    - \msvcp100.dll
+    - \dbghelp.dll
+    - \dbgcore.dll
+    - \wininet.dll
+    - \iphlpapi.dll
+    - \version.dll
+    - \cryptsp.dll
+    - \cryptbase.dll
+    - \wldp.dll
+    - \profapi.dll
+    - \sspicli.dll
+    - \winsta.dll
+    - \dpapi.dll
+  filter:
+    ImageLoaded|startswith:
+    - C:\Windows\System32\
+    - C:\Windows\SysWOW64\
+    - C:\Windows\WinSxS\
+  condition: selection and not filter
+metadata:
+  created_date: 2023-01-22
+  modified_date: 2023-03-15
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

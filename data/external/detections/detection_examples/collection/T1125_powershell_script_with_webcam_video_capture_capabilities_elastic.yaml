@@ -1,0 +1,47 @@
+technique_id: T1125
+technique_name: PowerShell Script with Webcam Video Capture Capabilities
+tactic: collection
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.category:process and host.os.type:windows and\n  powershell.file.script_block_text\
+  \ : (\n    \"NewFrameEventHandler\" or\n    \"VideoCaptureDevice\" or\n    \"DirectX.Capture.Filters\"\
+  \ or\n    \"VideoCompressors\" or\n    \"Start-WebcamRecorder\" or\n    (\n    \
+  \  (\"capCreateCaptureWindowA\" or\n       \"capCreateCaptureWindow\" or\n     \
+  \  \"capGetDriverDescription\") and\n      (\"avicap32.dll\" or \"avicap32\")\n\
+  \    )\n  )"
+explanation: 'Detects PowerShell scripts that can be used to record webcam video.
+  Attackers can capture this information to extort or
+
+  spy on victims.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/eb44611f-62a8-4036-a5ef-587098be6c43.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'false positives.
+
+
+    ### False positive analysis
+
+
+    - Legitimate video conferencing applications may trigger the detection rule due
+    to their use of similar API calls and script patterns. Users can create exceptions
+    for known and trusted applications by whitelisting their process names or script
+    signatures.
+
+    - Security testing tools that simulate webcam access for vulnerability assessments
+    might be flagged. To handle this, users should exclude these tools from monitoring
+    during scheduled testing period'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/EmpireProject/Empire/blob/master/lib/modules/powershell/collection/WebcamRecorder.py
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,60 @@
+technique_id: T1078.004
+technique_name: Microsoft Entra ID High Risk Sign-in
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset:azure.signinlogs and\n  (\n    azure.signinlogs.properties.risk_level_during_signin:high\
+  \ or\n    azure.signinlogs.properties.risk_level_aggregated:high\n  )"
+explanation: 'Identifies high risk Microsoft Entra ID sign-ins by leveraging Microsoft''s
+  Identity Protection machine learning
+
+  and heuristics. Identity Protection categorizes risk into three tiers: low, medium,
+  and high. While Microsoft does not
+
+  provide specific details about how risk is calculated, each level brings higher
+  confidence that the user or sign-in is
+
+  compromised.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/37994bca-0611-4500-ab67-5588afe73b77.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Sign-in Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Risky sign-ins may be triggered during legitimate travel, VPN use, or remote
+    work scenarios from unusual locations.
+
+    - In some cases, users switching devices or networks rapidly may trigger high-risk
+    scores.
+
+    - Automated scanners or penetration tests using known credentials may mimic high-risk
+    login behavior.
+
+    - Confirm whether the risk was remediated automatically by Microsoft Identity
+    Protection before proceeding with escalations.
+
+
+    ### Response and remediation
+
+
+    - If com'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/azure/active-directory/conditional-access/howto-conditional-access-policy-risk
+- https://docs.microsoft.com/en-us/azure/active-directory/identity-protection/overview-identity-protection
+- https://docs.microsoft.com/en-us/azure/active-directory/identity-protection/howto-identity-protection-investigate-risk
+has_investigation_guide: true
+risk_score: 73

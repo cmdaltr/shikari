@@ -1,0 +1,67 @@
+technique_id: T1059.007
+technique_name: Microsoft Management Console File from Unusual Path
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.executable : (\n    \"?:\\\\Windows\\\\System32\\\\mmc.exe\",\n\n   \
+  \ /* Crowdstrike specific condition as it uses NT Object paths */\n    \"\\\\Device\\\
+  \\HarddiskVolume*\\\\Windows\\\\System32\\\\mmc.exe\"\n  ) and\n  process.args :\
+  \ \"*.msc\" and\n  not process.args : (\n        \"?:\\\\Windows\\\\System32\\\\\
+  *.msc\",\n        \"?:\\\\Windows\\\\SysWOW64\\\\*.msc\",\n        \"?:\\\\Program\
+  \ files\\\\*.msc\",\n        \"?:\\\\Program Files (x86)\\\\*.msc\",\n        \"\
+  ?:\\\\Windows\\\\ADFS\\\\Microsoft.IdentityServer.msc\"\n  ) and\n  not process.command_line\
+  \ : (\n    \"C:\\\\Windows\\\\system32\\\\mmc.exe eventvwr.msc /s\",\n    \"mmc.exe\
+  \ eventvwr.msc /s\",\n    \"\\\"C:\\\\Windows\\\\System32\\\\mmc.exe\\\" CompMgmt.msc*\"\
+  \n  )"
+explanation: 'Identifies attempts to open a Microsoft Management Console File from
+  untrusted paths. Adversaries may use MSC files for
+
+  initial access and execution.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7e23dfef-da2c-4d64-b11d-5f285b638853.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks may trigger this rule if system administrators
+    execute .msc files from custom directories. To manage this, create exceptions
+    for known administrative scripts or tools that are regularly used from non-standard
+    paths.
+
+    - Software installations or updates might involve executing .msc files from temporary
+    or installation directories. Monitor these activities and whitelist specific installation
+    paths if they are verified as safe and part of ro'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/grimresource
+has_investigation_guide: true
+risk_score: 47

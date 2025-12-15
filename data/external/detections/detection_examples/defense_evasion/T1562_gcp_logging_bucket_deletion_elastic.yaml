@@ -1,0 +1,51 @@
+technique_id: T1562
+technique_name: GCP Logging Bucket Deletion
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:gcp.audit and event.action:google.logging.v*.ConfigServiceV*.DeleteBucket
+  and event.outcome:success
+explanation: 'Identifies a Logging bucket deletion in Google Cloud Platform (GCP).
+  Log buckets are containers that store and organize
+
+  log data. A deleted bucket stays in a pending state for 7 days, and Logging continues
+  to route logs to the bucket during
+
+  that time. To stop routing logs to a deleted bucket, you can delete the log sinks
+  that have the bucket as their
+
+  destination, or modify the filter for the sinks to stop it from routing logs to
+  the deleted bucket. An adversary may
+
+  delete a log bucket to evade detection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5663b693-0dea-4f2e-8275-f1ae5ff2de8e.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: GCP
+  confidence: high
+- type: data_source
+  value: Google Cloud Platform
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance activities by administrators may trigger bucket deletion
+    events. To manage this, create exceptions for known maintenance periods or specific
+    user accounts responsible for these tasks.
+
+    - Automated scripts or tools used for log management might delete buckets as part
+    of their normal operation. Identify these scripts and exclude their actions from
+    triggering alerts by filtering based on their service accounts or specific identifiers.
+
+    - Testing environm'
+  mitigation: Review investigation guide for details
+references:
+- https://cloud.google.com/logging/docs/buckets
+- https://cloud.google.com/logging/docs/storage
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,37 @@
+technique_id: T1219.002
+technique_name: Hijack Legit RDP Session to Move Laterally
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 52753ea4-b3a0-4365-910d-36cff487b789
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith: \\mstsc.exe\n  TargetFilename|contains: \\Microsoft\\Windows\\\
+  Start Menu\\Programs\\Startup\\\n"
+explanation: Detects the usage of tsclient share to place a backdoor on the RDP source
+  machine's startup folder
+false_positives:
+- Unlikely
+references:
+- Internal Research
+tags:
+- attack.command-and-control
+- attack.t1219.002
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection:
+    Image|endswith: \mstsc.exe
+    TargetFilename|contains: \Microsoft\Windows\Start Menu\Programs\Startup\
+  condition: selection
+metadata:
+  created_date: 2019-02-21
+  modified_date: 2021-11-27
+  author: Samir Bousseaden
+  status: test
+  imported_date: '2025-11-28'

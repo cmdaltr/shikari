@@ -1,0 +1,50 @@
+technique_id: T1564.001
+technique_name: Creation of Hidden Shared Object File
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: 'file where host.os.type == "linux" and event.type == "creation" and file.extension
+  == "so" and file.name : ".*.so" and
+
+  not process.name in ("dockerd", "azcopy", "podman")'
+explanation: 'Identifies the creation of a hidden shared object (.so) file. Users
+  can mark specific files as hidden simply by putting
+
+  a "." as the first character in the file or folder name. Adversaries can use this
+  to their advantage to hide files and
+
+  folders on the system for persistence and defense evasion.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/766d3f91-3f12-448c-b65f-20123e9e9e8c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Development and testing environments may frequently create hidden .so files
+    as part of routine operations. Users can mitigate this by excluding specific directories
+    or processes known to be part of development workflows.
+
+    - Backup or system maintenance scripts might generate hidden .so files temporarily.
+    Identify and exclude these scripts or their associated processes to prevent false
+    alerts.
+
+    - Some legitimate software installations or updates may create hidden .so file'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

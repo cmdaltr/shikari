@@ -1,0 +1,54 @@
+technique_id: T1053.005
+technique_name: Potential SSH Tunnel Persistence Install Using A Scheduled Task
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 2daa93a0-a5fb-41c5-8cd8-3c11294bfd1f
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_img and 1 of\
+  \ selection_cli_*\nselection_cli_ssh:\n  CommandLine|contains|all:\n  - ' /create\
+  \ '\n  - ssh.exe\n  - -i\nselection_cli_sshd:\n  CommandLine|contains|all:\n  -\
+  \ ' /create '\n  - sshd.exe\n  - -f\nselection_img:\n- Image|endswith: \\schtasks.exe\n\
+  - OriginalFileName: schtasks.exe\n"
+explanation: Detects the creation of new scheduled tasks via commandline, using Schtasks.exe.
+  This rule detects tasks creating that call OpenSSH, which may indicate the creation
+  of reverse SSH tunnel to the attacker's server.
+false_positives:
+- Unknown
+references:
+- https://thedfirreport.com/2023/10/30/netsupport-intrusion-results-in-domain-compromise/
+- https://www.kroll.com/en/insights/publications/cyber/cactus-ransomware-prickly-new-variant-evades-detection
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.execution
+- attack.t1053.005
+- attack.command-and-control
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_img:
+  - Image|endswith: \schtasks.exe
+  - OriginalFileName: schtasks.exe
+  selection_cli_sshd:
+    CommandLine|contains|all:
+    - ' /create '
+    - sshd.exe
+    - -f
+  selection_cli_ssh:
+    CommandLine|contains|all:
+    - ' /create '
+    - ssh.exe
+    - -i
+  condition: selection_img and 1 of selection_cli_*
+metadata:
+  created_date: 2025-07-14
+  modified_date: '2025-11-28'
+  author: Rory Duncan
+  status: experimental
+  imported_date: '2025-11-28'

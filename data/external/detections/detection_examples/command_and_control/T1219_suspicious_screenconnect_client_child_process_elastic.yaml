@@ -1,0 +1,73 @@
+technique_id: T1219
+technique_name: Suspicious ScreenConnect Client Child Process
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.parent.name :\n                (\"ScreenConnect.ClientService.exe\",\n\
+  \                 \"ScreenConnect.WindowsClient.exe\",\n                 \"ScreenConnect.WindowsBackstageShell.exe\"\
+  ,\n                 \"ScreenConnect.WindowsFileManager.exe\") and\n  (\n   (process.name\
+  \ : \"powershell.exe\" and\n    process.args : (\"-enc\", \"-ec\", \"-e\", \"*downloadstring*\"\
+  , \"*Reflection.Assembly*\", \"*http*\")) or\n   (process.name : \"cmd.exe\" and\
+  \ process.args : \"/c\") or\n   (process.name : \"net.exe\" and process.args : \"\
+  /add\") or\n   (process.name : \"schtasks.exe\" and process.args : (\"/create\"\
+  , \"-create\")) or\n   (process.name : \"sc.exe\" and process.args : \"create\"\
+  ) or\n   (process.name : \"rundll32.exe\" and not process.args : \"url.dll,FileProtocolHandler\"\
+  ) or\n   (process.name : \"msiexec.exe\" and process.args : (\"/i\", \"-i\") and\n\
+  \    process.args : (\"/q\", \"/quiet\", \"/qn\", \"-q\", \"-quiet\", \"-qn\", \"\
+  -Q+\")) or\n   process.name : (\"mshta.exe\", \"certutil.exe\", \"bistadmin.exe\"\
+  , \"certreq.exe\", \"wscript.exe\", \"cscript.exe\", \"curl.exe\",\n           \
+  \        \"ssh.exe\", \"scp.exe\", \"wevtutil.exe\", \"wget.exe\", \"wmic.exe\"\
+  )\n   )"
+explanation: 'Identifies suspicious processes being spawned by the ScreenConnect client
+  processes. This activity may indicate
+
+  execution abusing unauthorized access to the ScreenConnect remote access software.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/78de1aeb-5225-4067-b8cc-f4a1de8a8546.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate IT support activities using ScreenConnect may trigger the rule when
+    executing scripts or commands for maintenance. To manage this, identify and whitelist
+    specific IT support accounts or IP addresses that regularly perform these actions.
+
+    - Automated scripts or scheduled tasks that use ScreenConnect for routine operations
+    might be flagged. Review and document these scripts, then create exceptions for
+    known benign processes and arguments.
+
+    - Software updates or'
+  mitigation: Review investigation guide for details
+references:
+- https://www.huntress.com/blog/slashandgrab-screen-connect-post-exploitation-in-the-wild-cve-2024-1709-cve-2024-1708
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,47 @@
+technique_id: T1547.005
+technique_name: Security Support Provider (SSP) Added to LSA Configuration
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: eeb30123-9fbd-4ee8-aaa0-2e545bbed6dc
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_msiexec:\n  Image:\n  - C:\\Windows\\system32\\msiexec.exe\n\
+  \  - C:\\Windows\\syswow64\\MsiExec.exe\nselection:\n  TargetObject|endswith:\n\
+  \  - \\Control\\Lsa\\Security Packages\n  - \\Control\\Lsa\\OSConfig\\Security Packages\n"
+explanation: 'Detects the addition of a SSP to the registry. Upon a reboot or API
+  call, SSP DLLs gain access to encrypted and plaintext passwords stored in Windows.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://powersploit.readthedocs.io/en/latest/Persistence/Install-SSP/
+- https://github.com/EmpireProject/Empire/blob/08cbd274bef78243d7a8ed6443b8364acd1fc48b/data/module_source/persistence/Install-SSP.ps1#L157
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.t1547.005
+logsource:
+  category: registry_event
+  product: windows
+detection:
+  selection:
+    TargetObject|endswith:
+    - \Control\Lsa\Security Packages
+    - \Control\Lsa\OSConfig\Security Packages
+  filter_main_msiexec:
+    Image:
+    - C:\Windows\system32\msiexec.exe
+    - C:\Windows\syswow64\MsiExec.exe
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2019-01-18
+  modified_date: 2022-08-09
+  author: iwillkeepwatch
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,62 @@
+technique_id: T1528
+technique_name: Microsoft Entra ID Illicit Consent Grant via Registered Application
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"azure.auditlogs\" and\n  (\n    azure.auditlogs.operation_name:\"\
+  Consent to application\"\n    or event.action:\"Consent to application\"\n  )\n\
+  \  and event.outcome: \"success\"\n  and azure.auditlogs.properties.additional_details.key:\
+  \ \"AppId\""
+explanation: 'Identifies an illicit consent grant request on-behalf-of a registered
+  Entra ID application. Adversaries may create and
+
+  register an application in Microsoft Entra ID for the purpose of requesting user
+  consent to access resources. This is
+
+  accomplished by tricking a user into granting consent to the application, typically
+  via a pre-made phishing URL. This
+
+  establishes an OAuth grant that allows the malicious client applocation to access
+  resources on-behalf-of the user.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/1c6a8c7a-5cb6-4a82-ba27-d5a5b8a40a38.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Some applications may request high-privilege scopes for legitimate purposes.
+    Validate whether the application is verified, developed by Microsoft, or approved
+    internally by your organization.
+
+    - Review publisher verification, app ownership, and scope alignment with the intended
+    business use case.
+
+
+    ### Response and remediation
+
+
+    - Revoke the application’s OAuth grant using Graph API or PowerShell. Use the
+    Remove-AzureADOAuth2PermissionGrant cmdlet.
+
+    - Remove the associated'
+  mitigation: Review investigation guide for details
+references:
+- https://www.wiz.io/blog/midnight-blizzard-microsoft-breach-analysis-and-best-practices
+- https://docs.microsoft.com/en-us/microsoft-365/security/office-365-security/detect-and-remediate-illicit-consent-grants?view=o365-worldwide
+- https://www.cloud-architekt.net/detection-and-mitigation-consent-grant-attacks-azuread/
+- https://docs.microsoft.com/en-us/defender-cloud-apps/investigate-risky-oauth#how-to-detect-risky-oauth-apps
+has_investigation_guide: true
+risk_score: 47

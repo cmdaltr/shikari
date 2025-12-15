@@ -1,0 +1,41 @@
+technique_id: T1071.004
+technique_name: Suspicious Cobalt Strike DNS Beaconing - Sysmon
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.91
+validated: true
+source: sigma
+sigma_id: f356a9c4-effd-4608-bbf8-408afd5cd006
+level: critical
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection*\nselection1:\n\
+  \  QueryName|startswith:\n  - aaa.stage.\n  - post.1\nselection2:\n  QueryName|contains:\
+  \ .stage.123456.\n"
+explanation: Detects a program that invoked suspicious DNS queries known from Cobalt
+  Strike beacons
+false_positives:
+- Unknown
+references:
+- https://www.icebrg.io/blog/footprints-of-fin7-tracking-actor-patterns
+- https://www.sekoia.io/en/hunting-and-detecting-cobalt-strike/
+tags:
+- attack.command-and-control
+- attack.t1071.004
+logsource:
+  product: windows
+  category: dns_query
+detection:
+  selection1:
+    QueryName|startswith:
+    - aaa.stage.
+    - post.1
+  selection2:
+    QueryName|contains: .stage.123456.
+  condition: 1 of selection*
+metadata:
+  created_date: 2021-11-09
+  modified_date: 2023-01-16
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

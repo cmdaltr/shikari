@@ -1,0 +1,56 @@
+technique_id: T1547
+technique_name: Persistence via KDE AutoStart Script or Desktop File Modification
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"linux\" and event.type != \"deletion\" and\n\
+  \  file.extension in (\"sh\", \"desktop\") and\n  file.path :\n    (\n      \"/home/*/.config/autostart/*\"\
+  , \"/root/.config/autostart/*\",\n      \"/home/*/.kde/Autostart/*\", \"/root/.kde/Autostart/*\"\
+  ,\n      \"/home/*/.kde4/Autostart/*\", \"/root/.kde4/Autostart/*\",\n      \"/home/*/.kde/share/autostart/*\"\
+  , \"/root/.kde/share/autostart/*\",\n      \"/home/*/.kde4/share/autostart/*\",\
+  \ \"/root/.kde4/share/autostart/*\",\n      \"/home/*/.local/share/autostart/*\"\
+  , \"/root/.local/share/autostart/*\",\n      \"/home/*/.config/autostart-scripts/*\"\
+  , \"/root/.config/autostart-scripts/*\",\n      \"/etc/xdg/autostart/*\", \"/usr/share/autostart/*\"\
+  \n    ) and\n    not process.name in (\n      \"yum\", \"dpkg\", \"install\", \"\
+  dnf\", \"teams\", \"yum-cron\", \"dnf-automatic\", \"docker\", \"dockerd\", \"rpm\"\
+  , \"pacman\",\n      \"podman\", \"nautilus\", \"remmina\", \"cinnamon-settings.py\"\
+  , \"executor\", \"xfce4-clipman\", \"jetbrains-toolbox\",\n      \"ansible-admin\"\
+  , \"apk\"\n    )"
+explanation: 'Identifies the creation or modification of a K Desktop Environment (KDE)
+  AutoStart script or desktop file that will
+
+  execute upon each user logon. Adversaries may abuse this method for persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e3e904b3-0a8e-4e68-86a8-977a163e21d3.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- If this activity is related to new benign\
+    \ software installation activity, consider adding exceptions — preferably with\
+    \ a combination of user and command line conditions.\n- If this activity is related\
+    \ to a system administrator who uses cron jobs for administrative purposes, consider\
+    \ adding exceptions for this specific administrator user account. \n- Try to understand\
+    \ the context of the execution by thinking about the user, machine, or business\
+    \ purpose. A small number of"
+  mitigation: Review investigation guide for details
+references:
+- https://userbase.kde.org/System_Settings/Autostart
+- https://www.amnesty.org/en/latest/research/2020/09/german-made-finspy-spyware-found-in-egypt-and-mac-and-linux-versions-revealed/
+- https://www.intezer.com/blog/research/operation-electrorat-attacker-creates-fake-companies-to-drain-your-crypto-wallets/
+- https://www.elastic.co/security-labs/primer-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

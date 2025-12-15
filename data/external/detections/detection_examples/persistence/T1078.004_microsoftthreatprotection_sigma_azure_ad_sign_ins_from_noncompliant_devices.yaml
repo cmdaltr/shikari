@@ -1,0 +1,37 @@
+technique_id: T1078.004
+technique_name: Sign-ins from Non-Compliant Devices
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 4f77e1d7-3982-4ee0-8489-abf2d6b75284
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  DeviceDetail.isCompliant: 'false'\n"
+explanation: Monitor and alert for sign-ins where the device was non-compliant.
+false_positives:
+- Unknown
+references:
+- https://learn.microsoft.com/en-us/entra/architecture/security-operations-devices#non-compliant-device-sign-in
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.initial-access
+- attack.defense-evasion
+- attack.t1078.004
+logsource:
+  product: azure
+  service: signinlogs
+detection:
+  selection:
+    DeviceDetail.isCompliant: 'false'
+  condition: selection
+metadata:
+  created_date: 2022-06-28
+  modified_date: '2025-11-28'
+  author: Michael Epping, '@mepples21'
+  status: test
+  imported_date: '2025-11-28'

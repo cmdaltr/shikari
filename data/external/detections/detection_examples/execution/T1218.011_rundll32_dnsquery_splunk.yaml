@@ -1,0 +1,37 @@
+technique_id: T1218.011
+technique_name: Rundll32 DNSQuery
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`sysmon` EventCode=22 process_name="rundll32.exe" | stats count min(_time)
+  as firstTime max(_time) as lastTime by answer answer_count dvc process_exec process_guid
+  process_name query query_count reply_code_id signature signature_id src user_id
+  vendor_product QueryName QueryResults QueryStatus | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `rundll32_dnsquery_filter`'
+explanation: The following analytic detects a suspicious `rundll32.exe` process making
+  HTTP connections and performing DNS queries to web domains. It leverages Sysmon
+  EventCode 22 logs to identify these activities. This behavior is significant as
+  it is commonly associated with IcedID malware, where `rundll32.exe` checks internet
+  connectivity and communicates with C&C servers to download configurations and other
+  components. If confirmed malicious, this activity could allow attackers to establish
+  persistence, download additional payloads, and exfiltrate sensitive data, posing
+  a severe threat to the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/f1483f5e-ee29-11eb-9d23-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 22
+  confidence: high
+- type: risk_system
+  value: dvc
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://any.run/malware-trends/icedid
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/icedid/inf_icedid/windows-sysmon.log

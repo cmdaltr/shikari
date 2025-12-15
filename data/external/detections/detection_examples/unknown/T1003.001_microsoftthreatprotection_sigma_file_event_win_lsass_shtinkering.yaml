@@ -1,0 +1,40 @@
+technique_id: T1003.001
+technique_name: LSASS Process Dump Artefact In CrashDumps Folder
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 6902955a-01b7-432c-b32a-6f5f81d8f625
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetFilename|contains: lsass.exe.\n  TargetFilename|endswith: .dmp\n  TargetFilename|startswith:\
+  \ C:\\Windows\\System32\\config\\systemprofile\\AppData\\Local\\CrashDumps\\\n"
+explanation: Detects the presence of an LSASS dump file in the "CrashDumps" folder.
+  This could be a sign of LSASS credential dumping. Techniques such as the LSASS Shtinkering
+  have been seen abusing the Windows Error Reporting to dump said process.
+false_positives:
+- Rare legitimate dump of the process by the operating system due to a crash of lsass
+references:
+- https://github.com/deepinstinct/Lsass-Shtinkering
+- https://media.defcon.org/DEF%20CON%2030/DEF%20CON%2030%20presentations/Asaf%20Gilboa%20-%20LSASS%20Shtinkering%20Abusing%20Windows%20Error%20Reporting%20to%20Dump%20LSASS.pdf
+tags:
+- attack.credential-access
+- attack.t1003.001
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection:
+    TargetFilename|startswith: C:\Windows\System32\config\systemprofile\AppData\Local\CrashDumps\
+    TargetFilename|contains: lsass.exe.
+    TargetFilename|endswith: .dmp
+  condition: selection
+metadata:
+  created_date: 2022-12-08
+  modified_date: '2025-11-28'
+  author: '@pbssubhash'
+  status: test
+  imported_date: '2025-11-28'

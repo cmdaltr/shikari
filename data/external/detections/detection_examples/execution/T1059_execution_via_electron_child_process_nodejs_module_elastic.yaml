@@ -1,0 +1,44 @@
+technique_id: T1059
+technique_name: Execution via Electron Child Process Node.js Module
+tactic: execution
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n process.args == \"-e\" and process.args : \"const*require*child_process*\""
+explanation: 'Identifies attempts to execute a child process from within the context
+  of an Electron application using the
+
+  child_process Node.js module. Adversaries may abuse this technique to inherit permissions
+  from parent processes.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/35330ba2-c859-4c98-8b7f-c19159ea0e58.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate Electron applications may use the child_process module for valid
+    operations, such as launching helper scripts or tools. Users should identify and
+    whitelist these known applications to prevent unnecessary alerts.
+
+    - Development environments often execute scripts using child_process during testing
+    or debugging. Exclude processes originating from development directories or environments
+    to reduce false positives.
+
+    - Automated build or deployment tools running on m'
+  mitigation: Review investigation guide for details
+references:
+- https://www.matthewslipper.com/2019/09/22/everything-you-wanted-electron-child-process.html
+- https://www.trustedsec.com/blog/macos-injection-via-third-party-frameworks/
+- https://nodejs.org/api/child_process.html
+has_investigation_guide: true
+risk_score: 47

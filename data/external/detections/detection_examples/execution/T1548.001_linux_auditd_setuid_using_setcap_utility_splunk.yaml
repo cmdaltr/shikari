@@ -1,0 +1,37 @@
+technique_id: T1548.001
+technique_name: Linux Auditd Setuid Using Setcap Utility
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`linux_auditd` execve_command IN ("*setcap *")  AND execve_command IN ("*cap_setuid+ep*",
+  "*cap_setuid=ep*", "*cap_net_bind_service+p*", "*cap_net_raw+ep*", "*cap_dac_read_search+ep*")
+  | rename host as dest | rename comm as process_name | rename exe as process | stats
+  count min(_time) as firstTime max(_time) as lastTime by argc execve_command dest
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `linux_auditd_setuid_using_setcap_utility_filter`'
+explanation: The following analytic detects the execution of the 'setcap' utility
+  to enable the SUID bit on Linux systems. It leverages Linux Auditd data, focusing
+  on process names and command-line arguments that indicate the use of 'setcap' with
+  specific capabilities. This activity is significant because setting the SUID bit
+  allows a user to temporarily gain root access, posing a substantial security risk.
+  If confirmed malicious, an attacker could escalate privileges, execute arbitrary
+  commands with elevated permissions, and potentially compromise the entire system.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/1474459a-302b-4255-8add-d82f96d14cd9/
+indicators:
+- type: data_source
+  value: Linux Auditd Execve
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrator or network operator can execute this command. Please
+    update the filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.hackingarticles.in/linux-privilege-escalation-using-capabilities/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1548.001/linux_auditd_setuid/auditd_execve_setcap.log

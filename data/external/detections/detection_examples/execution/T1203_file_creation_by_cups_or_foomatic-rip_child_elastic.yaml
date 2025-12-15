@@ -1,0 +1,67 @@
+technique_id: T1203
+technique_name: File Creation by Cups or Foomatic-rip Child
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id with maxspan=10s\n  [process where host.os.type == \"\
+  linux\" and event.type == \"start\" and event.action in (\"exec\", \"start\") and\n\
+  \   process.parent.name == \"foomatic-rip\" and\n   process.name in (\"bash\", \"\
+  dash\", \"sh\", \"tcsh\", \"csh\", \"zsh\", \"ksh\", \"fish\")] by process.entity_id\n\
+  \  [file where host.os.type == \"linux\" and event.type != \"deletion\" and\n  \
+  \ not (process.name == \"gs\" and file.path like \"/tmp/gs_*\")] by process.parent.entity_id"
+explanation: 'This detection rule addresses multiple vulnerabilities in the CUPS printing
+  system, including CVE-2024-47176,
+
+  CVE-2024-47076, CVE-2024-47175, and CVE-2024-47177. Specifically, this rule detects
+  suspicious file creation events
+
+  executed by child processes of foomatic-rip. These flaws impact components like
+  cups-browsed, libcupsfilters, libppd,
+
+  and foomatic-rip, allowing remote unauthenticated attackers to manipulate IPP URLs
+  or inject malicious data through
+
+  crafted UDP packets or network spoofing. This can result in arbitrary command execution
+  when a print job is initiated.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b9b14be7-b7f4-4367-9934-81f07d2f63c4.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - This activity is rarely legitimate. However, verify the context to rule out
+    non-malicious printer configuration changes or legitimate IPP requests.
+
+
+    ### Response and Remediation
+
+
+    - Initiate the incident response process based on the triage outcome.
+
+    - Isolate the compromised host to prevent further exploitation.
+
+    - If the investigation confirms malicious activity, search the environment for
+    additional compromised hosts.
+
+    - Implement network segmentation or restrictions to'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/cups-overflow
+- https://www.evilsocket.net/2024/09/26/Attacking-UNIX-systems-via-CUPS-Part-I/
+- https://gist.github.com/stong/c8847ef27910ae344a7b5408d9840ee1
+- https://github.com/RickdeJager/cupshax/blob/main/cupshax.py
+has_investigation_guide: true
+risk_score: 73

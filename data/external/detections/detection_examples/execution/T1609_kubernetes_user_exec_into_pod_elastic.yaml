@@ -1,0 +1,51 @@
+technique_id: T1609
+technique_name: Kubernetes User Exec into Pod
+tactic: execution
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: 'any where host.os.type == "linux" and event.dataset == "kubernetes.audit_logs"
+  and
+
+  kubernetes.audit.verb in ("get", "create") and kubernetes.audit.objectRef.subresource
+  == "exec" and
+
+  kubernetes.audit.stage == "ResponseComplete" and `kubernetes.audit.annotations.authorization_k8s_io/decision`
+  == "allow"'
+explanation: 'This rule detects a user attempt to establish a shell session into a
+  pod using the ''exec'' command. Using the ''exec''
+
+  command in a pod allows a user to establish a temporary shell session and execute
+  any process/commands in the pod. An
+
+  adversary may call bash to gain a persistent interactive shell which will allow
+  access to any data the pod has
+
+  permissions to, including secrets.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/14de811c-d60f-11ec-9fd7-f661ea17fbce.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Kubernetes
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks by DevOps teams can trigger the rule when they
+    use ''exec'' for legitimate management purposes. To handle this, create exceptions
+    for specific user accounts or roles that are known to perform these tasks regularly.
+
+    - Automated scripts or tools that use ''exec'' for monitoring or maintenance can
+    also cause false positives. Identify these scripts and whitelist their associated
+    service accounts or IP addresses.
+
+    - Scheduled jobs or cron tasks that'
+  mitigation: Review investigation guide for details
+references:
+- https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/
+- https://kubernetes.io/docs/tasks/debug/debug-application/get-shell-running-container/
+has_investigation_guide: true
+risk_score: 47

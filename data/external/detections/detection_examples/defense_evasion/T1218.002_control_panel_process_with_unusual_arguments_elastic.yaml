@@ -1,0 +1,61 @@
+technique_id: T1218.002
+technique_name: Control Panel Process with Unusual Arguments
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : \"control.exe\" and\n  process.command_line : (\n    \"*.jpg*\"\
+  , \"*.png*\",\n    \"*.gif*\", \"*.bmp*\",\n    \"*.jpeg*\", \"*.TIFF*\",\n    \"\
+  *.inf*\", \"*.cpl:*/*\",\n    \"*../../..*\",\n    \"*/AppData/Local/*\",\n    \"\
+  *:\\\\Users\\\\Public\\\\*\",\n    \"*\\\\AppData\\\\Local\\\\*\"\n)"
+explanation: 'Identifies unusual instances of Control Panel with suspicious keywords
+  or paths in the process command line value.
+
+  Adversaries may abuse control.exe to proxy execution of malicious code.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/416697ae-e468-4093-a93d-59661fa619ec.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Image file paths in command-line arguments may trigger false positives if users
+    or applications are legitimately accessing image files through control.exe. To
+    mitigate this, create exceptions for known applications or user activities that
+    frequently access image files.
+
+    - Paths involving AppData or Users\Public directories might be flagged if legitimate
+    software installations or updates use these locations. Review and whitelist specific
+    software processes that are known'
+  mitigation: Review investigation guide for details
+references:
+- https://www.joesandbox.com/analysis/476188/1/html
+has_investigation_guide: true
+risk_score: 73

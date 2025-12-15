@@ -1,0 +1,52 @@
+technique_id: T1070.002
+technique_name: System Log File Deletion
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "file where host.os.type == \"linux\" and event.type == \"deletion\" and\n\
+  \  file.path :\n    (\n    \"/var/run/utmp\",\n    \"/var/log/wtmp\",\n    \"/var/log/btmp\"\
+  ,\n    \"/var/log/lastlog\",\n    \"/var/log/faillog\",\n    \"/var/log/syslog\"\
+  ,\n    \"/var/log/messages\",\n    \"/var/log/secure\",\n    \"/var/log/auth.log\"\
+  ,\n    \"/var/log/boot.log\",\n    \"/var/log/kern.log\",\n    \"/var/log/dmesg\"\
+  \n    ) and\n    not process.name in (\"gzip\", \"executor\", \"dockerd\")"
+explanation: 'Identifies the deletion of sensitive Linux system logs. This may indicate
+  an attempt to evade detection or destroy
+
+  forensic evidence on a system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/aa895aea-b69c-4411-b110-8d7599634b30.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Compression tools like gzip may trigger false positives when they temporarily
+    delete log files during compression. To mitigate this, ensure gzip is included
+    in the exclusion list within the detection rule.
+
+    - Automated system maintenance scripts might delete or rotate log files as part
+    of routine operations. Review these scripts and add their process names to the
+    exclusion list if they are verified as non-threatening.
+
+    - Docker-related processes, such as dockerd, can als'
+  mitigation: Review investigation guide for details
+references:
+- https://www.fireeye.com/blog/threat-research/2020/11/live-off-the-land-an-overview-of-unc1945.html
+- https://www.elastic.co/security-labs/detecting-log4j2-with-elastic-security
+has_investigation_guide: true
+risk_score: 47

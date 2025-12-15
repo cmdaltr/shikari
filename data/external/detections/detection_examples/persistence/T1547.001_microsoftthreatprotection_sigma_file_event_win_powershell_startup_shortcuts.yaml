@@ -1,0 +1,54 @@
+technique_id: T1547.001
+technique_name: Potential Startup Shortcut Persistence Via PowerShell.EXE
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 92fa78e7-4d39-45f1-91a3-8b23f3f1088d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith:\n  - \\powershell.exe\n  - \\pwsh.exe\n  TargetFilename|contains:\
+  \ \\start menu\\programs\\startup\\\n  TargetFilename|endswith: .lnk\n"
+explanation: 'Detects PowerShell writing startup shortcuts.
+
+  This procedure was highlighted in Red Canary Intel Insights Oct. 2021, "We frequently
+  observe adversaries using PowerShell to write malicious .lnk files into the startup
+  directory to establish persistence.
+
+  Accordingly, this detection opportunity is likely to identify persistence mechanisms
+  in multiple threats.
+
+  In the context of Yellow Cockatoo, this persistence mechanism eventually launches
+  the command-line script that leads to the installation of a malicious DLL"
+
+  '
+false_positives:
+- Depending on your environment accepted applications may leverage this at times.
+  It is recommended to search for anomalies inidicative of malware.
+references:
+- https://redcanary.com/blog/intelligence-insights-october-2021/
+- https://github.com/redcanaryco/atomic-red-team/blob/36d49de4c8b00bf36054294b4a1fcbab3917d7c5/atomics/T1547.001/T1547.001.md#atomic-test-7---add-executable-shortcut-link-to-user-startup-folder
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.t1547.001
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection:
+    Image|endswith:
+    - \powershell.exe
+    - \pwsh.exe
+    TargetFilename|contains: \start menu\programs\startup\
+    TargetFilename|endswith: .lnk
+  condition: selection
+metadata:
+  created_date: 2021-10-24
+  modified_date: 2023-02-23
+  author: Christopher Peacock '@securepeacock', SCYTHE
+  status: test
+  imported_date: '2025-11-28'

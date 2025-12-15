@@ -1,0 +1,62 @@
+technique_id: T1027
+technique_name: Suspicious File Downloaded From Direct IP Via Certutil.EXE
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: 13e6fe51-d478-4c7e-b0f2-6da9b400a829
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_* and\
+  \ not 1 of filter_main_*\nfilter_main_seven_zip:\n  CommandLine|contains: ://7-\n\
+  selection_flags:\n  CommandLine|contains:\n  - 'urlcache '\n  - 'verifyctl '\nselection_http:\n\
+  \  CommandLine|contains:\n  - ://1\n  - ://2\n  - ://3\n  - ://4\n  - ://5\n  -\
+  \ ://6\n  - ://7\n  - ://8\n  - ://9\nselection_img:\n- Image|endswith: \\certutil.exe\n\
+  - OriginalFileName: CertUtil.exe\n"
+explanation: Detects the execution of certutil with certain flags that allow the utility
+  to download files from direct IPs.
+false_positives:
+- Unknown
+references:
+- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/certutil
+- https://forensicitguy.github.io/agenttesla-vba-certutil-download/
+- https://news.sophos.com/en-us/2021/04/13/compromised-exchange-server-hosting-cryptojacker-targeting-other-exchange-servers/
+- https://twitter.com/egre55/status/1087685529016193025
+- https://lolbas-project.github.io/lolbas/Binaries/Certutil/
+- https://twitter.com/_JohnHammond/status/1708910264261980634
+tags:
+- attack.defense-evasion
+- attack.t1027
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith: \certutil.exe
+  - OriginalFileName: CertUtil.exe
+  selection_flags:
+    CommandLine|contains:
+    - 'urlcache '
+    - 'verifyctl '
+  selection_http:
+    CommandLine|contains:
+    - ://1
+    - ://2
+    - ://3
+    - ://4
+    - ://5
+    - ://6
+    - ://7
+    - ://8
+    - ://9
+  filter_main_seven_zip:
+    CommandLine|contains: ://7-
+  condition: all of selection_* and not 1 of filter_main_*
+metadata:
+  created_date: 2023-02-15
+  modified_date: '2025-11-28'
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

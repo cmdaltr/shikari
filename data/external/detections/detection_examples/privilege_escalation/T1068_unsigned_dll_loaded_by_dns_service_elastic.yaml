@@ -1,0 +1,51 @@
+technique_id: T1068
+technique_name: Unsigned DLL loaded by DNS Service
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "any where host.os.type == \"windows\" and event.category : (\"library\", \"\
+  process\") and\n  event.type : (\"start\", \"change\") and event.action : (\"load\"\
+  , \"Image loaded*\") and\n  process.executable : \"?:\\\\windows\\\\system32\\\\\
+  dns.exe\" and\n  not ?dll.code_signature.trusted == true and\n  not file.code_signature.status\
+  \ == \"Valid\""
+explanation: 'Identifies unusual DLLs loaded by the DNS Server process, potentially
+  indicating the abuse of the ServerLevelPluginDll
+
+  functionality. This can lead to privilege escalation and remote code execution with
+  SYSTEM privileges.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5d676480-9655-4507-adc6-4eec311efff8.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or patches may introduce new DLLs that are unsigned.
+    Verify the source of the update and, if trusted, create an exception for these
+    DLLs to prevent future alerts.
+
+    - Custom or in-house applications might use unsigned DLLs for specific functionalities.
+    Confirm the legitimacy of these applications and add them to an allowlist to avoid
+    unnecessary alerts.
+
+    - Some third-party security or monitoring tools may load unsigned DLLs as part
+    of their ope'
+  mitigation: Review investigation guide for details
+references:
+- https://cube0x0.github.io/Pocing-Beyond-DA/
+- https://adsecurity.org/?p=4064
+- https://github.com/gtworek/PSBits/tree/master/ServerLevelPluginDll
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,68 @@
+technique_id: T1071
+technique_name: High Number of Egress Network Connections from Unusual Executable
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "from logs-endpoint.events.network-*\n| where\n    @timestamp > now() - 1h\
+  \ and\n    host.os.type == \"linux\" and\n    event.type == \"start\" and\n    event.action\
+  \ == \"connection_attempted\" and\n    (\n        process.executable like \"/tmp/*\"\
+  \ or\n        process.executable like \"/var/tmp/*\" or\n        process.executable\
+  \ like \"/dev/shm/*\" or\n        process.executable like \"/var/log/*\" or\n  \
+  \      process.executable like \"/sys/*\" or\n        process.executable like \"\
+  /media/*\" or\n        process.executable like \"/proc/*\" or\n        process.executable\
+  \ like \"/var/backups/*\" or\n        process.executable like \"/var/mail/*\" or\n\
+  \        process.executable like \"/var/spool/*\" or\n        process.executable\
+  \ like \"./*\" or\n        process.name like \".*\"\n    ) and\n    not (\n    \
+  \    cidr_match(destination.ip,\n            \"10.0.0.0/8\", \"127.0.0.0/8\", \"\
+  169.254.0.0/16\", \"172.16.0.0/12\",\n            \"192.0.0.0/24\", \"192.0.0.29/32\"\
+  , \"192.0.0.8/32\", \"192.0.0.9/32\",\n            \"192.0.0.10/32\", \"192.0.0.170/32\"\
+  , \"192.0.0.171/32\", \"192.0.2.0/24\",\n            \"192.31.196.0/24\", \"192.52.193.0/24\"\
+  , \"192.168.0.0/16\", \"192.88.99.0/24\",\n            \"224.0.0.0/4\", \"100.64.0.0/10\"\
+  , \"192.175.48.0/24\", \"198.18.0.0/15\",\n            \"198.51.100.0/24\", \"203.0.113.0/24\"\
+  , \"240.0.0.0/4\", \"::1\", \"FE80::/10\", \"FF00::/8\"\n        ) or\n        process.executable\
+  \ like \"/tmp/newroot/*\" or\n        process.executable like \"/tmp/.mount*\" or\n\
+  \        process.executable like \"/tmp/go-build*\"\n    )\n| keep\n    @timestamp,\n\
+  \    host.os.type,\n    event.type,\n    event.action,\n    process.name,\n    process.executable,\n\
+  \    destination.ip,\n    agent.id,\n    host.name\n| stats\n    Esql.event_count\
+  \ = count(),\n    Esql.agent_id_count_distinct = count_distinct(agent.id),\n   \
+  \ Esql.host_name_values = values(host.name),\n    Esql.agent_id_values = values(agent.id)\n\
+  \    by process.executable\n| where\n    Esql.agent_id_count_distinct == 1 and\n\
+  \    Esql.event_count > 15\n| sort Esql.event_count asc\n| limit 100"
+explanation: 'This rule detects a high number of egress network connections from an
+  unusual executable on a Linux system. This could
+
+  indicate a command and control (C2) communication attempt, a brute force attack
+  via a malware infection, or other
+
+  malicious activity. ESQL rules have limited fields available in its alert documents.
+  Make sure to review the original
+
+  documents to aid in the investigation of this alert.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/1fa350e0-0aa2-4055-bf8f-ab8b59233e59.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Executables in temporary directories used by legitimate applications or scripts
+    can trigger alerts. Review the process name and executable path to determine if
+    they are associated with known applications or scripts.
+
+    - Automated scripts or cron jobs that perform network operations might be flagged.
+    Identify these scripts and consider excluding their paths from the rule if they
+    are verified as non-malicious.
+
+    - Development or testing environments often use temporary direc'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

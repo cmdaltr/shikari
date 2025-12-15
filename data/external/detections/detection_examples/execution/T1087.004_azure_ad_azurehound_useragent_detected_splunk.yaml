@@ -1,0 +1,43 @@
+technique_id: T1087.004
+technique_name: Azure AD AzureHound UserAgent Detected
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`azure_monitor_aad` category IN (MicrosoftGraphActivityLogs, NonInteractiveUserSignInLogs)
+  properties.userAgent=azurehound* | rename properties.userAgent as user_agent | fillnull
+  | stats count min(_time) as firstTime max(_time) as lastTime by dest user src vendor_account
+  vendor_product user_agent signature | iplocation src | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `azure_ad_azurehound_useragent_detected_filter`'
+explanation: This detection identifies the presence of the default AzureHound user-agent
+  string within Microsoft Graph Activity logs and NonInteractive SignIn Logs. AzureHound
+  is a tool used for gathering information about Azure Active Directory environments,
+  often employed by security professionals for legitimate auditing purposes. However,
+  it can also be leveraged by malicious actors to perform reconnaissance activities,
+  mapping out the Azure AD infrastructure to identify potential vulnerabilities and
+  targets for further exploitation. Detecting its usage can help in identifying unauthorized
+  access attempts and preemptively mitigating potential security threats to your Azure
+  environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/d62852db-a1f1-40db-a7fc-c3d56fa8bda3/
+indicators:
+- type: data_source
+  value: Azure Active Directory NonInteractiveUserSignInLogs
+  confidence: high
+- type: data_source
+  value: Azure Active Directory MicrosoftGraphActivityLogs
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: None
+  mitigation: Review context and user activity
+references:
+- https://github.com/SpecterOps/AzureHound
+- https://splunkbase.splunk.com/app/3110
+- https://splunk.github.io/splunk-add-on-for-microsoft-cloud-services/Install/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1087.004/azurehound/azurehound.log

@@ -1,0 +1,43 @@
+technique_id: T1484
+technique_name: AWS IAM SAML Provider Updated
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:aws.cloudtrail\n    and event.provider: iam.amazonaws.com\n\
+  \    and event.action: UpdateSAMLProvider\n    and event.outcome:success"
+explanation: Identifies when a user has updated a SAML provider in AWS. SAML providers
+  are used to enable federated access to the AWS Management Console. This activity
+  could be an indication of an attacker attempting to escalate privileges.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/979729e7-0c52-4c4c-b71e-88103304a79f.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS IAM
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative updates to SAML providers by authorized personnel can
+    trigger alerts. To manage this, maintain a list of known administrators and their
+    expected activities, and create exceptions for these users in the detection rule.
+
+    - Scheduled updates or maintenance activities involving SAML providers may also
+    result in false positives. Document these activities and adjust the detection
+    rule to exclude events occurring during these scheduled times.
+
+    - Automated'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/IAM/latest/APIReference/API_UpdateSAMLProvider.html
+has_investigation_guide: true
+risk_score: 47

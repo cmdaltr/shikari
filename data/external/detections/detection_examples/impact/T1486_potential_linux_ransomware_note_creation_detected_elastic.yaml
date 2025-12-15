@@ -1,0 +1,57 @@
+technique_id: T1486
+technique_name: Potential Linux Ransomware Note Creation Detected
+tactic: impact
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by process.entity_id, host.id with maxspan=1s\n  [file where host.os.type\
+  \ == \"linux\" and event.type == \"change\" and event.action == \"rename\" and file.extension\
+  \ : \"?*\"\n   and process.executable : (\"./*\", \"/tmp/*\", \"/var/tmp/*\", \"\
+  /dev/shm/*\", \"/var/run/*\", \"/boot/*\") and\n   file.path : (\n     \"/home/*/Downloads/*\"\
+  , \"/home/*/Documents/*\", \"/root/*\", \"/bin/*\", \"/usr/bin/*\", \"/var/log/*\"\
+  , \"/var/lib/log/*\",\n     \"/var/backup/*\", \"/var/www/*\") and\n   not process.name\
+  \ : (\n     \"dpkg\", \"yum\", \"dnf\", \"rpm\", \"dockerd\", \"go\", \"java\",\
+  \ \"pip*\", \"python*\", \"node\", \"containerd\", \"php\", \"p4d\",\n     \"conda\"\
+  , \"chrome\", \"imap\", \"cmake\", \"firefox\", \"semanage\", \"semodule\", \"ansible-galaxy\"\
+  , \"fc-cache\", \"jammy\", \"git\",\n     \"systemsettings\", \"vmis-launcher\"\
+  , \"bundle\", \"kudu-tserver\", \"suldownloader\", \"rustup-init\", \"bun\"\n  \
+  \  )\n  ] with runs=25\n  [file where host.os.type == \"linux\" and event.action\
+  \ == \"creation\" and\n   file.name : (\"*restore*\", \"*lock*\", \"*recovery*\"\
+  , \"*read*\", \"*instruction*\", \"*how_to*\", \"*ransom*\")\n  ]"
+explanation: 'This rule identifies a sequence of a mass file encryption event in conjunction
+  with the creation of a .txt file with a
+
+  file name containing ransomware keywords executed by the same process in a 1 second
+  timespan. Ransomware is a type of
+
+  malware that encrypts a victim''s files or systems and demands payment (usually
+  in cryptocurrency) in exchange for the
+
+  decryption key. One important indicator of a ransomware attack is the mass encryption
+  of the file system, after which a
+
+  new file extension is added to the file.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c8935a8b-634a-4449-98f7-bb24d3b2c0af.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'false positive caused by legitimate software updates or installations.
+
+    - Investigate the content and metadata of the created .txt files with names containing
+    keywords like *restore*, *lock*, or *ransom* to confirm if they contain ransom
+    notes or instructions, which would indicate a ransomware attack.
+
+    - Correlate the timing of the file rename and creation events to verify if they
+    occurred within the 1-second timespan, supporting the hypothesis of a rapid mass
+    encryption event typical of ransomwar'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

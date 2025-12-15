@@ -1,0 +1,105 @@
+technique_id: T1059.001
+technique_name: PowerView PowerShell Cmdlets - ScriptBlock
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: dcd74b95-3f36-4ed9-9598-0490951643aa
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ScriptBlockText|contains:\n  - Export-PowerViewCSV\n  - Find-DomainLocalGroupMember\n\
+  \  - Find-DomainObjectPropertyOutlier\n  - Find-DomainProcess\n  - Find-DomainShare\n\
+  \  - Find-DomainUserEvent\n  - Find-DomainUserLocation\n  - Find-ForeignGroup\n\
+  \  - Find-ForeignUser\n  - Find-GPOComputerAdmin\n  - Find-GPOLocation\n  - Find-InterestingDomain\n\
+  \  - Find-InterestingFile\n  - Find-LocalAdminAccess\n  - Find-ManagedSecurityGroups\n\
+  \  - Get-CachedRDPConnection\n  - Get-DFSshare\n  - Get-DomainDFSShare\n  - Get-DomainDNSRecord\n\
+  \  - Get-DomainDNSZone\n  - Get-DomainFileServer\n  - Get-DomainGPOComputerLocalGroupMapping\n\
+  \  - Get-DomainGPOLocalGroup\n  - Get-DomainGPOUserLocalGroupMapping\n  - Get-LastLoggedOn\n\
+  \  - Get-LoggedOnLocal\n  - Get-NetFileServer\n  - Get-NetForest\n  - Get-NetGPOGroup\n\
+  \  - Get-NetProcess\n  - Get-NetRDPSession\n  - Get-RegistryMountedDrive\n  - Get-RegLoggedOn\n\
+  \  - Get-WMIRegCachedRDPConnection\n  - Get-WMIRegLastLoggedOn\n  - Get-WMIRegMountedDrive\n\
+  \  - Get-WMIRegProxy\n  - Invoke-ACLScanner\n  - Invoke-CheckLocalAdminAccess\n\
+  \  - Invoke-EnumerateLocalAdmin\n  - Invoke-EventHunter\n  - Invoke-FileFinder\n\
+  \  - Invoke-Kerberoast\n  - Invoke-MapDomainTrust\n  - Invoke-ProcessHunter\n  -\
+  \ Invoke-RevertToSelf\n  - Invoke-ShareFinder\n  - Invoke-UserHunter\n  - Invoke-UserImpersonation\n\
+  \  - Remove-RemoteConnection\n  - Request-SPNTicket\n  - Resolve-IPAddress\n"
+explanation: Detects Cmdlet names from PowerView of the PowerSploit exploitation framework.
+false_positives:
+- Unknown
+references:
+- https://powersploit.readthedocs.io/en/stable/Recon/README
+- https://github.com/PowerShellMafia/PowerSploit/tree/master/Recon
+- https://thedfirreport.com/2020/10/08/ryuks-return
+- https://adsecurity.org/?p=2277
+tags:
+- attack.execution
+- attack.t1059.001
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - Export-PowerViewCSV
+    - Find-DomainLocalGroupMember
+    - Find-DomainObjectPropertyOutlier
+    - Find-DomainProcess
+    - Find-DomainShare
+    - Find-DomainUserEvent
+    - Find-DomainUserLocation
+    - Find-ForeignGroup
+    - Find-ForeignUser
+    - Find-GPOComputerAdmin
+    - Find-GPOLocation
+    - Find-InterestingDomain
+    - Find-InterestingFile
+    - Find-LocalAdminAccess
+    - Find-ManagedSecurityGroups
+    - Get-CachedRDPConnection
+    - Get-DFSshare
+    - Get-DomainDFSShare
+    - Get-DomainDNSRecord
+    - Get-DomainDNSZone
+    - Get-DomainFileServer
+    - Get-DomainGPOComputerLocalGroupMapping
+    - Get-DomainGPOLocalGroup
+    - Get-DomainGPOUserLocalGroupMapping
+    - Get-LastLoggedOn
+    - Get-LoggedOnLocal
+    - Get-NetFileServer
+    - Get-NetForest
+    - Get-NetGPOGroup
+    - Get-NetProcess
+    - Get-NetRDPSession
+    - Get-RegistryMountedDrive
+    - Get-RegLoggedOn
+    - Get-WMIRegCachedRDPConnection
+    - Get-WMIRegLastLoggedOn
+    - Get-WMIRegMountedDrive
+    - Get-WMIRegProxy
+    - Invoke-ACLScanner
+    - Invoke-CheckLocalAdminAccess
+    - Invoke-EnumerateLocalAdmin
+    - Invoke-EventHunter
+    - Invoke-FileFinder
+    - Invoke-Kerberoast
+    - Invoke-MapDomainTrust
+    - Invoke-ProcessHunter
+    - Invoke-RevertToSelf
+    - Invoke-ShareFinder
+    - Invoke-UserHunter
+    - Invoke-UserImpersonation
+    - Remove-RemoteConnection
+    - Request-SPNTicket
+    - Resolve-IPAddress
+  condition: selection
+metadata:
+  created_date: 2021-05-18
+  modified_date: 2023-11-22
+  author: Bhabesh Raj
+  status: test
+  imported_date: '2025-11-28'

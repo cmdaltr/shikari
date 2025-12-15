@@ -1,0 +1,56 @@
+technique_id: T1114
+technique_name: Google Workspace Custom Gmail Route Created or Modified
+tactic: collection
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset:\"google_workspace.admin\" and event.action:(\"CREATE_GMAIL_SETTING\"\
+  \ or \"CHANGE_GMAIL_SETTING\")\n  and google_workspace.event.type:\"EMAIL_SETTINGS\"\
+  \ and google_workspace.admin.setting.name:(\"EMAIL_ROUTE\" or \"MESSAGE_SECURITY_RULE\"\
+  )"
+explanation: 'Detects when a custom Gmail route is added or modified in Google Workspace.
+  Adversaries can add a custom e-mail route
+
+  for outbound mail to route these e-mails to their own inbox of choice for data gathering.
+  This allows adversaries to
+
+  capture sensitive information from e-mail and potential attachments, such as invoices
+  or payment documents. By default,
+
+  all email from current Google Workspace users with accounts are routed through a
+  domain''s mail server for inbound and
+
+  outbound mail.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9510add4-3392-11ed-bd01-f661ea17fbce.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This rule searches for domain-wide custom email routes created in the admin
+    console of Google Workspace. Administrators might create custom email routes to
+    fulfill organizational requirements.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Disable or limit the account during the investigation and response.
+
+    - Identify the possible impact of the incident and prioritize accordingly; the
+    following actions can h'
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/2685650?hl=en
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,39 @@
+technique_id: T1112
+technique_name: Windows Modify Registry No Auto Update
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Registry where Registry.registry_path="*\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU\\NoAutoUpdate"
+  AND Registry.registry_value_data="0x00000001" by Registry.action Registry.dest Registry.process_guid
+  Registry.process_id Registry.registry_hive Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_data Registry.registry_value_name Registry.registry_value_type
+  Registry.status Registry.user Registry.vendor_product | `drop_dm_object_name(Registry)`
+  | `security_content_ctime(lastTime)` | `security_content_ctime(firstTime)` | `windows_modify_registry_no_auto_update_filter`'
+explanation: The following analytic identifies a suspicious modification to the Windows
+  registry that disables automatic updates. It detects changes to the registry path
+  `SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU\NoAutoUpdate` with a value
+  of `0x00000001`. This activity is significant as it is commonly used by adversaries,
+  including malware like RedLine Stealer, to evade detection and maintain persistence.
+  If confirmed malicious, this could allow attackers to bypass security updates, leaving
+  the system vulnerable to further exploitation and potential zero-day attacks.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/fbd4f333-17bb-4eab-89cb-860fa2e0600e/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrators may enable or disable this feature that may cause some
+    false positive.
+  mitigation: Review context and user activity
+references:
+- https://learn.microsoft.com/de-de/security-updates/windowsupdateservices/18127499
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/redline/modify_registry/sysmon.log

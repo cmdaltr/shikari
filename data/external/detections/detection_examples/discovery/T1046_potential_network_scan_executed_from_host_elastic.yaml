@@ -1,0 +1,52 @@
+technique_id: T1046
+technique_name: Potential Network Scan Executed From Host
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: 'event.category:process and host.os.type:linux and event.action:(exec or exec_event
+  or executed or process_started) and
+
+  event.type:start and process.name:(ping or nping or hping or hping2 or hping3 or
+  nc or ncat or netcat or socat)'
+explanation: 'This threshold rule monitors for the rapid execution of unix utilities
+  that are capable of conducting network scans.
+
+  Adversaries may leverage built-in tools such as ping, netcat or socat to execute
+  ping sweeps across the network while
+
+  attempting to evade detection or due to the lack of network mapping tools available
+  on the compromised host.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/03c23d45-d3cb-4ad4-ab5d-b361ffe8724a.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine network diagnostics by system administrators can trigger alerts. To
+    manage this, create exceptions for known administrator accounts or specific IP
+    addresses frequently used for legitimate network diagnostics.
+
+    - Automated monitoring scripts that use these utilities for health checks or performance
+    monitoring may cause false positives. Identify and exclude these scripts by their
+    process names or execution paths.
+
+    - Scheduled tasks or cron jobs that involve network'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

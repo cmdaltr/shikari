@@ -1,0 +1,60 @@
+technique_id: T1021.006
+technique_name: Winrs Local Command Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: bcfece3d-56fe-4545-9931-3b8e92927db1
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_* or\
+  \ (selection_img and not 1 of filter_main_*)\nfilter_main_remote:\n  CommandLine|contains|windash:\n\
+  \  - '/r:'\n  - '/remote:'\nselection_img:\n- Image|endswith: \\winrs.exe\n- OriginalFileName:\
+  \ winrs.exe\nselection_local_ip:\n  CommandLine|contains|windash:\n  - /r:localhost\n\
+  \  - /r:127.0.0.1\n  - /r:[::1]\n  - /remote:localhost\n  - /remote:127.0.0.1\n\
+  \  - /remote:[::1]\n"
+explanation: 'Detects the execution of Winrs.exe where it is used to execute commands
+  locally.
+
+  Commands executed this way are launched under Winrshost.exe and can represent proxy
+  execution used for defense evasion or lateral movement.
+
+  '
+false_positives:
+- Unlikely
+references:
+- https://cardinalops.com/blog/living-off-winrm-abusing-complexity-in-remote-management/
+- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/winrs
+tags:
+- attack.lateral-movement
+- attack.defense-evasion
+- attack.t1021.006
+- attack.t1218
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith: \winrs.exe
+  - OriginalFileName: winrs.exe
+  selection_local_ip:
+    CommandLine|contains|windash:
+    - /r:localhost
+    - /r:127.0.0.1
+    - /r:[::1]
+    - /remote:localhost
+    - /remote:127.0.0.1
+    - /remote:[::1]
+  filter_main_remote:
+    CommandLine|contains|windash:
+    - '/r:'
+    - '/remote:'
+  condition: all of selection_* or (selection_img and not 1 of filter_main_*)
+metadata:
+  created_date: 2025-10-22
+  modified_date: '2025-11-28'
+  author: Liran Ravich, Nasreddine Bencherchali
+  status: experimental
+  imported_date: '2025-11-28'

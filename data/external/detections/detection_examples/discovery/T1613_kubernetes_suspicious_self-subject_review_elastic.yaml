@@ -1,0 +1,50 @@
+technique_id: T1613
+technique_name: Kubernetes Suspicious Self-Subject Review
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset : \"kubernetes.audit_logs\"\n  and kubernetes.audit.annotations.authorization_k8s_io/decision:\"\
+  allow\"\n  and kubernetes.audit.verb:\"create\"\n  and kubernetes.audit.objectRef.resource:(\"\
+  selfsubjectaccessreviews\" or \"selfsubjectrulesreviews\")\n  and (kubernetes.audit.user.username:(system\\\
+  :serviceaccount\\:* or system\\:node\\:*)\n  or kubernetes.audit.impersonatedUser.username:(system\\\
+  :serviceaccount\\:* or system\\:node\\:*))"
+explanation: 'This rule detects when a service account or node attempts to enumerate
+  their own permissions via the
+
+  selfsubjectaccessreview or selfsubjectrulesreview APIs. This is highly unusual behavior
+  for non-human identities like
+
+  service accounts and nodes. An adversary may have gained access to credentials/tokens
+  and this could be an attempt to
+
+  determine what privileges they have to facilitate further movement or execution
+  within the cluster.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/12a2f15d-597e-4334-88ff-38a02cb1330b.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Kubernetes
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Service accounts used for automated tasks may trigger this rule if they are
+    programmed to check permissions as part of their routine operations. To handle
+    this, identify these accounts and create exceptions for their specific API calls.
+
+    - Nodes performing legitimate self-assessment for compliance or security checks
+    might be flagged. Review the node''s purpose and, if necessary, whitelist these
+    actions in the detection rule.
+
+    - Development or testing environments where pe'
+  mitigation: Review investigation guide for details
+references:
+- https://www.paloaltonetworks.com/apps/pan/public/downloadResource?pagePath=/content/pan/en_US/resources/whitepapers/kubernetes-privilege-escalation-excessive-permissions-in-popular-platforms
+- https://kubernetes.io/docs/reference/access-authn-authz/authorization/#checking-api-access
+- https://techcommunity.microsoft.com/t5/microsoft-defender-for-cloud/detecting-identity-attacks-in-kubernetes/ba-p/3232340
+has_investigation_guide: true
+risk_score: 47

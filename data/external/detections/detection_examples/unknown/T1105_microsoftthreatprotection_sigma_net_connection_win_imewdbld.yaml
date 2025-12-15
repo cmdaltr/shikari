@@ -1,0 +1,40 @@
+technique_id: T1105
+technique_name: Network Connection Initiated By IMEWDBLD.EXE
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 8d7e392e-9b28-49e1-831d-5949c6281228
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith: \\IMEWDBLD.exe\n  Initiated: 'true'\n"
+explanation: 'Detects a network connection initiated by IMEWDBLD.EXE. This might indicate
+  potential abuse of the utility as a LOLBIN in order to download arbitrary files
+  or additional payloads.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1105/T1105.md#atomic-test-10---windows---powershell-download
+- https://lolbas-project.github.io/lolbas/Binaries/IMEWDBLD/
+tags:
+- attack.command-and-control
+- attack.t1105
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    Initiated: 'true'
+    Image|endswith: \IMEWDBLD.exe
+  condition: selection
+metadata:
+  created_date: 2022-01-22
+  modified_date: 2023-11-09
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

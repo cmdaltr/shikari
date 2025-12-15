@@ -1,0 +1,61 @@
+technique_id: T1059
+technique_name: Network Connection from Binary with RWX Memory Region
+tactic: execution
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sample by host.id, process.pid, process.name\n  /* auditd.data.a2 == \"7\"\
+  \ translates to RWX memory region protection (PROT_READ | PROT_WRITE | PROT_EXEC)\
+  \ */\n  [process where host.os.type == \"linux\" and auditd.data.syscall == \"mprotect\"\
+  \ and auditd.data.a2 == \"7\" and\n   not process.name == \"httpd\"]\n  [network\
+  \ where host.os.type == \"linux\" and event.type == \"start\" and event.action ==\
+  \ \"connection_attempted\" and\n   not cidrmatch(destination.ip, \"127.0.0.0/8\"\
+  , \"169.254.0.0/16\", \"224.0.0.0/4\", \"::1\")]"
+explanation: 'Monitors for the execution of a unix binary with read, write and execute
+  memory region permissions, followed by a
+
+  network connection. The mprotect() system call is used to change the access protections
+  on a region of memory that has
+
+  already been allocated. This syscall allows a process to modify the permissions
+  of pages in its virtual address space,
+
+  enabling or disabling permissions such as read, write, and execute for those pages.
+  RWX permissions on memory is in many
+
+  cases overly permissive, and should (especially in conjunction with an outbound
+  network connection) be analyzed
+
+  thoroughly.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/32300431-c2d5-432d-8ec8-0e03f9924756.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or patches may temporarily use RWX memory regions.
+    Monitor the specific process names and verify if they are associated with known
+    update mechanisms. Consider adding these processes to an exception list if they
+    are verified as safe.
+
+    - Development tools and environments often require RWX permissions for debugging
+    or testing purposes. Identify these tools and exclude them from the rule if they
+    are part of a controlled and secure development en'
+  mitigation: Review investigation guide for details
+references:
+- https://man7.org/linux/man-pages/man2/mprotect.2.html
+- https://www.elastic.co/security-labs/linux-detection-engineering-with-auditd
+has_investigation_guide: true
+risk_score: 47

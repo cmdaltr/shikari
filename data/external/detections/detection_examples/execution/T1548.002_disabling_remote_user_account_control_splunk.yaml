@@ -1,0 +1,41 @@
+technique_id: T1548.002
+technique_name: Disabling Remote User Account Control
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Registry where Registry.registry_path=*\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\EnableLUA*
+  Registry.registry_value_data="0x00000000" by Registry.action Registry.dest Registry.process_guid
+  Registry.process_id Registry.registry_hive Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_data Registry.registry_value_name Registry.registry_value_type
+  Registry.status Registry.user Registry.vendor_product | `drop_dm_object_name(Registry)`
+  | `disabling_remote_user_account_control_filter`'
+explanation: The following analytic identifies modifications to the registry key that
+  controls the enforcement of Windows User Account Control (UAC). It detects changes
+  to the registry path `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\EnableLUA`
+  where the value is set to `0x00000000`. This activity is significant because disabling
+  UAC can allow unauthorized changes to the system without user consent, potentially
+  leading to privilege escalation. If confirmed malicious, an attacker could gain
+  elevated privileges, making it easier to execute further attacks or maintain persistence
+  within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/bbc644bc-37df-4e1a-9c88-ec9a53e2038c/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: This registry key may be modified via administrators to implement a
+    change in system policy. This type of change should be a very rare occurrence.
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1548.002/atomic_red_team/windows-sysmon.log

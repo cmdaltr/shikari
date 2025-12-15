@@ -1,0 +1,65 @@
+technique_id: T1218.011
+technique_name: Windows Application Whitelisting Bypass Attempt via Rundll32
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "| tstats `security_content_summariesonly` \n  count min(_time) as firstTime\
+  \ \n  max(_time) as lastTime \nfrom datamodel=Endpoint.Processes where \n`process_rundll32`\
+  \ \nProcesses.process IN (\"*syssetup*\", \"*advpack*\", \"*setupapi*\")\nProcesses.process\
+  \ IN (\"*LaunchINFSection*\", \"*InstallHinfSection*\", \"*SetupInfObjectInstallAction*\"\
+  )\nby Processes.action Processes.dest Processes.original_file_name Processes.parent_process\n\
+  \   Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id\n\
+  \   Processes.parent_process_name Processes.parent_process_path Processes.process\
+  \ Processes.process_exec\n   Processes.process_guid Processes.process_hash Processes.process_id\
+  \ Processes.process_integrity_level\n   Processes.process_name Processes.process_path\
+  \ Processes.user Processes.user_id Processes.vendor_product\n| `drop_dm_object_name(Processes)`\
+  \ \n| `security_content_ctime(firstTime)` \n| `security_content_ctime(lastTime)`\n\
+  | `windows_application_whitelisting_bypass_attempt_via_rundll32_filter`"
+explanation: "The following analytic detects the execution of rundll32.exe calling\
+  \ one of the following DLLs:\n\n- Advpack.dll\n- Ieadvpack.dll\n- Syssetup.dll\n\
+  - Setupapi.dll\n\nwith one of the following functions: \"LaunchINFSection\", \"\
+  InstallHinfSection\", \"SetupInfObjectInstallAction\".\nThis method is identified\
+  \ through Endpoint Detection and Response (EDR) telemetry, \nfocusing on command-line\
+  \ executions and process details. \nThis activity is significant as it indicates\
+  \ a potential application\ncontrol or whitelisting bypass, allowing script code\
+  \ execution from a file.\nIf confirmed malicious, an attacker could execute arbitrary\
+  \ code, potentially leading to privilege escalation,\npersistence, or further network\
+  \ compromise.\nInvestigate the script content, network connections, and any spawned\
+  \ child processes for further context."
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/1ef5dab0-e1f1-495d-a272-d134583c10b1/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Although unlikely, some legitimate applications may leverage one of
+    the following DLLs syssetup.dll, dvpack.dll, ieadvpack.dll and can trigger a false
+    positive. Apply additional filters as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1218/011/
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1218.011/T1218.011.md
+- https://lolbas-project.github.io/lolbas/Binaries/Rundll32/
+- https://bohops.com/2018/02/26/leveraging-inf-sct-fetch-execute-techniques-for-bypass-evasion-persistence/
+- https://lolbas-project.github.io/lolbas/Libraries/Advpack/
+- https://lolbas-project.github.io/lolbas/Libraries/Ieadvpack/
+- https://lolbas-project.github.io/lolbas/Libraries/Setupapi/
+- https://lolbas-project.github.io/lolbas/Libraries/Syssetup/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1218.011/atomic_red_team/windows-sysmon.log

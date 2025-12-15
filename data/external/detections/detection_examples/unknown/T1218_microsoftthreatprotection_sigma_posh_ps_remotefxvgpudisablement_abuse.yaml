@@ -1,0 +1,39 @@
+technique_id: T1218
+technique_name: Potential RemoteFXvGPUDisablement.EXE Abuse - PowerShell ScriptBlock
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: cacef8fc-9d3d-41f7-956d-455c6e881bc5
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ScriptBlockText|startswith: function Get-VMRemoteFXPhysicalVideoAdapter {\n"
+explanation: Detects PowerShell module creation where the module Contents are set
+  to "function Get-VMRemoteFXPhysicalVideoAdapter". This could be a sign of potential
+  abuse of the "RemoteFXvGPUDisablement.exe" binary which is known to be vulnerable
+  to module load-order hijacking.
+false_positives:
+- Unknown
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218/T1218.md
+- https://github.com/redcanaryco/AtomicTestHarnesses/blob/7e1e4da116801e3d6fcc6bedb207064577e40572/TestHarnesses/T1218_SignedBinaryProxyExecution/InvokeRemoteFXvGPUDisablementCommand.ps1
+tags:
+- attack.defense-evasion
+- attack.t1218
+logsource:
+  product: windows
+  category: ps_script
+  definition: bade5735-5ab0-4aa7-a642-a11be0e40872
+detection:
+  selection:
+    ScriptBlockText|startswith: function Get-VMRemoteFXPhysicalVideoAdapter {
+  condition: selection
+metadata:
+  created_date: 2023-05-09
+  modified_date: '2025-11-28'
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

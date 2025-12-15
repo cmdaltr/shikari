@@ -1,0 +1,38 @@
+technique_id: T1566.002
+technique_name: O365 Email Reported By Admin Found Malicious
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=SecurityComplianceCenter Operation=AdminSubmission
+  | search RescanVerdict IN (Phish,Malware) | rename Id as signature_id, SenderIP
+  as src, Recipients{} as dest_user, P1Sender as src_user | fillnull | stats count
+  min(_time) as firstTime max(_time) as lastTime by dest user src vendor_account vendor_product
+  signature signature_id dest_user src_user Subject SubmissionContent | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `o365_email_reported_by_admin_found_malicious_filter`'
+explanation: The following analytic detects when an email manually submitted to Microsoft
+  through the Security & Compliance portal is found to be malicious. This capability
+  is an enhanced protection feature that can be used within o365 tenants by administrative
+  users to report potentially malicious emails. This correlation looks for any submission
+  that returns a Phish or Malware verdict upon submission.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/94396c3e-7728-422a-9956-e4b77b53dbdf/
+indicators:
+- type: data_source
+  value: Office 365 Universal Audit Log
+  confidence: high
+- type: risk_user
+  value: src_user
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Administrators that submit known phishing training exercises.
+  mitigation: Review context and user activity
+references:
+- https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/submissions-outlook-report-messages?view=o365-worldwide
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1566/o365_various_alerts/o365_various_alerts.log

@@ -1,0 +1,50 @@
+technique_id: T1068
+technique_name: Potential Privilege Escalation via Enlightenment
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id, process.parent.entity_id with maxspan=5s\n  [process\
+  \ where host.os.type == \"linux\" and event.type == \"start\" and event.action ==\
+  \ \"exec\" and\n    process.name == \"enlightenment_sys\" and process.args in (\"\
+  /bin/mount/\", \"-o\",\"noexec\",\"nosuid\",\"nodev\",\"uid=*\") ]\n  [process where\
+  \ host.os.type == \"linux\" and event.action == \"uid_change\" and event.type ==\
+  \ \"change\" and user.id == \"0\"]"
+explanation: 'Identifies an attempt to exploit a local privilege escalation CVE-2022-37706
+  via a flaw in Linux window manager package
+
+  Enlightenment. enlightenment_sys in Enlightenment before 0.25.4 allows local users
+  to gain privileges because it is
+
+  setuid root, and the system library function mishandles pathnames that begin with
+  a /dev/.. substring.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/bc0fc359-68db-421e-a435-348ced7a7f92.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using enlightenment_sys may trigger the rule.
+    Review the context of the execution, such as the user and the specific arguments
+    used, to determine if the activity is authorized.
+
+    - Automated scripts or system maintenance processes that involve enlightenment_sys
+    with similar arguments might be flagged. Identify these scripts and consider excluding
+    them by specifying their process hashes or paths in the detection rule.
+
+    - System updates or pa'
+  mitigation: Review investigation guide for details
+references:
+- https://ubuntu.com/security/CVE-2022-37706
+- https://www.exploit-db.com/exploits/51180
+has_investigation_guide: true
+risk_score: 73

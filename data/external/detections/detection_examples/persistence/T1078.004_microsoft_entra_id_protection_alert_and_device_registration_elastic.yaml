@@ -1,0 +1,53 @@
+technique_id: T1078.004
+technique_name: Microsoft Entra ID Protection Alert and Device Registration
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: 'sequence with maxspan=5m
+
+  [any where event.dataset == "azure.identity_protection"] by azure.identityprotection.properties.user_principal_name
+
+  [any where event.dataset == "azure.auditlogs" and event.action == "Register device"]
+  by azure.auditlogs.properties.initiated_by.user.userPrincipalName'
+explanation: Identifies sequence of events where a Microsoft Entra ID protection alert
+  is followed by an attempt to register a new device by the same user principal. This
+  behavior may indicate an adversary using a compromised account to register a device,
+  potentially leading to unauthorized access to resources or persistence in the environment.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a6d4e070-b9b9-4294-b028-d9e21ad47413.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Protection Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+    - If this rule is noisy in your environment due to expected activity, consider
+    adding exceptions — preferably with a combination of user and device conditions.
+
+    - Consider the context of the user account and whether the activity is expected.
+    For example, if the user is a developer or administrator, they may have legitimate
+    reasons for accessing resources from various locations or devices.
+
+    - A Microsoft Entra ID Protection alert may be triggered by legitimate activities
+    suc'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/azure/active-directory/reports-monitoring/reference-azure-monitor-sign-ins-log-schema
+- https://docs.microsoft.com/en-us/azure/active-directory/identity-protection/overview-identity-protection
+- https://docs.microsoft.com/en-us/azure/active-directory/identity-protection/howto-identity-protection-investigate-risk
+- https://docs.microsoft.com/en-us/azure/active-directory/identity-protection/howto-identity-protection-investigate-risk#investigation-framework
+has_investigation_guide: true
+risk_score: 73

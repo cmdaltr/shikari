@@ -1,0 +1,62 @@
+technique_id: T1021
+technique_name: Remote File Copy to a Hidden Share
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : (\"cmd.exe\", \"powershell.exe\", \"xcopy.exe\", \"pwsh.exe\"\
+  , \"powershell_ise.exe\") and \n  process.command_line : \"*\\\\\\\\*\\\\*$*\" and\
+  \ process.command_line : (\"*copy*\", \"*move*\", \"* cp *\", \"* mv *\")"
+explanation: 'Identifies a remote file copy attempt to a hidden network share. This
+  may indicate lateral movement or data staging
+
+  activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/fa01341d-6662-426b-9d0c-6d81e33c8a9d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Administrative tasks using hidden shares can trigger alerts. Regularly review
+    and document legitimate administrative activities that involve file transfers
+    to hidden shares.
+
+    - Backup operations often use hidden shares for data storage. Identify and exclude
+    backup processes by specifying known backup software and their typical command-line
+    arguments.
+
+    - Software deployment tools may utilize hidden shares for distributing updates.
+    Create exceptions for recognized deployme'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/hunting-for-lateral-movement-using-event-query-language
+has_investigation_guide: true
+risk_score: 47

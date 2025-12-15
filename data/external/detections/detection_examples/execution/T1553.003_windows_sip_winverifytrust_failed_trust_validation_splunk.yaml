@@ -1,0 +1,40 @@
+technique_id: T1553.003
+technique_name: Windows SIP WinVerifyTrust Failed Trust Validation
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`capi2_operational` EventID=81 "The digital signature of the object did not
+  verify." | xmlkv UserData_Xml | stats count min(_time) as firstTime max(_time) as
+  lastTime by Computer, UserData_Xml | rename Computer as dest | `windows_sip_winverifytrust_failed_trust_validation_filter`'
+explanation: The following analytic detects failed trust validation attempts using
+  Windows Event Log - CAPI2 (CryptoAPI 2). It specifically triggers on EventID 81,
+  which indicates that "The digital signature of the object did not verify." This
+  detection leverages the CAPI2 Operational log to identify instances where digital
+  signatures fail to validate. Monitoring this activity is crucial as it can indicate
+  attempts to execute untrusted or potentially malicious binaries. If confirmed malicious,
+  this activity could allow attackers to bypass security controls and execute unauthorized
+  code, leading to potential system compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/6ffc7f88-415b-4278-a80d-b957d6539e1a/
+indicators:
+- type: data_source
+  value: Windows Event Log CAPI2 81
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present in some instances of legitimate binaries
+    with invalid signatures. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1553/003/
+- https://specterops.io/wp-content/uploads/sites/3/2022/06/SpecterOps_Subverting_Trust_in_Windows.pdf
+- https://github.com/gtworek/PSBits/tree/master/SIP
+- https://github.com/mattifestation/PoCSubjectInterfacePackage
+- https://pentestlab.blog/2017/11/06/hijacking-digital-signatures/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1553.003/sip/capi2-operational.log

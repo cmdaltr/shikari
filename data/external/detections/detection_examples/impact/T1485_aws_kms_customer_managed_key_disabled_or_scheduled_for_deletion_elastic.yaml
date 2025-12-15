@@ -1,0 +1,54 @@
+technique_id: T1485
+technique_name: AWS KMS Customer Managed Key Disabled or Scheduled for Deletion
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:aws.cloudtrail and event.provider:kms.amazonaws.com and event.action:("DisableKey"
+  or "ScheduleKeyDeletion") and event.outcome:success
+explanation: 'Identifies attempts to disable or schedule the deletion of an AWS KMS
+  Customer Managed Key (CMK). Deleting an AWS KMS
+
+  key is destructive and potentially dangerous. It deletes the key material and all
+  metadata associated with the KMS key
+
+  and is irreversible. After a KMS key is deleted, the data that was encrypted under
+  that KMS key can no longer be
+
+  decrypted, which means that data becomes unrecoverable.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6951f15e-533c-4a60-8014-a3c3ab851a1b.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS KMS
+  confidence: high
+false_positives:
+- description: 'false positives or expected behavior.
+
+    - Contact the user or team responsible for the action to verify the intent and
+    ensure it was a legitimate operation.
+
+
+    ### False positive analysis
+
+
+    - Routine key management activities by authorized personnel can trigger alerts.
+    Regularly review and document key management procedures to differentiate between
+    legitimate and suspicious activities.
+
+    - Automated scripts or tools used for key rotation or lifecycle management might
+    disable or schedule deletion of key'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/cli/latest/reference/kms/disable-key.html
+- https://docs.aws.amazon.com/cli/latest/reference/kms/schedule-key-deletion.html
+has_investigation_guide: true
+risk_score: 47

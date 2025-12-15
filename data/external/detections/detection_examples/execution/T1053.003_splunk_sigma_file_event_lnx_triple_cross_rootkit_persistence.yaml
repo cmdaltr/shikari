@@ -1,0 +1,38 @@
+technique_id: T1053.003
+technique_name: Triple Cross eBPF Rootkit Default Persistence
+tactic: execution
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 1a2ea919-d11d-4d1e-8535-06cda13be20f
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetFilename|endswith: ebpfbackdoor\n"
+explanation: Detects the creation of "ebpfbackdoor" files in both "cron.d" and "sudoers.d"
+  directories. Which both are related to the TripleCross persistence method
+false_positives:
+- Unlikely
+references:
+- https://github.com/h3xduck/TripleCross/blob/12629558b8b0a27a5488a0b98f1ea7042e76f8ab/apps/deployer.sh
+tags:
+- attack.privilege-escalation
+- attack.execution
+- attack.persistence
+- attack.defense-evasion
+- attack.t1053.003
+logsource:
+  product: linux
+  category: file_event
+detection:
+  selection:
+    TargetFilename|endswith: ebpfbackdoor
+  condition: selection
+metadata:
+  created_date: 2022-07-05
+  modified_date: 2022-12-31
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

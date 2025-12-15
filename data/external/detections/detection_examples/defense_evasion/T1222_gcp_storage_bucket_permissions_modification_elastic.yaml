@@ -1,0 +1,44 @@
+technique_id: T1222
+technique_name: GCP Storage Bucket Permissions Modification
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:gcp.audit and event.action:"storage.setIamPermissions" and event.outcome:success
+explanation: 'Identifies when the Identity and Access Management (IAM) permissions
+  are modified for a Google Cloud Platform (GCP)
+
+  storage bucket. An adversary may modify the permissions on a storage bucket to weaken
+  their target''s security controls
+
+  or an administrator may inadvertently modify the permissions, which could lead to
+  data exposure or loss.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2326d1b2-9acf-4dee-bd21-867ea7378b4d.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: GCP
+  confidence: high
+- type: data_source
+  value: Google Cloud Platform
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative updates to IAM permissions can trigger alerts. To manage
+    this, create exceptions for known maintenance windows or specific administrative
+    accounts that regularly perform these updates.
+
+    - Automated scripts or tools that adjust permissions as part of their normal operation
+    may cause false positives. Identify these scripts and exclude their actions from
+    triggering alerts by using specific service accounts or tags.
+
+    - Changes made by trusted third-par'
+  mitigation: Review investigation guide for details
+references:
+- https://cloud.google.com/storage/docs/access-control/iam-permissions
+has_investigation_guide: true
+risk_score: 47

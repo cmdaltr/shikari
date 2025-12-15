@@ -1,0 +1,36 @@
+technique_id: T1189
+technique_name: Detect hosts connecting to dynamic domain providers
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime from
+  datamodel=Network_Resolution by DNS.answer DNS.answer_count DNS.query DNS.query_count
+  DNS.reply_code_id DNS.src DNS.vendor_product | `drop_dm_object_name("DNS")` | `security_content_ctime(firstTime)`
+  | `dynamic_dns_providers` | `detect_hosts_connecting_to_dynamic_domain_providers_filter`'
+explanation: The following analytic identifies DNS queries from internal hosts to
+  dynamic domain providers. It leverages DNS query logs from the `Network_Resolution`
+  data model and cross-references them with a lookup file containing known dynamic
+  DNS providers. This activity is significant because attackers often use dynamic
+  DNS services to host malicious payloads or command-and-control servers, making it
+  crucial for security teams to monitor. If confirmed malicious, this activity could
+  allow attackers to bypass firewall blocks, evade detection, and maintain persistent
+  access to the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/a1e761ac-1344-4dbd-88b2-3f34c912d359/
+indicators:
+- type: data_source
+  value: Sysmon EventID 22
+  confidence: high
+- type: risk_system
+  value: src
+  confidence: high
+false_positives:
+- description: Some users and applications may leverage Dynamic DNS to reach out to
+    some domains on the Internet since dynamic DNS by itself is not malicious, however
+    this activity must be verified.
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1189/dyn_dns_site/windows-sysmon.log

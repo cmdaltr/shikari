@@ -1,0 +1,325 @@
+technique_id: T1496
+technique_name: Network Communication With Crypto Mining Pool
+tactic: impact
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: fa5b1358-b040-4403-9868-15f7d9ab6329
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  DestinationHostname:\n  - alimabi.cn\n  - ap.luckpool.net\n  - bcn.pool.minergate.com\n\
+  \  - bcn.vip.pool.minergate.com\n  - bohemianpool.com\n  - ca-aipg.miningocean.org\n\
+  \  - ca-dynex.miningocean.org\n  - ca-neurai.miningocean.org\n  - ca-qrl.miningocean.org\n\
+  \  - ca-upx.miningocean.org\n  - ca-zephyr.miningocean.org\n  - ca.minexmr.com\n\
+  \  - ca.monero.herominers.com\n  - cbd.monerpool.org\n  - cbdv2.monerpool.org\n\
+  \  - cryptmonero.com\n  - crypto-pool.fr\n  - crypto-pool.info\n  - cryptonight-hub.miningpoolhub.com\n\
+  \  - d1pool.ddns.net\n  - d5pool.us\n  - daili01.monerpool.org\n  - de-aipg.miningocean.org\n\
+  \  - de-dynex.miningocean.org\n  - de-zephyr.miningocean.org\n  - de.minexmr.com\n\
+  \  - dl.nbminer.com\n  - donate.graef.in\n  - donate.ssl.xmrig.com\n  - donate.v2.xmrig.com\n\
+  \  - donate.xmrig.com\n  - donate2.graef.in\n  - drill.moneroworld.com\n  - dwarfpool.com\n\
+  \  - emercoin.com\n  - emercoin.net\n  - emergate.net\n  - ethereumpool.co\n  -\
+  \ eu.luckpool.net\n  - eu.minerpool.pw\n  - fcn-xmr.pool.minergate.com\n  - fee.xmrig.com\n\
+  \  - fr-aipg.miningocean.org\n  - fr-dynex.miningocean.org\n  - fr-neurai.miningocean.org\n\
+  \  - fr-qrl.miningocean.org\n  - fr-upx.miningocean.org\n  - fr-zephyr.miningocean.org\n\
+  \  - fr.minexmr.com\n  - hellominer.com\n  - herominers.com\n  - hk-aipg.miningocean.org\n\
+  \  - hk-dynex.miningocean.org\n  - hk-neurai.miningocean.org\n  - hk-qrl.miningocean.org\n\
+  \  - hk-upx.miningocean.org\n  - hk-zephyr.miningocean.org\n  - huadong1-aeon.ppxxmr.com\n\
+  \  - iwanttoearn.money\n  - jw-js1.ppxxmr.com\n  - koto-pool.work\n  - lhr.nbminer.com\n\
+  \  - lhr3.nbminer.com\n  - linux.monerpool.org\n  - lokiturtle.herominers.com\n\
+  \  - luckpool.net\n  - masari.miner.rocks\n  - mine.c3pool.com\n  - mine.moneropool.com\n\
+  \  - mine.ppxxmr.com\n  - mine.zpool.ca\n  - mine1.ppxxmr.com\n  - minemonero.gq\n\
+  \  - miner.ppxxmr.com\n  - miner.rocks\n  - minercircle.com\n  - minergate.com\n\
+  \  - minerpool.pw\n  - minerrocks.com\n  - miners.pro\n  - minerxmr.ru\n  - minexmr.cn\n\
+  \  - minexmr.com\n  - mining-help.ru\n  - miningpoolhub.com\n  - mixpools.org\n\
+  \  - moner.monerpool.org\n  - moner1min.monerpool.org\n  - monero-master.crypto-pool.fr\n\
+  \  - monero.crypto-pool.fr\n  - monero.hashvault.pro\n  - monero.herominers.com\n\
+  \  - monero.lindon-pool.win\n  - monero.miners.pro\n  - monero.riefly.id\n  - monero.us.to\n\
+  \  - monerocean.stream\n  - monerogb.com\n  - monerohash.com\n  - moneroocean.stream\n\
+  \  - moneropool.com\n  - moneropool.nl\n  - monerorx.com\n  - monerpool.org\n  -\
+  \ moriaxmr.com\n  - mro.pool.minergate.com\n  - multipool.us\n  - myxmr.pw\n  -\
+  \ na.luckpool.net\n  - nanopool.org\n  - nbminer.com\n  - node3.luckpool.net\n \
+  \ - noobxmr.com\n  - pangolinminer.comgandalph3000.com\n  - pool.4i7i.com\n  - pool.armornetwork.org\n\
+  \  - pool.cortins.tk\n  - pool.gntl.co.uk\n  - pool.hashvault.pro\n  - pool.minergate.com\n\
+  \  - pool.minexmr.com\n  - pool.monero.hashvault.pro\n  - pool.ppxxmr.com\n  - pool.somec.cc\n\
+  \  - pool.support\n  - pool.supportxmr.com\n  - pool.usa-138.com\n  - pool.xmr.pt\n\
+  \  - pool.xmrfast.com\n  - pool2.armornetwork.org\n  - poolchange.ppxxmr.com\n \
+  \ - pooldd.com\n  - poolmining.org\n  - poolto.be\n  - ppxvip1.ppxxmr.com\n  - ppxxmr.com\n\
+  \  - prohash.net\n  - r.twotouchauthentication.online\n  - randomx.xmrig.com\n \
+  \ - ratchetmining.com\n  - seed.emercoin.com\n  - seed.emercoin.net\n  - seed.emergate.net\n\
+  \  - seed1.joulecoin.org\n  - seed2.joulecoin.org\n  - seed3.joulecoin.org\n  -\
+  \ seed4.joulecoin.org\n  - seed5.joulecoin.org\n  - seed6.joulecoin.org\n  - seed7.joulecoin.org\n\
+  \  - seed8.joulecoin.org\n  - sg-aipg.miningocean.org\n  - sg-dynex.miningocean.org\n\
+  \  - sg-neurai.miningocean.org\n  - sg-qrl.miningocean.org\n  - sg-upx.miningocean.org\n\
+  \  - sg-zephyr.miningocean.org\n  - sg.minexmr.com\n  - sheepman.mine.bz\n  - siamining.com\n\
+  \  - sumokoin.minerrocks.com\n  - supportxmr.com\n  - suprnova.cc\n  - teracycle.net\n\
+  \  - trtl.cnpool.cc\n  - trtl.pool.mine2gether.com\n  - turtle.miner.rocks\n  -\
+  \ us-aipg.miningocean.org\n  - us-dynex.miningocean.org\n  - us-neurai.miningocean.org\n\
+  \  - us-west.minexmr.com\n  - us-zephyr.miningocean.org\n  - usxmrpool.com\n  -\
+  \ viaxmr.com\n  - webservicepag.webhop.net\n  - xiazai.monerpool.org\n  - xiazai1.monerpool.org\n\
+  \  - xmc.pool.minergate.com\n  - xmo.pool.minergate.com\n  - xmr-asia1.nanopool.org\n\
+  \  - xmr-au1.nanopool.org\n  - xmr-eu1.nanopool.org\n  - xmr-eu2.nanopool.org\n\
+  \  - xmr-jp1.nanopool.org\n  - xmr-us-east1.nanopool.org\n  - xmr-us-west1.nanopool.org\n\
+  \  - xmr-us.suprnova.cc\n  - xmr-usa.dwarfpool.com\n  - xmr.2miners.com\n  - xmr.5b6b7b.ru\n\
+  \  - xmr.alimabi.cn\n  - xmr.bohemianpool.com\n  - xmr.crypto-pool.fr\n  - xmr.crypto-pool.info\n\
+  \  - xmr.f2pool.com\n  - xmr.hashcity.org\n  - xmr.hex7e4.ru\n  - xmr.ip28.net\n\
+  \  - xmr.monerpool.org\n  - xmr.mypool.online\n  - xmr.nanopool.org\n  - xmr.pool.gntl.co.uk\n\
+  \  - xmr.pool.minergate.com\n  - xmr.poolto.be\n  - xmr.ppxxmr.com\n  - xmr.prohash.net\n\
+  \  - xmr.simka.pw\n  - xmr.somec.cc\n  - xmr.suprnova.cc\n  - xmr.usa-138.com\n\
+  \  - xmr.vip.pool.minergate.com\n  - xmr1min.monerpool.org\n  - xmrf.520fjh.org\n\
+  \  - xmrf.fjhan.club\n  - xmrfast.com\n  - xmrigcc.graef.in\n  - xmrminer.cc\n \
+  \ - xmrpool.de\n  - xmrpool.eu\n  - xmrpool.me\n  - xmrpool.net\n  - xmrpool.xyz\n\
+  \  - xx11m.monerpool.org\n  - xx11mv2.monerpool.org\n  - xxx.hex7e4.ru\n  - zarabotaibitok.ru\n\
+  \  - zer0day.ru\n"
+explanation: Detects initiated network connections to crypto mining pools
+false_positives:
+- Unlikely
+references:
+- https://www.poolwatch.io/coin/monero
+- https://github.com/stamparm/maltrail/blob/3ea70459b9559134449423c0a7d8b965ac5c40ea/trails/static/suspicious/crypto_mining.txt
+- https://www.virustotal.com/gui/search/behaviour_network%253A*.miningocean.org/files
+tags:
+- attack.impact
+- attack.t1496
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    DestinationHostname:
+    - alimabi.cn
+    - ap.luckpool.net
+    - bcn.pool.minergate.com
+    - bcn.vip.pool.minergate.com
+    - bohemianpool.com
+    - ca-aipg.miningocean.org
+    - ca-dynex.miningocean.org
+    - ca-neurai.miningocean.org
+    - ca-qrl.miningocean.org
+    - ca-upx.miningocean.org
+    - ca-zephyr.miningocean.org
+    - ca.minexmr.com
+    - ca.monero.herominers.com
+    - cbd.monerpool.org
+    - cbdv2.monerpool.org
+    - cryptmonero.com
+    - crypto-pool.fr
+    - crypto-pool.info
+    - cryptonight-hub.miningpoolhub.com
+    - d1pool.ddns.net
+    - d5pool.us
+    - daili01.monerpool.org
+    - de-aipg.miningocean.org
+    - de-dynex.miningocean.org
+    - de-zephyr.miningocean.org
+    - de.minexmr.com
+    - dl.nbminer.com
+    - donate.graef.in
+    - donate.ssl.xmrig.com
+    - donate.v2.xmrig.com
+    - donate.xmrig.com
+    - donate2.graef.in
+    - drill.moneroworld.com
+    - dwarfpool.com
+    - emercoin.com
+    - emercoin.net
+    - emergate.net
+    - ethereumpool.co
+    - eu.luckpool.net
+    - eu.minerpool.pw
+    - fcn-xmr.pool.minergate.com
+    - fee.xmrig.com
+    - fr-aipg.miningocean.org
+    - fr-dynex.miningocean.org
+    - fr-neurai.miningocean.org
+    - fr-qrl.miningocean.org
+    - fr-upx.miningocean.org
+    - fr-zephyr.miningocean.org
+    - fr.minexmr.com
+    - hellominer.com
+    - herominers.com
+    - hk-aipg.miningocean.org
+    - hk-dynex.miningocean.org
+    - hk-neurai.miningocean.org
+    - hk-qrl.miningocean.org
+    - hk-upx.miningocean.org
+    - hk-zephyr.miningocean.org
+    - huadong1-aeon.ppxxmr.com
+    - iwanttoearn.money
+    - jw-js1.ppxxmr.com
+    - koto-pool.work
+    - lhr.nbminer.com
+    - lhr3.nbminer.com
+    - linux.monerpool.org
+    - lokiturtle.herominers.com
+    - luckpool.net
+    - masari.miner.rocks
+    - mine.c3pool.com
+    - mine.moneropool.com
+    - mine.ppxxmr.com
+    - mine.zpool.ca
+    - mine1.ppxxmr.com
+    - minemonero.gq
+    - miner.ppxxmr.com
+    - miner.rocks
+    - minercircle.com
+    - minergate.com
+    - minerpool.pw
+    - minerrocks.com
+    - miners.pro
+    - minerxmr.ru
+    - minexmr.cn
+    - minexmr.com
+    - mining-help.ru
+    - miningpoolhub.com
+    - mixpools.org
+    - moner.monerpool.org
+    - moner1min.monerpool.org
+    - monero-master.crypto-pool.fr
+    - monero.crypto-pool.fr
+    - monero.hashvault.pro
+    - monero.herominers.com
+    - monero.lindon-pool.win
+    - monero.miners.pro
+    - monero.riefly.id
+    - monero.us.to
+    - monerocean.stream
+    - monerogb.com
+    - monerohash.com
+    - moneroocean.stream
+    - moneropool.com
+    - moneropool.nl
+    - monerorx.com
+    - monerpool.org
+    - moriaxmr.com
+    - mro.pool.minergate.com
+    - multipool.us
+    - myxmr.pw
+    - na.luckpool.net
+    - nanopool.org
+    - nbminer.com
+    - node3.luckpool.net
+    - noobxmr.com
+    - pangolinminer.comgandalph3000.com
+    - pool.4i7i.com
+    - pool.armornetwork.org
+    - pool.cortins.tk
+    - pool.gntl.co.uk
+    - pool.hashvault.pro
+    - pool.minergate.com
+    - pool.minexmr.com
+    - pool.monero.hashvault.pro
+    - pool.ppxxmr.com
+    - pool.somec.cc
+    - pool.support
+    - pool.supportxmr.com
+    - pool.usa-138.com
+    - pool.xmr.pt
+    - pool.xmrfast.com
+    - pool2.armornetwork.org
+    - poolchange.ppxxmr.com
+    - pooldd.com
+    - poolmining.org
+    - poolto.be
+    - ppxvip1.ppxxmr.com
+    - ppxxmr.com
+    - prohash.net
+    - r.twotouchauthentication.online
+    - randomx.xmrig.com
+    - ratchetmining.com
+    - seed.emercoin.com
+    - seed.emercoin.net
+    - seed.emergate.net
+    - seed1.joulecoin.org
+    - seed2.joulecoin.org
+    - seed3.joulecoin.org
+    - seed4.joulecoin.org
+    - seed5.joulecoin.org
+    - seed6.joulecoin.org
+    - seed7.joulecoin.org
+    - seed8.joulecoin.org
+    - sg-aipg.miningocean.org
+    - sg-dynex.miningocean.org
+    - sg-neurai.miningocean.org
+    - sg-qrl.miningocean.org
+    - sg-upx.miningocean.org
+    - sg-zephyr.miningocean.org
+    - sg.minexmr.com
+    - sheepman.mine.bz
+    - siamining.com
+    - sumokoin.minerrocks.com
+    - supportxmr.com
+    - suprnova.cc
+    - teracycle.net
+    - trtl.cnpool.cc
+    - trtl.pool.mine2gether.com
+    - turtle.miner.rocks
+    - us-aipg.miningocean.org
+    - us-dynex.miningocean.org
+    - us-neurai.miningocean.org
+    - us-west.minexmr.com
+    - us-zephyr.miningocean.org
+    - usxmrpool.com
+    - viaxmr.com
+    - webservicepag.webhop.net
+    - xiazai.monerpool.org
+    - xiazai1.monerpool.org
+    - xmc.pool.minergate.com
+    - xmo.pool.minergate.com
+    - xmr-asia1.nanopool.org
+    - xmr-au1.nanopool.org
+    - xmr-eu1.nanopool.org
+    - xmr-eu2.nanopool.org
+    - xmr-jp1.nanopool.org
+    - xmr-us-east1.nanopool.org
+    - xmr-us-west1.nanopool.org
+    - xmr-us.suprnova.cc
+    - xmr-usa.dwarfpool.com
+    - xmr.2miners.com
+    - xmr.5b6b7b.ru
+    - xmr.alimabi.cn
+    - xmr.bohemianpool.com
+    - xmr.crypto-pool.fr
+    - xmr.crypto-pool.info
+    - xmr.f2pool.com
+    - xmr.hashcity.org
+    - xmr.hex7e4.ru
+    - xmr.ip28.net
+    - xmr.monerpool.org
+    - xmr.mypool.online
+    - xmr.nanopool.org
+    - xmr.pool.gntl.co.uk
+    - xmr.pool.minergate.com
+    - xmr.poolto.be
+    - xmr.ppxxmr.com
+    - xmr.prohash.net
+    - xmr.simka.pw
+    - xmr.somec.cc
+    - xmr.suprnova.cc
+    - xmr.usa-138.com
+    - xmr.vip.pool.minergate.com
+    - xmr1min.monerpool.org
+    - xmrf.520fjh.org
+    - xmrf.fjhan.club
+    - xmrfast.com
+    - xmrigcc.graef.in
+    - xmrminer.cc
+    - xmrpool.de
+    - xmrpool.eu
+    - xmrpool.me
+    - xmrpool.net
+    - xmrpool.xyz
+    - xx11m.monerpool.org
+    - xx11mv2.monerpool.org
+    - xxx.hex7e4.ru
+    - zarabotaibitok.ru
+    - zer0day.ru
+  condition: selection
+metadata:
+  created_date: 2021-10-26
+  modified_date: 2024-01-19
+  author: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)
+  status: stable
+  imported_date: '2025-11-28'

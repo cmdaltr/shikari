@@ -1,0 +1,56 @@
+technique_id: T1555
+technique_name: Azure Storage Account Keys Accessed by Privileged User
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"azure.activitylogs\" and\nazure.activitylogs.operation_name:\
+  \ \"MICROSOFT.STORAGE/STORAGEACCOUNTS/LISTKEYS/ACTION\" and\nazure.activitylogs.identity.authorization.evidence.principal_type:\
+  \ \"User\" and\nazure.activitylogs.identity.authorization.evidence.role: (\n   \
+  \ \"Owner\" or\n    \"Contributor\" or\n    \"Storage Account Contributor\" or\n\
+  \    \"User Access Administrator\"\n) and event.outcome: \"success\""
+explanation: 'Identifies unusual high-privileged access to Azure Storage Account keys
+  by users with Owner, Contributor, or Storage
+
+  Account Contributor roles. This technique was observed in STORM-0501 ransomware
+  campaigns where compromised identities
+
+  with high-privilege Azure RBAC roles retrieved access keys to perform unauthorized
+  operations on Storage Accounts.
+
+  Microsoft recommends using Shared Access Signature (SAS) models instead of direct
+  key access for improved security.
+
+  This rule detects when a user principal with high-privilege roles accesses storage
+  keys for the first time in 7 days.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8b4d6c3a-2e9f-4b7c-9a5d-6f8e3c1b4d2a.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Azure Activity Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - DevOps and infrastructure teams may legitimately access storage keys during
+    deployment or migration activities. Document these planned activities and consider
+    creating exceptions for specific time windows.
+
+    - Emergency troubleshooting scenarios may require administrators to retrieve storage
+    keys. Establish a process for documenting these emergency accesses and review
+    them regularly.
+
+    - Automated backup or disaster recovery systems might use high-privilege service
+    account'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoft.com/en-us/security/blog/2025/08/27/storm-0501s-evolving-techniques-lead-to-cloud-based-ransomware/
+- https://docs.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage
+has_investigation_guide: true
+risk_score: 47

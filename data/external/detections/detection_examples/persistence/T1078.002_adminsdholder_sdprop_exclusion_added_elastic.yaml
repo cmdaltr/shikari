@@ -1,0 +1,63 @@
+technique_id: T1078.002
+technique_name: AdminSDHolder SDProp Exclusion Added
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where event.code == \"5136\" and\n  winlog.event_data.AttributeLDAPDisplayName\
+  \ : \"dSHeuristics\" and\n  length(winlog.event_data.AttributeValue) > 15 and\n\
+  \  winlog.event_data.AttributeValue regex~ \"[0-9]{15}([1-9a-f]).*\""
+explanation: 'Identifies a modification on the dsHeuristics attribute on the bit that
+  holds the configuration of groups excluded from
+
+  the SDProp process. The SDProp compares the permissions on protected objects with
+  those defined on the AdminSDHolder
+
+  object. If the permissions on any of the protected accounts and groups do not match,
+  the permissions on the protected
+
+  accounts and groups are reset to match those of the domain''s AdminSDHolder object,
+  meaning that groups excluded will
+
+  remain unchanged. Attackers can abuse this misconfiguration to maintain long-term
+  access to privileged accounts in these
+
+  groups.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/61d29caf-6c15-4d1e-9ccb-7ad12ccc0bc7.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - While this modification can be done legitimately, it is not a best practice.
+    Any potential benign true positive (B-TP) should be mapped and reviewed by the
+    security team for alternatives as this weakens the security of the privileged
+    group.
+
+
+    ### Response and remediation
+
+
+    - The change can be reverted by setting the dwAdminSDExMask (16th bit) to 0 in
+    dSHeuristics.
+
+    - Using the incident response data, update logging and audit policies to improve
+    the mean time to detect (MT'
+  mitigation: Review investigation guide for details
+references:
+- https://www.cert.ssi.gouv.fr/uploads/guide-ad.html#dsheuristics_bad
+- https://petri.com/active-directory-security-understanding-adminsdholder-object
+has_investigation_guide: true
+risk_score: 73

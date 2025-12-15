@@ -1,0 +1,46 @@
+technique_id: T1562.001
+technique_name: Hypervisor Enforced Code Integrity Disabled
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 8b7273a4-ba5d-4d8a-b04f-11f2900d043a
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Details: DWORD (0x00000000)\n  TargetObject|endswith:\n  - \\Microsoft\\Windows\\\
+  DeviceGuard\\HypervisorEnforcedCodeIntegrity\n  - \\Control\\DeviceGuard\\HypervisorEnforcedCodeIntegrity\n\
+  \  - \\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity\\Enabled\n"
+explanation: 'Detects changes to the HypervisorEnforcedCodeIntegrity registry key
+  and the "Enabled" value being set to 0 in order to disable the Hypervisor Enforced
+  Code Integrity feature. This allows an attacker to load unsigned and untrusted code
+  to be run in the kernel
+
+  '
+false_positives:
+- Unknown
+references:
+- https://www.welivesecurity.com/2023/03/01/blacklotus-uefi-bootkit-myth-confirmed/
+- https://github.com/redcanaryco/atomic-red-team/blob/04e487c1828d76df3e834621f4f893ea756d5232/atomics/T1562.001/T1562.001.md#atomic-test-43---disable-hypervisor-enforced-code-integrity-hvci
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|endswith:
+    - \Microsoft\Windows\DeviceGuard\HypervisorEnforcedCodeIntegrity
+    - \Control\DeviceGuard\HypervisorEnforcedCodeIntegrity
+    - \Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity\Enabled
+    Details: DWORD (0x00000000)
+  condition: selection
+metadata:
+  created_date: 2023-03-14
+  modified_date: 2024-07-05
+  author: Nasreddine Bencherchali (Nextron Systems), Anish Bogati
+  status: test
+  imported_date: '2025-11-28'

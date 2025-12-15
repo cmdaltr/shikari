@@ -1,0 +1,51 @@
+technique_id: T1090.001
+technique_name: PUA - Chisel Tunneling Tool Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 8b0e12da-d3c3-49db-bb4f-256703f380e5
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_img or all\
+  \ of selection_param*\nselection_img:\n  Image|endswith: \\chisel.exe\nselection_param1:\n\
+  \  CommandLine|contains:\n  - 'exe client '\n  - 'exe server '\nselection_param2:\n\
+  \  CommandLine|contains:\n  - -socks5\n  - -reverse\n  - ' r:'\n  - ':127.0.0.1:'\n\
+  \  - '-tls-skip-verify '\n  - :socks\n"
+explanation: Detects usage of the Chisel tunneling tool via the commandline arguments
+false_positives:
+- Some false positives may occur with other tools with similar commandlines
+references:
+- https://github.com/jpillora/chisel/
+- https://arcticwolf.com/resources/blog/lorenz-ransomware-chiseling-in/
+- https://blog.sekoia.io/lucky-mouse-incident-response-to-detection-engineering/
+tags:
+- attack.command-and-control
+- attack.t1090.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+    Image|endswith: \chisel.exe
+  selection_param1:
+    CommandLine|contains:
+    - 'exe client '
+    - 'exe server '
+  selection_param2:
+    CommandLine|contains:
+    - -socks5
+    - -reverse
+    - ' r:'
+    - ':127.0.0.1:'
+    - '-tls-skip-verify '
+    - :socks
+  condition: selection_img or all of selection_param*
+metadata:
+  created_date: 2022-09-13
+  modified_date: 2023-02-13
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

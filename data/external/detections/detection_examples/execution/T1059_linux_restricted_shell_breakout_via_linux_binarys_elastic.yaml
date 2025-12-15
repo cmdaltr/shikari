@@ -1,0 +1,97 @@
+technique_id: T1059
+technique_name: Linux Restricted Shell Breakout via Linux Binary(s)
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and\n\
+  (\n  /* launching shell from capsh */\n  (process.name == \"capsh\" and process.args\
+  \ == \"--\") or\n\n  /* launching shells from unusual parents or parent+arg combos\
+  \ */\n  (process.name in (\"bash\", \"dash\", \"ash\", \"sh\", \"tcsh\", \"csh\"\
+  , \"zsh\", \"ksh\", \"fish\") and (\n    (process.parent.name : \"*awk\" and process.parent.args\
+  \ : \"BEGIN {system(*)}\") or\n    (process.parent.name == \"git\" and process.parent.args\
+  \ : (\"*PAGER*\", \"!*sh\", \"exec *sh\") or\n     process.args : (\"*PAGER*\",\
+  \ \"!*sh\", \"exec *sh\") and not process.name == \"ssh\" ) or\n    (process.parent.name\
+  \ : (\"byebug\", \"ftp\", \"strace\", \"zip\", \"tar\") and\n    (\n      process.parent.args\
+  \ : \"BEGIN {system(*)}\" or\n      (process.parent.args : (\"*PAGER*\", \"!*sh\"\
+  , \"exec *sh\") or process.args : (\"*PAGER*\", \"!*sh\", \"exec *sh\")) or\n  \
+  \    (\n        (process.parent.args : \"exec=*sh\" or (process.parent.args : \"\
+  -I\" and process.parent.args : \"*sh\")) or\n        (process.args : \"exec=*sh\"\
+  \ or (process.args : \"-I\" and process.args : \"*sh\"))\n        )\n      )\n \
+  \   ) or\n\n    /* shells specified in parent args */\n    /* nice rule is broken\
+  \ in 8.2 */\n    (process.parent.args : \"*sh\" and\n      (\n        (process.parent.name\
+  \ == \"nice\") or\n        (process.parent.name == \"cpulimit\" and process.parent.args\
+  \ == \"-f\") or\n        (process.parent.name == \"find\" and process.parent.args\
+  \ == \".\" and process.parent.args == \"-exec\" and\n         process.parent.args\
+  \ == \";\" and process.parent.args : \"/bin/*sh\") or\n        (process.parent.name\
+  \ == \"flock\" and process.parent.args == \"-u\" and process.parent.args == \"/\"\
+  )\n      )\n    )\n  )) or\n\n  /* shells specified in args */\n  (process.args\
+  \ : \"*sh\" and (\n    (process.parent.name == \"crash\" and process.parent.args\
+  \ == \"-h\") or\n    (process.name == \"sensible-pager\" and process.parent.name\
+  \ in (\"apt\", \"apt-get\") and process.parent.args == \"changelog\")\n    /* scope\
+  \ to include more sensible-pager invoked shells with different parent process to\
+  \ reduce noise and remove false positives */\n\n  )) or\n  (process.name == \"busybox\"\
+  \ and event.action == \"exec\" and process.args_count == 2 and process.args : \"\
+  *sh\" and not\n   process.executable : \"/var/lib/docker/overlay2/*/merged/bin/busybox\"\
+  \ and not (process.parent.args == \"init\" and\n   process.parent.args == \"runc\"\
+  ) and not process.parent.args in (\"ls-remote\", \"push\", \"fetch\") and not process.parent.name\
+  \ == \"mkinitramfs\") or\n  (process.name == \"env\" and process.args_count == 2\
+  \ and process.args : \"*sh\") or\n  (process.parent.name in (\"vi\", \"vim\") and\
+  \ process.parent.args == \"-c\" and process.parent.args : \":!*sh\") or\n  (process.parent.name\
+  \ in (\"c89\", \"c99\", \"gcc\") and process.parent.args : \"*sh,-s\" and process.parent.args\
+  \ == \"-wrapper\") or\n  (process.parent.name == \"expect\" and process.parent.args\
+  \ == \"-c\" and process.parent.args : \"spawn *sh;interact\") or\n  (process.parent.name\
+  \ == \"mysql\" and process.parent.args == \"-e\" and process.parent.args : \"\\\\\
+  !*sh\") or\n  (process.parent.name == \"ssh\" and process.parent.args == \"-o\"\
+  \ and process.parent.args : \"ProxyCommand=;*sh 0<&2 1>&2\")\n)"
+explanation: 'Identifies the abuse of a Linux binary to break out of a restricted
+  shell or environment by spawning an interactive
+
+  system shell. The activity of spawning a shell from a binary is not common behavior
+  for a user or system administrator,
+
+  and may indicate an attempt to evade detection, increase capabilities or enhance
+  the stability of an adversary.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/52376a86-ee86-4967-97ae-1a05f55816f0.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+references:
+- https://gtfobins.github.io/gtfobins/apt/
+- https://gtfobins.github.io/gtfobins/apt-get/
+- https://gtfobins.github.io/gtfobins/nawk/
+- https://gtfobins.github.io/gtfobins/mawk/
+- https://gtfobins.github.io/gtfobins/awk/
+- https://gtfobins.github.io/gtfobins/gawk/
+- https://gtfobins.github.io/gtfobins/busybox/
+- https://gtfobins.github.io/gtfobins/c89/
+- https://gtfobins.github.io/gtfobins/c99/
+- https://gtfobins.github.io/gtfobins/cpulimit/
+- https://gtfobins.github.io/gtfobins/crash/
+- https://gtfobins.github.io/gtfobins/env/
+- https://gtfobins.github.io/gtfobins/expect/
+- https://gtfobins.github.io/gtfobins/find/
+- https://gtfobins.github.io/gtfobins/flock/
+- https://gtfobins.github.io/gtfobins/gcc/
+- https://gtfobins.github.io/gtfobins/mysql/
+- https://gtfobins.github.io/gtfobins/nice/
+- https://gtfobins.github.io/gtfobins/ssh/
+- https://gtfobins.github.io/gtfobins/vi/
+- https://gtfobins.github.io/gtfobins/vim/
+- https://gtfobins.github.io/gtfobins/capsh/
+- https://gtfobins.github.io/gtfobins/byebug/
+- https://gtfobins.github.io/gtfobins/git/
+- https://gtfobins.github.io/gtfobins/ftp/
+- https://www.elastic.co/security-labs/sequel-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

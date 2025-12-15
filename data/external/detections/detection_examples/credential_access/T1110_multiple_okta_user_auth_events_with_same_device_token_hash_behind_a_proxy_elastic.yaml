@@ -1,0 +1,39 @@
+technique_id: T1110
+technique_name: Multiple Okta User Auth Events with Same Device Token Hash Behind
+  a Proxy
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:okta.system\n    and not okta.actor.id:okta* and okta.debug_context.debug_data.dt_hash:*\n\
+  \    and okta.event_type:user.authentication* and okta.security_context.is_proxy:true"
+explanation: 'Detects when Okta user authentication events are reported for multiple
+  users with the same device token hash behind a
+
+  proxy.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/50887ba8-7ff7-11ee-a038-f661ea17fbcd.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: "False positive analysis:\n- A user may have legitimately started a\
+    \ session via a proxy for security or privacy reasons.\n- Users may share an endpoint\
+    \ related to work or personal use in which separate Okta accounts are used.\n\
+    \    - Architecturally, this shared endpoint may leverage a proxy for security\
+    \ or privacy reasons.\n    - Shared systems such as Kiosks and conference room\
+    \ computers may be used by multiple users.\n    - Shared working spaces may have\
+    \ a single endpoint that is used by multiple us"
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://sec.okta.com/articles/2023/08/cross-tenant-impersonation-prevention-and-detection
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

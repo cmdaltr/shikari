@@ -1,0 +1,39 @@
+technique_id: T1078
+technique_name: Roles Assigned Outside PIM
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: b1bc08d1-8224-4758-a0e6-fbcfc98c73bb
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  riskEventType: rolesAssignedOutsidePrivilegedIdentityManagementAlertConfiguration\n"
+explanation: Identifies when a privilege role assignment has taken place outside of
+  PIM and may indicate an attack.
+false_positives:
+- Investigate where users are being assigned privileged roles outside of Privileged
+  Identity Management and prohibit future assignments from there.
+references:
+- https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-how-to-configure-security-alerts#roles-are-being-assigned-outside-of-privileged-identity-management
+tags:
+- attack.initial-access
+- attack.defense-evasion
+- attack.t1078
+- attack.persistence
+- attack.privilege-escalation
+logsource:
+  product: azure
+  service: pim
+detection:
+  selection:
+    riskEventType: rolesAssignedOutsidePrivilegedIdentityManagementAlertConfiguration
+  condition: selection
+metadata:
+  created_date: 2023-09-14
+  modified_date: '2025-11-28'
+  author: Mark Morowczynski '@markmorow', Gloria Lee, '@gleeiamglo'
+  status: test
+  imported_date: '2025-11-28'

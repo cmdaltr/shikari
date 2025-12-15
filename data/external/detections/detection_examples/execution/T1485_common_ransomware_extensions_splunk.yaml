@@ -1,0 +1,57 @@
+technique_id: T1485
+technique_name: Common Ransomware Extensions
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "| tstats `security_content_summariesonly` \n  min(_time) as firstTime \n \
+  \ max(_time) as lastTime \n  count latest(Filesystem.user) as user \n        values(Filesystem.file_path)\
+  \ as file_path \n  from datamodel=Endpoint.Filesystem by \n        Filesystem.action\
+  \ Filesystem.dest\n        Filesystem.file_access_time Filesystem.file_create_time\
+  \ \n        Filesystem.file_hash Filesystem.file_modify_time\n        Filesystem.file_name\
+  \ Filesystem.file_path \n        Filesystem.file_acl Filesystem.file_size\n    \
+  \    Filesystem.process_guid Filesystem.process_id \n        Filesystem.user Filesystem.vendor_product\n\
+  | `drop_dm_object_name(Filesystem)` \n| rex field=file_name \"(?<file_extension>(\\\
+  .[^\\.]+){1,2})$\"\n| lookup update=true ransomware_extensions_lookup Extensions\
+  \ AS file_extension OUTPUT\nExtensions Name \n| search Name !=False \n| stats min(firstTime)\
+  \ as firstTime \n        max(lastTime) as lastTime \n        dc(file_path) as path_count\
+  \ \n        dc(file_name) as file_count \n        values(action) as action \n  \
+  \      values(file_access_time) as file_access_time \n        values(file_create_time)\
+  \ as file_create_time \n        values(file_hash) as file_hash \n        values(file_modify_time)\
+  \ as file_modify_time\n        values(file_acl) as file_acl \n        values(file_size)\
+  \ as file_size \n        values(process_guid) as process_guid \n        values(process_id)\
+  \ as process_id \n        values(user) as user \n        values(vendor_product)\
+  \ as vendor_product \n        values(file_name) as file_name \n        values(file_extension)\
+  \ as file_extension \n        values(Name) as Name \n  by dest \n| where path_count\
+  \ > 1 OR file_count > 20 \n| `common_ransomware_extensions_filter`"
+explanation: The following analytic detects modifications to files with extensions
+  commonly associated with ransomware. It leverages the Endpoint.Filesystem data model
+  to identify changes in file extensions that match known ransomware patterns. This
+  activity is significant because it suggests an attacker is attempting to encrypt
+  or alter files, potentially leading to severe data loss and operational disruption.
+  If confirmed malicious, this activity could result in the encryption of critical
+  data, rendering it inaccessible and causing significant damage to the organization's
+  data integrity and availability.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/a9e5c5db-db11-43ca-86a8-c852d1b2c0ec/
+indicators:
+- type: data_source
+  value: Sysmon EventID 11
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: It is possible for a legitimate file with these extensions to be created.
+    If this is a true ransomware attack, there will be a large number of files created
+    with these extensions.
+  mitigation: Review context and user activity
+references:
+- https://github.com/splunk/security_content/issues/2448
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1485/ransomware_notes/ransom-sysmon.log

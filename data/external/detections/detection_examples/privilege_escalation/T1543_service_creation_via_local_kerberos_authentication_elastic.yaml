@@ -1,0 +1,55 @@
+technique_id: T1543
+technique_name: Service Creation via Local Kerberos Authentication
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by winlog.computer_name with maxspan=5m\n [authentication where\n\
+  \n  /* event 4624 need to be logged */\n  event.action == \"logged-in\" and event.outcome\
+  \ == \"success\" and winlog.event_data.ElevatedToken == \"%%1843\" and process.pid\
+  \ == 0 and \n\n  /* authenticate locally using relayed kerberos Ticket */\n  winlog.event_data.AuthenticationPackageName\
+  \ :\"Kerberos\" and winlog.logon.type == \"Network\" and cidrmatch(source.ip, \"\
+  127.0.0.0/8\", \"::1\")] by winlog.event_data.TargetLogonId\n\n  [any where\n  \
+  \ /* event 4697 need to be logged */\n   event.action : \"service-installed\"] by\
+  \ winlog.event_data.SubjectLogonId"
+explanation: 'Identifies a suspicious local successful logon event where the Logon
+  Package is Kerberos, the remote address is set to
+
+  localhost, followed by a sevice creation from the same LogonId. This may indicate
+  an attempt to leverage a Kerberos
+
+  relay attack variant that can be used to elevate privilege locally from a domain
+  joined user to local System privileges.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e4e31051-ee01-4307-a6ee-b21b186958f4.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks may trigger the rule if administrators frequently
+    log in locally using Kerberos and create services as part of their duties. To
+    manage this, create exceptions for known administrative accounts or specific service
+    creation activities that are part of regular maintenance.
+
+    - Automated scripts or software updates that use Kerberos authentication and subsequently
+    install or update services can also generate false positives. Identify these script'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/Dec0ne/KrbRelayUp
+- https://googleprojectzero.blogspot.com/2021/10/using-kerberos-for-authentication-relay.html
+- https://github.com/cube0x0/KrbRelay
+- https://gist.github.com/tyranid/c24cfd1bd141d14d4925043ee7e03c82
+has_investigation_guide: true
+risk_score: 73

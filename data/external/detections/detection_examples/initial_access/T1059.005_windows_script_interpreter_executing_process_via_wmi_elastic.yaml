@@ -1,0 +1,57 @@
+technique_id: T1059.005
+technique_name: Windows Script Interpreter Executing Process via WMI
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by host.id with maxspan = 5s\n    [any where host.os.type == \"windows\"\
+  \ and\n     (event.category : (\"library\", \"driver\") or (event.category == \"\
+  process\" and event.action : \"Image loaded*\")) and\n     (?dll.name : \"wmiutils.dll\"\
+  \ or file.name : \"wmiutils.dll\") and process.name : (\"wscript.exe\", \"cscript.exe\"\
+  )]\n    [process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \     process.parent.name : \"wmiprvse.exe\" and\n     user.domain != \"NT AUTHORITY\"\
+  \ and\n     (process.pe.original_file_name :\n        (\n          \"cscript.exe\"\
+  ,\n          \"wscript.exe\",\n          \"PowerShell.EXE\",\n          \"Cmd.Exe\"\
+  ,\n          \"MSHTA.EXE\",\n          \"RUNDLL32.EXE\",\n          \"REGSVR32.EXE\"\
+  ,\n          \"MSBuild.exe\",\n          \"InstallUtil.exe\",\n          \"RegAsm.exe\"\
+  ,\n          \"RegSvcs.exe\",\n          \"msxsl.exe\",\n          \"CONTROL.EXE\"\
+  ,\n          \"EXPLORER.EXE\",\n          \"Microsoft.Workflow.Compiler.exe\",\n\
+  \          \"msiexec.exe\"\n        ) or\n      process.executable : (\"C:\\\\Users\\\
+  \\*.exe\", \"C:\\\\ProgramData\\\\*.exe\")\n     )\n    ]"
+explanation: 'Identifies use of the built-in Windows script interpreters (cscript.exe
+  or wscript.exe) being used to execute a process
+
+  via Windows Management Instrumentation (WMI). This may be indicative of malicious
+  activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b64b183e-1a76-422d-9179-7b389513e74d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts or automation tasks may trigger this rule
+    if they use cscript.exe or wscript.exe via WMI. To handle this, identify and document
+    these scripts, then create exceptions for their specific execution paths or user
+    accounts.
+
+    - Software installations or updates that utilize script interpreters through WMI
+    can be mistaken for malicious activity. Monitor and whitelist known installation
+    processes or update mechanisms that are frequently used in'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,53 @@
+technique_id: T1218.001
+technique_name: OneNote.EXE Execution of Malicious Embedded Scripts
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 84b1706c-932a-44c4-ae28-892b28a25b94
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains:\n  - \\exported\\\n  - \\onenoteofflinecache_files\\\n\
+  \  Image|endswith:\n  - \\cmd.exe\n  - \\cscript.exe\n  - \\mshta.exe\n  - \\powershell.exe\n\
+  \  - \\pwsh.exe\n  - \\wscript.exe\n  ParentImage|endswith: \\onenote.exe\n"
+explanation: 'Detects the execution of malicious OneNote documents that contain embedded
+  scripts.
+
+  When a user clicks on a OneNote attachment and then on the malicious link inside
+  the ".one" file, it exports and executes the malicious embedded script from specific
+  directories.
+
+  '
+false_positives:
+- Unlikely
+references:
+- https://bazaar.abuse.ch/browse/tag/one/
+tags:
+- attack.defense-evasion
+- attack.t1218.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \onenote.exe
+    Image|endswith:
+    - \cmd.exe
+    - \cscript.exe
+    - \mshta.exe
+    - \powershell.exe
+    - \pwsh.exe
+    - \wscript.exe
+    CommandLine|contains:
+    - \exported\
+    - \onenoteofflinecache_files\
+  condition: selection
+metadata:
+  created_date: 2023-02-02
+  modified_date: '2025-11-28'
+  author: '@kostastsale'
+  status: test
+  imported_date: '2025-11-28'

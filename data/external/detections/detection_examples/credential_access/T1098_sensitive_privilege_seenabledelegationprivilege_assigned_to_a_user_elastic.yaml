@@ -1,0 +1,60 @@
+technique_id: T1098
+technique_name: Sensitive Privilege SeEnableDelegationPrivilege assigned to a User
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: event.code:4704 and winlog.event_data.PrivilegeList:"SeEnableDelegationPrivilege"
+explanation: 'Identifies the assignment of the SeEnableDelegationPrivilege sensitive
+  "user right" to a user. The
+
+  SeEnableDelegationPrivilege "user right" enables computer and user accounts to be
+  trusted for delegation. Attackers can
+
+  abuse this right to compromise Active Directory accounts and elevate their privileges.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f494c678-3c33-43aa-b169-bb3d5198c41d.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - The SeEnableDelegationPrivilege privilege should not be assigned to users. If
+    this rule is triggered in your environment legitimately, the security team should
+    notify the administrators about the risks of using it.
+
+
+    ### Related rules
+
+
+    - KRBTGT Delegation Backdoor - e052c845-48d0-4f46-8a13-7d0aba05df82
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Remove the privilege from the account.
+
+    - Review the privileg'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.harmj0y.net/activedirectory/the-most-dangerous-user-right-you-probably-have-never-heard-of/
+- https://github.com/SigmaHQ/sigma/blob/master/rules/windows/builtin/security/win_alert_active_directory_user_control.yml
+- https://twitter.com/_nwodtuhs/status/1454049485080907776
+- https://www.thehacker.recipes/ad/movement/kerberos/delegations
+- https://github.com/atc-project/atomic-threat-coverage/blob/master/Atomic_Threat_Coverage/Logging_Policies/LP_0105_windows_audit_authorization_policy_change.md
+has_investigation_guide: true
+risk_score: 73

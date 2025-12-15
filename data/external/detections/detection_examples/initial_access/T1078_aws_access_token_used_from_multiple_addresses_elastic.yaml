@@ -1,0 +1,128 @@
+technique_id: T1078
+technique_name: AWS Access Token Used from Multiple Addresses
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-aws.cloudtrail* metadata _id, _version, _index\n| where @timestamp\
+  \ > now() - 30 minutes\n  and event.dataset == \"aws.cloudtrail\"\n  and aws.cloudtrail.user_identity.arn\
+  \ is not null\n  and aws.cloudtrail.user_identity.type == \"IAMUser\"\n  and source.ip\
+  \ is not null\n  and aws.cloudtrail.user_identity.access_key_id is not null\n  and\
+  \ not (\n    user_agent.original like \"*Terraform*\" or\n    user_agent.original\
+  \ like \"*Ansible*\" or\n    user_agent.original like \"*Pulumi*\"\n  )\n  and `source.as.organization.name`\
+  \ != \"AMAZON-AES\"\n  and not ((\n    `source.as.organization.name` == \"AMAZON-02\"\
+  \ and aws.cloudtrail.event_category == \"Data\"))\n  and event.provider not in (\n\
+  \    \"health.amazonaws.com\", \"monitoring.amazonaws.com\", \"notifications.amazonaws.com\"\
+  ,\n    \"ce.amazonaws.com\", \"cost-optimization-hub.amazonaws.com\",\n    \"servicecatalog-appregistry.amazonaws.com\"\
+  , \"securityhub.amazonaws.com\", \n    \"account.amazonaws.com\", \"budgets.amazonaws.com\"\
+  , \"freetier.amazonaws.com\"\n  )\n\n| eval\n  Esql.time_window_date_trunc = date_trunc(30\
+  \ minutes, @timestamp),\n  Esql.aws_cloudtrail_user_identity_arn = aws.cloudtrail.user_identity.arn,\n\
+  \  Esql.aws_cloudtrail_user_identity_access_key_id = aws.cloudtrail.user_identity.access_key_id,\n\
+  \  Esql.source_ip = source.ip,\n  Esql.user_agent_original = user_agent.original,\n\
+  \  Esql.source_ip_string = to_string(source.ip),\n  Esql.source_ip_user_agent_pair\
+  \ = concat(Esql.source_ip_string, \" - \", user_agent.original),\n  Esql.source_ip_city_pair\
+  \ = concat(Esql.source_ip_string, \" - \", source.geo.city_name),\n  Esql.source_geo_city_name\
+  \ = source.geo.city_name,\n  Esql.source_network_org_name = `source.as.organization.name`,\n\
+  \  Esql.source_ip_network_pair = concat(Esql.source_ip_string, \"-\", `source.as.organization.name`),\n\
+  \  Esql.event_timestamp = @timestamp\n\n| stats\n  Esql.event_action_values = values(event.action),\n\
+  \  Esql.event_provider_values = values(event.provider),\n  Esql.aws_cloudtrail_user_identity_access_key_id_values\
+  \ = values(Esql.aws_cloudtrail_user_identity_access_key_id),\n  Esql.aws_cloudtrail_user_identity_arn_values\
+  \ = values(Esql.aws_cloudtrail_user_identity_arn),\n  Esql.source_ip_values = values(Esql.source_ip),\n\
+  \  Esql.user_agent_original_values = values(Esql.user_agent_original),\n  Esql.source_ip_user_agent_pair_values\
+  \ = values(Esql.source_ip_user_agent_pair),\n  Esql.source_geo_city_name_values\
+  \ = values(Esql.source_geo_city_name),\n  Esql.source_ip_city_pair_values = values(Esql.source_ip_city_pair),\n\
+  \  Esql.source_network_org_name_values = values(Esql.source_network_org_name),\n\
+  \  Esql.source_ip_network_pair_values = values(Esql.source_ip_network_pair),\n \
+  \ Esql.source_ip_count_distinct = count_distinct(Esql.source_ip),\n  Esql.user_agent_original_count_distinct\
+  \ = count_distinct(Esql.user_agent_original),\n  Esql.source_geo_city_name_count_distinct\
+  \ = count_distinct(Esql.source_geo_city_name),\n  Esql.source_network_org_name_count_distinct\
+  \ = count_distinct(Esql.source_network_org_name),\n  Esql.timestamp_first_seen =\
+  \ min(Esql.event_timestamp),\n  Esql.timestamp_last_seen = max(Esql.event_timestamp),\n\
+  \  Esql.event_count = count()\n  by Esql.time_window_date_trunc, Esql.aws_cloudtrail_user_identity_access_key_id\n\
+  \n| eval\n  Esql.activity_type = case(\n    Esql.source_ip_count_distinct >= 2 and\
+  \ Esql.source_network_org_name_count_distinct >= 2 and Esql.source_geo_city_name_count_distinct\
+  \ >= 2 and Esql.user_agent_original_count_distinct >= 2, \"multiple_ip_network_city_user_agent\"\
+  ,\n    Esql.source_ip_count_distinct >= 2 and Esql.source_network_org_name_count_distinct\
+  \ >= 2 and Esql.source_geo_city_name_count_distinct >= 2, \"multiple_ip_network_city\"\
+  ,\n    Esql.source_ip_count_distinct >= 2 and Esql.source_geo_city_name_count_distinct\
+  \ >= 2, \"multiple_ip_and_city\",\n    Esql.source_ip_count_distinct >= 2 and Esql.source_network_org_name_count_distinct\
+  \ >= 2, \"multiple_ip_and_network\",\n    Esql.source_ip_count_distinct >= 2 and\
+  \ Esql.user_agent_original_count_distinct >= 2, \"multiple_ip_and_user_agent\",\n\
+  \    \"normal_activity\"\n  ),\n  Esql.activity_fidelity_score = case(\n    Esql.activity_type\
+  \ == \"multiple_ip_network_city_user_agent\", \"high\",\n    Esql.activity_type\
+  \ == \"multiple_ip_network_city\", \"high\",\n    Esql.activity_type == \"multiple_ip_and_city\"\
+  , \"medium\",\n    Esql.activity_type == \"multiple_ip_and_network\", \"medium\"\
+  ,\n    Esql.activity_type == \"multiple_ip_and_user_agent\", \"low\"\n  )\n\n| keep\n\
+  \  Esql.time_window_date_trunc,\n  Esql.activity_type,\n  Esql.activity_fidelity_score,\n\
+  \  Esql.event_count,\n  Esql.timestamp_first_seen,\n  Esql.timestamp_last_seen,\n\
+  \  Esql.aws_cloudtrail_user_identity_arn_values,\n  Esql.aws_cloudtrail_user_identity_access_key_id_values,\n\
+  \  Esql.event_action_values,\n  Esql.event_provider_values,\n  Esql.source_ip_values,\n\
+  \  Esql.user_agent_original_values,\n  Esql.source_ip_user_agent_pair_values,\n\
+  \  Esql.source_geo_city_name_values,\n  Esql.source_ip_city_pair_values,\n  Esql.source_network_org_name_values,\n\
+  \  Esql.source_ip_network_pair_values,\n  Esql.source_ip_count_distinct,\n  Esql.user_agent_original_count_distinct,\n\
+  \  Esql.source_geo_city_name_count_distinct,\n  Esql.source_network_org_name_count_distinct\n\
+  \n| where Esql.activity_type != \"normal_activity\""
+explanation: 'This rule identifies potentially suspicious activity by detecting instances
+  where a single IAM user''s temporary session
+
+  token is accessed from multiple IP addresses within a short time frame. Such behavior
+  may suggest that an adversary has
+
+  compromised temporary credentials and is utilizing them from various locations.
+  To enhance detection accuracy and
+
+  minimize false positives, the rule incorporates criteria that evaluate unique IP
+  addresses, user agents, cities, and
+
+  networks. These additional checks help distinguish between legitimate distributed
+  access patterns and potential
+
+  credential misuse. Detected activities are classified into different types based
+  on the combination of unique
+
+  indicators, with each classification assigned a fidelity score reflecting the likelihood
+  of malicious behavior. High
+
+  fidelity scores are given to patterns most indicative of threats, such as multiple
+  unique IPs, networks, cities, and
+
+  user agents. Medium and low fidelity scores correspond to less severe patterns,
+  enabling security teams to effectively
+
+  prioritize alerts.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0d92d30a-5f3e-4b71-bc3d-4a0c4914b7e0.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS IAM
+  confidence: high
+- type: data_source
+  value: AWS CloudTrail
+  confidence: high
+false_positives:
+- description: 'false positives associated with expected behavior, like dual-stack
+    IPV4/IPV6 usage.
+
+
+    #### Possible Investigation Steps
+
+
+    - **Identify the IAM User**: Examine the `aws.cloudtrail.user_identity.arn` stored
+    in `user_id` and correlate with the `source.ips` stored in `ip_list` and `unique_ips`
+    count to determine how widely the token was used.
+
+    - **Correlate Additional Detection Context**: Examine `activity_type` and `fidelity_score`
+    to determine additional cities, networks or user agents associated wit'
+  mitigation: Review investigation guide for details
+references:
+- https://www.sygnia.co/blog/sygnia-investigation-bybit-hack/
+has_investigation_guide: true
+risk_score: 47

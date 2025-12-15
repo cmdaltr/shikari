@@ -1,0 +1,59 @@
+technique_id: T1547.006
+technique_name: Kernel Module Removal
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and\n\
+  \  event.action in (\"exec\", \"exec_event\", \"start\", \"ProcessRollup2\") and\n\
+  \  (\n    process.name == \"rmmod\" or\n    (process.name == \"modprobe\" and process.args\
+  \ in (\"--remove\", \"-r\"))\n  ) and\n  process.parent.name in (\"sudo\", \"bash\"\
+  , \"dash\", \"ash\", \"sh\", \"tcsh\", \"csh\", \"zsh\", \"ksh\", \"fish\")"
+explanation: 'Kernel modules are pieces of code that can be loaded and unloaded into
+  the kernel upon demand. They extend the
+
+  functionality of the kernel without the need to reboot the system. This rule identifies
+  attempts to remove a kernel
+
+  module.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/cd66a5af-e34b-4bb0-8931-57d0a043f2ef.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'false positives.
+
+
+    ### False positive analysis
+
+
+    - Routine administrative tasks may trigger the rule when system administrators
+    use `rmmod` or `modprobe` for legitimate maintenance. To handle this, create exceptions
+    for specific user accounts or scripts known to perform these tasks regularly.
+
+    - Automated scripts or configuration management tools that manage kernel modules
+    might cause false positives. Identify these tools and exclude their processes
+    from the rule to prevent unnecessary alerts.
+
+    - So'
+  mitigation: Review investigation guide for details
+references:
+- http://man7.org/linux/man-pages/man8/modprobe.8.html
+has_investigation_guide: true
+risk_score: 47

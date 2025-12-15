@@ -1,0 +1,38 @@
+technique_id: T1078
+technique_name: Roles Activated Too Frequently
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 645fd80d-6c07-435b-9e06-7bc1b5656cba
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  riskEventType: sequentialActivationRenewalsAlertIncident\n"
+explanation: Identifies when the same privilege role has multiple activations by the
+  same user.
+false_positives:
+- Investigate where if active time period for a role is set too short.
+references:
+- https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-how-to-configure-security-alerts#roles-are-being-activated-too-frequently
+tags:
+- attack.initial-access
+- attack.defense-evasion
+- attack.t1078
+- attack.persistence
+- attack.privilege-escalation
+logsource:
+  product: azure
+  service: pim
+detection:
+  selection:
+    riskEventType: sequentialActivationRenewalsAlertIncident
+  condition: selection
+metadata:
+  created_date: 2023-09-14
+  modified_date: '2025-11-28'
+  author: Mark Morowczynski '@markmorow', Gloria Lee, '@gleeiamglo'
+  status: test
+  imported_date: '2025-11-28'

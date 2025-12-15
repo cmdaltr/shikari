@@ -1,0 +1,68 @@
+technique_id: T1553
+technique_name: SIP Provider Modification
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\
+  \ registry.value : (\"Dll\", \"$Dll\") and\n  registry.path: (\n    \"*\\\\SOFTWARE\\\
+  \\Microsoft\\\\Cryptography\\\\OID\\\\EncodingType 0\\\\CryptSIPDllPutSignedDataMsg\\\
+  \\{*}\\\\Dll\",\n    \"*\\\\SOFTWARE\\\\WOW6432Node\\\\Microsoft\\\\Cryptography\\\
+  \\OID\\\\EncodingType 0\\\\CryptSIPDllPutSignedDataMsg\\\\{*}\\\\Dll\",\n    \"\
+  *\\\\SOFTWARE\\\\Microsoft\\\\Cryptography\\\\Providers\\\\Trust\\\\FinalPolicy\\\
+  \\{*}\\\\$Dll\",\n    \"*\\\\SOFTWARE\\\\WOW6432Node\\\\Microsoft\\\\Cryptography\\\
+  \\Providers\\\\Trust\\\\FinalPolicy\\\\{*}\\\\$Dll\"\n    ) and\n  registry.data.strings:\"\
+  *.dll\" and\n  not (process.name : \"msiexec.exe\" and registry.data.strings : \"\
+  mso.dll\") and\n  not (process.name : \"regsvr32.exe\" and registry.data.strings\
+  \ == \"WINTRUST.DLL\")"
+explanation: 'Identifies modifications to the registered Subject Interface Package
+  (SIP) providers. SIP providers are used by the
+
+  Windows cryptographic system to validate file signatures on the system. This may
+  be an attempt to bypass signature
+
+  validation checks or inject code into critical processes.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f2c7b914-eda3-40c2-96ac-d23ef91776ca.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Installation or update processes like msiexec.exe may trigger registry changes
+    as part of legitimate software installations. Exclude these by adding exceptions
+    for msiexec.exe when registry data strings include mso.dll.
+
+    - System maintenance tasks using regsvr32.exe might modify SIP provider-related
+    registry entries. Exclude regsvr32.exe when registry data strings match WINTRUST.DLL
+    to prevent false alerts.
+
+    - Regular updates or patches from trusted software vendors may'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/mattifestation/PoCSubjectInterfacePackage
+has_investigation_guide: true
+risk_score: 47

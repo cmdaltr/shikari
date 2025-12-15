@@ -1,0 +1,54 @@
+technique_id: T1055
+technique_name: Suspicious .NET Reflection via PowerShell
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:windows and\n  powershell.file.script_block_text\
+  \ : (\n    \"[System.Reflection.Assembly]::Load\" or\n    \"[Reflection.Assembly]::Load\"\
+  \ or\n    \"Assembly.Load(\"\n  ) and\n  not powershell.file.script_block_text :\
+  \ (\n        (\"CommonWorkflowParameters\" or \"RelatedLinksHelpInfo\") and\n  \
+  \      \"HelpDisplayStrings\"\n  ) and\n  not (powershell.file.script_block_text\
+  \ :\n        (\"Get-SolutionFiles\" or \"Get-VisualStudio\" or \"Select-MSBuildPath\"\
+  ) and\n        file.name : \"PathFunctions.ps1\"\n  ) and\n  not powershell.file.script_block_text\
+  \ : (\n        \"Microsoft.PowerShell.Workflow.ServiceCore\" and \"ExtractPluginProperties([string]$pluginDir\"\
+  \n  ) and \n  \n  not powershell.file.script_block_text : (\"reflection.assembly]::Load('System.\"\
+  \ or \"LoadWithPartialName('Microsoft.\" or \"::Load(\\\"Microsoft.\" or \"Microsoft.Build.Utilities.Core.dll\"\
+  ) and \n  \n  not user.id : \"S-1-5-18\""
+explanation: 'Detects the use of Reflection.Assembly to load PEs and DLLs in memory
+  in PowerShell scripts. Attackers use this method
+
+  to load executables and DLLs without writing to the disk, bypassing security solutions.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e26f042e-c590-4e82-8e05-41e81bd822ad.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately outside engineering or IT business
+    units. As long as the analyst did not identify malware or suspicious activity
+    related to the user or host, this alert can be dismissed.
+
+
+    ### Related rules
+
+
+    - PowerShell PSReflect Script - 56f2e9b5-4803-4e44-a0a4-a52dc79d57fe
+
+    - Potential Process Injection via PowerShell - 2e29e96a-b67c-455a-afe4-de6183431d0d
+
+    - PowerShell Suspicious Payload Encoded and Compressed - 81fe9dc6-a2d7-4192-a2d8'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/dotnet/api/system.reflection.assembly.load
+has_investigation_guide: true
+risk_score: 47

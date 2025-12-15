@@ -1,0 +1,50 @@
+technique_id: T1110
+technique_name: Attempts to Brute Force an Okta User Account
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:okta.system and event.action:user.account.lock
+explanation: 'Identifies when an Okta user account is locked out 3 times within a
+  3 hour window. An adversary may attempt a brute
+
+  force or password spraying attack to obtain unauthorized access to user accounts.
+  The default Okta authentication policy
+
+  ensures that a user account is locked out after 10 failed authentication attempts.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e08ccd49-0380-4b2b-8d71-8000377d6e49.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis:
+
+
+    - Determine whether the account owner or an internal user made repeated mistakes
+    in entering their credentials, leading to the account lockout.
+
+    - Ensure there are no known network or application issues that might cause these
+    events.
+
+
+    ### Response and remediation:
+
+
+    - Alert the user and your IT department immediately.
+
+    - If unauthorized access is confirmed, initiate your incident response process.
+
+    - Investigate the source of the attack. If a specific machine or network is'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

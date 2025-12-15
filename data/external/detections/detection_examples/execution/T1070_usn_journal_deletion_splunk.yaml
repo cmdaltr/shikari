@@ -1,0 +1,50 @@
+technique_id: T1070
+technique_name: USN Journal Deletion
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: "| tstats `security_content_summariesonly` \n  count values(Processes.process)\
+  \ as process \n        values(Processes.parent_process) as parent_process \n   \
+  \     min(_time) as firstTime\n        max(_time) as lastTime \n\nfrom datamodel=Endpoint.Processes\
+  \ where \n\nProcesses.process_name=fsutil.exe\nProcesses.process = \"*usn*\" \n\
+  Processes.process = \"*deletejournal*\"\n\nby Processes.action Processes.dest Processes.original_file_name\
+  \ Processes.parent_process\n   Processes.parent_process_exec Processes.parent_process_guid\
+  \ Processes.parent_process_id\n   Processes.parent_process_name Processes.parent_process_path\
+  \ Processes.process Processes.process_exec\n   Processes.process_guid Processes.process_hash\
+  \ Processes.process_id Processes.process_integrity_level\n   Processes.process_name\
+  \ Processes.process_path Processes.user Processes.user_id Processes.vendor_product\n\
+  \n| `drop_dm_object_name(Processes)` \n| `security_content_ctime(firstTime)`\n|\
+  \ `security_content_ctime(lastTime)`\n| `usn_journal_deletion_filter`"
+explanation: The following analytic detects the deletion of the USN Journal using
+  the fsutil.exe utility. It leverages data from Endpoint Detection and Response (EDR)
+  agents, focusing on process execution logs that include command-line details. This
+  activity is significant because the USN Journal maintains a log of all changes made
+  to files on the disk, and its deletion can be an indicator of an attempt to cover
+  tracks or hinder forensic investigations. If confirmed malicious, this action could
+  allow an attacker to obscure their activities, making it difficult to trace file
+  modifications and potentially compromising incident response efforts.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b6e0ff70-b122-4227-9368-4cf322ab43c3/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: None identified
+  mitigation: Review context and user activity
+references:
+- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-usn
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1070/atomic_red_team/windows-sysmon.log

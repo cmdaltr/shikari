@@ -1,0 +1,35 @@
+technique_id: T1566.001
+technique_name: O365 Safe Links Detection
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`o365_management_activity` Name="*a potentially malicious URL*" Operation=AlertEntityGenerated
+  | fromjson Data | fillnull | stats count min(_time) as firstTime max(_time) as lastTime
+  values(ObjectId) as url values(od) as desc by AlertId, trc, Name, ot, dest, vendor_account,
+  vendor_product, src | rename Name as signature, AlertId as signature_id, trc as
+  user, ot as action | eval action = CASE(action == "Allowed", "allowed", action=="BlockPageOverride",
+  "allowed", true(),"blocked") | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `o365_safe_links_detection_filter`'
+explanation: The following analytic detects when any Microsoft Safe Links alerting
+  is triggered. This behavior may indicate when user has interacted with a phishing
+  or otherwise malicious link within the Microsoft Office ecosystem.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/711d9e8c-2cb0-45cf-8813-5f191ecb9b26/
+indicators:
+- type: data_source
+  value: Office 365 Universal Audit Log
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Based on Safe Links policies, may vary.
+  mitigation: Review context and user activity
+references:
+- https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/safe-links-about?view=o365-worldwide
+- https://attack.mitre.org/techniques/T1566/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1566/o365_various_alerts/o365_various_alerts.log

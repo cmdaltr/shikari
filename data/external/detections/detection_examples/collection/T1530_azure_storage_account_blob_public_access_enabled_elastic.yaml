@@ -1,0 +1,53 @@
+technique_id: T1530
+technique_name: Azure Storage Account Blob Public Access Enabled
+tactic: collection
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: 'event.dataset: "azure.activitylogs" and
+
+  event.action: "MICROSOFT.STORAGE/STORAGEACCOUNTS/WRITE" and
+
+  event.outcome: "success" and
+
+  azure.activitylogs.properties.responseBody: *\"allowBlobPublicAccess\"\:true*'
+explanation: 'Identifies when Azure Storage Account Blob public access is enabled,
+  allowing external access to blob containers. This
+
+  technique was observed in cloud ransom-based campaigns where threat actors modified
+  storage accounts to expose
+
+  non-remotely accessible accounts to the internet for data exfiltration. Adversaries
+  abuse the
+
+  Microsoft.Storage/storageAccounts/write operation to modify public access settings.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4c5a4e8b-3f2d-4a6e-9b5c-7d8f9e0a1b2c.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Azure Activity Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate CDN integration or public website hosting may require enabling public
+    blob access. Document approved storage accounts used for public content delivery
+    and create exceptions for these specific resources.
+
+    - DevOps automation tools might temporarily enable public access during deployment
+    processes. Identify service principals used by CI/CD pipelines and consider time-based
+    exceptions during deployment windows.
+
+    - Testing and development environments may have dif'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoft.com/en-us/security/blog/2025/08/27/storm-0501s-evolving-techniques-lead-to-cloud-based-ransomware/
+- https://docs.microsoft.com/en-us/azure/storage/blobs/anonymous-read-access-configure
+has_investigation_guide: true
+risk_score: 47

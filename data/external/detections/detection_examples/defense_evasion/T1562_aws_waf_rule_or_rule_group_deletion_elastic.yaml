@@ -1,0 +1,40 @@
+technique_id: T1562
+technique_name: AWS WAF Rule or Rule Group Deletion
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:aws.cloudtrail and event.provider:(waf.amazonaws.com or waf-regional.amazonaws.com
+  or wafv2.amazonaws.com) and event.action:(DeleteRule or DeleteRuleGroup) and event.outcome:success
+explanation: Identifies the deletion of a specified AWS Web Application Firewall (WAF)
+  rule or rule group.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5beaebc1-cc13-4bfc-9949-776f9e0dc318.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance or updates by authorized personnel can trigger rule deletions.
+    Verify if the deletion aligns with scheduled maintenance activities and consider
+    excluding these events from alerts.
+
+    - Automated scripts or tools used for infrastructure management might delete and
+    recreate WAF rules as part of their normal operation. Identify these scripts and
+    whitelist their actions to prevent unnecessary alerts.
+
+    - Changes in security policies or architecture might nec'
+  mitigation: Review investigation guide for details
+references:
+- https://awscli.amazonaws.com/v2/documentation/api/latest/reference/waf/delete-rule-group.html
+- https://docs.aws.amazon.com/waf/latest/APIReference/API_waf_DeleteRuleGroup.html
+has_investigation_guide: true
+risk_score: 47

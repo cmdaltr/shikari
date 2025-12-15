@@ -1,0 +1,63 @@
+technique_id: T1047
+technique_name: Suspicious Cmd Execution via WMI
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ process.parent.name : \"WmiPrvSE.exe\" and process.name : \"cmd.exe\" and process.args\
+  \ : \"/c\" and process.args:\"/Q\" and \n process.args : \"2>&1\" and process.args:\
+  \ \"1>\"  and \n process.args : (\"C:\\\\windows\\\\temp\\\\*.txt\", \"\\\\Windows\\\
+  \\Temp\\\\*\", \"-encodehex\", \"\\\\\\\\127.0.0.1\\\\C$\\\\Windows\\\\Temp\\\\\
+  *\", \"\\\\\\\\127.0.0.1\\\\ADMIN$\\\\__*.*\")"
+explanation: 'Identifies suspicious command execution (cmd) via Windows Management
+  Instrumentation (WMI) on a remote host. This could
+
+  be indicative of adversary lateral movement.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/12f07955-1674-44f7-86b5-c35da0a6f41a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using WMI may trigger this rule. System administrators
+    often use WMI for remote management, which can include executing scripts or commands.
+    To handle this, identify and whitelist known administrative accounts or specific
+    scripts that are regularly used for maintenance.
+
+    - Automated scripts or software that rely on WMI for legitimate operations might
+    also cause false positives. Review and document these processes, then create exceptions
+    f'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/elastic-protects-against-data-wiper-malware-targeting-ukraine-hermeticwiper
+- https://www.elastic.co/security-labs/operation-bleeding-bear
+has_investigation_guide: true
+risk_score: 73

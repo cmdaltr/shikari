@@ -1,0 +1,54 @@
+technique_id: T1564.008
+technique_name: Microsoft 365 Suspicious Inbox Rule to Delete or Move Emails
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset: \"o365.audit\" and\n    event.action: \"New-InboxRule\" and\
+  \ event.outcome: \"success\" and\n    o365.audit.Parameters.SubjectContainsWords:\
+  \ (\n        *phish* or\n        *hack* or\n        *alert* or\n        *malware*\
+  \ or\n        *security* or\n        *invoice* or\n        *payment* or\n      \
+  \  *wire* or\n        *transfer* or\n        *fraud* or\n        *reset* or\n  \
+  \      *unusual* or\n        *protection* or\n        *login* or\n        *suspicious*\n\
+  \    ) and (\n    o365.audit.Parameters.DeleteMessage: True or\n    o365.audit.Parameters.MoveToFolder:\
+  \ (\n        *Deleted* or\n        *Junk* or\n        *RSS*\n    )\n)"
+explanation: 'Identifies when a user creates a new inbox rule in Microsoft 365 that
+  deletes or moves emails containing suspicious
+
+  keywords. Adversaries who have compromised accounts often create inbox rules to
+  hide alerts, security notifications, or
+
+  other sensitive messages by automatically deleting them or moving them to obscure
+  folders. Common destinations include
+
+  Deleted Items, Junk Email, RSS Feeds, and RSS Subscriptions. This is a New Terms
+  rule that triggers only when the user
+
+  principal name and associated source IP address have not been observed performing
+  this activity in the past 14 days.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/40fe11c2-376e-11f0-9a82-f661ea17fbcd.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+- type: data_source
+  value: Microsoft 365 Audit Logs
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- Some rules may be created by users for\
+    \ legitimate purposes (e.g., moving newsletters).\n- Outlook plugins or automated\
+    \ email management tools could create rules that resemble this behavior.\n- Newly\
+    \ onboarded employees might configure rules for personal filtering without malicious\
+    \ intent.\n\n### Response and remediation\n\n- If the rule is determined to be\
+    \ malicious:\n  - Remove the inbox rule immediately.\n  - Review the user’s mailbox\
+    \ for signs of data theft or additional ma"
+  mitigation: Review investigation guide for details
+references:
+- https://learn.microsoft.com/en-us/defender-office-365/detect-and-remediate-outlook-rules-forms-attack
+- https://learn.microsoft.com/en-us/defender-xdr/alert-grading-playbook-inbox-manipulation-rules
+- https://blog.barracuda.com/2023/09/20/threat-spotlight-attackers-inbox-rules-evade-detection
+has_investigation_guide: true
+risk_score: 47

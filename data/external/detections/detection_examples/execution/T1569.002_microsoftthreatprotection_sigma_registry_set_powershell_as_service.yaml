@@ -1,0 +1,39 @@
+technique_id: T1569.002
+technique_name: PowerShell as a Service in Registry
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 4a5f5a5e-ac01-474b-9b4e-d61298c9df1d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Details|contains:\n  - powershell\n  - pwsh\n  TargetObject|contains: \\Services\\\
+  \n  TargetObject|endswith: \\ImagePath\n"
+explanation: Detects that a powershell code is written to the registry as a service.
+false_positives:
+- Unknown
+references:
+- https://speakerdeck.com/heirhabarov/hunting-for-powershell-abuse
+tags:
+- attack.execution
+- attack.t1569.002
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains: \Services\
+    TargetObject|endswith: \ImagePath
+    Details|contains:
+    - powershell
+    - pwsh
+  condition: selection
+metadata:
+  created_date: 2020-10-06
+  modified_date: 2023-08-17
+  author: oscd.community, Natalia Shornikova
+  status: test
+  imported_date: '2025-11-28'

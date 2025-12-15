@@ -1,0 +1,54 @@
+technique_id: T1552
+technique_name: Sensitive Files Compression
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:linux and event.type:start and\n \
+  \ process.name:(zip or tar or gzip or hdiutil or 7z) and\n  process.args:\n    (\n\
+  \      /root/.ssh/id_rsa or\n      /root/.ssh/id_rsa.pub or\n      /root/.ssh/id_ed25519\
+  \ or\n      /root/.ssh/id_ed25519.pub or\n      /root/.ssh/authorized_keys or\n\
+  \      /root/.ssh/authorized_keys2 or\n      /root/.ssh/known_hosts or\n      /root/.bash_history\
+  \ or\n      /etc/hosts or\n      /home/*/.ssh/id_rsa or\n      /home/*/.ssh/id_rsa.pub\
+  \ or\n      /home/*/.ssh/id_ed25519 or\n      /home/*/.ssh/id_ed25519.pub or\n \
+  \     /home/*/.ssh/authorized_keys or\n      /home/*/.ssh/authorized_keys2 or\n\
+  \      /home/*/.ssh/known_hosts or\n      /home/*/.bash_history or\n      /root/.aws/credentials\
+  \ or\n      /root/.aws/config or\n      /home/*/.aws/credentials or\n      /home/*/.aws/config\
+  \ or\n      /root/.docker/config.json or\n      /home/*/.docker/config.json or\n\
+  \      /etc/group or\n      /etc/passwd or\n      /etc/shadow or\n      /etc/gshadow\n\
+  \    )"
+explanation: 'Identifies the use of a compression utility to collect known files containing
+  sensitive information, such as credentials
+
+  and system configurations.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6b84d470-9036-4cc0-a27c-6d90bbfe81ab.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine system backups or administrative tasks may trigger the rule if they
+    involve compressing sensitive files for legitimate purposes. Users can create
+    exceptions for known backup scripts or administrative processes by excluding specific
+    process names or command-line arguments associated with these tasks.
+
+    - Developers or system administrators might compress configuration files during
+    development or deployment processes. To handle this, users can whitelist specific
+    us'
+  mitigation: Review investigation guide for details
+references:
+- https://www.trendmicro.com/en_ca/research/20/l/teamtnt-now-deploying-ddos-capable-irc-bot-tntbotinger.html
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,42 @@
+technique_id: T1222.001
+technique_name: AD Object WriteDAC Access
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.89
+validated: true
+source: sigma
+sigma_id: 028c7842-4243-41cd-be6f-12f3cf1a26c7
+level: critical
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  AccessMask: '0x40000'\n  EventID: 4662\n  ObjectServer: DS\n  ObjectType:\n \
+  \ - 19195a5b-6da0-11d0-afd3-00c04fd930c9\n  - domainDNS\n"
+explanation: Detects WRITE_DAC access to a domain object
+false_positives:
+- Unknown
+references:
+- https://threathunterplaybook.com/hunts/windows/180815-ADObjectAccessReplication/notebook.html
+- https://threathunterplaybook.com/library/windows/active_directory_replication.html
+- https://threathunterplaybook.com/hunts/windows/190101-ADModDirectoryReplication/notebook.html
+tags:
+- attack.defense-evasion
+- attack.t1222.001
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4662
+    ObjectServer: DS
+    AccessMask: '0x40000'
+    ObjectType:
+    - 19195a5b-6da0-11d0-afd3-00c04fd930c9
+    - domainDNS
+  condition: selection
+metadata:
+  created_date: 2019-09-12
+  modified_date: 2021-11-27
+  author: Roberto Rodriguez @Cyb3rWard0g
+  status: test
+  imported_date: '2025-11-28'

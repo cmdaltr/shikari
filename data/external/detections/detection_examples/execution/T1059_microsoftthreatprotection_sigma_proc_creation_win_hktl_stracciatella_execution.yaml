@@ -1,0 +1,45 @@
+technique_id: T1059
+technique_name: HackTool - Stracciatella Execution
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 7a4d9232-92fc-404d-8ce1-4c92e7caf539
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  - Image|endswith: \\Stracciatella.exe\n- OriginalFileName: Stracciatella.exe\n-\
+  \ Description: Stracciatella\n- Hashes|contains:\n  - SHA256=9d25e61ec1527e2a69d7c2a4e3fe2fe15890710c198a66a9f25d99fdf6c7b956\n\
+  \  - SHA256=fd16609bd9830c63b9413671678bb159b89c357d21942ddbb6b93add808d121a\n"
+explanation: Detects Stracciatella which executes a Powershell runspace from within
+  C# (aka SharpPick technique) with AMSI, ETW and Script Block Logging disabled based
+  on PE metadata characteristics.
+false_positives:
+- Unlikely
+references:
+- https://github.com/mgeeky/Stracciatella
+tags:
+- attack.execution
+- attack.defense-evasion
+- attack.t1059
+- attack.t1562.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+  - Image|endswith: \Stracciatella.exe
+  - OriginalFileName: Stracciatella.exe
+  - Description: Stracciatella
+  - Hashes|contains:
+    - SHA256=9d25e61ec1527e2a69d7c2a4e3fe2fe15890710c198a66a9f25d99fdf6c7b956
+    - SHA256=fd16609bd9830c63b9413671678bb159b89c357d21942ddbb6b93add808d121a
+  condition: selection
+metadata:
+  created_date: 2023-04-17
+  modified_date: 2024-11-23
+  author: pH-T (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

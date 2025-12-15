@@ -1,0 +1,33 @@
+technique_id: T1110
+technique_name: Crowdstrike Medium Severity Alert
+tactic: execution
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '`crowdstrike_stream` | rename event.EndpointIp as src_ip, event.EndpointName
+  as src_host, event.UserName as user, event.IncidentDescription as description, event.IncidentType
+  as type, event.NumbersOfAlerts as count_alerts, event.SeverityName as severity |
+  stats count min(_time) as firstTime max(_time) as lastTime by src_ip, src_host,
+  user, description, type, count_alerts, severity | where LIKE (severity, "%MEDIUM%")
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `crowdstrike_medium_severity_alert_filter`'
+explanation: The following analytic detects a CrowdStrike alert with MEDIUM severity
+  indicates a potential threat that requires prompt attention. This alert level suggests
+  suspicious activity that may compromise security but is not immediately critical.
+  It typically involves detectable but non-imminent risks, such as unusual behavior
+  or attempted policy violations, which should be investigated further and mitigated
+  quickly to prevent escalation of attacks.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/7e80d92a-6ec3-4eb1-a444-1480acfe2d14/
+indicators:
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.crowdstrike.com/wp-content/uploads/2022/12/CrowdStrike-Falcon-Event-Streams-Add-on-Guide-v3.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/suspicious_behaviour/crowdstrike_stream/medium_alert/crowdstrike_medium_clean.log

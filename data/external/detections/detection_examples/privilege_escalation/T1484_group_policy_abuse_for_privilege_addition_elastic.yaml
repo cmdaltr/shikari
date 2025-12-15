@@ -1,0 +1,55 @@
+technique_id: T1484
+technique_name: Group Policy Abuse for Privilege Addition
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where host.os.type == \"windows\" and event.code: \"5136\" and\n  winlog.event_data.AttributeLDAPDisplayName:\
+  \ \"gPCMachineExtensionNames\" and\n  winlog.event_data.AttributeValue: \"*827D319E-6EAC-11D2-A4EA-00C04F79F83A*\"\
+  \ and\n  winlog.event_data.AttributeValue: \"*803E14A0-B4FB-11D0-A0D0-00A0C90F574B*\""
+explanation: 'Detects the first occurrence of a modification to Group Policy Object
+  Attributes to add privileges to user accounts or
+
+  use them to add users as local admins.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b9554892-5e0e-424b-83a0-5aef95aa43bf.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Inspect whether the user that has done the modifications should be allowed to.
+    The user name can be found in the `winlog.event_data.SubjectUserName` field.
+
+
+    ### Related rules
+
+
+    - Scheduled Task Execution at Scale via GPO - 15a8ba77-1c13-4274-88fe-6bd14133861e
+
+    - Startup/Logon Script added to Group Policy Object - 16fac1a1-21ee-4ca6-b720-458e3855d046
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - The investiga'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/atc-project/atc-data/blob/master/docs/Logging_Policies/LP_0025_windows_audit_directory_service_changes.md
+- https://labs.f-secure.com/tools/sharpgpoabuse
+has_investigation_guide: true
+risk_score: 73

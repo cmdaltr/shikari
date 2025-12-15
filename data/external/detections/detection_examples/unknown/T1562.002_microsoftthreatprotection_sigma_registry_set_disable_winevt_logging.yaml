@@ -1,0 +1,73 @@
+technique_id: T1562.002
+technique_name: Disable Windows Event Logging Via Registry
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: 2f78da12-f7c7-430b-8b19-a28f269b77a3
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_* and not 1 of filter_optional_*\nfilter_main_iis:\n  Image|endswith:\
+  \ \\TiWorker.exe\n  Image|startswith: C:\\Windows\\winsxs\\\nfilter_main_svchost:\n\
+  \  Image: C:\\Windows\\System32\\svchost.exe\n  TargetObject|contains:\n  - \\Microsoft\\\
+  Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-FileInfoMinifilter\n\
+  \  - \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-ASN1\\\
+  \n  - \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Kernel-AppCompat\\\
+  \n  - \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Runtime\\\
+  Error\\\n  - \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-CAPI2/Operational\\\
+  \nfilter_main_trusted_installer:\n  Image: C:\\Windows\\servicing\\TrustedInstaller.exe\n\
+  \  TargetObject|contains: \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\\
+  Microsoft-Windows-Compat-Appraiser\nfilter_main_wevutil:\n  Image: C:\\Windows\\\
+  system32\\wevtutil.exe\nfilter_optional_empty:\n  Image: ''\nfilter_optional_null:\n\
+  \  Image: null\nselection:\n  Details: DWORD (0x00000000)\n  TargetObject|contains:\
+  \ \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\\n  TargetObject|endswith:\
+  \ \\Enabled\n"
+explanation: Detects tampering with the "Enabled" registry key in order to disable
+  Windows logging of a Windows event channel
+false_positives:
+- Rare falsepositives may occur from legitimate administrators disabling specific
+  event log for troubleshooting
+references:
+- https://twitter.com/WhichbufferArda/status/1543900539280293889
+- https://github.com/DebugPrivilege/CPP/blob/c39d365617dbfbcb01fffad200d52b6239b2918c/Windows%20Defender/RestoreDefenderConfig.cpp
+tags:
+- attack.defense-evasion
+- attack.t1562.002
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains: \Microsoft\Windows\CurrentVersion\WINEVT\Channels\
+    TargetObject|endswith: \Enabled
+    Details: DWORD (0x00000000)
+  filter_main_wevutil:
+    Image: C:\Windows\system32\wevtutil.exe
+  filter_main_iis:
+    Image|startswith: C:\Windows\winsxs\
+    Image|endswith: \TiWorker.exe
+  filter_main_svchost:
+    Image: C:\Windows\System32\svchost.exe
+    TargetObject|contains:
+    - \Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-FileInfoMinifilter
+    - \Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-ASN1\
+    - \Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-Kernel-AppCompat\
+    - \Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-Runtime\Error\
+    - \Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-CAPI2/Operational\
+  filter_main_trusted_installer:
+    Image: C:\Windows\servicing\TrustedInstaller.exe
+    TargetObject|contains: \Microsoft\Windows\CurrentVersion\WINEVT\Channels\Microsoft-Windows-Compat-Appraiser
+  filter_optional_empty:
+    Image: ''
+  filter_optional_null:
+    Image: null
+  condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*
+metadata:
+  created_date: 2022-07-04
+  modified_date: 2024-03-25
+  author: frack113, Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

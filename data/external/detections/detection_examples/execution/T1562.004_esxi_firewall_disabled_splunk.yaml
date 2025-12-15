@@ -1,0 +1,30 @@
+technique_id: T1562.004
+technique_name: ESXi Firewall Disabled
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`esxi_syslog` Message="*network firewall set*" AND Message="*enabled f*" |
+  rex field=_raw "Z (?<dest>[\w\.]+)\s" | stats min(_time) as firstTime max(_time)
+  as lastTime count by dest Message | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `esxi_firewall_disabled_filter`'
+explanation: This detection identifies when the ESXi firewall is disabled or set to
+  permissive mode, which can expose the host to unauthorized access and network-based
+  attacks. Such changes are often a precursor to lateral movement, data exfiltration,
+  or the installation of malicious software by a threat actor.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e321804c-8eb5-42f2-a843-36b289a6c6b2/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments, however tune as needed.
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.004/esxi_firewall_disabled/esxi_firewall_disabled.log

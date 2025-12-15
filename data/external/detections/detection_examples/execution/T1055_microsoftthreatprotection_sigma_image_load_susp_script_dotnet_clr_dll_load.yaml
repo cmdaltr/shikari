@@ -1,0 +1,53 @@
+technique_id: T1055
+technique_name: DotNet CLR DLL Loaded By Scripting Applications
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 4508a70e-97ef-4300-b62b-ff27992990ea
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ImageLoaded|endswith:\n  - \\clr.dll\n  - \\mscoree.dll\n  - \\mscorlib.dll\n\
+  \  Image|endswith:\n  - \\cmstp.exe\n  - \\cscript.exe\n  - \\mshta.exe\n  - \\\
+  msxsl.exe\n  - \\regsvr32.exe\n  - \\wmic.exe\n  - \\wscript.exe\n"
+explanation: Detects .NET CLR DLLs being loaded by scripting applications such as
+  wscript or cscript. This could be an indication of potential suspicious execution.
+false_positives:
+- Unknown
+references:
+- https://github.com/tyranid/DotNetToJScript
+- https://thewover.github.io/Introducing-Donut/
+- https://web.archive.org/web/20230329154538/https://blog.menasec.net/2019/07/interesting-difr-traces-of-net-clr.html
+- https://web.archive.org/web/20221026202428/https://gist.github.com/code-scrap/d7f152ffcdb3e0b02f7f394f5187f008
+tags:
+- attack.defense-evasion
+- attack.execution
+- attack.privilege-escalation
+- attack.t1055
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \cmstp.exe
+    - \cscript.exe
+    - \mshta.exe
+    - \msxsl.exe
+    - \regsvr32.exe
+    - \wmic.exe
+    - \wscript.exe
+    ImageLoaded|endswith:
+    - \clr.dll
+    - \mscoree.dll
+    - \mscorlib.dll
+  condition: selection
+metadata:
+  created_date: 2020-10-14
+  modified_date: 2023-02-23
+  author: omkar72, oscd.community
+  status: test
+  imported_date: '2025-11-28'

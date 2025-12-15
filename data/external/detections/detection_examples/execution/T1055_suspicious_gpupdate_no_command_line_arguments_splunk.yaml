@@ -1,0 +1,52 @@
+technique_id: T1055
+technique_name: Suspicious GPUpdate no Command Line Arguments
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count FROM datamodel=Endpoint.Processes
+  where `process_gpupdate` by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | regex
+  process="(?i)(gpupdate\.exe.{0,4}$)" | `suspicious_gpupdate_no_command_line_arguments_filter`'
+explanation: The following analytic detects the execution of gpupdate.exe without
+  any command line arguments. This behavior is identified using data from Endpoint
+  Detection and Response (EDR) agents, focusing on process execution logs. It is significant
+  because gpupdate.exe typically runs with specific arguments, and its execution without
+  them is often associated with malicious activities, such as those performed by Cobalt
+  Strike. If confirmed malicious, this activity could indicate an attempt to execute
+  unauthorized commands or scripts, potentially leading to further system compromise
+  or lateral movement within the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/f308490a-473a-40ef-ae64-dd7a6eba284a/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Limited false positives may be present in small environments. Tuning
+    may be required based on parent process.
+  mitigation: Review context and user activity
+references:
+- https://raw.githubusercontent.com/xx0hcd/Malleable-C2-Profiles/0ef8cf4556e26f6d4190c56ba697c2159faa5822/crimeware/trick_ryuk.profile
+- https://www.cobaltstrike.com/blog/learn-pipe-fitting-for-all-of-your-offense-projects/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1055/cobalt_strike/windows-sysmon.log

@@ -1,0 +1,38 @@
+technique_id: T1113
+technique_name: Windows Screen Capture Via Powershell
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`powershell` EventCode=4104 ScriptBlockText = "*[Drawing.Graphics]::FromImage(*"
+  AND ScriptBlockText = "*New-Object Drawing.Bitmap*" AND ScriptBlockText = "*.CopyFromScreen*"
+  | fillnull | stats count min(_time) as firstTime max(_time) as lastTime by dest
+  signature signature_id user_id vendor_product EventID Guid Opcode Name Path ProcessID
+  ScriptBlockId ScriptBlockText | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_screen_capture_via_powershell_filter`'
+explanation: The following analytic detects the execution of a PowerShell script designed
+  to capture screen images on a host. It leverages PowerShell Script Block Logging
+  to identify specific script block text patterns associated with screen capture activities.
+  This behavior is significant as it may indicate an attempt to exfiltrate sensitive
+  information by capturing desktop screenshots. If confirmed malicious, this activity
+  could allow an attacker to gather visual data from the compromised system, potentially
+  leading to data breaches or further exploitation.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/5e0b1936-8f99-4399-8ee2-9edc5b32e170/
+indicators:
+- type: data_source
+  value: Powershell Script Block Logging 4104
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://twitter.com/_CERT_UA/status/1620781684257091584
+- https://cert.gov.ua/article/3761104
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/winter-vivern/pwh_exfiltration/windows-powershell-xml.log

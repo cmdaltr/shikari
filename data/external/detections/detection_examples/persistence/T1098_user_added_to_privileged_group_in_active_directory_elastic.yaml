@@ -1,0 +1,63 @@
+technique_id: T1098
+technique_name: User Added to Privileged Group in Active Directory
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "iam where host.os.type == \"windows\" and event.action == \"added-member-to-group\"\
+  \ and\n(\n    group.id : \"S-1-5-21*\" and\n    (\n        group.name : (\n    \
+  \        \"Admin*\",\n            \"Domain Admins\",\n            \"Enterprise Admins\"\
+  ,\n            \"Backup Admins\",\n            \"Schema Admins\",\n            \"\
+  DnsAdmins\",\n            \"Exchange Organization Administrators\",\n          \
+  \  \"Print Operators\",\n            \"Server Operators\",\n            \"Account\
+  \ Operators\"\n        )\n    ) or\n    (\n        group.id : (\n            \"\
+  S-1-5-21-*-544\",\n            \"S-1-5-21-*-512\",\n            \"S-1-5-21-*-519\"\
+  ,\n            \"S-1-5-21-*-551\",\n            \"S-1-5-21-*-518\",\n          \
+  \  \"S-1-5-21-*-1101\",\n            \"S-1-5-21-*-1102\",\n            \"S-1-5-21-*-550\"\
+  ,\n            \"S-1-5-21-*-549\",\n            \"S-1-5-21-*-548\"\n        )\n\
+  \    )\n)"
+explanation: 'Identifies a user being added to a privileged group in Active Directory.
+  Privileged accounts and groups in Active
+
+  Directory are those to which powerful rights, privileges, and permissions are granted
+  that allow them to perform nearly
+
+  any action in Active Directory and on domain-joined systems.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5cd8e1f7-0050-4afc-b2df-904e40b2f5ae.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This attack abuses a legitimate Active Directory mechanism, so it is important
+    to determine whether the activity is legitimate, if the administrator is authorized
+    to perform this operation, and if there is a need to grant the account this level
+    of privilege.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - If the admin is not aware of the operation, activate your Active Directory incident
+    response plan.
+
+    - If'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/appendix-b--privileged-accounts-and-groups-in-active-directory
+has_investigation_guide: true
+risk_score: 47

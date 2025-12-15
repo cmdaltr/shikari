@@ -1,0 +1,61 @@
+technique_id: T1055
+technique_name: Potential Process Injection via PowerShell
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:windows and\n  powershell.file.script_block_text\
+  \ : (\n   (VirtualAlloc or VirtualAllocEx or VirtualProtect or LdrLoadDll or LoadLibrary\
+  \ or LoadLibraryA or\n      LoadLibraryEx or GetProcAddress or OpenProcess or OpenProcessToken\
+  \ or AdjustTokenPrivileges) and\n   (WriteProcessMemory or CreateRemoteThread or\
+  \ NtCreateThreadEx or CreateThread or QueueUserAPC or\n      SuspendThread or ResumeThread\
+  \ or GetDelegateForFunctionPointer)\n  ) and not \n  file.directory: (\n    \"C:\\\
+  ProgramData\\Microsoft\\Windows Defender Advanced Threat Protection\\SenseCM\" or\n\
+  \    \"C:\\ProgramData\\Microsoft\\Windows Defender Advanced Threat Protection\\\
+  Downloads\"\n  )"
+explanation: 'Detects the use of Windows API functions that are commonly abused by
+  malware and security tools to load malicious code
+
+  or inject it into remote processes.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2e29e96a-b67c-455a-afe4-de6183431d0d.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Related rules
+
+
+    - PowerShell PSReflect Script - 56f2e9b5-4803-4e44-a0a4-a52dc79d57fe
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-compromise behavior.
+
+    - Restrict PowerShell usage outside of IT and engineering business units using
+    GP'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/EmpireProject/Empire/blob/master/data/module_source/management/Invoke-PSInject.ps1
+- https://github.com/EmpireProject/Empire/blob/master/data/module_source/management/Invoke-ReflectivePEInjection.ps1
+- https://github.com/BC-SECURITY/Empire/blob/master/empire/server/data/module_source/credentials/Invoke-Mimikatz.ps1
+- https://www.elastic.co/security-labs/detect-credential-access
+has_investigation_guide: true
+risk_score: 73

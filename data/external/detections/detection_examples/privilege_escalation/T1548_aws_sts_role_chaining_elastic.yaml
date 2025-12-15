@@ -1,0 +1,51 @@
+technique_id: T1548
+technique_name: AWS STS Role Chaining
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset : \"aws.cloudtrail\" and\n    event.provider : \"sts.amazonaws.com\"\
+  \ and \n    event.action : \"AssumeRole\" and \n    aws.cloudtrail.user_identity.type\
+  \ : \"AssumedRole\" and \n    event.outcome : \"success\""
+explanation: 'Identifies role chaining activity. Role chaining is when you use one
+  assumed role to assume a second role through the
+
+  AWS CLI or API. While this a recognized functionality in AWS, role chaining can
+  be abused for privilege escalation if
+
+  the subsequent assumed role provides additional privileges. Role chaining can also
+  be used as a persistence mechanism as
+
+  each AssumeRole action results in a refreshed session token with a 1 hour maximum
+  duration. This is a new terms rule that looks for the first occurance of one role
+  (aws.cloudtrail.user_identity.session_context.session_issuer.arn) assuming another
+  (aws.cloudtrail.resources.arn).'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ba5a0b0c-b477-4729-a3dc-0147c2049cf1.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS STS
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- **Expected role chaining.** Some organizations\
+    \ use role chaining as part of multi-account access strategies. Maintain an allowlist\
+    \ of known `issuer.arn` - `target.arn` pairs.  \n- **Automation and scheduled\
+    \ tasks.** CI/CD systems or monitoring tools may assume roles frequently. Validate\
+    \ by `userAgent` and historical behavior.  \n- **Test/dev environments.** Development\
+    \ accounts may generate experimental chaining patterns. Tune rules or exceptions\
+    \ to exclude low-risk acco"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html#id_roles_terms-and-concepts
+- https://www.uptycs.com/blog/detecting-anomalous-aws-sessions-temporary-credentials
+- https://hackingthe.cloud/aws/post_exploitation/role-chain-juggling/
+has_investigation_guide: true
+risk_score: 47

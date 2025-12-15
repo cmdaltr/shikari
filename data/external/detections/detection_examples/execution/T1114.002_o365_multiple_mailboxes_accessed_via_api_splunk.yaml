@@ -1,0 +1,45 @@
+technique_id: T1114.002
+technique_name: O365 Multiple Mailboxes Accessed via API
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=Exchange Operation=MailItemsAccessed AppId=*
+  ClientAppId=* | bucket span=10m _time | eval matchRegex=if(match(ClientInfoString,"^Client=WebServices;ExchangeWebServices"),
+  1, 0) | search (AppId="00000003-0000-0000-c000-000000000000" OR matchRegex=1) |
+  fillnull | stats values(ClientIPAddress) as src dc(user) as unique_mailboxes values(user)
+  as user by _time ClientAppId ClientInfoString vendor_account vendor_product dest
+  signature | where unique_mailboxes > 5 | `o365_multiple_mailboxes_accessed_via_api_filter`'
+explanation: The following analytic detects when a high number of Office 365 Exchange
+  mailboxes are accessed via API (Microsoft Graph API or Exchange Web Services) within
+  a short timeframe. It leverages 'MailItemsAccessed' operations in Exchange, using
+  AppId and regex to identify API interactions. This activity is significant as it
+  may indicate unauthorized mass email access, potentially signaling data exfiltration
+  or account compromise. If confirmed malicious, attackers could gain access to sensitive
+  information, leading to data breaches and further exploitation of compromised accounts.
+  The threshold is set to flag over five unique mailboxes accessed within 10 minutes,
+  but should be tailored to your environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/7cd853e9-d370-412f-965d-a2bcff2a2908/
+indicators:
+- type: data_source
+  value: O365 MailItemsAccessed
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Legitimate applications may access multiple mailboxes via an API. You
+    can filter by the ClientAppId or the CLientIpAddress fields.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1114/002/
+- https://learn.microsoft.com/en-us/troubleshoot/azure/active-directory/verify-first-party-apps-sign-in
+- https://learn.microsoft.com/en-us/graph/permissions-reference
+- https://attack.mitre.org/techniques/T1114/002/
+- https://www.microsoft.com/en-us/security/blog/2024/01/25/midnight-blizzard-guidance-for-responders-on-nation-state-attack/
+- https://learn.microsoft.com/en-us/exchange/client-developer/exchange-web-services/ews-applications-and-the-exchange-architecture
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1114.002/o365_multiple_mailboxes_accessed_via_api/o365_multiple_mailboxes_accessed_via_api.log

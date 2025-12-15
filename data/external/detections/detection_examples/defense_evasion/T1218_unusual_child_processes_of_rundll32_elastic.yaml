@@ -1,0 +1,59 @@
+technique_id: T1218
+technique_name: Unusual Child Processes of RunDLL32
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence with maxspan=1h\n  [process where host.os.type == \"windows\" and\
+  \ event.type == \"start\" and\n     (process.name : \"rundll32.exe\" or process.pe.original_file_name\
+  \ == \"RUNDLL32.EXE\") and\n      (process.args_count == 1 and\n        /* Excludes\
+  \ bug where a missing closing quote sets args_count to 1 despite extra args */\n\
+  \        not process.command_line regex~ \"\"\"\\\".*\\.exe[^\\\"].*\"\"\")\n  ]\
+  \ by process.entity_id\n  [process where host.os.type == \"windows\" and event.type\
+  \ == \"start\" and process.parent.name : \"rundll32.exe\"\n  ] by process.parent.entity_id"
+explanation: 'Identifies child processes of unusual instances of RunDLL32 where the
+  command line parameters were suspicious. Misuse of
+
+  RunDLL32 could indicate malicious activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f036953a-4615-4707-a1ca-dc53bf69dcd5.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Related Rules
+
+
+    - Unusual Network Connection via RunDLL32 - 52aaab7b-b51c-441a-89ce-4387b3aea886
+
+
+    ### Response and Remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - If the triage identified malware, search the environment for additio'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

@@ -1,0 +1,323 @@
+technique_id: T1102
+technique_name: New Connection Initiated To Potential Dead Drop Resolver Domain
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.89
+validated: true
+source: sigma
+sigma_id: 297ae038-edc2-4b2e-bb3e-7c5fc94dd5c7
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_avant:\n  Image|endswith: \\avant.exe\n  Image|startswith:\n\
+  \  - C:\\Program Files (x86)\\Avant Browser\\\n  - C:\\Program Files\\Avant Browser\\\
+  \nfilter_main_brave:\n  Image|endswith: \\brave.exe\n  Image|startswith: C:\\Program\
+  \ Files\\BraveSoftware\\\nfilter_main_chrome:\n  Image:\n  - C:\\Program Files\\\
+  Google\\Chrome\\Application\\chrome.exe\n  - C:\\Program Files (x86)\\Google\\Chrome\\\
+  Application\\chrome.exe\nfilter_main_chrome_appdata:\n  Image|endswith: \\AppData\\\
+  Local\\Google\\Chrome\\Application\\chrome.exe\n  Image|startswith: C:\\Users\\\n\
+  filter_main_defender:\n  Image|contains:\n  - C:\\Program Files\\Windows Defender\
+  \ Advanced Threat Protection\\\n  - C:\\Program Files\\Windows Defender\\\n  - C:\\\
+  ProgramData\\Microsoft\\Windows Defender\\Platform\\\n  Image|endswith:\n  - \\\
+  MsMpEng.exe\n  - \\MsSense.exe\nfilter_main_discord:\n  DestinationHostname|endswith:\n\
+  \  - discord.com\n  - cdn.discordapp.com\n  Image|contains: \\AppData\\Local\\Discord\\\
+  \n  Image|endswith: \\Discord.exe\nfilter_main_dropbox:\n  DestinationHostname|endswith:\
+  \ dropbox.com\n  Image|endswith:\n  - \\Dropbox.exe\n  - \\DropboxInstaller.exe\n\
+  \  Image|startswith:\n  - C:\\Program Files (x86)\\Dropbox\\Client\\\n  - C:\\Program\
+  \ Files\\Dropbox\\Client\\\nfilter_main_edge_1:\n- Image|startswith: C:\\Program\
+  \ Files (x86)\\Microsoft\\EdgeWebView\\Application\\\n- Image|endswith: \\WindowsApps\\\
+  MicrosoftEdge.exe\n- Image:\n  - C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\\
+  msedge.exe\n  - C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe\nfilter_main_edge_2:\n\
+  \  Image|endswith:\n  - \\msedge.exe\n  - \\msedgewebview2.exe\n  Image|startswith:\n\
+  \  - C:\\Program Files (x86)\\Microsoft\\EdgeCore\\\n  - C:\\Program Files\\Microsoft\\\
+  EdgeCore\\\nfilter_main_empty:\n  Image: ''\nfilter_main_falkon:\n  Image|endswith:\
+  \ \\falkon.exe\n  Image|startswith:\n  - C:\\Program Files\\Falkon\\\n  - C:\\Program\
+  \ Files (x86)\\Falkon\\\nfilter_main_firefox:\n  Image:\n  - C:\\Program Files\\\
+  Mozilla Firefox\\firefox.exe\n  - C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\n\
+  filter_main_firefox_appdata:\n  Image|endswith: \\AppData\\Local\\Mozilla Firefox\\\
+  firefox.exe\n  Image|startswith: C:\\Users\\\nfilter_main_flock:\n  Image|contains:\
+  \ \\AppData\\Local\\Flock\\\n  Image|endswith: \\Flock.exe\nfilter_main_googledrive:\n\
+  \  DestinationHostname|endswith: drive.google.com\n  Image|contains:\n  - C:\\Program\
+  \ Files\\Google\\Drive File Stream\\\n  - C:\\Program Files (x86)\\Google\\Drive\
+  \ File Stream\\\n  Image|endswith: GoogleDriveFS.exe\nfilter_main_ie:\n  Image:\n\
+  \  - C:\\Program Files (x86)\\Internet Explorer\\iexplore.exe\n  - C:\\Program Files\\\
+  Internet Explorer\\iexplore.exe\nfilter_main_maxthon:\n  Image|contains: \\AppData\\\
+  Local\\Maxthon\\\n  Image|endswith: \\maxthon.exe\nfilter_main_mega:\n  DestinationHostname|endswith:\n\
+  \  - mega.co.nz\n  - mega.nz\n  Image|endswith:\n  - \\MEGAsync.exe\n  - \\MEGAsyncSetup32_*RC.exe\n\
+  \  - \\MEGAsyncSetup32.exe\n  - \\MEGAsyncSetup64.exe\n  - \\MEGAupdater.exe\nfilter_main_midori:\n\
+  \  Image|contains: \\AppData\\Local\\Programs\\midori-ng\\\n  Image|endswith: \\\
+  Midori Next Generation.exe\nfilter_main_null:\n  Image: null\nfilter_main_onedrive:\n\
+  \  DestinationHostname|endswith: onedrive.com\n  Image|contains: \\AppData\\Local\\\
+  Microsoft\\OneDrive\\\n  Image|endswith: \\OneDrive.exe\nfilter_main_opera:\n  Image|contains:\
+  \ \\AppData\\Local\\Programs\\Opera\\\n  Image|endswith: \\opera.exe\nfilter_main_phoebe:\n\
+  \  Image|contains: \\AppData\\Local\\Phoebe\\\n  Image|endswith: \\Phoebe.exe\n\
+  filter_main_prtg:\n  Image|endswith:\n  - C:\\Program Files (x86)\\PRTG Network\
+  \ Monitor\\PRTG Probe.exe\n  - C:\\Program Files\\PRTG Network Monitor\\PRTG Probe.exe\n\
+  filter_main_qtweb:\n  Image|endswith: \\QtWeb.exe\n  Image|startswith:\n  - C:\\\
+  Program Files (x86)\\QtWeb\\\n  - C:\\Program Files\\QtWeb\\\nfilter_main_safari:\n\
+  \  Image|contains:\n  - C:\\Program Files (x86)\\Safari\\\n  - C:\\Program Files\\\
+  Safari\\\n  Image|endswith: \\safari.exe\nfilter_main_seamonkey:\n  Image|endswith:\
+  \ \\seamonkey.exe\n  Image|startswith:\n  - C:\\Program Files\\SeaMonkey\\\n  -\
+  \ C:\\Program Files (x86)\\SeaMonkey\\\nfilter_main_slimbrowser:\n  Image|endswith:\
+  \ \\slimbrowser.exe\n  Image|startswith:\n  - C:\\Program Files\\SlimBrowser\\\n\
+  \  - C:\\Program Files (x86)\\SlimBrowser\\\nfilter_main_telegram:\n  DestinationHostname|endswith:\
+  \ .t.me\n  Image|contains: \\AppData\\Roaming\\Telegram Desktop\\\n  Image|endswith:\
+  \ \\Telegram.exe\nfilter_main_vivaldi:\n  Image|contains: \\AppData\\Local\\Vivaldi\\\
+  \n  Image|endswith: \\vivaldi.exe\nfilter_main_whale:\n  Image|endswith: \\whale.exe\n\
+  \  Image|startswith:\n  - C:\\Program Files\\Naver\\Naver Whale\\\n  - C:\\Program\
+  \ Files (x86)\\Naver\\Naver Whale\\\nfilter_main_whaterfox:\n  Image|endswith: \\\
+  Waterfox.exe\n  Image|startswith:\n  - C:\\Program Files\\Waterfox\\\n  - C:\\Program\
+  \ Files (x86)\\Waterfox\\\nfilter_main_whatsapp:\n  DestinationHostname|endswith:\
+  \ facebook.com\n  Image|endswith: \\WhatsApp.exe\n  Image|startswith:\n  - C:\\\
+  Program Files (x86)\\WindowsApps\\\n  - C:\\Program Files\\WindowsApps\\\nselection:\n\
+  \  DestinationHostname|endswith:\n  - .t.me\n  - 4shared.com\n  - abuse.ch\n  -\
+  \ anonfiles.com\n  - cdn.discordapp.com\n  - cloudflare.com\n  - ddns.net\n  - discord.com\n\
+  \  - docs.google.com\n  - drive.google.com\n  - dropbox.com\n  - dropmefiles.com\n\
+  \  - facebook.com\n  - feeds.rapidfeeds.com\n  - fotolog.com\n  - ghostbin.co/\n\
+  \  - githubusercontent.com\n  - gofile.io\n  - hastebin.com\n  - imgur.com\n  -\
+  \ livejournal.com\n  - mediafire.com\n  - mega.co.nz\n  - mega.nz\n  - onedrive.com\n\
+  \  - pages.dev\n  - paste.ee\n  - pastebin.com\n  - pastebin.pl\n  - pastetext.net\n\
+  \  - pixeldrain.com\n  - privatlab.com\n  - privatlab.net\n  - reddit.com\n  - send.exploit.in\n\
+  \  - sendspace.com\n  - steamcommunity.com\n  - storage.googleapis.com\n  - technet.microsoft.com\n\
+  \  - temp.sh\n  - transfer.sh\n  - trycloudflare.com\n  - twitter.com\n  - ufile.io\n\
+  \  - vimeo.com\n  - w3spaces.com\n  - wetransfer.com\n  - workers.dev\n  - youtube.com\n\
+  \  Initiated: 'true'\n"
+explanation: 'Detects an executable, which is not an internet browser or known application,
+  initiating network connections to legit popular websites, which were seen to be
+  used as dead drop resolvers in previous attacks.
+
+  In this context attackers leverage known websites such as "facebook", "youtube",
+  etc. In order to pass through undetected.
+
+  '
+false_positives:
+- One might need to exclude other internet browsers found in it's network or other
+  applications like ones mentioned above from Microsoft Defender.
+- Ninite contacting githubusercontent.com
+references:
+- https://web.archive.org/web/20220830134315/https://content.fireeye.com/apt-41/rpt-apt41/
+- https://securelist.com/the-tetrade-brazilian-banking-malware/97779/
+- https://blog.bushidotoken.net/2021/04/dead-drop-resolvers-espionage-inspired.html
+- https://github.com/kleiton0x00/RedditC2
+- https://twitter.com/kleiton0x7e/status/1600567316810551296
+- https://www.linkedin.com/posts/kleiton-kurti_github-kleiton0x00redditc2-abusing-reddit-activity-7009939662462984192-5DbI/?originalSubdomain=al
+tags:
+- attack.command-and-control
+- attack.t1102
+- attack.t1102.001
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    Initiated: 'true'
+    DestinationHostname|endswith:
+    - .t.me
+    - 4shared.com
+    - abuse.ch
+    - anonfiles.com
+    - cdn.discordapp.com
+    - cloudflare.com
+    - ddns.net
+    - discord.com
+    - docs.google.com
+    - drive.google.com
+    - dropbox.com
+    - dropmefiles.com
+    - facebook.com
+    - feeds.rapidfeeds.com
+    - fotolog.com
+    - ghostbin.co/
+    - githubusercontent.com
+    - gofile.io
+    - hastebin.com
+    - imgur.com
+    - livejournal.com
+    - mediafire.com
+    - mega.co.nz
+    - mega.nz
+    - onedrive.com
+    - pages.dev
+    - paste.ee
+    - pastebin.com
+    - pastebin.pl
+    - pastetext.net
+    - pixeldrain.com
+    - privatlab.com
+    - privatlab.net
+    - reddit.com
+    - send.exploit.in
+    - sendspace.com
+    - steamcommunity.com
+    - storage.googleapis.com
+    - technet.microsoft.com
+    - temp.sh
+    - transfer.sh
+    - trycloudflare.com
+    - twitter.com
+    - ufile.io
+    - vimeo.com
+    - w3spaces.com
+    - wetransfer.com
+    - workers.dev
+    - youtube.com
+  filter_main_chrome:
+    Image:
+    - C:\Program Files\Google\Chrome\Application\chrome.exe
+    - C:\Program Files (x86)\Google\Chrome\Application\chrome.exe
+  filter_main_chrome_appdata:
+    Image|startswith: C:\Users\
+    Image|endswith: \AppData\Local\Google\Chrome\Application\chrome.exe
+  filter_main_firefox:
+    Image:
+    - C:\Program Files\Mozilla Firefox\firefox.exe
+    - C:\Program Files (x86)\Mozilla Firefox\firefox.exe
+  filter_main_firefox_appdata:
+    Image|startswith: C:\Users\
+    Image|endswith: \AppData\Local\Mozilla Firefox\firefox.exe
+  filter_main_ie:
+    Image:
+    - C:\Program Files (x86)\Internet Explorer\iexplore.exe
+    - C:\Program Files\Internet Explorer\iexplore.exe
+  filter_main_edge_1:
+  - Image|startswith: C:\Program Files (x86)\Microsoft\EdgeWebView\Application\
+  - Image|endswith: \WindowsApps\MicrosoftEdge.exe
+  - Image:
+    - C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+    - C:\Program Files\Microsoft\Edge\Application\msedge.exe
+  filter_main_edge_2:
+    Image|startswith:
+    - C:\Program Files (x86)\Microsoft\EdgeCore\
+    - C:\Program Files\Microsoft\EdgeCore\
+    Image|endswith:
+    - \msedge.exe
+    - \msedgewebview2.exe
+  filter_main_safari:
+    Image|contains:
+    - C:\Program Files (x86)\Safari\
+    - C:\Program Files\Safari\
+    Image|endswith: \safari.exe
+  filter_main_defender:
+    Image|contains:
+    - C:\Program Files\Windows Defender Advanced Threat Protection\
+    - C:\Program Files\Windows Defender\
+    - C:\ProgramData\Microsoft\Windows Defender\Platform\
+    Image|endswith:
+    - \MsMpEng.exe
+    - \MsSense.exe
+  filter_main_prtg:
+    Image|endswith:
+    - C:\Program Files (x86)\PRTG Network Monitor\PRTG Probe.exe
+    - C:\Program Files\PRTG Network Monitor\PRTG Probe.exe
+  filter_main_brave:
+    Image|startswith: C:\Program Files\BraveSoftware\
+    Image|endswith: \brave.exe
+  filter_main_maxthon:
+    Image|contains: \AppData\Local\Maxthon\
+    Image|endswith: \maxthon.exe
+  filter_main_opera:
+    Image|contains: \AppData\Local\Programs\Opera\
+    Image|endswith: \opera.exe
+  filter_main_seamonkey:
+    Image|startswith:
+    - C:\Program Files\SeaMonkey\
+    - C:\Program Files (x86)\SeaMonkey\
+    Image|endswith: \seamonkey.exe
+  filter_main_vivaldi:
+    Image|contains: \AppData\Local\Vivaldi\
+    Image|endswith: \vivaldi.exe
+  filter_main_whale:
+    Image|startswith:
+    - C:\Program Files\Naver\Naver Whale\
+    - C:\Program Files (x86)\Naver\Naver Whale\
+    Image|endswith: \whale.exe
+  filter_main_whaterfox:
+    Image|startswith:
+    - C:\Program Files\Waterfox\
+    - C:\Program Files (x86)\Waterfox\
+    Image|endswith: \Waterfox.exe
+  filter_main_midori:
+    Image|contains: \AppData\Local\Programs\midori-ng\
+    Image|endswith: \Midori Next Generation.exe
+  filter_main_slimbrowser:
+    Image|startswith:
+    - C:\Program Files\SlimBrowser\
+    - C:\Program Files (x86)\SlimBrowser\
+    Image|endswith: \slimbrowser.exe
+  filter_main_flock:
+    Image|contains: \AppData\Local\Flock\
+    Image|endswith: \Flock.exe
+  filter_main_phoebe:
+    Image|contains: \AppData\Local\Phoebe\
+    Image|endswith: \Phoebe.exe
+  filter_main_falkon:
+    Image|startswith:
+    - C:\Program Files\Falkon\
+    - C:\Program Files (x86)\Falkon\
+    Image|endswith: \falkon.exe
+  filter_main_qtweb:
+    Image|startswith:
+    - C:\Program Files (x86)\QtWeb\
+    - C:\Program Files\QtWeb\
+    Image|endswith: \QtWeb.exe
+  filter_main_avant:
+    Image|startswith:
+    - C:\Program Files (x86)\Avant Browser\
+    - C:\Program Files\Avant Browser\
+    Image|endswith: \avant.exe
+  filter_main_whatsapp:
+    Image|startswith:
+    - C:\Program Files (x86)\WindowsApps\
+    - C:\Program Files\WindowsApps\
+    Image|endswith: \WhatsApp.exe
+    DestinationHostname|endswith: facebook.com
+  filter_main_telegram:
+    Image|contains: \AppData\Roaming\Telegram Desktop\
+    Image|endswith: \Telegram.exe
+    DestinationHostname|endswith: .t.me
+  filter_main_onedrive:
+    Image|contains: \AppData\Local\Microsoft\OneDrive\
+    Image|endswith: \OneDrive.exe
+    DestinationHostname|endswith: onedrive.com
+  filter_main_dropbox:
+    Image|startswith:
+    - C:\Program Files (x86)\Dropbox\Client\
+    - C:\Program Files\Dropbox\Client\
+    Image|endswith:
+    - \Dropbox.exe
+    - \DropboxInstaller.exe
+    DestinationHostname|endswith: dropbox.com
+  filter_main_mega:
+    Image|endswith:
+    - \MEGAsync.exe
+    - \MEGAsyncSetup32_*RC.exe
+    - \MEGAsyncSetup32.exe
+    - \MEGAsyncSetup64.exe
+    - \MEGAupdater.exe
+    DestinationHostname|endswith:
+    - mega.co.nz
+    - mega.nz
+  filter_main_googledrive:
+    Image|contains:
+    - C:\Program Files\Google\Drive File Stream\
+    - C:\Program Files (x86)\Google\Drive File Stream\
+    Image|endswith: GoogleDriveFS.exe
+    DestinationHostname|endswith: drive.google.com
+  filter_main_discord:
+    Image|contains: \AppData\Local\Discord\
+    Image|endswith: \Discord.exe
+    DestinationHostname|endswith:
+    - discord.com
+    - cdn.discordapp.com
+  filter_main_null:
+    Image: null
+  filter_main_empty:
+    Image: ''
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2022-08-17
+  modified_date: 2024-10-21
+  author: Sorina Ionescu, X__Junior (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

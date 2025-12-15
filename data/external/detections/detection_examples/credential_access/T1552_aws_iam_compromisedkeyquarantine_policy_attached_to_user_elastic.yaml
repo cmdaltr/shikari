@@ -1,0 +1,53 @@
+technique_id: T1552
+technique_name: AWS IAM CompromisedKeyQuarantine Policy Attached to User
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where event.dataset == \"aws.cloudtrail\"\n   and event.action == \"AttachUserPolicy\"\
+  \n   and event.outcome == \"success\"\n   and stringContains(aws.cloudtrail.request_parameters,\
+  \ \"AWSCompromisedKeyQuarantine\")"
+explanation: 'This rule looks for use of the IAM `AttachUserPolicy` API operation
+  to attach the `CompromisedKeyQuarantine` or `CompromisedKeyQuarantineV2` AWS managed
+  policies to an existing IAM user.
+
+  This policy denies access to certain actions and is applied by the AWS team in the
+  event that an IAM user''s credentials have been compromised or exposed publicly.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0b79f5c0-2c31-4fea-86cd-e62644278205.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS IAM
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - There shouldn''t be many false positives related to this action as it is inititated
+    by AWS in response to compromised or publicly exposed credentials.
+
+
+    ### Response and Remediation
+
+
+    - **Immediate Review and Reversal**: Update the user IAM permissions to remove
+    the quarantine policy and disable the compromised credentials.
+
+    - **Policy Update**: Review and possibly update your organization’s policies on
+    credential storage to tighten control and prevent public exposure.
+
+    - *'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSCompromisedKeyQuarantine.html/
+- https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSCompromisedKeyQuarantineV2.html/
+has_investigation_guide: true
+risk_score: 73

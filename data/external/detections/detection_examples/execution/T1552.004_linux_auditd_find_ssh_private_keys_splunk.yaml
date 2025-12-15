@@ -1,0 +1,39 @@
+technique_id: T1552.004
+technique_name: Linux Auditd Find Ssh Private Keys
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`linux_auditd` execve_command IN ("*find*", "*grep*") AND execve_command IN
+  ("*id_rsa*", "*id_dsa*", "*.key*", "*ssh_key*", "*authorized_keys*") | rename host
+  as dest | rename comm as process_name | rename exe as process | stats count min(_time)
+  as firstTime max(_time) as lastTime by argc execve_command dest | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `linux_auditd_find_ssh_private_keys_filter`'
+explanation: The following analytic detects suspicious attempts to find SSH private
+  keys, which may indicate an attacker's effort to compromise secure access to systems.
+  SSH private keys are essential for secure authentication, and unauthorized access
+  to these keys can enable attackers to gain unauthorized access to servers and other
+  critical infrastructure. By monitoring for unusual or unauthorized searches for
+  SSH private keys, this analytic helps identify potential threats to network security,
+  allowing security teams to quickly respond and safeguard against unauthorized access
+  and potential breaches.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e2d2bd10-dcd1-4b2f-8a76-0198eab32ba5/
+indicators:
+- type: data_source
+  value: Linux Auditd Execve
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrator or network operator can use this application for automation
+    purposes. Please update the filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.splunk.com/en_us/blog/security/deep-dive-on-persistence-privilege-escalation-technique-and-detection-in-linux-platform.html
+- https://github.com/peass-ng/PEASS-ng/tree/master/linPEAS
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1552.004/linux_auditd_find_ssh_files/auditd_execve_find_ssh.log

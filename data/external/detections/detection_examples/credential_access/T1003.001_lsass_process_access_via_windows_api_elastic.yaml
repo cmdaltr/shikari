@@ -1,0 +1,104 @@
+technique_id: T1003.001
+technique_name: LSASS Process Access via Windows API
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "api where host.os.type == \"windows\" and\n  process.Ext.api.name in (\"OpenProcess\"\
+  , \"OpenThread\") and Target.process.name : \"lsass.exe\" and \n  not \n  (\n  \
+  \  process.executable : (\n        \"?:\\\\ProgramData\\\\GetSupportService*\\\\\
+  Updates\\\\Update_*.exe\",\n        \"?:\\\\ProgramData\\\\Microsoft\\\\Windows\
+  \ Defender\\\\Platform\\\\*\\\\MsMpEng.exe\",\n        \"?:\\\\Program Files (x86)\\\
+  \\Asiainfo Security\\\\OfficeScan Client\\\\NTRTScan.exe\",\n        \"?:\\\\Program\
+  \ Files (x86)\\\\Blackpoint\\\\SnapAgent\\\\SnapAgent.exe\",\n        \"?:\\\\Program\
+  \ Files (x86)\\\\CheckPoint\\\\Endpoint Security\\\\EFR\\\\EFRService.exe\",\n \
+  \       \"?:\\\\Program Files (x86)\\\\CyberCNSAgent\\\\osqueryi.exe\",\n      \
+  \  \"?:\\\\Program Files (x86)\\\\cisco\\\\cisco anyconnect secure mobility client\\\
+  \\vpnagent.exe\",\n        \"?:\\\\Program Files (x86)\\\\cisco\\\\cisco anyconnect\
+  \ secure mobility client\\\\aciseagent.exe\",\n        \"?:\\\\Program Files (x86)\\\
+  \\cisco\\\\cisco anyconnect secure mobility client\\\\vpndownloader.exe\",\n   \
+  \     \"?:\\\\Program Files (x86)\\\\eScan\\\\reload.exe\",\n        \"?:\\\\Program\
+  \ Files (x86)\\\\Google\\\\Update\\\\GoogleUpdate.exe\",\n        \"?:\\\\Program\
+  \ Files (x86)\\\\Kaspersky Lab\\\\*\\\\avp.exe\",\n        \"?:\\\\Program Files\
+  \ (x86)\\\\microsoft intune management extension\\\\microsoft.management.services.intunewindowsagent.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\N-able Technologies\\\\Reactive\\\\bin\\\
+  \\NableReactiveManagement.exe\",\n        \"?:\\\\Program Files (x86)\\\\N-able\
+  \ Technologies\\\\Windows Agent\\\\bin\\\\agent.exe\",\n        \"?:\\\\Program\
+  \ Files (x86)\\\\Tanium\\\\Tanium Client\\\\TaniumClient.exe\",\n        \"?:\\\\\
+  Program Files (x86)\\\\Trend Micro\\\\*\\\\CCSF\\\\TmCCSF.exe\",\n        \"?:\\\
+  \\Program Files (x86)\\\\Trend Micro\\\\Security Agent\\\\TMASutility.exe\",\n \
+  \       \"?:\\\\Program Files*\\\\Windows Defender\\\\MsMpEng.exe\",\n        \"\
+  ?:\\\\Program Files\\\\Bitdefender\\\\Endpoint Security\\\\EPSecurityService.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\Cisco\\\\AMP\\\\*\\\\sfc.exe\",\n        \"\
+  ?:\\\\Program Files\\\\Common Files\\\\McAfee\\\\AVSolution\\\\mcshield.exe\",\n\
+  \        \"?:\\\\Program Files\\\\EA\\\\AC\\\\EAAntiCheat.GameService.exe\",\n \
+  \       \"?:\\\\Program Files\\\\Elastic\\\\Agent\\\\data\\\\elastic-agent-*\\\\\
+  components\\\\agentbeat.exe\",\n        \"?:\\\\Program Files\\\\Elastic\\\\Agent\\\
+  \\data\\\\elastic-agent-*\\\\components\\\\metricbeat.exe\",\n        \"?:\\\\Program\
+  \ Files\\\\Elastic\\\\Agent\\\\data\\\\elastic-agent-*\\\\components\\\\osqueryd.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\Elastic\\\\Agent\\\\data\\\\elastic-agent-*\\\
+  \\components\\\\packetbeat.exe\",\n        \"?:\\\\Program Files\\\\ESET\\\\ESET\
+  \ Security\\\\ekrn.exe\",\n        \"?:\\\\Program Files\\\\Fortinet\\\\FortiClient\\\
+  \\FortiProxy.exe\",\n        \"?:\\\\Program Files\\\\Fortinet\\\\FortiClient\\\\\
+  FortiSSLVPNdaemon.exe\",\n        \"?:\\\\Program Files\\\\Goverlan Inc\\\\GoverlanAgent\\\
+  \\GovAgentx64.exe\",\n        \"?:\\\\Program Files\\\\Huntress\\\\HuntressAgent.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\LogicMonitor\\\\Agent\\\\bin\\\\sbshutdown.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\Malwarebytes\\\\Anti-Malware\\\\MBAMService.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\Microsoft Monitoring Agent\\\\Agent\\\\Health\
+  \ Service State\\\\*\\\\pmfexe.exe\", \n        \"?:\\\\Program Files\\\\Microsoft\
+  \ Security Client\\\\MsMpEng.exe\",\n        \"?:\\\\Program Files\\\\Qualys\\\\\
+  QualysAgent\\\\QualysAgent.exe\",\n        \"?:\\\\Program Files\\\\smart-x\\\\\
+  controlupagent\\\\version*\\\\cuagent.exe\",\n        \"?:\\\\Program Files\\\\\
+  TDAgent\\\\ossec-agent\\\\ossec-agent.exe\",\n        \"?:\\\\Program Files\\\\\
+  Topaz OFD\\\\Warsaw\\\\core.exe\",\n        \"?:\\\\Program Files\\\\Trend Micro\\\
+  \\Deep Security Agent\\\\netagent\\\\tm_netagent.exe\",\n        \"?:\\\\Program\
+  \ Files\\\\VMware\\\\VMware Tools\\\\vmtoolsd.exe\",\n        \"?:\\\\Program Files\\\
+  \\Windows Defender Advanced Threat Protection\\\\MsSense.exe\",\n        \"?:\\\\\
+  Program Files\\\\Wise\\\\Wise Memory Optimizer\\\\WiseMemoryOptimzer.exe\",\n  \
+  \      \"?:\\\\Windows\\\\AdminArsenal\\\\PDQDeployRunner\\\\*\\\\exec\\\\Sysmon64.exe\"\
+  ,\n        \"?:\\\\Windows\\\\Sysmon.exe\",\n        \"?:\\\\Windows\\\\Sysmon64.exe\"\
+  ,\n        \"?:\\\\Windows\\\\System32\\\\csrss.exe\",\n        \"?:\\\\Windows\\\
+  \\System32\\\\MRT.exe\",\n        \"?:\\\\Windows\\\\System32\\\\msiexec.exe\",\n\
+  \        \"?:\\\\Windows\\\\System32\\\\taskhostw.exe\",\n        \"?:\\\\Windows\\\
+  \\System32\\\\RtkAudUService64.exe\",\n        \"?:\\\\Windows\\\\System32\\\\wbem\\\
+  \\WmiPrvSE.exe\",\n        \"?:\\\\Windows\\\\SysWOW64\\\\wbem\\\\WmiPrvSE.exe\"\
+  ,\n        \"?:\\\\Windows\\\\tenable_mw_scan_142a90001fb65e0beb1751cc8c63edd0.exe\"\
+  \n    ) and not ?process.code_signature.trusted == false\n  )"
+explanation: Identifies access attempts to the LSASS handle, which may indicate an
+  attempt to dump credentials from LSASS memory.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ff4599cb-409f-4910-a239-52e4e6f532ff.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - If this rule is noisy in your environment due to expected activity, consider
+    adding exceptions — preferably with a combination of `process.executable`, `process.code_signature.subject_name`
+    and `process.Ext.api.parameters.desired_access_numeric` conditions.
+
+
+    ### Related Rules
+
+
+    - Suspicious Lsass Process Access - 128468bf-cab1-4637-99ea-fdf3780a4609
+
+    - Potential Credential Access via DuplicateHandle in LSASS - 02a4576a-7480-4284-9327-548a806b5e48
+
+    - LSASS Memory Dump Hand'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1003.001/T1003.001.md
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,68 @@
+technique_id: T1518.001
+technique_name: Security Software Discovery via Grep
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where event.type == \"start\" and\nprocess.name : \"grep\" and user.id\
+  \ != \"0\" and\n not process.parent.executable : (\"/Library/Application Support/*\"\
+  , \"/opt/McAfee/agent/scripts/ma\") and\n   process.args :\n         (\"Little Snitch*\"\
+  ,\n          \"Avast*\",\n          \"Avira*\",\n          \"ESET*\",\n        \
+  \  \"BlockBlock*\",\n          \"360Sec*\",\n          \"LuLu*\",\n          \"\
+  KnockKnock*\",\n          \"kav\",\n          \"KIS\",\n          \"RTProtectionDaemon*\"\
+  ,\n          \"Malware*\",\n          \"VShieldScanner*\",\n          \"WebProtection*\"\
+  ,\n          \"webinspectord*\",\n          \"McAfee*\",\n          \"isecespd*\"\
+  ,\n          \"macmnsvc*\",\n          \"masvc*\",\n          \"kesl*\",\n     \
+  \     \"avscan*\",\n          \"guard*\",\n          \"rtvscand*\",\n          \"\
+  symcfgd*\",\n          \"scmdaemon*\",\n          \"symantec*\",\n          \"sophos*\"\
+  ,\n          \"osquery*\",\n          \"elastic-endpoint*\"\n          ) and\n \
+  \  not (\n     (process.args : \"Avast\" and process.args : \"Passwords\") or\n\
+  \     (process.args == \"osquery.conf\") or \n     (process.parent.args : \"/opt/McAfee/agent/scripts/ma\"\
+  \ and process.parent.args : \"checkhealth\") or\n     (process.command_line : (\n\
+  \       \"grep ESET Command-line scanner, version %s -A2\",\n       \"grep -i McAfee\
+  \ Web Gateway Core version:\",\n       \"grep --color=auto ESET Command-line scanner,\
+  \ version %s -A2\"\n       )\n     ) or\n     (process.parent.command_line : (\n\
+  \       \"\"\"sh -c printf \"command_start_%s\"*; perl -pe 's/[^ -~]/\\n/g' < /opt/eset/esets/sbin/esets_scan\
+  \ | grep 'ESET Command-line scanner, version %s' -A2 | tail -1; printf \"command_done_%s*\"\
+  \"\",\n       \"\"\"bash -c perl -pe 's/[^ -~]/\\n/g' < /opt/eset/esets/sbin/esets_scan\
+  \ | grep 'ESET Command-line scanner, version %s' -A2 | tail -1 \"\"\"       )\n\
+  \     )\n    )"
+explanation: 'Identifies the use of the grep command to discover known third-party
+  macOS and Linux security tools, such as Antivirus
+
+  or Host Firewall details.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/870aecc0-cea4-4110-af3f-e02e9b373655.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Discovery activities are not inherently malicious if they occur in isolation.
+    As long as the analyst did not identify suspicious activity related to the user
+    or host, such alerts can be dismissed.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-compromise behavior.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

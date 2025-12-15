@@ -1,0 +1,60 @@
+technique_id: T1037.004
+technique_name: Potential Execution of rc.local Script
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'process where host.os.type == "linux" and event.type == "info" and event.action
+  == "already_running" and
+
+  process.parent.args == "/etc/rc.local" and process.parent.args == "start"'
+explanation: 'This rule detects the potential execution of the `/etc/rc.local` script
+  through the `already_running` event action
+
+  created by the `rc-local.service` systemd service. The `/etc/rc.local` script is
+  a legacy initialization script that is
+
+  executed at the end of the boot process. The `/etc/rc.local` script is not enabled
+  by default on most Linux
+
+  distributions. The `/etc/rc.local` script can be used by attackers to persistently
+  execute malicious commands or scripts
+
+  on a compromised system at reboot. As the rc.local file is executed prior to the
+  initialization of Elastic Defend, the
+
+  execution event is not ingested, and therefore the `already_running` event is leveraged
+  to provide insight into the
+
+  potential execution of `rc.local`.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7318affb-bfe8-4d50-a425-f617833be160.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System maintenance scripts: Some Linux distributions or administrators may use
+    the rc.local script for legitimate system maintenance tasks. Review the script''s
+    content to verify its purpose and consider excluding these known benign scripts
+    from triggering alerts.
+
+    - Custom startup configurations: Organizations might have custom startup configurations
+    that utilize rc.local for non-malicious purposes. Document these configurations
+    and create exceptions in the detection ru'
+  mitigation: Review investigation guide for details
+references:
+- https://www.intezer.com/blog/malware-analysis/hiddenwasp-malware-targeting-linux-systems/
+- https://pberba.github.io/security/2022/02/06/linux-threat-hunting-for-persistence-initialization-scripts-and-shell-configuration/#8-boot-or-logon-initialization-scripts-rc-scripts
+- https://www.cyberciti.biz/faq/how-to-enable-rc-local-shell-script-on-systemd-while-booting-linux-system/
+- https://www.elastic.co/security-labs/sequel-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

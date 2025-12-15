@@ -1,0 +1,63 @@
+technique_id: T1059
+technique_name: Suspicious Execution with NodeJS
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \n(process.name : \"node.exe\" or ?process.pe.original_file_name == \"node.exe\"\
+  \ or ?process.code_signature.subject_name : \"OpenJS Foundation\") and\n\n(\n  (process.executable\
+  \ : (\"?:\\\\Users\\\\*\\\\AppData\\\\*\\\\node.exe\", \"\\\\Device\\\\HarddiskVolume?\\\
+  \\\\\\Users\\\\*\\\\AppData\\\\*\\\\node.exe\") and process.args : \"*.js\") or\n\
+  \n  (process.args : \"-r\" and process.parent.name : \"powershell.exe\") or\n\n\
+  \   process.command_line : (\"*eval(*\", \"*atob(*\", \"*require*child_process*\"\
+  )\n)"
+explanation: Identifies suspicious execution patterns using NodeJS interpeter like
+  process path and arguments.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/55f711c1-6b4d-4787-930d-c9317a885adf.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate script automation tools may trigger this rule if they download and
+    execute scripts from the internet. Users can create exceptions for known safe
+    tools by excluding specific file paths or process names.
+
+    - Software updates or installations that download scripts as part of their process
+    might be flagged. To handle this, users can whitelist specific origin URLs or
+    referrer URLs associated with trusted software vendors.
+
+    - Internal scripts distributed via corporat'
+  mitigation: Review investigation guide for details
+references:
+- https://nodejs.org
+has_investigation_guide: true
+risk_score: 73

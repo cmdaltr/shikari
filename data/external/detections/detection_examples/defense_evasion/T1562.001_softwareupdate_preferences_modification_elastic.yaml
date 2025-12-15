@@ -1,0 +1,43 @@
+technique_id: T1562.001
+technique_name: SoftwareUpdate Preferences Modification
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n process.name == \"defaults\" and\n process.args like \"write\" and process.args\
+  \ like \"-bool\" and process.args like~ (\"com.apple.SoftwareUpdate\", \"/Library/Preferences/com.apple.SoftwareUpdate.plist\"\
+  ) and not process.args like (\"TRUE\", \"true\")"
+explanation: 'Identifies changes to the SoftwareUpdate preferences using the built-in
+  defaults command. Adversaries may abuse this in
+
+  an attempt to disable security updates.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f683dcdf-a018-4801-b066-193d4ae6c8e5.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System administrators may use the defaults command to configure SoftwareUpdate
+    settings during routine maintenance. To handle this, create exceptions for known
+    administrative scripts or processes that frequently execute these commands.
+
+    - Automated configuration management tools might alter SoftwareUpdate preferences
+    as part of their standard operations. Identify these tools and exclude their process
+    identifiers from triggering the rule.
+
+    - Some legitimate applications m'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.checkpoint.com/2017/07/13/osxdok-refuses-go-away-money/
+has_investigation_guide: true
+risk_score: 47

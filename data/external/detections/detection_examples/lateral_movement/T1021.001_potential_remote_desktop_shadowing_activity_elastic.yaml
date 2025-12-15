@@ -1,0 +1,65 @@
+technique_id: T1021.001
+technique_name: Potential Remote Desktop Shadowing Activity
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "/* Identifies the modification of RDP Shadow registry or\n  the execution\
+  \ of processes indicative of active shadow RDP session */\n\nany where host.os.type\
+  \ == \"windows\" and\n(\n  (event.category == \"registry\" and event.type == \"\
+  change\" and\n    registry.value : \"Shadow\" and\n    registry.path : (\n     \
+  \ \"*\\\\Software\\\\Policies\\\\Microsoft\\\\Windows NT\\\\Terminal Services\\\\\
+  Shadow\"\n    ) and\n    registry.data.strings : (\"1\", \"0x00000001\", \"2\",\
+  \ \"0x00000002\", \"3\", \"0x00000003\", \"4\", \"0x00000004\")\n\n  ) or\n  (event.category\
+  \ == \"process\" and event.type == \"start\" and\n     (process.name : (\"RdpSaUacHelper.exe\"\
+  , \"RdpSaProxy.exe\") and process.parent.name : \"svchost.exe\") or\n     (?process.pe.original_file_name\
+  \ : \"mstsc.exe\" and process.args : \"/shadow:*\")\n  )\n)"
+explanation: 'Identifies the modification of the Remote Desktop Protocol (RDP) Shadow
+  registry or the execution of processes
+
+  indicative of an active RDP shadowing session. An adversary may abuse the RDP Shadowing
+  feature to spy on or control
+
+  other users active RDP sessions.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c57f8579-e2a5-4804-847f-f2732edc5156.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative activities may trigger alerts when IT staff use RDP
+    Shadowing for support. To manage this, create exceptions for known IT administrator
+    accounts or specific IP addresses.
+
+    - Scheduled maintenance or automated scripts that modify RDP Shadow registry settings
+    can be mistaken for malicious activity. Identify and exclude these processes or
+    scripts from the detection rule.
+
+    - Security software or monitoring tools that interact with RDP sessions might'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.bitsadmin.com/spying-on-users-using-rdp-shadowing
+- https://swarm.ptsecurity.com/remote-desktop-services-shadowing/
+has_investigation_guide: true
+risk_score: 73

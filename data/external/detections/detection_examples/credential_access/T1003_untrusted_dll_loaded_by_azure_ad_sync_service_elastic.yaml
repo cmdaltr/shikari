@@ -1,0 +1,57 @@
+technique_id: T1003
+technique_name: Untrusted DLL Loaded by Azure AD Sync Service
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where host.os.type == \"windows\" and process.name : \"AzureADConnectAuthenticationAgentService.exe\"\
+  \ and\n(\n (event.category == \"library\" and event.action == \"load\") or\n (event.category\
+  \ == \"process\" and event.action : \"Image loaded*\")\n) and\n\nnot (?dll.code_signature.trusted\
+  \ == true or file.code_signature.status == \"Valid\") and not\n\n  (\n   /* Elastic\
+  \ defend DLL path */\n   ?dll.path :\n         (\"?:\\\\Windows\\\\assembly\\\\\
+  NativeImages*\",\n          \"?:\\\\Windows\\\\Microsoft.NET\\\\*\",\n         \
+  \ \"?:\\\\Windows\\\\WinSxS\\\\*\",\n          \"?:\\\\Windows\\\\System32\\\\DriverStore\\\
+  \\FileRepository\\\\*\") or\n\n   /* Sysmon DLL path is mapped to file.path */\n\
+  \   file.path :\n         (\"?:\\\\Windows\\\\assembly\\\\NativeImages*\",\n   \
+  \       \"?:\\\\Windows\\\\Microsoft.NET\\\\*\",\n          \"?:\\\\Windows\\\\\
+  WinSxS\\\\*\",\n          \"?:\\\\Windows\\\\System32\\\\DriverStore\\\\FileRepository\\\
+  \\*\")\n  )"
+explanation: 'Identifies the load of a DLL without a valid code signature by the Azure
+  AD Sync process, which may indicate an attempt
+
+  to persist or collect sensitive credentials passing through the Azure AD synchronization
+  server.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f909075d-afc7-42d7-b399-600b94352fd9.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - DLLs from legitimate software updates or installations may trigger alerts if
+    they are not yet recognized as trusted. Users can monitor these occurrences and
+    verify the legitimacy of the software source before adding exceptions.
+
+    - Custom or in-house developed applications might load DLLs that lack valid signatures.
+    Users should ensure these applications are from a trusted source and consider
+    signing them or adding their paths to the exclusion list.
+
+    - DLLs located in non'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.xpnsec.com/azuread-connect-for-redteam/
+- https://medium.com/@breakingmhet/detect-azure-pass-through-authentication-abuse-azure-hybrid-environments-ed4274784252
+- https://learn.microsoft.com/en-us/azure/active-directory/hybrid/tshoot-connect-pass-through-authentication
+has_investigation_guide: true
+risk_score: 73

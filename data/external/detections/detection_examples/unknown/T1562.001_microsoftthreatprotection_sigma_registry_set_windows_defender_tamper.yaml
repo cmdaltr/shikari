@@ -1,0 +1,89 @@
+technique_id: T1562.001
+technique_name: Disable Windows Defender Functionalities Via Registry Keys
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.87
+validated: true
+source: sigma
+sigma_id: 0eb46774-f1ab-4a74-8238-1155855f2263
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_main and 1\
+  \ of selection_dword_* and not 1 of filter_optional_*\nfilter_optional_symantec:\n\
+  \  Image|endswith: \\sepWscSvc64.exe\n  Image|startswith: C:\\Program Files\\Symantec\\\
+  Symantec Endpoint Protection\\\nselection_dword_0:\n  Details: DWORD (0x00000000)\n\
+  \  TargetObject|endswith:\n  - \\DisallowExploitProtectionOverride\n  - \\Features\\\
+  TamperProtection\n  - \\MpEngine\\MpEnablePus\n  - \\PUAProtection\n  - \\Signature\
+  \ Update\\ForceUpdateFromMU\n  - \\SpyNet\\SpynetReporting\n  - \\SpyNet\\SubmitSamplesConsent\n\
+  \  - \\Windows Defender Exploit Guard\\Controlled Folder Access\\EnableControlledFolderAccess\n\
+  selection_dword_1:\n  Details: DWORD (0x00000001)\n  TargetObject|endswith:\n  -\
+  \ \\DisableAntiSpyware\n  - \\DisableAntiVirus\n  - \\DisableBehaviorMonitoring\n\
+  \  - \\DisableBlockAtFirstSeen\n  - \\DisableEnhancedNotifications\n  - \\DisableIntrusionPreventionSystem\n\
+  \  - \\DisableIOAVProtection\n  - \\DisableOnAccessProtection\n  - \\DisableRealtimeMonitoring\n\
+  \  - \\DisableScanOnRealtimeEnable\n  - \\DisableScriptScanning\nselection_main:\n\
+  \  TargetObject|contains:\n  - \\SOFTWARE\\Microsoft\\Windows Defender\\\n  - \\\
+  SOFTWARE\\Policies\\Microsoft\\Windows Defender Security Center\\\n  - \\SOFTWARE\\\
+  Policies\\Microsoft\\Windows Defender\\\n"
+explanation: Detects when attackers or tools disable Windows Defender functionalities
+  via the Windows registry
+false_positives:
+- Administrator actions via the Windows Defender interface
+- Third party Antivirus
+references:
+- https://thedfirreport.com/2021/10/18/icedid-to-xinglocker-ransomware-in-24-hours/
+- https://gist.github.com/anadr/7465a9fde63d41341136949f14c21105
+- https://admx.help/?Category=Windows_7_2008R2&Policy=Microsoft.Policies.WindowsDefender::SpyNetReporting
+- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ransomware-hive-conti-avoslocker
+- https://www.tenforums.com/tutorials/32236-enable-disable-microsoft-defender-pua-protection-windows-10-a.html
+- https://www.tenforums.com/tutorials/105533-enable-disable-windows-defender-exploit-protection-settings.html
+- https://www.tenforums.com/tutorials/123792-turn-off-tamper-protection-microsoft-defender-antivirus.html
+- https://securelist.com/key-group-ransomware-samples-and-telegram-schemes/114025/
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+logsource:
+  product: windows
+  category: registry_set
+detection:
+  selection_main:
+    TargetObject|contains:
+    - \SOFTWARE\Microsoft\Windows Defender\
+    - \SOFTWARE\Policies\Microsoft\Windows Defender Security Center\
+    - \SOFTWARE\Policies\Microsoft\Windows Defender\
+  selection_dword_1:
+    TargetObject|endswith:
+    - \DisableAntiSpyware
+    - \DisableAntiVirus
+    - \DisableBehaviorMonitoring
+    - \DisableBlockAtFirstSeen
+    - \DisableEnhancedNotifications
+    - \DisableIntrusionPreventionSystem
+    - \DisableIOAVProtection
+    - \DisableOnAccessProtection
+    - \DisableRealtimeMonitoring
+    - \DisableScanOnRealtimeEnable
+    - \DisableScriptScanning
+    Details: DWORD (0x00000001)
+  selection_dword_0:
+    TargetObject|endswith:
+    - \DisallowExploitProtectionOverride
+    - \Features\TamperProtection
+    - \MpEngine\MpEnablePus
+    - \PUAProtection
+    - \Signature Update\ForceUpdateFromMU
+    - \SpyNet\SpynetReporting
+    - \SpyNet\SubmitSamplesConsent
+    - \Windows Defender Exploit Guard\Controlled Folder Access\EnableControlledFolderAccess
+    Details: DWORD (0x00000000)
+  filter_optional_symantec:
+    Image|startswith: C:\Program Files\Symantec\Symantec Endpoint Protection\
+    Image|endswith: \sepWscSvc64.exe
+  condition: selection_main and 1 of selection_dword_* and not 1 of filter_optional_*
+metadata:
+  created_date: 2022-08-01
+  modified_date: 2024-10-07
+  author: AlertIQ, Ján Trenčanský, frack113, Nasreddine Bencherchali, Swachchhanda
+    Shrawan Poudel
+  status: test
+  imported_date: '2025-11-28'

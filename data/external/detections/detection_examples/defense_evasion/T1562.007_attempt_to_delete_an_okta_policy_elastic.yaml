@@ -1,0 +1,50 @@
+technique_id: T1562.007
+technique_name: Attempt to Delete an Okta Policy
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:okta.system and event.action:policy.lifecycle.delete
+explanation: 'Detects attempts to delete an Okta policy. An adversary may attempt
+  to delete an Okta policy in order to weaken an
+
+  organization''s security controls. For example, an adversary may attempt to delete
+  an Okta multi-factor authentication
+
+  (MFA) policy in order to weaken the authentication requirements for user accounts.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b4bb1440-0fcb-4ed1-87e5-b06d58efc5e9.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis:
+
+
+    - Check if there were issues with the Okta system at the time of the deletion
+    attempt. This could indicate a system error rather than a genuine threat activity.
+
+    - Check the geographical location (`okta.request.ip_chain.geographical_context`)
+    and time of the deletion attempt. If these match the actor''s normal behavior,
+    it might be a false positive.
+
+    - Verify the actor''s administrative rights to ensure they are correctly configured.
+
+
+    ### Response and remediation:
+
+
+    - If una'
+  mitigation: Review investigation guide for details
+references:
+- https://help.okta.com/en/prod/Content/Topics/Security/Security_Policies.htm
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

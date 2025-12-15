@@ -1,0 +1,55 @@
+technique_id: T1082
+technique_name: Hping Process Activity
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and\n\
+  \ event.action in (\"exec\", \"exec_event\", \"start\", \"ProcessRollup2\", \"executed\"\
+  , \"process_started\") and\n process.name in (\"hping\", \"hping2\", \"hping3\")"
+explanation: 'Hping ran on a Linux host. Hping is a FOSS command-line packet analyzer
+  and has the ability to construct network packets
+
+  for a wide variety of network security testing applications, including scanning
+  and firewall auditing.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/90169566-2260-4824-b8e4-8615c3b4ed52.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine network testing by IT teams may trigger the rule when using Hping for
+    legitimate purposes. To manage this, create exceptions for known IP addresses
+    or user accounts involved in regular network audits.
+
+    - Automated scripts or cron jobs that utilize Hping for monitoring network performance
+    can lead to false positives. Identify these scripts and exclude their execution
+    paths or associated user accounts from the detection rule.
+
+    - Security training exercises or penet'
+  mitigation: Review investigation guide for details
+references:
+- https://en.wikipedia.org/wiki/Hping
+has_investigation_guide: true
+risk_score: 47

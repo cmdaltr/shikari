@@ -1,0 +1,50 @@
+technique_id: T1003.001
+technique_name: HackTool - Dumpert Process Dumper Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.89
+validated: true
+source: sigma
+sigma_id: 2704ab9e-afe2-4854-a3b1-0c0706d03578
+level: critical
+query: '# Sigma Detection Logic
+
+  # Convert to platform-specific query using Sigma tools:
+
+  # https://github.com/SigmaHQ/sigma
+
+
+  condition: selection
+
+  selection:
+
+  - Hashes|contains: MD5=09D278F9DE118EF09163C6140255C690
+
+  - CommandLine|contains: Dumpert.dll
+
+  '
+explanation: Detects the use of Dumpert process dumper, which dumps the lsass.exe
+  process memory
+false_positives:
+- Very unlikely
+references:
+- https://github.com/outflanknl/Dumpert
+- https://unit42.paloaltonetworks.com/actors-still-exploiting-sharepoint-vulnerability/
+tags:
+- attack.credential-access
+- attack.t1003.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+  - Hashes|contains: MD5=09D278F9DE118EF09163C6140255C690
+  - CommandLine|contains: Dumpert.dll
+  condition: selection
+metadata:
+  created_date: 2020-02-04
+  modified_date: 2025-01-22
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

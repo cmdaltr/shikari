@@ -1,0 +1,50 @@
+technique_id: T1098
+technique_name: Login via Unusual System User
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "authentication where host.os.type == \"linux\" and event.action in (\"ssh_login\"\
+  , \"user_login\") and\nuser.name in (\n  \"deamon\", \"bin\", \"sys\", \"games\"\
+  , \"man\", \"lp\", \"mail\", \"news\", \"uucp\", \"proxy\", \"www-data\", \"backup\"\
+  ,\n  \"list\", \"irc\", \"gnats\", \"nobody\", \"systemd-timesync\", \"systemd-network\"\
+  , \"systemd-resolve\", \"messagebus\",\n  \"avahi\", \"sshd\", \"dnsmasq\"\n) and\
+  \ event.outcome == \"success\""
+explanation: 'This rule identifies successful logins by system users that are uncommon
+  to authenticate. These users
+
+  have `nologin` set by default, and must be modified to allow SSH access. Adversaries
+  may backdoor these users to
+
+  gain unauthorized access to the system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/428e9109-dc13-4ae9-84cb-100464d4c6fa.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: System
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System maintenance tasks may require temporary login access for system users.
+    Verify if the login corresponds with scheduled maintenance and consider excluding
+    these events during known maintenance windows.
+
+    - Automated scripts or services might use system accounts for legitimate purposes.
+    Identify these scripts and whitelist their associated activities to prevent false
+    alerts.
+
+    - Some system users might be configured for specific applications that require
+    login capabili'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.exatrack.com/Perfctl-using-portainer-and-new-persistences/
+- https://x.com/RFGroenewoud/status/1875112050218922010
+has_investigation_guide: true
+risk_score: 47

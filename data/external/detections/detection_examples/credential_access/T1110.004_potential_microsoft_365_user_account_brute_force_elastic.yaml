@@ -1,0 +1,97 @@
+technique_id: T1110.004
+technique_name: Potential Microsoft 365 User Account Brute Force
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-o365.audit-*\n| mv_expand event.category\n| eval\n    Esql.time_window_date_trunc\
+  \ = date_trunc(5 minutes, @timestamp),\n    Esql_priv.o365_audit_UserId_lower =\
+  \ to_lower(o365.audit.UserId),\n    Esql.o365_audit_LogonError = o365.audit.LogonError,\n\
+  \    Esql.o365_audit_ExtendedProperties_RequestType_lower = to_lower(o365.audit.ExtendedProperties.RequestType)\n\
+  | where\n    event.dataset == \"o365.audit\" and\n    event.category == \"authentication\"\
+  \ and\n    event.provider in (\"AzureActiveDirectory\", \"Exchange\") and\n    event.action\
+  \ in (\"UserLoginFailed\", \"PasswordLogonInitialAuthUsingPassword\") and\n    Esql.o365_audit_ExtendedProperties_RequestType_lower\
+  \ rlike \"(oauth.*||.*login.*)\" and\n    Esql.o365_audit_LogonError != \"IdsLocked\"\
+  \ and\n    Esql.o365_audit_LogonError not in (\n        \"EntitlementGrantsNotFound\"\
+  ,\n        \"UserStrongAuthEnrollmentRequired\",\n        \"UserStrongAuthClientAuthNRequired\"\
+  ,\n        \"InvalidReplyTo\",\n        \"SsoArtifactExpiredDueToConditionalAccess\"\
+  ,\n        \"PasswordResetRegistrationRequiredInterrupt\",\n        \"SsoUserAccountNotFoundInResourceTenant\"\
+  ,\n        \"UserStrongAuthExpired\",\n        \"CmsiInterrupt\"\n    ) and\n  \
+  \  Esql_priv.o365_audit_UserId_lower != \"not available\" and\n    o365.audit.Target.Type\
+  \ in (\"0\", \"2\", \"6\", \"10\")\n| stats\n    Esql.o365_audit_UserId_lower_count_distinct\
+  \ = count_distinct(Esql_priv.o365_audit_UserId_lower),\n    Esql_priv.o365_audit_UserId_lower_values\
+  \ = values(Esql_priv.o365_audit_UserId_lower),\n    Esql.o365_audit_LogonError_values\
+  \ = values(Esql.o365_audit_LogonError),\n    Esql.o365_audit_LogonError_count_distinct\
+  \ = count_distinct(Esql.o365_audit_LogonError),\n    Esql.o365_audit_ExtendedProperties_RequestType_values\
+  \ = values(Esql.o365_audit_ExtendedProperties_RequestType_lower),\n    Esql.source_ip_values\
+  \ = values(source.ip),\n    Esql.source_ip_count_distinct = count_distinct(source.ip),\n\
+  \    Esql.source_as_organization_name_values = values(source.`as`.organization.name),\n\
+  \    Esql.source_geo_country_name_values = values(source.geo.country_name),\n  \
+  \  Esql.source_geo_country_name_count_distinct = count_distinct(source.geo.country_name),\n\
+  \    Esql.source_as_organization_name_count_distinct = count_distinct(source.`as`.organization.name),\n\
+  \    Esql.timestamp_first_seen = min(@timestamp),\n    Esql.timestamp_last_seen\
+  \ = max(@timestamp),\n    Esql.event_count = count(*)\n  by Esql.time_window_date_trunc\n\
+  | eval\n    Esql.event_duration_seconds = date_diff(\"seconds\", Esql.timestamp_first_seen,\
+  \ Esql.timestamp_last_seen),\n    Esql.brute_force_type = case(\n        Esql.o365_audit_UserId_lower_count_distinct\
+  \ >= 15 and Esql.o365_audit_LogonError_count_distinct == 1 and Esql.event_count\
+  \ >= 10 and Esql.event_duration_seconds <= 1800, \"password_spraying\",\n      \
+  \  Esql.o365_audit_UserId_lower_count_distinct >= 8 and Esql.event_count >= 15 and\
+  \ Esql.o365_audit_LogonError_count_distinct <= 3 and Esql.source_ip_count_distinct\
+  \ <= 5 and Esql.event_duration_seconds <= 600, \"credential_stuffing\",\n      \
+  \  Esql.o365_audit_UserId_lower_count_distinct == 1 and Esql.o365_audit_LogonError_count_distinct\
+  \ == 1 and Esql.event_count >= 20 and Esql.event_duration_seconds <= 300, \"password_guessing\"\
+  ,\n        \"other\"\n    )\n| keep\n    Esql.time_window_date_trunc,\n    Esql.o365_audit_UserId_lower_count_distinct,\n\
+  \    Esql_priv.o365_audit_UserId_lower_values,\n    Esql.o365_audit_LogonError_values,\n\
+  \    Esql.o365_audit_LogonError_count_distinct,\n    Esql.o365_audit_ExtendedProperties_RequestType_values,\n\
+  \    Esql.source_ip_values,\n    Esql.source_ip_count_distinct,\n    Esql.source_as_organization_name_values,\n\
+  \    Esql.source_geo_country_name_values,\n    Esql.source_geo_country_name_count_distinct,\n\
+  \    Esql.source_as_organization_name_count_distinct,\n    Esql.timestamp_first_seen,\n\
+  \    Esql.timestamp_last_seen,\n    Esql.event_duration_seconds,\n    Esql.event_count,\n\
+  \    Esql.brute_force_type\n| where Esql.brute_force_type != \"other\""
+explanation: 'Identifies brute-force authentication activity targeting Microsoft 365
+  user accounts using failed sign-in patterns that
+
+  match password spraying, credential stuffing, or password guessing behavior. Adversaries
+  may attempt brute-force
+
+  authentication with credentials obtained from previous breaches, leaks, marketplaces
+  or guessable passwords.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/26f68dba-ce29-497b-8e13-b4fde1db5a2d.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+- type: data_source
+  value: Microsoft 365 Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - IT administrators using automation tools (e.g., PowerShell) during account provisioning
+    may trigger false positives if login attempts cluster.
+
+    - Penetration testing or red team simulations may resemble spray activity.
+
+    - Infrequent, low-volume login testing tools like ADFS testing scripts can exhibit
+    similar patterns.
+
+
+    ### Response and remediation
+
+
+    - Initiate an internal incident ticket and inform the affected identity/IT team.
+
+    - Temporarily disable impacted user accoun'
+  mitigation: Review investigation guide for details
+references:
+- https://learn.microsoft.com/en-us/security/operations/incident-response-playbook-password-spray
+- https://learn.microsoft.com/en-us/purview/audit-log-detailed-properties
+- https://securityscorecard.com/research/massive-botnet-targets-m365-with-stealthy-password-spraying-attacks/
+- https://github.com/0xZDH/Omnispray
+- https://github.com/0xZDH/o365spray
+has_investigation_guide: true
+risk_score: 47

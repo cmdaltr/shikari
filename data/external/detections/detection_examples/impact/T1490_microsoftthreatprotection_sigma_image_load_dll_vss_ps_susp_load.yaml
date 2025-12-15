@@ -1,0 +1,87 @@
+technique_id: T1490
+technique_name: Suspicious Volume Shadow Copy VSS_PS.dll Load
+tactic: impact
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: 333cdbe8-27bb-4246-bf82-b41a0dca4b70
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_* and not 1 of filter_optional_*\nfilter_main_image_null:\n  Image:\
+  \ null\nfilter_main_legit:\n  Image|endswith:\n  - \\clussvc.exe\n  - \\dismhost.exe\n\
+  \  - \\dllhost.exe\n  - \\inetsrv\\appcmd.exe\n  - \\inetsrv\\iissetup.exe\n  -\
+  \ \\msiexec.exe\n  - \\rundll32.exe\n  - \\searchindexer.exe\n  - \\srtasks.exe\n\
+  \  - \\svchost.exe\n  - \\System32\\SystemPropertiesAdvanced.exe\n  - \\taskhostw.exe\n\
+  \  - \\thor.exe\n  - \\thor64.exe\n  - \\tiworker.exe\n  - \\vssvc.exe\n  - \\vssadmin.exe\n\
+  \  - \\WmiPrvSE.exe\n  - \\wsmprovhost.exe\n  Image|startswith: C:\\Windows\\\n\
+  filter_main_update:\n  CommandLine|contains: \\dismhost.exe {\n  CommandLine|startswith:\
+  \ C:\\$WinREAgent\\Scratch\\\nfilter_optional_programfiles:\n  Image|startswith:\n\
+  \  - C:\\Program Files\\\n  - C:\\Program Files (x86)\\\nselection:\n  ImageLoaded|endswith:\
+  \ \\vss_ps.dll\n"
+explanation: 'Detects the image load of vss_ps.dll by uncommon executables. This DLL
+  is used by the Volume Shadow Copy Service (VSS) to manage shadow copies of files
+  and volumes.
+
+  It is often abused by attackers to delete or manipulate shadow copies, which can
+  hinder forensic investigations and data recovery efforts.
+
+  The fact that it is loaded by processes that are not typically associated with VSS
+  operations can indicate suspicious activity.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://www.virustotal.com/gui/file/ba88ca45589fae0139a40ca27738a8fc2dfbe1be5a64a9558f4e0f52b35c5add
+- https://twitter.com/am0nsec/status/1412232114980982787
+tags:
+- attack.defense-evasion
+- attack.impact
+- attack.t1490
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    ImageLoaded|endswith: \vss_ps.dll
+  filter_main_legit:
+    Image|startswith: C:\Windows\
+    Image|endswith:
+    - \clussvc.exe
+    - \dismhost.exe
+    - \dllhost.exe
+    - \inetsrv\appcmd.exe
+    - \inetsrv\iissetup.exe
+    - \msiexec.exe
+    - \rundll32.exe
+    - \searchindexer.exe
+    - \srtasks.exe
+    - \svchost.exe
+    - \System32\SystemPropertiesAdvanced.exe
+    - \taskhostw.exe
+    - \thor.exe
+    - \thor64.exe
+    - \tiworker.exe
+    - \vssvc.exe
+    - \vssadmin.exe
+    - \WmiPrvSE.exe
+    - \wsmprovhost.exe
+  filter_main_update:
+    CommandLine|startswith: C:\$WinREAgent\Scratch\
+    CommandLine|contains: \dismhost.exe {
+  filter_main_image_null:
+    Image: null
+  filter_optional_programfiles:
+    Image|startswith:
+    - C:\Program Files\
+    - C:\Program Files (x86)\
+  condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*
+metadata:
+  created_date: 2021-07-07
+  modified_date: 2025-07-11
+  author: Markus Neis, @markus_neis
+  status: test
+  imported_date: '2025-11-28'

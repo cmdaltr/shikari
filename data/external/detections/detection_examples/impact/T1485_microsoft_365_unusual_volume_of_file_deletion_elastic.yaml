@@ -1,0 +1,37 @@
+technique_id: T1485
+technique_name: Microsoft 365 Unusual Volume of File Deletion
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:SecurityComplianceCenter and event.category:web
+  and event.action:"Unusual volume of file deletion" and event.outcome:success
+explanation: Identifies that a user has deleted an unusually large volume of files
+  as reported by Microsoft Cloud App Security.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b2951150-658f-4a60-832f-a00d1e6c6745.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - High-volume legitimate deletions during data migration or cleanup projects can
+    trigger false positives. To manage this, create exceptions for users or groups
+    involved in these activities during the specified time frame.
+
+    - Automated processes or scripts that perform bulk deletions as part of routine
+    maintenance may be flagged. Identify these processes and whitelist them to prevent
+    unnecessary alerts.
+
+    - Users with roles in data management or IT support may regularly dele'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/cloud-app-security/anomaly-detection-policy
+- https://docs.microsoft.com/en-us/cloud-app-security/policy-template-reference
+has_investigation_guide: true
+risk_score: 47

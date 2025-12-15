@@ -1,0 +1,52 @@
+technique_id: T1098
+technique_name: AWS IAM User Created Access Keys For Another User
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-aws.cloudtrail-* metadata _id, _version, _index\n| where event.dataset\
+  \ == \"aws.cloudtrail\"\n    and event.provider == \"iam.amazonaws.com\"\n    and\
+  \ event.action == \"CreateAccessKey\"\n    and event.outcome == \"success\"\n  \
+  \  and user.name != user.target.name\n| keep\n    @timestamp,\n    cloud.account.id,\n\
+  \    cloud.region,\n    event.provider,\n    event.action,\n    event.outcome,\n\
+  \    event.dataset,\n    user.name,\n    source.address,\n    source.ip,\n    user.target.name,\n\
+  \    user_agent.original,\n    aws.cloudtrail.request_parameters,\n    aws.cloudtrail.response_elements,\n\
+  \    aws.cloudtrail.user_identity.arn,\n    aws.cloudtrail.user_identity.type,\n\
+  \    aws.cloudtrail.user_identity.access_key_id,\n    source.geo.*"
+explanation: 'An adversary with access to a set of compromised credentials may attempt
+  to persist or escalate privileges by creating a
+
+  new set of credentials for an existing user. This rule looks for use of the IAM
+  `CreateAccessKey` API operation to
+
+  create new programmatic access keys for another IAM user.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/696015ef-718e-40ff-ac4a-cc2ba88dbeeb.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS IAM
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- **Expected credential rotation.**  \n\
+    \  Some environments delegate credential rotation responsibilities to centralized\
+    \ automation or specific admin roles. Confirm if the calling user is authorized\
+    \ for such actions.  \n- **Administrative workflows.**  \n  Account provisioning\
+    \ systems may legitimately create keys on behalf of users. Check for standard\
+    \ tags, automation tools, or user agents that indicate managed operations.  \n\
+    - **Service-linked roles or external IAM automatio"
+  mitigation: Review investigation guide for details
+references:
+- https://hackingthe.cloud/aws/exploitation/iam_privilege_escalation/#iamcreateaccesskey
+- https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-persistence/aws-iam-persistence
+- https://permiso.io/blog/lucr-3-scattered-spider-getting-saas-y-in-the-cloud
+- https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateAccessKey.html
+has_investigation_guide: true
+risk_score: 47

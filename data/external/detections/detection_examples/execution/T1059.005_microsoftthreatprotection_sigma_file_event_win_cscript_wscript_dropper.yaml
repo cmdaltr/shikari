@@ -1,0 +1,49 @@
+technique_id: T1059.005
+technique_name: WScript or CScript Dropper - File
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 002bdb95-0cf1-46a6-9e08-d38c128a6127
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith:\n  - \\wscript.exe\n  - \\cscript.exe\n  TargetFilename|endswith:\n\
+  \  - .jse\n  - .vbe\n  - .js\n  - .vba\n  - .vbs\n  TargetFilename|startswith:\n\
+  \  - C:\\Users\\\n  - C:\\ProgramData\n"
+explanation: Detects a file ending in jse, vbe, js, vba, vbs written by cscript.exe
+  or wscript.exe
+false_positives:
+- Unknown
+references:
+- WScript or CScript Dropper (cea72823-df4d-4567-950c-0b579eaf0846)
+tags:
+- attack.execution
+- attack.t1059.005
+- attack.t1059.007
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \wscript.exe
+    - \cscript.exe
+    TargetFilename|startswith:
+    - C:\Users\
+    - C:\ProgramData
+    TargetFilename|endswith:
+    - .jse
+    - .vbe
+    - .js
+    - .vba
+    - .vbs
+  condition: selection
+metadata:
+  created_date: 2022-01-10
+  modified_date: 2022-12-02
+  author: Tim Shelton
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,49 @@
+technique_id: T1548.002
+technique_name: Bypass UAC via CMSTP
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: e66779cc-383e-4224-a3a4-267eeb585c40
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection*\nselection_cli:\n\
+  \  CommandLine|contains:\n  - /s\n  - -s\n  - /au\n  - -au\n  - /ni\n  - -ni\nselection_img:\n\
+  - Image|endswith: \\cmstp.exe\n- OriginalFileName: CMSTP.EXE\n"
+explanation: Detect commandline usage of Microsoft Connection Manager Profile Installer
+  (cmstp.exe) to install specially formatted local .INF files
+false_positives:
+- Legitimate use of cmstp.exe utility by legitimate user
+references:
+- https://eqllib.readthedocs.io/en/latest/analytics/e584f1a1-c303-4885-8a66-21360c90995b.html
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.003/T1218.003.md
+- https://lolbas-project.github.io/lolbas/Binaries/Cmstp/
+tags:
+- attack.privilege-escalation
+- attack.defense-evasion
+- attack.t1548.002
+- attack.t1218.003
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith: \cmstp.exe
+  - OriginalFileName: CMSTP.EXE
+  selection_cli:
+    CommandLine|contains:
+    - /s
+    - -s
+    - /au
+    - -au
+    - /ni
+    - -ni
+  condition: all of selection*
+metadata:
+  created_date: 2019-10-24
+  modified_date: 2022-08-30
+  author: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community
+  status: test
+  imported_date: '2025-11-28'

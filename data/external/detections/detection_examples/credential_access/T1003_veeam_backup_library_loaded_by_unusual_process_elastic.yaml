@@ -1,0 +1,45 @@
+technique_id: T1003
+technique_name: Veeam Backup Library Loaded by Unusual Process
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "library where host.os.type == \"windows\" and event.action == \"load\" and\n\
+  \  (dll.name : \"Veeam.Backup.Common.dll\" or dll.pe.original_file_name : \"Veeam.Backup.Common.dll\"\
+  ) and\n  (\n    process.code_signature.trusted == false or\n    process.code_signature.exists\
+  \ == false or\n    process.name : (\"powershell.exe\", \"pwsh.exe\", \"powershell_ise.exe\"\
+  )\n  )"
+explanation: 'Identifies potential credential decrypt operations by PowerShell or
+  unsigned processes using the Veeam.Backup.Common.dll
+
+  library. Attackers can use Veeam Credentials to target backups as part of destructive
+  operations such as Ransomware
+
+  attacks.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/aaab30ec-b004-4191-95e1-4a14387ef6a6.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts or automation tasks using PowerShell may trigger
+    the rule. Review the script''s purpose and source, and if verified as safe, consider
+    adding an exception for the specific script or process.
+
+    - Scheduled tasks or maintenance operations that involve Veeam Backup operations
+    might load the library through unsigned processes. Validate these tasks and exclude
+    them if they are part of routine, secure operations.
+
+    - Custom or third-party backup s'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

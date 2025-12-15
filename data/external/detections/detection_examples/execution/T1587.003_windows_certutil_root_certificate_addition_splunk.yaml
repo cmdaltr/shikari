@@ -1,0 +1,65 @@
+technique_id: T1587.003
+technique_name: Windows Certutil Root Certificate Addition
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "| tstats `security_content_summariesonly` \n  count min(_time) as firstTime\
+  \ \n  max(_time) as lastTime\n  values(Processes.process) as process \nfrom datamodel=Endpoint.Processes\
+  \ where \n`process_certutil` \nProcesses.process=*-addstore* \nProcesses.process=*root*\n\
+  Processes.process IN (\n      \"*:\\\\PerfLogs\\\\*\",\n      \"*:\\\\Windows\\\\\
+  Temp\\\\*\",\n      \"*\\\\AppData\\\\Local\\\\Temp\\\\*\",\n      \"*\\\\ProgramData\\\
+  \\*\",\n      \"*\\\\Users\\\\Public\\\\*\",\n      \"*%AppData%*\",\n      \"*%Public%*\"\
+  ,\n      \"*%Temp%*\",\n      \"*%tmp%*\"\n      )\nby Processes.action Processes.dest\
+  \ Processes.original_file_name\n   Processes.parent_process Processes.parent_process_exec\
+  \ \n   Processes.parent_process_guid Processes.parent_process_id \n   Processes.parent_process_name\
+  \ Processes.parent_process_path\n   Processes.process Processes.process_exec Processes.process_guid\
+  \ \n   Processes.process_hash Processes.process_id Processes.process_integrity_level\
+  \ \n   Processes.process_name Processes.process_path Processes.user \n   Processes.user_id\
+  \ Processes.vendor_product \n| `drop_dm_object_name(\"Processes\")`\n| `security_content_ctime(firstTime)`\
+  \ \n|`security_content_ctime(lastTime)` \n| `windows_certutil_root_certificate_addition_filter`"
+explanation: "The following analytic detects the use of certutil.exe to add a certificate\
+  \ to the Root certificate store using the \"-addstore\" flag.\nIn this case, the\
+  \ certificate is loaded from a temporary file path (e.g., %TEMP%) or other uncommon\
+  \ locations (e.g. C:\\\\Users\\\\Public\\\\), which is highly suspicious and uncommon\
+  \ in legitimate administrative activity.\nThis behavior may indicate an adversary\
+  \ is installing a malicious root certificate to intercept HTTPS traffic, impersonate\
+  \ trusted entities, or bypass security controls. \nThe use of flags such as -f (force)\
+  \ and -Enterprise, combined with loading .tmp files from user-writable locations,\
+  \ is consistent with post-exploitation activity seen in credential theft and adversary-in-the-middle\
+  \ (AiTM) attacks. \nThis should be investigated immediately, especially if correlated\
+  \ with unauthorized privilege use or prior certificate modifications.\nYou should\
+  \ monitor when new certificates are added to the root store because this store is\
+  \ what your system uses to decide which websites, apps, and software can be trusted.\
+  \ \nIf an attacker manages to add their own certificate there, they can silently\
+  \ intercept encrypted traffic, impersonate trusted websites, or make malicious programs\
+  \ look safe. \nThis means they could steal sensitive data, bypass security tools,\
+  \ and keep access to your system even after other malware is removed."
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e9926391-ec0c-4bad-8a95-e450dbf6aae4/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrators or third party utilities may use leverage certutil in
+    order to add a root certificate to the store. Filter as needed or restrict to
+    critical assets on the perimeter.
+  mitigation: Review context and user activity
+references:
+- https://www.microsoft.com/en-us/security/blog/2025/07/31/frozen-in-transit-secret-blizzards-aitm-campaign-against-diplomats/
+- https://www.deepinstinct.com/blog/iranian-threat-actor-continues-to-develop-mass-exploitation-tools
+- https://unit42.paloaltonetworks.com/retefe-banking-trojan-targets-sweden-switzerland-and-japan/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1587.003/add_store_cert/addstore_cert.log

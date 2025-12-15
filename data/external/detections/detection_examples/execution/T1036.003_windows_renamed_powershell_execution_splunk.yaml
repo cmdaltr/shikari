@@ -1,0 +1,46 @@
+technique_id: T1036.003
+technique_name: Windows Renamed Powershell Execution
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: "| tstats `security_content_summariesonly` \n  count min(_time) as firstTime\
+  \ \n        max(_time) as lastTime \n\nfrom datamodel=Endpoint.Processes where \n\
+  \n(\n  Processes.original_file_name = PowerShell.EXE\n  Processes.process_name !=\
+  \ powershell.exe\n)\nOR\n(\n  Processes.original_file_name = pwsh.dll\n  Processes.process_name\
+  \ != pwsh.exe\n)\nOR\n(\n  Processes.original_file_name = powershell_ise.EXE\n \
+  \ Processes.process_name != powershell_ise.exe\n)\n\nby Processes.action Processes.dest\
+  \ Processes.original_file_name Processes.parent_process \n   Processes.parent_process_exec\
+  \ Processes.parent_process_guid Processes.parent_process_id \n   Processes.parent_process_name\
+  \ Processes.parent_process_path Processes.process \n   Processes.process_exec Processes.process_guid\
+  \ Processes.process_hash Processes.process_id \n   Processes.process_integrity_level\
+  \ Processes.process_name Processes.process_path Processes.user \n   Processes.user_id\
+  \ Processes.vendor_product \n   \n| `drop_dm_object_name(Processes)`\n| `security_content_ctime(firstTime)`\
+  \ \n| `security_content_ctime(lastTime)`\n| `windows_renamed_powershell_execution_filter`"
+explanation: The following analytic identifies instances where the PowerShell executable
+  has been renamed and executed under an alternate filename. This behavior is commonly
+  associated with attempts to evade security controls or bypass logging mechanisms
+  that monitor standard PowerShell usage. While rare in legitimate environments, renamed
+  PowerShell binaries are frequently observed in malicious campaigns leveraging Living-off-the-Land
+  Binaries (LOLBins) and fileless malware techniques. This detection flags executions
+  of PowerShell where the process name does not match the default powershell.exe or
+  pwsh.exe, especially when invoked from unusual paths or accompanied by suspicious
+  command-line arguments.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/c08014de-cc5a-42de-9775-76ecd5b37bbd/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://malpedia.caad.fkie.fraunhofer.de/details/win.xworm
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1036.003/renamed_powershell/renamed_powershell.log

@@ -1,0 +1,55 @@
+technique_id: T1078
+technique_name: FirstTime Seen Account Performing DCSync
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.code:\"4662\" and winlog.event_data.Properties:(\n                 \
+  \              *DS-Replication-Get-Changes* or *DS-Replication-Get-Changes-All*\
+  \ or\n                               *DS-Replication-Get-Changes-In-Filtered-Set*\
+  \ or *1131f6ad-9c07-11d1-f79f-00c04fc2dcd2* or\n                               *1131f6aa-9c07-11d1-f79f-00c04fc2dcd2*\
+  \ or *89e95b76-444d-4c62-991a-0facbeda640c*) and\n not winlog.event_data.SubjectUserName:(*$\
+  \ or MSOL_*)"
+explanation: 'This rule identifies when a User Account starts the Active Directory
+  Replication Process for the first time. Attackers
+
+  can use the DCSync technique to get credential information of individual accounts
+  or the entire domain, thus
+
+  compromising the entire domain.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5c6f4c58-b381-452a-8976-f1b1c6aa0def.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Administrators may use custom accounts on Azure AD Connect; investigate if this
+    is part of a new Azure AD account setup, and ensure it is properly secured. If
+    the activity was expected and there is no other suspicious activity involving
+    the host or user, the analyst can dismiss the alert.
+
+    - Although replicating Active Directory (AD) data to non-Domain Controllers is
+    not a common practice and is generally not recommended from a security perspective,
+    some software vendor'
+  mitigation: Review investigation guide for details
+references:
+- https://threathunterplaybook.com/notebooks/windows/06_credential_access/WIN-180815210510.html
+- https://threathunterplaybook.com/library/windows/active_directory_replication.html?highlight=dcsync#directory-replication-services-auditing
+- https://github.com/SigmaHQ/sigma/blob/master/rules/windows/builtin/security/win_ad_replication_non_machine_account.yml
+- https://github.com/atc-project/atomic-threat-coverage/blob/master/Atomic_Threat_Coverage/Logging_Policies/LP_0027_windows_audit_directory_service_access.md
+- https://attack.stealthbits.com/privilege-escalation-using-mimikatz-dcsync
+- https://www.thehacker.recipes/ad/movement/credentials/dumping/dcsync
+has_investigation_guide: true
+risk_score: 73

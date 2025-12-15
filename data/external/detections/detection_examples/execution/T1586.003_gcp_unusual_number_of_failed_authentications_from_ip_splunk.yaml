@@ -1,0 +1,41 @@
+technique_id: T1586.003
+technique_name: GCP Unusual Number of Failed Authentications From Ip
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`gws_reports_login` event.type = login event.name = login_failure| bucket
+  span=5m _time | stats  dc(user_name) AS unique_accounts values(user_name) as tried_accounts
+  values(authentication_method) AS authentication_method by _time, src | eventstats  avg(unique_accounts)
+  as ip_avg , stdev(unique_accounts) as ip_std by _time | eval  upperBound=(ip_avg+ip_std*3)
+  | eval  isOutlier=if(unique_accounts > 10 and unique_accounts >= upperBound, 1,
+  0) | where isOutlier =1| `gcp_unusual_number_of_failed_authentications_from_ip_filter`'
+explanation: The following analytic identifies a single source IP failing to authenticate
+  into Google Workspace with multiple valid users, potentially indicating a Password
+  Spraying attack. It uses Google Workspace login failure events and calculates the
+  standard deviation for source IPs, applying the 3-sigma rule to detect unusual failed
+  authentication attempts. This activity is significant as it may signal an adversary
+  attempting to gain initial access or elevate privileges. If confirmed malicious,
+  this could lead to unauthorized access, data breaches, or further exploitation within
+  the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/bd8097ed-958a-4873-87d9-44f2b4d85705/
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+- type: risk_user
+  value: tried_accounts
+  confidence: high
+false_positives:
+- description: No known false positives for this detection. Please review this alert
+  mitigation: Review context and user activity
+references:
+- https://cloud.google.com/blog/products/identity-security/how-google-cloud-can-help-stop-credential-stuffing-attacks
+- https://www.slideshare.net/dafthack/ok-google-how-do-i-red-team-gsuite
+- https://attack.mitre.org/techniques/T1110/003/
+- https://www.blackhillsinfosec.com/wp-content/uploads/2020/05/Breaching-the-Cloud-Perimeter-Slides.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1110.003/gcp_gws_multiple_login_failure/gws_login.json

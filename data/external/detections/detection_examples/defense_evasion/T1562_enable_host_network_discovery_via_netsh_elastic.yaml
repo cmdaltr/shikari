@@ -1,0 +1,56 @@
+technique_id: T1562
+technique_name: Enable Host Network Discovery via Netsh
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: 'process where host.os.type == "windows" and event.type == "start" and
+
+  process.name : "netsh.exe" and
+
+  process.args : ("firewall", "advfirewall") and process.args : "group=Network Discovery"
+  and process.args : "enable=Yes"'
+explanation: 'Identifies use of the netsh.exe program to enable host discovery via
+  the network. Attackers can use this command-line
+
+  tool to weaken the host firewall settings.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8b4f0816-6a65-4630-86a6-c21c179c0d09.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This mechanism can be used legitimately.\
+    \ Analysts can dismiss the alert if the Administrator is aware of the activity\
+    \ and there are justifications for this configuration.\n\n### Response and remediation\n\
+    \n- Initiate the incident response process based on the outcome of the triage.\n\
+    - Isolate the involved hosts to prevent further post-compromise behavior.\n- Disable\
+    \ Network Discovery:\n    - Using netsh: `netsh advfirewall firewall set rule\
+    \ group=\"Network Discovery\" new enabl"
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

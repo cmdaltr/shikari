@@ -1,0 +1,36 @@
+technique_id: T1204
+technique_name: Kubernetes Pod Created in Default Namespace
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '`kube_audit` objectRef.resource=pods verb=create objectRef.namespace IN ("default",
+  "kube-system", "kube-public") | fillnull | stats count by objectRef.name objectRef.namespace
+  objectRef.resource requestReceivedTimestamp requestURI responseStatus.code sourceIPs{}
+  stage user.groups{} user.uid user.username userAgent verb | rename sourceIPs{} as
+  src_ip, user.username as user | `kubernetes_pod_created_in_default_namespace_filter`'
+explanation: The following analytic detects the creation of Kubernetes pods in the
+  default, kube-system, or kube-public namespaces. It leverages Kubernetes audit logs
+  to identify pod creation events within these specific namespaces. This activity
+  is significant for a SOC as it may indicate an attacker attempting to hide their
+  presence or evade defenses. Unauthorized pod creation in these namespaces can suggest
+  a successful cluster breach, potentially leading to privilege escalation, persistent
+  access, or further malicious activities within the cluster.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/3d6b1a81-367b-42d5-a925-6ef90b6b9f1e/
+indicators:
+- type: data_source
+  value: Kubernetes Audit
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1204/kubernetes_privileged_pod/kubernetes_privileged_pod.json

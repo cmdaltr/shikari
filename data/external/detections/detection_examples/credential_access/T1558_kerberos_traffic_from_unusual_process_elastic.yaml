@@ -1,0 +1,90 @@
+technique_id: T1558
+technique_name: Kerberos Traffic from Unusual Process
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "network where host.os.type == \"windows\" and event.type == \"start\" and\
+  \ network.direction == \"egress\" and\n  destination.port == 88 and source.port\
+  \ >= 49152 and process.pid != 4 and destination.address : \"*\" and\n  not \n  (\n\
+  \    process.executable : (\n        \"\\\\device\\\\harddiskvolume?\\\\program\
+  \ files (x86)\\\\nmap\\\\nmap.exe\",\n        \"\\\\device\\\\harddiskvolume?\\\\\
+  program files (x86)\\\\nmap oem\\\\nmap.exe\",\n        \"\\\\device\\\\harddiskvolume?\\\
+  \\windows\\\\system32\\\\lsass.exe\",\n        \"?:\\\\Program Files\\\\Amazon Corretto\\\
+  \\jdk1*\\\\bin\\\\java.exe\",\n        \"?:\\\\Program Files\\\\BlackBerry\\\\UEM\\\
+  \\Proxy Server\\\\bin\\\\prunsrv.exe\",\n        \"?:\\\\Program Files\\\\BlackBerry\\\
+  \\UEM\\\\Core\\\\tomcat-core\\\\bin\\\\tomcat9.exe\",\n        \"?:\\\\Program Files\\\
+  \\DBeaver\\\\dbeaver.exe\",\n        \"?:\\\\Program Files\\\\Docker\\\\Docker\\\
+  \\resources\\\\com.docker.backend.exe\",\n        \"?:\\\\Program Files\\\\Docker\\\
+  \\Docker\\\\resources\\\\com.docker.vpnkit.exe\",\n        \"?:\\\\Program Files\\\
+  \\Docker\\\\Docker\\\\resources\\\\vpnkit.exe\",\n        \"?:\\\\Program Files\\\
+  \\Google\\\\Chrome\\\\Application\\\\chrome.exe\",\n        \"?:\\\\Program Files\\\
+  \\Internet Explorer\\\\iexplore.exe\",\n        \"?:\\\\Program Files\\\\JetBrains\\\
+  \\PyCharm Community Edition*\\\\bin\\\\pycharm64.exe\",\n        \"?:\\\\Program\
+  \ Files\\\\Mozilla Firefox\\\\firefox.exe\",\n        \"?:\\\\Program Files\\\\\
+  Oracle\\\\VirtualBox\\\\VirtualBoxVM.exe\",\n        \"?:\\\\Program Files\\\\Puppet\
+  \ Labs\\\\Puppet\\\\puppet\\\\bin\\\\ruby.exe\",\n        \"?:\\\\Program Files\\\
+  \\rapid7\\\\nexpose\\\\nse\\\\.DLLCACHE\\\\nseserv.exe\",\n        \"?:\\\\Program\
+  \ Files\\\\Silverfort\\\\Silverfort AD Adapter\\\\SilverfortServer.exe\",\n    \
+  \    \"?:\\\\Program Files\\\\Tenable\\\\Nessus\\\\nessusd.exe\",\n        \"?:\\\
+  \\Program Files\\\\VMware\\\\VMware View\\\\Server\\\\bin\\\\ws_TomcatService.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Advanced Port Scanner\\\\advanced_port_scanner.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\DesktopCentral_Agent\\\\bin\\\\dcpatchscan.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\GFI\\\\LanGuard 12 Agent\\\\lnsscomm.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Internet Explorer\\\\iexplore.exe\",\n\
+  \        \"?:\\\\Program Files (x86)\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Microsoft\\\\EdgeUpdate\\\\MicrosoftEdgeUpdate.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Microsoft Silverlight\\\\sllauncher.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Nmap\\\\nmap.exe\",\n        \"?:\\\\\
+  Program Files (x86)\\\\Nmap OEM\\\\nmap.exe\",\n        \"?:\\\\Program Files (x86)\\\
+  \\nwps\\\\NetScanTools Pro\\\\NSTPRO.exe\",\n        \"?:\\\\Program Files (x86)\\\
+  \\SAP BusinessObjects\\\\tomcat\\\\bin\\\\tomcat9.exe\",\n        \"?:\\\\Program\
+  \ Files (x86)\\\\SuperScan\\\\scanner.exe\",\n        \"?:\\\\Program Files (x86)\\\
+  \\Zscaler\\\\ZSATunnel\\\\ZSATunnel.exe\",\n        \"?:\\\\Windows\\\\System32\\\
+  \\lsass.exe\",\n        \"?:\\\\Windows\\\\System32\\\\MicrosoftEdgeCP.exe\",\n\
+  \        \"?:\\\\Windows\\\\System32\\\\svchost.exe\",\n        \"?:\\\\Windows\\\
+  \\SysWOW64\\\\vmnat.exe\",\n        \"?:\\\\Windows\\\\SystemApps\\\\Microsoft.MicrosoftEdge_*\\\
+  \\MicrosoftEdge.exe\",\n        \"System\"\n    ) and process.code_signature.trusted\
+  \ == true\n  ) and\n destination.address != \"127.0.0.1\" and destination.address\
+  \ != \"::1\""
+explanation: 'Identifies network connections to the standard Kerberos port from an
+  unusual process. On Windows, the only process that
+
+  normally performs Kerberos traffic from a domain joined host is lsass.exe.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/897dc6b5-b39f-432a-8d75-d3730d50c782.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This rule uses a Kerberos-related port but does not identify the protocol used
+    on that port. HTTP traffic on a non-standard port or destination IP address unrelated
+    to Domain controllers can create false positives.
+
+    - Exceptions can be added for noisy/frequent connections.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Investigate crede'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

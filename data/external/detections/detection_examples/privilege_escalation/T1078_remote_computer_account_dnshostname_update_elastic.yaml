@@ -1,0 +1,59 @@
+technique_id: T1078
+technique_name: Remote Computer Account DnsHostName Update
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "iam where event.action == \"changed-computer-account\" and user.id : (\"S-1-5-21-*\"\
+  , \"S-1-12-1-*\") and\n\n    /* if DnsHostName value equal a DC DNS hostname then\
+  \ it's highly suspicious */\n    winlog.event_data.DnsHostName : \"??*\" and\n\n\
+  \    /* exclude FPs where DnsHostName starts with the ComputerName that was changed\
+  \ */\n    not startswith~(winlog.event_data.DnsHostName, substring(winlog.event_data.TargetUserName,\
+  \ 0, length(winlog.event_data.TargetUserName) - 1))"
+explanation: 'Identifies the remote update to a computer account''s DnsHostName attribute.
+  If the new value set is a valid domain
+
+  controller DNS hostname and the subject computer name is not a domain controller,
+  then it''s highly likely a preparation
+
+  step to exploit CVE-2022-26923 in an attempt to elevate privileges from a standard
+  domain user to domain admin
+
+  privileges.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6bed021a-0afb-461c-acbe-ffdb9574d3f3.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'false positive.
+
+    - Investigate the account associated with the user.id to determine if it has a
+    history of suspicious activity or if it has been compromised.
+
+    - Examine recent changes or activities on the affected computer account to identify
+    any unauthorized access or configuration changes.
+
+    - Correlate this event with other security alerts or logs to identify potential
+    patterns or coordinated activities that might indicate a broader attack.
+
+
+    ### False positive analysis
+
+
+    - Routine maintenance or u'
+  mitigation: Review investigation guide for details
+references:
+- https://research.ifcr.dk/certifried-active-directory-domain-privilege-escalation-cve-2022-26923-9e098fe298f4
+- https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2022-26923
+has_investigation_guide: true
+risk_score: 73

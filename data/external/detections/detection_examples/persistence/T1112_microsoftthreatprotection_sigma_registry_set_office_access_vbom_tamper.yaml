@@ -1,0 +1,40 @@
+technique_id: T1112
+technique_name: Trust Access Disable For VBApplications
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 1a5c46e9-f32f-42f7-b2bc-6e9084db7fbf
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Details: DWORD (0x00000001)\n  TargetObject|endswith: \\Security\\AccessVBOM\n"
+explanation: Detects registry changes to Microsoft Office "AccessVBOM" to a value
+  of "1" which disables trust access for VBA on the victim machine and lets attackers
+  execute malicious macros without any Microsoft Office warnings.
+false_positives:
+- Unlikely
+references:
+- https://twitter.com/inversecos/status/1494174785621819397
+- https://www.mcafee.com/blogs/other-blogs/mcafee-labs/zloader-with-a-new-infection-technique/
+- https://securelist.com/scarcruft-surveilling-north-korean-defectors-and-human-rights-activists/105074/
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.t1112
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|endswith: \Security\AccessVBOM
+    Details: DWORD (0x00000001)
+  condition: selection
+metadata:
+  created_date: 2020-05-22
+  modified_date: 2023-08-17
+  author: Trent Liffick (@tliffick), Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

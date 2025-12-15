@@ -1,0 +1,60 @@
+technique_id: T1055
+technique_name: Suspicious Managed Code Hosting Process
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"windows\" and event.type != \"deletion\" and\n\
+  \  file.name : (\"wscript.exe.log\",\n               \"cscript.exe.log\",\n    \
+  \           \"mshta.exe.log\",\n               \"wmic.exe.log\",\n             \
+  \  \"svchost.exe.log\",\n               \"dllhost.exe.log\",\n               \"\
+  cmstp.exe.log\",\n               \"regsvr32.exe.log\")"
+explanation: 'Identifies a suspicious managed code hosting process which could indicate
+  code injection or other form of suspicious
+
+  code execution.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/acf738b5-b5b2-4acc-bad9-1e18ee234f40.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts may trigger alerts when executed by IT personnel
+    using wscript.exe or cscript.exe. To manage this, create exceptions for known
+    scripts and trusted user accounts.
+
+    - Automated system maintenance tasks using mshta.exe or wmic.exe can be flagged
+    as suspicious. Identify and whitelist these tasks if they are part of regular
+    system operations.
+
+    - Software updates or installations might use svchost.exe or dllhost.exe, leading
+    to false positives'
+  mitigation: Review investigation guide for details
+references:
+- http://web.archive.org/web/20230329154538/https://blog.menasec.net/2019/07/interesting-difr-traces-of-net-clr.html
+has_investigation_guide: true
+risk_score: 73

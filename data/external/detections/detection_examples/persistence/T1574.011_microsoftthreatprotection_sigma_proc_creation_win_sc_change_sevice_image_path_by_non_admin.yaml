@@ -1,0 +1,52 @@
+technique_id: T1574.011
+technique_name: Possible Privilege Escalation via Weak Service Permissions
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: d937b75f-a665-4480-88a5-2f20e9f9b22a
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: scbynonadmin and 1 of\
+  \ selection_*\nscbynonadmin:\n  Image|endswith: \\sc.exe\n  IntegrityLevel:\n  -\
+  \ Medium\n  - S-1-16-8192\nselection_binpath:\n  CommandLine|contains|all:\n  -\
+  \ config\n  - binPath\nselection_failure:\n  CommandLine|contains|all:\n  - failure\n\
+  \  - command\n"
+explanation: Detection of sc.exe utility spawning by user with Medium integrity level
+  to change service ImagePath or FailureCommand
+false_positives:
+- Unknown
+references:
+- https://speakerdeck.com/heirhabarov/hunting-for-privilege-escalation-in-windows-environment
+- https://pentestlab.blog/2017/03/30/weak-service-permissions/
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1574.011
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  scbynonadmin:
+    Image|endswith: \sc.exe
+    IntegrityLevel:
+    - Medium
+    - S-1-16-8192
+  selection_binpath:
+    CommandLine|contains|all:
+    - config
+    - binPath
+  selection_failure:
+    CommandLine|contains|all:
+    - failure
+    - command
+  condition: scbynonadmin and 1 of selection_*
+metadata:
+  created_date: 2019-10-26
+  modified_date: 2024-12-01
+  author: Teymur Kheirkhabarov
+  status: test
+  imported_date: '2025-11-28'

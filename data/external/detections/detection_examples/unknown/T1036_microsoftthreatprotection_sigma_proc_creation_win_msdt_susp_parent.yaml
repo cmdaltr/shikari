@@ -1,0 +1,54 @@
+technique_id: T1036
+technique_name: Suspicious MSDT Parent Process
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 7a74da6b-ea76-47db-92cc-874ad90df734
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_msdt:\n- Image|endswith: \\msdt.exe\n- OriginalFileName: msdt.exe\nselection_parent:\n\
+  \  ParentImage|endswith:\n  - \\cmd.exe\n  - \\cscript.exe\n  - \\mshta.exe\n  -\
+  \ \\powershell.exe\n  - \\pwsh.exe\n  - \\regsvr32.exe\n  - \\rundll32.exe\n  -\
+  \ \\schtasks.exe\n  - \\wmic.exe\n  - \\wscript.exe\n  - \\wsl.exe\n"
+explanation: Detects msdt.exe executed by a suspicious parent as seen in CVE-2022-30190
+  / Follina exploitation
+false_positives:
+- Unknown
+references:
+- https://twitter.com/nao_sec/status/1530196847679401984
+- https://app.any.run/tasks/713f05d2-fe78-4b9d-a744-f7c133e3fafb/
+tags:
+- attack.defense-evasion
+- attack.t1036
+- attack.t1218
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_parent:
+    ParentImage|endswith:
+    - \cmd.exe
+    - \cscript.exe
+    - \mshta.exe
+    - \powershell.exe
+    - \pwsh.exe
+    - \regsvr32.exe
+    - \rundll32.exe
+    - \schtasks.exe
+    - \wmic.exe
+    - \wscript.exe
+    - \wsl.exe
+  selection_msdt:
+  - Image|endswith: \msdt.exe
+  - OriginalFileName: msdt.exe
+  condition: all of selection_*
+metadata:
+  created_date: 2022-06-01
+  modified_date: 2023-02-06
+  author: Nextron Systems
+  status: test
+  imported_date: '2025-11-28'

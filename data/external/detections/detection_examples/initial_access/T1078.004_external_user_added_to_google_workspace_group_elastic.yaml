@@ -1,0 +1,44 @@
+technique_id: T1078.004
+technique_name: External User Added to Google Workspace Group
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "iam where event.dataset == \"google_workspace.admin\" and event.action ==\
+  \ \"ADD_GROUP_MEMBER\" and\n  not endsWith(user.target.email, user.target.group.domain)"
+explanation: 'Detects an external Google Workspace user account being added to an
+  existing group. Adversaries may add external user
+
+  accounts as a means to intercept shared files or emails with that specific group.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/38f384e0-aef8-11ed-9a38-f661ea17fbcc.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+    - With the user account whom added the new user, verify this action was intentional
+
+    - Verify that the target whom was added to the group is expected to have access
+    to the organization''s resources and data
+
+    - If other members have been added to groups that are external, this may indicate
+    historically that this action is expected
+
+
+    ### Response and remediation
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Disable or limit the account during th'
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/33329
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,66 @@
+technique_id: T1218
+technique_name: Execution via Windows Command Debugging Utility
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ (?process.pe.original_file_name == \"CDB.Exe\" or process.name : \"cdb.exe\")\
+  \ and\n  process.args : (\"-cf\", \"-c\", \"-pd\") and\n  not process.executable\
+  \ : (\n        \"?:\\\\Program Files (x86)\\\\*\\\\cdb.exe\",\n        \"?:\\\\\
+  Program Files\\\\*\\\\cdb.exe\",\n\n        /* Crowdstrike specific exclusion as\
+  \ it uses NT Object paths */\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program\
+  \ Files (x86)\\\\*\\\\cdb.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program\
+  \ Files\\\\*\\\\cdb.exe\"\n  )"
+explanation: 'An adversary can use the Windows command line debugging utility cdb.exe
+  to execute commands or shellcode. This rule
+
+  looks for those instances and where the cdb.exe binary is outside of the normal
+  WindowsKit installation paths.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/bdfaddc4-4438-48b4-bc43-9f5cf8151c46.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate debugging activities by developers or IT staff using cdb.exe outside
+    standard paths can trigger alerts. To manage this, create exceptions for known
+    user accounts or specific machines frequently used for development.
+
+    - Automated testing environments may execute cdb.exe with command-line arguments
+    for legitimate purposes. Identify these environments and exclude their processes
+    from triggering alerts.
+
+    - Software installations or updates might temporarily use cd'
+  mitigation: Review investigation guide for details
+references:
+- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Cdb/
+has_investigation_guide: true
+risk_score: 47

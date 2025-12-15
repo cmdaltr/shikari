@@ -1,0 +1,40 @@
+technique_id: T1003.001
+technique_name: Create Remote Thread into LSASS
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventID=8 TargetImage=*lsass.exe | stats count min(_time) as firstTime
+  max(_time) as lastTime by EventID Guid NewThreadId ProcessID SecurityID SourceImage
+  SourceProcessGuid SourceProcessId StartAddress StartFunction StartModule TargetImage
+  TargetProcessGuid TargetProcessId UserID dest parent_process_exec parent_process_guid
+  parent_process_id parent_process_name parent_process_path process_exec process_guid
+  process_id process_name process_path signature signature_id user_id vendor_product
+  | `security_content_ctime(firstTime)` |`security_content_ctime(lastTime)` | `create_remote_thread_into_lsass_filter`'
+explanation: The following analytic detects the creation of a remote thread in the
+  Local Security Authority Subsystem Service (LSASS). This behavior is identified
+  using Sysmon EventID 8 logs, focusing on processes that create remote threads in
+  lsass.exe. This activity is significant because it is commonly associated with credential
+  dumping, a tactic used by adversaries to steal user authentication credentials.
+  If confirmed malicious, this could allow attackers to gain unauthorized access to
+  sensitive information, leading to potential compromise of the entire network. Analysts
+  should investigate to differentiate between legitimate tools and potential threats.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/67d4dbef-9564-4699-8da8-03a151529edc/
+indicators:
+- type: data_source
+  value: Sysmon EventID 8
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Other tools can access LSASS for legitimate reasons and generate an
+    event. In these cases, tweaking the search may help eliminate noise.
+  mitigation: Review context and user activity
+references:
+- https://2017.zeronights.org/wp-content/uploads/materials/ZN17_Kheirkhabarov_Hunting_for_Credentials_Dumping_in_Windows_Environment.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1003.001/atomic_red_team/windows-sysmon.log

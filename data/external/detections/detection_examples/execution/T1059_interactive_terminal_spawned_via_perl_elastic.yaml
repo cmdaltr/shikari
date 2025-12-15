@@ -1,0 +1,46 @@
+technique_id: T1059
+technique_name: Interactive Terminal Spawned via Perl
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:linux and event.type:(start or process_started)\
+  \ and process.name:perl and\n  process.args:(\"exec \\\"/bin/sh\\\";\" or \"exec\
+  \ \\\"/bin/dash\\\";\" or \"exec \\\"/bin/bash\\\";\")"
+explanation: 'Identifies when a terminal (tty) is spawned via Perl. Attackers may
+  upgrade a simple reverse shell to a fully
+
+  interactive tty after obtaining initial access to a host.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/05e5a668-7b51-4a67-93ab-e9af405c9ef3.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System maintenance scripts that use Perl to execute shell commands may trigger
+    this rule. Review and whitelist known maintenance scripts by adding exceptions
+    for specific script paths or process arguments.
+
+    - Automated deployment tools that utilize Perl for executing shell commands can
+    cause false positives. Identify these tools and exclude their specific process
+    arguments or execution paths from the detection rule.
+
+    - Development environments where Perl is used for test'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

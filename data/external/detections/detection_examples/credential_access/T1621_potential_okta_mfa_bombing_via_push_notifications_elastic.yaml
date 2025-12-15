@@ -1,0 +1,62 @@
+technique_id: T1621
+technique_name: Potential Okta MFA Bombing via Push Notifications
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by okta.actor.id with maxspan=10m\n  [ any\n    where event.dataset\
+  \ == \"okta.system\"\n      and (\n        okta.event_type == \"user.mfa.okta_verify.deny_push\"\
+  \n        or (\n          okta.event_type == \"user.authentication.auth_via_mfa\"\
+  \n          and okta.debug_context.debug_data.factor == \"OKTA_VERIFY_PUSH\"\n \
+  \         and okta.outcome.reason == \"INVALID_CREDENTIALS\"\n        )\n      )\n\
+  \  ] with runs=5\n  until\n  [ any\n    where event.dataset == \"okta.system\"\n\
+  \      and okta.event_type in (\n        \"user.authentication.sso\",\n        \"\
+  user.authentication.auth_via_mfa\",\n        \"user.authentication.verify\",\n \
+  \       \"user.session.start\"\n      )\n      and okta.outcome.result == \"SUCCESS\"\
+  \n  ]"
+explanation: 'Detects when an attacker abuses the Multi-Factor authentication mechanism
+  by repeatedly issuing login requests until the
+
+  user eventually accepts the Okta push notification. An adversary may attempt to
+  bypass the Okta MFA policies configured
+
+  for an organization to obtain unauthorized access.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8a0fbd26-867f-11ee-947c-f661ea17fbcd.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+- type: data_source
+  value: Okta System Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis:
+
+
+    - Determine if the MFA push notifications were legitimate. Sometimes, users accidentally
+    trigger MFA requests or deny them unintentionally and later approve them.
+
+    - Check if there are known issues with the MFA system causing false denials.
+
+
+    ### Response and remediation:
+
+
+    - If unauthorized access is confirmed, initiate your incident response process.
+
+    - Alert the user and your IT department immediately.
+
+    - If possible, isolate the user''s account until the issue is resolved'
+  mitigation: Review investigation guide for details
+references:
+- https://www.mandiant.com/resources/russian-targeting-gov-business
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://sec.okta.com/articles/2023/08/cross-tenant-impersonation-prevention-and-detection
+- https://www.rezonate.io/blog/okta-logs-decoded-unveiling-identity-threats-through-threat-hunting/
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 73

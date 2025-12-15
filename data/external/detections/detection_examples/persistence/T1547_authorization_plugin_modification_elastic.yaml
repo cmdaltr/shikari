@@ -1,0 +1,48 @@
+technique_id: T1547
+technique_name: Authorization Plugin Modification
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "file where host.os.type == \"macos\" and event.action == \"modification\"\
+  \ and\n  file.path like \"/Library/Security/SecurityAgentPlugins/*\" and\n  not\
+  \ file.path like (\"/Library/Security/SecurityAgentPlugins/KandjiPassport.bundle/*\"\
+  , \"/Library/Security/SecurityAgentPlugins/TeamViewerAuthPlugin.bundle/*\") and\n\
+  \  not process.name == \"shove\""
+explanation: 'Authorization plugins are used to extend the authorization services
+  API and implement mechanisms that are not natively
+
+  supported by the OS, such as multi-factor authentication with third party software.
+  Adversaries may abuse this feature
+
+  to persist and/or collect clear text credentials as they traverse the registered
+  plugins during user logon.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e6c98d38-633d-4b3e-9387-42112cd5ac10.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Known legitimate plugins such as KandjiPassport.bundle and TeamViewerAuthPlugin.bundle
+    may trigger alerts if they are updated or modified. Users can handle these by
+    ensuring these plugins are included in the exclusion list within the detection
+    rule.
+
+    - Trusted processes like those signed by a verified code signature, such as the
+    process named ''shove'', might be flagged if they interact with the plugin directories.
+    Users should verify the code signature and add these proc'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.apple.com/documentation/security/authorization_plug-ins
+- https://www.xorrior.com/persistent-credential-theft/
+has_investigation_guide: true
+risk_score: 47

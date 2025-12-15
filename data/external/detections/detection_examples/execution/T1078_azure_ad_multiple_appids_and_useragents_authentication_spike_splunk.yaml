@@ -1,0 +1,46 @@
+technique_id: T1078
+technique_name: Azure AD Multiple AppIDs and UserAgents Authentication Spike
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`azure_monitor_aad` category=SignInLogs operationName="Sign-in activity" (properties.authenticationRequirement="multiFactorAuthentication"
+  properties.status.additionalDetails="MFA required in Azure AD") OR (properties.authenticationRequirement=singleFactorAuthentication
+  "properties.authenticationDetails{}.succeeded"=true) | bucket span=5m _time | rename
+  properties.* as * | rename userAgent as user_agent | fillnull | stats count dc(appId)
+  as unique_app_ids dc(user_agent) as unique_user_agents min(_time) as firstTime max(_time)
+  as lastTime values(dest) as dest values(user_agent) as user_agent by user src vendor_account
+  vendor_product signature | where count > 5 and unique_app_ids > 2 and unique_user_agents
+  > 5 | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` |
+  `azure_ad_multiple_appids_and_useragents_authentication_spike_filter`'
+explanation: The following analytic detects unusual authentication activity in Azure
+  AD, specifically when a single user account has over 8 authentication attempts using
+  3+ unique application IDs and 5+ unique user agents within a short period. It leverages
+  Azure AD audit logs, focusing on authentication events and using statistical thresholds.
+  This behavior is significant as it may indicate an adversary probing for MFA requirements.
+  If confirmed malicious, it suggests a compromised account, potentially leading to
+  further exploitation, lateral movement, and data exfiltration. Early detection is
+  crucial to prevent substantial harm.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/5d8bb1f0-f65a-4b4e-af2e-fcdb88276314/
+indicators:
+- type: data_source
+  value: Azure Active Directory Sign-in activity
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Rapid authentication from the same user using more than 5 different
+    user agents and 3 application IDs is highly unlikely under normal circumstances.
+    However, there are potential scenarios that could lead to false positives.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1078/
+- https://www.blackhillsinfosec.com/exploiting-mfa-inconsistencies-on-microsoft-services/
+- https://github.com/dafthack/MFASweep
+- https://www.youtube.com/watch?v=SK1zgqaAZ2E
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1078/azure_ad_multiple_appids_and_useragents_auth/azure_ad_multiple_appids_and_useragents_auth.log

@@ -1,0 +1,83 @@
+# Bespoke Organization Configuration
+# Copy this file to config.yaml and customize for your environment
+
+# Organization information
+organization:
+  name: "Your Organization"
+
+  # Default Splunk index (used when generating Splunk queries)
+  default_index: "main"
+
+  # Default Splunk sourcetype
+  default_sourcetype: "WinEventLog:Security"
+
+  # Default MDE/KQL timespan
+  default_timespan: "1h"
+
+# Field name overrides
+# Map standard field names to your environment's custom field names
+# This is useful if your log sources use non-standard field names
+field_overrides:
+  # Process fields
+  # CommandLine: "process.command_line"
+  # ProcessName: "process.name"
+  # ParentProcessName: "process.parent.name"
+
+  # User fields
+  # AccountName: "user.name"
+  # AccountDomain: "user.domain"
+
+  # Network fields
+  # RemoteIP: "destination.ip"
+  # RemotePort: "destination.port"
+
+  # File fields
+  # FileName: "file.name"
+  # FilePath: "file.path"
+
+# Query generation settings
+query_settings:
+  # Whether to automatically apply exclusions to generated queries
+  apply_exclusions: true
+
+  # Maximum results to return (for queries that support limits)
+  max_results: 1000
+
+  # Default time range for queries
+  default_timespan: "1h"
+
+  # Whether to add comments explaining exclusions
+  add_exclusion_comments: true
+
+  # Severity threshold for including detections (1-5, 1=lowest)
+  min_severity: 1
+
+# Platform-specific settings
+platforms:
+  splunk:
+    # Add earliest/latest time modifiers
+    add_time_modifiers: true
+    # Default time format
+    time_format: "-1h"
+
+  mde:
+    # Use DeviceProcessEvents vs DeviceEvents
+    prefer_process_events: true
+
+  elastic:
+    # Default index pattern
+    index_pattern: "logs-*"
+
+# Custom detection categories to prioritize
+# Detections matching these categories will be highlighted
+priority_categories:
+  - "Credential Access"
+  - "Lateral Movement"
+  - "Execution"
+
+# Environment-specific tags to add to generated queries
+# These can help identify where queries came from
+tags:
+  environment: "production"
+  team: "security-operations"
+  # custom_tag: "value"

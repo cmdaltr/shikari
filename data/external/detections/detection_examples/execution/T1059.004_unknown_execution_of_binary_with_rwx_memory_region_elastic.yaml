@@ -1,0 +1,52 @@
+technique_id: T1059.004
+technique_name: Unknown Execution of Binary with RWX Memory Region
+tactic: execution
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.category:process and host.os.type:linux and auditd.data.syscall:mprotect\
+  \ and auditd.data.a2:7 and not (\n  process.executable:(\n    \"/usr/share/kibana/node/bin/node\"\
+  \ or \"/usr/share/elasticsearch/jdk/bin/java\" or \"/usr/sbin/apache2\"\n  ) or\n\
+  \  process.name:(httpd or java)\n)"
+explanation: 'Monitors for the execution of a previously unknown unix binary with
+  read, write and execute memory region permissions.
+
+  The mprotect() system call is used to change the access protections on a region
+  of memory that has already been
+
+  allocated. This syscall allows a process to modify the permissions of pages in its
+  virtual address space, enabling or
+
+  disabling permissions such as read, write, and execute for those pages. RWX permissions
+  on memory is in many cases
+
+  overly permissive, and should be analyzed thoroughly.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/23bcd283-2bc0-4db2-81d4-273fc051e5c0.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Known safe binaries like Node.js, Java, and Apache may trigger the rule due
+    to their legitimate use of RWX memory regions. These are already excluded in the
+    rule, but additional similar applications might need to be added to the exclusion
+    list.
+
+    - Custom or in-house developed applications that require RWX permissions for legitimate
+    functionality can also cause false positives. Identify these applications and
+    add them to the exclusion list to prevent unnecessary alerts.'
+  mitigation: Review investigation guide for details
+references:
+- https://man7.org/linux/man-pages/man2/mprotect.2.html
+- https://www.elastic.co/security-labs/linux-detection-engineering-with-auditd
+has_investigation_guide: true
+risk_score: 47

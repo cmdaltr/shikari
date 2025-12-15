@@ -1,0 +1,54 @@
+technique_id: T1105
+technique_name: Suspicious File Downloaded from Google Drive
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where\n\n    /* common browser processes  */\n    event.action in\
+  \ (\"exec\", \"fork\", \"start\") and\n\n    process.name : (\"Microsoft Edge\"\
+  , \"chrome.exe\", \"Google Chrome\", \"google-chrome-stable\",\n               \
+  \     \"google-chrome-beta\", \"google-chrome\", \"msedge.exe\", \"firefox.exe\"\
+  , \"brave.exe\",\n                    \"whale.exe\", \"browser.exe\", \"dragon.exe\"\
+  , \"vivaldi.exe\", \"opera.exe\", \"firefox\",\n                    \"powershell.exe\"\
+  , \"curl\", \"curl.exe\", \"wget\", \"wget.exe\") and\n\n    /* Look for Google\
+  \ Drive download URL with AV flag skipping */\n    (process.command_line : \"*drive.google.com*\"\
+  \ and process.command_line : \"*export=download*\" and process.command_line : \"\
+  *confirm=no_antivirus*\")"
+explanation: 'Identifies suspicious file download activity from a Google Drive URL.
+  This could indicate an attempt to deliver phishing
+
+  payloads via a trusted webservice.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a8afdce2-0ec1-11ee-b843-f661ea17fbcd.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate file sharing activities from Google Drive may trigger alerts if users
+    frequently download files for business purposes. To manage this, create exceptions
+    for specific users or departments known to use Google Drive extensively for legitimate
+    work.
+
+    - Automated scripts or tools that download files from Google Drive for regular
+    data processing tasks might be flagged. Identify these scripts and whitelist their
+    associated processes or command lines to prevent unnec'
+  mitigation: Review investigation guide for details
+references:
+- https://intelligence.abnormalsecurity.com/blog/google-drive-matanbuchus-malware
+has_investigation_guide: true
+risk_score: 47

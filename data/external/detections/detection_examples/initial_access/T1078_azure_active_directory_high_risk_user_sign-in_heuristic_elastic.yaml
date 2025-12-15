@@ -1,0 +1,36 @@
+technique_id: T1078
+technique_name: Azure Active Directory High Risk User Sign-in Heuristic
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:azure.signinlogs and\n  azure.signinlogs.properties.risk_state:(\"\
+  confirmedCompromised\" or \"atRisk\") and event.outcome:(success or Success)"
+explanation: 'Identifies high risk Azure Active Directory (AD) sign-ins by leveraging
+  Microsoft Identity Protection machine learning
+
+  and heuristics.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/26edba02-6979-4bce-920a-70b080a7be81.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\nIf this rule is noisy in your environment\
+    \ due to expected activity, consider adding exceptions — preferably with a combination\
+    \ of user and device conditions.\n\n### Response and remediation\n\n- Initiate\
+    \ the incident response process based on the outcome of the triage.\n- Disable\
+    \ or limit the account during the investigation and response.\n- Identify the\
+    \ possible impact of the incident and prioritize accordingly; the following actions\
+    \ can help you gain context:\n    - Identify"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/azure/active-directory/reports-monitoring/reference-azure-monitor-sign-ins-log-schema
+- https://docs.microsoft.com/en-us/azure/active-directory/identity-protection/overview-identity-protection
+- https://docs.microsoft.com/en-us/azure/active-directory/identity-protection/howto-identity-protection-investigate-risk
+- https://docs.microsoft.com/en-us/azure/active-directory/identity-protection/howto-identity-protection-investigate-risk#investigation-framework
+has_investigation_guide: true
+risk_score: 47

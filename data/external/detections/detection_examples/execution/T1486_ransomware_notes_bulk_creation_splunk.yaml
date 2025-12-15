@@ -1,0 +1,42 @@
+technique_id: T1486
+technique_name: Ransomware Notes bulk creation
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventCode=11 file_name IN ("*\.txt","*\.html","*\.hta") | bin _time
+  span=10s | stats min(_time) as firstTime max(_time) as lastTime dc(TargetFilename)
+  as unique_readme_path_count values(TargetFilename) as list_of_readme_path values(action)
+  as action values(file_access_time) as file_access_time values(file_create_time)
+  as file_create_time values(file_hash) as file_hash values(file_modify_time) as file_modify_time
+  values(file_path) as file_path values(file_acl) as file_acl values(file_size) as
+  file_size values(process_guid) as process_guid values(process_id) as process_id
+  values(user) as user values(vendor_product) as vendor_product by dest file_name
+  | where unique_readme_path_count >= 15 | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `ransomware_notes_bulk_creation_filter`'
+explanation: The following analytic identifies the bulk creation of ransomware notes
+  (e.g., .txt, .html, .hta files) on an infected machine. It leverages Sysmon EventCode
+  11 to detect multiple instances of these file types being created within a short
+  time frame. This activity is significant as it often indicates an active ransomware
+  attack, where the attacker is notifying the victim of the encryption. If confirmed
+  malicious, this behavior could lead to widespread data encryption, rendering critical
+  files inaccessible and potentially causing significant operational disruption.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/eff7919a-8330-11eb-83f8-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 11
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.mandiant.com/resources/fin11-email-campaigns-precursor-for-ransomware-data-theft
+- https://blog.virustotal.com/2020/11/keep-your-friends-close-keep-ransomware.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/clop/clop_a/windows-sysmon.log

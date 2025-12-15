@@ -1,0 +1,65 @@
+technique_id: T1053
+technique_name: At Job Created or Modified
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"linux\" and\nevent.action in (\"rename\", \"\
+  creation\") and file.path : \"/var/spool/cron/atjobs/*\" and not (\n  process.executable\
+  \ in (\n    \"/bin/dpkg\", \"/usr/bin/dpkg\", \"/bin/dockerd\", \"/usr/bin/dockerd\"\
+  , \"/usr/sbin/dockerd\", \"/bin/microdnf\",\n    \"/usr/bin/microdnf\", \"/bin/rpm\"\
+  , \"/usr/bin/rpm\", \"/bin/snapd\", \"/usr/bin/snapd\", \"/bin/yum\", \"/usr/bin/yum\"\
+  ,\n    \"/bin/dnf\", \"/usr/bin/dnf\", \"/bin/podman\", \"/usr/bin/podman\", \"\
+  /bin/dnf-automatic\", \"/usr/bin/dnf-automatic\",\n    \"/bin/pacman\", \"/usr/bin/pacman\"\
+  , \"/usr/bin/dpkg-divert\", \"/bin/dpkg-divert\", \"/sbin/apk\", \"/usr/sbin/apk\"\
+  ,\n    \"/usr/local/sbin/apk\", \"/usr/bin/apt\", \"/usr/sbin/pacman\", \"/bin/podman\"\
+  , \"/usr/bin/podman\", \"/usr/bin/puppet\",\n    \"/bin/puppet\", \"/opt/puppetlabs/puppet/bin/puppet\"\
+  , \"/usr/bin/chef-client\", \"/bin/chef-client\",\n    \"/bin/autossl_check\", \"\
+  /usr/bin/autossl_check\", \"/proc/self/exe\", \"/dev/fd/*\",  \"/usr/bin/pamac-daemon\"\
+  ,\n    \"/bin/pamac-daemon\", \"/usr/local/bin/dockerd\"\n  ) or\n  file.extension\
+  \ in (\"swp\", \"swpx\", \"swx\", \"dpkg-remove\") or\n  file.Ext.original.extension\
+  \ == \"dpkg-new\" or\n  process.executable : (\"/nix/store/*\", \"/var/lib/dpkg/*\"\
+  , \"/tmp/vmis.*\", \"/snap/*\", \"/dev/fd/*\") or\n  process.executable == null\
+  \ or\n  (process.name == \"sed\" and file.name : \"sed*\") or\n  (process.name ==\
+  \ \"perl\" and file.name : \"e2scrub_all.tmp*\")\n)"
+explanation: 'This rule monitors for at jobs being created or renamed. Linux at jobs
+  are scheduled tasks that can be leveraged by
+
+  system administrators to set up scheduled tasks, but may be abused by malicious
+  actors for persistence, privilege
+
+  escalation and command execution. By creating or modifying cron job configurations,
+  attackers can execute malicious
+
+  commands or scripts at predefined intervals, ensuring their continued presence and
+  enabling unauthorized activities.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/84755a05-78c8-4430-8681-89cd6c857d71.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System package managers like dpkg, rpm, and yum can trigger false positives
+    when they create or modify at jobs during software installations or updates. To
+    manage this, ensure these processes are included in the exclusion list within
+    the detection rule.
+
+    - Automated system management tools such as Puppet and Chef may also create or
+    modify at jobs as part of their routine operations. Add these tools to the exclusion
+    list to prevent unnecessary alerts.
+
+    - Temporary files w'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/primer-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

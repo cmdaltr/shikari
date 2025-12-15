@@ -1,0 +1,52 @@
+technique_id: T1567
+technique_name: Azure Storage Blob Retrieval via AzCopy
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: azure.platformlogs and\n    event.action: GetBlob and\n   \
+  \ azure.platformlogs.identity.type: SAS and\n    azure.platformlogs.properties.userAgentHeader:\
+  \ AzCopy* and\n    azure.platformlogs.statusCode: 200"
+explanation: 'Identifies successful GetBlob operations on Azure Storage Accounts using
+  AzCopy user agent with SAS token
+
+  authentication. AzCopy is a command-line utility for copying data to and from Azure
+  Storage. While legitimate for data
+
+  migration, adversaries may abuse AzCopy with compromised SAS tokens to exfiltrate
+  data from Azure Storage Accounts. This
+
+  rule detects the first occurrence of GetBlob operations from a specific storage
+  account using this pattern.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a8b3c4d5-e6f7-8901-a2b3-c4d5e6f78901.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Azure Platform Logs
+  confidence: high
+- type: data_source
+  value: Azure Storage
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+    - Routine data migration or backup operations using AzCopy with SAS tokens are
+    common in enterprise environments. If this is expected behavior for the storage
+    account, consider adding exceptions for specific accounts or IP ranges.
+
+    - DevOps pipelines or automated workflows may use AzCopy with SAS tokens for legitimate
+    data transfers. Review the automation configuration and add exceptions if appropriate.
+
+    - Third-party services or partners may have authorized access to stora'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoft.com/en-us/security/blog/2025/08/27/storm-0501s-evolving-techniques-lead-to-cloud-based-ransomware/
+- https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10
+- https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview
+has_investigation_guide: true
+risk_score: 47

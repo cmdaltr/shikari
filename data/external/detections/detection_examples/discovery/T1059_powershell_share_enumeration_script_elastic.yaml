@@ -1,0 +1,53 @@
+technique_id: T1059
+technique_name: PowerShell Share Enumeration Script
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:windows and\n  powershell.file.script_block_text:(\n\
+  \    \"Invoke-ShareFinder\" or\n    \"Invoke-ShareFinderThreaded\" or\n    (\n \
+  \     \"shi1_netname\" and\n      \"shi1_remark\"\n    ) or\n    (\n      \"NetShareEnum\"\
+  \ and\n      \"NetApiBufferFree\"\n    )\n  ) and not user.id : \"S-1-5-18\""
+explanation: 'Detects scripts that contain PowerShell functions, structures, or Windows
+  API functions related to windows share
+
+  enumeration activities. Attackers, mainly ransomware groups, commonly identify and
+  inspect network shares, looking for
+
+  critical information for encryption and/or exfiltration.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4c59cff1-b78a-41b8-a9f1-4231984d1fb6.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-compromise behavior.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all compromised accounts are identified. Reset passwords for these accounts
+    and'
+  mitigation: Review investigation guide for details
+references:
+- https://www.advintel.io/post/hunting-for-corporate-insurance-policies-indicators-of-ransom-exfiltrations
+- https://thedfirreport.com/2022/04/04/stolen-images-campaign-ends-in-conti-ransomware/
+- https://github.com/atc-project/atc-data/blob/master/docs/Logging_Policies/LP_0109_windows_powershell_script_block_log.md
+has_investigation_guide: true
+risk_score: 73

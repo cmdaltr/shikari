@@ -1,0 +1,42 @@
+technique_id: T1110.003
+technique_name: Okta Multiple Users Failing To Authenticate From Ip
+tactic: persistence
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count max(_time) as lastTime, min(_time)
+  as firstTime dc(Authentication.user) as unique_accounts values(Authentication.signature)
+  as signature values(Authentication.user) as user values(Authentication.app) as app
+  values(Authentication.authentication_method) as authentication_method values(Authentication.dest)
+  as dest from datamodel=Authentication where Authentication.action="failure" AND
+  Authentication.signature=user.session.start by _time span=5m Authentication.src
+  sourcetype | where unique_accounts > 9 | `drop_dm_object_name("Authentication")`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `okta_multiple_users_failing_to_authenticate_from_ip_filter`'
+explanation: The following analytic identifies instances where more than 10 unique
+  user accounts have failed to authenticate from a single IP address within a 5-minute
+  window in an Okta tenant. This detection uses OktaIm2 logs ingested via the Splunk
+  Add-on for Okta Identity Cloud. Such activity is significant as it may indicate
+  brute-force attacks or password spraying attempts. If confirmed malicious, this
+  behavior suggests an external entity is attempting to compromise multiple user accounts,
+  potentially leading to unauthorized access to organizational resources and data
+  breaches.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/de365ffa-42f5-46b5-b43f-fa72290b8218/
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: A source Ip failing to authenticate with multiple users in a short
+    period of time is not common legitimate behavior.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1110/003/
+- https://splunkbase.splunk.com/app/6553
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1110.003/okta_multiple_users_from_ip/okta_multiple_users_from_ip.log

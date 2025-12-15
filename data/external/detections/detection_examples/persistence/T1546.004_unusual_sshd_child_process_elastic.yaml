@@ -1,0 +1,50 @@
+technique_id: T1546.004
+technique_name: Unusual SSHD Child Process
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.category:process and host.os.type:linux and event.type:start and event.action:(exec\
+  \ or ProcessRollup2) and\nprocess.parent.name:(ssh or sshd) and process.args_count:2\
+  \ and\nnot (\n  process.command_line:(-bash or -zsh or -sh) or\n  process.name:(ractrans\
+  \ or exectask or tty or tput or ferny-askpass or id or ip)\n)"
+explanation: 'This rule detects the creation of an unusual SSHD child process through
+  the usage of the `new_terms` rule type.
+
+  Attackers may abuse SSH to maintain persistence on a compromised system, or to establish
+  a backdoor for remote access,
+
+  potentially resulting in an unusual SSHD child process being created.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4c3c6c47-e38f-4944-be27-5c80be973bd7.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts or automation tools may trigger this rule
+    if they execute commands with SSH or SSHD as the parent process. To handle this,
+    identify and document these scripts, then create exceptions for their specific
+    command-line patterns.
+
+    - System maintenance tasks or updates that involve SSH connections might appear
+    as unusual child processes. Regularly review and whitelist these known maintenance
+    activities to prevent unnecessary alerts.
+
+    - Custom'
+  mitigation: Review investigation guide for details
+references:
+- https://hadess.io/the-art-of-linux-persistence/
+has_investigation_guide: true
+risk_score: 47

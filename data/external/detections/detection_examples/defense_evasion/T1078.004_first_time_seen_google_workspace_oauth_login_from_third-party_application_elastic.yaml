@@ -1,0 +1,48 @@
+technique_id: T1078.004
+technique_name: First Time Seen Google Workspace OAuth Login from Third-Party Application
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'event.dataset: "google_workspace.token" and event.action: "authorize" and
+
+  google_workspace.token.scope.data: *Login and google_workspace.token.client.id:
+  *apps.googleusercontent.com'
+explanation: 'Detects the first time a third-party application logs in and authenticated
+  with OAuth. OAuth is used to grant
+
+  permissions to specific resources and services in Google Workspace. Compromised
+  credentials or service accounts could
+
+  allow an adversary to authenticate to Google Workspace as a valid user and inherit
+  their privileges.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/21bafdf0-cf17-11ed-bd57-f661ea17fbcc.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - New legitimate third-party applications: Users may frequently integrate new
+    third-party applications for productivity or collaboration. To manage this, maintain
+    a whitelist of known and trusted applications and exclude them from triggering
+    alerts.
+
+    - Regular updates to existing applications: Some applications may update their
+    OAuth client IDs during version upgrades. Monitor application update logs and
+    adjust the detection rule to exclude these known updates.
+
+    - Internal'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+- https://developers.google.com/apps-script/guides/bound
+- https://developers.google.com/identity/protocols/oauth2
+has_investigation_guide: true
+risk_score: 47

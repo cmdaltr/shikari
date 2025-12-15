@@ -1,0 +1,48 @@
+technique_id: T1574.006
+technique_name: Modification of Dynamic Linker Preload Shared Object
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: 'host.os.type:linux and event.category:file and event.action:(file_rename_event
+  or rename or renamed or updated) and
+
+  not event.type:deletion and file.path:/etc/ld.so.preload and
+
+  process.name:(* and not (oneagentinstallaction or passwd or wine))'
+explanation: 'Identifies modification of the dynamic linker preload shared object
+  (ld.so.preload). Adversaries may execute malicious
+
+  payloads by hijacking the dynamic linker used to load libraries.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/717f82c2-7741-4f9b-85b8-d06aeb853f4f.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may modify /etc/ld.so.preload.
+    To handle this, monitor the process names associated with these activities and
+    consider adding them to the exclusion list if they are verified as benign.
+
+    - System management tools like configuration management software might update
+    /etc/ld.so.preload as part of routine operations. Identify these tools and exclude
+    their process names from the detection rule to prevent false alerts.
+
+    - Custom scri'
+  mitigation: Review investigation guide for details
+references:
+- https://www.anomali.com/blog/rocke-evolves-its-arsenal-with-a-new-malware-family-written-in-golang
+has_investigation_guide: true
+risk_score: 47

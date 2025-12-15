@@ -1,0 +1,53 @@
+technique_id: T1037
+technique_name: Chkconfig Service Add
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.action in (\"exec\", \"\
+  exec_event\", \"start\") and\n( \n  (process.executable : \"/usr/sbin/chkconfig\"\
+  \ and process.args : \"--add\") or\n  (process.args : \"*chkconfig\" and process.args\
+  \ : \"--add\")\n) and not (\n  process.parent.name in (\"rpm\", \"qualys-scan-util\"\
+  , \"qualys-cloud-agent\", \"update-alternatives\") or\n  process.parent.args : (\"\
+  /var/tmp/rpm*\", \"/var/lib/waagent/*\") or\n  process.args in (\"jexec\", \"sapinit\"\
+  , \"httpd\", \"dbora\")\n)"
+explanation: 'Detects the use of the chkconfig binary to manually add a service for
+  management by chkconfig. Threat actors may utilize
+
+  this technique to maintain persistence on a system. When a new service is added,
+  chkconfig ensures that the service has
+
+  either a start or a kill entry in every runlevel and when the system is rebooted
+  the service file added will run
+
+  providing long-term persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b910f25a-2d44-47f2-a873-aabdc0d355e6.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: "False Positive Analysis\n\n- If this activity is related to new benign\
+    \ software installation activity, consider adding exceptions — preferably with\
+    \ a combination of user and command line conditions.\n- If this activity is related\
+    \ to a system administrator who uses the `chkconfig` binary for administrative\
+    \ purposes, consider adding exceptions for this specific administrator user account.\
+    \ \n- Try to understand the context of the execution by thinking about the user,\
+    \ machine, or business purpose. A sma"
+  mitigation: Review investigation guide for details
+references:
+- https://www.intezer.com/blog/research/lightning-framework-new-linux-threat/
+has_investigation_guide: true
+risk_score: 47

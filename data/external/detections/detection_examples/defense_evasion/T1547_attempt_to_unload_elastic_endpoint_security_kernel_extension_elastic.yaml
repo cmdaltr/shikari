@@ -1,0 +1,37 @@
+technique_id: T1547
+technique_name: Attempt to Unload Elastic Endpoint Security Kernel Extension
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n process.name == \"kextunload\" and process.args like~ (\"/System/Library/Extensions/EndpointSecurity.kext\"\
+  , \"EndpointSecurity.kext\")"
+explanation: Identifies attempts to unload the Elastic Endpoint Security kernel extension
+  via the kextunload command.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/70fa1af4-27fd-4f26-bd03-50b6af6b9e24.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System administrators performing routine maintenance may trigger the rule when
+    testing or updating kernel extensions. To manage this, create exceptions for known
+    maintenance activities by whitelisting specific user accounts or processes during
+    scheduled maintenance windows.
+
+    - Legitimate software updates or installations that require unloading the kernel
+    extension might be flagged. To handle this, monitor and document regular update
+    schedules and create exceptions for t'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

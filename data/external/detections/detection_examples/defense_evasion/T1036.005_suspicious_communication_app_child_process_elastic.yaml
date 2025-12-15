@@ -1,0 +1,124 @@
+technique_id: T1036.005
+technique_name: Suspicious Communication App Child Process
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ not process.executable : \n             (\"?:\\\\Program Files\\\\*.exe\", \n\
+  \              \"?:\\\\Program Files (x86)\\\\*.exe\", \n              \"?:\\\\\
+  Windows\\\\System32\\\\WerFault.exe\", \n              \"?:\\\\Windows\\\\SysWOW64\\\
+  \\WerFault.exe\") and \n  (\n    /* Slack */\n    (process.parent.name : \"slack.exe\"\
+  \ and not\n      (\n        (\n          process.executable : (\n            \"\
+  ?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\"\
+  ,\n            \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Island\\\\Island\\\\Application\\\
+  \\Island.exe\",\n            \"?:\\\\Users\\\\*\\\\AppData\\\\Roaming\\\\Zoom\\\\\
+  bin*\\\\Zoom.exe\",\n            \"?:\\\\Windows\\\\System32\\\\rundll32.exe\",\n\
+  \            \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Mozilla Firefox\\\\firefox.exe\"\
+  ,\n            \"?:\\\\Windows\\\\System32\\\\notepad.exe\",\n            \"?:\\\
+  \\Users\\\\*\\\\AppData\\\\Local\\\\Programs\\\\Opera\\\\opera.exe\"\n         \
+  \ ) and process.code_signature.trusted == true\n        ) or\n        (\n      \
+  \    process.code_signature.subject_name : (\n            \"Slack Technologies,\
+  \ Inc.\",\n            \"Slack Technologies, LLC\"\n          ) and process.code_signature.trusted\
+  \ == true\n        ) or\n        (\n          (process.name : \"powershell.exe\"\
+  \ and process.command_line : \"powershell.exe -c Invoke-WebRequest -Uri https://slackb.com/*\"\
+  ) or\n          (process.name : \"cmd.exe\" and process.command_line : \"C:\\\\\
+  WINDOWS\\\\system32\\\\cmd.exe /d /s /c \\\"%windir%\\\\System32\\\\rundll32.exe\
+  \ User32.dll,SetFocus 0\\\"\")\n        )\n      )\n    ) or\n\n    /* WebEx */\n\
+  \    (process.parent.name : (\"CiscoCollabHost.exe\", \"WebexHost.exe\") and not\n\
+  \      (\n        (\n          process.executable : (\n            \"?:\\\\Users\\\
+  \\*\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\",\n  \
+  \          \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Mozilla Firefox\\\\firefox.exe\"\
+  ,\n            \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Programs\\\\Opera\\\\opera.exe\"\
+  \n          ) and process.code_signature.trusted == true\n        ) or\n       \
+  \ (\n          process.code_signature.subject_name : (\n            \"Cisco Systems,\
+  \ Inc.\",\n            \"Cisco WebEx LLC\",\n            \"Cisco Systems Inc.\"\n\
+  \          ) and process.code_signature.trusted == true\n        )\n      )\n  \
+  \  ) or\n\n    /* Teams */\n    (process.parent.name : \"Teams.exe\" and not\n \
+  \     (\n        (\n          process.executable : (\n            \"?:\\\\Windows\\\
+  \\BrowserCore\\\\BrowserCore.exe\",\n            \"?:\\\\Users\\\\*\\\\AppData\\\
+  \\Local\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\",\n            \"?:\\\\\
+  Users\\\\*\\\\AppData\\\\Local\\\\Mozilla Firefox\\\\firefox.exe\", \n         \
+  \   \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Microsoft\\\\Teams\\\\current\\\\\
+  Teams.exe\"\n          ) and process.code_signature.trusted == true\n        ) or\n\
+  \        (\n          process.code_signature.subject_name : (\n            \"Microsoft\
+  \ Corporation\",\n            \"Microsoft 3rd Party Application Component\"\n  \
+  \        ) and process.code_signature.trusted == true\n        ) or\n        (\n\
+  \          (process.name : \"taskkill.exe\" and process.args : \"Teams.exe\")\n\
+  \        )\n      )\n    ) or\n\n    /* Discord */\n    (process.parent.name : \"\
+  Discord.exe\" and not\n      (\n        (\n          process.executable : (\n  \
+  \          \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\Application\\\
+  \\chrome.exe\",\n            \"?:\\\\Windows\\\\System32\\\\reg.exe\",\n       \
+  \     \"?:\\\\Windows\\\\SysWOW64\\\\reg.exe\"\n          ) and process.code_signature.trusted\
+  \ == true\n        ) or\n        (\n          process.code_signature.subject_name\
+  \ : (\n            \"Discord Inc.\"\n          ) and process.code_signature.trusted\
+  \ == true\n        ) or\n        (\n          process.name : \"cmd.exe\" and\n \
+  \         (\n            process.command_line : (\n              \"C:\\\\WINDOWS\\\
+  \\system32\\\\cmd.exe /d /s /c \\\"chcp\\\"\",\n              \"C:\\\\WINDOWS\\\\\
+  system32\\\\cmd.exe /q /d /s /c \\\"C:\\\\Program^ Files\\\\NVIDIA^ Corporation\\\
+  \\NVSMI\\\\nvidia-smi.exe\\\"\"\"            ) or\n            process.args : (\n\
+  \              \"C:\\\\WINDOWS/System32/nvidia-smi.exe\",\n              \"C:\\\\\
+  WINDOWS\\\\System32\\\\nvidia-smi.exe\",\n              \"C:\\\\Windows\\\\System32\\\
+  \\DriverStore\\\\FileRepository/*/nvidia-smi.exe*\"\n            )\n          )\n\
+  \        )\n      )\n    ) or\n\n    /* WhatsApp */\n    (process.parent.name :\
+  \ \"Whatsapp.exe\" and not\n      (\n        (\n          process.executable : (\n\
+  \            \"?:\\\\Windows\\\\System32\\\\reg.exe\",\n            \"?:\\\\Windows\\\
+  \\SysWOW64\\\\reg.exe\"\n          ) and process.code_signature.trusted == true\n\
+  \        ) or\n        (\n          process.code_signature.subject_name : (\n  \
+  \          \"WhatsApp LLC\",\n            \"WhatsApp, Inc\",\n            \"24803D75-212C-471A-BC57-9EF86AB91435\"\
+  \n          ) and process.code_signature.trusted == true\n        ) or\n       \
+  \ (\n          (process.name : \"cmd.exe\" and process.command_line : \"C:\\\\Windows\\\
+  \\system32\\\\cmd.exe /d /s /c \\\"C:\\\\Windows\\\\system32\\\\wbem\\\\wmic.exe*\"\
+  )\n        )\n      )\n    ) or\n\n    /* Zoom */\n    (process.parent.name : \"\
+  Zoom.exe\" and not\n      (\n        (\n          process.executable : (\n     \
+  \       \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\Application\\\
+  \\chrome.exe\",\n            \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Island\\\\\
+  Island\\\\Application\\\\Island.exe\",\n            \"?:\\\\Users\\\\*\\\\AppData\\\
+  \\Local\\\\Mozilla Firefox\\\\firefox.exe\"\n          ) and process.code_signature.trusted\
+  \ == true\n        ) or\n        (\n          process.code_signature.subject_name\
+  \ : (\n            \"Zoom Video Communications, Inc.\"\n          ) and process.code_signature.trusted\
+  \ == true\n        )\n      )\n    ) or\n\n    /* Thunderbird */\n    (process.parent.name\
+  \ : \"thunderbird.exe\" and not\n      (\n        (\n          process.executable\
+  \ : (\n            \"?:\\\\Windows\\\\splwow64.exe\", \n            \"?:\\\\Windows\\\
+  \\System32\\\\spool\\\\drivers\\\\x64\\\\3\\\\*.EXE\"\n          ) and process.code_signature.trusted\
+  \ == true\n        ) or\n        (\n          process.code_signature.subject_name\
+  \ : (\n            \"Mozilla Corporation\"\n          ) and process.code_signature.trusted\
+  \ == true\n        )\n      )\n    )\n  )"
+explanation: 'Identifies suspicious child processes of communications apps, which
+  can indicate a potential masquerading as the
+
+  communication app or the exploitation of a vulnerability on the application causing
+  it to execute code.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/adbfa3ee-777e-4747-b6b0-7bd645f30880.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may trigger the rule if they spawn
+    child processes from communication apps. Users can create exceptions for known
+    update processes by verifying their code signatures and paths.
+
+    - Custom scripts or automation tools that interact with communication apps might
+    be flagged. Users should ensure these scripts are signed and located in trusted
+    directories, then add them to the exception list.
+
+    - Certain administrative tasks, such as'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

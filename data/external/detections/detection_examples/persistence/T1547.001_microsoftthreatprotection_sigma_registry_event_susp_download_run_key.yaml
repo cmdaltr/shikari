@@ -1,0 +1,51 @@
+technique_id: T1547.001
+technique_name: Suspicious Run Key from Download
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 9c5037d1-c568-49b3-88c7-9846a5bdc2be
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|contains:\n  - \\AppData\\Local\\Packages\\Microsoft.Outlook_\n  - \\AppData\\\
+  Local\\Microsoft\\Olk\\Attachments\\\n  - \\Downloads\\\n  - \\Temporary Internet\
+  \ Files\\Content.Outlook\\\n  - \\Local Settings\\Temporary Internet Files\\\n \
+  \ TargetObject|contains:\n  - \\Software\\Microsoft\\Windows\\CurrentVersion\\Run\n\
+  \  - \\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Run\n  - \\Software\\\
+  Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\n"
+explanation: Detects the suspicious RUN keys created by software located in Download
+  or temporary Outlook/Internet Explorer directories
+false_positives:
+- Software installers downloaded and used by users
+references:
+- https://app.any.run/tasks/c5bef5b7-f484-4c43-9cf3-d5c5c7839def/
+- https://github.com/HackTricks-wiki/hacktricks/blob/e4c7b21b8f36c97c35b7c622732b38a189ce18f7/src/windows-hardening/windows-local-privilege-escalation/privilege-escalation-with-autorun-binaries.md
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.t1547.001
+logsource:
+  category: registry_event
+  product: windows
+detection:
+  selection:
+    Image|contains:
+    - \AppData\Local\Packages\Microsoft.Outlook_
+    - \AppData\Local\Microsoft\Olk\Attachments\
+    - \Downloads\
+    - \Temporary Internet Files\Content.Outlook\
+    - \Local Settings\Temporary Internet Files\
+    TargetObject|contains:
+    - \Software\Microsoft\Windows\CurrentVersion\Run
+    - \Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run
+    - \Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run
+  condition: selection
+metadata:
+  created_date: 2019-10-01
+  modified_date: 2025-02-17
+  author: Florian Roth (Nextron Systems), Swachchhanda Shrawan Poude (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,72 @@
+technique_id: T1562
+technique_name: Windows Firewall Disabled via PowerShell
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  (\n    process.name : (\"powershell.exe\", \"pwsh.exe\", \"powershell_ise.exe\"\
+  ) or\n    ?process.pe.original_file_name in (\"PowerShell.EXE\", \"pwsh.dll\", \"\
+  powershell_ise.EXE\")\n  ) and\n  process.args : \"*Set-NetFirewallProfile*\" and\n\
+  \  process.args : \"*-Enabled*\" and process.args : \"*False*\" and\n  process.args\
+  \ : (\"*-All*\", \"*Public*\", \"*Domain*\", \"*Private*\")"
+explanation: 'Identifies when the Windows Firewall is disabled using PowerShell cmdlets,
+  which can help attackers evade network
+
+  constraints, like internet and network lateral communication restrictions.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f63c8e3c-d396-404f-b2ea-0379d3942d73.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This mechanism can be used legitimately. Check whether the user is an administrator
+    and is legitimately performing troubleshooting.
+
+    - In case of an allowed benign true positive (B-TP), assess adding rules to allow
+    needed traffic and re-enable the firewall.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-compromise behavior.
+
+    - Re-enable the firewall with its'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2019-ps
+- https://www.tutorialspoint.com/how-to-get-windows-firewall-profile-settings-using-powershell
+- http://powershellhelp.space/commands/set-netfirewallrule-psv5.php
+- http://woshub.com/manage-windows-firewall-powershell/
+has_investigation_guide: true
+risk_score: 47

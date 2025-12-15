@@ -1,0 +1,76 @@
+technique_id: T1112
+technique_name: Code Signing Policy Modification Through Registry
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\n\
+  \  registry.value: \"BehaviorOnFailedVerify\" and registry.data.strings : (\"0\"\
+  , \"0x00000000\", \"1\", \"0x00000001\") and \n  not process.executable : \n   \
+  \                   (\"?:\\\\Windows\\\\System32\\\\svchost.exe\", \n          \
+  \             \"?:\\\\Windows\\\\CCM\\\\CcmExec.exe\",\n                       \"\
+  \\\\Device\\\\HarddiskVolume*\\\\Windows\\\\system32\\\\svchost.exe\", \n      \
+  \                 \"\\\\Device\\\\HarddiskVolume*\\\\Windows\\\\CCM\\\\CcmExec.exe\"\
+  )\n  /*\n    Full registry key path omitted due to data source variations:\n   \
+  \ \"HKEY_USERS\\\\*\\\\Software\\\\Policies\\\\Microsoft\\\\Windows NT\\\\Driver\
+  \ Signing\\\\BehaviorOnFailedVerify\"\n  */"
+explanation: 'Identifies attempts to disable the code signing policy through the registry.
+  Code signing provides authenticity on a
+
+  program, and grants the user with the ability to check whether the program has been
+  tampered with. By allowing the
+
+  execution of unsigned or self-signed code, threat actors can craft and execute malicious
+  code.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/da7733b1-fe08-487e-b536-0a04c6d8b0cd.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity should not happen legitimately. The security team should address
+    any potential benign true positive (B-TP), as this configuration can put the user
+    and the domain at risk.
+
+
+    ### Related Rules
+
+
+    - First Time Seen Driver Loaded - df0fd41e-5590-4965-ad5e-cd079ec22fa9
+
+    - Untrusted Driver Loaded - d8ab1ec1-feeb-48b9-89e7-c12e189448aa
+
+    - Code Signing Policy Modification Through Built-in tools - b43570de-a908-4f7f-8bdb-b2df6ffd8c80
+
+
+    ### Response and remediation
+
+
+    - In'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

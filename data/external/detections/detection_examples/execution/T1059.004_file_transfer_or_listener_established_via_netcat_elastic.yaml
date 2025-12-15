@@ -1,0 +1,71 @@
+technique_id: T1059.004
+technique_name: File Transfer or Listener Established via Netcat
+tactic: execution
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and\n\
+  event.action in (\"exec\", \"exec_event\", \"start\", \"ProcessRollup2\", \"executed\"\
+  , \"process_started\") and\nprocess.name in (\"nc\",\"ncat\",\"netcat\",\"netcat.openbsd\"\
+  ,\"netcat.traditional\") and\nprocess.args like~ (\n  /* bind shell to specific\
+  \ port or listener */\n  \"-*l*\",\"-*p*\",\n  /* reverse shell to command-line\
+  \ interpreter used for command execution */\n  \"-*e*\",\n  /* file transfer via\
+  \ stdout/pipe */\n  \">\",\"<\", \"|\"\n)"
+explanation: 'A netcat process is engaging in network activity on a Linux host. Netcat
+  is often used as a persistence mechanism by
+
+  exporting a reverse shell or by serving a shell on a listening port. Netcat is also
+  sometimes used for data
+
+  exfiltration.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/adb961e0-cb74-42a0-af9e-29fc41f88f5f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Netcat is a dual-use tool that can be used for benign or malicious activity.
+    It is included in some Linux distributions, so its presence is not necessarily
+    suspicious. Some normal use of this program, while uncommon, may originate from
+    scripts, automation tools, and frameworks.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Investigate'
+  mitigation: Review investigation guide for details
+references:
+- http://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet
+- https://www.sans.org/security-resources/sec560/netcat_cheat_sheet_v1.pdf
+- https://en.wikipedia.org/wiki/Netcat
+- https://www.hackers-arise.com/hacking-fundamentals
+- https://null-byte.wonderhowto.com/how-to/hack-like-pro-use-netcat-swiss-army-knife-hacking-tools-0148657/
+- https://levelup.gitconnected.com/ethical-hacking-part-15-netcat-nc-and-netcat-f6a8f7df43fd
+has_investigation_guide: true
+risk_score: 47

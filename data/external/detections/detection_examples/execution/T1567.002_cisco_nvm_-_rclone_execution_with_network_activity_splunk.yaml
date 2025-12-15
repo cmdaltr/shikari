@@ -1,0 +1,64 @@
+technique_id: T1567.002
+technique_name: Cisco NVM - Rclone Execution With Network Activity
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "`cisco_network_visibility_module_flowdata`\n(\n  process_name = \"rclone.exe\"\
+  \n  OR\n  (\n    process_arguments = \"* copy *\"\n    process_arguments = \"*\\\
+  \\\\\\*\"\n    process_arguments IN (\"*remote:*\", \"*mega:*\", \"*ftp:*\", \"\
+  *ftp1:*\")\n  )\n  OR\n  (\n    process_arguments IN (\"*remote:*\", \"*mega:*\"\
+  , \"*ftp:*\", \"*ftp1:*\")\n    process_arguments = \"*--transfers\"\n    process_arguments\
+  \ = \"*--ignore-existing*\"\n    process_arguments = \"*--auto-confirm*\"\n  )\n\
+  )\n| stats count min(_time) as firstTime max(_time) as lastTime\n        values(parent_process_arguments)\
+  \ as parent_process_arguments\n        values(process_arguments) as process_arguments\n\
+  \        values(parent_process_hash) as parent_process_hash\n        values(process_hash)\
+  \ as process_hash\n        values(module_name_list) as module_name_list\n      \
+  \  values(module_hash_list) as module_hash_list\n        values(dest_port) as dest_port\n\
+  \        values(aliul) as additional_logged_in_users_list\n        values(dest_hostname)\
+  \ as dest_hostname\n        by src dest parent_process_path parent_process_integrity_level\
+  \ process_path process_name process_integrity_level process_id transport\n| `security_content_ctime(firstTime)`\n\
+  | `security_content_ctime(lastTime)`\n| table\n  parent_process_integrity_level\
+  \ parent_process_path parent_process_arguments parent_process_hash\n  process_integrity_level\
+  \ process_path process_name process_arguments process_hash process_id\n  additional_logged_in_users_list\
+  \ module_name_list module_hash_list\n  src dest_hostname dest dest_port transport\
+  \ firstTime lastTime\n| `cisco_nvm___rclone_execution_with_network_activity_filter`"
+explanation: 'This detection identifies execution of the file synchronization utility
+  "rclone".
+
+  It leverages Cisco Network Visibility Module logs, specifically flow data in order
+  to capture process executions
+
+  initiating network connections.
+
+  While rclone is a legitimate command-line tool for syncing data to cloud storage
+  providers, it has been widely abused by threat actors for data exfiltration.
+
+  This analytic inspects process name and arguments for rclone and flags usage of
+  suspicious flags.
+
+  If matched, this could indicate malicious usage for stealthy data exfiltration or
+  cloud abuse.'
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/719f8c78-b20d-4bb9-8c33-6d1a762e7a9a/
+indicators:
+- type: data_source
+  value: Cisco Network Visibility Module Flow Data
+  confidence: high
+- type: risk_system
+  value: src
+  confidence: high
+false_positives:
+- description: Rclone is used legitimately in some backup or other workflows. Tune
+    this rule based on known-good operational usage or restrict by known user/service
+    accounts an specific folders or remote names.
+  mitigation: Review context and user activity
+references:
+- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/
+- https://thedfirreport.com/2021/10/04/bazarloader-and-the-conti-leaks/
+- https://thedfirreport.com/2021/11/29/continuing-the-bazar-ransomware-story/
+- https://redcanary.com/blog/threat-detection/rclone-mega-extortion/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/cisco_network_visibility_module/cisco_nvm_flowdata/nvm_flowdata.log

@@ -1,0 +1,76 @@
+technique_id: T1037
+technique_name: Process Spawned from Message-of-the-Day (MOTD)
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where event.type == \"start\" and host.os.type == \"linux\" and event.action\
+  \ : (\"exec\", \"exec_event\", \"start\") and\n  process.parent.executable : \"\
+  /etc/update-motd.d/*\" and\n  (\n    (\n      process.name in (\"bash\", \"dash\"\
+  , \"sh\", \"tcsh\", \"csh\", \"zsh\", \"ksh\", \"fish\") and\n      (\n        process.args\
+  \ : (\"-i\", \"-l\") or\n        (process.parent.name == \"socat\" and process.parent.args\
+  \ : \"*exec*\")\n      )\n    ) or\n    (\n      process.name : (\"nc\", \"ncat\"\
+  , \"netcat\", \"nc.openbsd\") and process.args_count >= 3 and \n      not process.args\
+  \ : (\"-*z*\", \"-*l*\")\n    ) or\n    (\n      process.name : \"python*\" and\
+  \ process.args : \"-c\" and process.args : (\n        \"*import*pty*spawn*\", \"\
+  *import*subprocess*call*\"\n      )\n    ) or\n    (\n      process.name : \"perl*\"\
+  \ and process.args : \"-e\" and process.args : \"*socket*\" and process.args : (\n\
+  \        \"*exec*\", \"*system*\"\n      )\n    ) or\n    (\n      process.name\
+  \ : \"ruby*\" and process.args : (\"-e\", \"-rsocket\") and process.args : (\n \
+  \       \"*TCPSocket.new*\", \"*TCPSocket.open*\"\n      )\n    ) or\n    (\n  \
+  \    process.name : \"lua*\" and process.args : \"-e\" and process.args : \"*socket.tcp*\"\
+  \ and process.args : (\n        \"*io.popen*\", \"*os.execute*\"\n      )\n    )\
+  \ or\n    (process.name : \"php*\" and process.args : \"-r\" and process.args :\
+  \ \"*fsockopen*\" and process.args : \"*/bin/*sh*\") or \n    (process.name : (\"\
+  awk\", \"gawk\", \"mawk\", \"nawk\") and process.args : \"*/inet/tcp/*\") or \n\
+  \    (process.name in (\"openssl\", \"telnet\")) or\n    (\n      process.args :\
+  \ (\n        \"./*\", \"/boot/*\", \"/dev/shm/*\", \"/etc/cron.*/*\", \"/etc/init.d/*\"\
+  , \"/etc/update-motd.d/*\", \"/run/*\", \"/srv/*\",\n        \"/tmp/*\", \"/var/tmp/*\"\
+  , \"/var/log/*\", \"/opt/*\"\n      ) and process.args_count == 1\n    )\n  ) and\
+  \ \n  not (\n    process.parent.args == \"--force\" or\n    process.args in (\"\
+  /usr/games/lolcat\", \"/usr/bin/screenfetch\") or\n    process.parent.name == \"\
+  system-crash-notification\"\n  )"
+explanation: 'Message of the day (MOTD) is the message that is presented to the user
+  when a user connects to a Linux server via SSH or
+
+  a serial connection. Linux systems contain several default MOTD files located in
+  the "/etc/update-motd.d/" directory.
+
+  These scripts run as the root user every time a user connects over SSH or a serial
+  connection. Adversaries may create
+
+  malicious MOTD files that grant them persistence onto the target every time a user
+  connects to the system by executing a
+
+  backdoor script or command. This rule detects the execution of potentially malicious
+  processes through the MOTD utility.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4ec47004-b34a-42e6-8003-376a123ea447.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Any activity that triggered the alert and is not inherently malicious must be\
+    \ monitored by the security team.\n\n### Response and remediation\n\n- Initiate\
+    \ the incident response process based on the outcome of the triage.\n- Isolate\
+    \ the involved host to prevent further post-compromise behavior.\n- If the triage\
+    \ identified malware, search the environment for additional compromised hosts.\n\
+    \  - Implement temporary network rules,"
+  mitigation: Review investigation guide for details
+references:
+- https://pberba.github.io/security/2022/02/06/linux-threat-hunting-for-persistence-initialization-scripts-and-shell-configuration/#10-boot-or-logon-initialization-scripts-motd
+has_investigation_guide: true
+risk_score: 73

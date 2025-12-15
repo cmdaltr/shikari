@@ -1,0 +1,67 @@
+technique_id: T1566.001
+technique_name: Remote Desktop File Opened from Suspicious Path
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ process.name : \"mstsc.exe\" and\n process.args : (\"?:\\\\Users\\\\*\\\\Downloads\\\
+  \\*.rdp\",\n                 \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Temp\\\\\
+  Temp?_*.rdp\",\n                 \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Temp\\\
+  \\7z*.rdp\",\n                 \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Temp\\\\\
+  Rar$*\\\\*.rdp\",\n                 \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Temp\\\
+  \\BNZ.*.rdp\",\n                 \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Microsoft\\\
+  \\Windows\\\\INetCache\\\\Content.Outlook\\\\*.rdp\")"
+explanation: 'Identifies attempts to open a remote desktop file from suspicious paths.
+  Adversaries may abuse RDP files for initial
+
+  access.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f401a0e3-5eeb-4591-969a-f435488e7d12.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Users frequently download legitimate RDP files from trusted sources like corporate
+    emails or internal portals. To manage this, create exceptions for known safe domains
+    or email addresses in your security tools.
+
+    - Temporary directories often store RDP files during legitimate software installations
+    or updates. Monitor these activities and whitelist specific processes or software
+    that are known to use RDP files during their operations.
+
+    - Employees working remotely may use'
+  mitigation: Review investigation guide for details
+references:
+- https://www.microsoft.com/en-us/security/blog/2024/10/29/midnight-blizzard-conducts-large-scale-spear-phishing-campaign-using-rdp-files/
+- https://www.blackhillsinfosec.com/rogue-rdp-revisiting-initial-access-methods/
+- https://shorsec.io/blog/malrdp-implementing-rouge-rdp-manually/
+has_investigation_guide: true
+risk_score: 47

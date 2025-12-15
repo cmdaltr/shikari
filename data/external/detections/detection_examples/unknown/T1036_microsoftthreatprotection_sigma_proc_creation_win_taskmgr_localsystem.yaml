@@ -1,0 +1,37 @@
+technique_id: T1036
+technique_name: Taskmgr as LOCAL_SYSTEM
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 9fff585c-c33e-4a86-b3cd-39312079a65f
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith: \\taskmgr.exe\n  User|contains:\n  - AUTHORI\n  - AUTORI\n"
+explanation: Detects the creation of taskmgr.exe process in context of LOCAL_SYSTEM
+false_positives:
+- Unknown
+references:
+- Internal Research
+tags:
+- attack.defense-evasion
+- attack.t1036
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    User|contains:
+    - AUTHORI
+    - AUTORI
+    Image|endswith: \taskmgr.exe
+  condition: selection
+metadata:
+  created_date: 2018-03-18
+  modified_date: 2022-05-27
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

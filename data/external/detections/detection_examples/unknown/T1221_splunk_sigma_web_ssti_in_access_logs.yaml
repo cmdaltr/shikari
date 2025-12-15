@@ -1,0 +1,52 @@
+technique_id: T1221
+technique_name: Server Side Template Injection Strings
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.85
+validated: true
+source: sigma
+sigma_id: ada3bc4f-f0fd-42b9-ba91-e105e8af7342
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: select_method and keywords\
+  \ and not filter\nfilter:\n  sc-status: 404\nkeywords:\n- ={{\n- =%7B%7B\n- =${\n\
+  - =$%7B\n- =<%=\n- =%3C%25=\n- =@(\n- freemarker.template.utility.Execute\n- .getClass().forName('javax.script.ScriptEngineManager')\n\
+  - T(org.apache.commons.io.IOUtils)\nselect_method:\n  cs-method: GET\n"
+explanation: Detects SSTI attempts sent via GET requests in access logs
+false_positives:
+- User searches in search boxes of the respective website
+- Internal vulnerability scanners can cause some serious FPs when used, if you experience
+  a lot of FPs due to this think of adding more filters such as "User Agent" strings
+  and more response codes
+references:
+- https://book.hacktricks.xyz/pentesting-web/ssti-server-side-template-injection
+- https://github.com/payloadbox/ssti-payloads
+tags:
+- attack.defense-evasion
+- attack.t1221
+logsource:
+  category: webserver
+detection:
+  select_method:
+    cs-method: GET
+  keywords:
+  - ={{
+  - =%7B%7B
+  - =${
+  - =$%7B
+  - =<%=
+  - =%3C%25=
+  - =@(
+  - freemarker.template.utility.Execute
+  - .getClass().forName('javax.script.ScriptEngineManager')
+  - T(org.apache.commons.io.IOUtils)
+  filter:
+    sc-status: 404
+  condition: select_method and keywords and not filter
+metadata:
+  created_date: 2022-06-14
+  modified_date: '2025-11-28'
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

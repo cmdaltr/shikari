@@ -1,0 +1,48 @@
+technique_id: T1567
+technique_name: Windows Gdrive Binary Activity
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where (Processes.process_name="gdrive.exe"
+  OR Processes.original_file_name="*gdrive.exe") Processes.process IN  ("* download
+  *", "* upload *", "* list*", "* update *", "* sync *", "* share *", "* account add*",
+  "* drives *", "* files *") by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_gdrive_binary_activity_filter`'
+explanation: The following analytic detects the execution of the 'gdrive' tool on
+  a Windows host. This tool allows standard users to perform tasks associated with
+  Google Drive via the command line. This is used by actors to stage tools as well
+  as exfiltrate data. The detection leverages data from Endpoint Detection and Response
+  (EDR) agents, focusing on process names and command-line executions. If confirmed
+  malicious, this could lead to compromise of systems or sensitive data being stolen.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/9e7bd7c8-1c08-496e-9ffe-fd84ceb322e7/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrator or network operator can use this application for automation
+    purposes. Please update the filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://cloud.google.com/blog/topics/threat-intelligence/uncovering-unc3886-espionage-operations
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1567/gdrive/gdrive_windows.log

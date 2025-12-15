@@ -1,0 +1,42 @@
+technique_id: T1204.003
+technique_name: AWS ECR Container Scanning Findings High
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`cloudtrail` eventSource=ecr.amazonaws.com eventName=DescribeImageScanFindings
+  | spath path=responseElements.imageScanFindings.findings{} output=findings | mvexpand
+  findings | spath input=findings | search severity=HIGH | rename name as finding_name,
+  description as finding_description, requestParameters.imageId.imageDigest as imageDigest,
+  requestParameters.repositoryName as repository | rename user_name as user | stats
+  count min(_time) as firstTime max(_time) as lastTime by signature dest user user_agent
+  src vendor_account vendor_region vendor_product finding_name finding_description
+  imageDigest repository | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `aws_ecr_container_scanning_findings_high_filter`'
+explanation: The following analytic identifies high-severity findings from AWS Elastic
+  Container Registry (ECR) image scans. It detects these activities by analyzing AWS
+  CloudTrail logs for the DescribeImageScanFindings event, specifically filtering
+  for findings with a high severity level. This activity is significant for a SOC
+  because high-severity vulnerabilities in container images can lead to potential
+  exploitation if not addressed. If confirmed malicious, attackers could exploit these
+  vulnerabilities to gain unauthorized access, execute arbitrary code, or escalate
+  privileges within the container environment, posing a significant risk to the overall
+  security posture.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/30a0e9f8-f1dd-4f9d-8fc2-c622461d781c/
+indicators:
+- type: data_source
+  value: AWS CloudTrail DescribeImageScanFindings
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-scanning.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1204.003/aws_ecr_image_scanning/aws_ecr_scanning_findings_events.json

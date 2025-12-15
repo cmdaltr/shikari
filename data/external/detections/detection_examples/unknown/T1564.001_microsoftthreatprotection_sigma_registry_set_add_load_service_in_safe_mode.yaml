@@ -1,0 +1,67 @@
+technique_id: T1564.001
+technique_name: Registry Persistence via Service in Safe Mode
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: 1547e27c-3974-43e2-a7d7-7f484fb928ec
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_optional_*\nfilter_optional_hexnode:\n  Details: Service\n  Image: C:\\\
+  Hexnode\\Hexnode Agent\\Current\\HexnodeAgent.exe\n  TargetObject|endswith:\n  -\
+  \ \\Control\\SafeBoot\\Minimal\\Hexnode Updater\\(Default)\n  - \\Control\\SafeBoot\\\
+  Network\\Hexnode Updater\\(Default)\n  - \\Control\\SafeBoot\\Minimal\\Hexnode Agent\\\
+  (Default)\n  - \\Control\\SafeBoot\\Network\\Hexnode Agent\\(Default)\nfilter_optional_mbamservice:\n\
+  \  Details: Service\n  Image|endswith: \\MBAMInstallerService.exe\n  TargetObject|endswith:\
+  \ \\MBAMService\\(Default)\nfilter_optional_sophos:\n  Image: C:\\WINDOWS\\system32\\\
+  msiexec.exe\n  TargetObject|endswith:\n  - \\Control\\SafeBoot\\Minimal\\SAVService\\\
+  (Default)\n  - \\Control\\SafeBoot\\Network\\SAVService\\(Default)\nselection:\n\
+  \  Details: Service\n  TargetObject|contains:\n  - \\Control\\SafeBoot\\Minimal\\\
+  \n  - \\Control\\SafeBoot\\Network\\\n  TargetObject|endswith: \\(Default)\n"
+explanation: Detects the modification of the registry to allow a driver or service
+  to persist in Safe Mode.
+false_positives:
+- Unknown
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1112/T1112.md#atomic-test-33---windows-add-registry-value-to-load-service-in-safe-mode-without-network
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1112/T1112.md#atomic-test-34---windows-add-registry-value-to-load-service-in-safe-mode-with-network
+tags:
+- attack.defense-evasion
+- attack.t1564.001
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains:
+    - \Control\SafeBoot\Minimal\
+    - \Control\SafeBoot\Network\
+    TargetObject|endswith: \(Default)
+    Details: Service
+  filter_optional_sophos:
+    Image: C:\WINDOWS\system32\msiexec.exe
+    TargetObject|endswith:
+    - \Control\SafeBoot\Minimal\SAVService\(Default)
+    - \Control\SafeBoot\Network\SAVService\(Default)
+  filter_optional_mbamservice:
+    Image|endswith: \MBAMInstallerService.exe
+    TargetObject|endswith: \MBAMService\(Default)
+    Details: Service
+  filter_optional_hexnode:
+    Image: C:\Hexnode\Hexnode Agent\Current\HexnodeAgent.exe
+    TargetObject|endswith:
+    - \Control\SafeBoot\Minimal\Hexnode Updater\(Default)
+    - \Control\SafeBoot\Network\Hexnode Updater\(Default)
+    - \Control\SafeBoot\Minimal\Hexnode Agent\(Default)
+    - \Control\SafeBoot\Network\Hexnode Agent\(Default)
+    Details: Service
+  condition: selection and not 1 of filter_optional_*
+metadata:
+  created_date: 2022-04-04
+  modified_date: 2025-10-22
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

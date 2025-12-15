@@ -1,0 +1,72 @@
+technique_id: T1573.002
+technique_name: Cisco Secure Firewall - Intrusion Events by Threat Activity
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`cisco_secure_firewall` EventType=IntrusionEvent
+
+  | stats count AS total_alerts, dc(signature_id) AS sig_count, values(SnortRuleGroups)
+  AS snort_rule_groups, values(connection_id) AS connection_id, values(rule) AS rule,
+  values(dest_port) AS dest_port, values(transport) AS transport, values(app) AS app,
+  values(signature) AS signature, values(src_ip) AS src_ip BY _time dest_ip signature_id
+
+  | lookup cisco_snort_ids_to_threat_mapping signature_id OUTPUT threat, category,
+  message
+
+  | where isnotnull(threat)
+
+  | bin _time span=1d
+
+  | stats count AS Total_Alerts, dc(signature_id) AS sig_count, values(signature_id)
+  AS signature_id, values(category) AS category, values(message) AS message, values(snort_rule_groups)
+  AS snort_rule_groups, values(connection_id) AS connection_id, values(rule) AS rule,
+  values(dest_port) AS dest_port, values(transport) AS transport, values(app) AS app,
+  values(signature) AS signature, values(src_ip) AS src_ip BY _time dest_ip threat
+
+  | lookup threat_snort_count threat OUTPUT description, distinct_count_snort_ids
+
+  | table _time, dest_ip, src_ip, threat, category, message, description, signature_id,
+  signature, snort_rule_groups, sig_count, distinct_count_snort_ids, connection_id,
+  rule, dest_port, transport, app
+
+  | where sig_count >= distinct_count_snort_ids
+
+  | `cisco_secure_firewall___intrusion_events_by_threat_activity_filter`'
+explanation: "This analytic detects intrusion events from known threat activity using\
+  \ Cisco Secure Firewall Intrusion Events. \nIt leverages Cisco Secure Firewall Threat\
+  \ Defense IntrusionEvent logs to identify cases where one or multiple Snort signatures\
+  \ \nassociated with a known threat or threat actor activity have been triggered\
+  \ within a one-hour time window. The detection uses a \nlookup table (cisco_snort_ids_to_threat_mapping)\
+  \ to map Snort signature IDs to known threat actors and their techniques. \nWhen\
+  \ multiple signatures associated with the same threat actor are triggered within\
+  \ the time window, and the count of \nunique signatures matches or exceeds the expected\
+  \ number of signatures for that threat technique, an alert is generated. \nThis\
+  \ helps identify potential coordinated threat activity in your network environment\
+  \ by correlating related intrusion \nevents that occur in close temporal proximity.\n\
+  \nCurrently, this detection will alert on the following threat actors or malware\
+  \ families as defined in the cisco_snort_ids_to_threat_mapping lookup:\n* ArcaneDoor\n\
+  * Static Tundra\n* AgentTesla\n* Amadey\n* AsyncRAT\n* Chafer\n* DCRAT\n* Lumma\
+  \ Stealer\n* Nobelium\n* Quasar\n* Remcos\n* Snake\n* Xworm\n\nTo add or update\
+  \ threat actors, update the cisco_snort_ids_to_threat_mapping.csv lookup file with\
+  \ new or modified threat names and associated Snort signature IDs."
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b71e57e8-c571-4ff1-ae13-bc4384a9e891/
+indicators:
+- type: data_source
+  value: Cisco Secure Firewall Threat Defense Intrusion Event
+  confidence: high
+- type: risk_system
+  value: dest_ip
+  confidence: high
+false_positives:
+- description: False positives may occur due to legitimate security testing or research
+    activities.
+  mitigation: Review context and user activity
+references:
+- https://www.cisco.com/c/en/us/products/security/firewalls/index.html
+- https://blog.talosintelligence.com/static-tundra/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/cisco_secure_firewall_threat_defense/lumma_stealer/lumma_stealer_events.log

@@ -1,0 +1,36 @@
+technique_id: T1526
+technique_name: Kubernetes Suspicious Image Pulling
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '`kube_audit` requestObject.message="Pulling image*" | search NOT `kube_allowed_images`
+  | fillnull | stats count by objectRef.name objectRef.namespace objectRef.resource
+  requestReceivedTimestamp requestURI responseStatus.code sourceIPs{} stage user.groups{}
+  user.uid user.username userAgent verb | rename sourceIPs{} as src_ip, user.username
+  as user | `kubernetes_suspicious_image_pulling_filter`'
+explanation: The following analytic detects suspicious image pulling in Kubernetes
+  environments. It identifies this activity by monitoring Kubernetes audit logs for
+  image pull requests that do not match a predefined list of allowed images. This
+  behavior is significant for a SOC as it may indicate an attacker attempting to deploy
+  malicious software or infiltrate the system. If confirmed malicious, the impact
+  could be severe, potentially leading to unauthorized access to sensitive systems
+  or data, and enabling further malicious activities within the cluster.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/4d3a17b3-0a6d-4ae0-9421-46623a69c122/
+indicators:
+- type: data_source
+  value: Kubernetes Audit
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1526/kubernetes_audit_pull_image/kubernetes_audit_pull_image.json

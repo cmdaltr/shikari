@@ -1,0 +1,38 @@
+technique_id: T1078
+technique_name: AWS Management Console Root Login
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:aws.cloudtrail and\nevent.provider:signin.amazonaws.com and\
+  \ \nevent.action:ConsoleLogin and \naws.cloudtrail.user_identity.type:Root and \n\
+  event.outcome:success"
+explanation: Identifies a successful login to the AWS Management Console by the Root
+  user.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e2a67480-3b79-403d-96e3-fdd2992c50ef.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS Sign-In
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- **Planned administrative actions.** \
+    \ \n  Some rare maintenance tasks require root credentials (for example, payment\
+    \ method updates). If the login aligns with documented change control and was\
+    \ performed using MFA by the approved owner, the alert can be closed as benign.\n\
+    - **Third-party managed account scenarios.**  \n  Managed service providers may\
+    \ log in as root during onboarding or support activities. Confirm via ticketing\
+    \ or contractual documentation.\n\n### Response and"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html
+has_investigation_guide: true
+risk_score: 47

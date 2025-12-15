@@ -1,0 +1,56 @@
+technique_id: T1572
+technique_name: Potential Protocol Tunneling via Chisel Server
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id, process.entity_id with maxspan=1m\n  [process where host.os.type\
+  \ == \"linux\" and event.type == \"start\" and event.action == \"exec\" and \n \
+  \  process.args == \"server\" and process.args in (\"--port\", \"-p\", \"--reverse\"\
+  , \"--backend\", \"--socks5\") and \n   process.args_count >= 3 and process.parent.name\
+  \ in (\"bash\", \"dash\", \"ash\", \"sh\", \"tcsh\", \"csh\", \"zsh\", \"ksh\",\
+  \ \"fish\")]\n  [network where host.os.type == \"linux\" and event.type == \"start\"\
+  \ and event.action == \"connection_accepted\" and \n   destination.ip != null and\
+  \ destination.ip != \"127.0.0.1\" and destination.ip != \"::1\" and \n   not process.name\
+  \ : (\n     \"python*\", \"php*\", \"perl\", \"ruby\", \"lua*\", \"openssl\", \"\
+  nc\", \"netcat\", \"ncat\", \"telnet\", \"awk\", \"java\", \"telnet\",\n     \"\
+  ftp\", \"socat\", \"curl\", \"wget\", \"dpkg\", \"docker\", \"dockerd\", \"yum\"\
+  , \"apt\", \"rpm\", \"dnf\", \"ssh\", \"sshd\", \"hugo\")]"
+explanation: 'This rule monitors for common command line flags leveraged by the Chisel
+  server utility followed by a received
+
+  connection within a timespan of 1 minute. Chisel is a command-line utility used
+  for creating and managing TCP and UDP
+
+  tunnels, enabling port forwarding and secure communication between machines. Attackers
+  can abuse the Chisel utility to
+
+  establish covert communication channels, bypass network restrictions, and carry
+  out malicious activities by creating
+
+  tunnels that allow unauthorized access to internal systems.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ac8805f6-1e08-406c-962e-3937057fa86f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- If this activity is related to new benign\
+    \ software installation activity, consider adding exceptions — preferably with\
+    \ a combination of user and command line conditions.\n- If this activity is related\
+    \ to a system administrator or developer who uses port tunneling for benign purposes,\
+    \ consider adding exceptions for specific user accounts or hosts. \n- Try to understand\
+    \ the context of the execution by thinking about the user, machine, or business\
+    \ purpose. A small number of"
+  mitigation: Review investigation guide for details
+references:
+- https://blog.bitsadmin.com/living-off-the-foreign-land-windows-as-offensive-platform
+- https://book.hacktricks.xyz/generic-methodologies-and-resources/tunneling-and-port-forwarding
+has_investigation_guide: true
+risk_score: 47

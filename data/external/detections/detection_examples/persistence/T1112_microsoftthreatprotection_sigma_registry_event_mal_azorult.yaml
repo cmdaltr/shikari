@@ -1,0 +1,41 @@
+technique_id: T1112
+technique_name: Registry Entries For Azorult Malware
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.89
+validated: true
+source: sigma
+sigma_id: f7f9ab88-7557-4a69-b30e-0a8f91b3a0e7
+level: critical
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  EventID:\n  - 12\n  - 13\n  TargetObject|contains: SYSTEM\\\n  TargetObject|endswith:\
+  \ \\services\\localNETService\n"
+explanation: Detects the presence of a registry key created during Azorult execution
+false_positives:
+- Unknown
+references:
+- https://www.trendmicro.com/vinfo/us/threat-encyclopedia/malware/trojan.win32.azoruit.a
+tags:
+- attack.defense-evasion
+- attack.persistence
+- attack.execution
+- attack.t1112
+logsource:
+  product: windows
+  category: registry_event
+detection:
+  selection:
+    EventID:
+    - 12
+    - 13
+    TargetObject|contains: SYSTEM\
+    TargetObject|endswith: \services\localNETService
+  condition: selection
+metadata:
+  created_date: 2020-05-08
+  modified_date: 2021-11-27
+  author: Trent Liffick
+  status: test
+  imported_date: '2025-11-28'

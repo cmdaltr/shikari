@@ -1,0 +1,49 @@
+technique_id: T1218.009
+technique_name: Detect Regsvcs with Network Connection
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "`sysmon`\nEventID=3\nNOT dest_ip IN (\n  \"10.0.0.0/8\", \"172.16.0.0/12\"\
+  , \"192.168.0.0/16\", \"100.64.0.0/10\",\n  \"127.0.0.0/8\", \"169.254.0.0/16\"\
+  , \"192.0.0.0/24\", \"192.0.0.0/29\", \"192.0.0.8/32\",\n  \"192.0.0.9/32\", \"\
+  192.0.0.10/32\", \"192.0.0.170/32\", \"192.0.0.171/32\", \"192.0.2.0/24\",\n  \"\
+  192.31.196.0/24\", \"192.52.193.0/24\", \"192.88.99.0/24\", \"224.0.0.0/4\", \"\
+  192.175.48.0/24\",\n  \"198.18.0.0/15\", \"198.51.100.0/24\", \"203.0.113.0/24\"\
+  , \"240.0.0.0/4\"\n)\nprocess_name=regsvcs.exe\n| stats count min(_time) as firstTime\
+  \ max(_time) as lastTime\n  by action app dest dest_ip dest_port direction dvc protocol\
+  \ protocol_version src\n     src_ip src_port transport user vendor_product process_name\
+  \ process_exec process_guid\n     process_id\n| `security_content_ctime(firstTime)`\n\
+  | `security_content_ctime(lastTime)`\n| `detect_regsvcs_with_network_connection_filter`"
+explanation: The following analytic identifies instances of Regsvcs.exe establishing
+  a network connection to a public IP address, excluding private IP ranges. This detection
+  leverages Sysmon EventID 3 logs to monitor network connections initiated by Regsvcs.exe.
+  This activity is significant as Regsvcs.exe, a legitimate Microsoft-signed binary,
+  can be exploited to bypass application control mechanisms and establish remote Command
+  and Control (C2) channels. If confirmed malicious, this behavior could allow an
+  attacker to escalate privileges, persist in the environment, and exfiltrate sensitive
+  data. Immediate investigation and remediation are recommended.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e3e7a1c0-f2b9-445c-8493-f30a63522d1a/
+indicators:
+- type: data_source
+  value: Sysmon EventID 3
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Although unlikely, limited instances of regsvcs.exe may cause a false
+    positive. Filter based endpoint usage, command line arguments, or process lineage.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1218/009/
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1218.009/T1218.009.md
+- https://lolbas-project.github.io/lolbas/Binaries/Regsvcs/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1218.009/atomic_red_team/windows-sysmon.log

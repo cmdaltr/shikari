@@ -1,0 +1,83 @@
+technique_id: T1548
+technique_name: Privilege Escalation via SUID/SGID
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and event.action\
+  \ == \"exec\" and (\n  (process.user.id == \"0\" and process.real_user.id != \"\
+  0\") or\n  (process.group.id == \"0\" and process.real_group.id != \"0\")\n) and\
+  \ (\n  process.name in (\n    \"aa-exec\", \"ab\", \"agetty\", \"alpine\", \"ar\"\
+  , \"arj\", \"arp\", \"as\", \"ascii-xfr\", \"ash\", \"aspell\",\n    \"atobm\",\
+  \ \"awk\", \"base32\", \"base64\", \"basenc\", \"basez\", \"bash\", \"bc\", \"bridge\"\
+  , \"busctl\",\n    \"busybox\", \"bzip2\", \"cabal\", \"capsh\", \"cat\", \"choom\"\
+  , \"chown\", \"chroot\", \"clamscan\", \"cmp\",\n    \"column\", \"comm\", \"cp\"\
+  , \"cpio\", \"cpulimit\", \"csh\", \"csplit\", \"csvtool\", \"cupsfilter\", \"curl\"\
+  ,\n    \"cut\", \"dash\", \"date\", \"dd\", \"debugfs\", \"dialog\", \"diff\", \"\
+  dig\", \"distcc\", \"dmsetup\", \"docker\",\n    \"dosbox\", \"ed\", \"efax\", \"\
+  elvish\", \"emacs\", \"env\", \"eqn\", \"espeak\", \"expand\", \"expect\", \"file\"\
+  ,\n    \"find\", \"fish\", \"flock\", \"fmt\", \"fold\", \"gawk\", \"gcore\", \"\
+  gdb\", \"genie\", \"genisoimage\", \"gimp\",\n    \"grep\", \"gtester\", \"gzip\"\
+  , \"hd\", \"head\", \"hexdump\", \"highlight\", \"hping3\", \"iconv\", \"install\"\
+  ,\n    \"ionice\", \"ispell\", \"jjs\", \"join\", \"jq\", \"jrunscript\", \"julia\"\
+  , \"ksh\", \"ksshell\", \"kubectl\",\n    \"ld.so\", \"less\", \"links\", \"logsave\"\
+  , \"look\", \"lua\", \"make\", \"mawk\", \"minicom\", \"more\",\n    \"mosquitto\"\
+  , \"msgattrib\", \"msgcat\", \"msgconv\", \"msgfilter\", \"msgmerge\", \"msguniq\"\
+  , \"multitime\",\n    \"mv\", \"nasm\", \"nawk\", \"ncftp\", \"nft\", \"nice\",\
+  \ \"nl\", \"nm\", \"nmap\", \"node\", \"nohup\", \"ntpdate\",\n    \"od\", \"openssl\"\
+  , \"openvpn\", \"pandoc\", \"paste\", \"perf\", \"perl\", \"pexec\", \"pg\", \"\
+  php\", \"pidstat\",\n    \"pr\", \"ptx\", \"python\", \"rc\", \"readelf\", \"restic\"\
+  , \"rev\", \"rlwrap\", \"rsync\", \"rtorrent\",\n    \"run-parts\", \"rview\", \"\
+  rvim\", \"sash\", \"scanmem\", \"sed\", \"setarch\", \"setfacl\", \"setlock\", \"\
+  shuf\",\n    \"soelim\", \"softlimit\", \"sort\", \"sqlite3\", \"ss\", \"ssh-agent\"\
+  , \"ssh-keygen\", \"ssh-keyscan\",\n    \"sshpass\", \"start-stop-daemon\", \"stdbuf\"\
+  , \"strace\", \"strings\", \"sysctl\", \"systemctl\", \"tac\",\n    \"tail\", \"\
+  taskset\", \"tbl\", \"tclsh\", \"tee\", \"terraform\", \"tftp\", \"tic\", \"time\"\
+  , \"timeout\", \"troff\",\n    \"ul\", \"unexpand\", \"uniq\", \"unshare\", \"unsquashfs\"\
+  , \"unzip\", \"update-alternatives\", \"uudecode\",\n    \"uuencode\", \"vagrant\"\
+  , \"varnishncsa\", \"view\", \"vigr\", \"vim\", \"vimdiff\", \"vipw\", \"w3m\",\
+  \ \"watch\",\n    \"wc\", \"wget\", \"whiptail\", \"xargs\", \"xdotool\", \"xmodmap\"\
+  , \"xmore\", \"xxd\", \"xz\", \"yash\", \"zsh\",\n    \"zsoelim\"\n  ) or\n  process.name\
+  \ == \"ip\" and (\n    (process.args == \"-force\" and process.args in (\"-batch\"\
+  , \"-b\")) or (process.args == \"exec\")\n  )\n) and not process.parent.name ==\
+  \ \"spine\""
+explanation: 'Identifies instances where a process is executed with user/group ID
+  0 (root), and a real user/group ID that is not 0.
+
+  This is indicative of a process that has been granted SUID/SGID permissions, allowing
+  it to run with elevated
+
+  privileges. Attackers may leverage a misconfiguration for exploitation in order
+  to escalate their privileges to root, or
+
+  establish a backdoor for persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/28eb3afe-131d-48b0-a8fc-9784f3d54f3c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Processes initiated by legitimate system maintenance tasks or scripts may trigger
+    the rule. Review scheduled tasks and scripts to identify benign activities and
+    consider excluding them from the rule.
+
+    - Some system utilities or applications may inherently require SUID/SGID permissions
+    for normal operation. Verify the necessity of these permissions and exclude known
+    safe applications from the rule.
+
+    - Development or testing environments often run processes with elevated p'
+  mitigation: Review investigation guide for details
+references:
+- https://gtfobins.github.io/#+suid
+- https://www.elastic.co/security-labs/primer-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

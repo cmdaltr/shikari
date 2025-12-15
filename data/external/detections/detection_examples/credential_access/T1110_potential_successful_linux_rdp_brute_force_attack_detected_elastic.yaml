@@ -1,0 +1,55 @@
+technique_id: T1110
+technique_name: Potential Successful Linux RDP Brute Force Attack Detected
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "sequence by host.id, related.user with maxspan=5s\n  [authentication where\
+  \ host.os.type == \"linux\" and event.action == \"authenticated\" and\n   auditd.data.terminal\
+  \ : \"*rdp*\" and event.outcome == \"failure\"] with runs=10\n  [authentication\
+  \ where host.os.type == \"linux\" and event.action  == \"authenticated\" and\n \
+  \  auditd.data.terminal : \"*rdp*\" and event.outcome == \"success\"] | tail 1"
+explanation: 'An RDP (Remote Desktop Protocol) brute force attack involves an attacker
+  repeatedly attempting various username and
+
+  password combinations to gain unauthorized access to a remote computer via RDP,
+  and if successful, the potential impact
+
+  can include unauthorized control over the compromised system, data theft, or the
+  ability to launch further attacks
+
+  within the network, jeopardizing the security and confidentiality of the targeted
+  system and potentially compromising
+
+  the entire network infrastructure. This rule identifies multiple consecutive authentication
+  failures targeting a
+
+  specific user account within a short time interval, followed by a successful authentication.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/521fbe5c-a78d-4b6b-a323-f978b0e4c4c0.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative activities may trigger the rule if administrators
+    frequently log in using RDP for system management. To handle this, create exceptions
+    for known administrator accounts or IP addresses that regularly perform these
+    tasks.
+
+    - Automated scripts or services that use RDP for routine operations can cause
+    false positives. Identify these scripts and whitelist their associated user accounts
+    or IPs to prevent unnecessary alerts.
+
+    - Scheduled tasks or cron'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

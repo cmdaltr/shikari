@@ -1,0 +1,38 @@
+technique_id: T1133
+technique_name: Web Spring Cloud Function FunctionRouter
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count from datamodel=Web where Web.http_method IN ("POST") Web.url="*/functionRouter*"
+  by Web.http_user_agent Web.http_method, Web.url,Web.url_length Web.src, Web.dest
+  Web.status sourcetype | `drop_dm_object_name("Web")` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `web_spring_cloud_function_functionrouter_filter`'
+explanation: The following analytic identifies HTTP POST requests to the Spring Cloud
+  Function endpoint containing "functionRouter" in the URL. It leverages the Web data
+  model to detect these requests based on specific fields such as http_method, url,
+  and http_user_agent. This activity is significant because it targets CVE-2022-22963,
+  a known vulnerability in Spring Cloud Function, which has multiple proof-of-concept
+  exploits available. If confirmed malicious, this activity could allow attackers
+  to execute arbitrary code, potentially leading to unauthorized access, data exfiltration,
+  or further compromise of the affected system.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/89dddbad-369a-4f8a-ace2-2439218735bc/
+indicators:
+- type: data_source
+  value: Splunk Stream HTTP
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present with legitimate applications. Attempt
+    to filter by dest IP or use Asset groups to restrict to servers.
+  mitigation: Review context and user activity
+references:
+- https://github.com/rapid7/metasploit-framework/pull/16395
+- https://github.com/hktalent/spring-spel-0day-poc
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/spring4shell/all_functionrouter_http_streams.log

@@ -1,0 +1,56 @@
+technique_id: T1098
+technique_name: Entra ID Global Administrator Role Assigned
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset:azure.auditlogs and\n    azure.auditlogs.properties.category:RoleManagement\
+  \ and\n    azure.auditlogs.operation_name:\"Add member to role\" and\n    azure.auditlogs.properties.target_resources.*.modified_properties.*.new_value:\
+  \ \"\\\"Global Administrator\\\"\"\""
+explanation: 'In Microsoft Entra ID, permissions to manage resources are assigned
+  using roles. The Global Administrator
+
+  is a role that enables users to have access to all administrative features in Microsoft
+  Entra ID and services that use Microsoft Entra ID
+
+  identities like the Microsoft 365 Defender portal, the Microsoft 365 compliance
+  center, Exchange, SharePoint Online, and
+
+  Skype for Business Online. Attackers can add users as Global Administrators to maintain
+  access and manage all
+
+  subscriptions and their settings and resources. They can also elevate privilege
+  to User Access Administrator to pivot into Azure resources.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/04c5a96f-19c5-44fd-9571-a0b033f9086f.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks may trigger alerts when legitimate IT staff are
+    assigned the Global Administrator role temporarily for maintenance or configuration
+    purposes. To manage this, create exceptions for known IT personnel or scheduled
+    maintenance windows.
+
+    - Automated scripts or third-party applications that require elevated permissions
+    might be flagged if they are configured to add users to the Global Administrator
+    role. Review and whitelist these scripts or appl'
+  mitigation: Review investigation guide for details
+references:
+- https://securitylabs.datadoghq.com/articles/i-spy-escalating-to-entra-id-global-admin/
+- https://docs.microsoft.com/en-us/azure/active-directory/roles/permissions-reference#global-administrator
+- https://www.microsoft.com/en-us/security/blog/2025/08/27/storm-0501s-evolving-techniques-lead-to-cloud-based-ransomware/
+has_investigation_guide: true
+risk_score: 73

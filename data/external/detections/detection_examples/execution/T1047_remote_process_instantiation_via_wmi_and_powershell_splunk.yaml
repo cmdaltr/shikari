@@ -1,0 +1,50 @@
+technique_id: T1047
+technique_name: Remote Process Instantiation via WMI and PowerShell
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where `process_powershell` (Processes.process="*Invoke-WmiMethod*"
+  AND Processes.process="*-CN*" AND Processes.process="*-Class Win32_Process*" AND  Processes.process="*-Name
+  create*") by Processes.action Processes.dest Processes.original_file_name Processes.parent_process
+  Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id
+  Processes.parent_process_name Processes.parent_process_path Processes.process Processes.process_exec
+  Processes.process_guid Processes.process_hash Processes.process_id Processes.process_integrity_level
+  Processes.process_name Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)`| `security_content_ctime(lastTime)`
+  | `remote_process_instantiation_via_wmi_and_powershell_filter`'
+explanation: The following analytic detects the execution of `powershell.exe` using
+  the `Invoke-WmiMethod` cmdlet to start a process on a remote endpoint via WMI. It
+  leverages data from Endpoint Detection and Response (EDR) agents, focusing on command-line
+  executions and process telemetry. This activity is significant as it indicates potential
+  lateral movement or remote code execution attempts by adversaries. If confirmed
+  malicious, this could allow attackers to execute arbitrary code on remote systems,
+  leading to further compromise and persistence within the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/112638b4-4634-11ec-b9ab-3e22fbd008af/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrators may leverage WWMI and powershell.exe to start a process
+    on remote systems, but this activity is usually limited to a small set of hosts
+    or users.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1047/
+- https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/invoke-wmimethod?view=powershell-5.1
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1047/lateral_movement/windows-sysmon.log

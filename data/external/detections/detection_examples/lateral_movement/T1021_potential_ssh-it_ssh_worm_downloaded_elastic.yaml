@@ -1,0 +1,57 @@
+technique_id: T1021
+technique_name: Potential SSH-IT SSH Worm Downloaded
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and\n\
+  \ event.action in (\"exec\", \"exec_event\", \"start\", \"ProcessRollup2\", \"executed\"\
+  , \"process_started\") and\n process.name in (\"curl\", \"wget\") and process.args\
+  \ : (\n  \"https://thc.org/ssh-it/x\", \"http://nossl.segfault.net/ssh-it-deploy.sh\"\
+  , \"https://gsocket.io/x\",\n  \"https://thc.org/ssh-it/bs\", \"http://nossl.segfault.net/bs\"\
+  \n)"
+explanation: 'Identifies processes that are capable of downloading files with command
+  line arguments containing URLs to SSH-IT''s
+
+  autonomous SSH worm. This worm intercepts outgoing SSH connections every time a
+  user uses ssh.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2ddc468e-b39b-4f5b-9825-f3dcb0e998ea.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using curl or wget to download files from the
+    internet may trigger the rule. To manage this, security teams can create exceptions
+    for specific URLs or IP addresses known to be safe and frequently accessed by
+    administrators.
+
+    - Automated scripts or cron jobs that use curl or wget to download updates or
+    configuration files from trusted internal or external sources might be flagged.
+    Users can whitelist these scripts or the specific URLs they'
+  mitigation: Review investigation guide for details
+references:
+- https://www.thc.org/ssh-it/
+has_investigation_guide: true
+risk_score: 47

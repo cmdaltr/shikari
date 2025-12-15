@@ -1,0 +1,44 @@
+technique_id: T1562.001
+technique_name: GitHub Protected Branch Settings Changed
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: "configuration where event.dataset == \"github.audit\"\n  and github.category\
+  \ == \"protected_branch\" and event.type == \"change\""
+explanation: 'This rule detects setting modifications for protected branches of a
+  GitHub repository. Branch protection rules can be
+
+  used to enforce certain workflows or requirements before a contributor can push
+  changes to a branch in your repository.
+
+  Changes to these protected branch settings should be investigated and verified as
+  legitimate activity. Unauthorized
+
+  changes could be used to lower your organization''s security posture and leave you
+  exposed for future attacks.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/07639887-da3a-4fbf-9532-8ce748ff8c50.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Github
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine updates by trusted team members may trigger alerts. To manage this,
+    create exceptions for specific users or teams who regularly update branch protection
+    settings as part of their role.
+
+    - Automated tools or scripts that modify branch settings for legitimate reasons
+    can cause false positives. Identify these tools and whitelist their activities
+    in the monitoring system.
+
+    - Scheduled maintenance or policy updates might lead to expected changes in branch
+    protection s'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

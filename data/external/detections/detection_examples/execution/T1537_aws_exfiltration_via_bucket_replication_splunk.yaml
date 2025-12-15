@@ -1,0 +1,37 @@
+technique_id: T1537
+technique_name: AWS Exfiltration via Bucket Replication
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`cloudtrail`  eventName = PutBucketReplication eventSource = s3.amazonaws.com
+  | rename user_name as user, requestParameters.ReplicationConfiguration.Rule.Destination.Bucket
+  as bucket_name | stats count min(_time) as firstTime max(_time) as lastTime by signature
+  dest user user_agent src vendor_account vendor_region vendor_product bucket_name
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `aws_exfiltration_via_bucket_replication_filter`'
+explanation: The following analytic detects API calls to enable S3 bucket replication
+  services. It leverages AWS CloudTrail logs to identify `PutBucketReplication` events,
+  focusing on fields like `bucketName`, `ReplicationConfiguration.Rule.Destination.Bucket`,
+  and user details. This activity is significant as it can indicate unauthorized data
+  replication, potentially leading to data exfiltration. If confirmed malicious, attackers
+  could replicate sensitive data to external accounts, leading to data breaches and
+  compliance violations.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/eeb432d6-2212-43b6-9e89-fcd753f7da4c/
+indicators:
+- type: data_source
+  value: AWS CloudTrail PutBucketReplication
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: It is possible that an AWS admin has legitimately implemented data
+    replication to ensure data availability and improve data protection/backup strategies.
+  mitigation: Review context and user activity
+references:
+- https://hackingthe.cloud/aws/exploitation/s3-bucket-replication-exfiltration/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1119/aws_exfil_datasync/cloudtrail.json

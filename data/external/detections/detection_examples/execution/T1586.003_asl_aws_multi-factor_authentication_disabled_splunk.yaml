@@ -1,0 +1,42 @@
+technique_id: T1586.003
+technique_name: ASL AWS Multi-Factor Authentication Disabled
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`amazon_security_lake` (api.operation=DeleteVirtualMFADevice OR api.operation=DeactivateMFADevice)
+  | fillnull | stats count min(_time) as firstTime max(_time) as lastTime by actor.user.uid
+  api.operation api.service.name http_request.user_agent src_endpoint.ip actor.user.account.uid
+  cloud.provider cloud.region | rename actor.user.uid as user api.operation as action
+  api.service.name as dest http_request.user_agent as user_agent src_endpoint.ip as
+  src actor.user.account.uid as vendor_account cloud.provider as vendor_product cloud.region
+  as vendor_region | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `asl_aws_multi_factor_authentication_disabled_filter`'
+explanation: The following analytic detects attempts to disable multi-factor authentication
+  (MFA) for an AWS IAM user. It leverages Amazon Security Lake logs, specifically
+  monitoring for `DeleteVirtualMFADevice` or `DeactivateMFADevice` API operations.
+  This activity is significant as disabling MFA can indicate an adversary attempting
+  to weaken account security to maintain persistence using a compromised account.
+  If confirmed malicious, this action could allow attackers to retain access to the
+  AWS environment without detection, potentially leading to unauthorized access to
+  sensitive resources and prolonged compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/4d2df5e0-1092-4817-88a8-79c7fa054668/
+indicators:
+- type: data_source
+  value: ASL AWS CloudTrail
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: AWS Administrators may disable MFA but it is highly unlikely for this
+    event to occur without prior notice to the company
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1621/
+- https://aws.amazon.com/what-is/mfa/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1621/aws_mfa_disabled/asl_ocsf_cloudtrail.json

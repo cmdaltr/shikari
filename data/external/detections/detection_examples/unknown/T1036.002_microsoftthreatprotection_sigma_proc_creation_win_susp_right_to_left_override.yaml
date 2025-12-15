@@ -1,0 +1,45 @@
+technique_id: T1036.002
+technique_name: Potential Defense Evasion Via Right-to-Left Override
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: ad691d92-15f2-4181-9aa4-723c74f9ddc3
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains:\n  - \\u202e\n  - '[U+202E]'\n"
+explanation: 'Detects the presence of the "u202+E" character, which causes a terminal,
+  browser, or operating system to render text in a right-to-left sequence.
+
+  This is used as an obfuscation and masquerading techniques.
+
+  '
+false_positives:
+- Commandlines that contains scriptures such as arabic or hebrew might make use of
+  this character
+references:
+- https://redcanary.com/blog/right-to-left-override/
+- https://www.malwarebytes.com/blog/news/2014/01/the-rtlo-method
+- https://unicode-explorer.com/c/202E
+- https://tria.ge/241015-l98snsyeje/behavioral2
+tags:
+- attack.defense-evasion
+- attack.t1036.002
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - \u202e
+    - '[U+202E]'
+  condition: selection
+metadata:
+  created_date: 2023-02-15
+  modified_date: 2025-02-06
+  author: Micah Babinski, @micahbabinski, Swachchhanda Shrawan Poudel (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,68 @@
+technique_id: T1601.001
+technique_name: Kernel Load or Unload via Kexec Detected
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and\n\
+  \  event.action in (\"exec\", \"exec_event\", \"start\", \"ProcessRollup2\", \"\
+  executed\", \"process_started\") and\n  process.name == \"kexec\" and process.args\
+  \ in (\"--exec\", \"-e\", \"--load\", \"-l\", \"--unload\", \"-u\") and\n  not process.parent.name\
+  \ in (\"kdumpctl\", \"unload.sh\")"
+explanation: 'This detection rule identifies the usage of kexec, helping to uncover
+  unauthorized kernel replacements and potential
+
+  compromise of the system''s integrity. Kexec is a Linux feature that enables the
+  loading and execution of a different
+
+  kernel without going through the typical boot process. Malicious actors can abuse
+  kexec to bypass security measures,
+
+  escalate privileges, establish persistence or hide their activities by loading a
+  malicious kernel, enabling them to
+
+  tamper with the system''s trusted state, allowing e.g. a VM Escape.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4d4c35f4-414e-4d0c-bb7e-6db7c80a6957.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Kdump operations may trigger false positives as kdumpctl is a benign parent
+    process for kexec. Ensure kdumpctl is included in the exclusion list to prevent
+    unnecessary alerts.
+
+    - Custom scripts for kernel unloading, such as unload.sh, can cause false positives.
+    Verify these scripts are legitimate and add them to the exclusion list if they
+    are frequently used in your environment.
+
+    - Routine administrative tasks involving kernel updates or testing may involve
+    kexec. Confir'
+  mitigation: Review investigation guide for details
+references:
+- https://www.crowdstrike.com/blog/venom-vulnerability-details/
+- https://www.makeuseof.com/what-is-venom-vulnerability/
+- https://madaidans-insecurities.github.io/guides/linux-hardening.html
+has_investigation_guide: true
+risk_score: 47

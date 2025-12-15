@@ -1,0 +1,58 @@
+technique_id: T1027
+technique_name: Base64 Decoded Payload Piped to Interpreter
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by host.id, process.parent.entity_id with maxspan=3s\n  [process\
+  \ where host.os.type == \"linux\" and event.type == \"start\" and event.action in\
+  \ (\"exec\", \"ProcessRollup2\") and (\n    (process.name in (\"base64\", \"base64plain\"\
+  , \"base64url\", \"base64mime\", \"base64pem\", \"base32\", \"base16\") and process.command_line\
+  \ like~ \"*-*d*\") or\n    (process.name == \"openssl\" and process.args == \"enc\"\
+  \ and process.args in (\"-d\", \"-base64\", \"-a\")) or\n    (process.name like\
+  \ \"python*\" and\n    (process.args == \"base64\" and process.args in (\"-d\",\
+  \ \"-u\", \"-t\")) or\n    (process.args == \"-c\" and process.args like \"*base64*\"\
+  \ and process.command_line like~ \"*b64decode*\")\n    ) or\n    (process.name like\
+  \ \"perl*\" and process.command_line like~ \"*decode_base64*\") or\n    (process.name\
+  \ like \"ruby*\" and process.args == \"-e\" and process.command_line like~ \"*Base64.decode64*\"\
+  )\n  )]\n [process where host.os.type == \"linux\" and event.type == \"start\" and\
+  \ event.action in (\"exec\", \"ProcessRollup2\") and process.name like~ (\n    \"\
+  bash\", \"dash\", \"sh\", \"tcsh\", \"csh\", \"zsh\", \"ksh\", \"fish\", \"python*\"\
+  , \"perl*\", \"ruby*\", \"lua*\", \"php*\"\n )]"
+explanation: 'This rule detects when a base64 decoded payload is piped to an interpreter
+  on Linux systems. Adversaries may use
+
+  base64 encoding to obfuscate data and pipe it to an interpreter to execute malicious
+  code. This technique may
+
+  be used to evade detection by host- or network-based security controls.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5bdad1d5-5001-4a13-ae99-fa8619500f1a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts may use Base64 encoding to handle data securely.
+    Review the context of the script execution and consider excluding specific scripts
+    or directories from monitoring if they are verified as safe.
+
+    - Automated backup or data transfer processes might use Base64 encoding for data
+    integrity. Identify these processes and create exceptions for known, trusted applications
+    or scripts.
+
+    - Development environments often use Base64 encoding for testin'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,71 @@
+technique_id: T1557
+technique_name: Potential NTLM Relay Attack against a Computer Account
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by winlog.computer_name, source.ip with maxspan=5s\n\n/* Filter for\
+  \ an event that indicates coercion against known abused named pipes using an account\
+  \ that is not the host */\n[file where host.os.type == \"windows\" and event.code\
+  \ : \"5145\" and \n    not startswith~(winlog.computer_name, substring(user.name,\
+  \ 0, -1)) and\n    file.name : (\n        \"Spoolss\", \"netdfs\", \"lsarpc\", \"\
+  lsass\", \"netlogon\", \"samr\", \"efsrpc\", \"FssagentRpc\",\n        \"eventlog\"\
+  , \"winreg\", \"srvsvc\", \"dnsserver\", \"dhcpserver\", \"WinsPipe\"\n    )]\n\n\
+  /* Detects a logon attempt using the NTLM protocol resulting from the coercion coming\
+  \ from the same IP address */\n[authentication where host.os.type == \"windows\"\
+  \ and event.code in (\"4624\", \"4625\") and\n    endswith~(user.name, \"$\") and\
+  \ winlog.logon.type : \"network\" and\n    winlog.event_data.AuthenticationPackageName\
+  \ : \"NTLM\" and\n\n    /* Filter for a machine account that matches the hostname\
+  \ */\n    startswith~(winlog.computer_name, substring(user.name, 0, -1)) and\n\n\
+  \    /* Verify if the Source IP belongs to the host */\n    not endswith(string(source.ip),\
+  \ string(host.ip)) and\n    source.ip != null and source.ip != \"::1\" and source.ip\
+  \ != \"127.0.0.1\"]"
+explanation: 'Detects potential relay attacks by identifying coercion attempts followed
+  by authentication events using a target
+
+  server''s computer account, originating from a different host. This may indicate
+  that an attacker has captured and
+
+  relayed the server''s computer account hash to execute code on behalf of the compromised
+  system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/23e5407a-b696-4433-9297-087645f2726c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Machine accounts performing legitimate network logons from different IP addresses
+    can trigger false positives. To manage this, identify and whitelist known IP addresses
+    associated with legitimate administrative tasks or automated processes.
+
+    - Scheduled tasks or automated scripts that use machine accounts for network operations
+    may be flagged. Review and document these tasks, then create exceptions for their
+    associated IP addresses and hostnames.
+
+    - Load balancers or pro'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/p0dalirius/windows-coerced-authentication-methods
+- https://www.thehacker.recipes/a-d/movement/mitm-and-coerced-authentications
+- https://www.synacktiv.com/publications/ntlm-reflection-is-dead-long-live-ntlm-reflection-an-in-depth-analysis-of-cve-2025
+- https://blog.redteam-pentesting.de/2025/reflective-kerberos-relay-attack/
+- https://googleprojectzero.blogspot.com/2021/10/using-kerberos-for-authentication-relay.html
+- https://github.com/CICADA8-Research/RemoteKrbRelay/blob/main/README.md
+- https://github.com/Orange-Cyberdefense/ocd-mindmaps/blob/main/excalimap/mindmap/ad/authenticated.md
+has_investigation_guide: true
+risk_score: 73

@@ -1,0 +1,58 @@
+technique_id: T1059.003
+technique_name: Command and Scripting Interpreter via Windows Scripts
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.command_line != null and\n  (\n    process.name : (\"powershell.exe\"\
+  , \"pwsh.exe\", \"powershell_ise.exe\", \"cmd.exe\") or\n    ?process.pe.original_file_name\
+  \ : (\"powershell.exe\", \"pwsh.dll\", \"powershell_ise.exe\", \"Cmd.Exe\")\n  )\
+  \ and\n  process.parent.name : (\"wscript.exe\", \"mshta.exe\")"
+explanation: Identifies PowerShell.exe or Cmd.exe execution spawning from Windows
+  Script Host processes Wscript.exe.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2d62889e-e758-4c5e-b57e-c735914ee32a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'false positives.
+
+
+    ### Possible investigation steps
+
+
+    - Review the process command line and arguments to identify any obfuscation patterns
+    or suspicious commands, such as Base64 encoding or web requests, that match the
+    query''s suspicious patterns.
+
+    - Examine the parent process details, specifically focusing on wscript.exe, cscript.exe,
+    or mshta.exe, to determine if the PowerShell execution was initiated by a legitimate
+    script or a potentially malicious one.
+
+    - Check the process execution context, in'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

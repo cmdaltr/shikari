@@ -1,0 +1,67 @@
+technique_id: T1204.002
+technique_name: Suspicious LNK Command-Line Padding with Whitespace Characters
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: dd8756e7-a3a0-4768-b47e-8f545d1a751c
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cmd:\n- CommandLine|contains:\n  - '                 '\n  - \\u0009\n\
+  \  - \\u000A\n  - \\u0011\n  - \\u0012\n  - \\u0013\n  - \\u000B\n  - \\u000C\n\
+  \  - \\u000D\n- CommandLine|re: \\n\\n\\n\\n\\n\\n\nselection_img:\n- ParentImage|endswith:\
+  \ \\explorer.exe\n- ParentCommandLine|contains: .lnk\n"
+explanation: 'Detects exploitation of LNK file command-line length discrepancy, where
+  attackers hide malicious commands beyond the 260-character UI limit while the actual
+  command-line argument field supports 4096 characters using whitespace padding (e.g.,
+  0x20, 0x09-0x0D).
+
+  Adversaries insert non-printable whitespace characters (e.g., Line Feed \x0A, Carriage
+  Return \x0D) to pad the visible section of the LNK file, pushing malicious commands
+  past the UI-visible boundary.
+
+  The hidden payload, executed at runtime but invisible in Windows Explorer properties,
+  enables stealthy execution and evasion—commonly used for social engineering attacks.
+
+  This rule flags suspicious use of such padding observed in real-world attacks.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://syedhasan010.medium.com/forensics-analysis-of-an-lnk-file-da68a98b8415
+- https://thehackernews.com/2025/03/unpatched-windows-zero-day-flaw.html
+- https://www.trendmicro.com/en_us/research/25/c/windows-shortcut-zero-day-exploit.html
+tags:
+- attack.initial-access
+- attack.execution
+- attack.t1204.002
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - ParentImage|endswith: \explorer.exe
+  - ParentCommandLine|contains: .lnk
+  selection_cmd:
+  - CommandLine|contains:
+    - '                 '
+    - \u0009
+    - \u000A
+    - \u0011
+    - \u0012
+    - \u0013
+    - \u000B
+    - \u000C
+    - \u000D
+  - CommandLine|re: \n\n\n\n\n\n
+  condition: all of selection_*
+metadata:
+  created_date: 2025-03-19
+  modified_date: '2025-11-28'
+  author: Swachchhanda Shrawan Poudel (Nextron Systems)
+  status: experimental
+  imported_date: '2025-11-28'

@@ -1,0 +1,61 @@
+technique_id: T1003
+technique_name: HackTool - Rubeus Execution - ScriptBlock
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 3245cd30-e015-40ff-a31d-5cadd5f377ec
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ScriptBlockText|contains:\n  - 'asreproast '\n  - 'dump /service:krbtgt '\n \
+  \ - dump /luid:0x\n  - 'kerberoast '\n  - 'createnetonly /program:'\n  - 'ptt /ticket:'\n\
+  \  - '/impersonateuser:'\n  - 'renew /ticket:'\n  - 'asktgt /user:'\n  - 'harvest\
+  \ /interval:'\n  - 's4u /user:'\n  - 's4u /ticket:'\n  - 'hash /password:'\n  -\
+  \ 'golden /aes256:'\n  - 'silver /user:'\n"
+explanation: Detects the execution of the hacktool Rubeus using specific command line
+  flags
+false_positives:
+- Unlikely
+references:
+- https://blog.harmj0y.net/redteaming/from-kekeo-to-rubeus
+- https://m0chan.github.io/2019/07/31/How-To-Attack-Kerberos-101.html
+- https://github.com/GhostPack/Rubeus
+tags:
+- attack.defense-evasion
+- attack.credential-access
+- attack.t1003
+- attack.t1558.003
+- attack.lateral-movement
+- attack.t1550.003
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - 'asreproast '
+    - 'dump /service:krbtgt '
+    - dump /luid:0x
+    - 'kerberoast '
+    - 'createnetonly /program:'
+    - 'ptt /ticket:'
+    - '/impersonateuser:'
+    - 'renew /ticket:'
+    - 'asktgt /user:'
+    - 'harvest /interval:'
+    - 's4u /user:'
+    - 's4u /ticket:'
+    - 'hash /password:'
+    - 'golden /aes256:'
+    - 'silver /user:'
+  condition: selection
+metadata:
+  created_date: 2023-04-27
+  modified_date: '2025-11-28'
+  author: Christian Burkard (Nextron Systems), Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

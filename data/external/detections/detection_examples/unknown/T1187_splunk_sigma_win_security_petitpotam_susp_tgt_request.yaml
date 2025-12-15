@@ -1,0 +1,62 @@
+technique_id: T1187
+technique_name: PetitPotam Suspicious Kerberos TGT Request
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 6a53d871-682d-40b6-83e0-b7c1a6c4e3a5
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_*\nfilter_local:\n  IpAddress: ::1\nfilter_thumbprint:\n  CertThumbprint:\
+  \ ''\nselection:\n  CertThumbprint|contains: '*'\n  EventID: 4768\n  TargetUserName|endswith:\
+  \ $\n"
+explanation: 'Detect suspicious Kerberos TGT requests.
+
+  Once an attacer obtains a computer certificate by abusing Active Directory Certificate
+  Services in combination with PetitPotam, the next step would be to leverage the
+  certificate for malicious purposes.
+
+  One way of doing this is to request a Kerberos Ticket Granting Ticket using a tool
+  like Rubeus.
+
+  This request will generate a 4768 event with some unusual fields depending on the
+  environment.
+
+  This analytic will require tuning, we recommend filtering Account_Name to the Domain
+  Controller computer accounts.
+
+  '
+false_positives:
+- False positives are possible if the environment is using certificates for authentication.
+  We recommend filtering Account_Name to the Domain Controller computer accounts.
+references:
+- https://github.com/topotam/PetitPotam
+- https://isc.sans.edu/forums/diary/Active+Directory+Certificate+Services+ADCS+PKI+domain+admin+vulnerability/27668/
+- https://github.com/splunk/security_content/blob/88d689fe8a055d8284337b9fad5d9152b42043db/detections/endpoint/petitpotam_suspicious_kerberos_tgt_request.yml
+tags:
+- attack.credential-access
+- attack.t1187
+logsource:
+  product: windows
+  service: security
+  definition: The advanced audit policy setting "Account Logon > Kerberos Authentication
+    Service" must be configured for Success/Failure
+detection:
+  selection:
+    EventID: 4768
+    TargetUserName|endswith: $
+    CertThumbprint|contains: '*'
+  filter_local:
+    IpAddress: ::1
+  filter_thumbprint:
+    CertThumbprint: ''
+  condition: selection and not 1 of filter_*
+metadata:
+  created_date: 2021-09-02
+  modified_date: 2022-10-05
+  author: Mauricio Velazco, Michael Haag
+  status: test
+  imported_date: '2025-11-28'

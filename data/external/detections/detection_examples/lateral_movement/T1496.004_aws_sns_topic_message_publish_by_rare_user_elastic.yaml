@@ -1,0 +1,51 @@
+technique_id: T1496.004
+technique_name: AWS SNS Topic Message Publish by Rare User
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:\"aws.cloudtrail\"\n    and event.provider:\"sns.amazonaws.com\"\
+  \n    and event.action:\"Publish\"\n    and event.outcome:\"success\""
+explanation: 'Identifies when an SNS topic message is published by a rare user in
+  AWS. Adversaries may publish messages to SNS topics
+
+  for phishing campaigns, data exfiltration, or lateral movement within the AWS environment.
+  SNS topics are used to send
+
+  notifications and messages to subscribed endpoints such as applications, mobile
+  devices or email addresses, making them a
+
+  valuable target for adversaries to distribute malicious content or exfiltrate sensitive
+  data. This is a New Terms rule that only flags
+
+  when this behavior is observed for the first time by a user or role.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2112ecce-cd34-11ef-873f-f661ea17fbcd.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS SNS
+  confidence: high
+false_positives:
+- description: "False Positive Analysis\n\n- **Routine Operational Use**:\n  - Confirm\
+    \ if the publishing activity aligns with standard operational tasks or automation\
+    \ scripts.\n  - Validate whether new or rare users were recently granted permissions\
+    \ for publishing messages to SNS topics.\n\n- **Testing or Monitoring Scripts**:\n\
+    \  - Automated testing or monitoring tools may trigger this rule if configured\
+    \ to publish messages to SNS topics.\n\n### Response and Remediation\n\n- **Immediate\
+    \ Action**:\n  - If unauthorized activ"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/sns/latest/api/API_Publish.html
+- https://hackingthe.cloud/aws/exploitation/Misconfigured_Resource-Based_Policies/exploting_public_resources_attack_playbook/
+- https://permiso.io/blog/s/smishing-attack-on-aws-sms-new-phone-who-dis/
+- https://www.sentinelone.com/labs/sns-sender-active-campaigns-unleash-messaging-spam-through-the-cloud/
+has_investigation_guide: true
+risk_score: 47

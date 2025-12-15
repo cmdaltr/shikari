@@ -1,0 +1,72 @@
+technique_id: T1112
+technique_name: PowerShell Script Block Logging Disabled
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\n\
+  \    registry.value : \"EnableScriptBlockLogging\" and\n    registry.data.strings\
+  \ : (\"0\", \"0x00000000\") and\n    not process.executable : (\n          \"?:\\\
+  \\Windows\\\\System32\\\\svchost.exe\",\n          \"?:\\\\Windows\\\\System32\\\
+  \\DeviceEnroller.exe\",\n          \"?:\\\\Windows\\\\system32\\\\omadmclient.exe\"\
+  ,\n          \"?:\\\\Program Files (x86)\\\\N-able Technologies\\\\AutomationManagerAgent\\\
+  \\AutomationManager.AgentService.exe\",\n          \n          /* Crowdstrike specific\
+  \ exclusion as it uses NT Object paths */\n          \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\System32\\\\svchost.exe\",\n          \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\System32\\\\DeviceEnroller.exe\",\n          \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\system32\\\\omadmclient.exe\",\n          \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Program Files (x86)\\\\N-able Technologies\\\\AutomationManagerAgent\\\\AutomationManager.AgentService.exe\"\
+  \n    )"
+explanation: 'Identifies attempts to disable PowerShell Script Block Logging via registry
+  modification. Attackers may disable this
+
+  logging to conceal their activities in the host and evade detection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/818e23e6-2094-4f0e-8c01-22d30f3506c6.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Related rules
+
+
+    - PowerShell Suspicious Discovery Related Windows API Functions - 61ac3638-40a3-44b2-855a-985636ca985e
+
+    - PowerShell Keylogging Script - bd2c86a0-8b61-4457-ab38-96943984e889
+
+    - PowerShell Suspicious Script with Audio Capture Capabilities - 2f2f4939-0b34-40c2-a0a3-844eb7889f43
+
+    - Potential Process Injection via PowerShell - 2e29e96a-b'
+  mitigation: Review investigation guide for details
+references:
+- https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.PowerShell::EnableScriptBlockLogging
+has_investigation_guide: true
+risk_score: 47

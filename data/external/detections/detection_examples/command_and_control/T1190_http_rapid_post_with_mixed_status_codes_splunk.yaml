@@ -1,0 +1,37 @@
+technique_id: T1190
+technique_name: HTTP Rapid POST with Mixed Status Codes
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`nginx_access_logs` http_method="POST"| bin _time span=5s | rename dest_ip
+  as dest | stats count, values(status) as status_codes, values(bytes_out) as bytes_out,
+  values(uri_path) as uris by _time, src_ip, dest, http_user_agent | where count>20
+  | table _time, dest, src_ip, count, status_codes, bytes_out, http_user_agent | `http_rapid_post_with_mixed_status_codes_filter`'
+explanation: This detection identifies rapid-fire POST request attacks where an attacker
+  sends more than 20 POST requests within a 5-second window, potentially attempting
+  to exploit race conditions or overwhelm request handling. The pattern is particularly
+  suspicious when responses vary in size or status codes, indicating successful exploitation
+  attempts or probing for vulnerable endpoints.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/c8c987d6-3a1a-4555-9a52-eea0741b6113/
+indicators:
+- type: data_source
+  value: Nginx Access
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present if the activity is part of diagnostics
+    or testing. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://portswigger.net/web-security/request-smuggling#what-is-http-request-smuggling
+- https://portswigger.net/research/http1-must-die
+- https://www.vaadata.com/blog/what-is-http-request-smuggling-exploitations-and-security-best-practices/
+- https://www.securityweek.com/new-http-request-smuggling-attacks-impacted-cdns-major-orgs-millions-of-websites/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/request_smuggling/nginx_request_smuggling.log

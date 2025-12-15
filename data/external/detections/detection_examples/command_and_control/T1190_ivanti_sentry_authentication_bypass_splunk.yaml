@@ -1,0 +1,43 @@
+technique_id: T1190
+technique_name: Ivanti Sentry Authentication Bypass
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("/mics/services/configservice/*", "/mics/services/*","/mics/services/MICSLogService*")
+  Web.status=200 by Web.http_user_agent, Web.status Web.http_method, Web.url, Web.url_length,
+  Web.src, Web.dest, sourcetype | `drop_dm_object_name("Web")` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `ivanti_sentry_authentication_bypass_filter`'
+explanation: The following analytic identifies unauthenticated access attempts to
+  the System Manager Portal in Ivanti Sentry, exploiting CVE-2023-38035. It detects
+  this activity by monitoring HTTP requests to specific endpoints ("/mics/services/configservice/*",
+  "/mics/services/*", "/mics/services/MICSLogService*") with a status code of 200.
+  This behavior is significant for a SOC as it indicates potential unauthorized access,
+  which could lead to OS command execution as root. If confirmed malicious, this activity
+  could result in significant system compromise and data breaches, especially if port
+  8443 is exposed to the internet.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b8e0d1cf-e6a8-4d46-a5ae-aebe18ead8f8/
+indicators:
+- type: data_source
+  value: Suricata
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: It is important to note that false positives may occur if the search
+    criteria are expanded beyond the HTTP status code 200. In other words, if the
+    search includes other HTTP status codes, the likelihood of encountering false
+    positives increases. This is due to the fact that HTTP status codes other than
+    200 may not necessarily indicate a successful exploitation attempt.
+  mitigation: Review context and user activity
+references:
+- https://github.com/horizon3ai/CVE-2023-38035/blob/main/CVE-2023-38035.py
+- https://www.horizon3.ai/ivanti-sentry-authentication-bypass-cve-2023-38035-deep-dive/
+- https://forums.ivanti.com/s/article/KB-API-Authentication-Bypass-on-Sentry-Administrator-Interface-CVE-2023-38035?language=en_US
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/ivanti/ivanti_sentry_CVE_2023_38035.log

@@ -1,0 +1,54 @@
+technique_id: T1087
+technique_name: AWS STS GetCallerIdentity API Called for the First Time
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"aws.cloudtrail\"\n    and event.provider: \"sts.amazonaws.com\"\
+  \n    and event.action: \"GetCallerIdentity\"\n    and event.outcome: \"success\"\
+  \n    and not aws.cloudtrail.user_identity.type: \"AssumedRole\""
+explanation: 'An adversary with access to a set of compromised credentials may attempt
+  to verify that the credentials are valid and
+
+  determine what account they are using. This rule looks for the first time an identity
+  has called the
+
+  STS GetCallerIdentity API, which may be an indicator of compromised credentials.
+
+  A legitimate user would not need to perform this operation as they should know the
+  account they are using.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/30fbf4db-c502-4e68-a239-2e99af0f70da.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS STS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - False positives may occur due to the intended usage of the service. Tuning is
+    needed in order to have higher confidence. Consider adding exceptions — preferably
+    with a combination of user agent and IP address conditions.
+
+    - Automation workflows that rely on the results from this API request may also
+    generate false-positives. We recommend adding exceptions related to the `user.id`
+    or `aws.cloudtrail.user_identity.arn` values to ignore these.
+
+
+    ### Response and remediation'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html
+- https://www.secureworks.com/research/detecting-the-use-of-stolen-aws-lambda-credentials
+- https://detectioninthe.cloud/ttps/discovery/sts_get_caller_identity
+has_investigation_guide: true
+risk_score: 47

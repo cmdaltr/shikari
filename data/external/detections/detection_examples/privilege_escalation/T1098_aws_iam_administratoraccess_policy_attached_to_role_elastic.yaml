@@ -1,0 +1,47 @@
+technique_id: T1098
+technique_name: AWS IAM AdministratorAccess Policy Attached to Role
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "iam where event.dataset == \"aws.cloudtrail\"\n   and event.provider == \"\
+  iam.amazonaws.com\"\n   and event.action == \"AttachRolePolicy\"\n   and event.outcome\
+  \ == \"success\"\n   and stringContains(aws.cloudtrail.request_parameters, \"policyArn=arn:aws:iam::aws:policy/AdministratorAccess\"\
+  )"
+explanation: 'An adversary with access to a set of compromised credentials may attempt
+  to persist or escalate privileges by attaching
+
+  additional permissions to compromised IAM roles. This rule looks for use of the
+  IAM AttachRolePolicy API operation to
+
+  attach the highly permissive AdministratorAccess AWS managed policy to an existing
+  IAM role.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/dde13d58-bc39-4aa0-87fd-b4bdbf4591da.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS IAM
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- **Delegated role management.**  \n  Cloud\
+    \ administrators may legitimately grant temporary AdministratorAccess for troubleshooting.\
+    \ Confirm through tickets or change logs.  \n- **Automation or service-linked\
+    \ roles.**  \n  Some services attach policies automatically for setup; verify\
+    \ whether the target is a service-linked role.  \n\n### Response and remediation\n\
+    \n**1. Immediate containment**\n- Detach the policy. Remove the `AdministratorAccess`\
+    \ policy from the target role.  \n-"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/IAM/latest/APIReference/API_AttachRolePolicy.html
+- https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AdministratorAccess.html
+- https://hackingthe.cloud/aws/exploitation/iam_privilege_escalation/
+has_investigation_guide: true
+risk_score: 47

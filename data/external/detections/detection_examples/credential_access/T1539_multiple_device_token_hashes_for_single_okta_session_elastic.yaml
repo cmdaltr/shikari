@@ -1,0 +1,51 @@
+technique_id: T1539
+technique_name: Multiple Device Token Hashes for Single Okta Session
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-okta*\n| where\n    event.dataset == \"okta.system\" and\n    not\
+  \ event.action in (\n        \"policy.evaluate_sign_on\",\n        \"user.session.start\"\
+  ,\n        \"user.authentication.sso\"\n    ) and\n    okta.actor.alternate_id !=\
+  \ \"system@okta.com\" and\n    okta.actor.alternate_id rlike \"[^@\\\\s]+\\\\@[^@\\\
+  \\s]+\" and\n    okta.authentication_context.external_session_id != \"unknown\"\n\
+  | keep\n    event.action,\n    okta.actor.alternate_id,\n    okta.authentication_context.external_session_id,\n\
+  \    okta.debug_context.debug_data.dt_hash\n| stats\n    Esql.okta_debug_context_debug_data_dt_hash_count_distinct\
+  \ = count_distinct(okta.debug_context.debug_data.dt_hash)\n  by\n    okta.actor.alternate_id,\n\
+  \    okta.authentication_context.external_session_id\n| where\n    Esql.okta_debug_context_debug_data_dt_hash_count_distinct\
+  \ >= 2\n| sort\n    Esql.okta_debug_context_debug_data_dt_hash_count_distinct desc"
+explanation: 'This rule detects when a specific Okta actor has multiple device token
+  hashes for a single Okta session. This may
+
+  indicate an authenticated session has been hijacked or is being used by multiple
+  devices. Adversaries may hijack a
+
+  session to gain unauthorized access to Okta admin console, applications, tenants,
+  or other resources.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/cc382a2e-7e52-11ee-9aac-f661ea17fbcd.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: "False positive analysis:\n- It is very rare that a legitimate user\
+    \ would have multiple device token hashes for a single Okta session as DT hashes\
+    \ do not change after an authenticated session is established.\n\n### Response\
+    \ and remediation:\n- Consider stopping all sessions for the user(s) involved\
+    \ in this action.\n- If this does not appear to be a false positive, consider\
+    \ resetting passwords for the users involved and enabling multi-factor authentication\
+    \ (MFA).\n    - If MFA is already enabled, consid"
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://sec.okta.com/articles/2023/08/cross-tenant-impersonation-prevention-and-detection
+- https://support.okta.com/help/s/article/session-hijacking-attack-definition-damage-defense?language=en_US
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

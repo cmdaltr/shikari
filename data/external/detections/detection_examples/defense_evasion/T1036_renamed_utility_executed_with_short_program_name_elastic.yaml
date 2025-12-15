@@ -1,0 +1,50 @@
+technique_id: T1036
+technique_name: Renamed Utility Executed with Short Program Name
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\
+  \ length(process.name) > 0 and\n length(process.name) == 5 and length(process.pe.original_file_name)\
+  \ > 5"
+explanation: 'Identifies the execution of a process with a single character process
+  name, differing from the original file name. This
+
+  is often done by adversaries while staging, executing temporary utilities, or trying
+  to bypass security detections based
+
+  on the process name.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/17c7f6a5-5bc9-4e1f-92bf-13632d24384d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Benign true positives (B-TPs) can be added as exceptions if necessary.\n\n###\
+    \ Response and remediation\n\n- Initiate the incident response process based on\
+    \ the outcome of the triage.\n- Isolate the involved host to prevent further post-compromise\
+    \ behavior.\n- If the triage identified malware, search the environment for additional\
+    \ compromised hosts.\n  - Implement temporary network rules, procedures, and segmentation\
+    \ to contain"
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

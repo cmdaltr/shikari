@@ -1,0 +1,67 @@
+technique_id: T1059
+technique_name: Abusable DLL Potential Sideloading From Suspicious Location
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 799a5f48-0ac1-4e0f-9152-71d137d48c2a
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_dll and 1 of\
+  \ selection_folders_*\nselection_dll:\n  ImageLoaded|endswith:\n  - \\coreclr.dll\n\
+  \  - \\facesdk.dll\n  - \\HPCustPartUI.dll\n  - \\libcef.dll\n  - \\ZIPDLL.dll\n\
+  selection_folders_1:\n  ImageLoaded|contains:\n  - :\\Perflogs\\\n  - :\\Users\\\
+  Public\\\n  - \\Temporary Internet\n  - \\Windows\\Temp\\\nselection_folders_2:\n\
+  - ImageLoaded|contains|all:\n  - :\\Users\\\n  - \\Favorites\\\n- ImageLoaded|contains|all:\n\
+  \  - :\\Users\\\n  - \\Favourites\\\n- ImageLoaded|contains|all:\n  - :\\Users\\\
+  \n  - \\Contacts\\\n- ImageLoaded|contains|all:\n  - :\\Users\\\n  - \\Pictures\\\
+  \n"
+explanation: Detects potential DLL sideloading of DLLs that are known to be abused
+  from suspicious locations
+false_positives:
+- Unknown
+references:
+- https://www.trendmicro.com/en_us/research/23/f/behind-the-scenes-unveiling-the-hidden-workings-of-earth-preta.html
+- https://research.checkpoint.com/2023/beyond-the-horizon-traveling-the-world-on-camaro-dragons-usb-flash-drives/
+tags:
+- attack.execution
+- attack.t1059
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection_dll:
+    ImageLoaded|endswith:
+    - \coreclr.dll
+    - \facesdk.dll
+    - \HPCustPartUI.dll
+    - \libcef.dll
+    - \ZIPDLL.dll
+  selection_folders_1:
+    ImageLoaded|contains:
+    - :\Perflogs\
+    - :\Users\Public\
+    - \Temporary Internet
+    - \Windows\Temp\
+  selection_folders_2:
+  - ImageLoaded|contains|all:
+    - :\Users\
+    - \Favorites\
+  - ImageLoaded|contains|all:
+    - :\Users\
+    - \Favourites\
+  - ImageLoaded|contains|all:
+    - :\Users\
+    - \Contacts\
+  - ImageLoaded|contains|all:
+    - :\Users\
+    - \Pictures\
+  condition: selection_dll and 1 of selection_folders_*
+metadata:
+  created_date: 2023-07-11
+  modified_date: '2025-11-28'
+  author: X__Junior (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

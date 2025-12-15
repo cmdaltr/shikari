@@ -1,0 +1,50 @@
+technique_id: T1053.005
+technique_name: Potential Persistence Via Powershell Search Order Hijacking - Task
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: b66474aa-bd92-4333-a16c-298155b120df
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|endswith:\n  - ' -windowstyle hidden'\n  - ' -w hidden'\n  - ' -ep\
+  \ bypass'\n  - ' -noni'\n  ParentCommandLine|contains|all:\n  - -k netsvcs\n  -\
+  \ -s Schedule\n  ParentImage: C:\\WINDOWS\\System32\\svchost.exe\n"
+explanation: Detects suspicious powershell execution via a schedule task where the
+  command ends with an suspicious flags to hide the powershell instance instead of
+  executeing scripts or commands. This could be a sign of persistence via PowerShell
+  "Get-Variable" technique as seen being used in Colibri Loader
+false_positives:
+- Unknown
+references:
+- https://blog.malwarebytes.com/threat-intelligence/2022/04/colibri-loader-combines-task-scheduler-and-powershell-in-clever-persistence-technique/
+tags:
+- attack.privilege-escalation
+- attack.execution
+- attack.persistence
+- attack.t1053.005
+- attack.t1059.001
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    ParentImage: C:\WINDOWS\System32\svchost.exe
+    ParentCommandLine|contains|all:
+    - -k netsvcs
+    - -s Schedule
+    CommandLine|endswith:
+    - ' -windowstyle hidden'
+    - ' -w hidden'
+    - ' -ep bypass'
+    - ' -noni'
+  condition: selection
+metadata:
+  created_date: 2022-04-08
+  modified_date: 2023-02-03
+  author: pH-T (Nextron Systems), Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

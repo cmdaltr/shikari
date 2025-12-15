@@ -1,0 +1,49 @@
+technique_id: T1003
+technique_name: Suspicious LSASS Access via MalSecLogon
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.code == \"10\" and\n \
+  \ winlog.event_data.TargetImage : \"?:\\\\WINDOWS\\\\system32\\\\lsass.exe\" and\n\
+  \n   /* seclogon service accessing lsass */\n  winlog.event_data.CallTrace : \"\
+  *seclogon.dll*\" and process.name : \"svchost.exe\" and\n\n   /* PROCESS_CREATE_PROCESS\
+  \ & PROCESS_DUP_HANDLE & PROCESS_QUERY_INFORMATION */\n  winlog.event_data.GrantedAccess\
+  \ == \"0x14c0\""
+explanation: 'Identifies suspicious access to LSASS handle from a call trace pointing
+  to seclogon.dll and with a suspicious access
+
+  rights value. This may indicate an attempt to leak an LSASS handle via abusing the
+  Secondary Logon service in
+
+  preparation for credential access.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7ba58110-ae13-439b-8192-357b0fcfa9d7.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tools or scripts that require access to LSASS for
+    system management tasks may trigger this rule. Users can create exceptions for
+    known tools by excluding specific process names or paths that are verified as
+    safe.
+
+    - Security software or endpoint protection solutions that perform regular scans
+    and require access to LSASS might be flagged. Coordinate with security vendors
+    to identify these processes and exclude them from the rule.
+
+    - System update'
+  mitigation: Review investigation guide for details
+references:
+- https://splintercod3.blogspot.com/p/the-hidden-side-of-seclogon-part-3.html
+has_investigation_guide: true
+risk_score: 73

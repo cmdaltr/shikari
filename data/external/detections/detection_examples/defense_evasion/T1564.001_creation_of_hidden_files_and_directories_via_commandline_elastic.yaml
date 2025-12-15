@@ -1,0 +1,46 @@
+technique_id: T1564.001
+technique_name: Creation of Hidden Files and Directories via CommandLine
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and event.action\
+  \ == \"exec\" and\nprocess.working_directory in (\"/tmp\", \"/var/tmp\", \"/dev/shm\"\
+  ) and\nprocess.args regex~ \"\"\"\\.[a-z0-9_\\-][a-z0-9_\\-\\.]{1,254}\"\"\" and\n\
+  not process.name in (\n  \"ls\", \"find\", \"grep\", \"git\", \"jq\", \"basename\"\
+  , \"check_snmp\", \"snmpget\", \"snmpwalk\", \"cc1plus\", \"snap\",\n  \"command-not-found\"\
+  , \"sqlite\", \"apk\", \"fgrep\", \"locate\", \"objdump\"\n)"
+explanation: 'Users can mark specific files as hidden simply by putting a "." as the
+  first character in the file or folder name.
+
+  Adversaries can use this to their advantage to hide files and folders on the system
+  for persistence and defense evasion.
+
+  This rule looks for hidden files or folders in common writable directories.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b9666521-4742-49ce-9ddc-b8e84c35acae.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System maintenance scripts may create hidden files in directories like /tmp
+    for temporary storage. Review these scripts and consider excluding them if they
+    are verified as non-threatening.
+
+    - Development tools and processes, such as version control systems or build scripts,
+    might generate hidden files for configuration or state tracking. Identify these
+    tools and add them to the exclusion list if they are part of regular operations.
+
+    - Monitoring and logging tools may use'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

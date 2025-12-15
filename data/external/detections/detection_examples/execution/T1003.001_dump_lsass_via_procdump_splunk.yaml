@@ -1,0 +1,63 @@
+technique_id: T1003.001
+technique_name: Dump LSASS via procdump
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "| tstats `security_content_summariesonly` \n  count min(_time) as firstTime\
+  \ \n        max(_time) as lastTime\n        \nfrom datamodel=Endpoint.Processes\
+  \ where \n\n`process_procdump`\nProcesses.process IN (*-ma*, *-mm*, \"*-mp*\", */ma*,\
+  \ */mm*, \"*/mp*\")\nProcesses.process IN (* ls*, \"* keyiso*\", \"* samss*\")\n\
+  \nby Processes.action Processes.dest Processes.original_file_name Processes.parent_process\
+  \ \n   Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id\n\
+  \   Processes.parent_process_name Processes.parent_process_path Processes.process\
+  \ Processes.process_exec\n   Processes.process_guid Processes.process_hash Processes.process_id\
+  \ Processes.process_integrity_level\n   Processes.process_name Processes.process_path\
+  \ Processes.user Processes.user_id Processes.vendor_product\n\n| `drop_dm_object_name(Processes)`\n\
+  | `security_content_ctime(firstTime)`\n| `security_content_ctime(lastTime)`\n| `dump_lsass_via_procdump_filter`"
+explanation: 'The following analytic detects the use of procdump.exe to dump the LSASS
+
+  process, specifically looking for the -mm and -ma command-line arguments. It leverages
+
+  data from Endpoint Detection and Response (EDR) agents, focusing on process names,
+
+  command-line executions, and parent processes. This activity is significant because
+
+  dumping LSASS can expose sensitive credentials, posing a severe security risk. If
+
+  confirmed malicious, an attacker could obtain credentials, escalate privileges,
+
+  and move laterally within the network, leading to potential data breaches and further
+
+  compromise of the environment.'
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/3742ebfe-64c2-11eb-ae93-0242ac130002/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: None identified.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1003/001/
+- https://docs.microsoft.com/en-us/sysinternals/downloads/procdump
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1003.001/T1003.001.md#atomic-test-2---dump-lsassexe-memory-using-procdump
+- https://thedfirreport.com/2022/08/08/bumblebee-roasts-its-way-to-domain-admin/
+- https://x.com/wietze/status/1958302556033065292?s=12
+validation:
+  test_available: true
+  test_count: 2
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1003.001/atomic_red_team/windows-sysmon.log

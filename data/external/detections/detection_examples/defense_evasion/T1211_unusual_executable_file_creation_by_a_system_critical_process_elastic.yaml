@@ -1,0 +1,53 @@
+technique_id: T1211
+technique_name: Unusual Executable File Creation by a System Critical Process
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"windows\" and event.type != \"deletion\" and\n\
+  \  file.extension : (\"exe\", \"dll\") and\n  process.name : (\"smss.exe\",\n  \
+  \                \"autochk.exe\",\n                  \"csrss.exe\",\n          \
+  \        \"wininit.exe\",\n                  \"services.exe\",\n               \
+  \   \"lsass.exe\",\n                  \"winlogon.exe\",\n                  \"userinit.exe\"\
+  ,\n                  \"LogonUI.exe\")"
+explanation: 'Identifies an unexpected executable file being created or modified by
+  a Windows system critical process, which may
+
+  indicate activity related to remote code execution or other forms of exploitation.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e94262f2-c1e9-4d3f-a907-aeab16712e1a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Benign true positives (B-TPs) can be added as exceptions if necessary.\n\n###\
+    \ Response and remediation\n\n- Initiate the incident response process based on\
+    \ the outcome of the triage.\n- Isolate the involved host to prevent further post-compromise\
+    \ behavior.\n- If the triage identified malware, search the environment for additional\
+    \ compromised hosts.\n  - Implement temporary network rules, procedures, and segmentation\
+    \ to contain"
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

@@ -1,0 +1,53 @@
+technique_id: T1059
+technique_name: Root Network Connection via GDB CAP_SYS_PTRACE
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "sequence by host.id, process.entry_leader.entity_id with maxspan=30s\n  [process\
+  \ where host.os.type == \"linux\" and event.type == \"start\" and event.action ==\
+  \ \"exec\" and process.name == \"gdb\" and\n   (process.thread.capabilities.effective\
+  \ : \"CAP_SYS_PTRACE\" or process.thread.capabilities.permitted : \"CAP_SYS_PTRACE\"\
+  ) and\n   user.id != \"0\"]\n  [network where host.os.type == \"linux\" and event.action\
+  \ == \"connection_attempted\" and event.type == \"start\" and\n   process.name !=\
+  \ null and user.id == \"0\"]"
+explanation: 'Identifies instances where GDB (granted the CAP_SYS_PTRACE capability)
+  is executed, after which an outbound network
+
+  connection is initiated by UID/GID 0 (root). In Linux, the CAP_SYS_PTRACE capability
+  grants a process the ability to use
+
+  the ptrace system call, which is typically used for debugging and allows the process
+  to trace and control other
+
+  processes. Attackers may leverage this capability to hook and inject into a process
+  that is running with root
+
+  permissions in order to execute shell code and gain a reverse shell with root privileges.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/28bc620d-b2f7-4132-b372-f77953881d05.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Development environments may trigger this rule when developers use GDB with
+    CAP_SYS_PTRACE for legitimate debugging purposes. To mitigate, create exceptions
+    for specific user IDs or processes known to be involved in development activities.
+
+    - Automated testing frameworks that utilize GDB for testing applications with
+    root privileges can cause false positives. Identify and exclude these processes
+    or testing environments from the rule.
+
+    - System maintenance scripts that re'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

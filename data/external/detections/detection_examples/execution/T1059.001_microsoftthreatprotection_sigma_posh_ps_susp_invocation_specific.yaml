@@ -1,0 +1,101 @@
+technique_id: T1059.001
+technique_name: Suspicious PowerShell Invocations - Specific
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_* and\
+  \ not 1 of filter_*\nfilter_chocolatey:\n  ScriptBlockText|contains:\n  - (New-Object\
+  \ System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\n\
+  \  - (New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')\n\
+  \  - Write-ChocolateyWarning\nselection_convert_b64:\n  ScriptBlockText|contains|all:\n\
+  \  - -nop\n  - ' -w '\n  - hidden\n  - ' -c '\n  - '[Convert]::FromBase64String'\n\
+  selection_enc_selection:\n  ScriptBlockText|contains|all:\n  - ' -w '\n  - hidden\n\
+  \  - -ep\n  - bypass\n  - -Enc\nselection_iex_selection:\n  ScriptBlockText|contains|all:\n\
+  \  - ' -w '\n  - hidden\n  - -noni\n  - -nop\n  - ' -c '\n  - iex\n  - New-Object\n\
+  selection_iex_webclient:\n  ScriptBlockText|contains|all:\n  - iex\n  - New-Object\n\
+  \  - Net.WebClient\n  - .Download\nselection_reg_selection:\n  ScriptBlockText|contains:\n\
+  \  - \\software\\microsoft\\windows\\currentversion\\run\n  - \\software\\wow6432node\\\
+  microsoft\\windows\\currentversion\\run\n  - \\software\\microsoft\\windows\\currentversion\\\
+  policies\\explorer\\run\n  ScriptBlockText|contains|all:\n  - powershell\n  - reg\n\
+  \  - add\nselection_webclient_selection:\n  ScriptBlockText|contains|all:\n  - bypass\n\
+  \  - -noprofile\n  - -windowstyle\n  - hidden\n  - new-object\n  - system.net.webclient\n\
+  \  - .download\n"
+explanation: Detects suspicious PowerShell invocation command parameters
+false_positives:
+- Unknown
+references:
+- Internal Research
+- https://github.com/HackTricks-wiki/hacktricks/blob/e4c7b21b8f36c97c35b7c622732b38a189ce18f7/src/windows-hardening/windows-local-privilege-escalation/privilege-escalation-with-autorun-binaries.md
+tags:
+- attack.execution
+- attack.t1059.001
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection_convert_b64:
+    ScriptBlockText|contains|all:
+    - -nop
+    - ' -w '
+    - hidden
+    - ' -c '
+    - '[Convert]::FromBase64String'
+  selection_iex_selection:
+    ScriptBlockText|contains|all:
+    - ' -w '
+    - hidden
+    - -noni
+    - -nop
+    - ' -c '
+    - iex
+    - New-Object
+  selection_enc_selection:
+    ScriptBlockText|contains|all:
+    - ' -w '
+    - hidden
+    - -ep
+    - bypass
+    - -Enc
+  selection_reg_selection:
+    ScriptBlockText|contains|all:
+    - powershell
+    - reg
+    - add
+    ScriptBlockText|contains:
+    - \software\microsoft\windows\currentversion\run
+    - \software\wow6432node\microsoft\windows\currentversion\run
+    - \software\microsoft\windows\currentversion\policies\explorer\run
+  selection_webclient_selection:
+    ScriptBlockText|contains|all:
+    - bypass
+    - -noprofile
+    - -windowstyle
+    - hidden
+    - new-object
+    - system.net.webclient
+    - .download
+  selection_iex_webclient:
+    ScriptBlockText|contains|all:
+    - iex
+    - New-Object
+    - Net.WebClient
+    - .Download
+  filter_chocolatey:
+    ScriptBlockText|contains:
+    - (New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1
+    - (New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')
+    - Write-ChocolateyWarning
+  condition: 1 of selection_* and not 1 of filter_*
+metadata:
+  created_date: 2017-03-05
+  modified_date: 2025-02-17
+  author: Florian Roth (Nextron Systems), Jonhnathan Ribeiro
+  status: test
+  imported_date: '2025-11-28'

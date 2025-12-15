@@ -1,0 +1,53 @@
+technique_id: T1078.004
+technique_name: AWS CLI with Kali Linux Fingerprint Identified
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'event.dataset: "aws.cloudtrail" and user_agent.original: (aws-cli*distrib#kali*
+  or Boto3*distrib#kali*)'
+explanation: 'Identifies the usage of the AWS CLI with a user agent string containing
+  `distrib#kali`, which suggests the request
+
+  was made from a Kali Linux distribution. This may indicate offensive security tooling
+  or unauthorized use of the AWS CLI
+
+  from a potentially adversarial environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f80ea920-f6f5-4c8a-9761-84ac97ec0cb2.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS CloudTrail
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - Rare but possible in security assessments or internal red teaming. Validate
+    the action context (user, IP, time of day, etc).
+
+
+    ### Response and Remediation
+
+
+    - Revoke Credentials: If unauthorized, revoke keys or sessions immediately.
+
+    - Harden IAM Policies: Restrict sensitive IAM privileges, especially if used by
+    CI/CD or automation roles.
+
+    - Alert on Repeat Usage: Add recurring monitoring for suspicious user agents including
+    `kali`, `curl`, or known toolkits.'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-user-identity.html
+- https://www.sygnia.co/blog/sygnia-investigation-bybit-hack/
+has_investigation_guide: true
+risk_score: 47

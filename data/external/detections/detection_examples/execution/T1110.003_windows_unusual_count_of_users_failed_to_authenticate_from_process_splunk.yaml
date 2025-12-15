@@ -1,0 +1,47 @@
+technique_id: T1110.003
+technique_name: Windows Unusual Count Of Users Failed To Authenticate From Process
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`wineventlog_security`  EventCode=4625 Logon_Type=2 ProcessName!="-" | bucket
+  span=2m _time | stats dc(TargetUserName) AS unique_accounts values(TargetUserName)
+  as user values(dest) as dest values(src) as src by _time, ProcessName, SubjectUserName,
+  Computer, action, app, authentication_method, signature, signature_id | eventstats
+  avg(unique_accounts) as comp_avg , stdev(unique_accounts) as comp_std by ProcessName,
+  SubjectUserName, Computer | eval upperBound=(comp_avg+comp_std*3) | eval isOutlier=if(unique_accounts
+  > 10 and unique_accounts >= upperBound, 1, 0) | search isOutlier=1 | `windows_unusual_count_of_users_failed_to_authenticate_from_process_filter`'
+explanation: The following analytic identifies a source process failing to authenticate
+  multiple users, potentially indicating a Password Spraying attack. It leverages
+  Windows Event 4625, which logs failed logon attempts, and uses statistical analysis
+  to detect anomalies. This activity is significant as it may represent an adversary
+  attempting to gain initial access or elevate privileges within an Active Directory
+  environment. If confirmed malicious, the attacker could compromise multiple accounts,
+  leading to unauthorized access, data exfiltration, or further lateral movement within
+  the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/25bdb6cb-2e49-4d34-a93c-d6c567c122fe/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4625
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: Computer
+  confidence: high
+false_positives:
+- description: A process failing to authenticate with multiple users is not a common
+    behavior for legitimate user sessions. Possible false positive scenarios include
+    but are not limited to vulnerability scanners and missconfigured systems.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1110/003/
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625
+- https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4625
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/basic-audit-logon-events
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1110.003/purplesharp_multiple_users_from_process_xml/windows-security.log

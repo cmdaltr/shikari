@@ -1,0 +1,55 @@
+technique_id: T1537
+technique_name: AWS RDS DB Snapshot Shared with Another Account
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "any where event.dataset == \"aws.cloudtrail\"\n    and event.provider == \"\
+  rds.amazonaws.com\"\n    and event.outcome == \"success\"\n    and event.action\
+  \ in (\"ModifyDBSnapshotAttribute\", \"ModifyDBClusterSnapshotAttribute\")\n   \
+  \ and stringContains(aws.cloudtrail.request_parameters, \"attributeName=restore\"\
+  )\n    and stringContains(aws.cloudtrail.request_parameters, \"valuesToAdd=[*]\"\
+  )"
+explanation: Identifies an AWS RDS DB snapshot being shared with another AWS account.
+  DB snapshots contain a full backup of an entire DB instance including sensitive
+  data that can be abused if shared with unauthorized accounts or made public. Adversaries
+  may use snapshots to restore a DB Instance in an environment they control as a means
+  of data exfiltration.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4577ef08-61d1-4458-909f-25a4b10c87fe.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS RDS
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - **Legitimate Backup Actions**: Confirm if the Db snapshot sharing aligns with
+    scheduled backups or legitimate automation tasks.
+
+    - **Consistency Check**: Compare the action against historical data of similar
+    actions performed by the user or within the organization. If the action is consistent
+    with past legitimate activities, it might indicate a false alarm.
+
+
+    ### Response and Remediation
+
+
+    - **Immediate Review and Reversal**: If the change was unauthorized, update the
+    sna'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBSnapshotAttribute.html
+- https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ShareSnapshot.html
+- https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation#rds-modifydbsnapshotattribute-rds-createdbsnapshot
+has_investigation_guide: true
+risk_score: 47

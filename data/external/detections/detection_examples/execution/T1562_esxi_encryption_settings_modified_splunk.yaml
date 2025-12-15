@@ -1,0 +1,31 @@
+technique_id: T1562
+technique_name: ESXi Encryption Settings Modified
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`esxi_syslog` Message="*system settings encryption set*" NOT Message="*shell.*"
+  Message IN ("* -s *", "* -e *","*--require-secure-boot*", "*require-exec-installed-only*",
+  "execInstalledOnly") | rex field=_raw "Z (?<dest>[\w\.]*)\s.*\]: \[(?<user>\w+)\]:(?<command>.+)"
+  | stats min(_time) as firstTime max(_time) as lastTime count by dest user command
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `esxi_encryption_settings_modified_filter`'
+explanation: Detects the disabling of critical encryption enforcement settings on
+  an ESXi host, such as secure boot or executable verification requirements, which
+  may indicate an attempt to weaken hypervisor integrity or allow unauthorized code
+  execution.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/dbbbe26f-83fe-4ee3-8b77-ccf7fbd416c8/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments, however tune as needed.
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562/esxi_encryption_modified/esxi_encryption_modified.log

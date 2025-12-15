@@ -1,0 +1,47 @@
+technique_id: T1550.004
+technique_name: Multiple Okta Sessions Detected for a Single User
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:okta.system\n    and okta.event_type:user.session.start\n  \
+  \  and okta.authentication_context.external_session_id:*\n    and not (okta.actor.id:\
+  \ okta* or okta.actor.display_name: okta*)"
+explanation: 'Detects when a user has started multiple Okta sessions with the same
+  user account and different session IDs. This may
+
+  indicate that an attacker has stolen the user''s session cookie and is using it
+  to access the user''s account from a
+
+  different location.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/621e92b6-7e54-11ee-bdc0-f661ea17fbcd.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate multiple device usage: Users may legitimately access their accounts
+    from multiple devices, leading to multiple session initiations. To handle this,
+    create exceptions for users who frequently use multiple devices for work.
+
+    - Frequent travel or remote work: Users who travel often or work remotely may
+    trigger this rule due to accessing Okta from various locations. Consider setting
+    up location-based exceptions for these users.
+
+    - Shared accounts: In environments'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://sec.okta.com/articles/2023/08/cross-tenant-impersonation-prevention-and-detection
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

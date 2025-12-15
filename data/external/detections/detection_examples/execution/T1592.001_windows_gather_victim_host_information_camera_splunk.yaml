@@ -1,0 +1,43 @@
+technique_id: T1592.001
+technique_name: Windows Gather Victim Host Information Camera
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`powershell` EventCode=4104 ScriptBlockText= "* Win32_PnPEntity *" ScriptBlockText=
+  "*SELECT*" ScriptBlockText= "*WHERE*" ScriptBlockText = "*PNPClass*" ScriptBlockText
+  IN ("*Image*", "*Camera*") | fillnull | stats count min(_time) as firstTime max(_time)
+  as lastTime by dest signature signature_id user_id vendor_product EventID Guid Opcode
+  Name Path ProcessID ScriptBlockId ScriptBlockText | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_gather_victim_host_information_camera_filter`'
+explanation: The following analytic detects a PowerShell script that enumerates camera
+  devices on the targeted host. This detection leverages PowerShell Script Block Logging,
+  specifically looking for commands querying Win32_PnPEntity for camera-related information.
+  This activity is significant as it is commonly observed in DCRat malware, which
+  collects camera data to send to its command-and-control server. If confirmed malicious,
+  this behavior could indicate an attempt to gather sensitive visual information from
+  the host, potentially leading to privacy breaches or further exploitation.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e4df4676-ea41-4397-b160-3ee0140dc332/
+indicators:
+- type: data_source
+  value: Powershell Script Block Logging 4104
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user_id
+  confidence: high
+false_positives:
+- description: Administrators may execute this powershell command to get hardware
+    information related to camera on $dest$.
+  mitigation: Review context and user activity
+references:
+- https://cert.gov.ua/article/405538
+- https://malpedia.caad.fkie.fraunhofer.de/details/win.dcrat
+- https://www.mandiant.com/resources/analyzing-dark-crystal-rat-backdoor
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/dcrat/dcrat_enum_camera/windows-powershell-xml.log

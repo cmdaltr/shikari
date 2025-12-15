@@ -1,0 +1,48 @@
+technique_id: T1574
+technique_name: Potential Privilege Escalation via PKEXEC
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: 'file where host.os.type == "linux" and file.path : "/*GCONV_PATH*"'
+explanation: 'Identifies an attempt to exploit a local privilege escalation in polkit
+  pkexec (CVE-2021-4034) via unsecure environment
+
+  variable injection. Successful exploitation allows an unprivileged user to escalate
+  to the root user.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8da41fc9-7735-4b24-9cc6-c78dfc9fc9c9.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks involving pkexec may trigger alerts if they involve
+    environment variable manipulation. Review the context of the command execution
+    to determine if it aligns with expected administrative behavior.
+
+    - Custom scripts or applications that legitimately use environment variables in
+    their execution paths might be flagged. Identify these scripts and consider adding
+    them to an exception list if they are verified as non-threatening.
+
+    - Automated system'
+  mitigation: Review investigation guide for details
+references:
+- https://seclists.org/oss-sec/2022/q1/80
+- https://haxx.in/files/blasty-vs-pkexec.c
+has_investigation_guide: true
+risk_score: 73

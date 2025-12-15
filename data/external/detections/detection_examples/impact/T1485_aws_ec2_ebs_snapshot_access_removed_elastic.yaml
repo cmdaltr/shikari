@@ -1,0 +1,51 @@
+technique_id: T1485
+technique_name: AWS EC2 EBS Snapshot Access Removed
+tactic: impact
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "info where event.dataset == \"aws.cloudtrail\"\n  and event.action == \"ModifySnapshotAttribute\"\
+  \n  and event.outcome == \"success\"\n  and stringContains (aws.cloudtrail.request_parameters,\
+  \ \"attributeType=CREATE_VOLUME_PERMISSION\")\n  and stringContains (aws.cloudtrail.request_parameters,\
+  \ \"remove=\")"
+explanation: 'Identifies the removal of access permissions from a shared AWS EC2 EBS
+  snapshot. EBS snapshots are essential for data
+
+  retention and disaster recovery. Adversaries may revoke or modify snapshot permissions
+  to prevent legitimate users from
+
+  accessing backups, thereby obstructing recovery efforts after data loss or destructive
+  actions. This tactic can also be
+
+  used to evade detection or maintain exclusive access to critical backups, ultimately
+  increasing the impact of an attack
+
+  and complicating incident response.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/713e0f5f-caf7-4dc2-88a7-3561f61f262a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS EC2
+  confidence: high
+false_positives:
+- description: "False positive analysis:\n\n- **Planned administrative maintenance**:\
+    \ Confirm whether this snapshot modification aligns with backup rotation, retention\
+    \ policy enforcement, or snapshot lifecycle automation.  \n- **Automation and\
+    \ tooling**: Infrastructure-as-code pipelines or DevOps scripts may legitimately\
+    \ remove snapshot sharing to enforce compliance. Review tags, user agents, and\
+    \ automation identifiers.  \n- **Testing or sandbox accounts**: Some non-production\
+    \ environments may modify snapshot acces"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/ebs/latest/userguide/ebs-modifying-snapshot-permissions.html
+- https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifySnapshotAttribute.html
+has_investigation_guide: true
+risk_score: 47

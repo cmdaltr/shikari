@@ -1,0 +1,38 @@
+technique_id: T1190
+technique_name: Ivanti VTM New Account Creation
+tactic: initial_access
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`ivanti_vtm_audit` OPERATION="adduser" MODGROUP="admin" IP="!!ABSENT!!" |
+  stats count min(_time) as firstTime max(_time) as lastTime by IP, MODUSER, OPERATION,
+  MODGROUP, AUTH | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `ivanti_vtm_new_account_creation_filter`'
+explanation: This analytic detects potential exploitation of the Ivanti Virtual Traffic
+  Manager (vTM) authentication bypass vulnerability (CVE-2024-7593) to create new
+  administrator accounts. The vulnerability allows unauthenticated remote attackers
+  to bypass authentication on the admin panel and create new admin users. This detection
+  looks for suspicious new account creation events in the Ivanti vTM audit logs that
+  lack expected authentication details, which may indicate exploitation attempts.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b04be6e5-2002-4349-8742-52285635b8f5/
+indicators:
+- type: data_source
+  value: Ivanti VTM Audit
+  confidence: high
+- type: risk_user
+  value: MODUSER
+  confidence: high
+false_positives:
+- description: Legitimate new account creation by authorized administrators will generate
+    similar log entries. However, those should include proper authentication details.
+    Verify any detected events against expected administrative activities and authorized
+    user lists.
+  mitigation: Review context and user activity
+references:
+- https://www.ivanti.com/security/security-advisories/ivanti-virtual-traffic-manager-vtm-cve-2024-7593
+- https://nvd.nist.gov/vuln/detail/CVE-2024-7593
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/ivanti/ivanti_vtm_audit.log

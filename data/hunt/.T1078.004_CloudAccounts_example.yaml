@@ -1,0 +1,90 @@
+id: hunt-t1078-004-cloud-accounts-01
+name: Hunt - Suspicious Cloud Account Activity Patterns
+description: |
+  Hunts for anomalous cloud account authentication patterns that may indicate
+  compromised credentials or unauthorized access. This detection focuses on
+  MITRE ATT&CK technique T1078.004 (Valid Accounts: Cloud Accounts).
+mitre_attack:
+  technique_id: T1078.004
+  technique_name: Valid Accounts - Cloud Accounts
+  tactic:
+    - Initial Access
+    - Persistence
+    - Privilege Escalation
+    - Defense Evasion
+severity: High
+platform: mde
+query: |
+  let timeframe = 30d;
+  let suspiciousCountries = dynamic(["CN", "RU", "KP", "IR"]);
+  let knownVPNProviders = dynamic(["NordVPN", "ExpressVPN", "TorGuard"]);
+  // Identify baseline user behavior
+  let userBaseline = AADSignInEventsBeta
+  | where Timestamp > ago(timeframe)
+  | summarize
+      BaselineCountries = make_set(Country),
+      BaselineIPCount = dcount(IPAddress),
+      BaselineAppCount = dcount(Application)
+      by AccountUpn;
+  // Hunt for anomalous activity
+  AADSignInEventsBeta
+  | where Timestamp > ago(7d)
+  | join kind=inner userBaseline on AccountUpn
+  | extend
+      NewCountry = iff(Country !in (BaselineCountries), true, false),
+      SuspiciousCountry = iff(Country in (suspiciousCountries), true, false),
+      TorExit = iff(ISP == "Tor", true, false),
+      VPNProvider = iff(ISP has_any (knownVPNProviders), true, false),
+      FailedAttempts = iff(ErrorCode != 0, 1, 0)
+  | summarize
+      FirstSeen = min(Timestamp),
+      LastSeen = max(Timestamp),
+      SignInCount = count(),
+      FailedSignIns = sum(FailedAttempts),
+      SuccessfulSignIns = countif(ErrorCode == 0),
+      UniqueIPs = dcount(IPAddress),
+      UniqueCountries = dcount(Country),
+      Countries = make_set(Country),
+      Applications = make_set(Application),
+      AnomalyFlags = pack(
+          "NewCountry", max(NewCountry),
+          "SuspiciousCountry", max(SuspiciousCountry),
+          "TorExit", max(TorExit),
+          "VPNProvider", max(VPNProvider)
+      )
+      by AccountUpn, AccountDisplayName
+  | extend AnomalyScore =
+      iff(AnomalyFlags.NewCountry == true, 2, 0) +
+      iff(AnomalyFlags.SuspiciousCountry == true, 3, 0) +
+      iff(AnomalyFlags.TorExit == true, 4, 0) +
+      iff(AnomalyFlags.VPNProvider == true, 1, 0) +
+      iff(UniqueCountries >= 3, 2, 0) +
+      iff(FailedSignIns >= 5, 2, 0)
+  | where AnomalyScore >= 3
+  | project-reorder
+      AnomalyScore, FirstSeen, LastSeen, AccountUpn, AccountDisplayName,
+      SignInCount, FailedSignIns, SuccessfulSignIns, UniqueCountries, Countries
+  | order by AnomalyScore desc, LastSeen desc
+hunt_metadata:
+  created: 2024-01-15
+  last_updated: 2024-01-15
+  author: Archer Threat Hunting Platform
+  confidence: High
+  false_positive_rate: Medium
+  hunt_type: anomaly-based
+  data_sources:
+    - Azure AD Sign-in Logs
+    - Authentication Logs
+  references:
+    - https://attack.mitre.org/techniques/T1078/004/
+  notes: |
+    This hunt uses a baseline approach to identify unusual authentication patterns.
+    Tune the anomaly score thresholds based on your environment's false positive rate.
+    Consider whitelisting legitimate VPN usage and travel patterns.
+tags:
+  - CloudAccounts
+  - Authentication
+  - AzureAD
+  - T1078.004
+  - InitialAccess
+  - AnomalyDetection

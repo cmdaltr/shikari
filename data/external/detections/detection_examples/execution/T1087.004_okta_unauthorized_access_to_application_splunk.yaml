@@ -1,0 +1,39 @@
+technique_id: T1087.004
+technique_name: Okta Unauthorized Access to Application
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats values(Authentication.app) as app values(Authentication.action) as
+  action values(Authentication.user) as user values(Authentication.reason) as reason
+  from datamodel=Authentication where Authentication.signature=app.generic.unauth_app_access_attempt
+  Authentication.action="failure" by _time Authentication.src Authentication.user
+  Authentication.dest | `drop_dm_object_name("Authentication")` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | iplocation src | `okta_unauthorized_access_to_application_filter`'
+explanation: The following analytic identifies attempts by users to access Okta applications
+  that have not been assigned to them. It leverages Okta Identity Management logs,
+  specifically focusing on failed access attempts to unassigned applications. This
+  activity is significant for a SOC as it may indicate potential unauthorized access
+  attempts, which could lead to exposure of sensitive information or disruption of
+  services. If confirmed malicious, such activity could result in data breaches, non-compliance
+  with data protection laws, and overall compromise of the IT environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/5f661629-9750-4cb9-897c-1f05d6db8727/
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: There is a possibility that a user may accidentally click on the wrong
+    application, which could trigger this event. It is advisable to verify the location
+    from which this activity originates.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1110/003/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1087.004/okta_unauth_access/okta_unauth_access.log

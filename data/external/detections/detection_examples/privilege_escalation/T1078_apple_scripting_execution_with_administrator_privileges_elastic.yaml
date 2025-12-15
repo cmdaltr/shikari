@@ -1,0 +1,44 @@
+technique_id: T1078
+technique_name: Apple Scripting Execution with Administrator Privileges
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and process.name == \"osascript\" and\n process.command_line : \"osascript*with\
+  \ administrator privileges\" and\n ((process.parent.code_signature.trusted == false\
+  \ or process.parent.code_signature.exists == false) or process.Ext.effective_parent.executable\
+  \ like (\"/tmp/*\", \"/private/tmp/*\", \"/Users/Shared/*\"))"
+explanation: 'Identifies execution of the Apple script interpreter (osascript) without
+  a password prompt and with administrator
+
+  privileges.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/827f8d8f-4117-4ae4-b551-f56d54b9da6b.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Known false positives may arise from legitimate applications that use AppleScript
+    with administrator privileges for valid operations, such as software installers
+    or system management tools.
+
+    - Exclude processes with benign parent applications like Electron, as specified
+    in the rule, to reduce false positives from common development environments.
+
+    - Consider adding exceptions for other trusted applications that frequently use
+    AppleScript with elevated privileges, ensuring'
+  mitigation: Review investigation guide for details
+references:
+- https://discussions.apple.com/thread/2266150
+has_investigation_guide: true
+risk_score: 47

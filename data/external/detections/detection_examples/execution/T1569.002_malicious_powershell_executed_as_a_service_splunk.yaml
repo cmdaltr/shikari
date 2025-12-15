@@ -1,0 +1,44 @@
+technique_id: T1569.002
+technique_name: Malicious Powershell Executed As A Service
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`wineventlog_system` EventCode=7045 | eval l_ImagePath=lower(ImagePath) |
+  regex l_ImagePath="powershell[.\s]|powershell_ise[.\s]|pwsh[.\s]|psexec[.\s]" |
+  regex l_ImagePath="-nop[rofile\s]+|-w[indowstyle]*\s+hid[den]*|-noe[xit\s]+|-enc[odedcommand\s]+"
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode ImagePath
+  ServiceName StartType ServiceType AccountName UserID dest | rename UserID as user|
+  `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `malicious_powershell_executed_as_a_service_filter`'
+explanation: The following analytic identifies the execution of malicious PowerShell
+  commands or payloads via the Windows SC.exe utility. It detects this activity by
+  analyzing Windows System logs (EventCode 7045) and filtering for specific PowerShell-related
+  patterns in the ImagePath field. This behavior is significant because it indicates
+  potential abuse of the Windows Service Control Manager to run unauthorized or harmful
+  scripts, which could lead to system compromise. If confirmed malicious, this activity
+  could allow attackers to execute arbitrary code, escalate privileges, or maintain
+  persistence within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8e204dfd-cae0-4ea8-a61d-e972a1ff2ff8/
+indicators:
+- type: data_source
+  value: Windows Event Log System 7045
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Creating a hidden powershell service is rare and could key off of those
+    instances.
+  mitigation: Review context and user activity
+references:
+- https://www.fireeye.com/content/dam/fireeye-www/blog/pdfs/dosfuscation-report.pdf
+- http://az4n6.blogspot.com/2017/
+- https://www.danielbohannon.com/blog-1/2017/3/12/powershell-execution-argument-obfuscation-how-it-can-make-detection-easier
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1569.002/malicious_powershell_executed_as_a_service/windows-xml.log

@@ -1,0 +1,38 @@
+technique_id: T1572
+technique_name: Ngrok Reverse Proxy on Network
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime  from datamodel=Network_Resolution where DNS.query IN ("*.ngrok.com","*.ngrok.io",
+  "ngrok.*.tunnel.com", "korgn.*.lennut.com") by DNS.answer DNS.answer_count DNS.query
+  DNS.query_count DNS.reply_code_id DNS.src DNS.vendor_product |  `drop_dm_object_name("DNS")`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `ngrok_reverse_proxy_on_network_filter`'
+explanation: The following analytic detects DNS queries to common Ngrok domains, indicating
+  potential use of the Ngrok reverse proxy tool. It leverages the Network Resolution
+  datamodel to identify queries to domains such as "*.ngrok.com" and "*.ngrok.io".
+  While Ngrok usage is not inherently malicious, it has been increasingly adopted
+  by adversaries for covert communication and data exfiltration. If confirmed malicious,
+  this activity could allow attackers to bypass network defenses, establish persistent
+  connections, and exfiltrate sensitive data, posing a significant threat to the network's
+  security.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/5790a766-53b8-40d3-a696-3547b978fcf0/
+indicators:
+- type: data_source
+  value: Sysmon EventID 22
+  confidence: high
+- type: risk_system
+  value: src
+  confidence: high
+false_positives:
+- description: False positives will be present based on organizations that allow the
+    use of Ngrok. Filter or monitor as needed.
+  mitigation: Review context and user activity
+references:
+- https://www.cisa.gov/uscert/sites/default/files/publications/aa22-320a_joint_csa_iranian_government-sponsored_apt_actors_compromise_federal%20network_deploy_crypto%20miner_credential_harvester.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1572/ngrok/windows-sysmon.log

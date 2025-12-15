@@ -1,0 +1,69 @@
+technique_id: T1543
+technique_name: Systemd Generator Created
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"linux\" and event.action in (\"rename\", \"creation\"\
+  ) and file.path : (\n\"/run/systemd/system-generators/*\", \"/etc/systemd/system-generators/*\"\
+  ,\n\"/usr/local/lib/systemd/system-generators/*\", \"/lib/systemd/system-generators/*\"\
+  ,\n\"/usr/lib/systemd/system-generators/*\", \"/etc/systemd/user-generators/*\"\
+  ,\n\"/usr/local/lib/systemd/user-generators/*\", \"/usr/lib/systemd/user-generators/*\"\
+  ,\n\"/lib/systemd/user-generators/*\"\n) and not (\n  process.executable in (\n\
+  \    \"/bin/dpkg\", \"/usr/bin/dpkg\", \"/bin/dockerd\", \"/usr/bin/dockerd\", \"\
+  /usr/sbin/dockerd\", \"/bin/microdnf\",\n    \"/usr/bin/microdnf\", \"/bin/rpm\"\
+  , \"/usr/bin/rpm\", \"/bin/snapd\", \"/usr/bin/snapd\", \"/bin/yum\", \"/usr/bin/yum\"\
+  ,\n    \"/bin/dnf\", \"/usr/bin/dnf\", \"/bin/podman\", \"/usr/bin/podman\", \"\
+  /bin/dnf-automatic\", \"/usr/bin/dnf-automatic\",\n    \"/bin/pacman\", \"/usr/bin/pacman\"\
+  , \"/usr/bin/dpkg-divert\", \"/bin/dpkg-divert\", \"/sbin/apk\", \"/usr/sbin/apk\"\
+  ,\n    \"/usr/local/sbin/apk\", \"/usr/bin/apt\", \"/usr/sbin/pacman\", \"/bin/podman\"\
+  , \"/usr/bin/podman\", \"/usr/bin/puppet\",\n    \"/bin/puppet\", \"/opt/puppetlabs/puppet/bin/puppet\"\
+  , \"/usr/bin/chef-client\", \"/bin/chef-client\", \"/usr/sbin/sshd\",\n    \"/bin/autossl_check\"\
+  , \"/usr/bin/autossl_check\", \"/proc/self/exe\", \"/dev/fd/*\",  \"/usr/bin/pamac-daemon\"\
+  ,\n    \"/bin/pamac-daemon\", \"/usr/lib/snapd/snapd\", \"/usr/local/bin/dockerd\"\
+  , \"/usr/libexec/platform-python\"\n  ) or\n  process.name like~ (\"ssm-agent-worker\"\
+  , \"crio\", \"docker-init\", \"systemd\", \"pacman\", \"python*\", \"platform-python*\"\
+  ) or\n  file.extension in (\"swp\", \"swpx\", \"swx\", \"dpkg-remove\") or\n  file.Ext.original.extension\
+  \ == \"dpkg-new\" or\n  process.executable == null\n)"
+explanation: 'This rule detects the creation of a systemd generator file. Generators
+  are small executables executed by systemd at
+
+  bootup and during configuration reloads. Their main role is to convert non-native
+  configuration and execution parameters
+
+  into dynamically generated unit files, symlinks, or drop-ins, extending the unit
+  file hierarchy for the service manager.
+
+  Systemd generators can be used to execute arbitrary code at boot time, which can
+  be leveraged by attackers to maintain
+
+  persistence on a Linux system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/39c06367-b700-4380-848a-cab06e7afede.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Package managers like dpkg, rpm, and yum can trigger false positives when they
+    create or rename files in systemd generator directories during software installations
+    or updates. To handle these, exclude processes associated with these package managers
+    as specified in the rule.
+
+    - Automated system management tools such as Puppet and Chef may also create or
+    modify generator files as part of their configuration management tasks. Exclude
+    these processes by adding them to the'
+  mitigation: Review investigation guide for details
+references:
+- https://pberba.github.io/security/2022/02/07/linux-threat-hunting-for-persistence-systemd-generators/
+- https://www.elastic.co/security-labs/primer-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

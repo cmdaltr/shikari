@@ -1,0 +1,40 @@
+technique_id: T1578
+technique_name: GCP Storage Bucket Configuration Modification
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:gcp.audit and event.action:"storage.buckets.update" and event.outcome:success
+explanation: 'Identifies when the configuration is modified for a storage bucket in
+  Google Cloud Platform (GCP). An adversary may
+
+  modify the configuration of a storage bucket in order to weaken the security controls
+  of their target''s environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/97359fd8-757d-4b1d-9af1-ef29e4a8680e.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: GCP
+  confidence: high
+- type: data_source
+  value: Google Cloud Platform
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative updates to storage bucket configurations by authorized
+    personnel can trigger alerts. To manage this, maintain a list of known administrators
+    and their typical activities, and create exceptions for these actions in the monitoring
+    system.
+
+    - Automated processes or scripts that regularly update bucket configurations for
+    maintenance or compliance purposes may cause false positives. Identify these processes
+    and exclude their actions from triggering ale'
+  mitigation: Review investigation guide for details
+references:
+- https://cloud.google.com/storage/docs/key-terms#buckets
+has_investigation_guide: true
+risk_score: 47

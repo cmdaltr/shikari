@@ -1,0 +1,36 @@
+technique_id: T1543.003
+technique_name: XMRIG Driver Loaded
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventCode=6 Signature="Noriyuki MIYAZAKI" OR ImageLoaded= "*\\WinRing0x64.sys"
+  |  stats  min(_time) as firstTime max(_time) as lastTime count by ImageLoaded dest
+  dvc process_hash process_path signature signature_id user_id vendor_product | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `xmrig_driver_loaded_filter`'
+explanation: The following analytic detects the installation of the XMRIG coinminer
+  driver on a system. It identifies the loading of the `WinRing0x64.sys` driver, commonly
+  associated with XMRIG, by analyzing Sysmon EventCode 6 logs for specific signatures
+  and image loads. This activity is significant because XMRIG is an open-source CPU
+  miner frequently exploited by adversaries to mine cryptocurrency illicitly. If confirmed
+  malicious, this activity could lead to unauthorized resource consumption, degraded
+  system performance, and potential financial loss due to unauthorized cryptocurrency
+  mining.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/90080fa6-a8df-11eb-91e4-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 6
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives should be limited.
+  mitigation: Review context and user activity
+references:
+- https://www.trendmicro.com/vinfo/hk/threat-encyclopedia/malware/trojan.ps1.powtran.a/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/xmrig_miner/windows-sysmon.log

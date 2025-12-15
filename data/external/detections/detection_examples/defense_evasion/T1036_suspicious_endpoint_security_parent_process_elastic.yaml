@@ -1,0 +1,64 @@
+technique_id: T1036
+technique_name: Suspicious Endpoint Security Parent Process
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : (\"esensor.exe\", \"elastic-endpoint.exe\") and\n  process.parent.executable\
+  \ != null and\n  process.args != null and\n  /* add FPs here */\n  not process.parent.executable\
+  \ : (\n        \"?:\\\\Program Files\\\\Elastic\\\\*\",\n        \"?:\\\\Windows\\\
+  \\System32\\\\services.exe\",\n        \"?:\\\\Windows\\\\System32\\\\WerFault*.exe\"\
+  ,\n        \"?:\\\\Windows\\\\System32\\\\wermgr.exe\",\n        \"?:\\\\Windows\\\
+  \\explorer.exe\"\n  ) and\n  not (\n    process.parent.executable : (\n        \"\
+  ?:\\\\Windows\\\\System32\\\\cmd.exe\",\n        \"?:\\\\Windows\\\\System32\\\\\
+  SecurityHealthHost.exe\",\n        \"?:\\\\Windows\\\\System32\\\\SecurityHealth\\\
+  \\*\\\\SecurityHealthHost.exe\",\n        \"?:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\
+  \\v1.0\\\\powershell.exe\"\n    ) and\n    process.args : (\n        \"test\", \"\
+  version\",\n        \"top\", \"run\",\n        \"*help\", \"status\",\n        \"\
+  upgrade\", \"/launch\",\n        \"/enable\", \"/av\"\n    )\n  )"
+explanation: 'A suspicious Endpoint Security parent process was detected. This may
+  indicate a process hollowing or other form of code
+
+  injection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b41a13c6-ba45-4bab-a534-df53d0cfed6a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Security tools or scripts that automate tasks may trigger false positives if
+    they launch endpoint security processes with unexpected parent processes. To manage
+    this, identify and document these tools, then add their parent executable paths
+    to the exclusion list.
+
+    - System administrators or IT personnel may use command-line tools like PowerShell
+    or cmd.exe for legitimate maintenance tasks. If these tasks frequently trigger
+    alerts, consider adding specific command-line a'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

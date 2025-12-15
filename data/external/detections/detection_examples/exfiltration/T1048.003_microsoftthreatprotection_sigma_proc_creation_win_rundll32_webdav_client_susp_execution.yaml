@@ -1,0 +1,77 @@
+technique_id: T1048.003
+technique_name: Suspicious WebDav Client Execution Via Rundll32.EXE
+tactic: exfiltration
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 982e9f2d-1a85-4d5b-aea4-31f5e97c6555
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_*\nfilter_local_ips:\n  CommandLine|contains:\n  - ://10.\n  - ://192.168.\n\
+  \  - ://172.16.\n  - ://172.17.\n  - ://172.18.\n  - ://172.19.\n  - ://172.20.\n\
+  \  - ://172.21.\n  - ://172.22.\n  - ://172.23.\n  - ://172.24.\n  - ://172.25.\n\
+  \  - ://172.26.\n  - ://172.27.\n  - ://172.28.\n  - ://172.29.\n  - ://172.30.\n\
+  \  - ://172.31.\n  - ://127.\n  - ://169.254.\nselection:\n  CommandLine|contains:\
+  \ C:\\windows\\system32\\davclnt.dll,DavSetCookie\n  CommandLine|re: ://\\d{1,3}\\\
+  .\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\n  Image|endswith: \\rundll32.exe\n  ParentCommandLine|contains:\
+  \ -s WebClient\n  ParentImage|endswith: \\svchost.exe\n"
+explanation: 'Detects "svchost.exe" spawning "rundll32.exe" with command arguments
+  like C:\windows\system32\davclnt.dll,DavSetCookie. This could be an indicator of
+  exfiltration or use of WebDav to launch code (hosted on WebDav Server) or potentially
+  a sign of exploitation of CVE-2023-23397
+
+  '
+false_positives:
+- Unknown
+references:
+- https://twitter.com/aceresponder/status/1636116096506818562
+- https://www.mdsec.co.uk/2023/03/exploiting-cve-2023-23397-microsoft-outlook-elevation-of-privilege-vulnerability/
+- https://www.pwndefend.com/2023/03/15/the-long-game-persistent-hash-theft/
+- https://www.microsoft.com/en-us/security/blog/wp-content/uploads/2023/03/Figure-7-sample-webdav-process-create-event.png
+- https://www.microsoft.com/en-us/security/blog/2023/03/24/guidance-for-investigating-attacks-using-cve-2023-23397/
+tags:
+- attack.exfiltration
+- attack.t1048.003
+- cve.2023-23397
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \svchost.exe
+    ParentCommandLine|contains: -s WebClient
+    Image|endswith: \rundll32.exe
+    CommandLine|contains: C:\windows\system32\davclnt.dll,DavSetCookie
+    CommandLine|re: ://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}
+  filter_local_ips:
+    CommandLine|contains:
+    - ://10.
+    - ://192.168.
+    - ://172.16.
+    - ://172.17.
+    - ://172.18.
+    - ://172.19.
+    - ://172.20.
+    - ://172.21.
+    - ://172.22.
+    - ://172.23.
+    - ://172.24.
+    - ://172.25.
+    - ://172.26.
+    - ://172.27.
+    - ://172.28.
+    - ://172.29.
+    - ://172.30.
+    - ://172.31.
+    - ://127.
+    - ://169.254.
+  condition: selection and not 1 of filter_*
+metadata:
+  created_date: 2023-03-16
+  modified_date: 2023-09-18
+  author: Nasreddine Bencherchali (Nextron Systems), Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

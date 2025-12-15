@@ -1,0 +1,63 @@
+technique_id: T1574.006
+technique_name: Shared Object Created or Changed by Previously Unknown Process
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "host.os.type:\"linux\" and event.action:(\"creation\" or \"file_create_event\"\
+  \ or \"file_rename_event\" or \"rename\" or \"file_write_event\") and\n(file.extension:\"\
+  so\" or file.name:*.so.*) and\nfile.path:(\n  /dev/shm/* or /usr/lib/* or /usr/lib64/*\
+  \ or /usr/local/lib/* or /usr/local/lib64/* or /lib/x86_64-linux-gnu/* or\n  /usr/lib/x86_64-linux-gnu/*\
+  \ or /lib/i386-linux-gnu/* or /usr/lib/i386-linux-gnu/* or /lib/* or /lib64/*\n\
+  ) and not (\n  process.name:(\n    \"dockerd\" or \"dpkg\" or \"rpm\" or \"snapd\"\
+  \ or \"yum\" or \"vmis-launcher\" or \"pacman\" or \"apt-get\" or \"dnf\" or \"\
+  podman\" or\n    platform-python* or \"dnf-automatic\" or \"unattended-upgrade\"\
+  \ or \"apk\" or \"snap-update-ns\" or \"install\" or \"exe\" or\n    \"systemd\"\
+  \ or \"root\" or \"sshd\" or \"pip\" or \"jlink\" or python* or \"update-alternatives\"\
+  \ or pip* or \"crio\" or \"packagekitd\"\n  ) or \n  (process.name:\"vmware-install.pl\"\
+  \ and file.path:/usr/lib/vmware-tools/*) or\n  (process.name:\"ssm-agent-worker\"\
+  \ and file.path:/usr/lib/jvm/java*) or \n  process.executable : (/dev/fd/* or \"\
+  /\" or \"/kaniko/executor\" or \"/usr/bin/buildah\")\n)"
+explanation: 'This rule monitors the creation of shared object files by previously
+  unknown processes. The creation of a shared object
+
+  file involves compiling code into a dynamically linked library that can be loaded
+  by other programs at runtime. While
+
+  this process is typically used for legitimate purposes, malicious actors can leverage
+  shared object files to execute
+
+  unauthorized code, inject malicious functionality into legitimate processes, or
+  bypass security controls. This allows
+
+  malware to persist on the system, evade detection, and potentially compromise the
+  integrity and confidentiality of the
+
+  affected system and its data.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/aebaa51f-2a91-4f6a-850b-b601db2293f4.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: "False Positive Analysis\n\n- If this activity is related to new benign\
+    \ software installation activity, consider adding exceptions — preferably with\
+    \ a combination of user and command line conditions.\n- If this activity is related\
+    \ to a system administrator that performed these actions for administrative purposes,\
+    \ consider adding exceptions for this specific administrator user account. \n\
+    - Try to understand the context of the execution by thinking about the user, machine,\
+    \ or business purpose. A small"
+  mitigation: Review investigation guide for details
+references:
+- https://threatpost.com/sneaky-malware-backdoors-linux/180158/
+has_investigation_guide: true
+risk_score: 47

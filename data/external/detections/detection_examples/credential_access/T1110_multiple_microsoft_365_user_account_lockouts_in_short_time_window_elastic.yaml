@@ -1,0 +1,79 @@
+technique_id: T1110
+technique_name: Multiple Microsoft 365 User Account Lockouts in Short Time Window
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-o365.audit-*\n| mv_expand event.category\n| eval\n    Esql.time_window_date_trunc\
+  \ = date_trunc(5 minutes, @timestamp)\n| where\n    event.dataset == \"o365.audit\"\
+  \ and\n    event.category == \"authentication\" and\n    event.provider in (\"AzureActiveDirectory\"\
+  , \"Exchange\") and\n    event.action in (\"UserLoginFailed\", \"PasswordLogonInitialAuthUsingPassword\"\
+  ) and\n    to_lower(o365.audit.ExtendedProperties.RequestType) rlike \"(oauth.*||.*login.*)\"\
+  \ and\n    o365.audit.LogonError == \"IdsLocked\" and\n    to_lower(o365.audit.UserId)\
+  \ != \"not available\" and\n    o365.audit.Target.Type in (\"0\", \"2\", \"6\",\
+  \ \"10\") and\n    source.`as`.organization.name != \"MICROSOFT-CORP-MSN-as-BLOCK\"\
+  \n| stats\n    Esql_priv.o365_audit_UserId_count_distinct = count_distinct(to_lower(o365.audit.UserId)),\n\
+  \    Esql_priv.o365_audit_UserId_values = values(to_lower(o365.audit.UserId)),\n\
+  \    Esql.source_ip_values = values(source.ip),\n    Esql.source_ip_count_distinct\
+  \ = count_distinct(source.ip),\n    Esql.source_as_organization_name_values = values(source.`as`.organization.name),\n\
+  \    Esql.source_as_organization_name_count_distinct = count_distinct(source.`as`.organization.name),\n\
+  \    Esql.source_geo_country_name_values = values(source.geo.country_name),\n  \
+  \  Esql.source_geo_country_name_count_distinct = count_distinct(source.geo.country_name),\n\
+  \    Esql.o365_audit_ExtendedProperties_RequestType_values = values(to_lower(o365.audit.ExtendedProperties.RequestType)),\n\
+  \    Esql.timestamp_first_seen = min(@timestamp),\n    Esql.timestamp_last_seen\
+  \ = max(@timestamp),\n    Esql.event_count = count(*)\n  by Esql.time_window_date_trunc\n\
+  | eval\n    Esql.event_duration_seconds = date_diff(\"seconds\", Esql.timestamp_first_seen,\
+  \ Esql.timestamp_last_seen)\n| keep\n    Esql.time_window_date_trunc,\n    Esql_priv.o365_audit_UserId_count_distinct,\n\
+  \    Esql_priv.o365_audit_UserId_values,\n    Esql.source_ip_values,\n    Esql.source_ip_count_distinct,\n\
+  \    Esql.source_as_organization_name_values,\n    Esql.source_as_organization_name_count_distinct,\n\
+  \    Esql.source_geo_country_name_values,\n    Esql.source_geo_country_name_count_distinct,\n\
+  \    Esql.o365_audit_ExtendedProperties_RequestType_values,\n    Esql.timestamp_first_seen,\n\
+  \    Esql.timestamp_last_seen,\n    Esql.event_count,\n    Esql.event_duration_seconds\n\
+  | where\n    Esql_priv.o365_audit_UserId_count_distinct >= 10 and\n    Esql.event_count\
+  \ >= 10 and\n    Esql.event_duration_seconds <= 300"
+explanation: 'Detects a burst of Microsoft 365 user account lockouts within a short
+  5-minute window. A high number of IdsLocked login
+
+  errors across multiple user accounts may indicate brute-force attempts for the same
+  users resulting in lockouts.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/de67f85e-2d43-11f0-b8c9-f661ea17fbcc.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+- type: data_source
+  value: Microsoft 365 Audit Logs
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - Automated systems with stale credentials may cause repeated failed logins.
+
+    - Legitimate bulk provisioning or scripted tests could unintentionally cause account
+    lockouts.
+
+    - Red team exercises or penetration tests may resemble the same lockout pattern.
+
+    - Some organizations may have a high volume of lockouts due to user behavior or
+    legacy systems.
+
+
+    ### Response Recommendations
+
+
+    - Notify affected users and confirm whether activity was expected or suspicious.
+
+    - Lock or rese'
+  mitigation: Review investigation guide for details
+references:
+- https://learn.microsoft.com/en-us/security/operations/incident-response-playbook-password-spray
+- https://learn.microsoft.com/en-us/purview/audit-log-detailed-properties
+- https://securityscorecard.com/research/massive-botnet-targets-m365-with-stealthy-password-spraying-attacks/
+- https://github.com/0xZDH/Omnispray
+- https://github.com/0xZDH/o365spray
+has_investigation_guide: true
+risk_score: 47

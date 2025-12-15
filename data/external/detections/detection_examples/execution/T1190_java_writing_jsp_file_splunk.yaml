@@ -1,0 +1,51 @@
+technique_id: T1190
+technique_name: Java Writing JSP File
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count FROM datamodel=Endpoint.Processes
+  where Processes.process_name IN ("java","java.exe", "javaw.exe") by _time Processes.action
+  Processes.dest Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | join process_guid [| tstats `security_content_summariesonly`
+  count FROM datamodel=Endpoint.Filesystem where Filesystem.file_name="*.jsp*" by
+  _time Filesystem.action Filesystem.dest Filesystem.file_access_time Filesystem.file_create_time
+  Filesystem.file_hash Filesystem.file_modify_time Filesystem.file_name Filesystem.file_path
+  Filesystem.file_acl Filesystem.file_size Filesystem.process_guid Filesystem.process_id
+  Filesystem.user Filesystem.vendor_product | `drop_dm_object_name(Filesystem)` |
+  fields _time process_guid file_path file_name file_create_time user dest process_name]
+  | stats count min(_time) as firstTime max(_time) as lastTime by dest process_name
+  process_guid file_name file_path file_create_time user | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `java_writing_jsp_file_filter`'
+explanation: The following analytic detects the Java process writing a .jsp file to
+  disk, which may indicate a web shell being deployed. It leverages data from the
+  Endpoint datamodel, specifically monitoring process and filesystem activities. This
+  activity is significant because web shells can provide attackers with remote control
+  over the compromised server, leading to further exploitation. If confirmed malicious,
+  this could allow unauthorized access, data exfiltration, or further compromise of
+  the affected system, posing a severe security risk.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/eb65619c-4f8d-4383-a975-d352765d344b/
+indicators:
+- type: data_source
+  value: Sysmon for Linux EventID 1 AND Sysmon for Linux EventID 11
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives are possible and filtering may be required. Restrict
+    by assets or filter known jsp files that are common for the environment.
+  mitigation: Review context and user activity
+references:
+- https://www.microsoft.com/security/blog/2022/04/04/springshell-rce-vulnerability-guidance-for-protecting-against-and-detecting-cve-2022-22965/
+- https://github.com/TheGejr/SpringShell
+- https://www.tenable.com/blog/spring4shell-faq-spring-framework-remote-code-execution-vulnerability
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/spring4shell/java_write_jsp-linux-sysmon.log

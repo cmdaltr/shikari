@@ -1,0 +1,68 @@
+technique_id: T1134.004
+technique_name: HackTool - PPID Spoofing SelectMyParent Tool Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 52ff7941-8211-46f9-84f8-9903efb7077d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  - Image|endswith: \\SelectMyParent.exe\n- CommandLine|contains:\n  - PPID-spoof\n\
+  \  - ppid_spoof\n  - spoof-ppid\n  - spoof_ppid\n  - ppidspoof\n  - spoofppid\n\
+  \  - spoofedppid\n  - ' -spawnto '\n- OriginalFileName|contains:\n  - PPID-spoof\n\
+  \  - ppid_spoof\n  - spoof-ppid\n  - spoof_ppid\n  - ppidspoof\n  - spoofppid\n\
+  \  - spoofedppid\n- Description: SelectMyParent\n- Hashes|contains:\n  - IMPHASH=04D974875BD225F00902B4CAD9AF3FBC\n\
+  \  - IMPHASH=A782AF154C9E743DDF3F3EB2B8F3D16E\n  - IMPHASH=89059503D7FBF470E68F7E63313DA3AD\n\
+  \  - IMPHASH=CA28337632625C8281AB8A130B3D6BAD\n"
+explanation: Detects the use of parent process ID spoofing tools like Didier Stevens
+  tool SelectMyParent
+false_positives:
+- Unlikely
+references:
+- https://pentestlab.blog/2020/02/24/parent-pid-spoofing/
+- https://www.picussecurity.com/resource/blog/how-to-detect-parent-pid-ppid-spoofing-attacks
+- https://www.ired.team/offensive-security/defense-evasion/parent-process-id-ppid-spoofing
+- https://www.virustotal.com/gui/search/filename%253A*spoof*%2520filename%253A*ppid*/files
+tags:
+- attack.privilege-escalation
+- attack.defense-evasion
+- attack.t1134.004
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+  - Image|endswith: \SelectMyParent.exe
+  - CommandLine|contains:
+    - PPID-spoof
+    - ppid_spoof
+    - spoof-ppid
+    - spoof_ppid
+    - ppidspoof
+    - spoofppid
+    - spoofedppid
+    - ' -spawnto '
+  - OriginalFileName|contains:
+    - PPID-spoof
+    - ppid_spoof
+    - spoof-ppid
+    - spoof_ppid
+    - ppidspoof
+    - spoofppid
+    - spoofedppid
+  - Description: SelectMyParent
+  - Hashes|contains:
+    - IMPHASH=04D974875BD225F00902B4CAD9AF3FBC
+    - IMPHASH=A782AF154C9E743DDF3F3EB2B8F3D16E
+    - IMPHASH=89059503D7FBF470E68F7E63313DA3AD
+    - IMPHASH=CA28337632625C8281AB8A130B3D6BAD
+  condition: selection
+metadata:
+  created_date: 2022-07-23
+  modified_date: 2024-11-23
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

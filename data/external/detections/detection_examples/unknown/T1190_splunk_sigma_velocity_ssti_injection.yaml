@@ -1,0 +1,56 @@
+technique_id: T1190
+technique_name: Potential Server Side Template Injection In Velocity
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.81
+validated: true
+source: sigma
+sigma_id: 16c86189-b556-4ee8-b4c7-7e350a195a4f
+level: high
+query: '# Sigma Detection Logic
+
+  # Convert to platform-specific query using Sigma tools:
+
+  # https://github.com/SigmaHQ/sigma
+
+
+  condition: keywords
+
+  keywords:
+
+  - ParseErrorException
+
+  - VelocityException
+
+  - TemplateInitException
+
+  '
+explanation: Detects exceptions in velocity template renderer, this most likely happens
+  due to dynamic rendering of user input and may lead to RCE.
+false_positives:
+- Application bugs
+- Missing .vm files
+references:
+- https://antgarsil.github.io/posts/velocity/
+- https://www.wix.engineering/post/threat-and-vulnerability-hunting-with-application-server-error-logs
+tags:
+- attack.initial-access
+- attack.t1190
+logsource:
+  category: application
+  product: velocity
+  definition: 'Requirements: application error logs must be collected (with LOG_LEVEL=ERROR
+    and above)'
+detection:
+  keywords:
+  - ParseErrorException
+  - VelocityException
+  - TemplateInitException
+  condition: keywords
+metadata:
+  created_date: 2023-02-11
+  modified_date: '2025-11-28'
+  author: Moti Harmats
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,49 @@
+technique_id: T1078
+technique_name: Azure Login Bypassing Conditional Access Policies
+tactic: persistence
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 13f2d3f5-6497-44a7-bf5f-dc13ffafe5dc
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_bjectid:\n  ObjectId: 0000000a-0000-0000-c000-000000000000\n\
+  selection:\n  ApplicationId: 9ba1a5c7-f17a-4de9-a1f1-6178c8d51223\n  Operation:\
+  \ UserLoggedIn\n  RequestType: Cmsi:Cmsi\n  ResultStatus: Success\n"
+explanation: 'Detects a successful login to the Microsoft Intune Company Portal which
+  could allow bypassing Conditional Access Policies and InTune device trust using
+  a tool like TokenSmith.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://labs.jumpsec.com/tokensmith-bypassing-intune-compliant-device-conditional-access/
+- https://github.com/JumpsecLabs/TokenSmith
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.initial-access
+- attack.defense-evasion
+- attack.t1078
+logsource:
+  service: audit
+  product: m365
+detection:
+  selection:
+    Operation: UserLoggedIn
+    ApplicationId: 9ba1a5c7-f17a-4de9-a1f1-6178c8d51223
+    ResultStatus: Success
+    RequestType: Cmsi:Cmsi
+  filter_main_bjectid:
+    ObjectId: 0000000a-0000-0000-c000-000000000000
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2025-01-08
+  modified_date: '2025-11-28'
+  author: Josh Nickels, Marius Rothenbücher
+  status: experimental
+  imported_date: '2025-11-28'

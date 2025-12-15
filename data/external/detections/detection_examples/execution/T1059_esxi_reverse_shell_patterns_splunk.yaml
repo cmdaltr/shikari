@@ -1,0 +1,30 @@
+technique_id: T1059
+technique_name: ESXi Reverse Shell Patterns
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`esxi_syslog` Message IN ("*bash -i >&*","*/dev/tcp/*","*/dev/udp/*", "*/socat
+  exec:*","*socket(S,PF_INET*") OR (Message="*python -c*" AND Message="*import socket*")
+  | rex field=_raw "Z (?<dest>[\w\.]+)\s" | stats min(_time) as firstTime max(_time)
+  as lastTime count by dest Message | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `esxi_reverse_shell_patterns_filter`'
+explanation: This detection looks for reverse shell string patterns on an ESXi host,
+  which may indicate that a threat actor is attempting to establish remote control
+  over the system.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/ee8b16a4-118e-4dd7-af4b-835530415610/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments, however tune as needed.
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059/esxi_reverse_shell/esxi_reverse_shell.log

@@ -1,0 +1,65 @@
+technique_id: T1078
+technique_name: Entra ID OAuth user_impersonation Scope for Unusual User and Client
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset: azure.signinlogs and\n    azure.signinlogs.properties.authentication_processing_details:\
+  \ *user_impersonation* and\n    azure.signinlogs.properties.authentication_requirement:\
+  \ \"singleFactorAuthentication\" and\n    azure.signinlogs.properties.token_issuer_type:\
+  \ \"AzureAD\" and\n    azure.signinlogs.properties.token_protection_status_details.sign_in_session_status:\
+  \ \"unbound\" and\n    azure.signinlogs.properties.user_type: \"Member\" and\n \
+  \   azure.signinlogs.properties.conditional_access_status: \"notApplied\" and\n\
+  \    not user_agent.original: Mozilla*PKeyAuth/1.0 and\n    not azure.signinlogs.properties.device_detail.operating_system:\
+  \ (Ios* or Android*) and\n    event.outcome: \"success\"\n    and not azure.signinlogs.properties.app_id:\
+  \ (\n        \"a5f63c0-b750-4f38-a71c-4fc0d58b89e2\" or\n        \"6bc3b958-689b-49f5-9006-36d165f30e00\"\
+  \ or\n        \"66a88757-258c-4c72-893c-3e8bed4d6899\" or\n        \"cc15fd57-2c6c-4117-a88c-83b1d56b4bbe\"\
+  \ or\n        \"0000000c-0000-0000-c000-000000000000\"\n    )"
+explanation: 'Identifies rare occurrences of OAuth workflow for a user principal that
+  is single factor authenticated, with an OAuth
+
+  scope containing user_impersonation for a token issued by Entra ID. Adversaries
+  may use this scope to gain unauthorized
+
+  access to user accounts, particularly when the sign-in session status is unbound,
+  indicating that the session is not
+
+  associated with a specific device or session. This behavior is indicative of potential
+  account compromise or
+
+  unauthorized access attempts. This rule flags when this pattern is detected for
+  a user principal that has not been seen
+
+  in the last 10 days, indicating potential abuse or unusual activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9563dace-5822-11f0-b1d3-f661ea17fbcd.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Sign-In Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Some legitimate applications may use the `user_impersonation` scope for valid
+    purposes, such as accessing user resources on behalf of the user. If this is expected
+    behavior, consider adjusting the rule or adding exceptions for specific applications
+    or user principals.
+
+    - Users may occasionally authenticate using single-factor authentication for specific
+    applications or scenarios, especially in environments where MFA is not enforced
+    or required. If this is expected behav'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/Flangvik/TeamFiltration
+- https://www.proofpoint.com/us/blog/threat-insight/attackers-unleash-teamfiltration-account-takeover-campaign
+has_investigation_guide: true
+risk_score: 47

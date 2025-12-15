@@ -1,0 +1,38 @@
+technique_id: T1552.004
+technique_name: PowerShell Get-Process LSASS
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: b2815d0d-7481-4bf0-9b6c-a4c48a94b349
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains:\n  - Get-Process lsas\n  - ps lsas\n  - gps lsas\n"
+explanation: Detects a "Get-Process" cmdlet and it's aliases on lsass process, which
+  is in almost all cases a sign of malicious activity
+false_positives:
+- Unknown
+references:
+- https://web.archive.org/web/20220205033028/https://twitter.com/PythonResponder/status/1385064506049630211
+tags:
+- attack.credential-access
+- attack.t1552.004
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - Get-Process lsas
+    - ps lsas
+    - gps lsas
+  condition: selection
+metadata:
+  created_date: 2021-04-23
+  modified_date: 2023-01-05
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

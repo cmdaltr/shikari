@@ -1,0 +1,32 @@
+technique_id: T1490
+technique_name: Azure Recovery Services Resource Deleted
+tactic: impact
+platform: Elastic
+fidelity_score: 0.87
+validated: true
+query: "event.dataset:azure.activitylogs and\n    azure.activitylogs.operation_name:MICROSOFT.RECOVERYSERVICES/*/DELETE\
+  \ and\n    event.outcome:(Success or success)"
+explanation: 'Identifies the deletion of Azure Recovery Services resources. Azure
+  Recovery Services vaults contain data for copies of
+
+  VMs, workloads, servers, and other resources regarding Infrastructure as a Service
+  (IaaS). Adversaries may delete these
+
+  recovery services to impact backup capabilities during stable operations or to inhibit
+  disaster recovery services during
+
+  ransom-based attacks or operational disruptions.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b8c3e5d0-8a1a-11ef-9b4a-f661ea17fbce.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Azure Activity Logs
+  confidence: high
+references:
+- https://www.microsoft.com/en-us/security/blog/2023/07/25/storm-0501-ransomware-attacks-expanding-to-hybrid-cloud-environments/
+risk_score: 47

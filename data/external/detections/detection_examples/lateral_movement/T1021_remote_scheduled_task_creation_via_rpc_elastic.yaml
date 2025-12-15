@@ -1,0 +1,41 @@
+technique_id: T1021
+technique_name: Remote Scheduled Task Creation via RPC
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: "iam where event.action == \"scheduled-task-created\" and\n winlog.event_data.RpcCallClientLocality\
+  \ : \"0\" and winlog.event_data.ClientProcessId : \"0\""
+explanation: Identifies scheduled task creation from a remote source. This could be
+  indicative of adversary lateral movement.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9c865691-5599-447a-bac9-b3f2df5f9a9d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - There is a high possibility of benign activity tied to the creation of remote
+    scheduled tasks as it is a general feature within Windows and used for legitimate
+    purposes for a wide range of activity. Any kind of context should be found to
+    further understand the source of the activity and determine the intent based on
+    the scheduled task''s contents.
+
+
+    ### Related rules
+
+
+    - Service Command Lateral Movement - d61cbcf8-1bc1-4cff-85ba-e7b21c5beedc
+
+    - Remotely Started Services vi'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

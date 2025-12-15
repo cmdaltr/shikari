@@ -1,0 +1,58 @@
+technique_id: T1087.001
+technique_name: BloodHound Collection Files
+tactic: discovery
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 02773bed-83bf-469f-b7ff-e676e7d78bab
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_optional_*\nfilter_optional_ms_winapps:\n  Image|endswith: \\svchost.exe\n\
+  \  TargetFilename|endswith: \\pocket_containers.json\n  TargetFilename|startswith:\
+  \ C:\\Program Files\\WindowsApps\\Microsoft.\nselection:\n  TargetFilename|endswith:\n\
+  \  - BloodHound.zip\n  - _computers.json\n  - _containers.json\n  - _domains.json\n\
+  \  - _gpos.json\n  - _groups.json\n  - _ous.json\n  - _users.json\n"
+explanation: Detects default file names outputted by the BloodHound collection tool
+  SharpHound
+false_positives:
+- Some false positives may arise in some environment and this may require some tuning.
+  Add additional filters or reduce level depending on the level of noise
+references:
+- https://academy.hackthebox.com/course/preview/active-directory-bloodhound/bloodhound--data-collection
+tags:
+- attack.discovery
+- attack.t1087.001
+- attack.t1087.002
+- attack.t1482
+- attack.t1069.001
+- attack.t1069.002
+- attack.execution
+- attack.t1059.001
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection:
+    TargetFilename|endswith:
+    - BloodHound.zip
+    - _computers.json
+    - _containers.json
+    - _domains.json
+    - _gpos.json
+    - _groups.json
+    - _ous.json
+    - _users.json
+  filter_optional_ms_winapps:
+    Image|endswith: \svchost.exe
+    TargetFilename|startswith: C:\Program Files\WindowsApps\Microsoft.
+    TargetFilename|endswith: \pocket_containers.json
+  condition: selection and not 1 of filter_optional_*
+metadata:
+  created_date: 2022-08-09
+  modified_date: 2023-03-29
+  author: C.J. May
+  status: test
+  imported_date: '2025-11-28'

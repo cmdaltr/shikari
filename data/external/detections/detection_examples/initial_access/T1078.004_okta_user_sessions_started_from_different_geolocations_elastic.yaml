@@ -1,0 +1,55 @@
+technique_id: T1078.004
+technique_name: Okta User Sessions Started from Different Geolocations
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-okta*\n| where\n    event.dataset == \"okta.system\" and\n    (event.action\
+  \ like \"user.authentication.*\" or event.action == \"user.session.start\") and\n\
+  \    okta.security_context.is_proxy != true and\n    okta.actor.id != \"unknown\"\
+  \ and\n    event.outcome == \"success\"\n| keep\n    event.action,\n    okta.security_context.is_proxy,\n\
+  \    okta.actor.id,\n    okta.actor.alternate_id,\n    event.outcome,\n    client.geo.country_name\n\
+  | stats\n    Esql.client_geo_country_name_count_distinct = count_distinct(client.geo.country_name)\n\
+  \    by okta.actor.id, okta.actor.alternate_id\n| where\n    Esql.client_geo_country_name_count_distinct\
+  \ >= 2\n| sort\n    Esql.client_geo_country_name_count_distinct desc"
+explanation: 'Detects when a specific Okta actor has multiple sessions started from
+  different geolocations. Adversaries may attempt to
+
+  launch an attack by using a list of known usernames and passwords to gain unauthorized
+  access to user accounts from
+
+  different locations.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2e56e1bc-867a-11ee-b13e-f661ea17fbcd.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis:
+
+    - It is very rare that a legitimate user would have multiple sessions started
+    from different geo-located countries in a short time frame.
+
+
+    ### Response and remediation:
+
+    - If the user is legitimate and the authentication behavior is not suspicious
+    based on device analysis, no action is required.
+
+    - If the user is legitimate but the authentication behavior is suspicious, consider
+    resetting passwords for the users involves and enabling multi-factor authentication
+    (MFA).'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://sec.okta.com/articles/2023/08/cross-tenant-impersonation-prevention-and-detection
+- https://www.rezonate.io/blog/okta-logs-decoded-unveiling-identity-threats-through-threat-hunting/
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

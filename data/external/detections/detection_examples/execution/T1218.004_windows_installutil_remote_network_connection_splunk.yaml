@@ -1,0 +1,62 @@
+technique_id: T1218.004
+technique_name: Windows InstallUtil Remote Network Connection
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "| tstats `security_content_summariesonly` count FROM datamodel=Endpoint.Processes\n\
+  \  where `process_installutil`\n  by _time span=1h\n  Processes.action Processes.dest\
+  \ Processes.original_file_name\n  Processes.parent_process Processes.parent_process_exec\
+  \ Processes.parent_process_guid\n  Processes.parent_process_id Processes.parent_process_name\
+  \ Processes.parent_process_path\n  Processes.process Processes.process_exec Processes.process_guid\
+  \ Processes.process_hash\n  Processes.process_id Processes.process_integrity_level\
+  \ Processes.process_name Processes.process_path\n  Processes.user Processes.user_id\
+  \ Processes.vendor_product\n| `drop_dm_object_name(Processes)`\n| `security_content_ctime(firstTime)`\n\
+  | `security_content_ctime(lastTime)`\n| join process_id dest\n    [| tstats `security_content_summariesonly`\n\
+  \        count FROM datamodel=Network_Traffic.All_Traffic where\n        All_Traffic.dest_port\
+  \ != 0\n        by All_Traffic.action All_Traffic.app All_Traffic.bytes All_Traffic.bytes_in\
+  \ All_Traffic.bytes_out\n        All_Traffic.dest  All_Traffic.dest_ip All_Traffic.dest_port\
+  \ All_Traffic.dvc All_Traffic.protocol\n        All_Traffic.protocol_version All_Traffic.src\
+  \ All_Traffic.src_ip All_Traffic.src_port\n        All_Traffic.transport All_Traffic.user\
+  \ All_Traffic.vendor_product All_Traffic.direction All_Traffic.process_id\n    |\
+  \ `drop_dm_object_name(All_Traffic)`\n    | rename dest as command_and_control\n\
+  \    | rename src as dest]\n| table _time user src dest parent_process_name process_name\
+  \ process_path process process_id dest_port command_and_control\n| stats count min(_time)\
+  \ as firstTime\n    max(_time) as lastTime\n    values(process) as process\n   \
+  \ values(command_and_control) as command_and_control\n    by user dest process_name\
+  \ process_id dest_port parent_process_name\n| `security_content_ctime(firstTime)`\n\
+  | `security_content_ctime(lastTime)`\n| `windows_installutil_remote_network_connection_filter`"
+explanation: The following analytic detects the Windows InstallUtil.exe binary making
+  a remote network connection. It leverages data from Endpoint Detection and Response
+  (EDR) agents, focusing on process and network telemetry. This activity is significant
+  because InstallUtil.exe can be exploited to download and execute malicious code,
+  bypassing application control mechanisms. If confirmed malicious, an attacker could
+  achieve code execution, potentially leading to further system compromise, data exfiltration,
+  or lateral movement within the network. Analysts should review the parent process,
+  network connections, and any associated file modifications to determine the legitimacy
+  of this activity.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/4fbf9270-43da-11ec-9486-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1 AND Sysmon EventID 3
+  confidence: high
+- type: data_source
+  value: Cisco Network Visibility Module Flow Data
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives should be present as InstallUtil is not typically
+    used to download remote files. Filter as needed based on Developers requirements.
+  mitigation: Review context and user activity
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1218.004/T1218.004.md
+validation:
+  test_available: true
+  test_count: 2
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1218.004/atomic_red_team/windows-sysmon.log

@@ -1,0 +1,57 @@
+technique_id: T1021.001
+technique_name: Potential SharpRDP Behavior
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "/* Incoming RDP followed by a new RunMRU string value set to cmd, powershell,\
+  \ taskmgr or tsclient, followed by process execution within 1m */\n\nsequence by\
+  \ host.id with maxspan=1m\n  [network where host.os.type == \"windows\" and event.type\
+  \ == \"start\" and process.name : \"svchost.exe\" and destination.port == 3389 and\n\
+  \   network.direction : (\"incoming\", \"ingress\") and network.transport == \"\
+  tcp\" and\n   source.ip != \"127.0.0.1\" and source.ip != \"::1\"\n  ]\n\n  [registry\
+  \ where host.os.type == \"windows\" and event.type == \"change\" and process.name\
+  \ : \"explorer.exe\" and\n   registry.path : (\"HKEY_USERS\\\\*\\\\Software\\\\\
+  Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\RunMRU\\\\*\") and\n   registry.data.strings\
+  \ : (\"cmd.exe*\", \"powershell.exe*\", \"taskmgr*\", \"\\\\\\\\tsclient\\\\*.exe\\\
+  \\*\")\n  ]\n\n  [process where host.os.type == \"windows\" and event.type == \"\
+  start\" and\n   (process.parent.name : (\"cmd.exe\", \"powershell.exe\", \"taskmgr.exe\"\
+  ) or process.args : (\"\\\\\\\\tsclient\\\\*.exe\")) and\n   not process.name :\
+  \ \"conhost.exe\"\n   ]"
+explanation: 'Identifies potential behavior of SharpRDP, which is a tool that can
+  be used to perform authenticated command execution
+
+  against a remote target via Remote Desktop Protocol (RDP) for the purposes of lateral
+  movement.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8c81e506-6e82-4884-9b9a-75d3d252f967.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using RDP may trigger the rule if they involve
+    command execution through cmd, powershell, or taskmgr. To manage this, create
+    exceptions for known administrative IP addresses or user accounts frequently performing
+    these tasks.
+
+    - Automated scripts or software updates that modify the RunMRU registry key with
+    benign commands can be mistaken for SharpRDP behavior. Identify and exclude these
+    processes or scripts from the detection rule.
+
+    - Remo'
+  mitigation: Review investigation guide for details
+references:
+- https://posts.specterops.io/revisiting-remote-desktop-lateral-movement-8fb905cb46c3
+- https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES/blob/master/Lateral%20Movement/LM_sysmon_3_12_13_1_SharpRDP.evtx
+- https://www.elastic.co/security-labs/hunting-for-lateral-movement-using-event-query-language
+has_investigation_guide: true
+risk_score: 73

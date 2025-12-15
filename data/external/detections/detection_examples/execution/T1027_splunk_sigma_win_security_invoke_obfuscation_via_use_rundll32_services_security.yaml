@@ -1,0 +1,50 @@
+technique_id: T1027
+technique_name: Invoke-Obfuscation Via Use Rundll32 - Security
+tactic: execution
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: cd0f7229-d16f-42de-8fe3-fba365fbcb3a
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  EventID: 4697\n  ServiceFileName|contains:\n  - value\n  - invoke\n  - comspec\n\
+  \  - iex\n  ServiceFileName|contains|all:\n  - '&&'\n  - rundll32\n  - shell32.dll\n\
+  \  - shellexec_rundll\n"
+explanation: Detects Obfuscated Powershell via use Rundll32 in Scripts
+false_positives:
+- Unknown
+references:
+- https://github.com/SigmaHQ/sigma/issues/1009
+tags:
+- attack.defense-evasion
+- attack.t1027
+- attack.execution
+- attack.t1059.001
+logsource:
+  product: windows
+  service: security
+  definition: The 'System Security Extension' audit subcategory need to be enabled
+    to log the EID 4697
+detection:
+  selection:
+    EventID: 4697
+    ServiceFileName|contains|all:
+    - '&&'
+    - rundll32
+    - shell32.dll
+    - shellexec_rundll
+    ServiceFileName|contains:
+    - value
+    - invoke
+    - comspec
+    - iex
+  condition: selection
+metadata:
+  created_date: 2020-10-09
+  modified_date: 2022-11-29
+  author: Nikita Nazarov, oscd.community
+  status: test
+  imported_date: '2025-11-28'

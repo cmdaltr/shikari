@@ -1,0 +1,56 @@
+technique_id: T1564
+technique_name: Alternate Data Stream Creation/Execution at Volume Root Directory
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "any where host.os.type == \"windows\" and event.category in (\"file\", \"\
+  process\") and\n  (\n    (event.type == \"creation\" and file.path regex~ \"\"\"\
+  [A-Z]:\\\\:.+\"\"\") or\n    (event.type == \"start\" and process.executable regex~\
+  \ \"\"\"[A-Z]:\\\\:.+\"\"\")\n  )"
+explanation: 'Identifies the creation of an Alternate Data Stream (ADS) at a volume
+  root directory, which can indicate the attempt to
+
+  hide tools and malware, as ADSs created in this directory are not displayed by system
+  utilities.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ff6cf8b9-b76c-4cc1-ac1b-4935164d1029.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System utilities or legitimate applications may create ADS at the volume root
+    for benign purposes, such as storing metadata or configuration data. Review the
+    source of the ADS creation to determine if it is associated with known safe applications.
+
+    - Backup or disk management software might use ADS to store additional information
+    about files. Verify if the detected activity aligns with scheduled backup operations
+    or disk management tasks.
+
+    - Some security tools or system'
+  mitigation: Review investigation guide for details
+references:
+- https://www.crowdstrike.com/blog/anatomy-of-alpha-spider-ransomware/
+has_investigation_guide: true
+risk_score: 47

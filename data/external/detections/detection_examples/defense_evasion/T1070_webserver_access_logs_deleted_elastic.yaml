@@ -1,0 +1,50 @@
+technique_id: T1070
+technique_name: WebServer Access Logs Deleted
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "file where event.type == \"deletion\" and\n  file.path : (\"C:\\\\inetpub\\\
+  \\logs\\\\LogFiles\\\\*.log\",\n               \"/var/log/apache*/access.log\",\n\
+  \               \"/etc/httpd/logs/access_log\",\n               \"/var/log/httpd/access_log\"\
+  ,\n               \"/var/www/*/logs/access.log\")"
+explanation: 'Identifies the deletion of WebServer access logs. This may indicate
+  an attempt to evade detection or destroy forensic
+
+  evidence on a system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/665e7a4f-c58e-4fc6-bc83-87a7572670ac.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine log rotation or maintenance scripts may delete old web server logs.
+    To handle this, identify and exclude these scheduled tasks from triggering alerts
+    by specifying their execution times or associated process names.
+
+    - Automated backup processes that move or delete logs after archiving can trigger
+    false positives. Exclude these processes by adding exceptions for the backup software
+    or scripts used.
+
+    - Development or testing environments where logs are frequently c'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

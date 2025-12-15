@@ -1,0 +1,45 @@
+technique_id: T1562.012
+technique_name: Audit Rules Deleted Via Auditctl
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: bed26dea-4525-47f4-b24a-76e30e44ffb0
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|re: -D\n  Image|endswith: /auditctl\n"
+explanation: 'Detects the execution of ''auditctl'' with the ''-D'' command line parameter,
+  which deletes all configured audit rules and watches on Linux systems.
+
+  This technique is commonly used by attackers to disable audit logging and cover
+  their tracks by removing monitoring capabilities.
+
+  Removal of audit rules can significantly impair detection of malicious activities
+  on the affected system.
+
+  '
+false_positives:
+- An administrator troubleshooting. Investigate all attempts.
+references:
+- https://www.atomicredteam.io/atomic-red-team/atomics/T1562.012
+- https://linux.die.net/man/8/auditct
+tags:
+- attack.defense-evasion
+- attack.t1562.012
+logsource:
+  product: linux
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: /auditctl
+    CommandLine|re: -D
+  condition: selection
+metadata:
+  created_date: 2025-10-17
+  modified_date: '2025-11-28'
+  author: Mohamed LAKRI
+  status: experimental
+  imported_date: '2025-11-28'

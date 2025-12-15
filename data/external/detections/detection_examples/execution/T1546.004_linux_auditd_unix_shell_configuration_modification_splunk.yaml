@@ -1,0 +1,43 @@
+technique_id: T1546.004
+technique_name: Linux Auditd Unix Shell Configuration Modification
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`linux_auditd` type=PATH name IN ("/etc/profile", "/etc/shells", "/etc/profile.d",
+  "/etc/bash.bashrc", "/etc/bashrc", "/etc/zsh/zprofile", "/etc/zsh/zshrc", "/etc/zsh/zlogin",
+  "/etc/zsh/zlogout", "/etc/csh.cshrc", "/etc/csh.login", "/root/.bashrc", "/root/.bash_profile",
+  "root/.profile", "/root/.zshrc", "/root/.zprofile", "/home/*/.bashrc", "/home/*/.zshrc",
+  "/home/*/.bash_profile", "/home/*/.zprofile", "/home/*/.profile", "/home/*/.bash_login",
+  "/home/*/.bash_logout", "/home/*/.zlogin", "/home/*/.zlogout") | rename host as
+  dest | stats count min(_time) as firstTime max(_time) as lastTime by name nametype
+  ogid type dest | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `linux_auditd_unix_shell_configuration_modification_filter`'
+explanation: The following analytic detects suspicious modifications to Unix shell
+  configuration files, which may indicate an attempt to alter system behavior or gain
+  unauthorized access. Unix shell configuration files, such as `.bashrc` or `.profile`,
+  control user environment settings and command execution. Unauthorized changes to
+  these files can be used to execute malicious commands, escalate privileges, or hide
+  malicious activities. By monitoring for unusual or unauthorized modifications to
+  shell configuration files, this analytic helps identify potential security threats,
+  allowing security teams to respond quickly and mitigate risks.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/66f737c6-3f7f-46ed-8e9b-cc0e5bf01f04/
+indicators:
+- type: data_source
+  value: Linux Auditd Path
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrator or network operator can use this application for automation
+    purposes. Please update the filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.splunk.com/en_us/blog/security/deep-dive-on-persistence-privilege-escalation-technique-and-detection-in-linux-platform.html
+- https://github.com/peass-ng/PEASS-ng/tree/master/linPEAS
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1546.004/linux_auditd_unix_shell_mod_config//linux_path_profile_d.log

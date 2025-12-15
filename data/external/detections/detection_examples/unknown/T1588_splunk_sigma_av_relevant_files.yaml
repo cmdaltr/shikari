@@ -1,0 +1,102 @@
+technique_id: T1588
+technique_name: Antivirus Relevant File Paths Alerts
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: c9a88268-0047-4824-ba6e-4d81ce0b907c
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_*\nselection_ext:\n\
+  \  Filename|endswith:\n  - .asax\n  - .ashx\n  - .asmx\n  - .asp\n  - .aspx\n  -\
+  \ .bat\n  - .cfm\n  - .cgi\n  - .chm\n  - .cmd\n  - .dat\n  - .ear\n  - .gif\n \
+  \ - .hta\n  - .jpeg\n  - .jpg\n  - .jsp\n  - .jspx\n  - .lnk\n  - .msc\n  - .php\n\
+  \  - .pl\n  - .png\n  - .ps1\n  - .psm1\n  - .py\n  - .pyc\n  - .rb\n  - .scf\n\
+  \  - .sct\n  - .sh\n  - .svg\n  - .txt\n  - .vbe\n  - .vbs\n  - .war\n  - .wll\n\
+  \  - .wsf\n  - .wsh\n  - .xll\n  - .xml\nselection_path:\n  Filename|contains:\n\
+  \  - :\\PerfLogs\\\n  - :\\Temp\\\n  - :\\Users\\Default\\\n  - :\\Users\\Public\\\
+  \n  - :\\Windows\\\n  - /www/\n  - \\inetpub\\\n  - \\tsclient\\\n  - apache\n \
+  \ - nginx\n  - tomcat\n  - weblogic\n"
+explanation: 'Detects an Antivirus alert in a highly relevant file path or with a
+  relevant file name.
+
+  This event must not be ignored just because the AV has blocked the malware but investigate,
+  how it came there in the first place.
+
+  '
+false_positives:
+- Unlikely
+references:
+- https://www.nextron-systems.com/?s=antivirus
+tags:
+- attack.resource-development
+- attack.t1588
+logsource:
+  category: antivirus
+detection:
+  selection_path:
+    Filename|contains:
+    - :\PerfLogs\
+    - :\Temp\
+    - :\Users\Default\
+    - :\Users\Public\
+    - :\Windows\
+    - /www/
+    - \inetpub\
+    - \tsclient\
+    - apache
+    - nginx
+    - tomcat
+    - weblogic
+  selection_ext:
+    Filename|endswith:
+    - .asax
+    - .ashx
+    - .asmx
+    - .asp
+    - .aspx
+    - .bat
+    - .cfm
+    - .cgi
+    - .chm
+    - .cmd
+    - .dat
+    - .ear
+    - .gif
+    - .hta
+    - .jpeg
+    - .jpg
+    - .jsp
+    - .jspx
+    - .lnk
+    - .msc
+    - .php
+    - .pl
+    - .png
+    - .ps1
+    - .psm1
+    - .py
+    - .pyc
+    - .rb
+    - .scf
+    - .sct
+    - .sh
+    - .svg
+    - .txt
+    - .vbe
+    - .vbs
+    - .war
+    - .wll
+    - .wsf
+    - .wsh
+    - .xll
+    - .xml
+  condition: 1 of selection_*
+metadata:
+  created_date: 2018-09-09
+  modified_date: 2024-11-02
+  author: Florian Roth (Nextron Systems), Arnim Rupp
+  status: test
+  imported_date: '2025-11-28'

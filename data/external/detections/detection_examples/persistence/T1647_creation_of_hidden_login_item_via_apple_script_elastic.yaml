@@ -1,0 +1,41 @@
+technique_id: T1647
+technique_name: Creation of Hidden Login Item via Apple Script
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and process.name == \"osascript\" and\n process.command_line : \"osascript*login\
+  \ item*hidden:true*\""
+explanation: 'Identifies the execution of osascript to create a hidden login item.
+  This may indicate an attempt to persist a malicious
+
+  program while concealing its presence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f24bcae1-8980-4b30-b5dd-f851b055c9e7.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate applications or scripts that automate login item management may trigger
+    this rule. Review the process command line details to verify if the application
+    is trusted.
+
+    - System administrators or IT management tools might use AppleScript for legitimate
+    configuration tasks. Confirm if the activity aligns with scheduled maintenance
+    or deployment activities.
+
+    - Users with advanced scripting knowledge might create custom scripts for personal
+    use. Check if the script i'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,50 @@
+technique_id: T1014
+technique_name: Unusual Kill Signal
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.action == \"killed-pid\"\
+  \ and auditd.data.syscall == \"kill\" and\nauditd.data.a1 in (\n  \"21\", \"22\"\
+  , \"23\", \"24\", \"25\", \"26\", \"27\", \"28\", \"29\", \"2a\", \"2b\", \"2c\"\
+  , \"2d\", \"2e\", \"2f\", \"30\",\n  \"31\", \"32\", \"33\", \"34\", \"35\", \"\
+  36\", \"37\", \"38\", \"39\", \"3a\", \"3b\", \"3c\", \"3d\", \"3e\", \"3f\", \"\
+  40\",\n  \"41\", \"42\", \"43\", \"44\", \"45\", \"46\", \"47\"\n)"
+explanation: 'This rule detects the use of unusual kill signals, specifically kill
+  signals in the range of 32-64, which
+
+  are not commonly used in standard operations. Rootkits may leverage these signals
+  to conduct certain actions,
+
+  such as manipulating processes in unexpected ways, potentially escalating privileges
+  or evading detection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/cf307a5a-d503-44a4-8158-db196d99c9df.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate applications or services may use signals in the 32-64 range for custom
+    inter-process communication, leading to false positives. Identify these applications
+    and create exceptions for their specific processes.
+
+    - Some system monitoring or management tools might utilize these signals for legitimate
+    process management tasks. Review the tools in use and whitelist their activities
+    if they are verified as non-threatening.
+
+    - Development environments or testing framew'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/m0nad/Diamorphine/blob/master/diamorphine.c#L302
+- https://www.elastic.co/security-labs/linux-detection-engineering-with-auditd
+has_investigation_guide: true
+risk_score: 47

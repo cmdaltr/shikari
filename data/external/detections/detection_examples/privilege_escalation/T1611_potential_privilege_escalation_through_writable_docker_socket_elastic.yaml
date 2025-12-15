@@ -1,0 +1,54 @@
+technique_id: T1611
+technique_name: Potential Privilege Escalation through Writable Docker Socket
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and event.action\
+  \ in (\"exec\", \"ProcessRollup2\") and\n(\n  (process.name == \"docker\" and process.args\
+  \ : \"run\" and process.args : \"-it\"  and\n   process.args : (\"unix://*/docker.sock\"\
+  , \"unix://*/dockershim.sock\")) or\n  (process.name == \"socat\" and process.args\
+  \ : (\"UNIX-CONNECT:*/docker.sock\", \"UNIX-CONNECT:*/dockershim.sock\"))\n) and\
+  \ not user.Ext.real.id : \"0\" and not group.Ext.real.id : \"0\""
+explanation: 'This rule monitors for the usage of Docker runtime sockets to escalate
+  privileges on Linux systems. Docker sockets by
+
+  default are only be writable by the root user and docker group. Attackers that have
+  permissions to write to these
+
+  sockets may be able to create and run a container that allows them to escalate privileges
+  and gain further access onto
+
+  the host file system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7acb2de3-8465-472a-8d9c-ccd7b73d0ed8.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks by non-root users with elevated permissions
+    can trigger the rule. To manage this, identify trusted users or groups who regularly
+    perform such tasks and create exceptions for their activities.
+
+    - Automated scripts or services that require Docker socket access for legitimate
+    operations may be flagged. Review these scripts or services and whitelist their
+    specific process names or arguments to prevent false positives.
+
+    - Development environmen'
+  mitigation: Review investigation guide for details
+references:
+- https://book.hacktricks.xyz/linux-hardening/privilege-escalation/docker-security/docker-breakout-privilege-escalation#automatic-enumeration-and-escape
+has_investigation_guide: true
+risk_score: 47

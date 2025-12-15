@@ -1,0 +1,68 @@
+technique_id: T1053
+technique_name: Suspicious Execution via Scheduled Task
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \    /* Schedule service cmdline on Win10+ */\n    process.parent.name : \"svchost.exe\"\
+  \ and process.parent.args : \"Schedule\" and\n    /* add suspicious programs here\
+  \ */\n    process.pe.original_file_name in\n                                (\n\
+  \                                  \"cscript.exe\",\n                          \
+  \        \"wscript.exe\",\n                                  \"PowerShell.EXE\"\
+  ,\n                                  \"Cmd.Exe\",\n                            \
+  \      \"MSHTA.EXE\",\n                                  \"RUNDLL32.EXE\",\n   \
+  \                               \"REGSVR32.EXE\",\n                            \
+  \      \"MSBuild.exe\",\n                                  \"InstallUtil.exe\",\n\
+  \                                  \"RegAsm.exe\",\n                           \
+  \       \"RegSvcs.exe\",\n                                  \"msxsl.exe\",\n   \
+  \                               \"CONTROL.EXE\",\n                             \
+  \     \"EXPLORER.EXE\",\n                                  \"Microsoft.Workflow.Compiler.exe\"\
+  ,\n                                  \"msiexec.exe\"\n                         \
+  \         ) and\n    /* add suspicious paths here */\n    process.args : (\n   \
+  \    \"C:\\\\Users\\\\*\",\n       \"C:\\\\ProgramData\\\\*\",\n       \"C:\\\\\
+  Windows\\\\Temp\\\\*\",\n       \"C:\\\\Windows\\\\Tasks\\\\*\",\n       \"C:\\\\\
+  PerfLogs\\\\*\",\n       \"C:\\\\Intel\\\\*\",\n       \"C:\\\\Windows\\\\Debug\\\
+  \\*\",\n       \"C:\\\\HP\\\\*\") and\n\n    not (process.name : \"cmd.exe\" and\
+  \ process.args : \"?:\\\\*.bat\" and process.working_directory : \"?:\\\\Windows\\\
+  \\System32\\\\\") and\n    not (process.name : \"cscript.exe\" and process.args\
+  \ : \"?:\\\\Windows\\\\system32\\\\calluxxprovider.vbs\") and\n    not (\n     \
+  \  process.name : \"powershell.exe\" and\n       process.args : (\n           \"\
+  -File\", \"-PSConsoleFile\",\n           \"C:\\\\ProgramData\\\\Microsoft\\\\AutopatchSetupScheduled\\\
+  \\SetupAutopatchClientV2Package.ps1\",\n           \"C:\\\\ProgramData\\\\Microsoft\\\
+  \\AutopatchSetupScheduled\\\\SetupAutopatchClientPackage.ps1\"                \n\
+  \       ) and user.id : \"S-1-5-18\"\n    ) and\n    not (process.name : \"msiexec.exe\"\
+  \ and user.id : \"S-1-5-18\")"
+explanation: Identifies execution of a suspicious program via scheduled tasks by looking
+  at process lineage and command line usage.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5d1d6907-0747-4d5d-9b24-e4a18853dc0a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Scheduled tasks running legitimate scripts or executables like cmd.exe or cscript.exe
+    in system directories may trigger false positives. To manage this, create exceptions
+    for these processes when they are executed from known safe directories such as
+    C:\Windows\System32.
+
+    - PowerShell scripts executed by the system account (S-1-5-18) for administrative
+    tasks can be mistakenly flagged. Exclude these by specifying exceptions for PowerShell
+    executions with arguments like -F'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/elastic-protects-against-data-wiper-malware-targeting-ukraine-hermeticwiper
+has_investigation_guide: true
+risk_score: 47

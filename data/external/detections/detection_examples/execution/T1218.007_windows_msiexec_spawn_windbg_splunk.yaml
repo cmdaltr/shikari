@@ -1,0 +1,51 @@
+technique_id: T1218.007
+technique_name: Windows MSIExec Spawn WinDBG
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.parent_process_name=msiexec.exe
+  Processes.process_name=windbg.exe by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`| `windows_msiexec_spawn_windbg_filter`'
+explanation: The following analytic identifies the unusual behavior of MSIExec spawning
+  WinDBG. It detects this activity by analyzing endpoint telemetry data, specifically
+  looking for instances where 'msiexec.exe' is the parent process of 'windbg.exe'.
+  This behavior is significant as it may indicate an attempt to debug or tamper with
+  system processes, which is uncommon in typical user activity and could signify malicious
+  intent. If confirmed malicious, this activity could allow an attacker to manipulate
+  or inspect running processes, potentially leading to privilege escalation or persistence
+  within the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/9a18f7c2-1fe3-47b8-9467-8b3976770a30/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives will only be present if the MSIExec process legitimately
+    spawns WinDBG. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://github.com/PaloAltoNetworks/Unit42-timely-threat-intel/blob/main/2023-10-25-IOCs-from-DarkGate-activity.txt
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1218.007/atomic_red_team/windbg_msiexec.log

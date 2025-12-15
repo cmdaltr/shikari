@@ -1,0 +1,51 @@
+technique_id: T1562.002
+technique_name: Change Winevt Channel Access Permission Via Registry
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 7d9263bd-dc47-4a58-bc92-5474abab390c
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_tiworker:\n  Image|endswith: \\TiWorker.exe\n  Image|startswith:\
+  \ C:\\Windows\\WinSxS\\\nfilter_main_trustedinstaller:\n  Image: C:\\Windows\\servicing\\\
+  TrustedInstaller.exe\nselection:\n  Details|contains:\n  - (A;;0x1;;;LA)\n  - (A;;0x1;;;SY)\n\
+  \  - (A;;0x5;;;BA)\n  TargetObject|contains: \\Microsoft\\Windows\\CurrentVersion\\\
+  WINEVT\\Channels\\\n  TargetObject|endswith: \\ChannelAccess\n"
+explanation: Detects tampering with the "ChannelAccess" registry key in order to change
+  access to Windows event channel.
+false_positives:
+- Unknown
+references:
+- https://app.any.run/tasks/77b2e328-8f36-46b2-b2e2-8a80398217ab/
+- https://learn.microsoft.com/en-us/windows/win32/api/winevt/
+- https://itconnect.uw.edu/tools-services-support/it-systems-infrastructure/msinf/other-help/understanding-sddl-syntax/
+tags:
+- attack.defense-evasion
+- attack.t1562.002
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains: \Microsoft\Windows\CurrentVersion\WINEVT\Channels\
+    TargetObject|endswith: \ChannelAccess
+    Details|contains:
+    - (A;;0x1;;;LA)
+    - (A;;0x1;;;SY)
+    - (A;;0x5;;;BA)
+  filter_main_trustedinstaller:
+    Image: C:\Windows\servicing\TrustedInstaller.exe
+  filter_main_tiworker:
+    Image|startswith: C:\Windows\WinSxS\
+    Image|endswith: \TiWorker.exe
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2022-09-17
+  modified_date: 2024-03-25
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

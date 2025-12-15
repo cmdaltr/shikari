@@ -1,0 +1,49 @@
+technique_id: T1071.001
+technique_name: Default Cobalt Strike Team Server Certificate
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "(event.dataset: network_traffic.tls or event.category: (network or network_traffic))\n\
+  \  and (tls.server.hash.md5:950098276A495286EB2A2556FBAB6D83\n  or tls.server.hash.sha1:6ECE5ECE4192683D2D84E25B0BA7E04F9CB7EB7C\n\
+  \  or tls.server.hash.sha256:87F2085C32B6A2CC709B365F55873E207A9CAA10BFFECF2FD16D3CF9D94D390C)"
+explanation: 'This rule detects the use of the default Cobalt Strike Team Server TLS
+  certificate. Cobalt Strike is software for
+
+  Adversary Simulations and Red Team Operations which are security assessments that
+  replicate the tactics and techniques
+
+  of an advanced adversary in a network. Modifications to the Packetbeat configuration
+  can be made to include MD5 and
+
+  SHA256 hashing algorithms (the default is SHA1). See the References section for
+  additional information on module
+
+  configuration.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e7075e8d-a966-458e-a183-85cd331af255.toml
+query_type: query
+query_language: kuery
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate security testing activities by internal teams using Cobalt Strike
+    may trigger the rule. Coordinate with security teams to whitelist known testing
+    IP addresses or certificate hashes.
+
+    - Some commercial penetration testing services may use Cobalt Strike with default
+    certificates. Verify the legitimacy of such services and exclude their traffic
+    from detection by adding their certificate hashes to an exception list.
+
+    - Network appliances or security tools that sim'
+  mitigation: Review investigation guide for details
+references:
+- https://attack.mitre.org/software/S0154/
+- https://www.cobaltstrike.com/help-setup-collaboration
+- https://www.elastic.co/guide/en/beats/packetbeat/current/configuration-tls.html
+- https://www.elastic.co/guide/en/beats/filebeat/7.9/filebeat-module-suricata.html
+- https://www.elastic.co/guide/en/beats/filebeat/7.9/filebeat-module-zeek.html
+- https://www.elastic.co/security-labs/collecting-cobalt-strike-beacons-with-the-elastic-stack
+has_investigation_guide: true
+risk_score: 73

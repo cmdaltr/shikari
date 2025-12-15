@@ -1,0 +1,63 @@
+technique_id: T1069
+technique_name: BloodHound Suite User-Agents Detected
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "any where event.dataset : (\n    \"azure.activitylogs\",\n    \"azure.graphactivitylogs\"\
+  ,\n    \"azure.auditlogs\",\n    \"azure.signinlogs\",\n    \"o365.audit\"\n) and\
+  \ user_agent.original regex~ \"(azure|sharp|blood)(hound)/.*\""
+explanation: 'Identifies potential enumeration activity using AzureHound, SharpHound,
+  or BloodHound across Microsoft cloud services.
+
+  These tools are often used by red teamers and adversaries to map users, groups,
+  roles, applications, and access
+
+  relationships within Microsoft Entra ID (Azure AD) and Microsoft 365.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c28750fa-4092-11f0-aca6-f661ea17fbcd.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Azure Activity Logs
+  confidence: high
+- type: data_source
+  value: Graph API
+  confidence: high
+- type: data_source
+  value: Graph API Activity Logs
+  confidence: high
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+- type: data_source
+  value: Microsoft 365 Audit Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Audit Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Sign-in Logs
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity may be benign if performed\
+    \ by red teams, internal security auditors, or known security tools under authorization.\n\
+    - Automated monitoring solutions, cloud posture scanners, or legitimate Azure/M365\
+    \ integrations may generate similar traffic. Review the `app_id` and user context.\n\
+    - Developer activity in test tenants may include tool usage for learning or validation\
+    \ purposes.\n\n### Response and remediation\n\n- If confirmed malicious:\n   \
+    \ - Revoke active session"
+  mitigation: Review investigation guide for details
+references:
+- https://specterops.io/bloodhound-overview/
+- https://github.com/SpecterOps/AzureHound
+- https://www.microsoft.com/en-us/security/blog/2025/05/27/new-russia-affiliated-actor-void-blizzard-targets-critical-sectors-for-espionage/
+has_investigation_guide: true
+risk_score: 47

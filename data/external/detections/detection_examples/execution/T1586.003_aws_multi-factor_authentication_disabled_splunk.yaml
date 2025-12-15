@@ -1,0 +1,40 @@
+technique_id: T1586.003
+technique_name: AWS Multi-Factor Authentication Disabled
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`cloudtrail` (eventName= DeleteVirtualMFADevice OR eventName=DeactivateMFADevice)
+  | rename user_name as user | stats count min(_time) as firstTime max(_time) as lastTime
+  by signature dest user user_agent src vendor_account vendor_region vendor_product
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `aws_multi_factor_authentication_disabled_filter`'
+explanation: The following analytic detects attempts to disable multi-factor authentication
+  (MFA) for an AWS IAM user. It leverages AWS CloudTrail logs to identify events where
+  MFA devices are deleted or deactivated. This activity is significant because disabling
+  MFA can indicate an adversary attempting to weaken account security, potentially
+  to maintain persistence using a compromised account. If confirmed malicious, this
+  action could allow attackers to retain access to the AWS environment without detection,
+  posing a significant risk to the security and integrity of the cloud infrastructure.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/374832b1-3603-420c-b456-b373e24d34c0/
+indicators:
+- type: data_source
+  value: AWS CloudTrail DeleteVirtualMFADevice
+  confidence: high
+- type: data_source
+  value: AWS CloudTrail DeactivateMFADevice
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: AWS Administrators may disable MFA but it is highly unlikely for this
+    event to occur without prior notice to the company
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1621/
+- https://aws.amazon.com/what-is/mfa/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1621/aws_mfa_disabled/cloudtrail.json

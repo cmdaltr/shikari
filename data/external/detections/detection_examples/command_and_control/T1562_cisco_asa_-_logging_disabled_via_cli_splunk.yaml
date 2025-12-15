@@ -1,0 +1,54 @@
+technique_id: T1562
+technique_name: Cisco ASA - Logging Disabled via CLI
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "`cisco_asa`\n| rex \"%ASA-[^-]+-\\d+-(?<message_id>\\d+):\" \n| search message_id\
+  \ IN (111009,111010,111008) \n| rex field=_raw \"executed (?:the command )?(?<asa_command>.+)$\"\
+  \ \n| search asa_command IN (\"*no logging*\",\"*logging disable*\",\"*clear logging*\"\
+  ,\"*no logging host*\",\"*no logging trap*\") \n| stats earliest(_time) as firstTime\
+  \ latest(_time) as lastTime values(user) as user values(action) as action values(asa_command)\
+  \ as commands values(src_ip) as src_ip values(process_name) as process_name by host\
+  \ \n| `security_content_ctime(firstTime)` \n| `security_content_ctime(lastTime)`\
+  \  \n| `cisco_asa___logging_disabled_via_cli_filter`"
+explanation: 'This analytic detects the disabling of logging functionality on a Cisco
+  ASA device
+
+  through CLI commands. Adversaries or malicious insiders may attempt to disable logging
+
+  to evade detection and hide malicious activity. The detection looks for specific
+  ASA
+
+  syslog message IDs (111009, 111010, 111008) associated with command execution,
+
+  combined with suspicious commands such as `no logging`, `logging disable`,
+
+  `clear logging`, or `no logging host`. Disabling logging on a firewall or security
+  device
+
+  is a strong indicator of defense evasion.'
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/7b4c9f3e-5a88-4b7b-9c4b-94d8e5d67201/
+indicators:
+- type: data_source
+  value: Cisco ASA Logs
+  confidence: high
+- type: risk_system
+  value: host
+  confidence: high
+false_positives:
+- description: 'Administrators may intentionally disable or modify logging during
+    maintenance,
+
+    troubleshooting, or device reconfiguration. These events should be verified
+
+    against approved change management activities.'
+  mitigation: Review context and user activity
+references:
+- https://www.cisco.com/site/us/en/products/security/firewalls/adaptive-security-appliance-asa-software/index.html
+- https://sec.cloudapps.cisco.com/security/center/resources/asa_ftd_continued_attacks
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/cisco_asa/arcane_door/cisco_asa.log

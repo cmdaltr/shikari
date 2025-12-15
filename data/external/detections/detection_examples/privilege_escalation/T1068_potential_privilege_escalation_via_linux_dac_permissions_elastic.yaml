@@ -1,0 +1,53 @@
+technique_id: T1068
+technique_name: Potential Privilege Escalation via Linux DAC permissions
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.category:process and host.os.type:linux and event.type:start and event.action:exec\
+  \ and\n(process.thread.capabilities.permitted:CAP_DAC_* or process.thread.capabilities.effective:\
+  \ CAP_DAC_*) and\nprocess.command_line:(*sudoers* or *passwd* or *shadow* or */root/.ssh*)\
+  \ and not (\n  user.id : \"0\" or\n  process.name : (\n    \"tar\" or \"getent\"\
+  \ or \"su\" or \"stat\" or \"dirname\" or \"chown\" or \"sudo\" or \"dpkg-split\"\
+  \ or \"dpkg-deb\" or \"dpkg\" or\n    \"podman\" or \"awk\" or \"passwd\" or \"\
+  dpkg-maintscript-helper\" or \"mutt_dotlock\" or \"nscd\" or \"logger\" or \"gpasswd\"\
+  \n  ) or\n  process.executable : /usr/lib/*/lxc/rootfs/* or\n  process.parent.name\
+  \ : (\n    \"dpkg\" or \"java\" or *postinst or \"dpkg-preconfigure\" or \"gnome-shell\"\
+  \n  )\n)"
+explanation: 'Identifies potential privilege escalation exploitation of DAC (Discretionary
+  access control) file permissions. The rule
+
+  identifies exploitation of DAC checks on sensitive file paths via suspicious processes
+  whose capabilities include
+
+  CAP_DAC_OVERRIDE (where a process can bypass all read write and execution checks)
+  or CAP_DAC_READ_SEARCH (where a
+
+  process can read any file or perform any executable permission on the directories).'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f7c70f2e-4616-439c-85ac-5b98415042fe.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Processes like "tar", "getent", "su", and others listed in the rule are known
+    to perform legitimate operations on sensitive files. Exclude these processes from
+    triggering alerts by adding them to the exception list in the detection rule.
+
+    - System management tools such as "dpkg" and "podman" may access sensitive files
+    during routine operations. Consider excluding these tools if they are part of
+    regular system maintenance activities.
+
+    - Processes running under user ID "0"'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

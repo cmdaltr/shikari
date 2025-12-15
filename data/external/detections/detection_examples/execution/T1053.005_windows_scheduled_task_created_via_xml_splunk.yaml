@@ -1,0 +1,57 @@
+technique_id: T1053.005
+technique_name: Windows Scheduled Task Created Via XML
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: "| tstats `security_content_summariesonly` \n  count min(_time) as firstTime\n\
+  \        max(_time) as lastTime\n\nfrom datamodel=Endpoint.Processes where \n\n\
+  `process_schtasks`\nProcesses.process IN (\"* /create *\", \"* -create *\")\nProcesses.process\
+  \ IN (\"* /xml *\", \"* -xml *\")\n\nby Processes.action Processes.dest Processes.original_file_name\
+  \ Processes.parent_process \n   Processes.parent_process_exec Processes.parent_process_guid\
+  \ Processes.parent_process_id \n   Processes.parent_process_name Processes.parent_process_path\
+  \ Processes.process Processes.process_exec \n   Processes.process_guid Processes.process_hash\
+  \ Processes.process_id Processes.process_integrity_level \n   Processes.process_name\
+  \ Processes.process_path Processes.user Processes.user_id Processes.vendor_product\n\
+  \n| `drop_dm_object_name(Processes)` \n| `security_content_ctime(firstTime)` \n\
+  | `security_content_ctime(lastTime)`\n| `windows_scheduled_task_created_via_xml_filter`"
+explanation: 'The following analytic detects the creation of scheduled tasks in Windows
+  using schtasks.exe with the "XML" parameter.
+
+  This detection leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on command-line executions and process details.
+
+  This activity is significant as it is a common technique for establishing persistence
+  or achieving privilege escalation, often used by malware like Trickbot and Winter-Vivern.
+  While creating a scheduled task via XML may be legitimate, it can also be abused
+  by attackers. If confirmed malicious, this could allow attackers to maintain access,
+  execute additional payloads, and potentially lead to data theft or ransomware deployment.'
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/7e03b682-3965-4598-8e91-a60a40a3f7e4/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Installers are known to create scheduled tasks via XML. Apply additional
+    filters as needed.
+  mitigation: Review context and user activity
+references:
+- https://twitter.com/_CERT_UA/status/1620781684257091584
+- https://cert.gov.ua/article/3761104
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/winter-vivern/scheduledtask/sysmon.log

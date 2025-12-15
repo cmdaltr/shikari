@@ -1,0 +1,47 @@
+technique_id: T1098.003
+technique_name: O365 Admin Consent Bypassed by Service Principal
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=AzureActiveDirectory Operation="Add app
+  role assignment to service principal." | eval len=mvcount(''Actor{}.ID'') | eval
+  userType = mvindex(''Actor{}.ID'',len-1) | eval roleId = mvindex(''ModifiedProperties{}.NewValue'',
+  0) | eval roleValue = mvindex(''ModifiedProperties{}.NewValue'', 1) | eval roleDescription
+  = mvindex(''ModifiedProperties{}.NewValue'', 2) | eval dest_user = mvindex(''Target{}.ID'',
+  0) | search userType = "ServicePrincipal" | eval src_user = user | fillnull | stats
+  count min(_time) as firstTime max(_time) as lastTime by signature dest user src
+  vendor_account vendor_product dest_user roleId roleValue roleDescription | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `o365_admin_consent_bypassed_by_service_principal_filter`'
+explanation: The following analytic identifies instances where a service principal
+  in Office 365 Azure Active Directory assigns app roles without standard admin consent.
+  It leverages `o365_management_activity` logs, specifically focusing on the 'Add
+  app role assignment to service principal' operation. This activity is significant
+  for SOCs as it may indicate a bypass of critical administrative controls, potentially
+  leading to unauthorized access or privilege escalation. If confirmed malicious,
+  this could allow an attacker to misuse automated processes to assign sensitive permissions,
+  compromising the security of the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8a1b22eb-50ce-4e26-a691-97ff52349569/
+indicators:
+- type: data_source
+  value: O365 Add app role assignment to service principal.
+  confidence: high
+- type: risk_user
+  value: dest_user
+  confidence: high
+false_positives:
+- description: Service Principals are sometimes configured to legitimately bypass
+    the consent process for purposes of automation. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1098/003/
+- https://msrc.microsoft.com/blog/2024/01/microsoft-actions-following-attack-by-nation-state-actor-midnight-blizzard/
+- https://www.microsoft.com/en-us/security/blog/2024/01/25/midnight-blizzard-guidance-for-responders-on-nation-state-attack/
+- https://attack.mitre.org/techniques/T1098/002/
+- https://www.microsoft.com/en-us/security/blog/2024/01/25/midnight-blizzard-guidance-for-responders-on-nation-state-attack/
+- https://winsmarts.com/how-to-grant-admin-consent-to-an-api-programmatically-e32f4a100e9d
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1098.003/o365_bypass_admin_consent/o365_bypass_admin_consent.log

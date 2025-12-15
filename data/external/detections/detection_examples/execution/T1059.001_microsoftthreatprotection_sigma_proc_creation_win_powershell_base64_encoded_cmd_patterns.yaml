@@ -1,0 +1,66 @@
+technique_id: T1059.001
+technique_name: Suspicious PowerShell Encoded Command Patterns
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: b9d9cc83-380b-4ba3-8d8f-60c0e7e2930c
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_* and\
+  \ not 1 of filter_*\nfilter_gcworker:\n  ParentImage|contains:\n  - C:\\Packages\\\
+  Plugins\\Microsoft.GuestConfiguration.ConfigurationforWindows\\\n  - \\gc_worker.exe\n\
+  selection_encoded:\n  CommandLine|contains:\n  - ' JAB'\n  - ' SUVYI'\n  - ' SQBFAFgA'\n\
+  \  - ' aWV4I'\n  - ' IAB'\n  - ' PAA'\n  - ' aQBlAHgA'\nselection_flags:\n  CommandLine|contains:\n\
+  \  - ' -e '\n  - ' -en '\n  - ' -enc '\n  - ' -enco'\nselection_img:\n- Image|endswith:\n\
+  \  - \\powershell.exe\n  - \\pwsh.exe\n- OriginalFileName:\n  - PowerShell.Exe\n\
+  \  - pwsh.dll\n"
+explanation: Detects PowerShell command line patterns in combincation with encoded
+  commands that often appear in malware infection chains
+false_positives:
+- Other tools that work with encoded scripts in the command line instead of script
+  files
+references:
+- https://app.any.run/tasks/b9040c63-c140-479b-ad59-f1bb56ce7a97/
+tags:
+- attack.execution
+- attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith:
+    - \powershell.exe
+    - \pwsh.exe
+  - OriginalFileName:
+    - PowerShell.Exe
+    - pwsh.dll
+  selection_flags:
+    CommandLine|contains:
+    - ' -e '
+    - ' -en '
+    - ' -enc '
+    - ' -enco'
+  selection_encoded:
+    CommandLine|contains:
+    - ' JAB'
+    - ' SUVYI'
+    - ' SQBFAFgA'
+    - ' aWV4I'
+    - ' IAB'
+    - ' PAA'
+    - ' aQBlAHgA'
+  filter_gcworker:
+    ParentImage|contains:
+    - C:\Packages\Plugins\Microsoft.GuestConfiguration.ConfigurationforWindows\
+    - \gc_worker.exe
+  condition: all of selection_* and not 1 of filter_*
+metadata:
+  created_date: 2022-05-24
+  modified_date: 2023-01-05
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,42 @@
+technique_id: T1556
+technique_name: Cisco Duo Policy Deny Access
+tactic: lateral_movement
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`cisco_duo_administrator` action=policy_update OR action=policy_create | spath
+  input=description | search auth_status="Deny access" | rename object as user | stats
+  count min(_time) as firstTime max(_time) as lastTime by action actionlabel description
+  user admin_email | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `cisco_duo_policy_deny_access_filter`'
+explanation: The following analytic identifies instances where a Duo administrator
+  creates or updates a policy to explicitly deny user access within the Duo environment.
+  It detects this behavior by searching Duo administrator activity logs for policy
+  creation or update actions where the authentication status is set to "Deny access."
+  By correlating these events with user and admin details, the analytic highlights
+  potential misuse or malicious changes to access policies. This behavior is critical
+  for a SOC to monitor, as unauthorized or suspicious denial of access policies can
+  indicate insider threats, account compromise, or attempts to disrupt legitimate
+  user access. The impact of such an attack may include denial of service to critical
+  accounts, disruption of business operations, or the masking of further malicious
+  activity by preventing targeted users from accessing resources. Early detection
+  enables rapid investigation and remediation to maintain organizational security
+  and availability.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/abf39464-ed43-4d69-a56c-02750032a3fb/
+indicators:
+- type: data_source
+  value: Cisco Duo Administrator
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://splunkbase.splunk.com/app/7404
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1556/cisco_duo_policy_deny_access/cisco_duo_administrator.json

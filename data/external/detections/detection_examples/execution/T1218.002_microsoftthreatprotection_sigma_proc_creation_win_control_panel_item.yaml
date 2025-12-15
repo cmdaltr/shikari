@@ -1,0 +1,60 @@
+technique_id: T1218.002
+technique_name: Control Panel Items
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: 0ba863e6-def5-4e50-9cea-4dd8c7dc46a4
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_reg_*\
+  \ or (selection_cpl and not 1 of filter_cpl_*)\nfilter_cpl_igfx:\n  CommandLine|contains|all:\n\
+  \  - 'regsvr32 '\n  - ' /s '\n  - igfxCPL.cpl\nfilter_cpl_sys:\n  CommandLine|contains:\n\
+  \  - \\System32\\\n  - '%System%'\n  - '|C:\\Windows\\system32|'\nselection_cpl:\n\
+  \  CommandLine|endswith: .cpl\nselection_reg_cli:\n  CommandLine|contains|all:\n\
+  \  - add\n  - CurrentVersion\\Control Panel\\CPLs\nselection_reg_img:\n- Image|endswith:\
+  \ \\reg.exe\n- OriginalFileName: reg.exe\n"
+explanation: Detects the malicious use of a control panel item
+false_positives:
+- Unknown
+references:
+- https://ired.team/offensive-security/code-execution/code-execution-through-control-panel-add-ins
+tags:
+- attack.privilege-escalation
+- attack.execution
+- attack.defense-evasion
+- attack.t1218.002
+- attack.persistence
+- attack.t1546
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_reg_img:
+  - Image|endswith: \reg.exe
+  - OriginalFileName: reg.exe
+  selection_reg_cli:
+    CommandLine|contains|all:
+    - add
+    - CurrentVersion\Control Panel\CPLs
+  selection_cpl:
+    CommandLine|endswith: .cpl
+  filter_cpl_sys:
+    CommandLine|contains:
+    - \System32\
+    - '%System%'
+    - '|C:\Windows\system32|'
+  filter_cpl_igfx:
+    CommandLine|contains|all:
+    - 'regsvr32 '
+    - ' /s '
+    - igfxCPL.cpl
+  condition: all of selection_reg_* or (selection_cpl and not 1 of filter_cpl_*)
+metadata:
+  created_date: 2020-06-22
+  modified_date: 2023-10-11
+  author: Kyaw Min Thein, Furkan Caliskan (@caliskanfurkan_)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,37 @@
+technique_id: T1556
+technique_name: O365 Excessive SSO logon errors
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=AzureActiveDirectory LogonError=*Sso*
+  Operation=UserLoginFailed | stats count min(_time) as firstTime max(_time) as lastTime
+  values(user) as user by src vendor_account vendor_product dest signature user_agent
+  | where count >= 5 | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `o365_excessive_sso_logon_errors_filter`'
+explanation: The following analytic detects accounts experiencing a high number of
+  Single Sign-On (SSO) logon errors. It leverages data from the `o365_management_activity`
+  dataset, focusing on failed user login attempts with SSO errors. This activity is
+  significant as it may indicate brute-force attempts or the hijacking/reuse of SSO
+  tokens. If confirmed malicious, attackers could potentially gain unauthorized access
+  to user accounts, leading to data breaches, privilege escalation, or further lateral
+  movement within the organization.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8158ccc4-6038-11eb-ae93-0242ac130002/
+indicators:
+- type: data_source
+  value: O365 UserLoginFailed
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Logon errors may not be malicious in nature however it may indicate
+    attempts to reuse a token or password obtained via credential access attack.
+  mitigation: Review context and user activity
+references:
+- https://stealthbits.com/blog/bypassing-mfa-with-pass-the-cookie/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1556/o365_sso_logon_errors/o365_sso_logon_errors2.json

@@ -1,0 +1,52 @@
+technique_id: T1546.012
+technique_name: Potential Persistence Via GlobalFlags
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 36803969-5421-41ec-b92f-8500f79c23b0
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_*\nselection_global_flag:\n\
+  \  TargetObject|contains|all:\n  - \\Microsoft\\Windows NT\\CurrentVersion\\\n \
+  \ - \\Image File Execution Options\\\n  - \\GlobalFlag\nselection_silent_process:\n\
+  \  TargetObject|contains:\n  - \\ReportingMode\n  - \\MonitorProcess\n  TargetObject|contains|all:\n\
+  \  - \\Microsoft\\Windows NT\\CurrentVersion\\\n  - \\SilentProcessExit\\\n"
+explanation: Detects registry persistence technique using the GlobalFlags and SilentProcessExit
+  keys
+false_positives:
+- Unknown
+references:
+- https://oddvar.moe/2018/04/10/persistence-using-globalflags-in-image-file-execution-options-hidden-from-autoruns-exe/
+- https://www.deepinstinct.com/2021/02/16/lsass-memory-dumps-are-stealthier-than-ever-before-part-2/
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.defense-evasion
+- attack.t1546.012
+- car.2013-01-002
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection_global_flag:
+    TargetObject|contains|all:
+    - \Microsoft\Windows NT\CurrentVersion\
+    - \Image File Execution Options\
+    - \GlobalFlag
+  selection_silent_process:
+    TargetObject|contains|all:
+    - \Microsoft\Windows NT\CurrentVersion\
+    - \SilentProcessExit\
+    TargetObject|contains:
+    - \ReportingMode
+    - \MonitorProcess
+  condition: 1 of selection_*
+metadata:
+  created_date: 2018-04-11
+  modified_date: 2023-06-05
+  author: Karneades, Jonhnathan Ribeiro, Florian Roth
+  status: test
+  imported_date: '2025-11-28'

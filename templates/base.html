@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+    <title>{% block title %}Archer{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='favicon-32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}?v={{ request.app.state.asset_version }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}?v={{ request.app.state.asset_version }}">
+    <style>
+        /* Ensure consistent positioning across all browsers */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        #container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #main-content {
+            flex: 1;
+        }
+
+        /* Dark mode CSS variables */
+        :root[data-theme="light"] {
+            --bg-primary: #f7fafc;
+            --bg-secondary: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-tertiary: #999999;
+            --border-color: #e2e8f0;
+            --shadow: rgba(0,0,0,0.08);
+            --accent: #C53030;
+        }
+
+        :root[data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #f0f0f0;
+            --text-secondary: #b0b0b0;
+            --text-tertiary: #808080;
+            --border-color: #404040;
+            --shadow: rgba(0,0,0,0.3);
+            --accent: #ff6b6b;
+        }
+
+        /* Global navigation buttons */
+        .global-nav-controls {
+            position: fixed;
+            top: 28px;
+            right: max(2em, calc((100vw - 1320px) / 2 + 2em));
+            z-index: 10001;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Adjust on smaller screens */
+        @media (max-width: 1400px) {
+            .global-nav-controls {
+                right: auto;
+                left: 20px;
+                top: 70px;
+            }
+        }
+
+        .nav-icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            min-height: 40px;
+            padding: 8px;
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
+
+        [data-theme="dark"] .nav-icon-btn {
+            background: rgba(45, 45, 45, 0.95);
+        }
+
+        .nav-icon-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .nav-icon-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Dark header bar at top - matches footer styling */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 85px;
+            background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+            z-index: 999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border-bottom: 3px solid var(--accent);
+        }
+
+        [data-theme="dark"] body::before {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        /* Logo at top center */
+        .header-logo-container {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-55%);
+            z-index: 1000;
+        }
+
+        .header-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .header-logo:hover {
+            opacity: 0.8;
+        }
+
+        .header-logo img {
+            width: auto;
+            height: 50px;
+            max-width: none;
+            object-fit: contain;
+            filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .header-logo h1 {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 33.6px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: #ffffff;
+            margin: 0;
+            text-shadow: 0px 1px 3px rgba(0,0,0,0.15);
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help for authenticated, Login|Home|Dark|Help for guests) -->
+    <div class="global-nav-controls">
+        {% if user %}
+        <a href="/library" class="nav-icon-btn" aria-label="Library" title="Library">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+        </a>
+        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+        </a>
+        <a href="/logout" class="nav-icon-btn" aria-label="Logout" title="Logout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+        </a>
+        <a href="/profile" class="nav-icon-btn" aria-label="Profile" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        </a>
+        {% else %}
+        <a href="/login?next_url={{ ((request.url.path + '?' + request.url.query) if request.url.query else request.url.path) | urlencode }}" class="nav-icon-btn" aria-label="Login" title="Login">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+        </a>
+        <a href="/" class="nav-icon-btn" aria-label="Home" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+        </a>
+        {% endif %}
+        <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        </button>
+        <a href="/how-it-works" class="nav-icon-btn" aria-label="Help" title="Help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        </a>
+    </div>
+
+    <!-- Logo at top center -->
+    <div class="header-logo-container">
+        <a href="/" class="header-logo">
+            <img src="{{ url_for('static', path='images/archer_banner.png') }}" alt="Archer" style="height: 60px; width: auto;">
+        </a>
+    </div>
+
+    <div id="container">
+        <div id="main-content" class="{% block main_class %}centered{% endblock %}">
+          {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Local LLM Detection Modal -->
+    <div id="llm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10003; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); max-width: 550px; width: 90%; padding: 0; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 2em;">🤖</div>
+                    <h2 style="margin: 0; font-size: 1.5em; font-weight: 600;">Local LLM Detected</h2>
+                </div>
+            </div>
+
+            <div style="padding: 24px;">
+                <p style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">
+                    Archer detected a local LLM running at:
+                </p>
+                <div id="llm-details" style="background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 6px; padding: 12px; margin-bottom: 20px;">
+                    <strong id="llm-name" style="color: #1f2937;"></strong>
+                    <br>
+                    <span id="llm-url" style="color: #6b7280; font-size: 0.9em; font-family: monospace;"></span>
+                </div>
+
+                <p style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">
+                    Would you like to use it for AI-powered detection generation?
+                </p>
+
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+                    <p style="margin: 0; font-weight: 600; color: #1e40af; font-size: 0.95em; margin-bottom: 6px;">Benefits:</p>
+                    <ul style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 0.9em; line-height: 1.5;">
+                        <li>Enhanced query quality and accuracy</li>
+                        <li>Better indicator extraction from threat intel</li>
+                        <li>Privacy: all data stays local</li>
+                    </ul>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <button id="llm-yes-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                        Yes, Use Local LLM
+                    </button>
+                    <button id="llm-no-btn" style="flex: 1; background: #6b7280; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                        No, Use Heuristic
+                    </button>
+                </div>
+
+                <label style="display: flex; align-items: center; gap: 8px; color: #666; font-size: 0.9em; cursor: pointer;">
+                    <input type="checkbox" id="llm-dont-ask" style="width: 16px; height: 16px; cursor: pointer;">
+                    Don't ask me again
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
+        // Dark mode functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const sunIcon = darkModeToggle.querySelector('.sun-icon');
+        const moonIcon = darkModeToggle.querySelector('.moon-icon');
+        const html = document.documentElement;
+
+        // Check for saved theme preference or default to 'light'
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', currentTheme);
+        updateIcons(currentTheme);
+
+        darkModeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcons(newTheme);
+        });
+
+        function updateIcons(theme) {
+            if (theme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            }
+        }
+    </script>
+
+    <!-- Local LLM Detection Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user has already answered
+            const llmPreference = localStorage.getItem('llm_preference');
+
+            if (llmPreference) {
+                // User has already set preference, don't show modal
+                return;
+            }
+
+            // Check if local LLM is available
+            fetch('/api/llm/detect')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.available) {
+                        // Show modal
+                        const modal = document.getElementById('llm-modal');
+                        const llmName = document.getElementById('llm-name');
+                        const llmUrl = document.getElementById('llm-url');
+                        const yesBtn = document.getElementById('llm-yes-btn');
+                        const noBtn = document.getElementById('llm-no-btn');
+                        const dontAskCheckbox = document.getElementById('llm-dont-ask');
+
+                        llmName.textContent = data.name;
+                        llmUrl.textContent = data.url;
+                        modal.style.display = 'flex';
+
+                        // Button handlers
+                        yesBtn.addEventListener('click', function() {
+                            saveLLMPreference(true, dontAskCheckbox.checked);
+                            modal.style.display = 'none';
+                        });
+
+                        noBtn.addEventListener('click', function() {
+                            saveLLMPreference(false, dontAskCheckbox.checked);
+                            modal.style.display = 'none';
+                        });
+
+                        // Hover effects
+                        yesBtn.addEventListener('mouseover', () => yesBtn.style.background = '#059669');
+                        yesBtn.addEventListener('mouseout', () => yesBtn.style.background = '#10b981');
+                        noBtn.addEventListener('mouseover', () => noBtn.style.background = '#4b5563');
+                        noBtn.addEventListener('mouseout', () => noBtn.style.background = '#6b7280');
+                    }
+                })
+                .catch(err => {
+                    console.log('LLM detection check failed:', err);
+                });
+        });
+
+        function saveLLMPreference(useLocalLLM, dontAskAgain) {
+            // Save to localStorage
+            if (dontAskAgain) {
+                localStorage.setItem('llm_preference', useLocalLLM ? 'true' : 'false');
+            }
+
+            // Save to server
+            const formData = new FormData();
+            formData.append('use_local_llm', useLocalLLM);
+            formData.append('dont_ask_again', dontAskAgain);
+
+            fetch('/api/llm/preference', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log('LLM preference saved:', data);
+            })
+            .catch(err => {
+                console.error('Failed to save LLM preference:', err);
+            });
+        }
+    </script>
+
+    <script src="{{ url_for('static', path='js/common.js') }}?v={{ request.app.state.asset_version }}"></script>
+</body>
+</html>

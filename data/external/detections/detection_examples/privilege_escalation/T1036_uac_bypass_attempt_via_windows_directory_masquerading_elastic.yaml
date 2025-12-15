@@ -1,0 +1,55 @@
+technique_id: T1036
+technique_name: UAC Bypass Attempt via Windows Directory Masquerading
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.args : (\"C:\\\\Windows \\\\system32\\\\*.exe\", \"C:\\\\Windows \\\\\
+  SysWOW64\\\\*.exe\")"
+explanation: 'Identifies an attempt to bypass User Account Control (UAC) by masquerading
+  as a Microsoft trusted Windows directory.
+
+  Attackers may bypass UAC to stealthily execute code with elevated permissions.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/290aca65-e94d-403b-ba0f-62f320e63f51.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Benign true positives (B-TPs) can be added as exceptions if necessary.\n\n###\
+    \ Response and remediation\n\n- Initiate the incident response process based on\
+    \ the outcome of the triage.\n- Isolate the involved host to prevent further post-compromise\
+    \ behavior.\n- If the triage identified malware, search the environment for additional\
+    \ compromised hosts.\n  - Implement temporary network rules, procedures, and segmentation\
+    \ to contain"
+  mitigation: Review investigation guide for details
+references:
+- https://medium.com/tenable-techblog/uac-bypass-by-mocking-trusted-directories-24a96675f6e
+has_investigation_guide: true
+risk_score: 73

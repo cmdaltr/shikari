@@ -1,0 +1,58 @@
+technique_id: T1070.006
+technique_name: File Creation Time Changed
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "file where host.os.type == \"windows\" and\n  event.provider == \"Microsoft-Windows-Sysmon\"\
+  \ and\n  /* File creation time change */\n  event.code == \"2\" and\n  not process.executable\
+  \ :\n           (\"?:\\\\Program Files\\\\*\",\n            \"?:\\\\Program Files\
+  \ (x86)\\\\*\",\n            \"?:\\\\Windows\\\\system32\\\\cleanmgr.exe\",\n  \
+  \          \"?:\\\\Windows\\\\system32\\\\msiexec.exe\",\n            \"?:\\\\Windows\\\
+  \\syswow64\\\\msiexec.exe\",\n            \"?:\\\\Windows\\\\system32\\\\svchost.exe\"\
+  ,\n            \"?:\\\\WINDOWS\\\\system32\\\\backgroundTaskHost.exe\",\n      \
+  \      \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\Application\\\
+  \\chrome.exe\",\n            \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\Mozilla Firefox\\\
+  \\firefox.exe\",\n            \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\slack\\\\\
+  app-*\\\\slack.exe\",\n            \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\\GitHubDesktop\\\
+  \\app-*\\\\GitHubDesktop.exe\",\n            \"?:\\\\Users\\\\*\\\\AppData\\\\Local\\\
+  \\Microsoft\\\\Teams\\\\current\\\\Teams.exe\",\n            \"?:\\\\Users\\\\*\\\
+  \\AppData\\\\Local\\\\Microsoft\\\\OneDrive\\\\OneDrive.exe\") and\n  not file.extension\
+  \ : (\"temp\", \"tmp\", \"~tmp\", \"xml\", \"newcfg\") and not user.name : (\"SYSTEM\"\
+  , \"Local Service\", \"Network Service\") and\n  not file.name : (\"LOG\", \"temp-index\"\
+  , \"license.rtf\", \"iconcache_*.db\")"
+explanation: 'Identifies modification of a file creation time. Adversaries may modify
+  file time attributes to blend malicious content
+
+  with existing files. Timestomping is a technique that modifies the timestamps of
+  a file often to mimic files that are in
+
+  trusted directories.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/166727ab-6768-4e26-b80c-948b228ffc06.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Trusted software updates or installations may alter file creation times. Exclude
+    known update processes like msiexec.exe from detection to reduce noise.
+
+    - System maintenance tasks, such as disk cleanup, can modify timestamps. Exclude
+    cleanmgr.exe to prevent these benign changes from triggering alerts.
+
+    - User-initiated actions in trusted applications like Chrome or Firefox might
+    change file creation times. Exclude these applications to avoid unnecessary alerts.
+
+    - Tempor'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

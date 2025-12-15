@@ -1,0 +1,50 @@
+technique_id: T1078.002
+technique_name: Access to a Sensitive LDAP Attribute
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "any where event.code == \"4662\" and\n\n  not winlog.event_data.SubjectUserSid\
+  \ : \"S-1-5-18\" and\n\n  winlog.event_data.Properties : (\n   /* unixUserPassword\
+  \ */\n  \"*612cb747-c0e8-4f92-9221-fdd5f15b550d*\",\n\n  /* ms-PKI-AccountCredentials\
+  \ */\n  \"*b8dfa744-31dc-4ef1-ac7c-84baf7ef9da7*\",\n\n  /*  ms-PKI-DPAPIMasterKeys\
+  \ */\n  \"*b3f93023-9239-4f7c-b99c-6745d87adbc2*\",\n\n  /* msPKI-CredentialRoamingTokens\
+  \ */\n  \"*b7ff5a38-0818-42b0-8110-d3d154c97f24*\"\n  ) and\n\n  /*\n   Excluding\
+  \ noisy AccessMasks\n   0x0 undefined and 0x100 Control Access\n   https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4662\n\
+  \   */\n  not winlog.event_data.AccessMask in (\"0x0\", \"0x100\")"
+explanation: 'Identify access to sensitive Active Directory object attributes that
+  contains credentials and decryption keys such as
+
+  unixUserPassword, ms-PKI-AccountCredentials and msPKI-CredentialRoamingTokens.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/764c9fcd-4c4c-41e6-a0c7-d6c46c2eff66.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Access by legitimate administrative accounts: Regular access by system administrators
+    to sensitive LDAP attributes can trigger alerts. To manage this, create exceptions
+    for known administrative accounts by excluding their SIDs from the detection rule.
+
+    - Scheduled system processes: Automated tasks or system processes that require
+    access to certain LDAP attributes may cause false positives. Identify these processes
+    and exclude their specific event codes or AccessMasks if'
+  mitigation: Review investigation guide for details
+references:
+- https://www.mandiant.com/resources/blog/apt29-windows-credential-roaming
+- https://social.technet.microsoft.com/wiki/contents/articles/11483.windows-credential-roaming.aspx
+- https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4662
+has_investigation_guide: true
+risk_score: 47

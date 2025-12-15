@@ -1,0 +1,55 @@
+technique_id: T1110
+technique_name: Microsoft Entra ID Rare Authentication Requirement for Principal User
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"azure.signinlogs\" and event.category: \"authentication\"\
+  \n    and azure.signinlogs.properties.user_type: \"Member\"\n    and azure.signinlogs.properties.authentication_details.authentication_method:\
+  \ \"Password\"\n    and not azure.signinlogs.properties.device_detail.browser: *\n\
+  \    and not source.as.organization.name: \"MICROSOFT-CORP-MSN-AS-BLOCK\"\n    and\
+  \ not azure.signinlogs.properties.authentication_requirement: \"multiFactorAuthentication\""
+explanation: 'Identifies rare instances of authentication requirements for Azure Entra
+  ID principal users. An adversary with stolen
+
+  credentials may attempt to authenticate with unusual authentication requirements,
+  which is a rare event and may indicate
+
+  an attempt to bypass conditional access policies (CAP) and multi-factor authentication
+  (MFA) requirements. The
+
+  authentication requirements specified may not be commonly used by the user based
+  on their historical sign-in activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/9e11faee-fddb-11ef-8257-f661ea17fbcd.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Sign-in Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    ### Common benign scenarios
+
+    - Automated scripts or applications using non-interactive authentication may trigger
+    this detection, particularly if they rely on legacy authentication protocols recorded
+    in `azure.signinlogs.properties.authentication_protocol`.
+
+    - Corporate proxies or VPNs may cause multiple users to authenticate from the
+    same IP, appearing as repeated failed attempts under `source.ip`.
+
+    - User account lockouts from forgotten passwords or misconfigured applicat'
+  mitigation: Review investigation guide for details
+references:
+- https://securityscorecard.com/wp-content/uploads/2025/02/MassiveBotnet-Report_022125_03.pdf
+has_investigation_guide: true
+risk_score: 47

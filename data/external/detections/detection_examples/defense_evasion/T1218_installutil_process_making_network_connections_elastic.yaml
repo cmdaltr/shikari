@@ -1,0 +1,47 @@
+technique_id: T1218
+technique_name: InstallUtil Process Making Network Connections
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "/* the benefit of doing this as an eql sequence vs kql is this will limit\
+  \ to alerting only on the first network connection */\n\nsequence by process.entity_id\n\
+  \  [process where host.os.type == \"windows\" and event.type == \"start\" and process.name\
+  \ : \"installutil.exe\"]\n  [network where host.os.type == \"windows\" and process.name\
+  \ : \"installutil.exe\" and network.direction : (\"outgoing\", \"egress\")]"
+explanation: 'Identifies InstallUtil.exe making outbound network connections. This
+  may indicate adversarial activity as InstallUtil is
+
+  often leveraged by adversaries to execute code and evade detection.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a13167f1-eec2-4015-9631-1fee60406dcf.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may trigger InstallUtil.exe to
+    make network connections. Users can create exceptions for known software update
+    processes by identifying their specific process entity IDs and excluding them
+    from the alert.
+
+    - System administrators may use InstallUtil.exe for routine maintenance tasks
+    that require network access. To prevent false positives, document these tasks
+    and configure the detection rule to exclude these specific instance'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

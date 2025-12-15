@@ -1,0 +1,55 @@
+technique_id: T1098
+technique_name: Microsoft Entra ID Elevated Access to User Access Administrator
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset: azure.auditlogs\n    and (\n      azure.auditlogs.operation_name:\
+  \ \"User has elevated their access to User Access Administrator for their Azure\
+  \ Resources\" or\n      azure.auditlogs.properties.additional_details.value: \"\
+  Microsoft.Authorization/elevateAccess/action\"\n    ) and event.outcome: \"success\""
+explanation: 'Identifies when a user has elevated their access to User Access Administrator
+  for their Azure Resources. The User Access
+
+  Administrator role allows users to manage user access to Azure resources, including
+  the ability to assign roles and
+
+  permissions. Adversaries may target an Entra ID Global Administrator or other privileged
+  role to elevate their access to
+
+  User Access Administrator, which can lead to further privilege escalation and unauthorized
+  access to sensitive
+
+  resources. This is a New Terms rule that only signals if the user principal name
+  has not been seen doing this activity
+
+  in the last 14 days.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8d9c4128-372a-11f0-9d8f-f661ea17fbcd.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Audit Logs
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- Legitimate admin actions may involve\
+    \ access elevation during maintenance, migration, or investigations.\n- Some IT\
+    \ departments may elevate access temporarily without leaving structured change\
+    \ records.\n- Review internal tickets, change logs, or admin activity dashboards\
+    \ for approved operations.\n\n### Response and remediation\n\n- If elevation was\
+    \ not authorized:\n  - Immediately remove the User Access Administrator role from\
+    \ the account.\n  - Disable or lock the account and b"
+  mitigation: Review investigation guide for details
+references:
+- https://learn.microsoft.com/en-us/azure/role-based-access-control/elevate-access-global-admin?tabs=azure-portal%2Centra-audit-logs/
+- https://permiso.io/blog/azures-apex-permissions-elevate-access-the-logs-security-teams-overlook
+- https://www.microsoft.com/en-us/security/blog/2025/08/27/storm-0501s-evolving-techniques-lead-to-cloud-based-ransomware/
+has_investigation_guide: true
+risk_score: 73

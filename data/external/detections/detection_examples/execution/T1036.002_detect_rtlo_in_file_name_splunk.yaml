@@ -1,0 +1,46 @@
+technique_id: T1036.002
+technique_name: Detect RTLO In File Name
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime values(Filesystem.file_create_time) as file_create_time from datamodel=Endpoint.Filesystem
+  where Filesystem.file_name!=unknown by Filesystem.action Filesystem.dest Filesystem.file_access_time
+  Filesystem.file_create_time Filesystem.file_hash Filesystem.file_modify_time Filesystem.file_name
+  Filesystem.file_path Filesystem.file_acl Filesystem.file_size Filesystem.process_guid
+  Filesystem.process_id Filesystem.user Filesystem.vendor_product | `drop_dm_object_name(Filesystem)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | regex
+  file_name =  "\\x{202E}" | rex field=file_name "(?<RTLO_file_1>.+)(?<RTLO_exist_file>\\x{202E})(?<RTLO_file_2>.+)"
+  | eval file_name_with_RTLO=file_name | eval file_name=RTLO_file_1.RTLO_file_2 |
+  fields - RTLO* | `detect_rtlo_in_file_name_filter`'
+explanation: The following analytic identifies the use of the right-to-left override
+  (RTLO) character in file names. It leverages data from the Endpoint.Filesystem datamodel,
+  specifically focusing on file creation events and file names containing the RTLO
+  character (U+202E). This activity is significant because adversaries use RTLO to
+  disguise malicious files as benign by reversing the text that follows the character.
+  If confirmed malicious, this technique can deceive users and security tools, leading
+  to the execution of harmful files and potential system compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/468b7e11-d362-43b8-b6ec-7a2d3b246678/
+indicators:
+- type: data_source
+  value: Sysmon EventID 11
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Implementation in regions that use right to left in native language.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1036/002/
+- https://resources.infosecinstitute.com/topic/spoof-using-right-to-left-override-rtlo-technique-2/
+- https://www.trendmicro.com/en_us/research/17/f/following-trail-blacktech-cyber-espionage-campaigns.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1036.002/outlook_attachment/rtlo_events.log

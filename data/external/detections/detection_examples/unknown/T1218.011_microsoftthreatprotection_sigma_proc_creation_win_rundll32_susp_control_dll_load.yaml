@@ -1,0 +1,43 @@
+technique_id: T1218.011
+technique_name: Suspicious Control Panel DLL Load
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: d7eb979b-c2b5-4a6f-a3a7-c87ce6763819
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_* and\
+  \ not filter\nfilter:\n  CommandLine|contains: Shell32.dll\nselection_img:\n- Image|endswith:\
+  \ \\rundll32.exe\n- OriginalFileName: RUNDLL32.EXE\nselection_parent:\n  ParentImage|endswith:\
+  \ \\System32\\control.exe\n"
+explanation: Detects suspicious Rundll32 execution from control.exe as used by Equation
+  Group and Exploit Kits
+false_positives:
+- Unknown
+references:
+- https://twitter.com/rikvduijn/status/853251879320662017
+- https://twitter.com/felixw3000/status/853354851128025088
+tags:
+- attack.defense-evasion
+- attack.t1218.011
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_parent:
+    ParentImage|endswith: \System32\control.exe
+  selection_img:
+  - Image|endswith: \rundll32.exe
+  - OriginalFileName: RUNDLL32.EXE
+  filter:
+    CommandLine|contains: Shell32.dll
+  condition: all of selection_* and not filter
+metadata:
+  created_date: 2017-04-15
+  modified_date: 2023-02-09
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

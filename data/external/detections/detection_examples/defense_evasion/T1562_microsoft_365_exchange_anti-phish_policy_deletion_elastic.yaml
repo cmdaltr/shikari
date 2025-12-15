@@ -1,0 +1,42 @@
+technique_id: T1562
+technique_name: Microsoft 365 Exchange Anti-Phish Policy Deletion
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:Exchange and event.category:web
+  and event.action:"Remove-AntiPhishPolicy" and event.outcome:success
+explanation: 'Identifies the deletion of an anti-phishing policy in Microsoft 365.
+  By default, Microsoft 365 includes built-in
+
+  features that help protect users from phishing attacks. Anti-phishing polices increase
+  this protection by refining
+
+  settings to better detect and prevent attacks.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d68eb1b5-5f1c-4b6d-9e63-5b6b145cd4aa.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative actions may trigger the rule if IT staff regularly update
+    or remove outdated anti-phishing policies. To manage this, create exceptions for
+    known administrative accounts performing these actions.
+
+    - Scheduled policy reviews might involve the removal of policies as part of a
+    legitimate update process. Document these schedules and exclude them from triggering
+    alerts by setting time-based exceptions.
+
+    - Automated scripts used for policy management can'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/powershell/module/exchange/remove-antiphishpolicy?view=exchange-ps
+- https://docs.microsoft.com/en-us/microsoft-365/security/office-365-security/set-up-anti-phishing-policies?view=o365-worldwide
+has_investigation_guide: true
+risk_score: 47

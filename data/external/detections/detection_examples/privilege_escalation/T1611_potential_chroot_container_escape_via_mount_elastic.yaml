@@ -1,0 +1,57 @@
+technique_id: T1611
+technique_name: Potential Chroot Container Escape via Mount
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id, process.parent.entity_id with maxspan=5m\n  [process\
+  \ where host.os.type == \"linux\" and event.type == \"start\" and event.action in\
+  \ (\"exec\", \"start\", \"ProcessRollup2\") and\n   process.name == \"mount\" and\
+  \ process.args : \"/dev/sd*\" and process.args_count >= 3 and\n   process.parent.name\
+  \ in (\"bash\", \"dash\", \"sh\", \"tcsh\", \"csh\", \"zsh\", \"ksh\", \"fish\"\
+  )]\n  [process where host.os.type == \"linux\" and event.type == \"start\" and event.action\
+  \ in (\"exec\", \"start\", \"ProcessRollup2\") and\n   process.name == \"chroot\"\
+  ]"
+explanation: 'Monitors for the execution of a file system mount followed by a chroot
+  execution. Given enough permissions, a user
+
+  within a container is capable of mounting the root file system of the host, and
+  leveraging chroot to escape its
+
+  containarized environment. This behavior pattern is very uncommon and should be
+  investigated.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5ae02ebc-a5de-4eac-afe6-c88de696477d.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System maintenance scripts may trigger the rule if they involve mounting and
+    chroot operations. Review scheduled tasks and scripts to identify legitimate use
+    and consider excluding these specific processes from the rule.
+
+    - Backup or recovery operations that require mounting file systems and changing
+    root directories can also cause false positives. Identify these operations and
+    create exceptions for the associated processes or users.
+
+    - Development or testing environment'
+  mitigation: Review investigation guide for details
+references:
+- https://book.hacktricks.xyz/v/portugues-ht/linux-hardening/privilege-escalation/escaping-from-limited-bash
+has_investigation_guide: true
+risk_score: 47

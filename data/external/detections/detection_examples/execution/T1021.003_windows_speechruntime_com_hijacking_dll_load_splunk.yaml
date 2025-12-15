@@ -1,0 +1,41 @@
+technique_id: T1021.003
+technique_name: Windows SpeechRuntime COM Hijacking DLL Load
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventCode=7 Image="*SpeechRuntime.exe" | eval image_loaded_lower
+  = lower(ImageLoaded) | search NOT image_loaded_lower="*system32*" | fillnull | stats
+  count min(_time) as firstTime max(_time) as lastTime by Image ImageLoaded dest loaded_file
+  loaded_file_path original_file_name parent_process_name parent_process_guid process_exec
+  process_guid process_hash process_id process_name process_path service_dll_signature_exists
+  service_dll_signature_verified signature signature_id user_id vendor_product | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_speechruntime_com_hijacking_dll_load_filter`'
+explanation: SpeechRuntime is vulnerable to an attack that allows a user to run code
+  on another user's session remotely and stealthily by exploiting a Windows COM class.
+  When this class is invoked, it launches SpeechRuntime.exe in the context of the
+  currently logged-on user. Because this COM class is susceptible to COM Hijacking,
+  the attacker can alter the registry remotely to point to a malicious DLL. By dropping
+  that DLL on the target system (e.g., via SMB) and triggering the COM object, the
+  attacker causes the malicious DLL to load into SpeechRuntime.exe and executing under
+  the user's context. This detection identifies suspicious DLL loads by SpeechRuntime.exe
+  from outside the expected locations.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/bd35738c-e93a-4e4f-be24-f6a3680b950a/
+indicators:
+- type: data_source
+  value: Sysmon EventID 7
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: This process should normally never be loading dlls from outside the
+    Windows system directory.
+  mitigation: Review context and user activity
+references:
+- https://github.com/rtecCyberSec/SpeechRuntimeMove
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1021.003/lateral_movement_speechruntime/windows-sysmon.log

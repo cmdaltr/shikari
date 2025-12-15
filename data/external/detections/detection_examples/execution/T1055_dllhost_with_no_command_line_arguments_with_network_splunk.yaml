@@ -1,0 +1,57 @@
+technique_id: T1055
+technique_name: DLLHost with no Command Line Arguments with Network
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)\n\
+  as lastTime FROM datamodel=Endpoint.Processes where \nProcesses.process_name=dllhost.exe\n\
+  Processes.action!=\"blocked\" \nby host _time span=1h \nProcesses.action Processes.dest\
+  \ Processes.original_file_name\nProcesses.parent_process Processes.parent_process_exec\
+  \ Processes.parent_process_guid\nProcesses.parent_process_id Processes.parent_process_name\
+  \ Processes.parent_process_path\nProcesses.process Processes.process_exec Processes.process_guid\
+  \ Processes.process_hash\nProcesses.process_id Processes.process_integrity_level\
+  \ Processes.process_name Processes.process_path\nProcesses.user Processes.user_id\
+  \ Processes.vendor_product\n| `drop_dm_object_name(Processes)` \n| `security_content_ctime(firstTime)`\n\
+  | `security_content_ctime(lastTime)` \n| regex process=\"(?i)(dllhost\\.exe.{0,4}$)\"\
+  \n| rename dest as src \n| join host process_id [\n  | tstats `security_content_summariesonly`\n\
+  \    count \n    latest(All_Traffic.dest) as dest \n    latest(All_Traffic.dest_ip)\
+  \ as dest_ip \n    latest(All_Traffic.dest_port) as dest_port \n    FROM datamodel=Network_Traffic.All_Traffic\
+  \ where \n      All_Traffic.dest_port != 0 \n      by host All_Traffic.action All_Traffic.app\
+  \ All_Traffic.bytes All_Traffic.bytes_in \n         All_Traffic.bytes_out All_Traffic.dest\
+  \  All_Traffic.dest_ip All_Traffic.dest_port \n         All_Traffic.dvc All_Traffic.protocol\
+  \ All_Traffic.protocol_version All_Traffic.src \n         All_Traffic.src_ip All_Traffic.src_port\
+  \ All_Traffic.transport All_Traffic.user \n         All_Traffic.vendor_product All_Traffic.direction\
+  \ All_Traffic.process_id\n  | `drop_dm_object_name(All_Traffic)`\n] \n| `dllhost_with_no_command_line_arguments_with_network_filter`"
+explanation: "The following analytic detects instances of DLLHost.exe running without\n\
+  command line arguments while establishing a network connection.\nThis behavior is\
+  \ identified using Endpoint Detection and Response (EDR) telemetry, \nfocusing on\
+  \ process execution and network activity data. \nIt is significant because DLLHost.exe\
+  \ typically runs with specific arguments, \nand its absence can indicate malicious\
+  \ activity, such as Cobalt Strike usage. \nIf confirmed malicious, this activity\
+  \ could allow attackers to execute code, \nmove laterally, or exfiltrate data, posing\
+  \ a severe threat to the network's security."
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/f1c07594-a141-11eb-8407-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1 AND Sysmon EventID 3
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: 'Although unlikely, some legitimate third party applications
+
+    may use a moved copy of dllhost, triggering a false positive.'
+  mitigation: Review context and user activity
+references:
+- https://raw.githubusercontent.com/threatexpress/malleable-c2/c3385e481159a759f79b8acfe11acf240893b830/jquery-c2.4.2.profile
+- https://www.cobaltstrike.com/blog/learn-pipe-fitting-for-all-of-your-offense-projects/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1055/cobalt_strike/windows-sysmon_dllhost.log

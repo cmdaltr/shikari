@@ -1,0 +1,44 @@
+technique_id: T1553.005
+technique_name: Windows Developer-Signed MSIX Package Installation
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`wineventlog_appxdeploymentserver` EventCode=855 NOT PackageMoniker IN ("*8wekyb3d8bbwe*","*cw5n1h2txyewy*")
+  | stats count min(_time) as firstTime max(_time) as lastTime values(PackageMoniker)
+  as PackageMoniker by dvc EventCode user_id | rename dvc as dest | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_developer_signed_msix_package_installation_filter`'
+explanation: This detection identifies the installation of developer-signed MSIX packages
+  that lack Microsoft Store signatures. All malicious MSIX packages observed in recent
+  threat campaigns (including those from FIN7, Zloader/Storm-0569, and FakeBat/Storm-1113)
+  were developer-signed rather than Microsoft Store signed. Microsoft Store apps have
+  specific publisher IDs containing '8wekyb3d8bbwe' or 'cw5n1h2txyewy', while developer-signed
+  packages lack these identifiers. This detection focuses on EventID 855 from the
+  Microsoft-Windows-AppXDeployment-Server/Operational logs, which indicates a completed
+  package installation.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2c0427aa-982c-4e97-bc33-bddeda4fd095/
+indicators:
+- type: data_source
+  value: Windows Event Log AppXDeployment-Server 855
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Legitimate developer-signed applications that are not from the Microsoft
+    Store will trigger this detection. Organizations should maintain a baseline of
+    expected developer-signed applications in their environment and tune the detection
+    accordingly. Common legitimate developer-signed applications include in-house
+    developed applications and some third-party applications that are not distributed
+    through the Microsoft Store.
+  mitigation: Review context and user activity
+references:
+- https://redcanary.com/blog/threat-intelligence/msix-installers/
+- https://learn.microsoft.com/en-us/windows/win32/appxpkg/troubleshooting
+- https://www.advancedinstaller.com/msix-installation-or-launching-errors-and-fixes.html
+- https://redcanary.com/blog/threat-detection/code-signing-certificates/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1204.002/appx/windows_appxdeploymentserver.log

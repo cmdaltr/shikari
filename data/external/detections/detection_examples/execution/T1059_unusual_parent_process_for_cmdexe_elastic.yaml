@@ -1,0 +1,62 @@
+technique_id: T1059
+technique_name: Unusual Parent Process for cmd.exe
+tactic: execution
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : \"cmd.exe\" and\n  process.parent.name : (\"lsass.exe\",\n   \
+  \                      \"csrss.exe\",\n                         \"epad.exe\",\n\
+  \                         \"regsvr32.exe\",\n                         \"dllhost.exe\"\
+  ,\n                         \"LogonUI.exe\",\n                         \"wermgr.exe\"\
+  ,\n                         \"spoolsv.exe\",\n                         \"jucheck.exe\"\
+  ,\n                         \"jusched.exe\",\n                         \"ctfmon.exe\"\
+  ,\n                         \"taskhostw.exe\",\n                         \"GoogleUpdate.exe\"\
+  ,\n                         \"sppsvc.exe\",\n                         \"sihost.exe\"\
+  ,\n                         \"slui.exe\",\n                         \"SIHClient.exe\"\
+  ,\n                         \"SearchIndexer.exe\",\n                         \"\
+  SearchProtocolHost.exe\",\n                         \"FlashPlayerUpdateService.exe\"\
+  ,\n                         \"WerFault.exe\",\n                         \"WUDFHost.exe\"\
+  ,\n                         \"unsecapp.exe\",\n                         \"wlanext.exe\"\
+  \ ) and\n  not (process.parent.name : \"dllhost.exe\" and process.parent.args :\
+  \ \"/Processid:{CA8C87C1-929D-45BA-94DB-EF8E6CB346AD}\")"
+explanation: Identifies a suspicious parent child process relationship with cmd.exe
+  descending from an unusual process.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3b47900d-e793-49e8-968f-c90dc3526aa1.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Cmd.exe instances spawned by legitimate system maintenance tools like Windows
+    Update or system indexing services can trigger false positives. Users can create
+    exceptions for processes like SearchIndexer.exe or WUDFHost.exe if they are verified
+    as part of routine system operations.
+
+    - Software updates or installations that use cmd.exe for scripting purposes might
+    be flagged. If GoogleUpdate.exe or FlashPlayerUpdateService.exe are known to be
+    part of regular update proces'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

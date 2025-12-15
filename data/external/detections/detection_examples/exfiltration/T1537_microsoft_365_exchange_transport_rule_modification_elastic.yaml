@@ -1,0 +1,43 @@
+technique_id: T1537
+technique_name: Microsoft 365 Exchange Transport Rule Modification
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:Exchange and event.category:web
+  and event.action:("Remove-TransportRule" or "Disable-TransportRule") and event.outcome:success
+explanation: 'Identifies when a transport rule has been disabled or deleted in Microsoft
+  365. Mail flow rules (also known as transport
+
+  rules) are used to identify and take action on messages that flow through your organization.
+  An adversary or insider
+
+  threat may modify a transport rule to exfiltrate data or evade defenses.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/272a6484-2663-46db-a532-ef734bf9a796.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative changes to transport rules by IT staff can trigger alerts.
+    To manage this, maintain a list of authorized personnel and their expected activities,
+    and create exceptions for these users in the monitoring system.
+
+    - Scheduled maintenance or updates to transport rules may result in false positives.
+    Document these activities and adjust the monitoring system to temporarily exclude
+    these events during known maintenance windows.
+
+    - Automated scripts or thi'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/powershell/module/exchange/remove-transportrule?view=exchange-ps
+- https://docs.microsoft.com/en-us/powershell/module/exchange/disable-transportrule?view=exchange-ps
+- https://docs.microsoft.com/en-us/exchange/security-and-compliance/mail-flow-rules/mail-flow-rules
+has_investigation_guide: true
+risk_score: 47

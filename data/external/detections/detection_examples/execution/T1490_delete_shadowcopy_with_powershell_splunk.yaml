@@ -1,0 +1,40 @@
+technique_id: T1490
+technique_name: Delete ShadowCopy With PowerShell
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`powershell` EventCode=4104 ScriptBlockText= "*ShadowCopy*" (ScriptBlockText
+  = "*Delete*" OR ScriptBlockText = "*Remove*") | fillnull | stats count min(_time)
+  as firstTime max(_time) as lastTime by dest signature signature_id user_id vendor_product
+  EventID Guid Opcode Name Path ProcessID ScriptBlockId ScriptBlockText | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `delete_shadowcopy_with_powershell_filter`'
+explanation: The following analytic detects the use of PowerShell to delete shadow
+  copies via the WMIC PowerShell module. It leverages EventCode 4104 and searches
+  for specific keywords like "ShadowCopy," "Delete," or "Remove" within the ScriptBlockText.
+  This activity is significant because deleting shadow copies is a common tactic used
+  by ransomware, such as DarkSide, to prevent data recovery. If confirmed malicious,
+  this action could lead to irreversible data loss and hinder recovery efforts, significantly
+  impacting business continuity and data integrity.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/5ee2bcd0-b2ff-11eb-bb34-acde48001122/
+indicators:
+- type: data_source
+  value: Powershell Script Block Logging 4104
+  confidence: high
+- type: risk_user
+  value: user_id
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.mandiant.com/resources/shining-a-light-on-darkside-ransomware-operations
+- https://www.techtarget.com/searchwindowsserver/tutorial/Set-up-PowerShell-script-block-logging-for-added-security
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059.001/powershell_script_block_logging/single_event_delete_shadowcopy.log

@@ -1,0 +1,65 @@
+technique_id: T1210
+technique_name: HackTool - SharpWSUS/WSUSpendu Execution
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: b0ce780f-10bd-496d-9067-066d23dc3aa5
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_wsuspendu_*\
+  \ or all of selection_sharpwsus_*\nselection_sharpwsus_commands:\n  CommandLine|contains:\n\
+  \  - ' approve '\n  - ' create '\n  - ' check '\n  - ' delete '\nselection_sharpwsus_flags:\n\
+  \  CommandLine|contains:\n  - ' /payload:'\n  - ' /payload='\n  - ' /updateid:'\n\
+  \  - ' /updateid='\nselection_wsuspendu_inject:\n  CommandLine|contains: ' -Inject\
+  \ '\nselection_wsuspendu_payload:\n  CommandLine|contains:\n  - ' -PayloadArgs '\n\
+  \  - ' -PayloadFile '\n"
+explanation: 'Detects the execution of SharpWSUS or WSUSpendu, utilities that allow
+  for lateral movement through WSUS.
+
+  Windows Server Update Services (WSUS) is a critical component of Windows systems
+  and is frequently configured in a way that allows an attacker to circumvent internal
+  networking limitations.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://labs.nettitude.com/blog/introducing-sharpwsus/
+- https://github.com/nettitude/SharpWSUS
+- https://web.archive.org/web/20210512154016/https://github.com/AlsidOfficial/WSUSpendu/blob/master/WSUSpendu.ps1
+tags:
+- attack.execution
+- attack.lateral-movement
+- attack.t1210
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_wsuspendu_inject:
+    CommandLine|contains: ' -Inject '
+  selection_wsuspendu_payload:
+    CommandLine|contains:
+    - ' -PayloadArgs '
+    - ' -PayloadFile '
+  selection_sharpwsus_commands:
+    CommandLine|contains:
+    - ' approve '
+    - ' create '
+    - ' check '
+    - ' delete '
+  selection_sharpwsus_flags:
+    CommandLine|contains:
+    - ' /payload:'
+    - ' /payload='
+    - ' /updateid:'
+    - ' /updateid='
+  condition: all of selection_wsuspendu_* or all of selection_sharpwsus_*
+metadata:
+  created_date: 2022-10-07
+  modified_date: 2024-08-23
+  author: '@Kostastsale, Nasreddine Bencherchali (Nextron Systems)'
+  status: test
+  imported_date: '2025-11-28'

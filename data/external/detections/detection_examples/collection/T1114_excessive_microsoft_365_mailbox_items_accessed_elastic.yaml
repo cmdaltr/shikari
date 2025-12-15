@@ -1,0 +1,53 @@
+technique_id: T1114
+technique_name: Excessive Microsoft 365 Mailbox Items Accessed
+tactic: collection
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"o365.audit\" and\n    event.provider: \"Exchange\" and\n\
+  \    event.action: \"MailItemsAccessed\" and\n    event.code: \"ExchangeItemAggregated\"\
+  \ and\n    (\n        (\n            o365.audit.OperationProperties.Name: \"IsThrottled\"\
+  \ and\n            o365.audit.OperationProperties.Value: \"True\"\n        ) or\
+  \ o365.audit.OperationCount >= 100\n    )"
+explanation: 'Identifies an excessive number of Microsoft 365 mailbox items accessed
+  by a user either via aggregated counts or
+
+  throttling. Microsoft audits mailbox access via the MailItemsAccessed event, which
+  is triggered when a user accesses
+
+  mailbox items. If more than 1000 mailbox items are accessed within a 24-hour period,
+  it is then throttled. Excessive
+
+  mailbox access may indicate an adversary attempting to exfiltrate sensitive information
+  or perform reconnaissance on a
+
+  target''s mailbox. This rule detects both the throttled and unthrottled events with
+  a high threshold.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7fc95782-4bd1-11f0-9838-f661ea17fbcd.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+- type: data_source
+  value: Microsoft 365 Audit Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+    - Legitimate users may access a large number of mailbox items in a short period,
+    especially in environments with high email volume or during data migrations. If
+    this is expected behavior, consider adjusting the rule or adding exceptions for
+    specific users or groups.
+
+    - Automated processes or scripts that access mailbox items may also trigger this
+    rule. If these processes are legitimate and necessary, consider adding exceptions
+    for the specific applications or users involve'
+  mitigation: Review investigation guide for details
+references:
+- https://learn.microsoft.com/en-us/purview/audit-log-investigate-accounts#use-mailitemsaccessed-audit-records-for-forensic-investigations
+- https://www.microsoft.com/en-us/security/blog/2025/05/27/new-russia-affiliated-actor-void-blizzard-targets-critical-sectors-for-espionage/
+has_investigation_guide: true
+risk_score: 47

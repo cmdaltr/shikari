@@ -1,0 +1,55 @@
+technique_id: T1082
+technique_name: Enumeration of Kernel Modules
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.category:process and host.os.type:linux and event.type:start and event.action:(exec\
+  \ or exec_event) and (\n (process.name:(lsmod or modinfo)) or\n (process.name:kmod\
+  \ and process.args:list) or\n (process.name:depmod and process.args:(--all or -a))\n\
+  ) and\nnot (\n  process.parent.name:(\n    mkinitramfs or cryptroot or framebuffer\
+  \ or dracut or jem or thin-provisioning-tools or readykernel or lvm2 or\n    vz-start\
+  \ or iscsi or mdadm or ovalprobes or bcache or plymouth or dkms or overlayroot or\
+  \ weak-modules or zfs or\n    systemd or whoopsie-upload-all or kdumpctl or apport-gtk\
+  \ or casper or rear or kernel-install or newrelic-infra\n  ) or\n  process.parent.executable:/var/lib/dpkg/info/linux-modules*-generic.post*\n\
+  )"
+explanation: 'Loadable Kernel Modules (or LKMs) are pieces of code that can be loaded
+  and unloaded into the kernel upon demand. They
+
+  extend the functionality of the kernel without the need to reboot the system. This
+  identifies attempts to enumerate
+
+  information about a kernel module.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2d8043ed-5bda-4caf-801c-c1feb7410504.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'false positives.
+
+
+    ### Possible investigation steps
+
+
+    - Review the process details in the alert to identify the specific command used
+    for kernel module enumeration, such as lsmod, modinfo, kmod with list argument,
+    or depmod with --all or -a arguments.
+
+    - Examine the process parent name to ensure it is not one of the benign processes
+    listed in the exclusion criteria, such as mkinitramfs, dracut, or systemd, which
+    could indicate a false positive.
+
+    - Investigate the user account associated with the pro'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

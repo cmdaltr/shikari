@@ -1,0 +1,52 @@
+technique_id: T1021
+technique_name: Incoming DCOM Lateral Movement with MMC
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id with maxspan=1m\n [network where host.os.type == \"windows\"\
+  \ and event.type == \"start\" and process.name : \"mmc.exe\" and source.port >=\
+  \ 49152 and\n destination.port >= 49152 and source.ip != \"127.0.0.1\" and source.ip\
+  \ != \"::1\" and\n  network.direction : (\"incoming\", \"ingress\") and network.transport\
+  \ == \"tcp\"\n ] by process.entity_id\n [process where host.os.type == \"windows\"\
+  \ and event.type == \"start\" and process.parent.name : \"mmc.exe\"\n ] by process.parent.entity_id"
+explanation: 'Identifies the use of Distributed Component Object Model (DCOM) to run
+  commands from a remote host, which are launched
+
+  via the MMC20 Application COM Object. This behavior may indicate an attacker abusing
+  a DCOM application to move
+
+  laterally.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/51ce96fb-9e52-4dad-b0ba-99b54440fc9a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using MMC may trigger the rule. Regularly review
+    and document routine administrative activities to differentiate them from suspicious
+    behavior.
+
+    - Automated scripts or management tools that use MMC for remote management can
+    cause false positives. Identify and whitelist these tools by their process and
+    network patterns.
+
+    - Internal network scanning or monitoring tools might mimic the behavior detected
+    by the rule. Exclude known IP addresses'
+  mitigation: Review investigation guide for details
+references:
+- https://enigma0x3.net/2017/01/05/lateral-movement-using-the-mmc20-application-com-object/
+has_investigation_guide: true
+risk_score: 73

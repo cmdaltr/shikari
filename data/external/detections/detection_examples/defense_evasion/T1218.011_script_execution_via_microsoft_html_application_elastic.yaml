@@ -1,0 +1,73 @@
+technique_id: T1218.011
+technique_name: Script Execution via Microsoft HTML Application
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ process.name : (\"rundll32.exe\", \"mshta.exe\") and\n  (\n     (process.command_line\
+  \ :\n        (\n        \"*script*eval(*\",\n         \"*script*GetObject*\",\n\
+  \         \"*.regread(*\",\n         \"*WScript.Shell*\",\n         \"*.run(*\"\
+  ,\n         \"*).Exec()*\",\n         \"*mshta*http*\",\n         \"*mshtml*RunHTMLApplication*\"\
+  ,\n         \"*mshtml*,#135*\",\n         \"*StrReverse*\",\n         \"*.RegWrite*\"\
+  ,\n         /* Issue #379 */\n         \"*window.close(*\",\n         \"* Chr(*\"\
+  \n         )\n     and not ?process.parent.executable :\n                  (\"?:\\\
+  \\Program Files (x86)\\\\Citrix\\\\System32\\\\wfshell.exe\",\n                \
+  \   \"?:\\\\Program Files (x86)\\\\Microsoft Office\\\\Office*\\\\MSACCESS.EXE\"\
+  ,\n                   \"?:\\\\Program Files\\\\Quokka.Works GTInstaller\\\\GTInstaller.exe\"\
+  )\n     ) or\n\n    (process.name : \"mshta.exe\" and\n     not process.command_line\
+  \ : (\"*.hta*\", \"*.htm*\", \"-Embedding\") and ?process.args_count >=2) or\n\n\
+  \     /* Execution of HTA file downloaded from the internet */\n     (process.name\
+  \ : \"mshta.exe\" and process.command_line : \"*\\\\Users\\\\*\\\\Downloads\\\\\
+  *.hta*\") or\n\n     /* Execution of HTA file from archive */\n     (process.name\
+  \ : \"mshta.exe\" and\n      process.args : (\"?:\\\\Users\\\\*\\\\Temp\\\\7z*\"\
+  , \"?:\\\\Users\\\\*\\\\Temp\\\\Rar$*\", \"?:\\\\Users\\\\*\\\\Temp\\\\Temp?_*\"\
+  , \"?:\\\\Users\\\\*\\\\Temp\\\\BNZ.*\"))\n   )"
+explanation: 'Identifies the execution of scripts via HTML applications using Windows
+  utilities rundll32.exe or mshta.exe. Adversaries
+
+  may bypass process and/or signature-based defenses by proxying execution of malicious
+  content with signed binaries.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/181f6b23-3799-445e-9589-0018328a9e46.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Execution of legitimate scripts by enterprise applications like Citrix, Microsoft
+    Office, or Quokka.Works GTInstaller can trigger false positives. Users can mitigate
+    this by adding these applications to the exclusion list in the detection rule.
+
+    - Scripts executed by mshta.exe that do not involve malicious intent, such as
+    internal web applications or administrative scripts, may be flagged. Users should
+    review these scripts and, if deemed safe, exclude them based on spec'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

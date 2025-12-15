@@ -1,0 +1,57 @@
+technique_id: T1562.001
+technique_name: Microsoft Office Protected View Disabled
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: a5c7a43f-6009-4a8c-80c5-32abf1c53ecc
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_path and 1\
+  \ of selection_values_*\nselection_path:\n  TargetObject|contains|all:\n  - \\SOFTWARE\\\
+  Microsoft\\Office\\\n  - \\Security\\ProtectedView\\\nselection_values_0:\n  Details:\
+  \ DWORD (0x00000000)\n  TargetObject|endswith:\n  - \\enabledatabasefileprotectedview\n\
+  \  - \\enableforeigntextfileprotectedview\nselection_values_1:\n  Details: DWORD\
+  \ (0x00000001)\n  TargetObject|endswith:\n  - \\DisableAttachementsInPV\n  - \\\
+  DisableInternetFilesInPV\n  - \\DisableIntranetCheck\n  - \\DisableUnsafeLocationsInPV\n"
+explanation: Detects changes to Microsoft Office protected view registry keys with
+  which the attacker disables this feature.
+false_positives:
+- Unlikely
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1562.001/T1562.001.md
+- https://unit42.paloaltonetworks.com/unit42-gorgon-group-slithering-nation-state-cybercrime/
+- https://yoroi.company/research/cyber-criminal-espionage-operation-insists-on-italian-manufacturing/
+- https://admx.help/HKCU/software/policies/microsoft/office/16.0/excel/security/protectedview
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+logsource:
+  product: windows
+  category: registry_set
+detection:
+  selection_path:
+    TargetObject|contains|all:
+    - \SOFTWARE\Microsoft\Office\
+    - \Security\ProtectedView\
+  selection_values_1:
+    Details: DWORD (0x00000001)
+    TargetObject|endswith:
+    - \DisableAttachementsInPV
+    - \DisableInternetFilesInPV
+    - \DisableIntranetCheck
+    - \DisableUnsafeLocationsInPV
+  selection_values_0:
+    Details: DWORD (0x00000000)
+    TargetObject|endswith:
+    - \enabledatabasefileprotectedview
+    - \enableforeigntextfileprotectedview
+  condition: selection_path and 1 of selection_values_*
+metadata:
+  created_date: 2021-06-08
+  modified_date: 2023-08-17
+  author: frack113, Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

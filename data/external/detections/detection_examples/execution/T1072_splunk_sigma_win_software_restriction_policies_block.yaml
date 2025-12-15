@@ -1,0 +1,44 @@
+technique_id: T1072
+technique_name: Restricted Software Access By SRP
+tactic: execution
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: b4c8da4a-1c12-46b0-8a2b-0a8521d03442
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  EventID:\n  - 865\n  - 866\n  - 867\n  - 868\n  - 882\n  Provider_Name: Microsoft-Windows-SoftwareRestrictionPolicies\n"
+explanation: Detects restricted access to applications by the Software Restriction
+  Policies (SRP) policy
+false_positives:
+- Unknown
+references:
+- https://learn.microsoft.com/en-us/windows-server/identity/software-restriction-policies/software-restriction-policies
+- https://github.com/nasbench/EVTX-ETW-Resources/blob/7a806a148b3d9d381193d4a80356016e6e8b1ee8/ETWEventsList/CSV/Windows11/22H2/W11_22H2_Pro_20220920_22621.382/Providers/Microsoft-Windows-AppXDeployment-Server.csv
+tags:
+- attack.lateral-movement
+- attack.execution
+- attack.defense-evasion
+- attack.t1072
+logsource:
+  product: windows
+  service: application
+detection:
+  selection:
+    Provider_Name: Microsoft-Windows-SoftwareRestrictionPolicies
+    EventID:
+    - 865
+    - 866
+    - 867
+    - 868
+    - 882
+  condition: selection
+metadata:
+  created_date: 2023-01-12
+  modified_date: '2025-11-28'
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

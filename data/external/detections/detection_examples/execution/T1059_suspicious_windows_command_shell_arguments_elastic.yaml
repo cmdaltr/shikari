@@ -1,0 +1,115 @@
+technique_id: T1059
+technique_name: Suspicious Windows Command Shell Arguments
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : \"cmd.exe\" and\n  (\n    process.command_line : (\n        \"\
+  *).Run(*\", \"*GetObject*\", \"* curl*regsvr32*\", \"*echo*wscript*\", \"*echo*ZONE.identifier*\"\
+  ,\n        \"*ActiveXObject*\", \"*dir /s /b *echo*\", \"*unescape(*\",  \"*findstr*TVNDRgAAAA*\"\
+  , \"*findstr*passw*\", \"*start*\\\\\\\\*\\\\DavWWWRoot\\\\*\",\n        \"* explorer*%CD%*\"\
+  , \"*%cd%\\\\*.js*\", \"*attrib*%CD%*\", \"*/?cMD<*\", \"*/AutoIt3ExecuteScript*..*\"\
+  , \"*&cls&cls&cls&cls&cls&*\",\n        \"*&#*;&#*;&#*;&#*;*\", \"* &&s^eT*\", \"\
+  *& ChrW(*\", \"*&explorer /root*\", \"*start __ & __\\\\*\", \"*findstr /V /L *forfiles*\"\
+  ,\n        \"*=wscri& set *\", \"*http*!COmpUternaME!*\", \"*start *.pdf * start\
+  \ /min cmd.exe /c *\\\\\\\\*\", \"*pip install*System.Net.WebClient*\",\n      \
+  \  \"*Invoke-WebReques*Start-Process*\", \"*-command (Invoke-webrequest*\", \"*copy\
+  \ /b *\\\\\\\\* ping *-n*\", \"*echo*.ToCharArray*\"\n    ) or\n\n    (process.args\
+  \ : \"echo\" and process.parent.name : (\"wscript.exe\", \"mshta.exe\")) or\n  \
+  \  \n    process.args : (\"1>?:\\\\*.vbs\", \"1>?:\\\\*.js\") or\n\n    (process.args\
+  \ : \"explorer.exe\" and process.args : \"type\" and process.args : \">\" and process.args\
+  \ : \"start\") or\n\n    (\n      process.parent.name : \"explorer.exe\" and\n \
+  \     process.command_line : (\n        \"*&&S^eT *\",\n        \"*&& set *&& set\
+  \ *&& set *&& set *&& set *&& call*\",\n        \"**\\\\u00??\\\\u00??\\\\u00??\\\
+  \\u00??\\\\u00??\\\\u00??\\\\u00??\\\\u00??*\"\n      )\n    ) or\n\n    (process.parent.name\
+  \ : \"explorer.exe\" and process.args : \"copy\" and process.args : \"&&\" and process.args\
+  \ : \"\\\\\\\\*@*\\\\*\")\n  ) and\n\n  /* false positives */\n  not (process.args\
+  \ : \"%TEMP%\\\\Spiceworks\\\\*\" and process.parent.name : \"wmiprvse.exe\") and\n\
+  \  not ?process.parent.executable : (\n        \"?:\\\\Perl64\\\\bin\\\\perl.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\nodejs\\\\node.exe\",\n        \"?:\\\\Program\
+  \ Files\\\\HP\\\\RS\\\\pgsql\\\\bin\\\\pg_dumpall.exe\",\n        \"?:\\\\Program\
+  \ Files (x86)\\\\PRTG Network Monitor\\\\64 bit\\\\PRTG Server.exe\",\n        \"\
+  ?:\\\\Program Files (x86)\\\\Spiceworks\\\\bin\\\\spiceworks-finder.exe\",\n   \
+  \     \"?:\\\\Program Files (x86)\\\\Zuercher Suite\\\\production\\\\leds\\\\leds.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\Tripwire\\\\Agent\\\\Plugins\\\\twexec\\\\twexec.exe\"\
+  ,\n        \"D:\\\\Agents\\\\?\\\\_work\\\\_tasks\\\\*\\\\SonarScanner.MSBuild.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\Microsoft VS Code\\\\Code.exe\",\n        \"\
+  ?:\\\\programmiweb\\\\NetBeans-*\\\\netbeans\\\\bin\\\\netbeans64.exe\",\n     \
+  \   \"?:\\\\Program Files (x86)\\\\Public Safety Suite Professional\\\\production\\\
+  \\leds\\\\leds.exe\",\n        \"?:\\\\Program Files (x86)\\\\Tier2Tickets\\\\button_gui.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\NetBeans-*\\\\netbeans\\\\bin\\\\netbeans*.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Public Safety Suite Professional\\\\production\\\
+  \\leds\\\\leds.exe\",\n        \"?:\\\\Program Files (x86)\\\\Tier2Tickets\\\\button_gui.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Helpdesk Button\\\\button_gui.exe\",\n\
+  \        \"?:\\\\VTSPortable\\\\VTS\\\\jre\\\\bin\\\\javaw.exe\",\n        \"?:\\\
+  \\Program Files\\\\Bot Framework Composer\\\\Bot Framework Composer.exe\",\n   \
+  \     \"?:\\\\Program Files\\\\KMSYS Worldwide\\\\eQuate\\\\*\\\\SessionMgr.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\Craneware\\\\Pricing Analyzer\\\\Craneware.Pricing.Shell.exe\"\
+  ,\n        \"?:\\\\Program Files (x86)\\\\jumpcloud-agent-app\\\\jumpcloud-agent-app.exe\"\
+  ,\n        \"?:\\\\Program Files\\\\PostgreSQL\\\\*\\\\bin\\\\pg_dumpall.exe\",\n\
+  \        \"?:\\\\Program Files (x86)\\\\Vim\\\\vim*\\\\vimrun.exe\") and\n  not\
+  \ (\n        /* Crowdstrike doesn't populate process.parent.executable */\n    \
+  \    event.dataset == \"crowdstrike.fdr\" and\n        process.parent.name : (\n\
+  \          \"perl.exe\", \"node.exe\", \"pg_dumpall.exe\", \"PRTG Server.exe\",\
+  \ \"spiceworks-finder.exe\", \"leds.exe\", \"twexec.exe\",\n          \"SonarScanner.MSBuild.exe\"\
+  , \"Code.exe\", \"netbeans64.exe\", \"javaw.exe\", \"Bot Framework Composer.exe\"\
+  , \"SessionMgr.exe\",\n          \"Craneware.Pricing.Shell.exe\", \"jumpcloud-agent-app.exe\"\
+  , \"vimrun.exe\"\n        )\n      ) and\n  not (process.args :  \"?:\\\\Program\
+  \ Files\\\\Citrix\\\\Secure Access Client\\\\nsauto.exe\" and process.parent.name\
+  \ : \"userinit.exe\") and\n  not process.args : (\n        \"?:\\\\Program Files\
+  \ (x86)\\\\PCMatic\\\\PCPitstopScheduleService.exe\",\n        \"?:\\\\Program Files\
+  \ (x86)\\\\AllesTechnologyAgent\\\\*\",\n        \"https://auth.axis.com/oauth2/oauth-authorize*\"\
+  \n  ) and\n  not process.command_line : (\n    \"\\\"cmd\\\" /c %NETBEANS_MAVEN_COMMAND_LINE%\"\
+  ,\n    \"?:\\\\Windows\\\\system32\\\\cmd.exe /q /d /s /c \\\"npm.cmd ^\\\"install^\\\
+  \" ^\\\"--no-bin-links^\\\" ^\\\"--production^\\\"\\\"\"\"  ) and\n  not (process.name\
+  \ : \"cmd.exe\" and process.args : \"%TEMP%\\\\Spiceworks\\\\*\" and process.args\
+  \ : \"http*/dataloader/persist_netstat_data\") and\n  not (process.args == \"echo\"\
+  \ and process.args == \"GEQ\" and process.args == \"1073741824\")"
+explanation: 'Identifies the execution of the Windows Command Shell process (cmd.exe)
+  with suspicious argument values. This behavior
+
+  is often observed during malware installation.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d9ffc3d6-9de9-4b29-9395-5757d0695ecf.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'false positives. This helps in early detection of potential threats
+    by monitoring for suspicious command executions.
+
+
+    ### Possible investigation steps
+
+
+    - Review the command line arguments associated with the cmd.exe process to identify
+    any suspicious patterns or keywords such as "curl", "regsvr32", "wscript", or
+    "Invoke-WebRequest" that may indicate malicious activity.
+
+    - Check the parent process of the cmd.exe execution to determine if it is a known
+    benign process or if it is associated with pot'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

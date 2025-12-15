@@ -1,0 +1,51 @@
+technique_id: T1190
+technique_name: Terminal Service Process Spawn
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: 1012f107-b8f1-4271-af30-5aed2de89b39
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_*\nfilter_img:\n  Image|endswith:\n  - \\rdpclip.exe\n  - :\\Windows\\\
+  System32\\csrss.exe\n  - :\\Windows\\System32\\wininit.exe\n  - :\\Windows\\System32\\\
+  winlogon.exe\nfilter_null:\n  Image: null\nselection:\n  ParentCommandLine|contains|all:\n\
+  \  - \\svchost.exe\n  - termsvcs\n"
+explanation: Detects a process spawned by the terminal service server process (this
+  could be an indicator for an exploitation of CVE-2019-0708)
+false_positives:
+- Unknown
+references:
+- https://securingtomorrow.mcafee.com/other-blogs/mcafee-labs/rdp-stands-for-really-do-patch-understanding-the-wormable-rdp-vulnerability-cve-2019-0708/
+tags:
+- attack.initial-access
+- attack.t1190
+- attack.lateral-movement
+- attack.t1210
+- car.2013-07-002
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    ParentCommandLine|contains|all:
+    - \svchost.exe
+    - termsvcs
+  filter_img:
+    Image|endswith:
+    - \rdpclip.exe
+    - :\Windows\System32\csrss.exe
+    - :\Windows\System32\wininit.exe
+    - :\Windows\System32\winlogon.exe
+  filter_null:
+    Image: null
+  condition: selection and not 1 of filter_*
+metadata:
+  created_date: 2019-05-22
+  modified_date: 2023-01-25
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

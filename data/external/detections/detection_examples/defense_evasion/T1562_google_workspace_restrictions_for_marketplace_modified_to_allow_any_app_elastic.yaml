@@ -1,0 +1,48 @@
+technique_id: T1562
+technique_name: Google Workspace Restrictions for Marketplace Modified to Allow Any
+  App
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset:\"google_workspace.admin\" and event.action:\"CHANGE_APPLICATION_SETTING\"\
+  \ and event.category:(iam or configuration)\n    and google_workspace.event.type:\"\
+  APPLICATION_SETTINGS\" and google_workspace.admin.application.name:\"Google Workspace\
+  \ Marketplace\"\n        and google_workspace.admin.setting.name:\"Apps Access Setting\
+  \ Allowlist access\"  and google_workspace.admin.new_value:\"ALLOW_ALL\""
+explanation: 'Detects when the Google Marketplace restrictions are changed to allow
+  any application for users in Google Workspace.
+
+  Malicious APKs created by adversaries may be uploaded to the Google marketplace
+  but not installed on devices managed
+
+  within Google Workspace. Administrators should set restrictions to not allow any
+  application from the marketplace for
+
+  security reasons. Adversaries may enable any app to be installed and executed on
+  mobile devices within a Google
+
+  Workspace environment prior to distributing the malicious APK to the end user.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a2795334-2499-11ed-9e1a-f661ea17fbce.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- Identify the user account associated\
+    \ with this action and assess their administrative privileges with Google Workspace\
+    \ Marketplace.\n- Google Workspace administrators may intentionally add an application\
+    \ from the marketplace based on organizational needs.\n    - Follow up with the\
+    \ user who added the application to ensure this was intended.\n- Verify the application\
+    \ identified has been assessed thoroughly by an administrator.\n\n### Response\
+    \ and remediation\n\n- Initiate the i"
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/6089179?hl=en
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 47

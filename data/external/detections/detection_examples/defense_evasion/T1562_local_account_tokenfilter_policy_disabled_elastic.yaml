@@ -1,0 +1,69 @@
+technique_id: T1562
+technique_name: Local Account TokenFilter Policy Disabled
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\n\
+  \  registry.value : \"LocalAccountTokenFilterPolicy\" and\n  registry.path : (\n\
+  \    \"HKLM\\\\*\\\\LocalAccountTokenFilterPolicy\",\n    \"\\\\REGISTRY\\\\MACHINE\\\
+  \\*\\\\LocalAccountTokenFilterPolicy\",\n    \"MACHINE\\\\*\\\\LocalAccountTokenFilterPolicy\"\
+  \n  ) and registry.data.strings : (\"1\", \"0x00000001\") and\n  not process.executable\
+  \ : (\n    /* Intune */\n    \"C:\\\\Windows\\\\system32\\\\deviceenroller.exe\"\
+  ,\n    \"C:\\\\Windows\\\\system32\\\\omadmclient.exe\",\n\n    /* Crowdstrike specific\
+  \ exclusion as it uses NT Object paths */\n    \"\\\\Device\\\\HarddiskVolume*\\\
+  \\system32\\\\deviceenroller.exe\",\n    \"\\\\Device\\\\HarddiskVolume*\\\\system32\\\
+  \\omadmclient.exe\"\n  )"
+explanation: 'Identifies registry modification to the LocalAccountTokenFilterPolicy
+  policy. If this value exists (which doesn''t by
+
+  default) and is set to 1, then remote connections from all local members of Administrators
+  are granted full
+
+  high-integrity tokens during negotiation.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/07b1ef73-1fde-4a49-a34a-5dd40011b076.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Administrative tools or scripts that modify the LocalAccountTokenFilterPolicy
+    for legitimate configuration purposes may trigger alerts. To manage this, identify
+    and document these tools, then create exceptions for their known registry changes.
+
+    - System updates or patches that adjust registry settings as part of their installation
+    process can cause false positives. Monitor update schedules and correlate alerts
+    with these activities to determine if they are benign.
+
+    - Sec'
+  mitigation: Review investigation guide for details
+references:
+- https://www.stigviewer.com/stig/windows_server_2008_r2_member_server/2014-04-02/finding/V-36439
+- https://posts.specterops.io/pass-the-hash-is-dead-long-live-localaccounttokenfilterpolicy-506c25a7c167
+- https://www.welivesecurity.com/wp-content/uploads/2018/01/ESET_Turla_Mosquito.pdf
+has_investigation_guide: true
+risk_score: 47

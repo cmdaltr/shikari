@@ -1,0 +1,49 @@
+technique_id: T1048
+technique_name: Potential Data Exfiltration Through Curl
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and event.action\
+  \ in (\"exec\", \"ProcessRollup2\") and process.name == \"curl\" and\n?process.parent.executable\
+  \ != null and (process.args in (\"-F\", \"-T\", \"-d\") or process.args like \"\
+  --data*\") and \nprocess.command_line like~ (\"*@/*.zip*\", \"*@/*.gz*\", \"*@/*.tgz*\"\
+  , \"*b64=@*\", \"*=<*\") and\nprocess.command_line like~ \"*http*\""
+explanation: "Detects the use of curl to upload an archived file to an internet server.\
+  \ Threat actors often will collect data on a\nsystem and compress it in an archive\
+  \ file before exfiltrating the file back to their C2 server for review. Many threat\
+  \ \nactors have been seen utilizing curl to upload this archive file with the collected\
+  \ data to do this. Use of curl in this \nway while not inherently malicious should\
+  \ be considered highly abnormal and suspicious activity."
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/be70614d-4295-473c-a953-582aef41c865.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate data transfers using curl for system backups or data synchronization
+    can trigger the rule. To manage this, identify and whitelist specific processes
+    or scripts that are known to perform these tasks regularly.
+
+    - Automated system updates or software installations that use curl to download
+    and upload data might be flagged. Exclude these processes by verifying their source
+    and adding them to an exception list if they are from trusted vendors.
+
+    - Internal data tra'
+  mitigation: Review investigation guide for details
+references:
+- https://everything.curl.dev/usingcurl/uploads
+has_investigation_guide: true
+risk_score: 47

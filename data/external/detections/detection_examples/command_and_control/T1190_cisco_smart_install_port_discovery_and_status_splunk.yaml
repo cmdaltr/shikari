@@ -1,0 +1,49 @@
+technique_id: T1190
+technique_name: Cisco Smart Install Port Discovery and Status
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count values(All_Traffic.src_ip)
+  as src_ip values(All_Traffic.src_port) as src_port values(All_Traffic.dest_ip) as
+  dest_ip earliest(_time) as firstTime latest(_time) as lastTime from datamodel=Network_Traffic
+  where All_Traffic.dest_port=4786 AND All_Traffic.transport=tcp by All_Traffic.dest_ip
+  All_Traffic.dest_port | `drop_dm_object_name("All_Traffic")` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `cisco_smart_install_port_discovery_and_status_filter`'
+explanation: This analytic detects network traffic to TCP port 4786, which is used
+  by the Cisco Smart Install protocol. Smart Install is a plug-and-play configuration
+  and image-management feature that helps customers to deploy Cisco switches. This
+  protocol has been exploited via CVE-2018-0171, a vulnerability that allows unauthenticated
+  remote attackers to execute arbitrary code or cause denial of service conditions.
+  Recently, Cisco Talos reported that a Russian state-sponsored threat actor called
+  "Static Tundra" has been actively exploiting this vulnerability to compromise unpatched
+  and end-of-life network devices. Monitoring for traffic to this port can help identify
+  potential exploitation attempts or unauthorized Smart Install activity.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/ded9f9d7-edb8-48cf-8b72-1b459eee6785/
+indicators:
+- type: data_source
+  value: Splunk Stream TCP
+  confidence: high
+- type: risk_system
+  value: dest_ip
+  confidence: high
+false_positives:
+- description: Legitimate use of Cisco Smart Install may generate traffic to port
+    4786 within environments that actively use this feature for switch deployment
+    and management. Network administrators might use Smart Install for legitimate
+    device configuration purposes, especially during network deployment or maintenance
+    windows. To reduce false positives, baseline normal Smart Install usage patterns
+    in your environment and consider implementing time-based filtering to alert only
+    on unexpected usage outside of scheduled maintenance periods. Additionally, consider
+    whitelisting known management stations that legitimately use Smart Install.
+  mitigation: Review context and user activity
+references:
+- https://blog.talosintelligence.com/static-tundra/
+- https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20180328-smi2
+- https://github.com/AlrikRr/Cisco-Smart-Exploit
+- https://www.exploit-db.com/exploits/44451
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/cisco/cisco_smart_install/stream_tcp.log

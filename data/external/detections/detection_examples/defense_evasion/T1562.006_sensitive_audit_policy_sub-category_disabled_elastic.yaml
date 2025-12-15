@@ -1,0 +1,51 @@
+technique_id: T1562.006
+technique_name: Sensitive Audit Policy Sub-Category Disabled
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.code : \"4719\" and host.os.type : \"windows\" and\n  winlog.event_data.AuditPolicyChangesDescription\
+  \ : \"Success removed\" and\n  winlog.event_data.SubCategory : (\n     \"Logon\"\
+  \ or\n     \"Audit Policy Change\" or\n     \"Process Creation\" or\n     \"Audit\
+  \ Other System Events\" or\n     \"Audit Security Group Management\" or\n     \"\
+  Audit User Account Management\"\n  )"
+explanation: 'Identifies attempts to disable auditing for some security sensitive
+  audit policy sub-categories. This is often done by
+
+  attackers in an attempt to evade detection and forensics on a system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0ef5d3eb-67ef-43ab-93b7-305cfa5a21f6.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Re-enable affected logging components, services, and security monitoring.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all'
+  mitigation: Review investigation guide for details
+references:
+- https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4719
+- https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gpac/77878370-0712-47cd-997d-b07053429f6d
+has_investigation_guide: true
+risk_score: 47

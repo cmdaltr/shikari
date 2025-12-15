@@ -1,0 +1,50 @@
+technique_id: T1059
+technique_name: Windows Suspicious VMWare Tools Child Process
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.parent_process_name=vmtoolsd.exe
+  AND Processes.process_name IN ("powershell.exe","cmd.exe", "msbuild.exe", "microsoft.workflow.compiler.exe",
+  "searchprotocolhost.exe", "scrcons.exe", "cscript.exe", "wscript.exe","bitsadmin.exe",
+  "rundll32.exe", "wmic.exe", "mshta.exe", "certutil.exe", "schtasks.exe") by Processes.action
+  Processes.dest Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_suspicious_vmware_tools_child_process_filter`'
+explanation: The following analytic identifies child processes spawned by vmtoolsd.exe,
+  the VMWare Tools service in Windows, which typically runs with SYSTEM privileges.
+  This detection leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on process and parent process relationships. Monitoring this activity is
+  crucial as it can indicate exploitation attempts, such as CVE-2023-20867. If confirmed
+  malicious, attackers could gain SYSTEM-level access, allowing them to execute arbitrary
+  code, escalate privileges, and potentially compromise the entire system.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/1f77661a-0fe3-4b8d-a62c-7dff06906d26/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Although unlikely, some legitimate Administrative scripts may utilize
+    VMWare Tools to execute commands on virtual machines.
+  mitigation: Review context and user activity
+references:
+- https://cloud.google.com/blog/topics/threat-intelligence/vmware-esxi-zero-day-bypass/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059/vmtoolsd/vmtoolsd_execution.log

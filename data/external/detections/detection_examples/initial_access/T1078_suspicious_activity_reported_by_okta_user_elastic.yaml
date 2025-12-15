@@ -1,0 +1,43 @@
+technique_id: T1078
+technique_name: Suspicious Activity Reported by Okta User
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:okta.system and event.action:user.account.report_suspicious_activity_by_enduser
+explanation: 'Detects when a user reports suspicious activity for their Okta account.
+  These events should be investigated, as they can
+
+  help security teams identify when an adversary is attempting to gain access to their
+  network.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f994964f-6fce-4d75-8e79-e16ccc412588.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Users frequently accessing their accounts from new devices or locations may
+    trigger false positives. Implement geofencing or device recognition to reduce
+    these alerts.
+
+    - Routine administrative actions, such as password resets or account updates,
+    might be misinterpreted as suspicious. Exclude these actions from alerts if they
+    are performed by known administrators.
+
+    - Automated scripts or applications using service accounts can generate alerts
+    if not properly configured.'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

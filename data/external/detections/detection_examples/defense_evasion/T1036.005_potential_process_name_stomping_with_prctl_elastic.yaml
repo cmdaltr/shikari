@@ -1,0 +1,54 @@
+technique_id: T1036.005
+technique_name: Potential Process Name Stomping with Prctl
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"linux\" and auditd.data.syscall == \"prctl\"\
+  \ and auditd.data.a0 == \"f\" and\nprocess.executable like (\n  \"/boot/*\", \"\
+  /dev/shm/*\", \"/etc/cron.*/*\", \"/etc/init.d/*\", \"/var/run/*\", \"/etc/update-motd.d/*\"\
+  ,\n  \"/tmp/*\", \"/var/log/*\", \"/var/tmp/*\", \"/home/*\", \"/run/shm/*\", \"\
+  /run/*\", \"./*\"\n)"
+explanation: 'This rule leverages Auditd data to detect the use of the `prctl` syscall
+  to potentially hide a process
+
+  by changing its name. The `prctl` syscall is used to control various process attributes.
+  Attackers can use
+
+  this syscall to change the name of a process to a hidden directory or file, making
+  it harder to detect. The query
+
+  looks for the `prctl` syscall with the `PR_SET_NAME` argument set to `f` (PR_SET_NAME
+  is used to set the name of a process).'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/fef62ecf-0260-4b71-848b-a8624b304828.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System maintenance scripts may invoke prctl to rename processes for legitimate
+    reasons. Review scheduled tasks and maintenance scripts in directories like /etc/cron.*
+    and /etc/init.d to identify benign uses.
+
+    - Development environments often use prctl for testing purposes. Exclude known
+    development directories such as /home/developer or /tmp/dev from the rule to reduce
+    noise.
+
+    - Some monitoring or logging tools might use prctl to rename their processes for
+    clarity. Ident'
+  mitigation: Review investigation guide for details
+references:
+- https://haxrob.net/process-name-stomping/
+- https://haxrob.net/hiding-in-plain-sight-part-2/
+- https://www.elastic.co/security-labs/linux-detection-engineering-with-auditd
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,74 @@
+# Bespoke Exclusions Configuration
+# Copy this file to exclusions.yaml and customize for your environment
+#
+# These exclusions are automatically applied to all generated detection queries.
+# Use this to reduce false positives from known-good processes, service accounts, etc.
+
+# Processes to always exclude from detections
+# Supports wildcards (*) at the start or end of the path
+process_exclusions:
+  # Security tools
+  - "C:\\Program Files\\Windows Defender\\*.exe"
+  - "C:\\Program Files\\CrowdStrike\\*.exe"
+  # - "C:\\Program Files\\YourEDR\\*.exe"
+
+  # Backup and monitoring agents
+  # - "C:\\Program Files\\BackupAgent\\agent.exe"
+  # - "C:\\Program Files\\MonitoringTool\\monitor.exe"
+
+  # Custom applications
+  # - "C:\\CustomApps\\*.exe"
+
+# Users/service accounts to always exclude
+# These are excluded from both source and target user fields
+user_exclusions:
+  # System accounts (usually safe to exclude)
+  - "SYSTEM"
+  - "LOCAL SERVICE"
+  - "NETWORK SERVICE"
+
+  # Service accounts (customize for your environment)
+  # - "svc_backup"
+  # - "svc_monitoring"
+  # - "svc_antivirus"
+
+# Hostnames to always exclude
+# Useful for excluding infrastructure servers that generate expected activity
+host_exclusions:
+  # Domain controllers (be careful - attacks often target DCs)
+  # - "DC01"
+  # - "DC02"
+
+  # Security infrastructure
+  # - "SIEM01"
+  # - "SOAR01"
+
+  # Monitoring servers
+  # - "NAGIOS01"
+  # - "ZABBIX01"
+
+# IP addresses or CIDR ranges to exclude
+# Useful for excluding known-good network segments
+ip_exclusions:
+  # Internal ranges (customize for your network)
+  # - "10.0.0.0/8"
+  # - "192.168.1.0/24"
+
+  # Security infrastructure IPs
+  # - "10.10.10.50"
+
+# Custom field exclusions
+# Map any field name to a list of values to exclude
+custom_exclusions:
+  # Example: Exclude specific command line patterns
+  # CommandLine:
+  #   - "*Microsoft\\Windows\\Temporary Internet Files*"
+  #   - "*update.exe /silent*"
+
+  # Example: Exclude specific file hashes
+  # SHA256:
+  #   - "abc123..."
+
+  # Example: Exclude specific registry keys
+  # RegistryKey:
+  #   - "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\SecurityAgent"

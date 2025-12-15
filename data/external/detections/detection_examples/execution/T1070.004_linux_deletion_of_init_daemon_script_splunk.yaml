@@ -1,0 +1,39 @@
+technique_id: T1070.004
+technique_name: Linux Deletion Of Init Daemon Script
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Filesystem where Filesystem.action=deleted Filesystem.file_path
+  IN ( "/etc/init.d/*") by Filesystem.action Filesystem.dest Filesystem.file_access_time
+  Filesystem.file_create_time Filesystem.file_hash Filesystem.file_modify_time Filesystem.file_name
+  Filesystem.file_path Filesystem.file_acl Filesystem.file_size Filesystem.process_guid
+  Filesystem.process_id Filesystem.user Filesystem.vendor_product | `drop_dm_object_name(Filesystem)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`| `linux_deletion_of_init_daemon_script_filter`'
+explanation: The following analytic detects the deletion of init daemon scripts on
+  a Linux machine. It leverages filesystem event logs to identify when files within
+  the /etc/init.d/ directory are deleted. This activity is significant because init
+  daemon scripts control the start and stop of critical services, and their deletion
+  can indicate an attempt to impair security features or evade defenses. If confirmed
+  malicious, this behavior could allow an attacker to disrupt essential services,
+  execute destructive payloads, or persist undetected in the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/729aab57-d26f-4156-b97f-ab8dda8f44b1/
+indicators:
+- type: data_source
+  value: Sysmon for Linux EventID 11
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrator or network operator can execute this command. Please
+    update the filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.sentinelone.com/labs/acidrain-a-modem-wiper-rains-down-on-europe/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/acidrain/sysmon_linux.log

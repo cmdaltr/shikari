@@ -1,0 +1,60 @@
+technique_id: T1137
+technique_name: Outlook Home Page Registry Modification
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.action != \"deletion\"\
+  \ and registry.value : \"URL\" and\n    registry.path : (\n        \"*\\\\SOFTWARE\\\
+  \\Microsoft\\\\Office\\\\*\\\\Outlook\\\\Webview\\\\*\",\n        \"*\\\\SOFTWARE\\\
+  \\Microsoft\\\\Office\\\\*\\\\Outlook\\\\Today\\\\*\"\n    ) and registry.data.strings\
+  \ : (\"*://*\", \"*:\\\\*\")"
+explanation: 'Identifies modifications in registry keys associated with abuse of the
+  Outlook Home Page functionality for command and
+
+  control or persistence.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ac5a2759-5c34-440a-b0c4-51fe674611d6.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may modify the registry keys associated
+    with Outlook''s Home Page feature. Users can create exceptions for known software
+    update processes to prevent unnecessary alerts.
+
+    - Custom scripts or administrative tools used by IT departments to configure Outlook
+    settings across multiple machines might trigger this rule. Identifying and excluding
+    these trusted scripts or tools can reduce false positives.
+
+    - Some third-party Outlook add'
+  mitigation: Review investigation guide for details
+references:
+- https://cloud.google.com/blog/topics/threat-intelligence/breaking-the-rules-tough-outlook-for-home-page-attacks/
+- https://github.com/trustedsec/specula
+has_investigation_guide: true
+risk_score: 73

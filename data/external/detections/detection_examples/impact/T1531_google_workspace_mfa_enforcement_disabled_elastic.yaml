@@ -1,0 +1,45 @@
+technique_id: T1531
+technique_name: Google Workspace MFA Enforcement Disabled
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:google_workspace.admin and event.provider:admin\n  and event.category:iam\
+  \ and event.action:ENFORCE_STRONG_AUTHENTICATION\n  and google_workspace.admin.new_value:false"
+explanation: 'Detects when multi-factor authentication (MFA) enforcement is disabled
+  for Google Workspace users. An adversary may
+
+  disable MFA enforcement in order to weaken an organization’s security controls.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/cad4500a-abd7-4ef3-b5d3-95524de7cfe1.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - While this activity can be done by administrators, all users must use MFA. The
+    security team should address any potential benign true positive (B-TP), as this
+    configuration can risk the user and domain.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Disable or limit the account during the investigation and response.
+
+    - Identify the possible impact of the incident and prioritize accordingly; the
+    following act'
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/9176657?hl=en#
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 47

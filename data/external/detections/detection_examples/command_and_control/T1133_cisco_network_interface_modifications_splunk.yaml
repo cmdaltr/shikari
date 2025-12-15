@@ -1,0 +1,51 @@
+technique_id: T1133
+technique_name: Cisco Network Interface Modifications
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count values(All_Changes.command)
+  as command min(_time) as firstTime max(_time) as lastTime from datamodel=Change.All_Changes
+  where ( (All_Changes.command="*interface*") OR (All_Changes.command="*LINEPROTO-5-UPDOWN*")
+  OR (All_Changes.command="*ip address*") ) by All_Changes.dvc All_Changes.user |
+  `drop_dm_object_name("All_Changes")` | rename dvc as dest | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `cisco_network_interface_modifications_filter`'
+explanation: This analytic detects the creation or modification of network interfaces
+  on Cisco devices, which could indicate an attacker establishing persistence or preparing
+  for lateral movement. After gaining initial access to network devices, threat actors
+  like Static Tundra often create new interfaces (particularly loopback interfaces)
+  to establish covert communication channels or maintain persistence. This detection
+  specifically looks for the configuration of new interfaces, interface state changes,
+  and the assignment of IP addresses to interfaces. These activities are particularly
+  concerning when they involve unusual interface names or descriptions containing
+  suspicious terms.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/61ae09c2-079e-44b1-8be0-74e35c5a679e/
+indicators:
+- type: data_source
+  value: Cisco IOS Logs
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Legitimate network interface configuration changes may trigger this
+    detection during routine network maintenance or initial device setup. Network
+    administrators often need to create or modify interfaces as part of normal operations.
+    To reduce false positives, consider implementing a baseline of expected administrative
+    activities, including approved administrative usernames, typical times for interface
+    configuration changes, and scheduled maintenance windows. You may also want to
+    create a lookup table of approved interface naming conventions and filter out
+    alerts for standard interface configurations.
+  mitigation: Review context and user activity
+references:
+- https://blog.talosintelligence.com/static-tundra/
+- https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20180328-smi2
+- https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/interface/command/ir-cr-book/ir-i1.html#wp1389942834
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/cisco/cisco_smart_install/cisco_ios.log

@@ -1,0 +1,60 @@
+technique_id: T1053.005
+technique_name: Scheduled Task Executing Encoded Payload from Registry
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: c4eeeeae-89f4-43a7-8b48-8d1bdfa66c78
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cli_create:\n  CommandLine|contains: /Create\nselection_cli_encoding:\n\
+  \  CommandLine|contains:\n  - FromBase64String\n  - encodedcommand\nselection_cli_get:\n\
+  \  CommandLine|contains:\n  - Get-ItemProperty\n  - ' gp '\nselection_cli_hive:\n\
+  \  CommandLine|contains:\n  - 'HKCU:'\n  - 'HKLM:'\n  - 'registry::'\n  - HKEY_\n\
+  selection_img:\n- Image|endswith: \\schtasks.exe\n- OriginalFileName: schtasks.exe\n"
+explanation: Detects the creation of a schtask that potentially executes a base64
+  encoded payload stored in the Windows Registry using PowerShell.
+false_positives:
+- Unlikely
+references:
+- https://thedfirreport.com/2022/02/21/qbot-and-zerologon-lead-to-full-domain-compromise/
+tags:
+- attack.privilege-escalation
+- attack.execution
+- attack.persistence
+- attack.t1053.005
+- attack.t1059.001
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_img:
+  - Image|endswith: \schtasks.exe
+  - OriginalFileName: schtasks.exe
+  selection_cli_create:
+    CommandLine|contains: /Create
+  selection_cli_encoding:
+    CommandLine|contains:
+    - FromBase64String
+    - encodedcommand
+  selection_cli_get:
+    CommandLine|contains:
+    - Get-ItemProperty
+    - ' gp '
+  selection_cli_hive:
+    CommandLine|contains:
+    - 'HKCU:'
+    - 'HKLM:'
+    - 'registry::'
+    - HKEY_
+  condition: all of selection_*
+metadata:
+  created_date: 2022-02-12
+  modified_date: 2023-02-04
+  author: pH-T (Nextron Systems), @Kostastsale, TheDFIRReport, X__Junior (Nextron
+    Systems), Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,52 @@
+technique_id: T1218.011
+technique_name: Windows LOLBAS Executed Outside Expected Path
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '|  tstats `security_content_summariesonly` latest(Processes.parent_process)
+  as parent_process, latest(Processes.process) as process, latest(Processes.process_guid)
+  as process_guid count, min(_time) AS firstTime, max(_time) AS lastTime FROM datamodel=Endpoint.Processes
+  where Processes.process != "unknown" AND NOT Processes.process_path IN ("*\\Program
+  Files*","*\\PROGRA~*","*\\Windows\\System32\\*","*\\Windows\\Syswow64\\*") by Processes.action
+  Processes.dest Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  |`drop_dm_object_name(Processes)` | lookup lolbas_file_path lolbas_file_name as
+  process_name OUTPUT description as desc | lookup lolbas_file_path lolbas_file_name
+  as process_name lolbas_file_path as process_path OUTPUT description as is_lolbas_path
+  | search desc!="false" AND is_lolbas_path="false" | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_lolbas_executed_outside_expected_path_filter`'
+explanation: The following analytic identifies a LOLBAS process being executed outside
+  of it's expected location. Processes being executed outside of expected locations
+  may be an indicator that an adversary is attempting to evade defenses or execute
+  malicious code. The LOLBAS project documents Windows native binaries that can be
+  abused by threat actors to perform tasks like executing malicious code.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/326fdf44-b90c-4d2e-adca-1fd140b10536/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Vendors will often copy system exectables to a different path for application
+    usage.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1036/
+- https://attack.mitre.org/techniques/T1036/005/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1036/cmd_lolbas_usage/cmd_lolbas_usage.log

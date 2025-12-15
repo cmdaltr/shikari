@@ -1,0 +1,83 @@
+technique_id: T1112
+technique_name: Potential RemoteMonologue Attack
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.action != \"deletion\"\
+  \ and\n  registry.value == \"RunAs\" and registry.data.strings : \"Interactive User\"\
+  \ and\n\n  not \n  (\n    (\n      process.executable : (\n        \"C:\\\\ProgramData\\\
+  \\Microsoft\\\\Windows Defender\\\\Platform\\\\4.*\\\\MsMpEng.exe\",\n        \"\
+  C:\\\\Program Files\\\\Windows Defender\\\\MsMpEng.exe\"\n      ) and\n      registry.path\
+  \ : \"*\\\\SOFTWARE\\\\Classes\\\\AppID\\\\{1111A26D-EF95-4A45-9F55-21E52ADF9887}\\\
+  \\RunAs\"\n    ) or\n    (\n      process.executable : (\n        \"C:\\\\Program\
+  \ Files\\\\TeamViewer\\\\TeamViewer.exe\",\n        \"C:\\\\Program Files (x86)\\\
+  \\TeamViewer\\\\TeamViewer.exe\"\n      ) and\n      registry.path : \"*\\\\SOFTWARE\\\
+  \\Classes\\\\AppID\\\\{850A928D-5456-4865-BBE5-42635F1EBCA1}\\\\RunAs\"\n    ) or\n\
+  \    (\n      process.executable : \"C:\\\\Windows\\\\System32\\\\svchost.exe\"\
+  \ and\n      registry.path : \"*\\\\S-1-*Classes\\\\AppID\\\\{D3E34B21-9D75-101A-8C3D-00AA001A1652}\\\
+  \\RunAs\"\n    ) or\n    (\n      process.executable : \"C:\\\\Windows\\\\System32\\\
+  \\SecurityHealthService.exe\" and\n      registry.path : (\n        \"*\\\\SOFTWARE\\\
+  \\Classes\\\\AppID\\\\{1D278EEF-5C38-4F2A-8C7D-D5C13B662567}\\\\RunAs\",\n     \
+  \   \"*\\\\SOFTWARE\\\\Classes\\\\AppID\\\\{7E55A26D-EF95-4A45-9F55-21E52ADF9878}\\\
+  \\RunAs\"\n      )\n    ) or\n    (\n      process.executable : \"C:\\\\Windows\\\
+  \\System32\\\\SecurityHealthService.exe\" and\n      registry.path : (\n       \
+  \ \"*\\\\SOFTWARE\\\\Classes\\\\AppID\\\\{1D278EEF-5C38-4F2A-8C7D-D5C13B662567}\\\
+  \\RunAs\",\n        \"*\\\\SOFTWARE\\\\Classes\\\\AppID\\\\{7E55A26D-EF95-4A45-9F55-21E52ADF9878}\\\
+  \\RunAs\"\n      )\n    ) or\n    registry.path : (\n      \"HKLM\\\\SOFTWARE\\\\\
+  Microsoft\\\\Office\\\\ClickToRun\\\\VREGISTRY_*\",\n      \"\\\\REGISTRY\\\\MACHINE\\\
+  \\SOFTWARE\\\\Microsoft\\\\Office\\\\ClickToRun\\\\VREGISTRY_*\"\n    ) or\n   \
+  \ (process.executable : \"C:\\\\windows\\\\System32\\\\msiexec.exe\" and ?user.id\
+  \ : \"S-1-5-18\")\n  )"
+explanation: 'Identifies attempt to perform session hijack via COM object registry
+  modification by setting the RunAs value to
+
+  Interactive User.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c18975f5-676c-4091-b626-81e8938aa2ee.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Software updates or installations that modify COM settings.
+
+    - Automated scripts or management tools that adjust COM configurations.
+
+
+    ### Response and remediation
+
+
+    - Immediately isolate the affected system from the network to prevent further
+    unauthorized access or lateral movement by the adversary.
+
+    - Modify the registry value back to its secure state, ensuring that "RunAs" value
+    is not set to "Interactive User".
+
+    - Conduct a thorough review of recent user activity and sy'
+  mitigation: Review investigation guide for details
+references:
+- https://www.ibm.com/think/x-force/remotemonologue-weaponizing-dcom-ntlm-authentication-coercions#1
+- https://github.com/xforcered/RemoteMonologue
+has_investigation_guide: true
+risk_score: 47

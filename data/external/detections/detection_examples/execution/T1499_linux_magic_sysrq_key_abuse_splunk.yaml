@@ -1,0 +1,40 @@
+technique_id: T1499
+technique_name: Linux Magic SysRq Key Abuse
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`linux_auditd` type=Path name="/proc/sysrq-trigger" OR name="/proc/sys/kernel/sysrq"
+  OR name="/etc/sysctl.conf" | rename host as dest | stats count min(_time) as firstTime
+  max(_time) as lastTime by dest name | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `linux_magic_sysrq_key_abuse_filter`'
+explanation: 'Detects potential abuse of the Linux Magic SysRq (System Request) key
+  by adversaries
+
+  with root or sufficient privileges to manipulate or destabilize a system.
+
+  Writing to /proc/sysrq-trigger can crash the system, kill processes, or bypass standard
+  logging.
+
+  Monitoring SysRq abuse helps detect stealthy post-exploitation activity.'
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/22c03600-f84a-47fa-abaa-ffbe3e72c782/
+indicators:
+- type: data_source
+  value: Linux Auditd Path
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Legitimate administrative activity modifying SysRq for debugging or
+    recovery. Please update the filter macros to remove false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.kernel.org/doc/html/v4.10/_sources/admin-guide/sysrq.txt
+- https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/4/html/reference_guide/s3-proc-sys-kernel
+- https://www.splunk.com/en_us/blog/security/threat-update-awfulshred-script-wiper.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1529/linux_sysrq_abuse/linux_sysrq_abuse.log

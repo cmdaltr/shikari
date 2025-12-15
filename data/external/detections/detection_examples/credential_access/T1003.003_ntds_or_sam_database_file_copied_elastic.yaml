@@ -1,0 +1,64 @@
+technique_id: T1003.003
+technique_name: NTDS or SAM Database File Copied
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  (\n    ((?process.pe.original_file_name in (\"Cmd.Exe\", \"PowerShell.EXE\",\
+  \ \"XCOPY.EXE\") or process.name : (\"Cmd.Exe\", \"PowerShell.EXE\", \"XCOPY.EXE\"\
+  )) and\n       process.args : (\"copy\", \"xcopy\", \"Copy-Item\", \"move\", \"\
+  cp\", \"mv\")\n    ) or\n    ((?process.pe.original_file_name : \"esentutl.exe\"\
+  \ or process.name : \"esentutl.exe\") and process.args : (\"*/y*\", \"*/vss*\",\
+  \ \"*/d*\"))\n  ) and\n  process.command_line : (\"*\\\\ntds.dit*\", \"*\\\\config\\\
+  \\SAM*\", \"*\\\\*\\\\GLOBALROOT\\\\Device\\\\HarddiskVolumeShadowCopy*\\\\*\",\
+  \ \"*/system32/config/SAM*\", \"*\\\\User Data\\\\*\")"
+explanation: 'Identifies a copy operation of the Active Directory Domain Database
+  (ntds.dit) or Security Account Manager (SAM) files.
+
+  Those files contain sensitive information including hashed domain and/or local credentials.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3bc6deaa-fbd4-433a-ae21-3e892f95624f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Benign true positives (B-TPs) can be added as exceptions if necessary.\n\n###\
+    \ Response and Remediation\n\n- Initiate the incident response process based on\
+    \ the outcome of the triage.\n  - If malicious activity is confirmed, perform\
+    \ a broader investigation to identify the scope of the compromise and determine\
+    \ the appropriate remediation steps.\n- Isolate the involved hosts to prevent\
+    \ further post-compromise behavior.\n- If the"
+  mitigation: Review investigation guide for details
+references:
+- https://thedfirreport.com/2020/11/23/pysa-mespinoza-ransomware/
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1003.002/T1003.002.md#atomic-test-3---esentutlexe-sam-copy
+- https://www.elastic.co/security-labs/detect-credential-access
+- https://www.elastic.co/security-labs/siestagraph-new-implant-uncovered-in-asean-member-foreign-ministry
+has_investigation_guide: true
+risk_score: 73

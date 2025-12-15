@@ -1,0 +1,36 @@
+technique_id: T1562.001
+technique_name: Disable PUA Protection on Windows Defender
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 8ffc5407-52e3-478f-9596-0a7371eafe13
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Details: DWORD (0x00000000)\n  TargetObject|contains: \\Policies\\Microsoft\\\
+  Windows Defender\\PUAProtection\n"
+explanation: Detects disabling Windows Defender PUA protection
+false_positives:
+- Unknown
+references:
+- https://www.tenforums.com/tutorials/32236-enable-disable-microsoft-defender-pua-protection-windows-10-a.html
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains: \Policies\Microsoft\Windows Defender\PUAProtection
+    Details: DWORD (0x00000000)
+  condition: selection
+metadata:
+  created_date: 2021-08-04
+  modified_date: 2023-08-17
+  author: Austin Songer @austinsonger
+  status: test
+  imported_date: '2025-11-28'

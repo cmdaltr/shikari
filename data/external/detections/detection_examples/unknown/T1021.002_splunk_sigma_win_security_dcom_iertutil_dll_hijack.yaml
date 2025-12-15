@@ -1,0 +1,41 @@
+technique_id: T1021.002
+technique_name: DCOM InternetExplorer.Application Iertutil DLL Hijack - Security
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: c39f0c81-7348-4965-ab27-2fde35a1b641
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  SubjectUserName|endswith: $\nselection:\n  EventID: 5145\n  RelativeTargetName|endswith:\
+  \ \\Internet Explorer\\iertutil.dll\n"
+explanation: Detects a threat actor creating a file named `iertutil.dll` in the `C:\Program
+  Files\Internet Explorer\` directory over the network for a DCOM InternetExplorer
+  DLL Hijack scenario.
+false_positives:
+- Unknown
+references:
+- https://threathunterplaybook.com/hunts/windows/201009-RemoteDCOMIErtUtilDLLHijack/notebook.html
+tags:
+- attack.lateral-movement
+- attack.t1021.002
+- attack.t1021.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 5145
+    RelativeTargetName|endswith: \Internet Explorer\iertutil.dll
+  filter:
+    SubjectUserName|endswith: $
+  condition: selection and not filter
+metadata:
+  created_date: 2020-10-12
+  modified_date: 2022-11-26
+  author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR)
+  status: test
+  imported_date: '2025-11-28'

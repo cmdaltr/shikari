@@ -1,0 +1,74 @@
+technique_id: T1574
+technique_name: Dynamic Linker Creation or Modification
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "file where host.os.type == \"linux\" and event.action in (\"creation\", \"\
+  rename\") and\nfile.path : (\"/etc/ld.so.preload\", \"/etc/ld.so.conf.d/*\", \"\
+  /etc/ld.so.conf\") and\nnot (\n  process.executable in (\n    \"/bin/dpkg\", \"\
+  /usr/bin/dpkg\", \"/bin/dockerd\", \"/usr/bin/dockerd\", \"/usr/sbin/dockerd\",\
+  \ \"/bin/microdnf\",\n    \"/usr/bin/microdnf\", \"/bin/rpm\", \"/usr/bin/rpm\"\
+  , \"/bin/snapd\", \"/usr/bin/snapd\", \"/bin/yum\", \"/usr/bin/yum\",\n    \"/bin/dnf\"\
+  , \"/usr/bin/dnf\", \"/bin/podman\", \"/usr/bin/podman\", \"/bin/dnf-automatic\"\
+  , \"/usr/bin/dnf-automatic\",\n    \"/bin/pacman\", \"/usr/bin/pacman\", \"/usr/bin/dpkg-divert\"\
+  , \"/bin/dpkg-divert\", \"/sbin/apk\", \"/usr/sbin/apk\",\n    \"/usr/local/sbin/apk\"\
+  , \"/usr/bin/apt\", \"/usr/sbin/pacman\", \"/bin/podman\", \"/usr/bin/podman\",\
+  \ \"/usr/bin/puppet\",\n    \"/bin/puppet\", \"/opt/puppetlabs/puppet/bin/puppet\"\
+  , \"/usr/bin/chef-client\", \"/bin/chef-client\",\n    \"/bin/autossl_check\", \"\
+  /usr/bin/autossl_check\", \"/proc/self/exe\",  \"/usr/bin/pamac-daemon\",\n    \"\
+  /bin/pamac-daemon\", \"/usr/lib/snapd/snapd\", \"/usr/local/bin/dockerd\", \"/usr/libexec/platform-python\"\
+  ,\n    \"/usr/lib/snapd/snap-update-ns\", \"/usr/bin/vmware-config-tools.pl\", \"\
+  ./usr/bin/podman\", \"/bin/nvidia-cdi-hook\",\n    \"/usr/lib/dracut/dracut-install\"\
+  , \"./usr/bin/nvidia-cdi-hook\", \"/.envbuilder/bin/envbuilder\", \"/usr/bin/buildah\"\
+  ,\n    \"/usr/sbin/dnf\", \"/usr/bin/pamac\", \"/sbin/pacman\", \"/usr/bin/crio\"\
+  , \"/usr/sbin/yum-cron\"\n  ) or\n  file.extension in (\"swp\", \"swpx\", \"swx\"\
+  , \"dpkg-remove\") or\n  file.Ext.original.extension == \"dpkg-new\" or\n  process.executable\
+  \ : (\n    \"/nix/store/*\", \"/var/lib/dpkg/*\", \"/snap/*\", \"/dev/fd/*\", \"\
+  /usr/lib/virtualbox/*\", \"/opt/dynatrace/oneagent/*\",\n    \"/usr/libexec/platform-python*\"\
+  \n  ) or\n  process.executable == null or\n  process.name in (\n    \"java\", \"\
+  executor\", \"ssm-agent-worker\", \"packagekitd\", \"crio\", \"dockerd-entrypoint.sh\"\
+  ,\n    \"docker-init\", \"BootTimeChecker\", \"dockerd (deleted)\", \"dockerd\"\n\
+  \  ) or\n  (process.name == \"sed\" and file.name : \"sed*\") or\n  (process.name\
+  \ == \"perl\" and file.name : \"e2scrub_all.tmp*\") or\n  (process.name == \"init\"\
+  \ and file.name == \"ld.wsl.conf\") or\n  (process.name == \"sshd\" and file.extension\
+  \ == \"dpkg-new\")\n)"
+explanation: 'Detects the creation or modification of files related to the configuration
+  of the dynamic linker on Linux systems.
+
+  The dynamic linker is a shared library that is used by the Linux kernel to load
+  and execute programs. Attackers may
+
+  attempt to hijack the execution flow of a program by modifying the dynamic linker
+  configuration files. This technique
+
+  is often observed by userland rootkits that leverage shared objects to maintain
+  persistence on a compromised host.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/640f79d1-571d-4f96-a9af-1194fc8cf763.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Package management operations can trigger false positives when legitimate package
+    managers like dpkg, rpm, or yum modify linker configuration files. To handle this,
+    ensure these processes are included in the exclusion list to prevent unnecessary
+    alerts.
+
+    - System updates or software installations often involve temporary file modifications
+    with extensions like swp or dpkg-new. Exclude these extensions to reduce false
+    positives.
+
+    - Automated system management tools such as'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

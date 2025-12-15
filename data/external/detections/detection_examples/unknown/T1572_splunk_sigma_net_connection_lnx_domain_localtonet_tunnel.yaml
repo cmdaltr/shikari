@@ -1,0 +1,50 @@
+technique_id: T1572
+technique_name: Communication To LocaltoNet Tunneling Service Initiated - Linux
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: c4568f5d-131f-4e78-83d4-45b2da0ec4f1
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  DestinationHostname|endswith:\n  - .localto.net\n  - .localtonet.com\n  Initiated:\
+  \ 'true'\n"
+explanation: 'Detects an executable initiating a network connection to "LocaltoNet"
+  tunneling sub-domains.
+
+  LocaltoNet is a reverse proxy that enables localhost services to be exposed to the
+  Internet.
+
+  Attackers have been seen to use this service for command-and-control activities
+  to bypass MFA and perimeter controls.
+
+  '
+false_positives:
+- Legitimate use of the LocaltoNet service.
+references:
+- https://localtonet.com/documents/supported-tunnels
+- https://cloud.google.com/blog/topics/threat-intelligence/unc3944-targets-saas-applications
+tags:
+- attack.command-and-control
+- attack.t1572
+- attack.t1090
+- attack.t1102
+logsource:
+  category: network_connection
+  product: linux
+detection:
+  selection:
+    DestinationHostname|endswith:
+    - .localto.net
+    - .localtonet.com
+    Initiated: 'true'
+  condition: selection
+metadata:
+  created_date: 2024-06-17
+  modified_date: '2025-11-28'
+  author: Andreas Braathen (mnemonic.io)
+  status: test
+  imported_date: '2025-11-28'

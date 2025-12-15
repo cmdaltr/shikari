@@ -1,0 +1,51 @@
+technique_id: T1610
+technique_name: Kubernetes Pod Created With HostIPC
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset : \"kubernetes.audit_logs\"\n  and kubernetes.audit.annotations.authorization_k8s_io/decision:\"\
+  allow\"\n  and kubernetes.audit.objectRef.resource:\"pods\"\n  and kubernetes.audit.verb:(\"\
+  create\" or \"update\" or \"patch\")\n  and kubernetes.audit.requestObject.spec.hostIPC:true\n\
+  \  and not kubernetes.audit.requestObject.spec.containers.image: (\"docker.elastic.co/beats/elastic-agent:8.4.0\"\
+  )"
+explanation: 'This rule detects an attempt to create or modify a pod using the host
+  IPC namespace. This gives access to data used by
+
+  any pod that also use the hosts IPC namespace. If any process on the host or any
+  processes in a pod uses the hosts
+
+  inter-process communication mechanisms (shared memory, semaphore arrays, message
+  queues, etc.), an attacker can
+
+  read/write to those same mechanisms. They may look for files in /dev/shm or use
+  ipcs to check for any IPC facilities
+
+  being used.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/764c8437-a581-4537-8060-1fdb0e92c92d.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Kubernetes
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Pods using hostIPC for legitimate inter-process communication may trigger alerts.
+    Review the pod''s purpose and verify if hostIPC is necessary for its function.
+
+    - Known benign images, such as monitoring or logging agents, might use hostIPC.
+    Update the exclusion list to include these images if they are verified as non-threatening.
+
+    - Development or testing environments often use hostIPC for debugging purposes.
+    Consider excluding these environments from the rule or creatin'
+  mitigation: Review investigation guide for details
+references:
+- https://research.nccgroup.com/2021/11/10/detection-engineering-for-kubernetes-clusters/#part3-kubernetes-detections
+- https://kubernetes.io/docs/concepts/security/pod-security-policy/#host-namespaces
+- https://bishopfox.com/blog/kubernetes-pod-privilege-escalation
+has_investigation_guide: true
+risk_score: 47

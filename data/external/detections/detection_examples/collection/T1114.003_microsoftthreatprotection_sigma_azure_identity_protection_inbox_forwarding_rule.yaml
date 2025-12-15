@@ -1,0 +1,36 @@
+technique_id: T1114.003
+technique_name: Suspicious Inbox Forwarding Identity Protection
+tactic: collection
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 27e4f1d6-ae72-4ea0-8a67-77a73a289c3d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  riskEventType: suspiciousInboxForwarding\n"
+explanation: Indicates suspicious rules such as an inbox rule that forwards a copy
+  of all emails to an external address
+false_positives:
+- A legitimate forwarding rule.
+references:
+- https://learn.microsoft.com/en-us/entra/id-protection/concept-identity-protection-risks#suspicious-inbox-forwarding
+- https://learn.microsoft.com/en-us/entra/architecture/security-operations-user-accounts#unusual-sign-ins
+tags:
+- attack.t1114.003
+- attack.collection
+logsource:
+  product: azure
+  service: riskdetection
+detection:
+  selection:
+    riskEventType: suspiciousInboxForwarding
+  condition: selection
+metadata:
+  created_date: 2023-09-03
+  modified_date: '2025-11-28'
+  author: Mark Morowczynski '@markmorow', Gloria Lee, '@gleeiamglo'
+  status: test
+  imported_date: '2025-11-28'

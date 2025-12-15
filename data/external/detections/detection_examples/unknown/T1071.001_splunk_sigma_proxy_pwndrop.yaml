@@ -1,0 +1,36 @@
+technique_id: T1071.001
+technique_name: PwnDrp Access
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.89
+validated: true
+source: sigma
+sigma_id: 2b1ee7e4-89b6-4739-b7bb-b811b6607e5e
+level: critical
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  c-uri|contains: /pwndrop/\n"
+explanation: Detects downloads from PwnDrp web servers developed for red team testing
+  and most likely also used for criminal activity
+false_positives:
+- Unknown
+references:
+- https://breakdev.org/pwndrop/
+tags:
+- attack.command-and-control
+- attack.t1071.001
+- attack.t1102.001
+- attack.t1102.003
+logsource:
+  category: proxy
+detection:
+  selection:
+    c-uri|contains: /pwndrop/
+  condition: selection
+metadata:
+  created_date: 2020-04-15
+  modified_date: 2021-11-27
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

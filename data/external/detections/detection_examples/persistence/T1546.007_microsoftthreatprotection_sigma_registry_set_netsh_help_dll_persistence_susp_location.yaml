@@ -1,0 +1,66 @@
+technique_id: T1546.007
+technique_name: New Netsh Helper DLL Registered From A Suspicious Location
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: e7b18879-676e-4a0e-ae18-27039185a8e7
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_target and\
+  \ 1 of selection_folders_*\nselection_folders_1:\n  Details|contains:\n  - :\\Perflogs\\\
+  \n  - :\\Users\\Public\\\n  - :\\Windows\\Temp\\\n  - \\AppData\\Local\\Temp\\\n\
+  \  - \\Temporary Internet\nselection_folders_2:\n- Details|contains|all:\n  - :\\\
+  Users\\\n  - \\Favorites\\\n- Details|contains|all:\n  - :\\Users\\\n  - \\Favourites\\\
+  \n- Details|contains|all:\n  - :\\Users\\\n  - \\Contacts\\\n- Details|contains|all:\n\
+  \  - :\\Users\\\n  - \\Pictures\\\nselection_target:\n  TargetObject|contains: \\\
+  SOFTWARE\\Microsoft\\NetSh\n"
+explanation: 'Detects changes to the Netsh registry key to add a new DLL value that
+  is located on a suspicious location. This change might be an indication of a potential
+  persistence attempt by adding a malicious Netsh helper
+
+  '
+false_positives:
+- Unknown
+references:
+- https://www.ired.team/offensive-security/persistence/t1128-netsh-helper-dll
+- https://pentestlab.blog/2019/10/29/persistence-netsh-helper-dll/
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.t1546.007
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection_target:
+    TargetObject|contains: \SOFTWARE\Microsoft\NetSh
+  selection_folders_1:
+    Details|contains:
+    - :\Perflogs\
+    - :\Users\Public\
+    - :\Windows\Temp\
+    - \AppData\Local\Temp\
+    - \Temporary Internet
+  selection_folders_2:
+  - Details|contains|all:
+    - :\Users\
+    - \Favorites\
+  - Details|contains|all:
+    - :\Users\
+    - \Favourites\
+  - Details|contains|all:
+    - :\Users\
+    - \Contacts\
+  - Details|contains|all:
+    - :\Users\
+    - \Pictures\
+  condition: selection_target and 1 of selection_folders_*
+metadata:
+  created_date: 2023-11-28
+  modified_date: '2025-11-28'
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

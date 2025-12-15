@@ -1,0 +1,68 @@
+technique_id: T1530
+technique_name: AWS S3 Bucket Policy Added to Share with External Account
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "info where event.dataset == \"aws.cloudtrail\"\n    and event.provider ==\
+  \ \"s3.amazonaws.com\"\n    and event.action == \"PutBucketPolicy\" \n    and stringContains(aws.cloudtrail.request_parameters,\
+  \ \"Effect=Allow\")\n    and (\n        stringContains(aws.cloudtrail.request_parameters,\
+  \ \"AWS=\") or \n        stringContains(aws.cloudtrail.request_parameters, \"aws:PrincipalAccount=\"\
+  ) or\n        stringContains(aws.cloudtrail.request_parameters, \"aws:SourceAccount=\"\
+  )\n        )\nand not stringContains(aws.cloudtrail.request_parameters, \"arn:aws:cloudfront::\"\
+  )  \nand not stringContains(aws.cloudtrail.request_parameters, \"arn:aws:iam::cloudfront:user\"\
+  )\nand not stringContains(aws.cloudtrail.request_parameters, aws.cloudtrail.recipient_account_id)"
+explanation: 'Detects when an Amazon S3 bucket policy is modified to share access
+  with an external AWS account. This rule analyzes
+
+  PutBucketPolicy events and compares the S3 bucket’s account ID to any account IDs
+  referenced in the policy’s
+
+  Effect=Allow statements. If the policy includes principals from accounts other than
+  the bucket owner’s, the rule
+
+  triggers an alert. This behavior may indicate an adversary backdooring a bucket
+  for data exfiltration or cross-account
+
+  persistence. For example, an attacker who compromises credentials could attach a
+  policy allowing access from an external
+
+  AWS account they control, enabling continued access even after credentials are rotated.
+  Note: This rule will not alert
+
+  if the account ID is part of the bucket’s name or appears in the resource ARN. Such
+  cases are common in standardized
+
+  naming conventions (e.g., “mybucket-123456789012”). To ensure full coverage, use
+  complementary rules to monitor for
+
+  suspicious PutBucketPolicy API requests targeting buckets with account IDs embedded
+  in their names or resources.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e8c9ff14-fd1e-11ee-a0df-f661ea17fbce.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS S3
+  confidence: high
+false_positives:
+- description: "false positive. \n\n- **Review Context and Source**\n  - Check `source.ip`,\
+    \ `source.geo`, and `user_agent.original` for anomalies — such as new IP ranges,\
+    \ access from unfamiliar geographies, or use of programmatic clients (`boto3`,\
+    \ `aws-cli`).\n\n- **Correlate with Related Activity**\n  - Search CloudTrail\
+    \ for subsequent activity by the external AWS account ID(s):\n    - `GetObject`,\
+    \ `ListBucket`, or `PutObject` events that indicate data access or exfiltration.\n\
+    \  - Look for additional configuration cha"
+  mitigation: Review investigation guide for details
+references:
+- https://stratus-red-team.cloud/attack-techniques/AWS/aws.exfiltration.s3-backdoor-bucket-policy/
+- https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketPolicy.html
+has_investigation_guide: true
+risk_score: 47

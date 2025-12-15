@@ -1,0 +1,49 @@
+technique_id: T1033
+technique_name: Possible DCSync Attack
+tactic: discovery
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 56fda488-113e-4ce9-8076-afc2457922c3
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  OpNum:\n  - 0\n  - 1\n  - 12\nselection:\n  EventID: 3\n  EventLog: RPCFW\n\
+  \  InterfaceUuid: e3514235-4b06-11d1-ab04-00c04fc2dcd2\n"
+explanation: Detects remote RPC calls to MS-DRSR from non DC hosts, which could indicate
+  DCSync / DCShadow attacks.
+false_positives:
+- Unknown
+references:
+- https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-drsr/f977faaa-673e-4f66-b9bf-48c640241d47?redirectedfrom=MSDN
+- https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/ddd4608fe8684fcf2fcf9b48c5f0b3c28097f8a3/documents/MS-DRSR.md
+- https://github.com/zeronetworks/rpcfirewall
+- https://zeronetworks.com/blog/stopping-lateral-movement-via-the-rpc-firewall/
+tags:
+- attack.t1033
+- attack.discovery
+logsource:
+  product: rpc_firewall
+  category: application
+  definition: 'Requirements: install and apply the RPC Firewall to all processes,
+    enable DRSR UUID (e3514235-4b06-11d1-ab04-00c04fc2dcd2) for "dangerous" opcodes
+    (not 0,1 or 12) only from trusted IPs (DCs)'
+detection:
+  selection:
+    EventLog: RPCFW
+    EventID: 3
+    InterfaceUuid: e3514235-4b06-11d1-ab04-00c04fc2dcd2
+  filter:
+    OpNum:
+    - 0
+    - 1
+    - 12
+  condition: selection and not filter
+metadata:
+  created_date: 2022-01-01
+  modified_date: '2025-11-28'
+  author: Sagie Dulce, Dekel Paz
+  status: test
+  imported_date: '2025-11-28'

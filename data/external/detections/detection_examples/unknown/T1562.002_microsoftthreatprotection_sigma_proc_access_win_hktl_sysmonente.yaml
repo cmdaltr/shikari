@@ -1,0 +1,56 @@
+technique_id: T1562.002
+technique_name: HackTool - SysmonEnte Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: d29ada0f-af45-4f27-8f32-f7b77c3dbc4e
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: ( selection_sysmon and\
+  \ not 1 of filter_main_* ) or selection_calltrace\nfilter_main_generic:\n  SourceImage|contains:\n\
+  \  - :\\Program Files (x86)\\\n  - :\\Program Files\\\n  - :\\Windows\\System32\\\
+  \n  - :\\Windows\\SysWOW64\\\nfilter_main_msdefender:\n  SourceImage|contains: :\\\
+  ProgramData\\Microsoft\\Windows Defender\\Platform\\\n  SourceImage|endswith: \\\
+  MsMpEng.exe\nselection_calltrace:\n  CallTrace: Ente\nselection_sysmon:\n  GrantedAccess:\
+  \ '0x1400'\n  TargetImage|contains:\n  - :\\Windows\\Sysmon.exe\n  - :\\Windows\\\
+  Sysmon64.exe\n"
+explanation: Detects the use of SysmonEnte, a tool to attack the integrity of Sysmon
+false_positives:
+- Unknown
+references:
+- https://codewhitesec.blogspot.com/2022/09/attacks-on-sysmon-revisited-sysmonente.html
+- https://github.com/codewhitesec/SysmonEnte/
+- https://github.com/codewhitesec/SysmonEnte/blob/fe267690fcc799fbda15398243615a30451d9099/screens/1.png
+tags:
+- attack.defense-evasion
+- attack.t1562.002
+logsource:
+  category: process_access
+  product: windows
+detection:
+  selection_sysmon:
+    TargetImage|contains:
+    - :\Windows\Sysmon.exe
+    - :\Windows\Sysmon64.exe
+    GrantedAccess: '0x1400'
+  selection_calltrace:
+    CallTrace: Ente
+  filter_main_generic:
+    SourceImage|contains:
+    - :\Program Files (x86)\
+    - :\Program Files\
+    - :\Windows\System32\
+    - :\Windows\SysWOW64\
+  filter_main_msdefender:
+    SourceImage|contains: :\ProgramData\Microsoft\Windows Defender\Platform\
+    SourceImage|endswith: \MsMpEng.exe
+  condition: ( selection_sysmon and not 1 of filter_main_* ) or selection_calltrace
+metadata:
+  created_date: 2022-09-07
+  modified_date: 2023-11-28
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

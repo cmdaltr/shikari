@@ -1,0 +1,42 @@
+technique_id: T1110.003
+technique_name: Windows Multiple Invalid Users Failed To Authenticate Using NTLM
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`wineventlog_security` EventCode=4776 TargetUserName!=*$ Status=0xc0000064
+  | bucket span=5m _time | stats dc(TargetUserName) AS unique_accounts values(TargetUserName)
+  as tried_accounts values(dest) as dest by _time, Workstation | where unique_accounts
+  > 30 | `windows_multiple_invalid_users_failed_to_authenticate_using_ntlm_filter`'
+explanation: The following analytic detects a single source endpoint failing to authenticate
+  with 30 unique invalid users using the NTLM protocol. It leverages EventCode 4776
+  from Domain Controller logs, focusing on error code 0xC0000064, which indicates
+  non-existent usernames. This behavior is significant as it may indicate a Password
+  Spraying attack, where an adversary attempts to gain initial access or elevate privileges.
+  If confirmed malicious, this activity could lead to unauthorized access, privilege
+  escalation, and potential compromise of sensitive information within the Active
+  Directory environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/57ad5a64-9df7-11eb-a290-acde48001122/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4776
+  confidence: high
+- type: risk_system
+  value: Workstation
+  confidence: high
+false_positives:
+- description: A host failing to authenticate with multiple invalid domain users is
+    not a common behavior for legitimate systems. Possible false positive scenarios
+    include but are not limited to vulnerability scanners and missconfigured systems.
+    If this detection triggers on a host other than a Domain Controller, the behavior
+    could represent a password spraying attack against the host's local accounts.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1110/003/
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/audit-credential-validation
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4776
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1110.003/purplesharp_invalid_users_ntlm_xml/windows-security.log

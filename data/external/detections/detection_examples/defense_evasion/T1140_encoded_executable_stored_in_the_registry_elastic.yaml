@@ -1,0 +1,53 @@
+technique_id: T1140
+technique_name: Encoded Executable Stored in the Registry
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.88
+validated: true
+query: "registry where host.os.type == \"windows\" and\n/* update here with encoding\
+  \ combinations */\n registry.data.strings : \"TVqQAAMAAAAEAAAA*\""
+explanation: 'Identifies registry write modifications to hide an encoded portable
+  executable. This could be indicative of adversary
+
+  defense evasion by avoiding the storing of malicious content directly on disk.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/93c1ce76-494c-4f01-8167-35edfb52f7b1.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software installations or updates may write encoded executables to
+    the registry as part of their normal operation. Users can create exceptions for
+    known software by identifying their specific registry paths and excluding them
+    from the detection rule.
+
+    - Security tools and system management software might store encoded data in the
+    registry for legitimate purposes. Review the registry paths and data associated
+    with these tools and exclude them if they are verif'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,44 @@
+technique_id: T1574.001
+technique_name: Microsoft Defender Blocked from Loading Unsigned DLL
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 0b0ea3cc-99c8-4730-9c53-45deee2a4c86
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  EventID:\n  - 11\n  - 12\n  ProcessPath|endswith:\n  - \\MpCmdRun.exe\n  - \\\
+  NisSrv.exe\n"
+explanation: Detects Code Integrity (CI) engine blocking Microsoft Defender's processes
+  (MpCmdRun and NisSrv) from loading unsigned DLLs which may be an attempt to sideload
+  arbitrary DLL
+false_positives:
+- Unknown
+references:
+- https://www.sentinelone.com/blog/living-off-windows-defender-lockbit-ransomware-sideloads-cobalt-strike-through-microsoft-security-tool
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.defense-evasion
+- attack.t1574.001
+logsource:
+  product: windows
+  service: security-mitigations
+detection:
+  selection:
+    EventID:
+    - 11
+    - 12
+    ProcessPath|endswith:
+    - \MpCmdRun.exe
+    - \NisSrv.exe
+  condition: selection
+metadata:
+  created_date: 2022-08-02
+  modified_date: 2022-09-28
+  author: Bhabesh Raj
+  status: test
+  imported_date: '2025-11-28'

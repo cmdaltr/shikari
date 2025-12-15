@@ -1,0 +1,30 @@
+technique_id: T1098
+technique_name: Windows AD Privileged Group Modification
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`wineventlog_security` EventCode IN (4728) | stats min(_time) as _time dc(user)
+  as usercount, values(user) as user values(user_category) as user_category values(src_user_category)
+  as src_user_category values(dvc) as dvc by signature, Group_Name,src_user dest |
+  lookup admon_groups_def  cn as Group_Name OUTPUT category | where category="privileged"
+  | `windows_ad_privileged_group_modification_filter`'
+explanation: Detect users added to privileged AD Groups.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/187bf937-c436-4c65-bbcb-7539ffe02da1/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4728
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: None
+  mitigation: Review context and user activity
+references:
+- https://splunkbase.splunk.com/app/6853
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1098/account_manipulation/xml-windows-security.log

@@ -1,0 +1,39 @@
+technique_id: T1548
+technique_name: Regedit as Trusted Installer
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 883835a7-df45-43e4-bf1d-4268768afda4
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith: \\regedit.exe\n  ParentImage|endswith:\n  - \\TrustedInstaller.exe\n\
+  \  - \\ProcessHacker.exe\n"
+explanation: Detects a regedit started with TrustedInstaller privileges or by ProcessHacker.exe
+false_positives:
+- Unlikely
+references:
+- https://twitter.com/1kwpeter/status/1397816101455765504
+tags:
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1548
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \regedit.exe
+    ParentImage|endswith:
+    - \TrustedInstaller.exe
+    - \ProcessHacker.exe
+  condition: selection
+metadata:
+  created_date: 2021-05-27
+  modified_date: 2022-10-09
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

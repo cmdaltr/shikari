@@ -1,0 +1,47 @@
+technique_id: T1003
+technique_name: Unusual Web Config File Access
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.category:file and host.os.type:windows and event.action:open and\n \
+  \ file.name:\"web.config\" and file.path : *VirtualDirectories*"
+explanation: 'Detects unusual access to the web.config file, which contains sensitive
+  credential information such as database
+
+  connection strings, machineKey validation/decryption keys, and SAML/OAuth token
+  settings. Attackers can use the
+
+  information extracted to forge malicious __VIEWSTATE requests for persistent RCE
+  on the web server or pivot to the SQL
+
+  server using exposed connection strings.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5841b80f-a1f8-4c00-a966-d2cc4a7a82e4.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks by IT personnel may trigger alerts when accessing
+    web.config files for legitimate configuration updates. To manage this, create
+    exceptions for known administrative accounts or scheduled maintenance windows.
+
+    - Automated backup processes that access web.config files can be mistaken for
+    suspicious activity. Identify and exclude these processes by their specific user
+    accounts or service names.
+
+    - Web application updates or deployments often invo'
+  mitigation: Review investigation guide for details
+references:
+- https://unit42.paloaltonetworks.com/microsoft-sharepoint-cve-2025-49704-cve-2025-49706-cve-2025-53770/
+has_investigation_guide: true
+risk_score: 47

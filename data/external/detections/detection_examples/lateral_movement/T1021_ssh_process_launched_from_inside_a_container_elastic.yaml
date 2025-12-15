@@ -1,0 +1,51 @@
+technique_id: T1021
+technique_name: SSH Process Launched From Inside A Container
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'process where host.os.type == "linux" and event.type == "start" and event.action
+  == "exec" and
+
+  process.entry_leader.entry_meta.type == "container" and process.name in ("sshd",
+  "ssh", "autossh")'
+explanation: 'This rule detects an SSH or SSHD process executed from inside a container.
+  This includes both the client ssh binary and
+
+  server ssh daemon process. SSH usage inside a container should be avoided and monitored
+  closely when necessary. With
+
+  valid credentials an attacker may move laterally to other containers or to the underlying
+  host through container
+
+  breakout. They may also use valid SSH credentials as a persistence mechanism.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5c50ffa6-07f4-4cce-a1b7-c16928a2ed52.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Development and testing environments may intentionally use SSH for debugging
+    or administrative tasks. Users can create exceptions for specific container IDs
+    or hostnames associated with these environments to reduce noise.
+
+    - Automated scripts or orchestration tools might use SSH to manage containers.
+    Identify these tools and exclude their process IDs or user accounts from triggering
+    the rule.
+
+    - Some legacy applications might rely on SSH for internal communication. Revie'
+  mitigation: Review investigation guide for details
+references:
+- https://microsoft.github.io/Threat-Matrix-for-Kubernetes/techniques/SSH%20server%20running%20inside%20container/
+- https://www.blackhillsinfosec.com/sshazam-hide-your-c2-inside-of-ssh/
+has_investigation_guide: true
+risk_score: 47

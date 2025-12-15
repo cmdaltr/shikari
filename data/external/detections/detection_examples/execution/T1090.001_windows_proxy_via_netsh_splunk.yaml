@@ -1,0 +1,53 @@
+technique_id: T1090.001
+technique_name: Windows Proxy Via Netsh
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where `process_netsh` Processes.process
+  = "* portproxy *" Processes.process = "* v4tov4 *" by Processes.action Processes.dest
+  Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  |`drop_dm_object_name("Processes")` |`security_content_ctime(firstTime)` |`security_content_ctime(lastTime)`
+  | `windows_proxy_via_netsh_filter`'
+explanation: The following analytic identifies the use of netsh.exe to configure a
+  connection proxy, which can be leveraged for persistence by executing a helper DLL.
+  It detects this activity by analyzing process creation events from Endpoint Detection
+  and Response (EDR) agents, focusing on command-line executions involving "portproxy"
+  and "v4tov4" parameters. This activity is significant because it indicates potential
+  unauthorized network configuration changes, which could be used to maintain persistence
+  or redirect network traffic. If confirmed malicious, this could allow an attacker
+  to maintain covert access or manipulate network communications, posing a significant
+  security risk.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/c137bfe8-6036-4cff-b77b-4e327dd0a1cf/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Some VPN applications are known to launch netsh.exe. Outside of these
+    instances, it is unusual for an executable to launch netsh.exe and run commands.
+  mitigation: Review context and user activity
+references:
+- https://www.microsoft.com/en-us/security/blog/2023/05/24/volt-typhoon-targets-us-critical-infrastructure-with-living-off-the-land-techniques/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1090.001/netsh_portproxy/volt_sysmon.log

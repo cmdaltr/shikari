@@ -1,0 +1,39 @@
+technique_id: T1548.002
+technique_name: UAC Bypass MMC Load Unsigned Dll
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventCode=7  ImageLoaded = "*.dll" Image = "*\\mmc.exe" Signed=false
+  Company != "Microsoft Corporation" | fillnull | stats count min(_time) as firstTime
+  max(_time) as lastTime by Image ImageLoaded dest loaded_file loaded_file_path original_file_name
+  process_exec process_guid process_hash process_id process_name process_path service_dll_signature_exists
+  service_dll_signature_verified signature signature_id user_id vendor_product | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `uac_bypass_mmc_load_unsigned_dll_filter`'
+explanation: The following analytic detects the loading of an unsigned DLL by the
+  MMC.exe application, which is indicative of a potential UAC bypass or privilege
+  escalation attempt. It leverages Sysmon EventCode 7 to identify instances where
+  MMC.exe loads a non-Microsoft, unsigned DLL. This activity is significant because
+  attackers often use this technique to modify CLSID registry entries, causing MMC.exe
+  to load malicious DLLs, thereby bypassing User Account Control (UAC) and gaining
+  elevated privileges. If confirmed malicious, this could allow an attacker to execute
+  arbitrary code with higher privileges, leading to further system compromise and
+  persistence.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/7f04349c-e30d-11eb-bc7f-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 7
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown. all of the dll loaded by mmc.exe is microsoft signed dll.
+  mitigation: Review context and user activity
+references:
+- https://offsec.almond.consulting/UAC-bypass-dotnet.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1548/uac_bypass/windows-sysmon2.log

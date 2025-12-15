@@ -1,0 +1,45 @@
+technique_id: T1190
+technique_name: Ivanti Connect Secure Command Injection Attempts
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN("*/api/v1/totp/user-backup-code/../../system/maintenance/archiving/cloud-server-test-connection*","*/api/v1/totp/user-backup-code/../../license/keys-status/*")
+  Web.http_method IN ("POST", "GET") Web.status=200 by Web.src, Web.dest, Web.http_user_agent,
+  Web.url, Web.http_method, Web.status | `drop_dm_object_name("Web")` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `ivanti_connect_secure_command_injection_attempts_filter`'
+explanation: The following analytic identifies attempts to exploit the CVE-2023-46805
+  and CVE-2024-21887 vulnerabilities in Ivanti Connect Secure. It detects POST requests
+  to specific URIs that leverage command injection to execute arbitrary commands.
+  The detection uses the Web datamodel to monitor for these requests and checks for
+  a 200 OK response, indicating a successful exploit attempt. This activity is significant
+  as it can lead to unauthorized command execution on the server. If confirmed malicious,
+  attackers could gain control over the system, leading to potential data breaches
+  or further network compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/1f32a7e0-a060-4545-b7de-73fcf9ad536e/
+indicators:
+- type: data_source
+  value: Suricata
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: This analytic is limited to HTTP Status 200; adjust as necessary. False
+    positives may occur if the URI path is IP-restricted or externally blocked. It's
+    recommended to review the context of the alerts and adjust the analytic parameters
+    to better fit the specific environment.
+  mitigation: Review context and user activity
+references:
+- https://github.com/RootUp/PersonalStuff/blob/master/http-vuln-cve2023-46805_2024_21887.nse
+- https://github.com/projectdiscovery/nuclei-templates/blob/c6b351e71b0fb0e40e222e97038f1fe09ac58194/http/misconfiguration/ivanti/CVE-2023-46085-CVE-2024-21887-mitigation-not-applied.yaml
+- https://github.com/rapid7/metasploit-framework/pull/18708/files
+- https://attackerkb.com/topics/AdUh6by52K/cve-2023-46805/rapid7-analysis
+- https://labs.watchtowr.com/welcome-to-2024-the-sslvpn-chaos-continues-ivanti-cve-2023-46805-cve-2024-21887/
+- https://twitter.com/GreyNoiseIO/status/1747711939466453301
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/ivanti/suricata_ivanti_secure_connect_exploitphase.log

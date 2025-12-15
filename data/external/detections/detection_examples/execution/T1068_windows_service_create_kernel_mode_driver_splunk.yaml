@@ -1,0 +1,51 @@
+technique_id: T1068
+technique_name: Windows Service Create Kernel Mode Driver
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.process_name=sc.exe
+  Processes.process="*kernel*" by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_service_create_kernel_mode_driver_filter`'
+explanation: The following analytic identifies the creation of a new kernel mode driver
+  using the sc.exe command. This detection leverages data from Endpoint Detection
+  and Response (EDR) agents, focusing on process execution logs that include command-line
+  details. The activity is significant because adding a kernel driver is uncommon
+  in regular operations and can indicate an attempt to gain low-level access to the
+  system. If confirmed malicious, this could allow an attacker to execute code with
+  high privileges, potentially compromising the entire system and evading traditional
+  security measures.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/0b4e3b06-1b2b-4885-b752-cf06d12a90cb/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present based on common applications adding
+    new drivers, however, filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://www.aon.com/cyber-solutions/aon_cyber_labs/yours-truly-signed-av-driver-weaponizing-an-antivirus-driver/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1068/drivers/sc_kernel.log

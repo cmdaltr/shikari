@@ -1,0 +1,45 @@
+technique_id: T1190
+technique_name: Tomcat Session Deserialization Attempt
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.http_method=GET AND Web.cookie="*JSESSIONID=.*" AND Web.status=500 by
+  Web.src, Web.dest, Web.http_user_agent, Web.uri_path, Web.cookie, Web.status | `drop_dm_object_name("Web")`
+  | where match(cookie, "^JSESSIONID=\.") | rex field=cookie "JSESSIONID=\.(?<cookie_path>[^;]+)"
+  | eval severity="High" | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `tomcat_session_deserialization_attempt_filter`'
+explanation: This detection identifies potential exploitation of CVE-2025-24813 in
+  Apache Tomcat through the second stage of the attack. This phase occurs when an
+  attacker attempts to trigger deserialization of a previously uploaded malicious
+  session file by sending a GET request with a specially crafted JSESSIONID cookie.
+  These requests typically have specific characteristics, including a JSESSIONID cookie
+  with a leading dot that matches a previously uploaded filename, and typically result
+  in a HTTP 500 error when the exploitation succeeds.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e28b4fd4-8f5a-41cd-8222-2f1ccca53ef1/
+indicators:
+- type: data_source
+  value: Nginx Access
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives should occur as this pattern is highly specific
+    to CVE-2025-24813 exploitation. However, legitimate application errors that use
+    similar cookie patterns and result in 500 status codes might trigger false positives.
+    Review the JSESSIONID cookie format and the associated request context to confirm
+    exploitation attempts.
+  mitigation: Review context and user activity
+references:
+- https://lists.apache.org/thread/j5fkjv2k477os90nczf2v9l61fb0kkgq
+- https://nvd.nist.gov/vuln/detail/CVE-2025-24813
+- https://github.com/vulhub/vulhub/tree/master/tomcat/CVE-2025-24813
+- https://www.rapid7.com/db/vulnerabilities/apache-tomcat-cve-2025-24813/
+- https://gist.github.com/MHaggis/e106367f6649fbb09ab27e7b4a01cf73
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/tomcat/tomcat_nginx_access.log

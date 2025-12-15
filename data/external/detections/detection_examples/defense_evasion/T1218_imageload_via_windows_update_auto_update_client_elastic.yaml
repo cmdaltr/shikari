@@ -1,0 +1,60 @@
+technique_id: T1218
+technique_name: ImageLoad via Windows Update Auto Update Client
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  (?process.pe.original_file_name == \"wuauclt.exe\" or process.name : \"wuauclt.exe\"\
+  ) and\n   /* necessary windows update client args to load a dll */\n   process.args\
+  \ : \"/RunHandlerComServer\" and process.args : \"/UpdateDeploymentProvider\" and\n\
+  \   /* common paths writeable by a standard user where the target DLL can be placed\
+  \ */\n   process.args : (\"C:\\\\Users\\\\*.dll\", \"C:\\\\ProgramData\\\\*.dll\"\
+  , \"C:\\\\Windows\\\\Temp\\\\*.dll\", \"C:\\\\Windows\\\\Tasks\\\\*.dll\")"
+explanation: 'Identifies abuse of the Windows Update Auto Update Client (wuauclt.exe)
+  to load an arbitrary DLL. This behavior is used
+
+  as a defense evasion technique to blend-in malicious activity with legitimate Windows
+  software.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/edf8ee23-5ea7-4123-ba19-56b41e424ae3.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Any activity that triggered the alert and is not inherently malicious must be\
+    \ monitored by the security team.\n\n### Response and Remediation\n\n- Initiate\
+    \ the incident response process based on the outcome of the triage.\n- Isolate\
+    \ the involved host to prevent further post-compromise behavior.\n- If the triage\
+    \ identified malware, search the environment for additional compromised hosts.\n\
+    \  - Implement temporary network rules,"
+  mitigation: Review investigation guide for details
+references:
+- https://dtm.uk/wuauclt/
+has_investigation_guide: true
+risk_score: 47

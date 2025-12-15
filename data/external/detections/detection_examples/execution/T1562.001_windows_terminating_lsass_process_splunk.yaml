@@ -1,0 +1,40 @@
+technique_id: T1562.001
+technique_name: Windows Terminating Lsass Process
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: '`sysmon` EventCode=10 TargetImage=*lsass.exe GrantedAccess = 0x1 | stats count
+  min(_time) as firstTime max(_time) as lastTime by CallTrace EventID GrantedAccess
+  Guid Opcode ProcessID SecurityID SourceImage SourceProcessGUID SourceProcessId TargetImage
+  TargetProcessGUID TargetProcessId UserID dest granted_access parent_process_exec
+  parent_process_guid parent_process_id parent_process_name parent_process_path process_exec
+  process_guid process_id process_name process_path signature signature_id user_id
+  vendor_product | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_terminating_lsass_process_filter`'
+explanation: The following analytic detects a suspicious process attempting to terminate
+  the Lsass.exe process. It leverages Sysmon EventCode 10 logs to identify processes
+  granted PROCESS_TERMINATE access to Lsass.exe. This activity is significant because
+  Lsass.exe is a critical process responsible for enforcing security policies and
+  handling user credentials. If confirmed malicious, this behavior could indicate
+  an attempt to perform credential dumping, privilege escalation, or evasion of security
+  policies, potentially leading to unauthorized access and persistence within the
+  environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/7ab3c319-a4e7-4211-9e8c-40a049d0dba6/
+indicators:
+- type: data_source
+  value: Sysmon EventID 10
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://blog.talosintelligence.com/2022/03/threat-advisory-doublezero.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/doublezero_wiper/sysmon.log

@@ -1,0 +1,63 @@
+technique_id: T1137
+technique_name: Persistence via Microsoft Office AddIns
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"windows\" and event.type != \"deletion\" and\n\
+  \ file.extension : (\"wll\",\"xll\",\"ppa\",\"ppam\",\"xla\",\"xlam\") and\n file.path\
+  \ : (\n    \"C:\\\\Users\\\\*\\\\AppData\\\\Roaming\\\\Microsoft\\\\Word\\\\Startup\\\
+  \\*\",\n    \"C:\\\\Users\\\\*\\\\AppData\\\\Roaming\\\\Microsoft\\\\AddIns\\\\\
+  *\",\n    \"C:\\\\Users\\\\*\\\\AppData\\\\Roaming\\\\Microsoft\\\\Excel\\\\XLSTART\\\
+  \\*\",\n\n    /* Crowdstrike specific condition as it uses NT Object paths */\n\
+  \    \"\\\\Device\\\\HarddiskVolume*\\\\Users\\\\*\\\\AppData\\\\Roaming\\\\Microsoft\\\
+  \\Word\\\\Startup\\\\*\",\n    \"\\\\Device\\\\HarddiskVolume*\\\\Users\\\\*\\\\\
+  AppData\\\\Roaming\\\\Microsoft\\\\AddIns\\\\*\",\n    \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Users\\\\*\\\\AppData\\\\Roaming\\\\Microsoft\\\\Excel\\\\XLSTART\\\\*\"\n )"
+explanation: Detects attempts to establish persistence on an endpoint by abusing Microsoft
+  Office add-ins.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f44fa4b6-524c-4e87-8d9e-a32599e4fb7c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate add-ins installed by trusted software vendors may trigger alerts.
+    Verify the source and publisher of the add-in to determine its legitimacy.
+
+    - Custom add-ins developed internally for business purposes can be flagged. Maintain
+    a whitelist of known internal add-ins to prevent unnecessary alerts.
+
+    - Frequent updates to legitimate add-ins might cause repeated alerts. Implement
+    version control and update the whitelist accordingly to accommodate these changes.
+
+    - Us'
+  mitigation: Review investigation guide for details
+references:
+- https://labs.withsecure.com/publications/add-in-opportunities-for-office-persistence
+has_investigation_guide: true
+risk_score: 73

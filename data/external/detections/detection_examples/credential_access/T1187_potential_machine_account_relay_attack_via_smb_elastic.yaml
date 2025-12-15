@@ -1,0 +1,53 @@
+technique_id: T1187
+technique_name: Potential Machine Account Relay Attack via SMB
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where event.code == \"5145\" and endswith(user.name, \"$\") and\n\n /*\
+  \ compare computername with user.name and make sure they match */\n startswith~(winlog.computer_name,\
+  \ substring(user.name, 0, -1)) and\n\n /* exclude local access */\n not endswith(string(source.ip),\
+  \ string(host.ip)) and\n source.ip != \"::\" and source.ip != null and source.ip\
+  \ != \"::1\" and source.ip != \"127.0.0.1\""
+explanation: 'Identifies potential relay attacks against a machine account by identifying
+  network share access events coming from a
+
+  remote source.ip but using the target server computer account. This may indicate
+  a successful SMB relay attack.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d84a11c0-eb12-4e7d-8a0a-718e38351e29.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Machine accounts performing legitimate network logons from different IP addresses
+    can trigger false positives. To manage this, identify and whitelist known IP addresses
+    associated with legitimate administrative tasks or automated processes.
+
+    - Scheduled tasks or automated scripts that use machine accounts for network operations
+    may be flagged. Review and document these tasks, then create exceptions for their
+    associated IP addresses and hostnames.
+
+    - Load balancers or pro'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/p0dalirius/windows-coerced-authentication-methods
+- https://www.thehacker.recipes/a-d/movement/mitm-and-coerced-authentications
+- https://attack.mitre.org/techniques/T1187/
+has_investigation_guide: true
+risk_score: 73

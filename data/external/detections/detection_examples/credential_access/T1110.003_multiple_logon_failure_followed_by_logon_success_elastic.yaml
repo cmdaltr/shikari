@@ -1,0 +1,69 @@
+technique_id: T1110.003
+technique_name: Multiple Logon Failure Followed by Logon Success
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by winlog.computer_name, source.ip with maxspan=5s\n  [authentication\
+  \ where event.action == \"logon-failed\" and\n    /* event 4625 need to be logged\
+  \ */\n    winlog.logon.type : \"Network\" and user.id != null and \n    source.ip\
+  \ != null and source.ip != \"127.0.0.1\" and source.ip != \"::1\" and \n    not\
+  \ winlog.event_data.TargetUserSid : \"S-1-0-0\" and not user.id : \"S-1-0-0\" and\
+  \ \n    not user.name : (\"ANONYMOUS LOGON\", \"-\", \"*$\") and not user.domain\
+  \ == \"NT AUTHORITY\" and\n\n    /* noisy failure status codes often associated\
+  \ to authentication misconfiguration */\n    not winlog.event_data.Status : (\"\
+  0xC000015B\", \"0XC000005E\", \"0XC0000133\", \"0XC0000192\")] with runs=5\n  [authentication\
+  \ where event.action == \"logged-in\" and\n    /* event 4624 need to be logged */\n\
+  \    winlog.logon.type : \"Network\" and\n    source.ip != null and source.ip !=\
+  \ \"127.0.0.1\" and source.ip != \"::1\" and\n    not user.name : (\"ANONYMOUS LOGON\"\
+  , \"-\", \"*$\") and not user.domain == \"NT AUTHORITY\"]"
+explanation: 'Identifies multiple logon failures followed by a successful one from
+  the same source address. Adversaries will often
+
+  brute force login attempts across multiple users with a common or known password,
+  in an attempt to gain access to
+
+  accounts.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/4e85dc8a-3e41-40d8-bc28-91af7ac6cf60.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Authentication misconfiguration or obsolete credentials.
+
+    - Service account password expired.
+
+    - Domain trust relationship issues.
+
+    - Infrastructure or availability issues.
+
+
+    ### Related rules
+
+
+    - Multiple Logon Failure from the same Source Address - 48b6edfc-079d-4907-b43c-baffa243270d
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the source host to prevent further post-compromise behavior.
+
+    - If the as'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625
+has_investigation_guide: true
+risk_score: 47

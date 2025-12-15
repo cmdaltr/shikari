@@ -1,0 +1,44 @@
+technique_id: T1537
+technique_name: ASL AWS EC2 Snapshot Shared Externally
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`amazon_security_lake` api.operation=ModifySnapshotAttribute | spath input=api.request.data
+  path=createVolumePermission.add.items{}.group output=group | search group=all |
+  fillnull | stats count min(_time) as firstTime max(_time) as lastTime by actor.user.uid
+  api.operation api.service.name http_request.user_agent src_endpoint.ip actor.user.account.uid
+  cloud.provider cloud.region api.request.data | rename actor.user.uid as user api.operation
+  as action api.service.name as dest http_request.user_agent as user_agent src_endpoint.ip
+  as src actor.user.account.uid as vendor_account cloud.provider as vendor_product
+  cloud.region as vendor_region | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `asl_aws_ec2_snapshot_shared_externally_filter`'
+explanation: The following analytic detects when an EC2 snapshot is shared publicly
+  by analyzing AWS CloudTrail events. This detection method leverages CloudTrail logs
+  to identify modifications in snapshot permissions, specifically when the snapshot
+  is shared outside the originating AWS account. This activity is significant as it
+  may indicate an attempt to exfiltrate sensitive data stored in the snapshot. If
+  confirmed malicious, an attacker could gain unauthorized access to the snapshot's
+  data, potentially leading to data breaches or further exploitation of the compromised
+  information.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/00af8f7f-e004-446b-9bba-2732f717ae27/
+indicators:
+- type: data_source
+  value: ASL AWS CloudTrail
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: It is possible that an AWS admin has legitimately shared a snapshot
+    with others for  a specific purpose.
+  mitigation: Review context and user activity
+references:
+- https://labs.nettitude.com/blog/how-to-exfiltrate-aws-ec2-data/
+- https://stratus-red-team.cloud/attack-techniques/AWS/aws.exfiltration.ec2-share-ebs-snapshot/
+- https://hackingthe.cloud/aws/enumeration/loot_public_ebs_snapshots/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1537/aws_snapshot_exfil/asl_ocsf_cloudtrail.json

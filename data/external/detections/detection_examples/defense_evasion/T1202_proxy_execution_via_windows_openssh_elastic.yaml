@@ -1,0 +1,68 @@
+technique_id: T1202
+technique_name: Proxy Execution via Windows OpenSSH
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\
+  \ process.name : (\"ssh.exe\", \"sftp.exe\") and\n process.command_line : (\"*Command=*powershell*\"\
+  , \"*schtasks*\", \"*Command=*@echo off*\", \"*Command=*http*\", \"*Command=*mshta*\"\
+  ,  \"*Command=*msiexec*\",\n                          \"*Command=*cmd /c*\", \"\
+  *Command=*cmd.exe*\", \"*Command=\\\"cmd /c*\", \"*LocalCommand=scp*&&*\", \"*LocalCommand=?scp*&&*\"\
+  , \"*Command=*script*\")"
+explanation: 'Identifies attempts to execute commands via proxy using the Windows
+  OpenSSH client. This may indicate an attempt to bypass
+
+  application control via trusted windows binaries.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8cd49fbc-a35a-4418-8688-133cc3a1e548.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This is a dual-use tool, meaning its usage is not inherently malicious. Analysts
+    can dismiss the alert if the administrator is aware of the activity, no other
+    suspicious activity was identified.
+
+
+    ### Response and Remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Run a full antimalware scan. This may reveal additional artifacts left in the
+    system, persisten'
+  mitigation: Review investigation guide for details
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Ssh/
+has_investigation_guide: true
+risk_score: 73

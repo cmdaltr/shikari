@@ -1,0 +1,48 @@
+technique_id: T1111
+technique_name: Attempted Bypass of Okta MFA
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: event.dataset:okta.system and event.action:user.mfa.attempt_bypass
+explanation: 'Detects attempts to bypass Okta multi-factor authentication (MFA). An
+  adversary may attempt to bypass the Okta MFA
+
+  policies configured for an organization in order to obtain unauthorized access to
+  an application.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3805c3dc-f82c-4f8d-891e-63c24d3102b0.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Check if there were issues with the MFA system at the time of the bypass attempt.
+    This could indicate a system error rather than a genuine bypass attempt.
+
+    - Check the geographical location (`okta.request.ip_chain.geographical_context`)
+    and time of the login attempt. If these match the actor''s normal behavior, it
+    might be a false positive.
+
+    - Verify the actor''s MFA settings to ensure they are correctly configured.
+
+
+    ### Response and remediation
+
+
+    - If unauthorized access i'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/okta-and-lapsus-what-you-need-to-know
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 73

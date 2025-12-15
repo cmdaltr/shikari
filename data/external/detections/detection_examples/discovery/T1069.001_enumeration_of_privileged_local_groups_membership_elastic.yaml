@@ -1,0 +1,82 @@
+technique_id: T1069.001
+technique_name: Enumeration of Privileged Local Groups Membership
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "host.os.type:windows and event.category:iam and event.action:user-member-enumerated\
+  \ and\n  (\n    group.name:(*Admin* or \"RemoteDesktopUsers\") or\n    winlog.event_data.TargetSid:(\"\
+  S-1-5-32-544\" or \"S-1-5-32-555\")\n  ) and \n  not (\n    winlog.event_data.SubjectUserName:\
+  \ *$ or\n    winlog.event_data.SubjectUserSid: (\"S-1-5-19\" or \"S-1-5-20\") or\
+  \ \n    winlog.event_data.CallerProcessName:(\"-\" or \n                       \
+  \                C\\:\\\\Windows\\\\System32\\\\VSSVC.exe or \n                \
+  \                       C\\:\\\\Windows\\\\System32\\\\SearchIndexer.exe or \n \
+  \                                      C\\:\\\\Windows\\\\System32\\\\CompatTelRunner.exe\
+  \ or \n                                       C\\:\\\\Windows\\\\System32\\\\oobe\\\
+  \\msoobe.exe or\n                                       C\\:\\\\Windows\\\\System32\\\
+  \\net1.exe or \n                                       C\\:\\\\Windows\\\\System32\\\
+  \\svchost.exe or \n                                       C\\:\\\\Windows\\\\System32\\\
+  \\Netplwiz.exe or \n                                       C\\:\\\\Windows\\\\System32\\\
+  \\msiexec.exe or\n                                       C\\:\\\\Windows\\\\System32\\\
+  \\CloudExperienceHostBroker.exe or\n                                       C\\:\\\
+  \\Windows\\\\System32\\\\RuntimeBroker.exe or\n                                \
+  \       C\\:\\\\Windows\\\\System32\\\\wbem\\\\WmiPrvSE.exe or\n               \
+  \                        C\\:\\\\Windows\\\\System32\\\\SrTasks.exe or\n       \
+  \                                C\\:\\\\Windows\\\\System32\\\\diskshadow.exe or\n\
+  \                                       C\\:\\\\Windows\\\\System32\\\\dfsrs.exe\
+  \ or\n                                       C\\:\\\\Windows\\\\System32\\\\vssadmin.exe\
+  \ or\n                                       C\\:\\\\Windows\\\\System32\\\\dllhost.exe\
+  \ or\n                                       C\\:\\\\Windows\\\\System32\\\\mmc.exe\
+  \ or\n                                       C\\:\\\\Windows\\\\System32\\\\SettingSyncHost.exe\
+  \ or\n                                       C\\:\\\\Windows\\\\System32\\\\inetsrv\\\
+  \\w3wp.exe or\n                                       C\\:\\\\Windows\\\\System32\\\
+  \\wsmprovhost.exe or\n                                       C\\:\\\\Windows\\\\\
+  System32\\\\mstsc.exe or\n                                       C\\:\\\\Windows\\\
+  \\System32\\\\esentutl.exe or\n                                       C\\:\\\\Windows\\\
+  \\System32\\\\RecoveryDrive.exe or\n                                       C\\:\\\
+  \\Windows\\\\System32\\\\SystemPropertiesComputerName.exe or\n                 \
+  \                      C\\:\\\\Windows\\\\SysWOW64\\\\msiexec.exe or\n         \
+  \                              C\\:\\\\Windows\\\\System32\\\\taskhostw.exe or\n\
+  \                                       C\\:\\\\Windows\\\\ImmersiveControlPanel\\\
+  \\SystemSettings.exe or\n                                       C\\:\\\\Windows\\\
+  \\Temp\\\\rubrik_vmware*\\\\snaptool.exe or\n                                  \
+  \     C\\:\\\\Windows\\\\VeeamVssSupport\\\\VeeamGuestHelper.exe or\n          \
+  \                             C\\:\\\\WindowsAzure\\\\*WaAppAgent.exe or\n     \
+  \                                  C\\:\\\\$WINDOWS.~BT\\\\Sources\\\\*.exe\n  \
+  \                                    )\n  )"
+explanation: 'Identifies instances of an unusual process enumerating built-in Windows
+  privileged local groups membership like
+
+  Administrators or Remote Desktop users.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/291a0de9-937a-4189-94c0-3e847c8b13e4.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Discovery activities are not inherently malicious if they occur in isolation.
+    As long as the analyst did not identify suspicious activity related to the user
+    or host, such alerts can be dismissed.
+
+    - If this rule is noisy in your environment due to expected activity, consider
+    adding exceptions — preferably with a combination of user and command line conditions.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    -'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

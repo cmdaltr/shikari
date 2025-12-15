@@ -1,0 +1,39 @@
+technique_id: T1003.003
+technique_name: NTDS Exfiltration Filename Patterns
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 3a8da4e0-36c1-40d2-8b29-b3e890d5172a
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetFilename|endswith:\n  - \\All.cab\n  - .ntds.cleartext\n"
+explanation: Detects creation of files with specific name patterns seen used in various
+  tools that export the NTDS.DIT for exfiltration.
+false_positives:
+- Unknown
+references:
+- https://github.com/rapid7/metasploit-framework/blob/eb6535009f5fdafa954525687f09294918b5398d/modules/post/windows/gather/ntds_grabber.rb
+- https://github.com/rapid7/metasploit-framework/blob/eb6535009f5fdafa954525687f09294918b5398d/data/post/powershell/NTDSgrab.ps1
+- https://github.com/SecureAuthCorp/impacket/blob/7d2991d78836b376452ca58b3d14daa61b67cb40/impacket/examples/secretsdump.py#L2405
+tags:
+- attack.credential-access
+- attack.t1003.003
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection:
+    TargetFilename|endswith:
+    - \All.cab
+    - .ntds.cleartext
+  condition: selection
+metadata:
+  created_date: 2022-03-11
+  modified_date: 2023-05-05
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

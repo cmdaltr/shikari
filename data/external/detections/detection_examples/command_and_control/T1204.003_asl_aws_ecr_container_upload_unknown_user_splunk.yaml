@@ -1,0 +1,42 @@
+technique_id: T1204.003
+technique_name: ASL AWS ECR Container Upload Unknown User
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '`amazon_security_lake` api.operation=PutImage NOT `aws_ecr_users_asl` | fillnull
+  | stats count min(_time) as firstTime max(_time) as lastTime by actor.user.uid api.operation
+  api.service.name http_request.user_agent src_endpoint.ip actor.user.account.uid
+  cloud.provider cloud.region | rename actor.user.uid as user api.operation as action
+  api.service.name as dest http_request.user_agent as user_agent src_endpoint.ip as
+  src actor.user.account.uid as vendor_account cloud.provider as vendor_product cloud.region
+  as vendor_region | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `asl_aws_ecr_container_upload_unknown_user_filter`'
+explanation: The following analytic detects unauthorized container uploads to AWS
+  Elastic Container Service (ECR) by monitoring AWS CloudTrail events. It identifies
+  instances where a new container is uploaded by a user not previously recognized
+  as authorized. This detection is crucial for a SOC as it can indicate a potential
+  compromise or misuse of AWS ECR, which could lead to unauthorized access to sensitive
+  data or the deployment of malicious containers. By identifying and investigating
+  these events, organizations can mitigate the risk of data breaches or other security
+  incidents resulting from unauthorized container uploads. The impact of such an attack
+  could be significant, compromising the integrity and security of the organization's
+  cloud environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/886a8f46-d7e2-4439-b9ba-aec238e31732/
+indicators:
+- type: data_source
+  value: ASL AWS CloudTrail
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1204/003/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1204.003/aws_ecr_container_upload/asl_ocsf_cloudtrail.json

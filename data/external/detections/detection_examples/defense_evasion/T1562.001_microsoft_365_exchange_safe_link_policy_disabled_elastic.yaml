@@ -1,0 +1,39 @@
+technique_id: T1562.001
+technique_name: Microsoft 365 Exchange Safe Link Policy Disabled
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:Exchange and event.category:web
+  and event.action:"Disable-SafeLinksRule" and event.outcome:success
+explanation: 'Identifies when a Safe Link policy is disabled in Microsoft 365. Safe
+  Link policies for Office applications extend
+
+  phishing protection to documents that contain hyperlinks, even after they have been
+  delivered to a user.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/a989fa1b-9a11-4dd8-a3e9-f0de9c6eb5f2.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Administrative changes: Legitimate administrative actions may involve disabling
+    Safe Link policies temporarily for testing or configuration purposes. To manage
+    this, create exceptions for known administrative accounts or scheduled maintenance
+    windows.
+
+    - Third-party integrations: Some third-party security tools or integrations might
+    require Safe Link policies to be disabled for compatibility reasons. Identify
+    and document these tools, and set up exceptions for their ass'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/powershell/module/exchange/disable-safelinksrule?view=exchange-ps
+- https://docs.microsoft.com/en-us/microsoft-365/security/office-365-security/atp-safe-links?view=o365-worldwide
+has_investigation_guide: true
+risk_score: 47

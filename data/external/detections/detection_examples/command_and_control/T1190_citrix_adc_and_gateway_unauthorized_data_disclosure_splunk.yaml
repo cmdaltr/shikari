@@ -1,0 +1,40 @@
+technique_id: T1190
+technique_name: Citrix ADC and Gateway Unauthorized Data Disclosure
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("*/oauth/idp/.well-known/openid-configuration*")  Web.status=200
+  by Web.http_user_agent, Web.status Web.http_method, Web.url, Web.url_length, Web.src,
+  Web.dest, sourcetype | `drop_dm_object_name("Web")` | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `citrix_adc_and_gateway_unauthorized_data_disclosure_filter`'
+explanation: The following analytic detects attempts to exploit the Citrix Bleed vulnerability
+  (CVE-2023-4966), which can lead to the leaking of session tokens. It identifies
+  HTTP requests with a 200 status code targeting the /oauth/idp/.well-known/openid-configuration
+  URL endpoint. By parsing web traffic and filtering based on user agent details,
+  HTTP method, source and destination IPs, and sourcetype, it aims to identify potentially
+  malicious requests. This activity is significant for a SOC because successful exploitation
+  can allow attackers to impersonate legitimate users, bypass authentication, and
+  access sensitive data. If confirmed malicious, it could lead to unauthorized data
+  access, network propagation, and critical information exfiltration.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b593cac5-dd20-4358-972a-d945fefdaf17/
+indicators:
+- type: data_source
+  value: Suricata
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present based on organization use of Citrix
+    ADC and Gateway. Filter, or restrict the analytic to Citrix devices only.
+  mitigation: Review context and user activity
+references:
+- https://www.assetnote.io/resources/research/citrix-bleed-leaking-session-tokens-with-cve-2023-4966
+- https://github.com/assetnote/exploits/tree/main/citrix/CVE-2023-4966
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/citrix/cve-2023-4966-citrix.log

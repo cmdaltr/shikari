@@ -1,0 +1,48 @@
+technique_id: T1087.002
+technique_name: Windows AD Privileged Object Access Activity
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`wineventlog_security` EventCode=4662 ObjectName IN ( "CN=Account Operators,*",
+  "CN=Administrators,*", "CN=Backup Operators,*", "CN=Cert Publishers,*", "CN=Certificate
+  Service DCOM Access,*", "CN=Domain Admins,*", "CN=Domain Controllers,*", "CN=Enterprise
+  Admins,*", "CN=Enterprise Read-only Domain Controllers,*", "CN=Group Policy Creator
+  Owners,*", "CN=Incoming Forest Trust Builders,*", "CN=Microsoft Exchange Servers,*",
+  "CN=Network Configuration Operators,*", "CN=Power Users,*", "CN=Print Operators,*",
+  "CN=Read-only Domain Controllers,*", "CN=Replicators,*", "CN=Schema Admins,*", "CN=Server
+  Operators,*", "CN=Exchange Trusted Subsystem,*", "CN=Exchange Windows Permission,*",
+  "CN=Organization Management,*") | rex field=ObjectName "CN\=(?<object_name>[^,]+)"
+  | stats values(Computer) as dest, values(object_name) as object_name, dc(ObjectName)
+  as object_count, min(_time) as firstTime, max(_time) as lastTime, count by SubjectUserName
+  | rename SubjectUserName as user | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_ad_privileged_object_access_activity_filter`'
+explanation: The following analytic detects access attempts to privileged Active Directory
+  objects, such as Domain Admins or Enterprise Admins. It leverages Windows Security
+  Event Code 4662 to identify when these sensitive objects are accessed. This activity
+  is significant because such objects should rarely be accessed by normal users or
+  processes, and unauthorized access attempts may indicate attacker enumeration or
+  lateral movement within the domain. If confirmed malicious, this activity could
+  allow attackers to escalate privileges, persist in the environment, or gain control
+  over critical domain resources.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/dc2f58bc-8cd2-4e51-962a-694b963acde0/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4662
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Service accounts or applications that routinely query Active Directory
+    for information.
+  mitigation: Review context and user activity
+references:
+- https://medium.com/securonix-tech-blog/detecting-ldap-enumeration-and-bloodhound-s-sharphound-collector-using-active-directory-decoys-dfc840f2f644
+- https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4662
+- https://attack.mitre.org/tactics/TA0007/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1087.002/4662_ad_enum/4662_priv_events.log

@@ -1,0 +1,36 @@
+technique_id: T1558
+technique_name: Replay Attack Detected
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 5a44727c-3b85-4713-8c44-4401d5499629
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  EventID: 4649\n"
+explanation: Detects possible Kerberos Replay Attack on the domain controllers when
+  "KRB_AP_ERR_REPEAT" Kerberos response is sent to the client
+false_positives:
+- Unknown
+references:
+- https://github.com/Yamato-Security/EnableWindowsLogSettings/blob/7f6d755d45ac7cc9fc35b0cbf498e6aa4ef19def/ConfiguringSecurityLogAuditPolicies.md
+- https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4649
+tags:
+- attack.credential-access
+- attack.t1558
+logsource:
+  service: security
+  product: windows
+detection:
+  selection:
+    EventID: 4649
+  condition: selection
+metadata:
+  created_date: 2022-10-14
+  modified_date: '2025-11-28'
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

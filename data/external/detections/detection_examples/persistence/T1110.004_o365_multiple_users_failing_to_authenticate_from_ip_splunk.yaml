@@ -1,0 +1,42 @@
+technique_id: T1110.004
+technique_name: O365 Multiple Users Failing To Authenticate From Ip
+tactic: persistence
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=AzureActiveDirectory Operation=UserLoginFailed
+  ErrorNumber=50126 | bucket span=5m _time | fillnull | stats dc(user) as unique_accounts
+  values(user) as user values(LogonError) as LogonError values(signature) as signature
+  values(UserAgent) as user_agent values(dest) as dest by _time src vendor_account
+  vendor_product | where unique_accounts > 10 | `o365_multiple_users_failing_to_authenticate_from_ip_filter`'
+explanation: The following analytic identifies instances where more than 10 unique
+  user accounts fail to authenticate from a single IP address within a 5-minute window.
+  This detection leverages O365 audit logs, specifically Azure Active Directory login
+  failures (AzureActiveDirectoryStsLogon). Such activity is significant as it may
+  indicate brute-force attacks or password spraying attempts. If confirmed malicious,
+  this behavior suggests an external entity is attempting to breach security by targeting
+  multiple accounts, potentially leading to unauthorized access. Immediate action
+  is required to block or monitor the suspicious IP and notify affected users to enhance
+  their security measures.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8d486e2e-3235-4cfe-ac35-0d042e24ecb4/
+indicators:
+- type: data_source
+  value: O365 UserLoginFailed
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: A source Ip failing to authenticate with multiple users in a short
+    period of time is not common legitimate behavior.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1110/003/
+- https://docs.microsoft.com/en-us/security/compass/incident-response-playbook-password-spray
+- https://www.cisa.gov/uscert/ncas/alerts/aa21-008a
+- https://docs.microsoft.com/azure/active-directory/reports-monitoring/reference-sign-ins-error-codes
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1110.003/o365_multiple_users_from_ip/o365_multiple_users_from_ip.log

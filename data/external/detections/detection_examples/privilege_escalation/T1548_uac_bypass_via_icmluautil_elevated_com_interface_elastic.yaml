@@ -1,0 +1,50 @@
+technique_id: T1548
+technique_name: UAC Bypass via ICMLuaUtil Elevated COM Interface
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ process.parent.name == \"dllhost.exe\" and\n process.parent.args in (\"/Processid:{3E5FC7F9-9A51-4367-9063-A120244FBEC7}\"\
+  , \"/Processid:{D2E7041B-2927-42FB-8E9F-7CE93B6DC937}\") and\n process.pe.original_file_name\
+  \ != \"WerFault.exe\""
+explanation: 'Identifies User Account Control (UAC) bypass attempts via the ICMLuaUtil
+  Elevated COM interface. Attackers may attempt
+
+  to bypass UAC to stealthily execute code with elevated permissions.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/68d56fdc-7ffa-4419-8e95-81641bd6f845.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may trigger the rule if they use
+    the ICMLuaUtil Elevated COM Interface for necessary elevation. Users can monitor
+    the specific software involved and create exceptions for trusted applications.
+
+    - System maintenance tasks initiated by IT administrators might use similar processes
+    for legitimate purposes. Identifying these tasks and excluding them from the rule
+    can reduce false positives.
+
+    - Certain enterprise applications may r'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

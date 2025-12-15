@@ -1,0 +1,44 @@
+technique_id: T1027
+technique_name: Invoke-Obfuscation Via Use MSHTA - PowerShell
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: e55a5195-4724-480e-a77e-3ebe64bd3759
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_4104\nselection_4104:\n\
+  \  ScriptBlockText|contains|all:\n  - set\n  - '&&'\n  - mshta\n  - vbscript:createobject\n\
+  \  - .run\n  - (window.close)\n"
+explanation: Detects Obfuscated Powershell via use MSHTA in Scripts
+false_positives:
+- Unknown
+references:
+- https://github.com/SigmaHQ/sigma/issues/1009
+tags:
+- attack.defense-evasion
+- attack.t1027
+- attack.execution
+- attack.t1059.001
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection_4104:
+    ScriptBlockText|contains|all:
+    - set
+    - '&&'
+    - mshta
+    - vbscript:createobject
+    - .run
+    - (window.close)
+  condition: selection_4104
+metadata:
+  created_date: 2020-10-08
+  modified_date: 2022-11-29
+  author: Nikita Nazarov, oscd.community
+  status: test
+  imported_date: '2025-11-28'

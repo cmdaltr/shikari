@@ -1,0 +1,35 @@
+technique_id: T1110
+technique_name: Crowdstrike Multiple LOW Severity Alerts
+tactic: execution
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '`crowdstrike_stream` tag=alert event.SeverityName= LOW | rename event.EndpointIp
+  as src_ip, event.EndpointName as src_host, event.UserName as user, event.IncidentDescription
+  as description, event.IncidentType as type, event.NumbersOfAlerts as count_alerts,
+  event.SeverityName as severity | stats dc(type) as type_count, values(user) as users,
+  values(description) as descriptions, values(type) as types, values(severity) count
+  min(_time) as firstTime max(_time) as lastTime by src_ip src_host | where type_count
+  >= 3 | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `crowdstrike_multiple_low_severity_alerts_filter`'
+explanation: The following analytic detects multiple CrowdStrike LOW severity alerts,
+  indicating a series of minor suspicious activities or policy violations. These alerts
+  are not immediately critical but should be reviewed to prevent potential threats.
+  They often highlight unusual behavior or low-level risks that, if left unchecked,
+  could escalate into more significant security issues. Regular monitoring and analysis
+  of these alerts are essential for maintaining robust security.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/5c2c02d8-bee7-4f5c-9dea-e3e1012daddb/
+indicators:
+- type: risk_system
+  value: src_host
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.crowdstrike.com/wp-content/uploads/2022/12/CrowdStrike-Falcon-Event-Streams-Add-on-Guide-v3.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/suspicious_behaviour/crowdstrike_stream/multiple_low_alert/crowdstrike_multiple_low_cleaned.log

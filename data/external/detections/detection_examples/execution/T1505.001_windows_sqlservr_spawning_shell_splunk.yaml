@@ -1,0 +1,47 @@
+technique_id: T1505.001
+technique_name: Windows Sqlservr Spawning Shell
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.parent_process_name="sqlservr.exe"
+  `process_cmd` OR `process_powershell` by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_sqlservr_spawning_shell_filter`'
+explanation: This analytic detects instances where the sqlservr.exe process spawns
+  a command shell (cmd.exe) or PowerShell process. This behavior is often indicative
+  of command execution initiated from within the SQL Server process, potentially due
+  to exploitation of SQL injection vulnerabilities or the use of extended stored procedures
+  like xp_cmdshell.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/d33aac9f-030c-4830-8701-0c2dd75bb6cb/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Legitimate administrative activities or monitoring tools might occasionally
+    spawn command shells from sqlservr.exe. Review the process command-line arguments
+    and consider filtering out known legitimate processes or users.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1505/001/
+- https://github.com/MHaggis/notes/tree/master/utilities/SQLSSTT
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1505.001/simulation/sqlservr-windows_sysmon.log

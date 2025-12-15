@@ -1,0 +1,61 @@
+technique_id: T1204.004
+technique_name: FileFix - Suspicious Child Process from Browser File Upload Abuse
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 4be03877-d5b6-4520-85c9-a5911c0a656c
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains: '#'\n  Image|endswith:\n  - \\bitsadmin.exe\n  - \\certutil.exe\n\
+  \  - \\cmd.exe\n  - \\mshta.exe\n  - \\powershell.exe\n  - \\pwsh.exe\n  - \\regsvr32.exe\n\
+  \  ParentImage|endswith:\n  - \\brave.exe\n  - \\chrome.exe\n  - \\firefox.exe\n\
+  \  - \\msedge.exe\n"
+explanation: 'Detects potentially suspicious subprocesses such as LOLBINs spawned
+  by web browsers. This activity could be associated with the "FileFix" social engineering
+  technique,
+
+  where users are tricked into launching the file explorer via a browser-based phishing
+  page and pasting malicious commands into the address bar.
+
+  The technique abuses clipboard manipulation and disguises command execution as benign
+  file path access, resulting in covert execution of system utilities.
+
+  '
+false_positives:
+- Legitimate use of PowerShell or other utilities launched from browser extensions
+  or automation tools
+references:
+- https://mrd0x.com/filefix-clickfix-alternative/
+tags:
+- attack.execution
+- attack.t1204.004
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith:
+    - \brave.exe
+    - \chrome.exe
+    - \firefox.exe
+    - \msedge.exe
+    Image|endswith:
+    - \bitsadmin.exe
+    - \certutil.exe
+    - \cmd.exe
+    - \mshta.exe
+    - \powershell.exe
+    - \pwsh.exe
+    - \regsvr32.exe
+    CommandLine|contains: '#'
+  condition: selection
+metadata:
+  created_date: 2025-06-26
+  modified_date: 2025-06-30
+  author: 0xFustang
+  status: experimental
+  imported_date: '2025-11-28'

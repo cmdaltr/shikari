@@ -1,0 +1,65 @@
+technique_id: T1055
+technique_name: Suspicious Process Creation CallTrace
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by host.id with maxspan=1m\n  [process where host.os.type == \"windows\"\
+  \ and event.code == \"1\" and\n   /* sysmon process creation */\n   process.parent.name\
+  \ : (\"winword.exe\", \"excel.exe\", \"outlook.exe\", \"powerpnt.exe\", \"eqnedt32.exe\"\
+  , \"fltldr.exe\",\n                          \"mspub.exe\", \"msaccess.exe\",\"\
+  cscript.exe\", \"wscript.exe\", \"rundll32.exe\", \"regsvr32.exe\",\n          \
+  \                \"mshta.exe\", \"wmic.exe\", \"cmstp.exe\", \"msxsl.exe\") and\n\
+  \n   /* noisy FP patterns */\n   not (process.parent.name : \"EXCEL.EXE\" and process.executable\
+  \ : \"?:\\\\Program Files\\\\Microsoft Office\\\\root\\\\Office*\\\\ADDINS\\\\*.exe\"\
+  ) and\n   not (process.executable : \"?:\\\\Windows\\\\splwow64.exe\" and process.args\
+  \ in (\"8192\", \"12288\") and process.parent.name : (\"winword.exe\", \"excel.exe\"\
+  , \"outlook.exe\", \"powerpnt.exe\")) and\n   not (process.parent.name : \"rundll32.exe\"\
+  \ and process.parent.args : (\"?:\\\\WINDOWS\\\\Installer\\\\MSI*.tmp,zzzzInvokeManagedCustomActionOutOfProc\"\
+  , \"--no-sandbox\")) and\n   not (process.executable :\n            (\"?:\\\\Program\
+  \ Files (x86)\\\\Microsoft\\\\EdgeWebView\\\\Application\\\\*\\\\msedgewebview2.exe\"\
+  ,\n             \"?:\\\\Program Files\\\\Adobe\\\\Acrobat DC\\\\Acrobat\\\\Acrobat.exe\"\
+  ,\n             \"?:\\\\Windows\\\\SysWOW64\\\\DWWIN.EXE\") and\n        process.parent.name\
+  \ : (\"winword.exe\", \"excel.exe\", \"outlook.exe\", \"powerpnt.exe\")) and\n \
+  \  not (process.parent.name : \"regsvr32.exe\" and process.parent.args : (\"?:\\\
+  \\Program Files\\\\*\", \"?:\\\\Program Files (x86)\\\\*\"))\n   ] by process.parent.entity_id,\
+  \ process.entity_id\n  [process where host.os.type == \"windows\" and event.code\
+  \ == \"10\" and\n   /* Sysmon process access event from unknown module */\n   winlog.event_data.CallTrace\
+  \ : \"*UNKNOWN*\"] by process.entity_id, winlog.event_data.TargetProcessGUID"
+explanation: 'Identifies when a process is created and immediately accessed from an
+  unknown memory code region and by the same parent
+
+  process. This may indicate a code injection attempt.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3ed032b2-45d8-4406-bc79-7ad1eabb2c72.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Remove and block malicious artifacts identified during triage.
+
+    - Run a full antimalware scan. This may reveal additional artifacts left in the
+    system, persistence mechan'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

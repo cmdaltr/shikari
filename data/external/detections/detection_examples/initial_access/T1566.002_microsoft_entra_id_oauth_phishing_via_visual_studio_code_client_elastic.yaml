@@ -1,0 +1,63 @@
+technique_id: T1566.002
+technique_name: Microsoft Entra ID OAuth Phishing via Visual Studio Code Client
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"azure.signinlogs\" and\nevent.action: \"Sign-in activity\"\
+  \ and\nevent.outcome: \"success\" and\n(\n  azure.signinlogs.properties.resource_display_name:\
+  \ \"Microsoft Graph\" or\n  azure.signinlogs.properties.resource_id: \"00000003-0000-0000-c000-000000000000\"\
+  \n) and (\n  azure.signinlogs.properties.app_id: \"aebc6443-996d-45c2-90f0-388ff96faa56\"\
+  \ or\n  azure.signinlogs.properties.app_display_name: \"Visual Studio Code\"\n)"
+explanation: 'Detects potentially suspicious OAuth authorization activity in Microsoft
+  Entra ID where the Visual Studio Code
+
+  first-party application (client_id = aebc6443-996d-45c2-90f0-388ff96faa56) is used
+  to request access to Microsoft Graph
+
+  resources. While this client ID is legitimately used by Visual Studio Code, threat
+  actors have been observed abusing it
+
+  in phishing campaigns to make OAuth requests appear trustworthy. These attacks rely
+  on redirect URIs such as VSCode''s
+
+  Insiders redirect location, prompting victims to return an OAuth authorization code
+  that can be exchanged for access
+
+  tokens. This rule may help identify unauthorized use of the VS Code OAuth flow as
+  part of social engineering or
+
+  credential phishing activity.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/14fa0285-fe78-4843-ac8e-f4b481f49da9.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID
+  confidence: high
+- type: data_source
+  value: Microsoft Entra ID Sign-in Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Automated scripts or applications using non-interactive authentication may trigger
+    this detection, particularly if they rely on legacy authentication protocols recorded
+    in `azure.signinlogs.properties.authentication_protocol`.
+
+    - Corporate proxies or VPNs may cause multiple users to authenticate from the
+    same IP, appearing as repeated failed attempts under `source.ip`.
+
+    - User account lockouts from forgotten passwords or misconfigured applications
+    may show multiple authe'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/azure/active-directory/reports-monitoring/reference-azure-monitor-sign-ins-log-schema
+- https://www.volexity.com/blog/2025/04/22/phishing-for-codes-russian-threat-actors-target-microsoft-365-oauth-workflows/
+has_investigation_guide: true
+risk_score: 47

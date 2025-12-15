@@ -1,0 +1,40 @@
+technique_id: T1055
+technique_name: PowerShell ShellCode
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 16b37b70-6fcf-4814-a092-c36bd3aafcbd
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ScriptBlockText|contains:\n  - OiCAAAAYInlM\n  - OiJAAAAYInlM\n"
+explanation: Detects Base64 encoded Shellcode
+false_positives:
+- Unknown
+references:
+- https://twitter.com/cyb3rops/status/1063072865992523776
+tags:
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1055
+- attack.execution
+- attack.t1059.001
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - OiCAAAAYInlM
+    - OiJAAAAYInlM
+  condition: selection
+metadata:
+  created_date: 2018-11-17
+  modified_date: 2024-01-25
+  author: David Ledbetter (shellcode), Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,48 @@
+technique_id: T1566
+technique_name: M365 Threat Intelligence Signal
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'event.dataset: "o365.audit" and event.provider: "ThreatIntelligence"'
+explanation: 'Identifies a Microsoft 365 audit log generated for Threat Intelligence
+  signals by Microsoft Defender for Office 365.
+
+  Signals generated may relate to services such as Exchange Online, SharePoint Online,
+  OneDrive for Business and others.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/60c814fc-7d06-11f0-b326-f661ea17fbcd.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+- type: data_source
+  value: Microsoft 365 Audit Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender
+  confidence: high
+- type: data_source
+  value: Microsoft Defender Threat Intelligence
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative activities in Exchange Online or SharePoint Online may
+    trigger audit logs tagged with "ThreatIntelligence" without indicating malicious
+    intent. Review these logs to identify patterns of legitimate administrative actions
+    and consider excluding them from the detection rule.
+
+    - Automated processes or third-party integrations with Microsoft 365 services
+    can generate audit logs similar to those flagged by the rule. Identify these processes
+    and create e'
+  mitigation: Review investigation guide for details
+references:
+- https://learn.microsoft.com/en-us/purview/audit-supported-services
+- https://www.octiga.io/en-gb/insights/nist-csf-for-office-365
+- https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema
+has_investigation_guide: true
+risk_score: 47

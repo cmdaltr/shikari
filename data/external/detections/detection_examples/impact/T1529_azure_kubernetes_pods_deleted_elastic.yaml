@@ -1,0 +1,40 @@
+technique_id: T1529
+technique_name: Azure Kubernetes Pods Deleted
+tactic: impact
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'event.dataset:azure.activitylogs and azure.activitylogs.operation_name:"MICROSOFT.KUBERNETES/CONNECTEDCLUSTERS/PODS/DELETE"
+  and
+
+  event.outcome:(Success or success)'
+explanation: 'Identifies the deletion of Azure Kubernetes Pods. Adversaries may delete
+  a Kubernetes pod to disrupt the normal behavior
+
+  of the environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/83a1931d-8136-46fc-b7b9-2db4f639e014.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance or updates by authorized personnel can lead to legitimate
+    pod deletions. To manage this, create exceptions for known maintenance windows
+    or specific user accounts responsible for these tasks.
+
+    - Automated scaling operations might delete pods as part of normal scaling activities.
+    Identify and exclude these operations by correlating with scaling events or using
+    tags that indicate automated processes.
+
+    - Development and testing environments often experie'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/azure/role-based-access-control/resource-provider-operations#microsoftkubernetes
+has_investigation_guide: true
+risk_score: 47

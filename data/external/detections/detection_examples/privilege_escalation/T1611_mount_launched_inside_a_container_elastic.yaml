@@ -1,0 +1,55 @@
+technique_id: T1611
+technique_name: Mount Launched Inside a Container
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'process where host.os.type == "linux" and event.type == "start" and event.action
+  == "exec" and
+
+  process.entry_leader.entry_meta.type == "container" and process.name == "mount"'
+explanation: 'This rule detects the use of the mount utility from inside a container.
+  The mount command is used to make a
+
+  device or file system accessible to the system, and then to connect its root directory
+  to a specified mount point on the
+
+  local file system. When launched inside a privileged container--a container deployed
+  with all the capabilities of the
+
+  host machine-- an attacker can access sensitive host level files which could be
+  used for further privilege escalation
+
+  and container escapes to the host machine. Any usage of mount inside a running privileged
+  container should be further
+
+  investigated.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c73cc6ab-b30e-46bf-b5f2-29d9ab4caf7b.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance tasks within privileged containers may trigger the rule.
+    Exclude known maintenance scripts or processes by adding them to an exception
+    list based on their unique identifiers or command patterns.
+
+    - Backup operations that require mounting file systems might be flagged. Identify
+    and exclude these operations by specifying the backup process names or arguments
+    in the rule exceptions.
+
+    - Development or testing environments often use privileged containers f'
+  mitigation: Review investigation guide for details
+references:
+- https://book.hacktricks.xyz/linux-hardening/privilege-escalation/docker-security/docker-breakout-privilege-escalation#privileged
+has_investigation_guide: true
+risk_score: 47

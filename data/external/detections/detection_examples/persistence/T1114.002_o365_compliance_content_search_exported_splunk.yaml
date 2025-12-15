@@ -1,0 +1,38 @@
+technique_id: T1114.002
+technique_name: O365 Compliance Content Search Exported
+tactic: persistence
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=SecurityComplianceCenter Operation="SearchExported"
+  | rename user_id as user | fillnull | stats count min(_time) as firstTime max(_time)
+  as lastTime by signature dest user src vendor_account vendor_product ExchangeLocations
+  Query | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `o365_compliance_content_search_exported_filter`'
+explanation: The following analytic identifies when the results of a content search
+  within the Office 365 Security and Compliance Center are exported. It uses the SearchExported
+  operation from the SecurityComplianceCenter workload in the o365_management_activity
+  data source. This activity is significant because exporting search results can involve
+  sensitive or critical organizational data, potentially leading to data exfiltration.
+  If confirmed malicious, an attacker could gain access to and exfiltrate sensitive
+  information, posing a severe risk to the organization's data security and compliance
+  posture.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2ce9f31d-ab4f-4179-b2b7-c77a9652e1d8/
+indicators:
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Compliance content searche exports may be executed for legitimate purposes,
+    filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1114/002/
+- https://learn.microsoft.com/en-us/purview/ediscovery-content-search-overview
+- https://learn.microsoft.com/en-us/purview/ediscovery-keyword-queries-and-search-conditions
+- https://learn.microsoft.com/en-us/purview/ediscovery-search-for-activities-in-the-audit-log
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1114.002/o365_compliance_content_search_exported/o365_compliance_content_search_exported.log

@@ -1,0 +1,61 @@
+technique_id: T1059.005
+technique_name: Cisco NVM - Susp Script From Archive Triggering Network Activity
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: "`cisco_network_visibility_module_flowdata`\nparent_process_name IN (\"explorer.exe\"\
+  , \"winrar.exe\", \"7zFM.exe\")\nprocess_name IN (\"wscript.exe\", \"cscript.exe\"\
+  )\nprocess_arguments = \"*\\\\AppData\\\\Local\\\\Temp\\\\*\"\nprocess_arguments\
+  \ IN (\"*\\\\rar*\", \"*\\\\7z*\", \"*.zip*\")\n| stats count min(_time) as firstTime\
+  \ max(_time) as lastTime\n        values(parent_process_arguments) as parent_process_arguments\n\
+  \        values(process_arguments) as process_arguments\n        values(parent_process_hash)\
+  \ as parent_process_hash\n        values(process_hash) as process_hash\n       \
+  \ values(module_name_list) as module_name_list\n        values(module_hash_list)\
+  \ as module_hash_list\n        values(dest_port) as dest_port\n        values(aliul)\
+  \ as additional_logged_in_users_list\n        values(dest_hostname) as dest_hostname\n\
+  \        by src dest parent_process_path parent_process_name parent_process_integrity_level\
+  \ process_path process_name process_integrity_level process_id transport\n| `security_content_ctime(firstTime)`\n\
+  | `security_content_ctime(lastTime)`\n| table\n  parent_process_integrity_level\
+  \ parent_process_name parent_process_path parent_process_arguments parent_process_hash\n\
+  \  process_integrity_level process_path process_name process_arguments process_hash\
+  \ process_id\n  additional_logged_in_users_list module_name_list module_hash_list\n\
+  \  src dest_hostname dest dest_port transport firstTime lastTime\n| `cisco_nvm___susp_script_from_archive_triggering_network_activity_filter`"
+explanation: 'This analytic detects script execution (`wscript.exe` or `cscript.exe`)
+  triggered from compressed files opened directly using
+
+  `explorer.exe`, `winrar.exe`, or `7zFM.exe`.
+
+  When a user double clicks on a ".js" file from within one of these compressed files.
+  Its extracted temporally in the temp directory in folder with certain markers.
+
+  It leverages Cisco Network Visibility Module (NVM) flow data, in order to look for
+  a specific parent/child relationship and an initiated network connection.
+
+  This behavior is exploited by threat actors such as Scarlet Goldfinch to deliver
+  and run malicious scripts as an initial access technique.'
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8b07c2c9-0cde-4c44-9fa6-59dcf2b25777/
+indicators:
+- type: data_source
+  value: Cisco Network Visibility Module Flow Data
+  confidence: high
+- type: risk_system
+  value: src
+  confidence: high
+false_positives:
+- description: 'Some software installers or automation scripts may extract and run
+    scripts from archive files in temporary directories.
+
+    However, it is uncommon for such scripts to initiate outbound network connections
+    immediately upon extraction.
+
+    This behavior should be considered suspicious and investigated, especially in
+    environments where such scripting is not typical.'
+  mitigation: Review context and user activity
+references:
+- https://redcanary.com/threat-detection-report/threats/scarlet-goldfinch/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/cisco_network_visibility_module/cisco_nvm_flowdata/nvm_flowdata.log

@@ -1,0 +1,125 @@
+technique_id: T1055
+technique_name: Rare Remote Thread Creation By Uncommon Source Image
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: 02d1d718-dd13-41af-989d-ea85c7fab93f
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_* and not 1 of filter_optional_*\nfilter_main_conhost:\n  SourceImage:\n\
+  \  - C:\\Windows\\System32\\Defrag.exe\n  - C:\\Windows\\System32\\makecab.exe\n\
+  \  TargetImage: C:\\Windows\\System32\\conhost.exe\nfilter_main_ms_office:\n  SourceImage|startswith:\n\
+  \  - C:\\Program Files\\Microsoft Office\\\n  - C:\\Program Files (x86)\\Microsoft\
+  \ Office\\\n  TargetImage: System\nfilter_main_provtol_svchost:\n  SourceImage:\
+  \ C:\\Windows\\System32\\provtool.exe\n  TargetImage: C:\\Windows\\System32\\svchost.exe\n\
+  filter_main_userinit:\n  SourceImage: C:\\Windows\\System32\\userinit.exe\n  TargetImage:\
+  \ C:\\Windows\\explorer.exe\nfilter_main_winword:\n  SourceImage|endswith: \\WINWORD.EXE\n\
+  \  TargetImage|startswith:\n  - C:\\Program Files (x86)\\\n  - C:\\Program Files\\\
+  \nfilter_optional_explorer_vmtools:\n  SourceImage|endswith: \\SysWOW64\\explorer.exe\n\
+  \  TargetImage:\n  - C:\\Program Files (x86)\\VMware\\VMware Tools\\vmtoolsd.exe\n\
+  \  - C:\\Program Files\\VMware\\VMware Tools\\vmtoolsd.exe\nselection:\n  SourceImage|endswith:\n\
+  \  - \\bash.exe\n  - \\cscript.exe\n  - \\cvtres.exe\n  - \\defrag.exe\n  - \\dialer.exe\n\
+  \  - \\dnx.exe\n  - \\esentutl.exe\n  - \\excel.exe\n  - \\expand.exe\n  - \\find.exe\n\
+  \  - \\findstr.exe\n  - \\forfiles.exe\n  - \\gpupdate.exe\n  - \\hh.exe\n  - \\\
+  installutil.exe\n  - \\lync.exe\n  - \\makecab.exe\n  - \\mDNSResponder.exe\n  -\
+  \ \\monitoringhost.exe\n  - \\msbuild.exe\n  - \\mshta.exe\n  - \\mspaint.exe\n\
+  \  - \\outlook.exe\n  - \\ping.exe\n  - \\provtool.exe\n  - \\python.exe\n  - \\\
+  regsvr32.exe\n  - \\robocopy.exe\n  - \\runonce.exe\n  - \\sapcimc.exe\n  - \\smartscreen.exe\n\
+  \  - \\spoolsv.exe\n  - \\tstheme.exe\n  - \\userinit.exe\n  - \\vssadmin.exe\n\
+  \  - \\vssvc.exe\n  - \\w3wp.exe\n  - \\winscp.exe\n  - \\winword.exe\n  - \\wmic.exe\n\
+  \  - \\wscript.exe\n"
+explanation: Detects uncommon processes creating remote threads.
+false_positives:
+- This rule is best put in testing first in order to create a baseline that reflects
+  the data in your environment.
+references:
+- Personal research, statistical analysis
+- https://lolbas-project.github.io
+tags:
+- attack.privilege-escalation
+- attack.defense-evasion
+- attack.t1055
+logsource:
+  product: windows
+  category: create_remote_thread
+detection:
+  selection:
+    SourceImage|endswith:
+    - \bash.exe
+    - \cscript.exe
+    - \cvtres.exe
+    - \defrag.exe
+    - \dialer.exe
+    - \dnx.exe
+    - \esentutl.exe
+    - \excel.exe
+    - \expand.exe
+    - \find.exe
+    - \findstr.exe
+    - \forfiles.exe
+    - \gpupdate.exe
+    - \hh.exe
+    - \installutil.exe
+    - \lync.exe
+    - \makecab.exe
+    - \mDNSResponder.exe
+    - \monitoringhost.exe
+    - \msbuild.exe
+    - \mshta.exe
+    - \mspaint.exe
+    - \outlook.exe
+    - \ping.exe
+    - \provtool.exe
+    - \python.exe
+    - \regsvr32.exe
+    - \robocopy.exe
+    - \runonce.exe
+    - \sapcimc.exe
+    - \smartscreen.exe
+    - \spoolsv.exe
+    - \tstheme.exe
+    - \userinit.exe
+    - \vssadmin.exe
+    - \vssvc.exe
+    - \w3wp.exe
+    - \winscp.exe
+    - \winword.exe
+    - \wmic.exe
+    - \wscript.exe
+  filter_main_conhost:
+    SourceImage:
+    - C:\Windows\System32\Defrag.exe
+    - C:\Windows\System32\makecab.exe
+    TargetImage: C:\Windows\System32\conhost.exe
+  filter_main_provtol_svchost:
+    SourceImage: C:\Windows\System32\provtool.exe
+    TargetImage: C:\Windows\System32\svchost.exe
+  filter_main_userinit:
+    SourceImage: C:\Windows\System32\userinit.exe
+    TargetImage: C:\Windows\explorer.exe
+  filter_main_winword:
+    SourceImage|endswith: \WINWORD.EXE
+    TargetImage|startswith:
+    - C:\Program Files (x86)\
+    - C:\Program Files\
+  filter_main_ms_office:
+    SourceImage|startswith:
+    - C:\Program Files\Microsoft Office\
+    - C:\Program Files (x86)\Microsoft Office\
+    TargetImage: System
+  filter_optional_explorer_vmtools:
+    SourceImage|endswith: \SysWOW64\explorer.exe
+    TargetImage:
+    - C:\Program Files (x86)\VMware\VMware Tools\vmtoolsd.exe
+    - C:\Program Files\VMware\VMware Tools\vmtoolsd.exe
+  condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*
+metadata:
+  created_date: 2019-10-27
+  modified_date: 2025-10-18
+  author: Perez Diego (@darkquassar), oscd.community
+  status: test
+  imported_date: '2025-11-28'

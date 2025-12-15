@@ -1,0 +1,59 @@
+technique_id: T1218
+technique_name: Potential Escalation via Vulnerable MSI Repair
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where event.type == \"start\" and host.os.type == \"windows\" and\n\
+  \ user.domain : (\"NT AUTHORITY\", \"AUTORITE NT\", \"AUTORIDADE NT\") and\n process.parent.name\
+  \ : (\"chrome.exe\", \"msedge.exe\", \"brave.exe\", \"whale.exe\", \"browser.exe\"\
+  , \"dragon.exe\", \"vivaldi.exe\",\n                        \"opera.exe\", \"iexplore\"\
+  , \"firefox.exe\", \"waterfox.exe\", \"iexplore.exe\", \"tor.exe\", \"safari.exe\"\
+  ) and\n process.parent.command_line : \"*go.microsoft.com*\""
+explanation: 'Identifies when a browser process navigates to the Microsoft Help page
+  followed by spawning an elevated process. This
+
+  may indicate a successful exploitation for privilege escalation abusing a vulnerable
+  Windows Installer repair setup.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/043d80a3-c49e-43ef-9c72-1088f0c7b278.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may trigger the rule if they involve
+    browser-based help documentation. To manage this, identify and whitelist known
+    software update processes that frequently access Microsoft Help pages.
+
+    - Automated scripts or administrative tools that use browsers to access Microsoft
+    Help for legitimate purposes can cause false positives. Exclude these scripts
+    or tools by specifying their unique command-line patterns or process names.
+
+    - Use'
+  mitigation: Review investigation guide for details
+references:
+- https://sec-consult.com/blog/detail/msi-installer-repair-to-system-a-detailed-journey/
+- https://msrc.microsoft.com/update-guide/en-US/advisory/CVE-2024-38014
+has_investigation_guide: true
+risk_score: 73

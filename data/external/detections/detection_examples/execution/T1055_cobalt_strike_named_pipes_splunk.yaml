@@ -1,0 +1,51 @@
+technique_id: T1055
+technique_name: Cobalt Strike Named Pipes
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "`sysmon` (EventID=17 OR EventID=18)\nPipeName IN (\n  \"\\\\DserNamePipe*\"\
+  ,\n  \"\\\\interprocess_*\",\n  \"\\\\lsarpc_*\",\n  \"\\\\mojo_*\",\n  \"\\\\msagent_*\"\
+  ,\n  \"\\\\MSSE-*\",\n  \"\\\\netlogon_*\",\n  \"\\\\ntsvcs*\",\n  \"\\\\postex_*\"\
+  ,\n  \"\\\\samr_*\",\n  \"\\\\spoolss_*\",\n  \"\\\\srvsvc_*\",\n  \"\\\\status_*\"\
+  ,\n  \"\\\\UIA_PIPE*\",\n  \"\\\\win_svc*\",\n  \"\\\\winsock*\",\n  \"\\\\wkssvc_*\"\
+  ,\n)\n| stats count min(_time) as firstTime max(_time) as lastTime\nby dest dvc\
+  \ pipe_name process_exec process_guid process_id process_name process_path\nsignature\
+  \ signature_id user_id vendor_product Image PipeName\n| `security_content_ctime(firstTime)`\n\
+  | `security_content_ctime(lastTime)`\n| `cobalt_strike_named_pipes_filter`"
+explanation: The following analytic detects the use of default or publicly known named
+  pipes associated with Cobalt Strike. It leverages Sysmon EventID 17 and 18 to identify
+  specific named pipes commonly used by Cobalt Strike's Artifact Kit and Malleable
+  C2 Profiles. This activity is significant because Cobalt Strike is a popular tool
+  for adversaries to conduct post-exploitation tasks, and identifying its named pipes
+  can reveal potential malicious activity. If confirmed malicious, this could indicate
+  an active Cobalt Strike beacon, leading to unauthorized access, data exfiltration,
+  or further lateral movement within the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/5876d429-0240-4709-8b93-ea8330b411b5/
+indicators:
+- type: data_source
+  value: Sysmon EventID 17
+  confidence: high
+- type: data_source
+  value: Sysmon EventID 18
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: The idea of using named pipes with Cobalt Strike is to blend in. Therefore,
+    some of the named pipes identified and added may cause false positives. Filter
+    by process name or pipe name to reduce false positives.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1218/009/
+- https://docs.microsoft.com/en-us/windows/win32/ipc/named-pipes
+- https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/index.htm#cshid=1040
+- https://www.cobaltstrike.com/blog/learn-pipe-fitting-for-all-of-your-offense-projects/
+- https://gist.github.com/MHaggis/6c600e524045a6d49c35291a21e10752
+- https://www.mandiant.com/resources/shining-a-light-on-darkside-ransomware-operations
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1055/cobalt_strike/windows-sysmon.log

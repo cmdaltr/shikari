@@ -1,0 +1,39 @@
+technique_id: T1218
+technique_name: Potential Provisioning Registry Key Abuse For Binary Proxy Execution
+  - REG
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 7021255e-5db3-4946-a8b9-0ba7a4644a69
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetObject|contains: \\SOFTWARE\\Microsoft\\Provisioning\\Commands\\\n"
+explanation: Detects potential abuse of the provisioning registry key for indirect
+  command execution through "Provlaunch.exe".
+false_positives:
+- Unknown
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Provlaunch/
+- https://twitter.com/0gtweet/status/1674399582162153472
+tags:
+- attack.defense-evasion
+- attack.t1218
+logsource:
+  category: registry_set
+  product: windows
+  definition: 'Requirements: The registry key "\SOFTWARE\Microsoft\Provisioning\Commands\"
+    and its subkey must be monitored'
+detection:
+  selection:
+    TargetObject|contains: \SOFTWARE\Microsoft\Provisioning\Commands\
+  condition: selection
+metadata:
+  created_date: 2023-08-02
+  modified_date: 2023-08-17
+  author: Swachchhanda Shrawan Poudel
+  status: test
+  imported_date: '2025-11-28'

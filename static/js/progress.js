@@ -1,0 +1,715 @@
+// Poll /progress_status for updates and update the progress bars and lists
+const params = new URLSearchParams(window.location.search);
+const group = params.get('group_name') || '';
+
+// CVE Research Stage Management
+let cveStageTracking = {
+  isCVEHunt: false,
+  currentStage: 0,
+  stagesComplete: false,
+  stages: [
+    { id: 1, status: 'researching_cve', duration: 2000 },
+    { id: 2, status: 'finding_pocs', duration: 2000 },
+    { id: 3, status: 'mapping_techniques', duration: 1500 },
+    { id: 4, status: 'extracting_iocs', duration: 1500 }
+  ]
+};
+
+// Track if redirect has been initiated to prevent multiple redirects
+let redirectInitiated = false;
+
+// Check if this is a CVE hunt (group name starts with CVE-)
+// Note: Server already sets initial state, we just need to track and start progression
+if (group && (group.startsWith('CVE-') || group.startsWith('cve-'))) {
+  cveStageTracking.isCVEHunt = true;
+
+  // Start CVE stage progression
+  progressCVEStages();
+}
+
+function progressCVEStages() {
+  if (!cveStageTracking.isCVEHunt || cveStageTracking.stagesComplete) return;
+
+  const currentStageNum = cveStageTracking.currentStage + 1;
+
+  // Mark previous stage as complete
+  if (cveStageTracking.currentStage > 0) {
+    const prevStageEl = document.getElementById('cve-stage-' + cveStageTracking.currentStage);
+    if (prevStageEl) {
+      prevStageEl.classList.remove('active');
+      prevStageEl.classList.add('complete');
+      const spinner = prevStageEl.querySelector('.stage-spinner');
+      const check = prevStageEl.querySelector('.stage-check');
+      if (spinner) spinner.style.display = 'none';
+      if (check) check.style.display = 'inline';
+    }
+  }
+
+  // Activate current stage
+  if (currentStageNum <= 4) {
+    const stageEl = document.getElementById('cve-stage-' + currentStageNum);
+    if (stageEl) {
+      stageEl.classList.add('active');
+      const spinner = stageEl.querySelector('.stage-spinner');
+      if (spinner) spinner.style.display = 'inline';
+    }
+
+    // Update overall progress bar
+    const progressPercent = (currentStageNum / 4) * 100;
+    const progressBar = document.getElementById('cve-overall-progress-bar');
+    const progressCounter = document.getElementById('cve-progress-counter');
+    if (progressBar) progressBar.style.width = progressPercent + '%';
+    if (progressCounter) progressCounter.textContent = 'Step ' + currentStageNum + '/4';
+
+    cveStageTracking.currentStage = currentStageNum;
+
+    // Schedule next stage
+    const stageDuration = cveStageTracking.stages[currentStageNum - 1].duration;
+    setTimeout(progressCVEStages, stageDuration);
+  } else {
+    // All CVE stages complete - mark last one complete and transition
+    const lastStageEl = document.getElementById('cve-stage-4');
+    if (lastStageEl) {
+      lastStageEl.classList.remove('active');
+      lastStageEl.classList.add('complete');
+      const spinner = lastStageEl.querySelector('.stage-spinner');
+      const check = lastStageEl.querySelector('.stage-check');
+      if (spinner) spinner.style.display = 'none';
+      if (check) check.style.display = 'inline';
+    }
+
+    cveStageTracking.stagesComplete = true;
+
+    // Hide CVE stages and show detection progress after a brief delay
+    setTimeout(function() {
+      const cveStagesDiv = document.getElementById('cve-research-stages');
+      const detectionDiv = document.getElementById('detection-progress-sections');
+      if (cveStagesDiv) cveStagesDiv.style.display = 'none';
+      if (detectionDiv) detectionDiv.style.display = 'block';
+
+      // Update title
+      const pageTitle = document.getElementById('page-title');
+      if (pageTitle) {
+        pageTitle.textContent = 'Detection Generation Progress';
+      }
+    }, 1000);
+  }
+}
+
+// Track YAML state to avoid regressions and lock at 100% once complete
+let lastYamlPct = 0;
+let yamlComplete = false;
+// Track last created count and last reported YAML file path
+let lastYamlCreated = 0;
+let lastYamlFileShown = '';
+
+// Ellipsis animation state
+let ellipsisTimer = null;
+let ellipsisCount = 0;
+let ellipsisEl = null;
+
+// Ensure an animated ellipsis span exists after the waiting text in the "last YAML file" line
+function ensureEllipsisSpan(hostEl) {
+  // Reuse existing span if already attached to the same host
+  if (ellipsisEl && ellipsisEl.parentElement === hostEl) return ellipsisEl;
+  // If the span exists elsewhere, remove it so we can reattach
+  if (ellipsisEl && ellipsisEl.parentElement && ellipsisEl.parentElement !== hostEl) {
+    try { ellipsisEl.remove(); } catch (_) {}
+    ellipsisEl = null;
+  }
+  if (!hostEl) return null;
+  const span = document.createElement('span');
+  span.id = 'progress-ellipsis';
+  span.style.display = 'inline-block';
+  span.style.minWidth = '1.2em';
+  span.textContent = ''; // start empty; will animate
+  hostEl.appendChild(document.createTextNode(''));
+  hostEl.appendChild(span);
+  ellipsisEl = span;
+  return span;
+}
+function startEllipsis(hostEl) {
+  if (ellipsisTimer) return;
+  const span = ensureEllipsisSpan(hostEl);
+  if (!span) return;
+  ellipsisCount = 0;
+  ellipsisTimer = setInterval(function () {
+    ellipsisCount = (ellipsisCount + 1) % 4;
+    span.textContent = '.'.repeat(ellipsisCount);
+  }, 400);
+}
+function stopEllipsis(removeSpan) {
+  if (ellipsisTimer) {
+    clearInterval(ellipsisTimer);
+    ellipsisTimer = null;
+  }
+  if (!ellipsisEl) return;
+  if (removeSpan) {
+    try { ellipsisEl.remove(); } catch (_) {}
+    ellipsisEl = null;
+  } else {
+    ellipsisEl.textContent = '...';
+  }
+}
+
+function pct(part, total){
+  if(!total || total<=0) return 0;
+  return Math.min(100, Math.round((part/total)*100));
+}
+
+// Deep-scan helper: find last string value that looks like a YAML path
+function findLastYamlStringDeep(value, acc) {
+  acc = acc || [];
+  if (typeof value === 'string') {
+    if (/\.(ya?ml)$/i.test(value)) acc.push(value);
+    return acc;
+  }
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) findLastYamlStringDeep(value[i], acc);
+    return acc;
+  }
+  if (value && typeof value === 'object') {
+    for (const k in value) {
+      if (!Object.prototype.hasOwnProperty.call(value, k)) continue;
+      findLastYamlStringDeep(value[k], acc);
+    }
+    return acc;
+  }
+  return acc;
+}
+
+// Extract a best-guess "last file written" from server payload
+function extractLastYamlFile(root, progress) {
+  const j = root || {};
+  const p = progress || {};
+  // direct fields (expanded)
+  const candidates = [
+    p.last_yaml_file, p.last_yaml, p.last_yaml_filename, p.last_yaml_path, p.last_yaml_filepath, p.last_yaml_fullpath, p.last_yaml_full_path,
+    p.last_written_file, p.last_output_file, p.current_yaml_file, p.current_file, p.file,
+    j.last_yaml_file, j.last_yaml, j.last_yaml_filename, j.last_yaml_path, j.last_yaml_filepath, j.last_yaml_fullpath, j.last_yaml_full_path,
+    j.last_written_file, j.last_output_file, j.current_yaml_file, j.current_file, j.file,
+    (p.output && p.output.last_yaml), (j.output && j.output.last_yaml)
+  ].filter(Boolean);
+  const direct = candidates.find(s => typeof s === 'string' && /\.(ya?ml)$/i.test(s));
+  if (direct) return String(direct);
+  // arrays
+  const arrays = [
+    p.yaml_files, p.created_yaml_files, p.files,
+    j.yaml_files, j.created_yaml_files, j.files
+  ].filter(Array.isArray);
+  for (const arr of arrays) {
+    const lastYaml = [...arr].reverse().find(f => typeof f === 'string' && /\.(ya?ml)$/i.test(f));
+    if (lastYaml) return String(lastYaml);
+  }
+  // deep scan anywhere in payloads
+  const found = findLastYamlStringDeep([p, j]);
+  if (found.length) return String(found[found.length - 1]);
+  return '';
+}
+
+// Ensure there is a small line under the YAML bar to show the last file written
+function getOrCreateLastFileEl(yamlFillEl) {
+  // Prefer the placeholder in the HTML if present
+  let el = document.getElementById('last-yaml-file');
+  if (el) return el;
+
+  // Fallback: create if missing and insert after the YAML bar
+  el = document.createElement('div');
+  el.id = 'last-yaml-file';
+  el.style.marginTop = '6px';
+  el.style.fontSize = '0.9em';
+  el.style.color = '#666'; // Default color for "Waiting for first file"
+  el.style.display = 'block';
+  el.style.whiteSpace = 'normal';
+  el.style.wordBreak = 'break-all';
+  let bar = null;
+  try { bar = yamlFillEl && (yamlFillEl.closest && yamlFillEl.closest('.progress-bar')) || yamlFillEl.parentElement; } catch (_) {}
+  if (bar && bar.parentElement) {
+    bar.insertAdjacentElement('afterend', el);
+  } else {
+    const container = document.querySelector('.progress-container') || document.body;
+    container.appendChild(el);
+  }
+  return el;
+}
+
+// HEAD a subset and pick the "best" candidate by size, then Last-Modified
+async function pickByHead(urls) {
+  const limit = Math.min(urls.length, 25);
+  let best = { url: '', size: -1, ts: 0 };
+  for (let i = 0; i < limit; i++) {
+    const u = urls[i];
+    try {
+      const resp = await fetch(u, { method: 'HEAD' });
+      if (!resp.ok) continue;
+      const len = Number(resp.headers.get('content-length')) || 0;
+      const lm = resp.headers.get('last-modified');
+      const ts = lm ? Date.parse(lm) : 0;
+      if (len > best.size || (len === best.size && ts > best.ts)) {
+        best = { url: u, size: len, ts };
+      }
+    } catch (_) {}
+  }
+  return best.url || urls[urls.length - 1] || '';
+}
+
+// Fetch a YAML file list from an API endpoint (data-files-url) and normalize to absolute URLs
+async function listYamlFilesFromApi(filesUrl) {
+  const resp = await fetch(filesUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+  if (!resp.ok) throw new Error('FILES_API_NOT_AVAILABLE');
+  const data = await resp.json();
+  const arrays = [data.files, data.entries, data.items, data.list].filter(Array.isArray);
+  const out = new Set();
+  arrays.forEach(arr => {
+    arr.forEach(x => {
+      let path = '';
+      if (typeof x === 'string') path = x;
+      else if (x && typeof x === 'object') path = x.path || x.file || x.name || '';
+      if (path && /\.(ya?ml)$/i.test(path)) {
+        if (/^https?:\/\//i.test(path) || path.startsWith('/')) out.add(path);
+        else out.add(`${path}`.replace(/\/{2,}/g, '/'));
+      }
+    });
+  });
+  return Array.from(out);
+}
+
+// Replace the fetchDirectoryYamlFiles and getMostRecentQueryYaml functions with these versions
+async function fetchYamlFilesInDirectory(dirPath = 'data/queries') {
+  try {
+    // First attempt - try to directly access the directory listing if it's enabled on the server
+    try {
+      const dirRes = await fetch(`/${dirPath}/`, { 
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      
+      if (dirRes.ok && dirRes.headers.get('content-type')?.includes('text/html')) {
+        const html = await dirRes.text();
+        // Parse HTML directory listing to extract YAML files
+        const regex = new RegExp(`href="([^"]+\\.(ya?ml))"[^>]*>([^<]+)<\\/a>\\s*<\\/td>\\s*<td[^>]*>([\\d-]+\\s+[\\d:]+)`, 'gi');
+        const files = [];
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+          const [_, href, __, name, dateStr] = match;
+          const fullPath = `${dirPath}/${href}`.replace(/\/{2,}/g, '/');
+          files.push({
+            path: fullPath,
+            name: name || href,
+            url: `/${fullPath}`
+          });
+        }
+        
+        if (files.length > 0) {
+          // Get timestamps via HEAD requests to sort by last-modified
+          const fileDetails = await Promise.all(files.map(async file => {
+            try {
+              const headRes = await fetch(file.url, { method: 'HEAD' });
+              if (headRes.ok) {
+                const lastMod = headRes.headers.get('last-modified');
+                return {
+                  ...file,
+                  modified: lastMod ? new Date(lastMod) : new Date(0),
+                  size: parseInt(headRes.headers.get('content-length') || '0')
+                };
+              }
+            } catch (_) {}
+            return { ...file, modified: new Date(0), size: 0 };
+          }));
+          
+          return fileDetails.sort((a, b) => b.modified - a.modified);
+        }
+      }
+    } catch (e) {
+      console.debug('Directory listing parse failed:', e);
+    }
+    
+    // Second attempt - try a predictable file pattern with date-based naming
+    // Assuming files might be named like YYYY-MM-DD-query.yaml or query-YYYY-MM-DD.yaml
+    const today = new Date();
+    const dates = [];
+    
+    // Generate the last 7 days of possible dates
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      dates.push(`${year}-${month}-${day}`);
+      dates.push(`${year}${month}${day}`);
+    }
+    
+    // Try different filename patterns
+    const candidates = [
+      ...dates.map(date => `${dirPath}/query-${date}.yaml`),
+      ...dates.map(date => `${dirPath}/${date}-query.yaml`),
+      ...dates.map(date => `${dirPath}/queries-${date}.yaml`),
+      ...dates.map(date => `${dirPath}/${date}-queries.yaml`),
+      `${dirPath}/query.yaml`,
+      `${dirPath}/queries.yaml`
+    ];
+    
+    // Check each candidate with HEAD request
+    const validFiles = [];
+    for (const path of candidates) {
+      try {
+        const res = await fetch(`/${path}`, { method: 'HEAD' });
+        if (res.ok) {
+          const lastMod = res.headers.get('last-modified');
+          validFiles.push({
+            path,
+            name: path.split('/').pop(),
+            modified: lastMod ? new Date(lastMod) : new Date(),
+            size: parseInt(res.headers.get('content-length') || '0')
+          });
+        }
+      } catch (_) {}
+    }
+    
+    return validFiles.sort((a, b) => b.modified - a.modified);
+  } catch (e) {
+    console.debug('Error fetching directory files:', e);
+    return [];
+  }
+}
+
+
+// Fix the syntax error in the file
+async function refresh(){
+  if(!group) return;
+  try{
+    const res = await fetch(`/progress_status?group_name=${encodeURIComponent(group)}`);
+    const j = await res.json();
+    const p = j.progress || j.progress_state || j || {};
+
+    // Check if processing failed
+    if (p.status === 'failed') {
+      // Show error message and stop polling
+      const yamlFill = document.getElementById('yaml-progress') || document.querySelector('.progress-fill.yaml');
+      const lastEl = getOrCreateLastFileEl(yamlFill);
+      if (lastEl) {
+        lastEl.innerHTML = '';
+        lastEl.style.display = 'block';
+
+        const errorText = document.createElement('span');
+        errorText.textContent = 'Error: ';
+        errorText.style.color = '#dc3545'; // Red color
+        errorText.style.fontWeight = 'bold';
+        lastEl.appendChild(errorText);
+
+        const msgSpan = document.createElement('span');
+        msgSpan.textContent = 'Processing failed. Please check the logs or try again.';
+        msgSpan.style.color = '#495057';
+        lastEl.appendChild(msgSpan);
+      }
+
+      // Stop further polling
+      return;
+    }
+
+    // Detection generation progress (monotonic + lock at 100% once complete)
+    const created = p.created_yaml || p.yaml_created || 0;
+    const total = p.total_yaml || p.yaml_total || 10;
+    const currentPct = Math.min(100, Math.round((total > 0 ? (created/total)*100 : 0)));
+
+    const serverMovedToCorrelation = (p.status === 'genai_started' || p.status === 'genai_starting' || p.status === 'genai_complete');
+    if (!yamlComplete && (serverMovedToCorrelation || (total > 0 && created >= total) || currentPct >= 100)) {
+      yamlComplete = true;
+      console.debug('Detection generation complete, transitioning to correlation');
+
+      // Force a final progress update to ensure backend knows detection generation is complete
+      if (!serverMovedToCorrelation) {
+        try {
+          // Signal completion to the backend via special endpoint
+          await fetch(`/complete_yaml?group_name=${encodeURIComponent(group)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (err) {
+          console.debug('Error signaling detection completion:', err);
+        }
+      }
+    }
+
+    const yamlFill = document.getElementById('yaml-progress') || document.querySelector('.progress-fill.yaml');
+    if (yamlFill) {
+      const nextPct = yamlComplete ? 100 : Math.max(lastYamlPct, currentPct);
+      lastYamlPct = nextPct;
+      yamlFill.style.width = nextPct + '%';
+      if (nextPct >= 100) yamlFill.classList.add('complete');
+    }
+
+    // Drive the "last file" line every tick
+    const lastEl = getOrCreateLastFileEl(yamlFill);
+
+    const createdIncreased = created > lastYamlCreated;
+    if (createdIncreased) lastYamlCreated = created;
+
+    if (lastEl) {
+      // YAML generation is complete, show "Complete" message
+      if (yamlComplete) {
+        lastEl.innerHTML = ''; // Clear existing content
+        lastEl.style.display = 'block'; // Show element again
+
+        // "Complete: " in green and bold
+        const completeText = document.createElement('span');
+        completeText.textContent = 'Complete: ';
+        completeText.style.color = '#28a745'; // Green color matching detection bar
+        completeText.style.fontWeight = 'bold';
+        lastEl.appendChild(completeText);
+
+        // Show actual YAML file count (total_files) not procedure count (total_yaml)
+        // One procedure can generate multiple YAML files (one per data source/index)
+        const totalFiles = p.total_files || total;
+        const countSpan = document.createElement('span');
+        countSpan.textContent = `${totalFiles} detection files generated`;
+        countSpan.style.color = '#495057'; // Default grey/black text
+        lastEl.appendChild(countSpan);
+
+        // Stop ellipsis animation if it's still running
+        stopEllipsis(true);
+      }
+      // Still in progress - show "Finalising" message with ellipsis if no files created yet
+      else if (created === 0) {
+        // Show "Finalising..." with animated ellipsis
+        lastEl.innerHTML = ''; // Clear existing content
+        lastEl.style.display = 'block'; // Show element
+        lastEl.style.color = '#666'; // Grey text
+
+        const searchText = document.createTextNode('Finalising...');
+        lastEl.appendChild(searchText);
+
+        // Start ellipsis animation
+        startEllipsis(lastEl);
+      }
+      // Files are being created - hide the message
+      else {
+        // Clear text and hide element during detection generation
+        lastEl.textContent = '';
+        lastEl.style.display = 'none';
+        stopEllipsis(true);
+      }
+    }
+
+    // Sole-vendor correlation progress - only start after detection completes
+    const correlationFill = document.getElementById('genai-progress');
+    if (correlationFill) {
+      let correlationPct = 0;
+      const correlationStatus = p.status || '';
+      const correlationProcessed = p.processed || p.genai_processed || 0;
+      const correlationTotal = p.total_pairs || p.genai_total || p.total_files || 0;
+
+      // Only show correlation progress if detection generation is complete
+      if (!yamlComplete) {
+        // Don't start correlation until detection is done
+        correlationPct = 0;
+      } else if (correlationStatus === 'genai_complete' || correlationStatus === 'complete') {
+        // Both genai_complete and complete mean correlation finished
+        correlationPct = 100;
+      } else if (correlationStatus === 'merging_correlations') {
+        // Show 99% during merge to indicate near completion but still processing
+        correlationPct = 99;
+      } else if (correlationStatus === 'genai_processing' || correlationStatus === 'genai_started') {
+        // Calculate percentage if we have totals
+        if (correlationTotal > 0 && correlationProcessed >= 0) {
+          correlationPct = Math.min(99, Math.round((correlationProcessed / correlationTotal) * 100));
+        } else if (correlationProcessed > 0) {
+          // If we don't have total, show progress based on processed count
+          // Cap at 99% until complete
+          correlationPct = Math.min(99, Math.round(Math.log(correlationProcessed + 1) * 10));
+        } else if (correlationStatus === 'genai_started') {
+          correlationPct = 1; // Show minimal progress when started
+        }
+      } else if (correlationStatus === 'genai_starting') {
+        // Just starting, show minimal progress
+        correlationPct = 1;
+      } else if (correlationStatus && correlationStatus !== 'yaml') {
+        // Log unexpected status for debugging - but don't try to calculate progress
+        // to avoid progress bar jumping
+        console.warn(`Unexpected correlation status: "${correlationStatus}"`);
+      }
+
+      // Debug logging for correlation progress
+      if (correlationStatus === 'genai_processing' && correlationProcessed > 0) {
+        console.log(`Correlation progress: ${correlationProcessed}/${correlationTotal} = ${correlationPct}%`);
+      }
+
+      correlationFill.style.width = correlationPct + '%';
+      if (correlationPct >= 100) {
+        correlationFill.classList.add('complete');
+      } else {
+        correlationFill.classList.remove('complete');
+      }
+    }
+
+    // Display correlation techniques info below the correlation bar
+    const correlationInfoEl = document.getElementById('last-correlation');
+    if (correlationInfoEl && yamlComplete) {
+      const correlationStatus = p.status || '';
+      const correlationProcessed = p.processed || 0;
+      const correlationTotal = p.total_pairs || 0;
+      // Use post-merge count if available (reflects what's displayed on results page after merging)
+      // Otherwise fall back to pre-merge count for backward compatibility
+      const vendorCount = p.correlation_count_post_merge || p.vendor_count || 0;
+
+      if (correlationStatus === 'genai_complete' || correlationStatus === 'complete') {
+        // Correlation complete
+        correlationInfoEl.innerHTML = '';
+
+        // "Complete: " in blue and bold
+        const completeText = document.createElement('span');
+        completeText.textContent = 'Complete: ';
+        completeText.style.color = '#007bff';
+        completeText.style.fontWeight = 'bold';
+        correlationInfoEl.appendChild(completeText);
+
+        // "9979 merged correlations generated" in black (default), normal weight
+        const countSpan = document.createElement('span');
+        countSpan.textContent = `${vendorCount} merged correlations generated`;
+        countSpan.style.color = '#495057'; // Default grey/black text
+        correlationInfoEl.appendChild(countSpan);
+      } else if (correlationStatus === 'merging_correlations') {
+        // Show merging status
+        correlationInfoEl.innerHTML = '';
+
+        // "Merging correlations: " in default color
+        const prefixSpan = document.createElement('span');
+        prefixSpan.textContent = 'Merging correlations with shared techniques';
+        correlationInfoEl.appendChild(prefixSpan);
+
+        // Add animated ellipsis
+        startEllipsis(correlationInfoEl);
+      } else if (correlationStatus === 'genai_processing') {
+        // Show progress
+        correlationInfoEl.innerHTML = '';
+
+        // "Correlating techniques: " in default color
+        const prefixSpan = document.createElement('span');
+        prefixSpan.textContent = 'Correlating techniques: ';
+        correlationInfoEl.appendChild(prefixSpan);
+
+        // "X of Y pairs evaluated" in blue, not bold
+        const progressSpan = document.createElement('span');
+        progressSpan.textContent = `${correlationProcessed} of ${correlationTotal} pairs evaluated`;
+        progressSpan.style.color = '#007bff';
+        correlationInfoEl.appendChild(progressSpan);
+      } else if (correlationStatus === 'genai_starting' || correlationStatus === 'genai_started') {
+        // Just starting
+        correlationInfoEl.textContent = 'Starting correlation analysis';
+        startEllipsis(correlationInfoEl);
+      } else {
+        // Waiting
+        correlationInfoEl.textContent = 'Waiting for detection generation to complete';
+      }
+    }
+
+    // Cross-vendor correlation progress - only start after sole-vendor correlation completes
+    const crossVendorFill = document.getElementById('cross-vendor-progress');
+    const crossVendorSection = document.getElementById('cross-vendor-section');
+    if (crossVendorFill && crossVendorSection) {
+      let crossVendorPct = 0;
+      const correlationStatus = p.status || '';
+      const crossCount = p.cross_count || 0;
+
+      // Check if cross-vendor correlation was enabled from backend
+      const isCrossVendorEnabled = p.cross_vendor_enabled === true;
+
+      // Only show cross-vendor progress if sole-vendor correlation is complete
+      const soleVendorComplete = (correlationStatus === 'genai_complete' || correlationStatus === 'complete');
+
+      if (!isCrossVendorEnabled) {
+        // Cross-vendor disabled - grey out the section
+        crossVendorPct = 0;
+        crossVendorSection.classList.add('disabled');
+      } else {
+        // Cross-vendor enabled - remove disabled class and show pink theme
+        crossVendorSection.classList.remove('disabled');
+
+        if (!soleVendorComplete) {
+          // Wait for sole-vendor to complete first
+          crossVendorPct = 0;
+        } else if (crossCount > 0) {
+          // Cross-vendor complete - show 100%
+          crossVendorPct = 100;
+        } else {
+          // Processing (if we add cross-vendor correlation tracking in the future)
+          crossVendorPct = 0;
+        }
+      }
+
+      crossVendorFill.style.width = crossVendorPct + '%';
+      if (crossVendorPct >= 100) {
+        crossVendorFill.classList.add('complete');
+      }
+    }
+
+    // Display cross-vendor correlation info below the cross-vendor bar
+    const crossVendorInfoEl = document.getElementById('last-cross-vendor');
+    if (crossVendorInfoEl && crossVendorSection) {
+      const correlationStatus = p.status || '';
+      const crossCount = p.cross_count || 0;
+      const isCrossVendorEnabled = p.cross_vendor_enabled === true;
+      const soleVendorComplete = (correlationStatus === 'genai_complete' || correlationStatus === 'complete');
+
+      if (!isCrossVendorEnabled) {
+        // Cross-vendor disabled
+        crossVendorInfoEl.textContent = 'Cross-vendor correlation not enabled for this analysis';
+        crossVendorInfoEl.style.color = '#999';
+      } else if (!soleVendorComplete) {
+        // Wait for sole-vendor to complete
+        crossVendorInfoEl.textContent = 'Waiting for sole-vendor correlation to complete';
+        crossVendorInfoEl.style.color = '#999';
+      } else if (crossCount > 0) {
+        // Cross-vendor complete
+        crossVendorInfoEl.innerHTML = '';
+
+        // "Complete: " in pink and bold
+        const completeText = document.createElement('span');
+        completeText.textContent = 'Complete: ';
+        completeText.style.color = '#e91e63';
+        completeText.style.fontWeight = 'bold';
+        crossVendorInfoEl.appendChild(completeText);
+
+        // "X merged correlations generated" in black (default), normal weight
+        const countSpan = document.createElement('span');
+        countSpan.textContent = `${crossCount} cross-vendor merged correlations generated`;
+        countSpan.style.color = '#495057';
+        crossVendorInfoEl.appendChild(countSpan);
+      } else {
+        // No cross-vendor correlations found (enabled but no results)
+        crossVendorInfoEl.textContent = 'No cross-vendor correlations identified';
+        crossVendorInfoEl.style.color = '#6c757d';
+      }
+    }
+
+    // Correlation progress (if present)
+    const corrEl = document.getElementById('correlation-progress');
+    if (corrEl) {
+      const corrPct = Math.min(100, Math.round((p.correlation_progress || 0) * 100));
+      corrEl.style.width = corrPct + '%';
+      if (corrPct >= 100) corrEl.classList.add('complete');
+    }
+
+    // Check if all stages are complete and redirect to summary page
+    const yamlDone = yamlComplete || (p.created_yaml > 0 && p.created_yaml >= p.total_yaml);
+    const correlationDone = (p.status === 'genai_complete' || p.status === 'complete');
+
+    // If both detection and correlation are complete, redirect to results page
+    if (yamlDone && correlationDone && !redirectInitiated) {
+      redirectInitiated = true; // Prevent multiple redirects
+      setTimeout(() => {
+        window.location.href = `/results?group_name=${encodeURIComponent(group)}`;
+      }, 1000); // Wait 1 second to show completion state
+    }
+
+  } catch(e) {
+    console.error('Progress polling error:', e);
+  }
+}
+setInterval(refresh, 1500);
+refresh();
+// Remove previous DOMContentLoaded ellipsis start tied to the leady when in the "Waiting for first file" state.
+// It now starts only when in the "Waiting for first file" state.Loaded', function () {
+// document.addEventListener('DOMContentLoaded', function () {
+//   startEllipsis();// });

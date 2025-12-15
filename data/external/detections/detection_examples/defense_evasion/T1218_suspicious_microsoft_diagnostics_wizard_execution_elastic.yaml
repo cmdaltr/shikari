@@ -1,0 +1,72 @@
+technique_id: T1218
+technique_name: Suspicious Microsoft Diagnostics Wizard Execution
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  (?process.pe.original_file_name == \"msdt.exe\" or process.name : \"msdt.exe\"\
+  ) and\n  (\n    process.args : (\"IT_RebrowseForFile=*\", \"*FromBase64*\", \"*/../../../*\"\
+  , \"*PCWDiagnostic*\") or\n    (\n      process.args : \"-af\" and process.args\
+  \ : \"/skip\" and\n      process.parent.name : (\"explorer.exe\", \"cmd.exe\", \"\
+  powershell.exe\", \"cscript.exe\", \"wscript.exe\", \"mshta.exe\", \"rundll32.exe\"\
+  , \"regsvr32.exe\") and\n      process.args : (\"?:\\\\WINDOWS\\\\diagnostics\\\\\
+  index\\\\PCWDiagnostic.xml\", \"PCWDiagnostic.xml\", \"?:\\\\Users\\\\Public\\\\\
+  *\", \"?:\\\\Windows\\\\Temp\\\\*\")\n    ) or\n\n    (process.pe.original_file_name\
+  \ == \"msdt.exe\" and not process.name : \"msdt.exe\" and process.name != null)\
+  \ or\n\n    (\n      ?process.pe.original_file_name == \"msdt.exe\" and\n      not\
+  \ process.executable : (\n        \"?:\\\\Windows\\\\system32\\\\msdt.exe\",\n \
+  \       \"?:\\\\Windows\\\\SysWOW64\\\\msdt.exe\",\n        /* Crowdstrike specific\
+  \ exclusion as it uses NT Object paths */\n        \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\system32\\\\msdt.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\\\
+  Windows\\\\SysWOW64\\\\msdt.exe\"\n      )\n    )\n  )"
+explanation: 'Identifies potential abuse of the Microsoft Diagnostics Troubleshooting
+  Wizard (MSDT) to proxy malicious command or
+
+  binary execution via malicious process arguments.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2c3c29a4-f170-42f8-a3d8-2ceebc18eb6a.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate troubleshooting activities by IT staff using MSDT may trigger alerts.
+    To manage this, create exceptions for known IT user accounts or specific machines
+    frequently used for diagnostics.
+
+    - Automated scripts or software updates that utilize MSDT for legitimate purposes
+    can cause false positives. Identify these scripts and whitelist their execution
+    paths or parent processes.
+
+    - Custom diagnostic tools that leverage MSDT might be flagged. Review these tools
+    and ex'
+  mitigation: Review investigation guide for details
+references:
+- https://twitter.com/nao_sec/status/1530196847679401984
+- https://lolbas-project.github.io/lolbas/Binaries/Msdt/
+has_investigation_guide: true
+risk_score: 73

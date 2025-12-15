@@ -1,0 +1,44 @@
+technique_id: T1558
+technique_name: KRBTGT Delegation Backdoor
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: 'iam where event.code == "4738" and winlog.event_data.AllowedToDelegateTo :
+  "*krbtgt*"'
+explanation: 'Identifies the modification of the msDS-AllowedToDelegateTo attribute
+  to KRBTGT. Attackers can use this technique to
+
+  maintain persistence to the domain by having the ability to request tickets for
+  the KRBTGT service.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e052c845-48d0-4f46-8a13-7d0aba05df82.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks involving legitimate changes to the msDS-AllowedToDelegateTo
+    attribute for service accounts may trigger alerts. Review the context of the change
+    and verify with the IT team if it aligns with scheduled maintenance or updates.
+
+    - Automated scripts or tools used for Active Directory management might modify
+    delegation settings as part of their operations. Identify these scripts and exclude
+    their activity from triggering alerts by creating except'
+  mitigation: Review investigation guide for details
+references:
+- https://skyblue.team/posts/delegate-krbtgt
+- https://github.com/atc-project/atomic-threat-coverage/blob/master/Atomic_Threat_Coverage/Logging_Policies/LP_0026_windows_audit_user_account_management.md
+has_investigation_guide: true
+risk_score: 73

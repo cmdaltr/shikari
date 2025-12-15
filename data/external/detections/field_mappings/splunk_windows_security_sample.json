@@ -1,0 +1,80 @@
+{
+  "platform": "Splunk",
+  "index": "windows_security",
+  "sourcetype": "WinEventLog:Security",
+  "description": "Windows Security Event Logs via Splunk",
+  "fields": [
+    {
+      "name": "EventCode",
+      "type": "integer",
+      "description": "Windows Event ID",
+      "common_values": [
+        4688,
+        4689,
+        4624,
+        4625,
+        4672,
+        5140,
+        4698,
+        4702
+      ],
+      "population": 1.0,
+      "required": true
+    },
+    {
+      "name": "CommandLine",
+      "type": "string",
+      "description": "Process command line arguments",
+      "aliases": [
+        "Process_CommandLine",
+        "ProcessCommandLine"
+      ],
+      "population": 0.95,
+      "required": false
+    },
+    {
+      "name": "SourceImage",
+      "type": "string",
+      "description": "Path to source process executable",
+      "aliases": [
+        "Image",
+        "ProcessName",
+        "ParentProcessName"
+      ],
+      "population": 0.98,
+      "required": false
+    },
+    {
+      "name": "TargetImage",
+      "type": "string",
+      "description": "Path to target process executable",
+      "aliases": [
+        "TargetFilename"
+      ],
+      "population": 0.9,
+      "required": false
+    },
+    {
+      "name": "GrantedAccess",
+      "type": "string",
+      "description": "Access rights granted to process",
+      "population": 0.85,
+      "required": false
+    },
+    {
+      "name": "User",
+      "type": "string",
+      "description": "User account associated with event",
+      "aliases": [
+        "Account_Name",
+        "SubjectUserName",
+        "TargetUserName"
+      ],
+      "population": 0.99,
+      "required": false
+    }
+  ],
+  "validation_date": "2024-11-28",
+  "sample_count": 1000000,
+  "notes": "Sample field mapping - update with your actual field names"
+}

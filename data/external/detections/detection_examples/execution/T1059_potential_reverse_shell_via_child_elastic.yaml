@@ -1,0 +1,53 @@
+technique_id: T1059
+technique_name: Potential Reverse Shell via Child
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id, process.entity_id with maxspan=5s\n  [network where event.type\
+  \ == \"start\" and host.os.type == \"linux\" and\n     event.action in (\"connection_attempted\"\
+  , \"connection_accepted\") and\n     process.name : (\"bash\", \"dash\", \"sh\"\
+  , \"tcsh\", \"csh\", \"zsh\", \"ksh\", \"fish\", \"socat\") and destination.ip !=\
+  \ null and\n     not cidrmatch(destination.ip, \"127.0.0.0/8\", \"169.254.0.0/16\"\
+  , \"224.0.0.0/4\", \"::1\")]\n  [process where event.type == \"start\" and host.os.type\
+  \ == \"linux\" and event.action == \"exec\" and\n     process.name in (\"bash\"\
+  , \"dash\", \"sh\", \"tcsh\", \"csh\", \"zsh\", \"ksh\", \"fish\") and (\n     \
+  \  (process.args : (\"-i\", \"-l\")) or (process.parent.name == \"socat\" and process.parent.args\
+  \ : \"*exec*\")\n   )]"
+explanation: 'This detection rule identifies suspicious network traffic patterns associated
+  with TCP reverse shell activity. This
+
+  activity consists of a network event that is followed by the creation of a shell
+  process with suspicious command line
+
+  arguments. An attacker may establish a Linux TCP reverse shell to gain remote access
+  to a target system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2138bb70-5a5e-42fd-be5e-b38edf6a6777.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'false positives due to legitimate administrative activities.
+
+
+    ### False positive analysis
+
+
+    - Legitimate administrative scripts or tools that use shell processes with interactive
+    flags may trigger the rule. To manage this, identify and document these scripts,
+    then create exceptions for their specific command-line arguments or parent processes.
+
+    - Automated maintenance tasks or cron jobs that involve shell execution with similar
+    command-line arguments can be mistaken for reverse shell activity. Rev'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md
+has_investigation_guide: true
+risk_score: 47

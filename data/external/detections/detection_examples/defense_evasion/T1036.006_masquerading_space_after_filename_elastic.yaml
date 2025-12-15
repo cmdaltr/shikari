@@ -1,0 +1,58 @@
+technique_id: T1036.006
+technique_name: Masquerading Space After Filename
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type:(\"linux\",\"macos\") and event.type == \"start\"\
+  \ and\nprocess.executable regex~ \"\"\"/[a-z0-9\\s_\\-\\\\./]+\\s\"\"\" and not\
+  \ (\n  process.name in (\"ls\", \"find\", \"grep\", \"xkbcomp\") or\n  process.executable\
+  \ like (\"/opt/nessus_agent/*\", \"/opt/gitlab/sv/gitlab-exporter/*\", \"/tmp/ansible-admin/*\"\
+  ) or\n  process.parent.args in (\n    \"./check_rubrik\", \"/usr/bin/check_mk_agent\"\
+  , \"/etc/rubrik/start_stop_bootstrap.sh\", \"/etc/rubrik/start_stop_agent.sh\"\n\
+  \  )\n)"
+explanation: 'This rules identifies a process created from an executable with a space
+  appended to the end of the filename. This may
+
+  indicate an attempt to masquerade a malicious file as benign to gain user execution.
+  When a space is added to the end of
+
+  certain files, the OS will execute the file according to it''s true filetype instead
+  of it''s extension. Adversaries can
+
+  hide a program''s true filetype by changing the extension of the file. They can
+  then add a space to the end of the name
+
+  so that the OS automatically executes the file when it''s double-clicked.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f5fb4598-4f10-11ed-bdc3-0242ac120002.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Processes like "ls", "find", "grep", and "xkbcomp" are known to be safe and
+    can be excluded from triggering the rule by adding them to the exception list.
+
+    - Executables located in directories such as "/opt/nessus_agent/*", "/opt/gitlab/sv/gitlab-exporter/*",
+    and "/tmp/ansible-admin/*" are typically non-threatening and should be excluded
+    to prevent false positives.
+
+    - Parent processes with arguments like "./check_rubrik", "/usr/bin/check_mk_agent",
+    "/etc/rubrik/start_sto'
+  mitigation: Review investigation guide for details
+references:
+- https://www.picussecurity.com/resource/blog/picus-10-critical-mitre-attck-techniques-t1036-masquerading
+has_investigation_guide: true
+risk_score: 47

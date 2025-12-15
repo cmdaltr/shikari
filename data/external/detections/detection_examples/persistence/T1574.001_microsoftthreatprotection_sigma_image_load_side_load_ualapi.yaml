@@ -1,0 +1,41 @@
+technique_id: T1574.001
+technique_name: Fax Service DLL Search Order Hijack
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 828af599-4c53-4ed2-ba4a-a9f835c434ea
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  ImageLoaded|startswith: C:\\Windows\\WinSxS\\\nselection:\n  ImageLoaded|endswith:\
+  \ ualapi.dll\n  Image|endswith: \\fxssvc.exe\n"
+explanation: The Fax service attempts to load ualapi.dll, which is non-existent. An
+  attacker can then (side)load their own malicious DLL using this service.
+false_positives:
+- Unlikely
+references:
+- https://windows-internals.com/faxing-your-way-to-system/
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.defense-evasion
+- attack.t1574.001
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    Image|endswith: \fxssvc.exe
+    ImageLoaded|endswith: ualapi.dll
+  filter:
+    ImageLoaded|startswith: C:\Windows\WinSxS\
+  condition: selection and not filter
+metadata:
+  created_date: 2020-05-04
+  modified_date: 2022-06-02
+  author: NVISO
+  status: test
+  imported_date: '2025-11-28'

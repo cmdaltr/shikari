@@ -1,0 +1,45 @@
+technique_id: T1021
+technique_name: AWS SSM Session Started to EC2 Instance
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:\"aws.cloudtrail\" and event.provider:\"ssm.amazonaws.com\"\n\
+  \    and event.action:\"StartSession\" and event.outcome:\"success\""
+explanation: Identifies the first occurrence of an AWS user or role establishing a
+  session via SSM to an EC2 instance. Adversaries may use AWS Session Manager to establish
+  a session to an EC2 instance to execute commands on the instance. This can be used
+  to gain access to the instance and perform actions such as privilege escalation.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/804a7ac8-fc00-11ee-924b-f661ea17fbce.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS SSM
+  confidence: high
+- type: data_source
+  value: AWS EC2
+  confidence: high
+false_positives:
+- description: "False Positive Analysis\n\n- **Legitimate Administrative Activities**:\
+    \ Confirm whether the SSM session was initiated for valid administrative purposes\
+    \ such as system maintenance, patching, or configuration updates. Verify with\
+    \ the respective teams or personnel.\n\n### Response and Remediation\n\n- **Incident\
+    \ Response Activation**: If malicious intent or actions are confirmed, activate\
+    \ the incident response protocol.\n    - This includes containment of the threat,\
+    \ eradication of the adversary’s presence"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_StartSession.html
+- https://hackingthe.cloud/aws/post_exploitation/intercept_ssm_communications/
+- https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc
+- https://unit42.paloaltonetworks.com/cloud-lateral-movement-techniques
+has_investigation_guide: true
+risk_score: 47

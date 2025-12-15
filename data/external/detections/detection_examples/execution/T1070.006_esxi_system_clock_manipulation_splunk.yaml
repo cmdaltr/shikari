@@ -1,0 +1,35 @@
+technique_id: T1070.006
+technique_name: ESXi System Clock Manipulation
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`esxi_syslog` Message="*NTPClock*" AND Message="*system clock stepped*" |
+  rex field=_raw "stepped to (?<epoch_time>\d+\.\d+),.+delta\s(?<delta>\d+)\s" | rex
+  field=_raw "Z (?<dest>[\w\.]+)\s" | eval epoch_time=tonumber(epoch_time) | eval
+  delta=tonumber(delta) | eval event_time=round(_time, 0) | eval direction=if(epoch_time
+  < event_time, "backward", "forward") | eval original_time=if(direction=="backward",
+  epoch_time + delta, epoch_time - delta) | eval stepped_to_str=strftime(epoch_time,
+  "%Y-%m-%d %H:%M:%S") | eval original_time_str=strftime(original_time, "%Y-%m-%d
+  %H:%M:%S") | stats min(_time) as firstTime max(_time) as lastTime count by dest
+  direction original_time_str stepped_to_str epoch_time delta | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `esxi_system_clock_manipulation_filter`'
+explanation: This detection identifies a significant change to the system clock on
+  an ESXi host, which may indicate an attempt to manipulate timestamps and evade detection
+  or forensic analysis
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/910df401-b215-4675-88c5-2ad7b06d82a5/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments, however tune as needed
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1070/esxi_system_clock_manipulation/esxi_system_clock_manipulation.log

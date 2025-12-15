@@ -1,0 +1,42 @@
+technique_id: T1562
+technique_name: Google Workspace Bitlocker Setting Disabled
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset:\"google_workspace.admin\" and event.action:\"CHANGE_APPLICATION_SETTING\"\
+  \ and event.category:(iam or configuration)\n    and google_workspace.admin.new_value:\"\
+  Disabled\" and google_workspace.admin.setting.name:BitLocker*"
+explanation: 'Google Workspace administrators whom manage Windows devices and have
+  Windows device management enabled may also enable
+
+  BitLocker drive encryption to mitigate unauthorized data access on lost or stolen
+  computers. Adversaries with valid
+
+  account access may disable BitLocker to access sensitive data on an endpoint added
+  to Google Workspace device
+
+  management.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7caa8e60-2df0-11ed-b814-f661ea17fbce.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- An administrator may have intentionally\
+    \ disabled BitLocker for routine maintenance or endpoint updates.\n   - Verify\
+    \ with the user that they intended to disable BitLocker on Windows endpoints.\n\
+    \n### Response and remediation\n\n- Initiate the incident response process based\
+    \ on the outcome of the triage.\n- Disable or limit the account during the investigation\
+    \ and response.\n- Identify the possible impact of the incident and prioritize\
+    \ accordingly; the following actions can he"
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/9176657?hl=en
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 47

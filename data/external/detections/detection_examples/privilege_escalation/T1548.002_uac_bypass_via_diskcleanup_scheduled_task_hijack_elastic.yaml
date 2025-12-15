@@ -1,0 +1,64 @@
+technique_id: T1548.002
+technique_name: UAC Bypass via DiskCleanup Scheduled Task Hijack
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ process.args : \"/autoclean\" and process.args : \"/d\" and process.executable\
+  \ != null and\n not process.executable : (\n        \"C:\\\\Windows\\\\System32\\\
+  \\cleanmgr.exe\",\n        \"C:\\\\Windows\\\\SysWOW64\\\\cleanmgr.exe\",\n    \
+  \    \"C:\\\\Windows\\\\System32\\\\taskhostw.exe\",\n\n        /* Crowdstrike specific\
+  \ exclusion as it uses NT Object paths */\n        \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\System32\\\\cleanmgr.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\SysWOW64\\\\cleanmgr.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\
+  \\Windows\\\\System32\\\\taskhostw.exe\"\n)"
+explanation: 'Identifies User Account Control (UAC) bypass via hijacking DiskCleanup
+  Scheduled Task. Attackers bypass UAC to
+
+  stealthily execute code with elevated permissions.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/1dcc51f6-ba26-49e7-9ef4-2655abb2361e.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate system maintenance tools or scripts may trigger the rule if they
+    use similar arguments and executables not listed in the safe paths. Review the
+    process origin and context to determine if it is part of routine maintenance.
+
+    - Custom administrative scripts that automate disk cleanup tasks might be flagged.
+    Verify the script''s source and purpose, and consider adding it to an exception
+    list if it is deemed safe.
+
+    - Software updates or installations that temporaril'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

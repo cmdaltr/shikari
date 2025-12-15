@@ -1,0 +1,39 @@
+technique_id: T1219.002
+technique_name: Remote Access Tool - AnyDesk Silent Installation
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 114e7f1c-f137-48c8-8f54-3088c24ce4b9
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains|all:\n  - --install\n  - --start-with-win\n  - --silent\n"
+explanation: Detects AnyDesk Remote Desktop silent installation. Which can be used
+  by attackers to gain remote access.
+false_positives:
+- Legitimate deployment of AnyDesk
+references:
+- https://twitter.com/TheDFIRReport/status/1423361119926816776?s=20
+- https://support.anydesk.com/Automatic_Deployment
+tags:
+- attack.command-and-control
+- attack.t1219.002
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains|all:
+    - --install
+    - --start-with-win
+    - --silent
+  condition: selection
+metadata:
+  created_date: 2021-08-06
+  modified_date: 2023-03-05
+  author: Ján Trenčanský
+  status: test
+  imported_date: '2025-11-28'

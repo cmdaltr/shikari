@@ -1,0 +1,53 @@
+technique_id: T1564.006
+technique_name: Windows ConHost with Headless Argument
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where Processes.process_name=conhost.exe
+  Processes.process="*--headless *" by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_conhost_with_headless_argument_filter`'
+explanation: The following analytic detects the unusual invocation of the Windows
+  Console Host process (conhost.exe) with the undocumented --headless parameter. This
+  detection leverages Endpoint Detection and Response (EDR) telemetry, specifically
+  monitoring for command-line executions where conhost.exe is executed with the --headless
+  argument. This activity is significant for a SOC as it is not commonly used in legitimate
+  operations and may indicate an attacker's attempt to execute commands stealthily.
+  If confirmed malicious, this behavior could lead to persistence, lateral movement,
+  or other malicious activities, potentially resulting in data exfiltration or system
+  compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/d5039508-998d-4cfc-8b5e-9dcd679d9a62/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may be present if the application is legitimately used,
+    filter by user or endpoint as needed.
+  mitigation: Review context and user activity
+references:
+- https://x.com/embee_research/status/1559410767564181504?s=20
+- https://x.com/GroupIB_TI/status/1719675754886131959?s=20
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1564.003/headless/4688_conhost_headless.log

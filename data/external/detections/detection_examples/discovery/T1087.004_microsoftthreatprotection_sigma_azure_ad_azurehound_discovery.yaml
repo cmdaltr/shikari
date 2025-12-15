@@ -1,0 +1,38 @@
+technique_id: T1087.004
+technique_name: Discovery Using AzureHound
+tactic: discovery
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 35b781cc-1a08-4a5a-80af-42fd7c315c6b
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ResultType: 0\n  userAgent|contains: azurehound\n"
+explanation: Detects AzureHound (A BloodHound data collector for Microsoft Azure)
+  activity via the default User-Agent that is used during its operation after successful
+  authentication.
+false_positives:
+- Unknown
+references:
+- https://github.com/BloodHoundAD/AzureHound
+tags:
+- attack.discovery
+- attack.t1087.004
+- attack.t1526
+logsource:
+  product: azure
+  service: signinlogs
+detection:
+  selection:
+    userAgent|contains: azurehound
+    ResultType: 0
+  condition: selection
+metadata:
+  created_date: 2022-11-27
+  modified_date: '2025-11-28'
+  author: Janantha Marasinghe
+  status: test
+  imported_date: '2025-11-28'

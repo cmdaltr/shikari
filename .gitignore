@@ -1,0 +1,145 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/
+
+# Project specific
+.temp/
+*.log
+prompt.txt
+
+# Sensitive data - NEVER commit these
+.env
+*.key
+*.pem
+profile_pictures/
+
+# DATA DIRECTORY - Exclude dynamically generated files, keep structure
+# Database files (runtime generated)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Attack flows (dynamically generated)
+data/attack_flows/*
+!data/attack_flows/.gitkeep
+
+# Correlations (dynamically generated)
+data/correlate/*
+!data/correlate/.gitkeep
+!data/correlate/*_example*.json
+
+# CVE cache (runtime downloaded) - MIGRATED TO data/cache/cve
+data/cve_cache/*
+!data/cve_cache/.gitkeep
+data/cache/cve/*
+!data/cache/cve/.gitkeep
+
+# Generated detections (dynamically created)
+data/groups/*
+!data/groups/.gitkeep
+!data/groups/*_example*.yaml
+
+# Hunt queries (dynamically generated)
+data/hunt/*
+!data/hunt/.gitkeep
+!data/hunt/*_example*.yaml
+
+# User profiles (runtime generated)
+data/profiles/*
+!data/profiles/.gitkeep
+
+# Progress tracking (runtime generated)
+data/progress/*
+!data/progress/.gitkeep
+
+# Uploads (user-uploaded files)
+data/uploads/*
+!data/uploads/.gitkeep
+!data/uploads/*_template.*
+
+# Emulation results (runtime generated)
+data/emulation/*
+!data/emulation/evidence/
+data/emulation/evidence/*
+!data/emulation/evidence/.gitkeep
+
+# VECTR output (dynamically generated)
+data/vectr/*
+!data/vectr/.gitkeep
+!data/vectr/campaigns/
+!data/vectr/exports/
+data/vectr/campaigns/*
+!data/vectr/campaigns/.gitkeep
+data/vectr/exports/*
+!data/vectr/exports/.gitkeep
+
+# Cache directory for MITRE ATT&CK data - runtime generated
+archer/data/cache/*
+!archer/data/cache/.gitkeep
+
+# Query examples repository (downloaded from GitHub)
+archer/data/query_examples/*
+!archer/data/query_examples/.gitkeep
+!archer/data/query_examples/README.md
+
+# Atomic Red Team (static data - git submodule in archer/data/emulation/)
+archer/data/emulation/atomic-red-team/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.hypothesis/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# OSINT enrichment - local repo clones and cache
+data/osint_cache/
+data/osint_repos/
+data/cache/osint/*
+!data/cache/osint/.gitkeep
+data/external/repos/*
+!data/external/repos/.gitkeep
+
+# Bespoke - organization-specific content (PRIVATE - never commit)
+data/bespoke/*
+!data/bespoke/.gitkeep
+!data/bespoke/*.example
+!data/bespoke/searches/
+data/bespoke/searches/*
+!data/bespoke/searches/.gitkeep
+!data/bespoke/searches/example.yaml
+# Mappings directory structure tracked, but files are org-specific
+!data/bespoke/mappings/
+data/bespoke/mappings/*
+!data/bespoke/mappings/.gitkeep

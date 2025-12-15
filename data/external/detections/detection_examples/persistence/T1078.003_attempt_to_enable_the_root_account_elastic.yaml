@@ -1,0 +1,42 @@
+technique_id: T1078.003
+technique_name: Attempt to Enable the Root Account
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "process where host.os.type == \"macos\" and event.type in (\"start\", \"process_started\"\
+  ) and\n process.name == \"dsenableroot\" and \n not process.args == \"-d\""
+explanation: 'Identifies attempts to enable the root account using the dsenableroot
+  command. This command may be abused by adversaries
+
+  for persistence, as the root account is disabled by default.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/cc2fd2d0-ba3a-4939-b87f-2901764ed036.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System administrators may legitimately enable the root account for maintenance
+    or troubleshooting. To handle this, create exceptions for known administrator
+    accounts or specific maintenance windows.
+
+    - Automated scripts or management tools might use the dsenableroot command as
+    part of their operations. Identify these tools and exclude their process signatures
+    from triggering alerts.
+
+    - Educational or testing environments may require enabling the root account for
+    instruct'
+  mitigation: Review investigation guide for details
+references:
+- https://ss64.com/osx/dsenableroot.html
+has_investigation_guide: true
+risk_score: 47

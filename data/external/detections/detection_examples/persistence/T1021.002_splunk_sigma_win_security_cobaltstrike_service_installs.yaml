@@ -1,0 +1,61 @@
+technique_id: T1021.002
+technique_name: CobaltStrike Service Installations - Security
+tactic: persistence
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: d7a95147-145f-4678-b85d-d1ff4a3bb3f6
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: event_id and 1 of selection*\n\
+  event_id:\n  EventID: 4697\nselection1:\n  ServiceFileName|contains|all:\n  - ADMIN$\n\
+  \  - .exe\nselection2:\n  ServiceFileName|contains|all:\n  - '%COMSPEC%'\n  - start\n\
+  \  - powershell\nselection3:\n  ServiceFileName|contains: powershell -nop -w hidden\
+  \ -encodedcommand\nselection4:\n  ServiceFileName|base64offset|contains: 'IEX (New-Object\
+  \ Net.Webclient).DownloadString(''http://127.0.0.1:'\n"
+explanation: Detects known malicious service installs that appear in cases in which
+  a Cobalt Strike beacon elevates privileges or lateral movement
+false_positives:
+- Unknown
+references:
+- https://www.sans.org/webcasts/119395
+- https://www.crowdstrike.com/blog/getting-the-bacon-from-cobalt-strike-beacon/
+- https://thedfirreport.com/2021/08/29/cobalt-strike-a-defenders-guide/
+tags:
+- attack.persistence
+- attack.execution
+- attack.privilege-escalation
+- attack.lateral-movement
+- attack.t1021.002
+- attack.t1543.003
+- attack.t1569.002
+logsource:
+  product: windows
+  service: security
+  definition: The 'System Security Extension' audit subcategory need to be enabled
+    to log the EID 4697
+detection:
+  event_id:
+    EventID: 4697
+  selection1:
+    ServiceFileName|contains|all:
+    - ADMIN$
+    - .exe
+  selection2:
+    ServiceFileName|contains|all:
+    - '%COMSPEC%'
+    - start
+    - powershell
+  selection3:
+    ServiceFileName|contains: powershell -nop -w hidden -encodedcommand
+  selection4:
+    ServiceFileName|base64offset|contains: 'IEX (New-Object Net.Webclient).DownloadString(''http://127.0.0.1:'
+  condition: event_id and 1 of selection*
+metadata:
+  created_date: 2021-05-26
+  modified_date: 2022-11-27
+  author: Florian Roth (Nextron Systems), Wojciech Lesicki
+  status: test
+  imported_date: '2025-11-28'

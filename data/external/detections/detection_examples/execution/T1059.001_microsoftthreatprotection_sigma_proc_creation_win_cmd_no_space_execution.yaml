@@ -1,0 +1,91 @@
+technique_id: T1059.001
+technique_name: Cmd.EXE Missing Space Characters Execution Anomaly
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: a16980c2-0c56-4de0-9a79-17971979efdd
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection* and not\
+  \ 1 of filter_*\nfilter_fp:\n- CommandLine|contains: AppData\\Local\\Programs\\\
+  Microsoft VS Code\\resources\\app\\node_modules\n- CommandLine|endswith: cmd.exe/c\
+  \ .\n- CommandLine: cmd.exe /c\nfilter_generic:\n  CommandLine|contains:\n  - 'cmd.exe\
+  \ /c '\n  - 'cmd /c '\n  - 'cmd.exe /k '\n  - 'cmd /k '\n  - 'cmd.exe /r '\n  -\
+  \ 'cmd /r '\nselection1:\n  CommandLine|contains:\n  - cmd.exe/c\n  - \\cmd/c\n\
+  \  - '\"cmd/c'\n  - cmd.exe/k\n  - \\cmd/k\n  - '\"cmd/k'\n  - cmd.exe/r\n  - \\\
+  cmd/r\n  - '\"cmd/r'\nselection2:\n  CommandLine|contains:\n  - /cwhoami\n  - /cpowershell\n\
+  \  - /cschtasks\n  - /cbitsadmin\n  - /ccertutil\n  - /kwhoami\n  - /kpowershell\n\
+  \  - /kschtasks\n  - /kbitsadmin\n  - /kcertutil\nselection3:\n  CommandLine|contains:\n\
+  \  - cmd.exe /c\n  - cmd /c\n  - cmd.exe /k\n  - cmd /k\n  - cmd.exe /r\n  - cmd\
+  \ /r\n"
+explanation: 'Detects Windows command lines that miss a space before or after the
+  /c flag when running a command using the cmd.exe.
+
+  This could be a sign of obfuscation of a fat finger problem (typo by the developer).
+
+  '
+false_positives:
+- Unknown
+references:
+- https://twitter.com/cyb3rops/status/1562072617552678912
+- https://ss64.com/nt/cmd.html
+tags:
+- attack.execution
+- attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection1:
+    CommandLine|contains:
+    - cmd.exe/c
+    - \cmd/c
+    - '"cmd/c'
+    - cmd.exe/k
+    - \cmd/k
+    - '"cmd/k'
+    - cmd.exe/r
+    - \cmd/r
+    - '"cmd/r'
+  selection2:
+    CommandLine|contains:
+    - /cwhoami
+    - /cpowershell
+    - /cschtasks
+    - /cbitsadmin
+    - /ccertutil
+    - /kwhoami
+    - /kpowershell
+    - /kschtasks
+    - /kbitsadmin
+    - /kcertutil
+  selection3:
+    CommandLine|contains:
+    - cmd.exe /c
+    - cmd /c
+    - cmd.exe /k
+    - cmd /k
+    - cmd.exe /r
+    - cmd /r
+  filter_generic:
+    CommandLine|contains:
+    - 'cmd.exe /c '
+    - 'cmd /c '
+    - 'cmd.exe /k '
+    - 'cmd /k '
+    - 'cmd.exe /r '
+    - 'cmd /r '
+  filter_fp:
+  - CommandLine|contains: AppData\Local\Programs\Microsoft VS Code\resources\app\node_modules
+  - CommandLine|endswith: cmd.exe/c .
+  - CommandLine: cmd.exe /c
+  condition: 1 of selection* and not 1 of filter_*
+metadata:
+  created_date: 2022-08-23
+  modified_date: 2023-03-06
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

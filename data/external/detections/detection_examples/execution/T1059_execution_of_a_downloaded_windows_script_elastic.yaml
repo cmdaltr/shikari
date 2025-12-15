@@ -1,0 +1,50 @@
+technique_id: T1059
+technique_name: Execution of a Downloaded Windows Script
+tactic: execution
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by host.id, user.id with maxspan=3m\n[file where host.os.type ==\
+  \ \"windows\" and event.action == \"creation\" and user.id != \"S-1-5-18\" and\n\
+  \  process.name : (\"chrome.exe\", \"msedge.exe\", \"brave.exe\", \"browser.exe\"\
+  , \"dragon.exe\", \"vivaldi.exe\", \"explorer.exe\", \"winrar.exe\", \"7zFM.exe\"\
+  , \"7zG.exe\", \"Bandizip.exe\") and\n  file.extension in~ (\"js\", \"jse\", \"\
+  vbs\", \"vbe\", \"wsh\", \"hta\", \"cmd\", \"bat\") and\n  (file.origin_url != null\
+  \ or file.origin_referrer_url != null)]\n[process where host.os.type == \"windows\"\
+  \ and event.type == \"start\" and\n process.parent.name : (\"chrome.exe\", \"msedge.exe\"\
+  , \"brave.exe\", \"firefox.exe\", \"browser.exe\", \"dragon.exe\", \"vivaldi.exe\"\
+  , \"explorer.exe\", \"winrar.exe\", \"7zFM.exe\", \"7zG.exe\", \"Bandizip.exe\"\
+  ) and \n process.args_count >= 2 and\n (\n  process.name in~ (\"wscript.exe\", \"\
+  mshta.exe\") or\n  (process.name : \"cmd.exe\" and process.command_line : (\"*.cmd*\"\
+  , \"*.bat*\"))\n  )]"
+explanation: 'Identifies the creation of a Windows script downloaded from the internet
+  followed by the execution of a scripting utility.
+
+  Adversaries may use Windows script files for initial access and execution.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/79543b00-28a5-4461-81ac-644c4dc4012f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate script automation tools may trigger this rule if they download and
+    execute scripts from the internet. Users can create exceptions for known safe
+    tools by excluding specific file paths or process names.
+
+    - Software updates or installations that download scripts as part of their process
+    might be flagged. To handle this, users can whitelist specific origin URLs or
+    referrer URLs associated with trusted software vendors.
+
+    - Internal scripts distributed via corporat'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

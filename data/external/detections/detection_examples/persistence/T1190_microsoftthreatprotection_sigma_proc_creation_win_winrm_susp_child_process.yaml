@@ -1,0 +1,50 @@
+technique_id: T1190
+technique_name: Suspicious Processes Spawned by WinRM
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 5cc2cda8-f261-4d88-a2de-e9e193c86716
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith:\n  - \\cmd.exe\n  - \\sh.exe\n  - \\bash.exe\n  - \\powershell.exe\n\
+  \  - \\pwsh.exe\n  - \\wsl.exe\n  - \\schtasks.exe\n  - \\certutil.exe\n  - \\whoami.exe\n\
+  \  - \\bitsadmin.exe\n  ParentImage|endswith: \\wsmprovhost.exe\n"
+explanation: Detects suspicious processes including shells spawnd from WinRM host
+  process
+false_positives:
+- Legitimate WinRM usage
+references:
+- Internal Research
+tags:
+- attack.t1190
+- attack.initial-access
+- attack.persistence
+- attack.privilege-escalation
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \wsmprovhost.exe
+    Image|endswith:
+    - \cmd.exe
+    - \sh.exe
+    - \bash.exe
+    - \powershell.exe
+    - \pwsh.exe
+    - \wsl.exe
+    - \schtasks.exe
+    - \certutil.exe
+    - \whoami.exe
+    - \bitsadmin.exe
+  condition: selection
+metadata:
+  created_date: 2021-05-20
+  modified_date: 2022-07-14
+  author: Andreas Hunkeler (@Karneades), Markus Neis
+  status: test
+  imported_date: '2025-11-28'

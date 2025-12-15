@@ -1,0 +1,42 @@
+technique_id: T1136.003
+technique_name: O365 Added Service Principal
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=AzureActiveDirectory Operation="*Add service
+  principal*" OR (Operation = "*principal*" AND action = "created") | fillnull | stats
+  count min(_time) as firstTime max(_time) as lastTime by signature dest user src
+  vendor_account vendor_product | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `o365_added_service_principal_filter`'
+explanation: The following analytic detects the addition of new service principal
+  accounts in O365 tenants. It leverages data from the `o365_management_activity`
+  dataset, specifically monitoring for operations related to adding or creating service
+  principals. This activity is significant because attackers can exploit service principals
+  to gain unauthorized access and perform malicious actions within an organization's
+  environment. If confirmed malicious, this could allow attackers to interact with
+  APIs, access resources, and execute operations on behalf of the organization, potentially
+  leading to data breaches or further compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/1668812a-6047-11eb-ae93-0242ac130002/
+indicators:
+- type: data_source
+  value: O365
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: The creation of a new Federation is not necessarily malicious, however
+    these events need to be followed closely, as it may indicate federated credential
+    abuse or backdoor via federated identities at a different cloud provider.
+  mitigation: Review context and user activity
+references:
+- https://www.fireeye.com/content/dam/fireeye-www/blog/pdfs/wp-m-unc2452-2021-000343-01.pdf
+- https://www.cisa.gov/uscert/ncas/alerts/aa21-008a
+- https://www.splunk.com/en_us/blog/security/a-golden-saml-journey-solarwinds-continued.html
+- https://blog.sygnia.co/detection-and-hunting-of-golden-saml-attack?hsLang=en
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1136.003/o365_added_service_principal/o365_add_service_principal.log

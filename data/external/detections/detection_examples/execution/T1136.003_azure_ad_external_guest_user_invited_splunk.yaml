@@ -1,0 +1,43 @@
+technique_id: T1136.003
+technique_name: Azure AD External Guest User Invited
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`azure_monitor_aad` operationName="Invite external user" | rename properties.*
+  as * | rename initiatedBy.user.userPrincipalName as initiatedBy | rename targetResources{}.type
+  as type | rename userAgent as user_agent | fillnull | stats count min(_time) as
+  firstTime max(_time) as lastTime by dest user src vendor_account vendor_product
+  user_agent initiatedBy type signature | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `azure_ad_external_guest_user_invited_filter`'
+explanation: The following analytic detects the invitation of an external guest user
+  within Azure AD. It leverages Azure AD AuditLogs to identify events where an external
+  user is invited, using fields such as operationName and initiatedBy. Monitoring
+  these invitations is crucial as they can lead to unauthorized access if abused.
+  If confirmed malicious, this activity could allow attackers to gain access to internal
+  resources, potentially leading to data breaches or further exploitation of the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/c1fb4edb-cab1-4359-9b40-925ffd797fb5/
+indicators:
+- type: data_source
+  value: Azure Active Directory Invite external user
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_user
+  value: initiatedBy
+  confidence: high
+false_positives:
+- description: Administrator may legitimately invite external guest users. Filter
+    as needed.
+  mitigation: Review context and user activity
+references:
+- https://dirkjanm.io/assets/raw/US-22-Mollema-Backdooring-and-hijacking-Azure-AD-accounts_final.pdf
+- https://www.blackhat.com/us-22/briefings/schedule/#backdooring-and-hijacking-azure-ad-accounts-by-abusing-external-identities-26999
+- https://attack.mitre.org/techniques/T1136/003/
+- https://docs.microsoft.com/en-us/azure/active-directory/external-identities/b2b-quickstart-add-guest-users-portal
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1136.003/azure_ad_external_guest_user_invited/azure-audit.log

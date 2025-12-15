@@ -1,0 +1,58 @@
+technique_id: T1134.001
+technique_name: Meterpreter or Cobalt Strike Getsystem Service Installation - System
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: 843544a7-56e0-4dcc-a44f-5cc266dd97d6
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_id and 1 of\
+  \ selection_cli_*\nselection_cli_cmd:\n  ImagePath|contains:\n  - cmd\n  - '%COMSPEC%'\n\
+  \  ImagePath|contains|all:\n  - /c\n  - echo\n  - \\pipe\\\nselection_cli_rundll:\n\
+  \  ImagePath|contains|all:\n  - rundll32\n  - .dll,a\n  - '/p:'\nselection_cli_share:\n\
+  \  ImagePath|startswith: \\\\\\\\127.0.0.1\\\\ADMIN$\\\nselection_id:\n  EventID:\
+  \ 7045\n  Provider_Name: Service Control Manager\n"
+explanation: Detects the use of getsystem Meterpreter/Cobalt Strike command by detecting
+  a specific service installation
+false_positives:
+- Unlikely
+references:
+- https://speakerdeck.com/heirhabarov/hunting-for-privilege-escalation-in-windows-environment
+- https://blog.cobaltstrike.com/2014/04/02/what-happens-when-i-type-getsystem/
+tags:
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1134.001
+- attack.t1134.002
+logsource:
+  product: windows
+  service: system
+detection:
+  selection_id:
+    Provider_Name: Service Control Manager
+    EventID: 7045
+  selection_cli_cmd:
+    ImagePath|contains|all:
+    - /c
+    - echo
+    - \pipe\
+    ImagePath|contains:
+    - cmd
+    - '%COMSPEC%'
+  selection_cli_rundll:
+    ImagePath|contains|all:
+    - rundll32
+    - .dll,a
+    - '/p:'
+  selection_cli_share:
+    ImagePath|startswith: \\\\127.0.0.1\\ADMIN$\
+  condition: selection_id and 1 of selection_cli_*
+metadata:
+  created_date: 2019-10-26
+  modified_date: 2023-11-15
+  author: Teymur Kheirkhabarov, Ecco, Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

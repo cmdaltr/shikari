@@ -1,0 +1,54 @@
+technique_id: T1220
+technique_name: XSL Script Execution With WMIC
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where `process_wmic` Processes.process
+  = "*os get*" Processes.process="*/format:*" Processes.process = "*.xsl*" by Processes.action
+  Processes.dest Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `xsl_script_execution_with_wmic_filter`'
+explanation: The following analytic detects the execution of an XSL script using the
+  WMIC process, which is often indicative of malicious activity. It leverages data
+  from Endpoint Detection and Response (EDR) agents, focusing on command-line executions
+  involving WMIC and XSL files. This behavior is significant as it has been associated
+  with the FIN7 group, known for using this technique to execute malicious scripts.
+  If confirmed malicious, this activity could allow attackers to execute arbitrary
+  code, potentially leading to system compromise and further malicious actions within
+  the environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/004e32e2-146d-11ec-a83f-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.mandiant.com/resources/fin7-pursuing-an-enigmatic-and-evasive-global-criminal-operation
+- https://attack.mitre.org/groups/G0046/
+- https://web.archive.org/web/20190814201250/https://subt0x11.blogspot.com/2018/04/wmicexe-whitelisting-bypass-hacking.html
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1220/T1220.md#atomic-test-3---wmic-bypass-using-local-xsl-file
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/fin7/fin7_macro_js_1/sysmon.log

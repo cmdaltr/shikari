@@ -1,0 +1,43 @@
+technique_id: T1055.002
+technique_name: Windows Process Injection Remote Thread
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventCode=8 TargetImage IN ("*\\Taskmgr.exe", "*\\calc.exe", "*\\notepad.exe",
+  "*\\rdpclip.exe", "*\\explorer.exe", "*\\wermgr.exe", "*\\ping.exe", "*\\OneDriveSetup.exe",
+  "*\\dxdiag.exe", "*\\mobsync.exe", "*\\msra.exe", "*\\xwizard.exe","*\\cmd.exe",
+  "*\\powershell.exe") | stats count min(_time) as firstTime max(_time) as lastTime
+  by EventID Guid NewThreadId ProcessID SecurityID SourceImage SourceProcessGuid SourceProcessId
+  StartAddress StartFunction StartModule TargetImage TargetProcessGuid TargetProcessId
+  UserID dest parent_process_exec parent_process_guid parent_process_id parent_process_name
+  parent_process_path process_exec process_guid process_id process_name process_path
+  signature signature_id user_id vendor_product | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_process_injection_remote_thread_filter`'
+explanation: The following analytic detects suspicious remote thread execution in
+  processes such as Taskmgr.exe, calc.exe, and notepad.exe, which may indicate process
+  injection by malware like Qakbot. This detection leverages Sysmon EventCode 8 to
+  identify remote thread creation in specific target processes. This activity is significant
+  as it often signifies an attempt by malware to inject malicious code into legitimate
+  processes, potentially leading to unauthorized code execution. If confirmed malicious,
+  this could allow attackers to execute arbitrary code, escalate privileges, or maintain
+  persistence on the compromised host.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8a618ade-ca8f-4d04-b972-2d526ba59924/
+indicators:
+- type: data_source
+  value: Sysmon EventID 8
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://twitter.com/pr0xylife/status/1585612370441031680?s=46&t=Dc3CJi4AnM-8rNoacLbScg
+- https://thedfirreport.com/2023/06/12/a-truly-graceful-wipe-out/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/qakbot/qbot_wermgr2/sysmon_wermgr2.log

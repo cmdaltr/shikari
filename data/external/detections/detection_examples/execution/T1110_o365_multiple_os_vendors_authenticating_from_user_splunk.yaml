@@ -1,0 +1,41 @@
+technique_id: T1110
+technique_name: O365 Multiple OS Vendors Authenticating From User
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: "`o365_management_activity` Operation IN (UserLoginFailed,UserLoggedIn) \n\
+  | eval -time = _time \n| bin _time span=15m \n| fillnull \n| stats values(Operation)\
+  \ as signature, values(ErrorNumber) as signature_id, values(OS) as os_name, dc(OS)\
+  \ as os_count, count, min(-time) as firstTime, max(-time) as lastTime by ClientIP,\
+  \ UserId, _time, dest, vendor_account, vendor_product\n| where os_count >= 4 \n\
+  | eval src = ClientIP, user = UserId \n| `security_content_ctime(firstTime)` \n\
+  | `security_content_ctime(lastTime)` \n| `o365_multiple_os_vendors_authenticating_from_user_filter`"
+explanation: The following analytic identifies when multiple operating systems are
+  used to authenticate to Azure/EntraID/Office 365 by the same user account over a
+  short period of time. This activity could be indicative of attackers enumerating
+  various logon capabilities of Azure/EntraID/Office 365 and attempting to discover
+  weaknesses in the organizational MFA or conditional access configurations. Usage
+  of the tools like "MFASweep" will trigger this detection.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/3451e58a-9457-4985-a600-b616b0cbfda1/
+indicators:
+- type: data_source
+  value: Office 365 Universal Audit Log
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: IP or users where the usage of multiple Operating systems is expected,
+    filter accordingly.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1110
+- https://www.blackhillsinfosec.com/exploiting-mfa-inconsistencies-on-microsoft-services/
+- https://sra.io/blog/msspray-wait-how-many-endpoints-dont-have-mfa/
+- https://github.com/dafthack/MFASweep/tree/master
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1110/azure_mfasweep_events/azure_mfasweep_events.log

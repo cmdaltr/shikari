@@ -1,0 +1,67 @@
+technique_id: T1202
+technique_name: Proxy Execution via Console Window Host
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ process.name : \"conhost.exe\" and process.args : \"--headless\" and\n  process.command_line\
+  \ : (\"*powershell*\", \"*cmd *\", \"*cmd.exe *\", \"*script*\", \"*mshta*\", \"\
+  *curl *\", \"*curl.exe *\", \"*^*^*^*\", \"*.bat*\", \"*.cmd*\", \"*schtasks*\"\
+  , \"*@SSL*\", \"*http*\", \"* \\\\\\\\*\", \"*.vbs*\", \"*.js*\", \"*mhsta*\")"
+explanation: 'Identifies abuse of the Console Window Host (conhost.exe) to execute
+  commands via proxy. This behavior is used as a defense
+
+  evasion technique to blend-in malicious activity with legitimate Windows software.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/fcd16fe8-eb29-42b3-8aee-6c9ad777a2f6.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This is a dual-use tool, meaning its usage is not inherently malicious. Analysts
+    can dismiss the alert if the administrator is aware of the activity, no other
+    suspicious activity was identified.
+
+
+    ### Response and Remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Run a full antimalware scan. This may reveal additional artifacts left in the
+    system, persisten'
+  mitigation: Review investigation guide for details
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Conhost/
+has_investigation_guide: true
+risk_score: 73

@@ -1,0 +1,63 @@
+technique_id: T1021
+technique_name: Remote Windows Service Installed
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by winlog.logon.id, winlog.computer_name with maxspan=1m\n[authentication\
+  \ where event.action == \"logged-in\" and winlog.logon.type : \"Network\" and\n\
+  event.outcome==\"success\" and source.ip != null and source.ip != \"127.0.0.1\"\
+  \ and source.ip != \"::1\"]\n[iam where event.action == \"service-installed\" and\n\
+  \ not winlog.event_data.SubjectLogonId : \"0x3e7\" and\n not winlog.event_data.ServiceFileName\
+  \ :\n               (\"?:\\\\Windows\\\\ADCR_Agent\\\\adcrsvc.exe\",\n         \
+  \       \"?:\\\\Windows\\\\System32\\\\VSSVC.exe\",\n                \"?:\\\\Windows\\\
+  \\servicing\\\\TrustedInstaller.exe\",\n                \"?:\\\\Windows\\\\System32\\\
+  \\svchost.exe\",\n                \"?:\\\\Program Files (x86)\\\\*.exe\",\n    \
+  \            \"?:\\\\Program Files\\\\*.exe\",\n                \"?:\\\\Windows\\\
+  \\PSEXESVC.EXE\",\n                \"?:\\\\Windows\\\\System32\\\\sppsvc.exe\",\n\
+  \                \"?:\\\\Windows\\\\System32\\\\wbem\\\\WmiApSrv.exe\",\n      \
+  \          \"?:\\\\WINDOWS\\\\RemoteAuditService.exe\",\n                \"?:\\\\\
+  Windows\\\\VeeamVssSupport\\\\VeeamGuestHelper.exe\",\n                \"?:\\\\\
+  Windows\\\\VeeamLogShipper\\\\VeeamLogShipper.exe\",\n                \"?:\\\\Windows\\\
+  \\CAInvokerService.exe\",\n                \"?:\\\\Windows\\\\System32\\\\upfc.exe\"\
+  ,\n                \"?:\\\\Windows\\\\AdminArsenal\\\\PDQ*.exe\",\n            \
+  \    \"?:\\\\Windows\\\\System32\\\\vds.exe\",\n                \"?:\\\\Windows\\\
+  \\Veeam\\\\Backup\\\\VeeamDeploymentSvc.exe\",\n                \"?:\\\\Windows\\\
+  \\ProPatches\\\\Scheduler\\\\STSchedEx.exe\",\n                \"?:\\\\Windows\\\
+  \\System32\\\\certsrv.exe\",\n                \"?:\\\\Windows\\\\eset-remote-install-service.exe\"\
+  ,\n                \"?:\\\\Pella Corporation\\\\Pella Order Management\\\\GPAutoSvc.exe\"\
+  ,\n                \"?:\\\\Pella Corporation\\\\OSCToGPAutoService\\\\OSCToGPAutoSvc.exe\"\
+  ,\n                \"?:\\\\Pella Corporation\\\\Pella Order Management\\\\GPAutoSvc.exe\"\
+  ,\n                \"?:\\\\Windows\\\\SysWOW64\\\\NwxExeSvc\\\\NwxExeSvc.exe\",\n\
+  \                \"?:\\\\Windows\\\\System32\\\\taskhostex.exe\")]"
+explanation: 'Identifies a network logon followed by Windows service creation with
+  same LogonId. This could be indicative of lateral
+
+  movement, but will be noisy if commonly done by administrators."'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d33ea3bf-9a11-463e-bd46-f648f2a0f4b1.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Administrative activities can trigger false positives when administrators frequently
+    install or update services remotely. To manage this, create exceptions for known
+    administrative accounts or specific IP addresses used by IT staff.
+
+    - Legitimate software installations or updates may appear as suspicious service
+    installations. Maintain an updated list of authorized software paths and exclude
+    these from the detection rule.
+
+    - Automated deployment tools like PDQ Deploy or'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

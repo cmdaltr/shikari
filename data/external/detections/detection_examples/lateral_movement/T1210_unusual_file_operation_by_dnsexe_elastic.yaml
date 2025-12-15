@@ -1,0 +1,55 @@
+technique_id: T1210
+technique_name: Unusual File Operation by dns.exe
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.category : \"file\" and host.os.type : \"windows\" and\n  event.type\
+  \ : (\"creation\" or \"deletion\" or \"change\") and process.name : \"dns.exe\"\
+  \ and\n  not file.extension : (\"old\" or \"temp\" or \"bak\" or \"dns\" or \"arpa\"\
+  \ or \"log\")"
+explanation: 'Identifies an unexpected file being modified by dns.exe, the process
+  responsible for Windows DNS Server services, which
+
+  may indicate activity related to remote code execution or other forms of exploitation.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c7ce36c0-32ff-4f9a-bfc2-dcb242bf99f9.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - DNS debug logging configured to write to a file with a non-.log extension (e.g.,
+    .txt) causes dns.exe to legitimately create or rotate that file during troubleshooting.
+
+    - An administrator exports a zone to a custom-named file with a nonstandard extension
+    (e.g., .txt or .xml), leading dns.exe to create or modify that file as part of
+    routine maintenance.
+
+
+    ### Response and remediation
+
+
+    - Isolate the host by removing it from DNS rotation and restricting network access
+    to m'
+  mitigation: Review investigation guide for details
+references:
+- https://research.checkpoint.com/2020/resolving-your-way-into-domain-admin-exploiting-a-17-year-old-bug-in-windows-dns-servers/
+- https://msrc-blog.microsoft.com/2020/07/14/july-2020-security-update-cve-2020-1350-vulnerability-in-windows-domain-name-system-dns-server/
+- https://www.elastic.co/security-labs/detection-rules-for-sigred-vulnerability
+has_investigation_guide: true
+risk_score: 47

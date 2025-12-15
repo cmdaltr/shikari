@@ -1,0 +1,56 @@
+technique_id: T1552.006
+technique_name: Windows Findstr GPP Discovery
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where (Processes.process_name=findstr.exe
+  AND Processes.process=*sysvol* AND Processes.process=*cpassword*) by Processes.action
+  Processes.dest Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_findstr_gpp_discovery_filter`'
+explanation: The following analytic detects the use of the findstr command to search
+  for unsecured credentials in Group Policy Preferences (GPP). It leverages data from
+  Endpoint Detection and Response (EDR) agents, focusing on command-line executions
+  involving findstr.exe with references to SYSVOL and cpassword. This activity is
+  significant because it indicates an attempt to locate and potentially decrypt embedded
+  credentials in GPP, which could lead to unauthorized access. If confirmed malicious,
+  this could allow an attacker to escalate privileges or gain access to sensitive
+  systems and data within the domain.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/1631ac2d-f2a9-42fa-8a59-d6e210d472f5/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Administrators may leverage findstr to find passwords in GPO to validate
+    exposure. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1552/006/
+- https://pentestlab.blog/2017/03/20/group-policy-preferences/
+- https://adsecurity.org/?p=2288
+- https://www.hackingarticles.in/credential-dumping-group-policy-preferences-gpp/
+- https://support.microsoft.com/en-us/topic/ms14-025-vulnerability-in-group-policy-preferences-could-allow-elevation-of-privilege-may-13-2014-60734e15-af79-26ca-ea53-8cd617073c30
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1552.006/findstr_gpp_discovery/windows-security.log

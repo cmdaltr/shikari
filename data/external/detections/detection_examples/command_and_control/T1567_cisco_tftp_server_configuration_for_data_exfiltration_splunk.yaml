@@ -1,0 +1,50 @@
+technique_id: T1567
+technique_name: Cisco TFTP Server Configuration for Data Exfiltration
+tactic: command_and_control
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count values(All_Changes.command)
+  as command min(_time) as firstTime max(_time) as lastTime from datamodel=Change.All_Changes
+  where  (All_Changes.command="*tftp-server*") AND ( All_Changes.command="*nvram:startup-config*"
+  OR All_Changes.command="*bootflash:running-config*" OR All_Changes.command="*system:running-config*"
+  OR All_Changes.command="*bootflash:info*" OR All_Changes.command="*startup-config*"
+  OR All_Changes.command="*running-config*" ) by All_Changes.dvc All_Changes.user
+  | `drop_dm_object_name("All_Changes")` | rename dvc as dest | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `cisco_tftp_server_configuration_for_data_exfiltration_filter`'
+explanation: This analytic detects the configuration of TFTP services on Cisco IOS
+  devices that could be used to exfiltrate sensitive configuration files. Threat actors
+  like Static Tundra have been observed configuring TFTP servers to make device configuration
+  files accessible for exfiltration after gaining initial access. The detection specifically
+  looks for commands that expose critical configuration files such as startup-config,
+  running-config, and other sensitive system information through TFTP. This activity
+  is particularly concerning as it may represent an attempt to steal credentials,
+  network topology information, and other sensitive data stored in device configurations.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/1abce487-f480-4d5f-a551-01de0bece0bd/
+indicators:
+- type: data_source
+  value: Cisco IOS Logs
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Legitimate TFTP server configurations may be detected by this analytic
+    during authorized backup operations or device maintenance. Network administrators
+    sometimes use TFTP for legitimate configuration backups, firmware updates, or
+    during troubleshooting. To reduce false positives, consider implementing a baseline
+    of expected administrative activities, including approved administrative usernames
+    and scheduled maintenance windows.
+  mitigation: Review context and user activity
+references:
+- https://blog.talosintelligence.com/static-tundra/
+- https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20180328-smi2
+- https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/fundamentals/command/cf_command_ref/T_through_X.html#wp3081407060
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1190/cisco/cisco_smart_install/cisco_ios.log

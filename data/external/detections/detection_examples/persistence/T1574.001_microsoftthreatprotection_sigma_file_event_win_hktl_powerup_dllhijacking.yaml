@@ -1,0 +1,48 @@
+technique_id: T1574.001
+technique_name: HackTool - Powerup Write Hijack DLL
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 602a1f13-c640-4d73-b053-be9a2fa58b96
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith:\n  - \\powershell.exe\n  - \\pwsh.exe\n  TargetFilename|endswith:\
+  \ .bat\n"
+explanation: 'Powerup tool''s Write Hijack DLL exploits DLL hijacking for privilege
+  escalation.
+
+  In it''s default mode, it builds a self deleting .bat file which executes malicious
+  command.
+
+  The detection rule relies on creation of the malicious bat file (debug.bat by default).
+
+  '
+false_positives:
+- Any powershell script that creates bat files
+references:
+- https://powersploit.readthedocs.io/en/latest/Privesc/Write-HijackDll/
+tags:
+- attack.persistence
+- attack.privilege-escalation
+- attack.defense-evasion
+- attack.t1574.001
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \powershell.exe
+    - \pwsh.exe
+    TargetFilename|endswith: .bat
+  condition: selection
+metadata:
+  created_date: 2021-08-21
+  modified_date: 2024-06-27
+  author: Subhash Popuri (@pbssubhash)
+  status: test
+  imported_date: '2025-11-28'

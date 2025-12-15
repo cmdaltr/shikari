@@ -1,0 +1,41 @@
+technique_id: T1222
+technique_name: Azure Blob Permissions Modification
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset:azure.activitylogs and azure.activitylogs.operation_name:(\n\
+  \     \"MICROSOFT.STORAGE/STORAGEACCOUNTS/BLOBSERVICES/CONTAINERS/BLOBS/MANAGEOWNERSHIP/ACTION\"\
+  \ or\n     \"MICROSOFT.STORAGE/STORAGEACCOUNTS/BLOBSERVICES/CONTAINERS/BLOBS/MODIFYPERMISSIONS/ACTION\"\
+  ) and\n  event.outcome:(Success or success)"
+explanation: 'Identifies when the Azure role-based access control (Azure RBAC) permissions
+  are modified for an Azure Blob. An
+
+  adversary may modify the permissions on a blob to weaken their target''s security
+  controls or an administrator may
+
+  inadvertently modify the permissions, which could lead to data exposure or loss.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d79c4b2a-6134-4edd-86e6-564a92a933f9.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative changes to Azure Blob permissions by authorized personnel
+    can trigger alerts. To manage this, create exceptions for specific user accounts
+    or roles that frequently perform legitimate permission modifications.
+
+    - Automated scripts or tools used for regular maintenance or deployment might
+    modify permissions as part of their operation. Identify these scripts and exclude
+    their activity from triggering alerts by using specific identifiers or tags assoc'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+has_investigation_guide: true
+risk_score: 47

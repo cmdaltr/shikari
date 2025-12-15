@@ -1,0 +1,43 @@
+technique_id: T1621
+technique_name: Okta Authentication Failed During MFA Challenge
+tactic: exfiltration
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime  values(Authentication.app) as app values(Authentication.reason) as
+  reason values(Authentication.signature) as signature  values(Authentication.method)
+  as method  from datamodel=Authentication where  Authentication.signature=user.authentication.auth_via_mfa
+  Authentication.action = failure by _time Authentication.src Authentication.user
+  Authentication.dest Authentication.action | `drop_dm_object_name("Authentication")`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`| iplocation
+  src | `okta_authentication_failed_during_mfa_challenge_filter`'
+explanation: The following analytic identifies failed authentication attempts during
+  the Multi-Factor Authentication (MFA) challenge in an Okta tenant. It uses the Authentication
+  datamodel to detect specific failed events where the authentication signature is
+  `user.authentication.auth_via_mfa`. This activity is significant as it may indicate
+  an adversary attempting to authenticate with compromised credentials on an account
+  with MFA enabled. If confirmed malicious, this could suggest an ongoing attempt
+  to bypass MFA protections, potentially leading to unauthorized access and further
+  compromise of the affected account.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e2b99e7d-d956-411a-a120-2b14adfdde93/
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: A user may have accidentally entered the wrong credentials during the
+    MFA challenge. If the user is new to MFA, they may have trouble authenticating.
+    Ensure that the user is aware of the MFA process and has the correct credentials.
+  mitigation: Review context and user activity
+references:
+- https://sec.okta.com/everythingisyes
+- https://splunkbase.splunk.com/app/6553
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1621/okta_mfa_login_failed/okta_mfa_login_failed.log

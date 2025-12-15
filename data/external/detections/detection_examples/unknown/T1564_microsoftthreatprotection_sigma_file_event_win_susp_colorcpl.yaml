@@ -1,0 +1,41 @@
+technique_id: T1564
+technique_name: Suspicious Creation with Colorcpl
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: e15b518d-b4ce-4410-a9cd-501f23ce4a18
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_*\nfilter_ext:\n  TargetFilename|endswith:\n  - .icm\n  - .gmmp\n  - .cdmp\n\
+  \  - .camp\nselection:\n  Image|endswith: \\colorcpl.exe\n"
+explanation: Once executed, colorcpl.exe will copy the arbitrary file to c:\windows\system32\spool\drivers\color\
+false_positives:
+- Unknown
+references:
+- https://twitter.com/eral4m/status/1480468728324231172?s=20
+tags:
+- attack.defense-evasion
+- attack.t1564
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection:
+    Image|endswith: \colorcpl.exe
+  filter_ext:
+    TargetFilename|endswith:
+    - .icm
+    - .gmmp
+    - .cdmp
+    - .camp
+  condition: selection and not 1 of filter_*
+metadata:
+  created_date: 2022-01-21
+  modified_date: 2023-01-05
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

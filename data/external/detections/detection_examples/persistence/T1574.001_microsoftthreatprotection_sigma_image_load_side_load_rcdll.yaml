@@ -1,0 +1,42 @@
+technique_id: T1574.001
+technique_name: Potential Rcdll.DLL Sideloading
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 6e78b74f-c762-4800-82ad-f66787f10c8a
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  ImageLoaded|startswith:\n  - C:\\Program Files (x86)\\Microsoft Visual\
+  \ Studio\\\n  - C:\\Program Files (x86)\\Windows Kits\\\nselection:\n  ImageLoaded|endswith:\
+  \ \\rcdll.dll\n"
+explanation: Detects potential DLL sideloading of rcdll.dll
+false_positives:
+- Unknown
+references:
+- https://www.trendmicro.com/en_us/research/23/c/iron-tiger-sysupdate-adds-linux-targeting.html
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1574.001
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    ImageLoaded|endswith: \rcdll.dll
+  filter:
+    ImageLoaded|startswith:
+    - C:\Program Files (x86)\Microsoft Visual Studio\
+    - C:\Program Files (x86)\Windows Kits\
+  condition: selection and not filter
+metadata:
+  created_date: 2023-03-13
+  modified_date: 2023-03-15
+  author: X__Junior (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

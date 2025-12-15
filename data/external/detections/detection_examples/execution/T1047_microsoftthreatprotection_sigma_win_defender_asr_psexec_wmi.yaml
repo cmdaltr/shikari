@@ -1,0 +1,43 @@
+technique_id: T1047
+technique_name: PSExec and WMI Process Creations Block
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 97b9ce1e-c5ab-11ea-87d0-0242ac130003
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  EventID: 1121\n  ProcessName|endswith:\n  - \\wmiprvse.exe\n  - \\psexesvc.exe\n"
+explanation: Detects blocking of process creations originating from PSExec and WMI
+  commands
+false_positives:
+- Unknown
+references:
+- https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference?view=o365-worldwide#block-process-creations-originating-from-psexec-and-wmi-commands
+- https://twitter.com/duff22b/status/1280166329660497920
+tags:
+- attack.execution
+- attack.lateral-movement
+- attack.t1047
+- attack.t1569.002
+logsource:
+  product: windows
+  service: windefend
+  definition: 'Requirements:Enabled Block process creations originating from PSExec
+    and WMI commands from Attack Surface Reduction (GUID: d1e49aac-8f56-4280-b9ba-993a6d77406c)'
+detection:
+  selection:
+    EventID: 1121
+    ProcessName|endswith:
+    - \wmiprvse.exe
+    - \psexesvc.exe
+  condition: selection
+metadata:
+  created_date: 2020-07-14
+  modified_date: 2022-12-25
+  author: Bhabesh Raj
+  status: test
+  imported_date: '2025-11-28'

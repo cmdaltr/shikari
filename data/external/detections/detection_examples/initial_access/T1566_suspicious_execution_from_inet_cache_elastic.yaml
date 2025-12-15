@@ -1,0 +1,72 @@
+technique_id: T1566
+technique_name: Suspicious Execution from INET Cache
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.parent.name : (\"explorer.exe\", \"winrar.exe\", \"7zFM.exe\", \"Bandizip.exe\"\
+  ) and\n  (\n    process.args : \"*\\\\AppData\\\\Local\\\\Microsoft\\\\Windows\\\
+  \\INetCache\\\\IE\\\\*\" or\n    process.executable : (\n      \"?:\\\\Users\\\\\
+  *\\\\AppData\\\\Local\\\\Microsoft\\\\Windows\\\\INetCache\\\\IE\\\\*\",\n\n   \
+  \   /* Crowdstrike specific condition as it uses NT Object paths */\n      \"\\\\\
+  Device\\\\HarddiskVolume*\\\\Users\\\\*\\\\AppData\\\\Local\\\\Microsoft\\\\Windows\\\
+  \\INetCache\\\\IE\\\\*\"\n    )\n  ) and\n  not process.executable : (\n       \
+  \ \"?:\\\\Program Files\\\\*.exe\",\n        \"?:\\\\Program Files (x86)\\\\*.exe\"\
+  ,\n        \"?:\\\\Windows\\\\System32\\\\mspaint.exe\",\n        \"?:\\\\Windows\\\
+  \\System32\\\\notepad.exe\",\n\n        /* Crowdstrike specific exclusion as it\
+  \ uses NT Object paths */\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program Files\\\
+  \\*.exe\",\n        \"\\\\Device\\\\HarddiskVolume*\\\\Program Files (x86)\\\\*.exe\"\
+  ,\n        \"\\\\Device\\\\HarddiskVolume*\\\\Windows\\\\System32\\\\mspaint.exe\"\
+  ,\n        \"\\\\Device\\\\HarddiskVolume*\\\\Windows\\\\System32\\\\notepad.exe\"\
+  \n  )"
+explanation: 'Identifies the execution of a process with arguments pointing to the
+  INetCache Folder. Adversaries may deliver malicious
+
+  content via WININET during initial access.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/dca6b4b0-ae70-44eb-bb7a-ce6db502ee78.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may temporarily use the INetCache
+    folder for storing executable files. Users can create exceptions for known update
+    processes by identifying their specific executable paths and excluding them from
+    the rule.
+
+    - Some browser extensions or plugins might cache executable files in the INetCache
+    folder during normal operations. Users should monitor and whitelist these extensions
+    if they are verified as safe and frequently trigger a'
+  mitigation: Review investigation guide for details
+references:
+- https://www.trendmicro.com/en_us/research/24/b/cve202421412-water-hydra-targets-traders-with-windows-defender-s.html
+has_investigation_guide: true
+risk_score: 73

@@ -1,0 +1,39 @@
+technique_id: T1485
+technique_name: Windows File Without Extension In Critical Folder
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count FROM datamodel=Endpoint.Filesystem
+  where Filesystem.file_path IN ("*\\System32\\drivers\\*", "*\\syswow64\\drivers\\*")
+  by Filesystem.action Filesystem.dest Filesystem.file_access_time Filesystem.file_create_time
+  Filesystem.file_hash Filesystem.file_modify_time Filesystem.file_name Filesystem.file_path
+  Filesystem.file_acl Filesystem.file_size Filesystem.process_guid Filesystem.process_id
+  Filesystem.user Filesystem.vendor_product | `drop_dm_object_name(Filesystem)` |
+  rex field="file_name" "\.(?<extension>[^\.]*$)" | where isnull(extension) | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_file_without_extension_in_critical_folder_filter`'
+explanation: The following analytic detects the creation of files without extensions
+  in critical folders like "System32\Drivers." It leverages data from the Endpoint.Filesystem
+  datamodel, focusing on file paths and creation times. This activity is significant
+  as it may indicate the presence of destructive malware, such as HermeticWiper, which
+  drops driver components in these directories. If confirmed malicious, this behavior
+  could lead to severe system compromise, including boot sector wiping, resulting
+  in potential data loss and system inoperability.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/0dbcac64-963c-11ec-bf04-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 11
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Unknown at this point
+  mitigation: Review context and user activity
+references:
+- https://blog.talosintelligence.com/2022/02/threat-advisory-hermeticwiper.html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/hermetic_wiper/sysmon.log

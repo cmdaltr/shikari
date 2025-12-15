@@ -1,0 +1,37 @@
+technique_id: T1003.001
+technique_name: Potential Credential Dumping Via LSASS SilentProcessExit Technique
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.89
+validated: true
+source: sigma
+sigma_id: 55e29995-75e7-451a-bef0-6225e2f13597
+level: critical
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetObject|contains: Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\\\
+  lsass.exe\n"
+explanation: Detects changes to the Registry in which a monitor program gets registered
+  to dump the memory of the lsass.exe process
+false_positives:
+- Unlikely
+references:
+- https://www.deepinstinct.com/2021/02/16/lsass-memory-dumps-are-stealthier-than-ever-before-part-2/
+- https://oddvar.moe/2018/04/10/persistence-using-globalflags-in-image-file-execution-options-hidden-from-autoruns-exe/
+tags:
+- attack.credential-access
+- attack.t1003.001
+logsource:
+  category: registry_event
+  product: windows
+detection:
+  selection:
+    TargetObject|contains: Microsoft\Windows NT\CurrentVersion\SilentProcessExit\lsass.exe
+  condition: selection
+metadata:
+  created_date: 2021-02-26
+  modified_date: 2022-12-19
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,43 @@
+technique_id: T1020
+technique_name: Modification or Deletion of an AWS RDS Cluster
+tactic: exfiltration
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.81
+validated: true
+source: sigma
+sigma_id: 457cc9ac-d8e6-4d1d-8c0e-251d0f11a74c
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  eventName:\n  - ModifyDBCluster\n  - DeleteDBCluster\n  eventSource: rds.amazonaws.com\n"
+explanation: Detects modifications to an RDS cluster or its deletion, which may indicate
+  potential data exfiltration attempts, unauthorized access, or exposure of sensitive
+  information.
+false_positives:
+- Verify if the modification or deletion was performed by an authorized administrator.
+- Confirm if the modification or deletion was part of a planned change or maintenance
+  activity.
+references:
+- https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBCluster.html
+- https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DeleteDBCluster.html
+- https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc#rds-modifydbinstance
+tags:
+- attack.exfiltration
+- attack.t1020
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventSource: rds.amazonaws.com
+    eventName:
+    - ModifyDBCluster
+    - DeleteDBCluster
+  condition: selection
+metadata:
+  created_date: 2024-12-06
+  modified_date: '2025-11-28'
+  author: Ivan Saakov
+  status: experimental
+  imported_date: '2025-11-28'

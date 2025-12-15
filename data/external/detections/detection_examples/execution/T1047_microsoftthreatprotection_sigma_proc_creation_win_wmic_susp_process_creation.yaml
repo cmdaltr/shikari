@@ -1,0 +1,70 @@
+technique_id: T1047
+technique_name: Suspicious Process Created Via Wmic.EXE
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains:\n  - rundll32\n  - bitsadmin\n  - regsvr32\n  - 'cmd.exe\
+  \ /c '\n  - 'cmd.exe /k '\n  - 'cmd.exe /r '\n  - 'cmd /c '\n  - 'cmd /k '\n  -\
+  \ 'cmd /r '\n  - powershell\n  - pwsh\n  - certutil\n  - cscript\n  - wscript\n\
+  \  - mshta\n  - \\Users\\Public\\\n  - \\Windows\\Temp\\\n  - \\AppData\\Local\\\
+  \n  - '%temp%'\n  - '%tmp%'\n  - '%ProgramData%'\n  - '%appdata%'\n  - '%comspec%'\n\
+  \  - '%localappdata%'\n  CommandLine|contains|all:\n  - 'process '\n  - 'call '\n\
+  \  - 'create '\n"
+explanation: Detects WMIC executing "process call create" with suspicious calls to
+  processes such as "rundll32", "regsrv32", etc.
+false_positives:
+- Unknown
+references:
+- https://thedfirreport.com/2020/10/08/ryuks-return/
+- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ransomware-hive-conti-avoslocker
+tags:
+- attack.execution
+- attack.t1047
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains|all:
+    - 'process '
+    - 'call '
+    - 'create '
+    CommandLine|contains:
+    - rundll32
+    - bitsadmin
+    - regsvr32
+    - 'cmd.exe /c '
+    - 'cmd.exe /k '
+    - 'cmd.exe /r '
+    - 'cmd /c '
+    - 'cmd /k '
+    - 'cmd /r '
+    - powershell
+    - pwsh
+    - certutil
+    - cscript
+    - wscript
+    - mshta
+    - \Users\Public\
+    - \Windows\Temp\
+    - \AppData\Local\
+    - '%temp%'
+    - '%tmp%'
+    - '%ProgramData%'
+    - '%appdata%'
+    - '%comspec%'
+    - '%localappdata%'
+  condition: selection
+metadata:
+  created_date: 2020-10-12
+  modified_date: 2023-02-14
+  author: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

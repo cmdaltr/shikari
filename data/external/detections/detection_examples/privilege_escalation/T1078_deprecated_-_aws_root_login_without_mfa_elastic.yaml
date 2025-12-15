@@ -1,0 +1,40 @@
+technique_id: T1078
+technique_name: Deprecated - AWS Root Login Without MFA
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset:aws.cloudtrail and event.provider:signin.amazonaws.com and event.action:ConsoleLogin\
+  \ and\n  aws.cloudtrail.user_identity.type:Root and\n  aws.cloudtrail.console_login.additional_eventdata.mfa_used:false\
+  \ and\n  event.outcome:success"
+explanation: 'Identifies attempts to login to AWS as the root user without using multi-factor
+  authentication (MFA). Amazon AWS best
+
+  practices indicate that the root user should be protected by MFA.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/bc0c6f0d-dab0-47a3-b135-0925f0a333bc.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS Route53
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- While this activity is not inherently\
+    \ malicious, the root account must use MFA. The security team should address any\
+    \ potential benign true positive (B-TP), as this configuration can risk the entire\
+    \ cloud environment.\n\n### Response and remediation\n\n- Initiate the incident\
+    \ response process based on the outcome of the triage.\n- Identify the possible\
+    \ impact of the incident and prioritize accordingly; the following actions can\
+    \ help you gain context:\n    - Identify the accou"
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html
+has_investigation_guide: true
+risk_score: 73

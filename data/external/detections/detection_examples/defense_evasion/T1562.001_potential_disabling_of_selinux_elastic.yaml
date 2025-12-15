@@ -1,0 +1,56 @@
+technique_id: T1562.001
+technique_name: Potential Disabling of SELinux
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "process where host.os.type == \"linux\" and event.type == \"start\" and\n\
+  \ event.action in (\"exec\", \"exec_event\", \"start\", \"ProcessRollup2\", \"executed\"\
+  , \"process_started\") and\n process.name == \"setenforce\" and process.args ==\
+  \ \"0\""
+explanation: 'Identifies potential attempts to disable Security-Enhanced Linux (SELinux),
+  which is a Linux kernel security feature to
+
+  support access control policies. Adversaries may disable security tools to avoid
+  possible detection of their tools and
+
+  activities.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/eb9eb8ba-a983-41d9-9c93-a1c05112ca5e.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Auditd Manager
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System administrators may execute the ''setenforce 0'' command during routine
+    maintenance or troubleshooting, leading to false positives. To manage this, create
+    exceptions for known maintenance windows or specific administrator accounts.
+
+    - Some automated scripts or configuration management tools might temporarily set
+    SELinux to permissive mode for deployment purposes. Identify these scripts and
+    exclude their execution context from triggering alerts.
+
+    - Development environ'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

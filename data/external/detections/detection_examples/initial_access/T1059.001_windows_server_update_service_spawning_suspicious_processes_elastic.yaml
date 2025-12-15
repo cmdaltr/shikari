@@ -1,0 +1,62 @@
+technique_id: T1059.001
+technique_name: Windows Server Update Service Spawning Suspicious Processes
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \  process.name : (\"cmd.exe\", \"powershell.exe\", \"pwsh.exe\", \"powershell_ise.exe\"\
+  , \"rundll32.exe\", \"curl.exe\") and\n  (\n   (process.parent.name : \"w3wp.exe\"\
+  \ and process.parent.args : \"WsusPool\") or\n   process.parent.name : \"WsusService.exe\"\
+  \n   )"
+explanation: 'Identifies suspicious processes being spawned by the Windows Server
+  Update Service. This activity may indicate exploitation
+
+  activity or access to an existing web shell backdoor.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/1ac027c2-8c60-4715-af73-927b9c219e20.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This behavior is rare and should be treated with high suspicion.
+
+
+    ### Response and remediation
+
+
+    - Immediately isolate the affected Server from the network to prevent further
+    unauthorized access or lateral movement.
+
+    - Terminate any suspicious processes identified as being spawned by w3wp.exe,
+    such as cmd.exe or powershell.exe, to halt any ongoing malicious activity.
+
+    - Conduct a thorough review of the server''s application pools and web directories
+    to identify and remove'
+  mitigation: Review investigation guide for details
+references:
+- https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-59287
+- https://hawktrace.com/blog/CVE-2025-59287
+has_investigation_guide: true
+risk_score: 73

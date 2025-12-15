@@ -1,0 +1,46 @@
+technique_id: T1133
+technique_name: First Occurrence of Okta User Session Started via Proxy
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'event.dataset:okta.system and okta.event_type: (user.session.start or user.authentication.verify)
+  and okta.security_context.is_proxy:true and not okta.actor.id: okta*'
+explanation: Identifies the first occurrence of an Okta user session started via a
+  proxy.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6f1bb4b2-7dc8-11ee-92b2-f661ea17fbcd.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis:
+
+    - A user may have legitimately started a session via a proxy for security or privacy
+    reasons.
+
+
+    ### Response and remediation:
+
+    - Review the profile of the user involved in this action to determine if proxy
+    usage may be expected.
+
+    - If the user is legitimate and the authentication behavior is not suspicious,
+    no action is required.
+
+    - If the user is legitimate but the authentication behavior is suspicious, consider
+    resetting the user''s password and enabling multi-factor authen'
+  mitigation: Review investigation guide for details
+references:
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://developer.okta.com/docs/reference/api/system-log/#issuer-object
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://sec.okta.com/articles/2023/08/cross-tenant-impersonation-prevention-and-detection
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

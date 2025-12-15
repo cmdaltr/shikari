@@ -1,0 +1,65 @@
+technique_id: T1486
+technique_name: AWS S3 Object Encryption Using External KMS Key
+tactic: impact
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from logs-aws.cloudtrail-* metadata _id, _version, _index\n\n// any successful\
+  \ S3 copy event\n| where\n  event.dataset == \"aws.cloudtrail\"\n  and event.provider\
+  \ == \"s3.amazonaws.com\"\n  and event.action == \"CopyObject\"\n  and event.outcome\
+  \ == \"success\"\n\n// dissect request parameters to extract KMS key info and target\
+  \ object info\n| dissect aws.cloudtrail.request_parameters\n    \"{%{?bucketName}=%{Esql.aws_cloudtrail_request_parameters_target_bucket_name},%{?x-amz-server-side-encryption-aws-kms-key-id}=%{?arn}:%{?aws}:%{?kms}:%{?region}:%{Esql.aws_cloudtrail_request_parameters_kms_key_account_id}:%{?key}/%{Esql.aws_cloudtrail_request_parameters_kms_key_id},%{?Host}=%{?tls.client.server.name},%{?x-amz-server-side-encryption}=%{?server_side_encryption},%{?x-amz-copy-source}=%{?bucket.object.name},%{?key}=%{Esql.aws_cloudtrail_request_parameters_target_object_key}}\"\
+  \n\n// detect cross-account key usage\n| where cloud.account.id != Esql.aws_cloudtrail_request_parameters_kms_key_account_id\n\
+  \n// keep ECS and dissected fields\n| keep\n  @timestamp,\n  aws.cloudtrail.user_identity.arn,\n\
+  \  cloud.account.id,\n  event.action,\n  Esql.aws_cloudtrail_request_parameters_target_bucket_name,\n\
+  \  Esql.aws_cloudtrail_request_parameters_kms_key_account_id,\n  Esql.aws_cloudtrail_request_parameters_kms_key_id,\n\
+  \  Esql.aws_cloudtrail_request_parameters_target_object_key"
+explanation: 'Identifies `CopyObject` events within an S3 bucket using an AWS KMS
+  key from an external account for encryption.
+
+  Adversaries with access to a misconfigured S3 bucket and the proper permissions
+  may encrypt objects with an external KMS
+
+  key to deny their victims access to their own data.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ab8f074c-5565-4bc4-991c-d49770e19fc9.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS S3
+  confidence: high
+- type: data_source
+  value: AWS KMS
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis:
+
+
+    - **Legitimate Administrative Actions**: Confirm if the `CopyObject` action aligns
+    with scheduled updates, maintenance activities, or legitimate administrative tasks
+    documented in change management systems.
+
+    - **Consistency Check**: Compare the action against historical data of similar
+    activities performed by the user or within the organization. If the action is
+    consistent with past legitimate activities, it might indicate a false alarm.
+
+
+    ### Response and Remediation:
+
+
+    -'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html/
+- https://docs.aws.amazon.com/kms/latest/APIReference/API_GenerateDataKey.html/
+- https://www.gem.security/post/cloud-ransomware-a-new-take-on-an-old-attack-pattern/
+- https://rhinosecuritylabs.com/aws/s3-ransomware-part-1-attack-vector/
+has_investigation_guide: true
+risk_score: 47

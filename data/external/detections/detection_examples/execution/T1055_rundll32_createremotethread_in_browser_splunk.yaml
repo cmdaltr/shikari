@@ -1,0 +1,40 @@
+technique_id: T1055
+technique_name: Rundll32 CreateRemoteThread In Browser
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventCode=8 SourceImage = "*\\rundll32.exe" TargetImage IN ("*\\firefox.exe",
+  "*\\chrome.exe", "*\\iexplore.exe","*\\microsoftedgecp.exe") | stats count min(_time)
+  as firstTime max(_time) as lastTime by EventID Guid NewThreadId ProcessID SecurityID
+  SourceImage SourceProcessGuid SourceProcessId StartAddress StartFunction StartModule
+  TargetImage TargetProcessGuid TargetProcessId UserID dest parent_process_exec parent_process_guid
+  parent_process_id parent_process_name parent_process_path process_exec process_guid
+  process_id process_name process_path signature signature_id user_id vendor_product
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `rundll32_createremotethread_in_browser_filter`'
+explanation: The following analytic detects the suspicious creation of a remote thread
+  by rundll32.exe targeting browser processes such as firefox.exe, chrome.exe, iexplore.exe,
+  and microsoftedgecp.exe. This detection leverages Sysmon EventCode 8, focusing on
+  SourceImage and TargetImage fields to identify the behavior. This activity is significant
+  as it is commonly associated with malware like IcedID, which hooks browsers to steal
+  sensitive information such as banking details. If confirmed malicious, this could
+  allow attackers to intercept and exfiltrate sensitive user data, leading to potential
+  financial loss and privacy breaches.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/f8a22586-ee2d-11eb-a193-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 8
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.joesandbox.com/analysis/380662/0/html
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/malware/icedid/inf_icedid/windows-sysmon.log

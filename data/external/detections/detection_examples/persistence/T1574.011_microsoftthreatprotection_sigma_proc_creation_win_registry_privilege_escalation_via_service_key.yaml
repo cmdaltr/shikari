@@ -1,0 +1,49 @@
+technique_id: T1574.011
+technique_name: Potential Privilege Escalation via Service Permissions Weakness
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 0f9c21f1-6a73-4b0e-9809-cb562cb8d981
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  CommandLine|contains:\n  - \\ImagePath\n  - \\FailureCommand\n  - \\ServiceDll\n\
+  \  CommandLine|contains|all:\n  - ControlSet\n  - services\n  IntegrityLevel:\n\
+  \  - Medium\n  - S-1-16-8192\n"
+explanation: Detect modification of services configuration (ImagePath, FailureCommand
+  and ServiceDLL) in registry by processes with Medium integrity level
+false_positives:
+- Unknown
+references:
+- https://speakerdeck.com/heirhabarov/hunting-for-privilege-escalation-in-windows-environment
+- https://pentestlab.blog/2017/03/31/insecure-registry-permissions/
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1574.011
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    IntegrityLevel:
+    - Medium
+    - S-1-16-8192
+    CommandLine|contains|all:
+    - ControlSet
+    - services
+    CommandLine|contains:
+    - \ImagePath
+    - \FailureCommand
+    - \ServiceDll
+  condition: selection
+metadata:
+  created_date: 2019-10-26
+  modified_date: 2024-12-01
+  author: Teymur Kheirkhabarov
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,61 @@
+technique_id: T1566.001
+technique_name: Office Macro File Creation From Suspicious Process
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: b1c50487-1967-4315-a026-6491686d860e
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cmd:\n- Image|endswith:\n  - \\cscript.exe\n  - \\mshta.exe\n  - \\regsvr32.exe\n\
+  \  - \\rundll32.exe\n  - \\wscript.exe\n- ParentImage|endswith:\n  - \\cscript.exe\n\
+  \  - \\mshta.exe\n  - \\regsvr32.exe\n  - \\rundll32.exe\n  - \\wscript.exe\nselection_ext:\n\
+  \  TargetFilename|endswith:\n  - .docm\n  - .dotm\n  - .xlsm\n  - .xltm\n  - .potm\n\
+  \  - .pptm\n"
+explanation: Detects the creation of a office macro file from a a suspicious process
+false_positives:
+- Unknown
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1566.001/T1566.001.md
+- https://learn.microsoft.com/en-us/deployoffice/compat/office-file-format-reference
+tags:
+- attack.initial-access
+- attack.t1566.001
+logsource:
+  category: file_event
+  product: windows
+  definition: 'Requirements: The "ParentImage" field is not available by default on
+    EID 11 of Sysmon logs. To be able to use this rule to the full extent you need
+    to enriche the log with additional ParentImage data'
+detection:
+  selection_cmd:
+  - Image|endswith:
+    - \cscript.exe
+    - \mshta.exe
+    - \regsvr32.exe
+    - \rundll32.exe
+    - \wscript.exe
+  - ParentImage|endswith:
+    - \cscript.exe
+    - \mshta.exe
+    - \regsvr32.exe
+    - \rundll32.exe
+    - \wscript.exe
+  selection_ext:
+    TargetFilename|endswith:
+    - .docm
+    - .dotm
+    - .xlsm
+    - .xltm
+    - .potm
+    - .pptm
+  condition: all of selection_*
+metadata:
+  created_date: 2022-01-23
+  modified_date: 2023-02-22
+  author: frack113, Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

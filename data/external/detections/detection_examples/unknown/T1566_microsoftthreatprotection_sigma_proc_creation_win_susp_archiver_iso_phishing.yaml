@@ -1,0 +1,47 @@
+technique_id: T1566
+technique_name: Phishing Pattern ISO in Archive
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: fcdf69e5-a3d3-452a-9724-26f2308bf2b1
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith:\n  - \\isoburn.exe\n  - \\PowerISO.exe\n  - \\ImgBurn.exe\n \
+  \ ParentImage|endswith:\n  - \\Winrar.exe\n  - \\7zFM.exe\n  - \\peazip.exe\n"
+explanation: Detects cases in which an ISO files is opend within an archiver like
+  7Zip or Winrar, which is a sign of phishing as threat actors put small ISO files
+  in archives as email attachments to bypass certain filters and protective measures
+  (mark of web)
+false_positives:
+- Legitimate cases in which archives contain ISO or IMG files and the user opens the
+  archive and the image via clicking and not extraction
+references:
+- https://twitter.com/1ZRR4H/status/1534259727059787783
+- https://app.any.run/tasks/e1fe6a62-bce8-4323-a49a-63795d9afd5d/
+tags:
+- attack.initial-access
+- attack.t1566
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith:
+    - \Winrar.exe
+    - \7zFM.exe
+    - \peazip.exe
+    Image|endswith:
+    - \isoburn.exe
+    - \PowerISO.exe
+    - \ImgBurn.exe
+  condition: selection
+metadata:
+  created_date: 2022-06-07
+  modified_date: '2025-11-28'
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,53 @@
+technique_id: T1059
+technique_name: PowerShell MiniDump Script
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: 'event.category:process and host.os.type:windows and powershell.file.script_block_text:(MiniDumpWriteDump
+  or MiniDumpWithFullMemory or pmuDetirWpmuDiniM) and not user.id : "S-1-5-18"'
+explanation: 'This rule detects PowerShell scripts capable of dumping process memory
+  using WindowsErrorReporting or Dbghelp.dll
+
+  MiniDumpWriteDump. Attackers can use this tooling to dump LSASS and get access to
+  credentials.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/577ec21e-56fe-4065-91d8-45eb8224fe77.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: PowerShell Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Regular users do not have a business justification for using scripting utilities
+    to dump process memory, making false positives unlikely.
+
+
+    ### Related rules
+
+
+    - PowerShell PSReflect Script - 56f2e9b5-4803-4e44-a0a4-a52dc79d57fe
+
+    - Potential Process Injection via PowerShell - 2e29e96a-b67c-455a-afe4-de6183431d0d
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved hosts to prevent further post-c'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/PowerShellMafia/PowerSploit/blob/master/Exfiltration/Out-Minidump.ps1
+- https://github.com/FuzzySecurity/PowerShell-Suite/blob/master/Get-ProcessMiniDump.ps1
+- https://github.com/atc-project/atc-data/blob/master/docs/Logging_Policies/LP_0109_windows_powershell_script_block_log.md
+has_investigation_guide: true
+risk_score: 73

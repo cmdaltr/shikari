@@ -1,0 +1,50 @@
+technique_id: T1053.005
+technique_name: Windows Scheduled Task with Highest Privileges
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime  from datamodel=Endpoint.Processes where Processes.process_name = "schtasks.exe"
+  Processes.process = "*/rl *" Processes.process = "* highest *" by Processes.action
+  Processes.dest Processes.original_file_name Processes.parent_process Processes.parent_process_exec
+  Processes.parent_process_guid Processes.parent_process_id Processes.parent_process_name
+  Processes.parent_process_path Processes.process Processes.process_exec Processes.process_guid
+  Processes.process_hash Processes.process_id Processes.process_integrity_level Processes.process_name
+  Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_scheduled_task_with_highest_privileges_filter`'
+explanation: The following analytic detects the creation of a new scheduled task with
+  the highest execution privileges via Schtasks.exe. It leverages Endpoint Detection
+  and Response (EDR) logs to monitor for specific command-line parameters ('/rl' and
+  'highest') in schtasks.exe executions. This activity is significant as it is commonly
+  used in AsyncRAT attacks for persistence and privilege escalation. If confirmed
+  malicious, this could allow an attacker to maintain persistent access and execute
+  tasks with elevated privileges, potentially leading to unauthorized system access
+  and data breaches.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2f15e1a4-0fc2-49dd-919e-cbbe60699218/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives may arise from legitimate applications that create
+    tasks to run as SYSTEM. Therefore, it's recommended to adjust filters based on
+    parent process or modify the query to include world writable paths for restriction.
+  mitigation: Review context and user activity
+references:
+- https://malpedia.caad.fkie.fraunhofer.de/details/win.asyncrat
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1053.005/asyncrat_highest_priv_schtasks/sysmon.log

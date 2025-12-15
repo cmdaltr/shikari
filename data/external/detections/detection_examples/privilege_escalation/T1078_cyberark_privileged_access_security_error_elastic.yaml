@@ -1,0 +1,23 @@
+technique_id: T1078
+technique_name: CyberArk Privileged Access Security Error
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: event.dataset:cyberarkpas.audit and event.type:error
+explanation: 'Identifies the occurrence of a CyberArk Privileged Access Security (PAS)
+  error level audit event. The event.code
+
+  correlates to the CyberArk Vault Audit Action Code.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/3f0e5410-a4bf-4e8c-bcfc-79d67a285c54.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: CyberArk PAS
+  confidence: high
+references:
+- https://docs.cyberark.com/Product-Doc/OnlineHelp/PAS/Latest/en/Content/PASREF/Vault%20Audit%20Action%20Codes.htm?tocpath=Administration%7CReferences%7C_____3
+has_investigation_guide: true
+risk_score: 73

@@ -1,0 +1,69 @@
+technique_id: T1114
+technique_name: Suspicious Email Access by First-Party Application via Microsoft Graph
+tactic: collection
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.dataset: \"azure.graphactivitylogs\" and\nazure.graphactivitylogs.properties.app_id:\
+  \ * and\nazure.graphactivitylogs.result_signature: 200 and\nazure.graphactivitylogs.properties.c_idtyp:\
+  \ \"user\" and\nazure.graphactivitylogs.properties.client_auth_method: 0 and\nhttp.request.method:\
+  \ (GET or POST or PUT or PATCH or DELETE) and (\n  url.path: (/v1.0/me/*cc or /v1.0/users/*)\
+  \ and\n  (\n    url.path: (*mail* or *messages* or *inbox*) or\n    azure.graphactivitylogs.properties.requestUri:\
+  \ (*mail* or *messages* or *inbox*)\n  ) or\n  azure.graphactivitylogs.properties.scopes:\
+  \ (\n    \"Mail.Read\" or \"Mail.ReadWrite\" or \"Mail.Send\" or \"email\"\n  )\n\
+  )"
+explanation: 'Identifies access to email resources via Microsoft Graph API using an
+  first-party application on behalf of a user
+
+  principal. This behavior may indicate an adversary using a phished OAuth refresh
+  token or a Primary Refresh Token (PRT)
+
+  to access email resources. The pattern includes requests to Microsoft Graph API
+  endpoints related to email, such as
+
+  /me/mailFolders/inbox/messages or /users/{user_id}/messages, using a public client
+  application ID and a user principal
+
+  object ID. This is a New Terms rule that only signals if the application ID and
+  user principal object ID have not been
+
+  seen doing this activity in the last 14 days.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e882e934-2aaa-11f0-8272-f661ea17fbcc.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Graph
+  confidence: high
+- type: data_source
+  value: Microsoft Graph Activity Logs
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - New legitimate apps may appear after a user consents via OAuth. Developers,
+    third-party tools, or IT-supplied utilities may access mail APIs if users consent.
+
+    - Users leveraging Microsoft development environments (e.g., Visual Studio Code)
+    may trigger this behavior with delegated `.default` permissions.
+
+    - Admin-approved apps deployed via conditional access may trigger similar access
+    logs if not previously seen in detection baselines.
+
+
+    ### Response and Remediation
+
+
+    - If'
+  mitigation: Review investigation guide for details
+references:
+- https://www.volexity.com/blog/2025/04/22/phishing-for-codes-russian-threat-actors-target-microsoft-365-oauth-workflows/
+- https://github.com/dirkjanm/ROADtools
+- https://dirkjanm.io/phishing-for-microsoft-entra-primary-refresh-tokens/
+has_investigation_guide: true
+risk_score: 47

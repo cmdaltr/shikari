@@ -1,0 +1,43 @@
+technique_id: T1547.012
+technique_name: Print Processor Registry Autostart
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count  min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Registry where Registry.registry_path ="*\\Control\\Print\\Environments\\Windows
+  x64\\Print Processors*" by Registry.action Registry.dest Registry.process_guid Registry.process_id
+  Registry.registry_hive Registry.registry_path Registry.registry_key_name Registry.registry_value_data
+  Registry.registry_value_name Registry.registry_value_type Registry.status Registry.user
+  Registry.vendor_product | `security_content_ctime(lastTime)` | `security_content_ctime(firstTime)`
+  | `drop_dm_object_name(Registry)` | `print_processor_registry_autostart_filter`'
+explanation: The following analytic detects suspicious modifications or new entries
+  in the Print Processor registry path. It leverages registry activity data from the
+  Endpoint data model to identify changes in the specified registry path. This activity
+  is significant because the Print Processor registry is known to be exploited by
+  APT groups like Turla for persistence and privilege escalation. If confirmed malicious,
+  this could allow an attacker to execute a malicious DLL payload by restarting the
+  spoolsv.exe process, leading to potential control over the compromised machine.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/1f5b68aa-2037-11ec-898e-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: possible new printer installation may add driver component on this
+    registry.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1547/012/
+- https://www.welivesecurity.com/2020/05/21/no-game-over-winnti-group/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1547.012/print_reg/sysmon_print.log

@@ -1,0 +1,41 @@
+technique_id: T1078
+technique_name: AWS SAML Update identity provider
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`cloudtrail` eventName=UpdateSAMLProvider | rename user_name as user | stats
+  count min(_time) as firstTime max(_time) as lastTime values(requestParameters.sAMLProviderArn)
+  as request_parameters by signature dest user user_agent src vendor_account vendor_region
+  vendor_product | `security_content_ctime(firstTime)`| `security_content_ctime(lastTime)`
+  |`aws_saml_update_identity_provider_filter`'
+explanation: The following analytic detects updates to the SAML provider in AWS. It
+  leverages AWS CloudTrail logs to identify the `UpdateSAMLProvider` event, analyzing
+  fields such as `sAMLProviderArn`, `sourceIPAddress`, and `userIdentity` details.
+  Monitoring updates to the SAML provider is crucial as it may indicate a perimeter
+  compromise of federated credentials or unauthorized backdoor access set by an attacker.
+  If confirmed malicious, this activity could allow attackers to manipulate identity
+  federation, potentially leading to unauthorized access to cloud resources and sensitive
+  data.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2f0604c6-6030-11eb-ae93-0242ac130002/
+indicators:
+- type: data_source
+  value: AWS CloudTrail UpdateSAMLProvider
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Updating a SAML provider or creating a new one may not necessarily
+    be malicious however it needs to be closely monitored.
+  mitigation: Review context and user activity
+references:
+- https://www.cisa.gov/uscert/ncas/alerts/aa21-008a
+- https://www.splunk.com/en_us/blog/security/a-golden-saml-journey-solarwinds-continued.html
+- https://www.fireeye.com/content/dam/fireeye-www/blog/pdfs/wp-m-unc2452-2021-000343-01.pdf
+- https://www.cyberark.com/resources/threat-research-blog/golden-saml-newly-discovered-attack-technique-forges-authentication-to-cloud-apps
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1078/update_saml_provider/update_saml_provider.json

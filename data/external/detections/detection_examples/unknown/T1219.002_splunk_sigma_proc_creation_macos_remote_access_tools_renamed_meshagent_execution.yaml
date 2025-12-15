@@ -1,0 +1,55 @@
+technique_id: T1219.002
+technique_name: Remote Access Tool - Renamed MeshAgent Execution - MacOS
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: bd3b5eaa-439d-4a42-8f35-a49f5c8a2582
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_meshagent and\
+  \ not 1 of filter_main_*\nfilter_main_legitimate:\n  Image|endswith:\n  - /meshagent\n\
+  \  - /meshagent_osx64\nselection_meshagent:\n- CommandLine|contains: --meshServiceName\n\
+  - OriginalFileName|contains: meshagent\n"
+explanation: 'Detects the execution of a renamed instance of the Remote Monitoring
+  and Management (RMM) tool, MeshAgent.
+
+  RMM tools such as MeshAgent are commonly utilized by IT administrators for legitimate
+  remote support and system management.
+
+  However, malicious actors may exploit these tools by renaming them to bypass detection
+  mechanisms, enabling unauthorized access and control over compromised systems.
+
+  '
+false_positives:
+- Unknown
+references:
+- https://www.huntress.com/blog/know-thy-enemy-a-novel-november-case-on-persistent-remote-access
+- https://thecyberexpress.com/ukraine-hit-by-meshagent-malware-campaign/
+- https://wazuh.com/blog/how-to-detect-meshagent-with-wazuh/
+- https://www.security.com/threat-intelligence/medusa-ransomware-attacks
+tags:
+- attack.command-and-control
+- attack.defense-evasion
+- attack.t1219.002
+- attack.t1036.003
+logsource:
+  category: process_creation
+  product: macos
+detection:
+  selection_meshagent:
+  - CommandLine|contains: --meshServiceName
+  - OriginalFileName|contains: meshagent
+  filter_main_legitimate:
+    Image|endswith:
+    - /meshagent
+    - /meshagent_osx64
+  condition: selection_meshagent and not 1 of filter_main_*
+metadata:
+  created_date: 2025-05-19
+  modified_date: '2025-11-28'
+  author: Norbert Jaśniewicz (AlphaSOC)
+  status: experimental
+  imported_date: '2025-11-28'

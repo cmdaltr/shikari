@@ -1,0 +1,74 @@
+technique_id: T1003.003
+technique_name: Symbolic Link to Shadow Copy Created
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \ (\n    (?process.pe.original_file_name in (\"Cmd.Exe\",\"PowerShell.EXE\")) or\n\
+  \    (process.name : (\"cmd.exe\", \"powershell.exe\"))\n ) and\n\n /* Create Symbolic\
+  \ Link to Shadow Copies */\n process.args : (\"*mklink*\", \"*SymbolicLink*\") and\
+  \ process.command_line : (\"*HarddiskVolumeShadowCopy*\")"
+explanation: 'Identifies the creation of symbolic links to a shadow copy. Symbolic
+  links can be used to access files in the shadow
+
+  copy, including sensitive files such as ntds.dit, System Boot Key and browser offline
+  credentials.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d117cbb4-7d56-41b4-b999-bdf8c25648a0.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This rule should cause very few false positives. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Related rules
+
+
+    - NTDS or SAM Database File Copied - 3bc6deaa-fbd4-433a-ae21-3e892f95624f
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all compromised accounts are identified. Reset passwords for'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/mklink
+- https://2017.zeronights.org/wp-content/uploads/materials/ZN17_Kheirkhabarov_Hunting_for_Credentials_Dumping_in_Windows_Environment.pdf
+- https://blog.netwrix.com/2021/11/30/extracting-password-hashes-from-the-ntds-dit-file/
+- https://www.hackingarticles.in/credential-dumping-ntds-dit/
+has_investigation_guide: true
+risk_score: 47

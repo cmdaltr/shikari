@@ -1,0 +1,60 @@
+technique_id: T1059.003
+technique_name: Windows PowerShell FakeCAPTCHA Clipboard Execution
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Processes where `process_powershell` AND Processes.process="*-w*h*"
+  AND ( (Processes.process IN ("*robot*", "*captcha*", "*verify*", "*security check*",
+  "*complete verification*")) OR ( (Processes.process IN ("*iwr *", "*Invoke-WebRequest*",
+  "*wget *", "*curl *", "*Net.WebClient*", "*DownloadString*", "*[Convert]::FromBase64String*"))
+  AND (Processes.process IN ("*iex*", "*Invoke-Expression*")) AND (Processes.process
+  IN ("*click*", "*verify*", "*check*", "*human*", "*bot*", "*token*", "*challenge*"))
+  ) OR ( Processes.process="*clipboard*" AND Processes.process="*iex*" AND (Processes.process="*FromBase64String*"
+  OR Processes.process="*decode*") ) ) by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_powershell_fakecaptcha_clipboard_execution_filter`'
+explanation: This detection identifies potential FakeCAPTCHA/ClickFix clipboard hijacking
+  campaigns by looking for PowerShell execution with hidden window parameters and
+  distinctive strings related to fake CAPTCHA verification. These campaigns use social
+  engineering to trick users into pasting malicious PowerShell commands from their
+  clipboard, typically delivering information stealers or remote access trojans.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/d81d4d3d-76b5-4f21-ab51-b17d5164c106/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: data_source
+  value: Cisco Network Visibility Module Flow Data
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Legitimate PowerShell commands that use hidden windows for automation
+    tasks may trigger this detection. The search specifically looks for patterns typical
+    of FakeCAPTCHA campaigns. You may need to add additional exclusions for legitimate
+    administrative activities in your environment by modifying the filter macro.
+  mitigation: Review context and user activity
+references:
+- https://urlhaus.abuse.ch/
+- https://www.proofpoint.com/us/blog/threat-insight/security-brief-clickfix-social-engineering-technique-floods-threat-landscape
+- https://reliaquest.com/blog/using-captcha-for-compromise/
+- https://attack.mitre.org/techniques/T1204/001/
+- https://github.com/MHaggis/ClickGrab
+validation:
+  test_available: true
+  test_count: 2
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059.001/atomic_red_team/captcha_windows-sysmon.log

@@ -1,0 +1,41 @@
+technique_id: T1071
+technique_name: Cobalt Strike Command and Control Beacon
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "((event.category: (network OR network_traffic) AND type: (tls OR http))\n\
+  \    OR event.dataset: (network_traffic.tls OR network_traffic.http)\n) AND destination.domain:/[a-z]{3}.stage.[0-9]{8}\\\
+  ..*/"
+explanation: 'Cobalt Strike is a threat emulation platform commonly modified and used
+  by adversaries to conduct network attack and
+
+  exploitation campaigns. This rule detects a network activity algorithm leveraged
+  by Cobalt Strike implant beacons for
+
+  command and control.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/cf53f532-9cc9-445a-9ae7-fced307ec53c.toml
+query_type: query
+query_language: lucene
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or patch management systems may use similar domain
+    naming conventions. Review and whitelist known update servers to prevent false
+    alerts.
+
+    - Internal development or testing environments might mimic Cobalt Strike''s domain
+    patterns for legitimate purposes. Identify and exclude these environments from
+    the rule.
+
+    - Automated scripts or tools that generate network traffic with similar domain
+    structures can trigger false positives. Monitor and docum'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.morphisec.com/fin7-attacks-restaurant-industry
+- https://www.fireeye.com/blog/threat-research/2017/04/fin7-phishing-lnk.html
+- https://www.elastic.co/security-labs/collecting-cobalt-strike-beacons-with-the-elastic-stack
+has_investigation_guide: true
+risk_score: 73

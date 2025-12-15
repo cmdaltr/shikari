@@ -1,0 +1,38 @@
+technique_id: T1562.001
+technique_name: Windows Defender Service Disabled - Registry
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: e1aa95de-610a-427d-b9e7-9b46cfafbe6a
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Details: DWORD (0x00000004)\n  TargetObject|endswith: \\Services\\WinDefend\\\
+  Start\n"
+explanation: Detects when an attacker or tool disables the  Windows Defender service
+  (WinDefend) via the registry
+false_positives:
+- Administrator actions
+references:
+- https://thedfirreport.com/2021/10/18/icedid-to-xinglocker-ransomware-in-24-hours/
+- https://gist.github.com/anadr/7465a9fde63d41341136949f14c21105
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+logsource:
+  product: windows
+  category: registry_set
+detection:
+  selection:
+    TargetObject|endswith: \Services\WinDefend\Start
+    Details: DWORD (0x00000004)
+  condition: selection
+metadata:
+  created_date: 2022-08-01
+  modified_date: 2024-03-25
+  author: Ján Trenčanský, frack113, AlertIQ, Nasreddine Bencherchali
+  status: test
+  imported_date: '2025-11-28'

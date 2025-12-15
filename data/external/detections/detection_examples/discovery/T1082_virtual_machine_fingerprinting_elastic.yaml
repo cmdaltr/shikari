@@ -1,0 +1,51 @@
+technique_id: T1082
+technique_name: Virtual Machine Fingerprinting
+tactic: discovery
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "event.category:process and host.os.type:linux and event.type:(start or process_started)\
+  \ and\n  process.args:(\"/sys/class/dmi/id/bios_version\" or\n                \"\
+  /sys/class/dmi/id/product_name\" or\n                \"/sys/class/dmi/id/chassis_vendor\"\
+  \ or\n                \"/proc/scsi/scsi\" or\n                \"/proc/ide/hd0/model\"\
+  ) and\n  not user.name:root"
+explanation: 'An adversary may attempt to get detailed information about the operating
+  system and hardware. This rule identifies
+
+  common locations used to discover virtual machine hardware by a non-root user. This
+  technique has been used by the Pupy
+
+  RAT and other malware.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/5b03c9fb-9945-4d2f-9568-fd690fee3fba.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Non-root users running legitimate scripts or applications that query system
+    files for hardware information may trigger the rule. Review the context of the
+    process and user activity to determine if it aligns with expected behavior.
+
+    - System administrators or developers using automated tools for inventory or monitoring
+    purposes might access these paths. Consider creating exceptions for known tools
+    or scripts that are verified as safe.
+
+    - Security or compliance audits cond'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

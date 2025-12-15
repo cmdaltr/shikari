@@ -1,0 +1,56 @@
+technique_id: T1563.001
+technique_name: Potential Execution via XZBackdoor
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id, user.id with maxspan=1s\n [process where host.os.type\
+  \ == \"linux\" and event.type == \"start\" and event.action == \"exec\" and process.name\
+  \ == \"sshd\" and\n    process.args == \"-D\" and process.args == \"-R\"] by process.pid,\
+  \ process.entity_id\n [process where host.os.type == \"linux\" and event.type ==\
+  \ \"start\" and event.action == \"exec\" and process.parent.name == \"sshd\" and\n\
+  \  process.executable != null and not (\n    process.executable in (\"/usr/sbin/sshd\"\
+  , \"/usr/sbin/unix_chkpwd\", \"/usr/bin/google_authorized_keys\", \"/usr/bin/fipscheck\"\
+  ) or\n    process.args like (\"rsync*\", \"systemctl*\", \"/usr/sbin/unix_chkpwd\"\
+  , \"/usr/bin/google_authorized_keys\", \"/usr/sbin/aad_certhandler*\") or\n    process.command_line\
+  \ like \"sh -c /usr/bin/env -i PATH=*\"\n  )] by process.parent.pid, process.parent.entity_id\n\
+  \ [process where host.os.type == \"linux\" and event.action == \"end\" and process.name\
+  \ == \"sshd\" and process.exit_code != 0] by process.pid, process.entity_id\n [network\
+  \ where host.os.type == \"linux\" and event.type == \"end\" and event.action ==\
+  \ \"disconnect_received\" and process.name == \"sshd\"] by process.pid, process.entity_id"
+explanation: 'It identifies potential malicious shell executions through remote SSH
+  and detects cases where the sshd service suddenly
+
+  terminates soon after successful execution, suggesting suspicious behavior similar
+  to the XZ backdoor.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/7afc6cc9-8800-4c7f-be6b-b688d2dea248.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative SSH sessions may trigger the rule if they involve
+    non-standard executables. To manage this, create exceptions for known administrative
+    scripts or tools that are frequently used in your environment.
+
+    - Automated processes or scripts that use SSH for routine tasks might mimic the
+    behavior of the XZBackdoor. Identify these processes and exclude them by specifying
+    their executable paths or command-line patterns in the rule exceptions.
+
+    - Security to'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/amlweems/xzbot
+- https://access.redhat.com/security/cve/CVE-2024-3094
+- https://www.elastic.co/security-labs/500ms-to-midnight
+has_investigation_guide: true
+risk_score: 73

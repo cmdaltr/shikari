@@ -1,0 +1,45 @@
+technique_id: T1136.003
+technique_name: Azure Automation Account Created
+tactic: persistence
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`azure_audit` operationName.value="Microsoft.Automation/automationAccounts/write"
+  status.value=Succeeded | dedup object | rename claims.ipaddr as src, subscriptionId
+  as vendor_account, operationName.value as signature | stats count min(_time) as
+  firstTime max(_time) as lastTime by dest user src vendor_account vendor_product
+  object object_path signature | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `azure_automation_account_created_filter`'
+explanation: The following analytic detects the creation of a new Azure Automation
+  account within an Azure tenant. It leverages Azure Audit events, specifically the
+  Azure Activity log category, to identify when an account is created or updated.
+  This activity is significant because Azure Automation accounts can be used to automate
+  tasks and orchestrate actions across Azure and on-premise environments. If an attacker
+  creates an Automation account with elevated privileges, they could maintain persistence,
+  execute malicious runbooks, and potentially escalate privileges or execute code
+  on virtual machines, posing a significant security risk.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/860902fd-2e76-46b3-b050-ba548dab576c/
+indicators:
+- type: data_source
+  value: Azure Audit Create or Update an Azure Automation account
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Administrators may legitimately create Azure Automation accounts. Filter
+    as needed.
+  mitigation: Review context and user activity
+references:
+- https://docs.microsoft.com/en-us/azure/automation/overview
+- https://docs.microsoft.com/en-us/azure/automation/automation-create-standalone-account?tabs=azureportal
+- https://docs.microsoft.com/en-us/azure/automation/automation-hybrid-runbook-worker
+- https://www.inversecos.com/2021/12/how-to-detect-malicious-azure.html
+- https://www.netspi.com/blog/technical/cloud-penetration-testing/maintaining-azure-persistence-via-automation-accounts/
+- https://microsoft.github.io/Azure-Threat-Research-Matrix/Persistence/AZT503/AZT503-3/
+- https://attack.mitre.org/techniques/T1136/003/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1136.003/azure_automation_account/azure-activity.log

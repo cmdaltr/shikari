@@ -1,0 +1,39 @@
+technique_id: T1562.001
+technique_name: Windows Impair Defenses Disable HVCI
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Registry where Registry.registry_path = "*\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity\\Enabled"
+  Registry.registry_value_data="0x00000000" by Registry.action Registry.dest Registry.process_guid
+  Registry.process_id Registry.registry_hive Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_data Registry.registry_value_name Registry.registry_value_type
+  Registry.status Registry.user Registry.vendor_product | `drop_dm_object_name(Registry)`
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `windows_impair_defenses_disable_hvci_filter`'
+explanation: The following analytic detects the disabling of Hypervisor-protected
+  Code Integrity (HVCI) by monitoring changes in the Windows registry. It leverages
+  data from the Endpoint datamodel, specifically focusing on registry paths and values
+  related to HVCI settings. This activity is significant because HVCI helps protect
+  the kernel and system processes from tampering by malicious code. If confirmed malicious,
+  disabling HVCI could allow attackers to execute unsigned kernel-mode code, potentially
+  leading to kernel-level rootkits or other severe security breaches.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b061dfcc-f0aa-42cc-a6d4-a87f172acb79/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives will be limited to administrative scripts disabling
+    HVCI. Filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://www.microsoft.com/en-us/security/blog/2023/04/11/guidance-for-investigating-attacks-using-cve-2022-21894-the-blacklotus-campaign/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.001/atomic_red_team/hvci_windows-sysmon.log

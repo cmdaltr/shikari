@@ -1,0 +1,54 @@
+technique_id: T1537
+technique_name: AWS Exfiltration via EC2 Snapshot
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`cloudtrail` eventName IN ("CreateSnapshot", "DescribeSnapshotAttribute",
+  "ModifySnapshotAttribute", "DeleteSnapshot") src_ip !="guardduty.amazonaws.com"
+  |  bin _time span=5m | rename user_name as user |  stats count dc(signature) as
+  distinct_api_calls values(signature) as signature values(dest) as dest values(requestParameters.attributeType)
+  as attributeType values(requestParameters.createVolumePermission.add.items{}.userId)
+  as aws_account_id_added values(user_agent) as user_agent by _time user src vendor_account
+  vendor_region vendor_product | where distinct_api_calls >= 2 | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `aws_exfiltration_via_ec2_snapshot_filter`'
+explanation: The following analytic detects a series of AWS API calls related to EC2
+  snapshots within a short time window, indicating potential exfiltration via EC2
+  Snapshot modifications. It leverages AWS CloudTrail logs to identify actions such
+  as creating, describing, and modifying snapshot attributes. This activity is significant
+  as it may indicate an attacker attempting to exfiltrate data by sharing EC2 snapshots
+  externally. If confirmed malicious, the attacker could gain access to sensitive
+  information stored in the snapshots, leading to data breaches and potential compliance
+  violations.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/ac90b339-13fc-4f29-a18c-4abbba1f2171/
+indicators:
+- type: data_source
+  value: AWS CloudTrail CreateSnapshot
+  confidence: high
+- type: data_source
+  value: AWS CloudTrail DescribeSnapshotAttribute
+  confidence: high
+- type: data_source
+  value: AWS CloudTrail ModifySnapshotAttribute
+  confidence: high
+- type: data_source
+  value: AWS CloudTrail DeleteSnapshot
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: It is possible that an AWS admin has legitimately shared a snapshot
+    with an other account for a specific purpose. Please check any recent change requests
+    filed in your organization.
+  mitigation: Review context and user activity
+references:
+- https://labs.nettitude.com/blog/how-to-exfiltrate-aws-ec2-data/
+- https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifySnapshotAttribute.html
+- https://bleemb.medium.com/data-exfiltration-with-native-aws-s3-features-c94ae4d13436
+- https://stratus-red-team.cloud/attack-techniques/list/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1537/aws_snapshot_exfil/aws_cloudtrail_events.json

@@ -1,0 +1,44 @@
+technique_id: T1556.006
+technique_name: ASL AWS New MFA Method Registered For User
+tactic: lateral_movement
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`amazon_security_lake` api.operation=CreateVirtualMFADevice | fillnull | stats
+  count min(_time) as firstTime max(_time) as lastTime by actor.user.uid api.operation
+  api.service.name http_request.user_agent src_endpoint.ip actor.user.account.uid
+  cloud.provider cloud.region | rename actor.user.uid as user api.operation as action
+  api.service.name as dest http_request.user_agent as user_agent src_endpoint.ip as
+  src actor.user.account.uid as vendor_account cloud.provider as vendor_product cloud.region
+  as vendor_region | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `asl_aws_new_mfa_method_registered_for_user_filter`'
+explanation: The following analytic identifies the registration of a new Multi-Factor
+  Authentication (MFA) method for an AWS account, as logged through Amazon Security
+  Lake (ASL). It detects this activity by monitoring the `CreateVirtualMFADevice`
+  API operation within ASL logs. This behavior is significant because adversaries
+  who gain unauthorized access to an AWS account may register a new MFA method to
+  maintain persistence. If confirmed malicious, this activity could allow attackers
+  to secure their access, making it harder to detect and remove their presence from
+  the compromised environment.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/33ae0931-2a03-456b-b1d7-b016c5557fbd/
+indicators:
+- type: data_source
+  value: ASL AWS CloudTrail
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Newly onboarded users who are registering an MFA method for the first
+    time will also trigger this detection.
+  mitigation: Review context and user activity
+references:
+- https://aws.amazon.com/blogs/security/you-can-now-assign-multiple-mfa-devices-in-iam/
+- https://attack.mitre.org/techniques/T1556/
+- https://attack.mitre.org/techniques/T1556/006/
+- https://twitter.com/jhencinski/status/1618660062352007174
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1556.006/aws_new_mfa_method_registered_for_user/asl_ocsf_cloudtrail.json

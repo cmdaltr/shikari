@@ -1,0 +1,58 @@
+technique_id: T1566.002
+technique_name: Execution of File Written or Modified by Microsoft Office
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence with maxspan=2h\n  [file where host.os.type == \"windows\" and event.type\
+  \ != \"deletion\" and file.extension : \"exe\" and\n     (process.name : \"WINWORD.EXE\"\
+  \ or\n      process.name : \"EXCEL.EXE\" or\n      process.name : \"OUTLOOK.EXE\"\
+  \ or\n      process.name : \"POWERPNT.EXE\" or\n      process.name : \"eqnedt32.exe\"\
+  \ or\n      process.name : \"fltldr.exe\" or\n      process.name : \"MSPUB.EXE\"\
+  \ or\n      process.name : \"MSACCESS.EXE\")\n  ] by host.id, file.path\n  [process\
+  \ where host.os.type == \"windows\" and event.type == \"start\" and \n   not (process.name\
+  \ : \"NewOutlookInstaller.exe\" and process.code_signature.subject_name : \"Microsoft\
+  \ Corporation\" and process.code_signature.trusted == true) and \n   not (process.name\
+  \ : \"ShareFileForOutlook-v*.exe\" and process.code_signature.subject_name : \"\
+  Citrix Systems, Inc.\" and process.code_signature.trusted == true)\n  ] by host.id,\
+  \ process.executable"
+explanation: 'Identifies an executable created by a Microsoft Office application and
+  subsequently executed. These processes are often
+
+  launched via scripts inside documents or during exploitation of Microsoft Office
+  applications.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0d8ad79f-9025-45d8-80c1-4f0cd3c5e8e5.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - This activity is unlikely to happen legitimately. Benign true positives (B-TPs)
+    can be added as exceptions if necessary.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Investigate credential exposure on systems compromised or used by the attacker
+    to ensure all compromised accounts are identified. Reset passwords for these accounts
+    and'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

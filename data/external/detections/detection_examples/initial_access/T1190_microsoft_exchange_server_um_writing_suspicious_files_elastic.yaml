@@ -1,0 +1,50 @@
+technique_id: T1190
+technique_name: Microsoft Exchange Server UM Writing Suspicious Files
+tactic: initial_access
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"windows\" and event.type == \"creation\" and\n\
+  \  process.name : (\"UMWorkerProcess.exe\", \"umservice.exe\") and\n  file.extension\
+  \ : (\"php\", \"jsp\", \"js\", \"aspx\", \"asmx\", \"asax\", \"cfm\", \"shtml\"\
+  ) and\n  (\n    file.path : \"?:\\\\inetpub\\\\wwwroot\\\\aspnet_client\\\\*\" or\n\
+  \n    (file.path : \"?:\\\\*\\\\Microsoft\\\\Exchange Server*\\\\FrontEnd\\\\HttpProxy\\\
+  \\owa\\\\auth\\\\*\" and\n       not (file.path : \"?:\\\\*\\\\Microsoft\\\\Exchange\
+  \ Server*\\\\FrontEnd\\\\HttpProxy\\\\owa\\\\auth\\\\version\\\\*\" or\n       \
+  \     file.name : (\"errorFE.aspx\", \"expiredpassword.aspx\", \"frowny.aspx\",\
+  \ \"GetIdToken.htm\", \"logoff.aspx\",\n                        \"logon.aspx\",\
+  \ \"OutlookCN.aspx\", \"RedirSuiteServiceProxy.aspx\", \"signout.aspx\"))) or\n\n\
+  \    (file.path : \"?:\\\\*\\\\Microsoft\\\\Exchange Server*\\\\FrontEnd\\\\HttpProxy\\\
+  \\ecp\\\\auth\\\\*\" and\n       not file.name : \"TimeoutLogoff.aspx\")\n  )"
+explanation: 'Identifies suspicious files being written by the Microsoft Exchange
+  Server Unified Messaging (UM) service. This activity
+
+  has been observed exploiting CVE-2021-26858.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6cd1779c-560f-4b68-a8f1-11009b27fe63.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+references:
+- https://www.microsoft.com/security/blog/2021/03/02/hafnium-targeting-exchange-servers
+- https://www.volexity.com/blog/2021/03/02/active-exploitation-of-microsoft-exchange-zero-day-vulnerabilities
+has_investigation_guide: true
+risk_score: 47

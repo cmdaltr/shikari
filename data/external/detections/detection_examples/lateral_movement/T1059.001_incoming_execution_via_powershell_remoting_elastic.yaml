@@ -1,0 +1,52 @@
+technique_id: T1059.001
+technique_name: Incoming Execution via PowerShell Remoting
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "sequence by host.id with maxspan = 30s\n   [network where host.os.type ==\
+  \ \"windows\" and network.direction : (\"incoming\", \"ingress\") and destination.port\
+  \ in (5985, 5986) and\n    source.ip != \"127.0.0.1\" and source.ip != \"::1\"]\n\
+  \   [process where host.os.type == \"windows\" and\n    event.type == \"start\"\
+  \ and process.parent.name : \"wsmprovhost.exe\" and not process.executable : \"\
+  ?:\\\\Windows\\\\System32\\\\conhost.exe\"]"
+explanation: 'Identifies remote execution via Windows PowerShell remoting. Windows
+  PowerShell remoting allows a user to run any
+
+  Windows PowerShell command on one or more remote computers. This could be an indication
+  of lateral movement.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/2772264c-6fb9-4d9d-9014-b416eed21254.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using PowerShell Remoting can trigger the rule.
+    To manage this, identify and whitelist known administrative IP addresses or user
+    accounts that frequently perform remote management tasks.
+
+    - Automated scripts or scheduled tasks that use PowerShell Remoting for system
+    maintenance might be flagged. Review and document these scripts, then create exceptions
+    for their specific process names or execution paths.
+
+    - Security tools or monitoring sol'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/powershell/scripting/learn/remoting/running-remote-commands?view=powershell-7.1
+has_investigation_guide: true
+risk_score: 47

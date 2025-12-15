@@ -1,0 +1,54 @@
+technique_id: T1218.010
+technique_name: Detect Regsvr32 Application Control Bypass
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where `process_regsvr32` Processes.process=*scrobj*
+  by Processes.action Processes.dest Processes.original_file_name Processes.parent_process
+  Processes.parent_process_exec Processes.parent_process_guid Processes.parent_process_id
+  Processes.parent_process_name Processes.parent_process_path Processes.process Processes.process_exec
+  Processes.process_guid Processes.process_hash Processes.process_id Processes.process_integrity_level
+  Processes.process_name Processes.process_path Processes.user Processes.user_id Processes.vendor_product
+  | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)`| `security_content_ctime(lastTime)`
+  | `detect_regsvr32_application_control_bypass_filter`'
+explanation: The following analytic identifies the abuse of Regsvr32.exe to proxy
+  execution of malicious code, specifically detecting the loading of "scrobj.dll"
+  by Regsvr32.exe. This detection leverages data from Endpoint Detection and Response
+  (EDR) agents, focusing on process creation events and command-line executions. This
+  activity is significant because Regsvr32.exe is a trusted, signed Microsoft binary,
+  often used in "Squiblydoo" attacks to bypass application control mechanisms. If
+  confirmed malicious, this technique could allow an attacker to execute arbitrary
+  code, potentially leading to system compromise and persistent access.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/070e9b80-6252-11eb-ae93-0242ac130002/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives related to third party software registering
+    .DLL's.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1218/010/
+- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1218.010/T1218.010.md
+- https://lolbas-project.github.io/lolbas/Binaries/Regsvr32/
+- https://support.microsoft.com/en-us/topic/how-to-use-the-regsvr32-tool-and-troubleshoot-regsvr32-error-messages-a98d960a-7392-e6fe-d90a-3f4e0cb543e5
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1218.010/atomic_red_team/windows-sysmon.log

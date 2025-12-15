@@ -1,0 +1,37 @@
+technique_id: T1059
+technique_name: Potential Malicious PowerShell Based on Alert Correlation
+tactic: execution
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "from .alerts-security.* metadata _id\n\n// Filter for PowerShell related alerts\n\
+  | where kibana.alert.rule.name like \"*PowerShell*\"\n\n// as alerts don't have\
+  \ non-ECS fields, parse the script block ID using grok\n| grok message \"ScriptBlock\
+  \ ID: (?<Esql.script_block_id>.+)\"\n| where Esql.script_block_id is not null\n\n\
+  // keep relevant fields for further processing\n| keep kibana.alert.rule.name, Esql.script_block_id,\
+  \ _id\n\n// count distinct alerts and filter for matches above the threshold\n|\
+  \ stats\n    Esql.kibana_alert_rule_name_count_distinct = count_distinct(kibana.alert.rule.name),\n\
+  \    Esql.kibana_alert_rule_name_values = values(kibana.alert.rule.name),\n    Esql._id_values\
+  \ = values(_id)\n  by Esql.script_block_id\n\n// Apply detection threshold\n| where\
+  \ Esql.kibana_alert_rule_name_count_distinct >= 5"
+explanation: Identifies PowerShell script blocks associated with multiple distinct
+  detections, indicating likely malicious behavior.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f770ce79-05fd-4d74-9866-1c5d66c9b34b.toml
+query_type: esql
+query_language: esql
+indicators:
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This rule is unlikely to trigger on legitimate\
+    \ activity. Benign true positives (B-TPs) can be added as exceptions if necessary.\n\
+    \n### Response and Remediation\n\n- Initiate the incident response process based\
+    \ on the outcome of the triage.\n  - If malicious activity is confirmed, perform\
+    \ a broader investigation to identify the scope of the compromise and determine\
+    \ the appropriate remediation steps.\n- Isolate the involved hosts to prevent\
+    \ further post-compromise behavior.\n-"
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 73

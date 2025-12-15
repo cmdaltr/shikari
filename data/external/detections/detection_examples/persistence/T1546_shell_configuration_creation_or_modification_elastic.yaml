@@ -1,0 +1,80 @@
+technique_id: T1546
+technique_name: Shell Configuration Creation or Modification
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"linux\" and event.action in (\"rename\", \"creation\"\
+  ) and file.path : (\n  // system-wide configurations\n  \"/etc/profile\", \"/etc/profile.d/*\"\
+  , \"/etc/bash.bashrc\", \"/etc/bash.bash_logout\", \"/etc/zsh/*\",\n  \"/etc/csh.cshrc\"\
+  , \"/etc/csh.login\", \"/etc/fish/config.fish\", \"/etc/ksh.kshrc\",\n  // root\
+  \ and user configurations\n  \"/home/*/.profile\", \"/home/*/.bashrc\", \"/home/*/.bash_login\"\
+  , \"/home/*/.bash_logout\", \"/home/*/.bash_profile\",\n  \"/root/.profile\", \"\
+  /root/.bashrc\", \"/root/.bash_login\", \"/root/.bash_logout\", \"/root/.bash_profile\"\
+  ,\n  \"/root/.bash_aliases\", \"/home/*/.bash_aliases\", \"/home/*/.zprofile\",\
+  \ \"/home/*/.zshrc\", \"/root/.zprofile\",\n  \"/root/.zshrc\", \"/home/*/.cshrc\"\
+  , \"/home/*/.login\", \"/home/*/.logout\", \"/root/.cshrc\", \"/root/.login\",\n\
+  \  \"/root/.logout\", \"/home/*/.config/fish/config.fish\", \"/root/.config/fish/config.fish\"\
+  , \"/home/*/.kshrc\",\n  \"/root/.kshrc\"\n) and not (\n  process.executable in\
+  \ (\n    \"/bin/dpkg\", \"/usr/bin/dpkg\", \"/bin/dockerd\", \"/usr/bin/dockerd\"\
+  , \"/usr/sbin/dockerd\", \"/bin/microdnf\",\n    \"/usr/bin/microdnf\", \"/bin/rpm\"\
+  , \"/usr/bin/rpm\", \"/bin/snapd\", \"/usr/bin/snapd\", \"/bin/yum\", \"/usr/bin/yum\"\
+  ,\n    \"/bin/dnf\", \"/usr/bin/dnf\", \"/bin/podman\", \"/usr/bin/podman\", \"\
+  /bin/dnf-automatic\", \"/usr/bin/dnf-automatic\",\n    \"/bin/pacman\", \"/usr/bin/pacman\"\
+  , \"/usr/bin/dpkg-divert\", \"/bin/dpkg-divert\", \"/sbin/apk\", \"/usr/sbin/apk\"\
+  ,\n    \"/usr/local/sbin/apk\", \"/usr/bin/apt\", \"/usr/sbin/pacman\", \"/bin/podman\"\
+  , \"/usr/bin/podman\", \"/usr/bin/puppet\",\n    \"/bin/puppet\", \"/opt/puppetlabs/puppet/bin/puppet\"\
+  , \"/usr/bin/chef-client\", \"/bin/chef-client\",\n    \"/bin/autossl_check\", \"\
+  /usr/bin/autossl_check\", \"/proc/self/exe\", \"/dev/fd/*\",  \"/usr/bin/pamac-daemon\"\
+  ,\n    \"/bin/pamac-daemon\", \"/usr/lib/snapd/snapd\", \"/usr/sbin/adduser\", \"\
+  /usr/sbin/useradd\", \"/usr/local/bin/dockerd\",\n    \"/usr/sbin/gdm\", \"/usr/bin/unzip\"\
+  , \"/usr/bin/gnome-shell\", \"/sbin/mkhomedir_helper\", \"/usr/sbin/sshd\",\n  \
+  \  \"/opt/puppetlabs/puppet/bin/ruby\", \"/usr/bin/xfce4-session\", \"/usr/libexec/oddjob/mkhomedir\"\
+  , \"/sbin/useradd\",\n    \"/usr/lib/systemd/systemd\", \"/usr/sbin/crond\", \"\
+  /usr/bin/pamac-daemon\", \"/usr/sbin/mkhomedir_helper\",\n    \"/opt/pbis/sbin/lwsmd\"\
+  , \"/usr/sbin/oddjobd\"\n  ) or\n  file.extension in (\"swp\", \"swpx\", \"swx\"\
+  , \"dpkg-remove\") or\n  file.Ext.original.extension == \"dpkg-new\" or\n  process.executable\
+  \ : (\n    \"/nix/store/*\", \"/var/lib/dpkg/*\", \"/tmp/vmis.*\", \"/snap/*\",\
+  \ \"/dev/fd/*\", \"/usr/lib/virtualbox/*\",\n    \"/usr/libexec/platform-python*\"\
+  \n  ) or\n  process.executable == null or\n  process.name in (\"adclient\", \"mkhomedir_helper\"\
+  , \"teleport\", \"mkhomedir\", \"adduser\", \"desktopDaemon\", \"executor\", \"\
+  crio\") or\n  (process.name == \"sed\" and file.name : \"sed*\") or\n  (process.name\
+  \ == \"perl\" and file.name : \"e2scrub_all.tmp*\")\n)"
+explanation: 'This rule monitors the creation/alteration of a shell configuration
+  file. Unix systems use shell configuration files to
+
+  set environment variables, create aliases, and customize the user''s environment.
+  Adversaries may modify or add a shell
+
+  configuration file to execute malicious code and gain persistence in the system.
+  This behavior is consistent with the
+
+  Kaiji malware family.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/28f6f34b-8e16-487a-b5fd-9d22eb903db8.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System package managers like dpkg, rpm, and yum often modify shell configuration
+    files during software installations or updates. To handle these, exclude processes
+    with executables such as /bin/dpkg or /usr/bin/rpm from triggering alerts.
+
+    - Automated system management tools like Puppet and Chef may alter shell configuration
+    files as part of their routine operations. Exclude these processes by adding exceptions
+    for executables like /opt/puppetlabs/puppet/bin/puppet or /'
+  mitigation: Review investigation guide for details
+references:
+- https://intezer.com/blog/research/kaiji-new-chinese-linux-malware-turning-to-golang/
+- https://www.elastic.co/security-labs/primer-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

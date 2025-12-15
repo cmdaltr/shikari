@@ -1,0 +1,53 @@
+technique_id: T1562.001
+technique_name: Disable-WindowsOptionalFeature Command PowerShell
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 99c4658d-2c5e-4d87-828d-7c066ca537c3
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection*\nselection_cmd:\n\
+  \  ScriptBlockText|contains|all:\n  - Disable-WindowsOptionalFeature\n  - -Online\n\
+  \  - -FeatureName\nselection_feature:\n  ScriptBlockText|contains:\n  - Windows-Defender-Gui\n\
+  \  - Windows-Defender-Features\n  - Windows-Defender\n  - Windows-Defender-ApplicationGuard\n"
+explanation: 'Detect built in PowerShell cmdlet Disable-WindowsOptionalFeature, Deployment
+  Image Servicing and Management tool.
+
+  Similar to DISM.exe, this cmdlet is used to enumerate, install, uninstall, configure,
+  and update features and packages in Windows images
+
+  '
+false_positives:
+- Unknown
+references:
+- https://github.com/redcanaryco/atomic-red-team/blob/5b67c9b141fa3918017f8fa44f2f88f0b1ecb9e1/atomics/T1562.001/T1562.001.md
+- https://learn.microsoft.com/en-us/powershell/module/dism/disable-windowsoptionalfeature?view=windowsserver2022-ps
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+logsource:
+  product: windows
+  category: ps_script
+  definition: 'Requirements: Script Block Logging must be enabled'
+detection:
+  selection_cmd:
+    ScriptBlockText|contains|all:
+    - Disable-WindowsOptionalFeature
+    - -Online
+    - -FeatureName
+  selection_feature:
+    ScriptBlockText|contains:
+    - Windows-Defender-Gui
+    - Windows-Defender-Features
+    - Windows-Defender
+    - Windows-Defender-ApplicationGuard
+  condition: all of selection*
+metadata:
+  created_date: 2022-09-10
+  modified_date: '2025-11-28'
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,48 @@
+technique_id: T1648
+technique_name: First Time AWS CloudFormation Stack Creation
+tactic: execution
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:aws.cloudtrail and event.provider:cloudformation.amazonaws.com\
+  \ and\n    event.action: (CreateStack or CreateStackInstances) \n    and event.outcome:success"
+explanation: This rule detects the first time a principal calls AWS CloudFormation
+  CreateStack, CreateStackSet or CreateStackInstances API. CloudFormation is used
+  to create a collection of cloud resources called a stack, via a defined template
+  file. An attacker with the appropriate privileges could leverage CloudFormation
+  to create specific resources needed to further exploit the environment. This is
+  a new terms rule that looks for the first instance of this behavior for a role or
+  IAM user within a particular account.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0415258b-a7b2-48a6-891a-3367cd9d4d31.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: CloudFormation
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine infrastructure updates by authorized users may trigger the rule. To
+    manage this, maintain a list of users or roles that regularly perform these updates
+    and create exceptions for them.
+
+    - Automated deployment tools or scripts that use CloudFormation for legitimate
+    purposes can cause false positives. Identify these tools and exclude their associated
+    IAM roles or users from the rule.
+
+    - New team members or roles onboarding into cloud management tasks might be flagge'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html
+- https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_CreateStack.html
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,39 @@
+technique_id: T1562.006
+technique_name: Logging Configuration Changes on Linux Host
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: c830f15d-6f6e-430f-8074-6f73d6807841
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  name:\n  - /etc/syslog.conf\n  - /etc/rsyslog.conf\n  - /etc/syslog-ng/syslog-ng.conf\n\
+  \  type: PATH\n"
+explanation: Detect changes of syslog daemons configuration files
+false_positives:
+- Legitimate administrative activity
+references:
+- self experience
+tags:
+- attack.defense-evasion
+- attack.t1562.006
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    type: PATH
+    name:
+    - /etc/syslog.conf
+    - /etc/rsyslog.conf
+    - /etc/syslog-ng/syslog-ng.conf
+  condition: selection
+metadata:
+  created_date: 2019-10-25
+  modified_date: 2021-11-27
+  author: Mikhail Larin, oscd.community
+  status: test
+  imported_date: '2025-11-28'

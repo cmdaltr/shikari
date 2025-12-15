@@ -1,0 +1,51 @@
+technique_id: T1562.001
+technique_name: Uncommon Extension In Keyboard Layout IME File Registry Value
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: b888e3f2-224d-4435-b00b-9dd66e9ea1f1
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_known_extension:\n  Details|endswith: .ime\nselection:\n\
+  \  TargetObject|contains|all:\n  - \\Control\\Keyboard Layouts\\\n  - Ime File\n"
+explanation: 'Detects usage of Windows Input Method Editor (IME) keyboard layout feature,
+  which allows an attacker to load a DLL into the process after sending the WM_INPUTLANGCHANGEREQUEST
+  message.
+
+  Before doing this, the client needs to register the DLL in a special registry key
+  that is assumed to implement this keyboard layout. This registry key should store
+  a value named "Ime File" with a DLL path.
+
+  IMEs are essential for languages that have more characters than can be represented
+  on a standard keyboard, such as Chinese, Japanese, and Korean.
+
+  '
+false_positives:
+- IMEs are essential for languages that have more characters than can be represented
+  on a standard keyboard, such as Chinese, Japanese, and Korean.
+references:
+- https://www.linkedin.com/pulse/guntior-story-advanced-bootkit-doesnt-rely-windows-disk-baranov-wue8e/
+tags:
+- attack.defense-evasion
+- attack.t1562.001
+logsource:
+  product: windows
+  category: registry_set
+detection:
+  selection:
+    TargetObject|contains|all:
+    - \Control\Keyboard Layouts\
+    - Ime File
+  filter_main_known_extension:
+    Details|endswith: .ime
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2023-11-21
+  modified_date: '2025-11-28'
+  author: X__Junior (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

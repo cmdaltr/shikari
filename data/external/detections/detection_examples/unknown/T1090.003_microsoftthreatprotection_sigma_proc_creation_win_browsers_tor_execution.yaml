@@ -1,0 +1,36 @@
+technique_id: T1090.003
+technique_name: Tor Client/Browser Execution
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 62f7c9bf-9135-49b2-8aeb-1e54a6ecc13c
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  Image|endswith:\n  - \\tor.exe\n  - \\Tor Browser\\Browser\\firefox.exe\n"
+explanation: Detects the use of Tor or Tor-Browser to connect to onion routing networks
+false_positives:
+- Unknown
+references:
+- https://www.logpoint.com/en/blog/detecting-tor-use-with-logpoint/
+tags:
+- attack.command-and-control
+- attack.t1090.003
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \tor.exe
+    - \Tor Browser\Browser\firefox.exe
+  condition: selection
+metadata:
+  created_date: 2022-02-20
+  modified_date: 2023-02-13
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,60 @@
+technique_id: T1218.010
+technique_name: Potentially Suspicious Child Process Of Regsvr32
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 6f0947a4-1c5e-4e0d-8ac7-53159b8f23ca
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_main_*\nfilter_main_werfault:\n  CommandLine|contains: ' -u -p '\n  Image|endswith:\
+  \ \\werfault.exe\nselection:\n  Image|endswith:\n  - \\calc.exe\n  - \\cscript.exe\n\
+  \  - \\explorer.exe\n  - \\mshta.exe\n  - \\net.exe\n  - \\net1.exe\n  - \\nltest.exe\n\
+  \  - \\notepad.exe\n  - \\powershell.exe\n  - \\pwsh.exe\n  - \\reg.exe\n  - \\\
+  schtasks.exe\n  - \\werfault.exe\n  - \\wscript.exe\n  ParentImage|endswith: \\\
+  regsvr32.exe\n"
+explanation: Detects potentially suspicious child processes of "regsvr32.exe".
+false_positives:
+- Unlikely, but can rarely occur. Apply additional filters accordingly.
+references:
+- https://redcanary.com/blog/intelligence-insights-april-2022/
+- https://www.echotrail.io/insights/search/regsvr32.exe
+- https://www.ired.team/offensive-security/code-execution/t1117-regsvr32-aka-squiblydoo
+tags:
+- attack.defense-evasion
+- attack.t1218.010
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \regsvr32.exe
+    Image|endswith:
+    - \calc.exe
+    - \cscript.exe
+    - \explorer.exe
+    - \mshta.exe
+    - \net.exe
+    - \net1.exe
+    - \nltest.exe
+    - \notepad.exe
+    - \powershell.exe
+    - \pwsh.exe
+    - \reg.exe
+    - \schtasks.exe
+    - \werfault.exe
+    - \wscript.exe
+  filter_main_werfault:
+    Image|endswith: \werfault.exe
+    CommandLine|contains: ' -u -p '
+  condition: selection and not 1 of filter_main_*
+metadata:
+  created_date: 2022-05-05
+  modified_date: 2023-05-26
+  author: elhoim, Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron
+    Systems)
+  status: test
+  imported_date: '2025-11-28'

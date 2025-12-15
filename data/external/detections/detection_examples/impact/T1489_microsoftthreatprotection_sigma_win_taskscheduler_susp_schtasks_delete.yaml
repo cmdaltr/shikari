@@ -1,0 +1,54 @@
+technique_id: T1489
+technique_name: Important Scheduled Task Deleted
+tactic: impact
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 9e3cb244-bdb8-4632-8c90-6079c8f4f16d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  UserName|contains:\n  - AUTHORI\n  - AUTORI\nselection:\n  EventID: 141\n\
+  \  TaskName|contains:\n  - \\Windows\\SystemRestore\\SR\n  - \\Windows\\Windows\
+  \ Defender\\\n  - \\Windows\\BitLocker\n  - \\Windows\\WindowsBackup\\\n  - \\Windows\\\
+  WindowsUpdate\\\n  - \\Windows\\UpdateOrchestrator\\\n  - \\Windows\\ExploitGuard\n"
+explanation: 'Detects when adversaries try to stop system services or processes by
+  deleting their respective scheduled tasks in order to conduct data destructive activities
+
+  '
+false_positives:
+- Unknown
+references:
+- https://www.socinvestigation.com/most-common-windows-event-ids-to-hunt-mind-map/
+tags:
+- attack.impact
+- attack.t1489
+logsource:
+  product: windows
+  service: taskscheduler
+  definition: 'Requirements: The "Microsoft-Windows-TaskScheduler/Operational" is
+    disabled by default and needs to be enabled in order for this detection to trigger'
+detection:
+  selection:
+    EventID: 141
+    TaskName|contains:
+    - \Windows\SystemRestore\SR
+    - \Windows\Windows Defender\
+    - \Windows\BitLocker
+    - \Windows\WindowsBackup\
+    - \Windows\WindowsUpdate\
+    - \Windows\UpdateOrchestrator\
+    - \Windows\ExploitGuard
+  filter:
+    UserName|contains:
+    - AUTHORI
+    - AUTORI
+  condition: selection and not filter
+metadata:
+  created_date: 2023-01-13
+  modified_date: 2023-02-07
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,51 @@
+technique_id: T1036.005
+technique_name: Potential Windows Error Manager Masquerading
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id, process.entity_id with maxspan = 5s\n  [process where\
+  \ host.os.type == \"windows\" and event.type:\"start\" and process.name : (\"wermgr.exe\"\
+  , \"WerFault.exe\") and\n    (process.args_count == 1 and\n      /* Excludes bug\
+  \ where a missing closing quote sets args_count to 1 despite extra args */\n   \
+  \   not process.command_line regex~ \"\"\"\\\".*\\.exe[^\\\"].*\"\"\")]\n  [network\
+  \ where host.os.type == \"windows\" and process.name : (\"wermgr.exe\", \"WerFault.exe\"\
+  ) and network.protocol != \"dns\" and\n    network.direction : (\"outgoing\", \"\
+  egress\") and destination.ip !=\"::1\" and destination.ip !=\"127.0.0.1\"\n  ]"
+explanation: 'Identifies suspicious instances of the Windows Error Reporting process
+  (WerFault.exe or Wermgr.exe) with matching
+
+  command-line and process executable values performing outgoing network connections.
+  This may be indicative of a
+
+  masquerading attempt to evade suspicious child process behavior detections.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6ea41894-66c3-4df7-ad6b-2c5074eb3df8.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity is unlikely to happen legitimately.\
+    \ Benign true positives (B-TPs) can be added as exceptions if necessary.\n\n###\
+    \ Response and remediation\n\n- Initiate the incident response process based on\
+    \ the outcome of the triage.\n- Isolate the involved host to prevent further post-compromise\
+    \ behavior.\n- If the triage identified malware, search the environment for additional\
+    \ compromised hosts.\n  - Implement temporary network rules, procedures, and segmentation\
+    \ to contain"
+  mitigation: Review investigation guide for details
+references:
+- https://twitter.com/SBousseaden/status/1235533224337641473
+- https://www.hexacorn.com/blog/2019/09/20/werfault-command-line-switches-v0-1/
+- https://app.any.run/tasks/26051d84-b68e-4afb-8a9a-76921a271b81/
+- https://www.elastic.co/security-labs/elastic-security-uncovers-blister-malware-campaign
+has_investigation_guide: true
+risk_score: 47

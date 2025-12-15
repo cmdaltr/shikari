@@ -1,0 +1,40 @@
+technique_id: T1558
+technique_name: Windows Computer Account With SPN
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`wineventlog_security` EventCode=4741 NewUacValue="0x80" ServicePrincipalNames
+  IN ("*HOST/*","*RestrictedKrbHost/*") | stats count min(_time) as firstTime max(_time)
+  as lastTime values(EventCode),values(TargetDomainName),values(PrimaryGroupId), values(OldUacValue),
+  values(NewUacValue),values(SamAccountName),values(DnsHostName),values(ServicePrincipalNames)
+  by dest Logon_ID subject | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_computer_account_with_spn_filter`'
+explanation: The following analytic detects the addition of Service Principal Names
+  (SPNs) HOST and RestrictedKrbHost to a computer account, indicative of KrbRelayUp
+  behavior. This detection leverages Windows Security Event Logs, specifically EventCode
+  4741, to identify changes in SPNs. This activity is significant as it is commonly
+  associated with Kerberos-based attacks, which can be used to escalate privileges
+  or perform lateral movement within a network. If confirmed malicious, this behavior
+  could allow an attacker to impersonate services, potentially leading to unauthorized
+  access to sensitive resources.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/9a3e57e7-33f4-470e-b25d-165baa6e8357/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4741
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: It is possible third party applications may add these SPNs to Computer
+    Accounts, filtering may be needed.
+  mitigation: Review context and user activity
+references:
+- https://www.trustedsec.com/blog/an-attack-path-mapping-approach-to-cves-2021-42287-and-2021-42278
+- https://github.com/Dec0ne/KrbRelayUp
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1558/windows_computer_account_with_spn/windows-xml.log

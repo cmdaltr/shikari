@@ -1,0 +1,49 @@
+technique_id: T1537
+technique_name: AWS S3 Bucket Replicated to Another Account
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "any where event.dataset == \"aws.cloudtrail\"\n   and event.action == \"PutBucketReplication\"\
+  \n   and event.outcome == \"success\"\n   and stringContains(aws.cloudtrail.request_parameters,\
+  \ \"Account\")"
+explanation: Identifies when the `PutBucketReplication` operation is used to replicate
+  S3 objects to a bucket in another AWS account. Adversaries may use bucket replication
+  to exfiltrate sensitive data to an environment they control.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/d488f026-7907-4f56-ad51-742feb3db01c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS S3
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - **Legitimate Backup Actions**: Confirm if the S3 bucket replication aligns with
+    scheduled backups or legitimate automation tasks.
+
+    - **Consistency Check**: Compare the action against historical data of similar
+    actions performed by the user or within the organization. If the action is consistent
+    with past legitimate activities, it might indicate a false alarm.
+
+
+    ### Response and Remediation
+
+
+    - **Immediate Review and Reversal**: If the change was unauthorized, update the
+    S'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-walkthrough-2.html/
+- https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketReplication.html/
+has_investigation_guide: true
+risk_score: 47

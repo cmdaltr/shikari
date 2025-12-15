@@ -1,0 +1,39 @@
+technique_id: T1562
+technique_name: Microsoft 365 Exchange DLP Policy Removed
+tactic: defense_evasion
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:o365.audit and event.provider:Exchange and event.category:web
+  and event.action:"Remove-DlpPolicy" and event.outcome:success
+explanation: 'Identifies when a Data Loss Prevention (DLP) policy is removed in Microsoft
+  365. An adversary may remove a DLP policy to
+
+  evade existing DLP monitoring.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/60f3adec-1df9-4104-9c75-b97d9f078b25.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Microsoft 365
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative changes to DLP policies by authorized personnel can trigger
+    alerts. To manage this, maintain a list of authorized users and correlate their
+    activities with policy changes to verify legitimacy.
+
+    - Scheduled updates or maintenance activities might involve temporary removal
+    of DLP policies. Document these activities and create exceptions in the monitoring
+    system for the duration of the maintenance window.
+
+    - Automated scripts or third-party tools used'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.microsoft.com/en-us/powershell/module/exchange/remove-dlppolicy?view=exchange-ps
+- https://docs.microsoft.com/en-us/microsoft-365/compliance/data-loss-prevention-policies?view=o365-worldwide
+has_investigation_guide: true
+risk_score: 47

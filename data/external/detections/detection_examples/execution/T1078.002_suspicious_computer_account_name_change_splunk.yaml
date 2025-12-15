@@ -1,0 +1,40 @@
+technique_id: T1078.002
+technique_name: Suspicious Computer Account Name Change
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`wineventlog_security` EventCode=4781 OldTargetUserName="*$" NewTargetUserName!="*$"
+  | table _time, Computer, Caller_User_Name, OldTargetUserName, NewTargetUserName
+  | rename Computer as dest | `suspicious_computer_account_name_change_filter`'
+explanation: The following analytic detects a suspicious computer account name change
+  in Active Directory. It leverages Event ID 4781, which logs account name changes,
+  to identify instances where a computer account name is changed to one that does
+  not end with a `$`. This behavior is significant as it may indicate an attempt to
+  exploit CVE-2021-42278 and CVE-2021-42287, which can lead to domain controller impersonation
+  and privilege escalation. If confirmed malicious, this activity could allow an attacker
+  to gain elevated privileges and potentially control the domain.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/35a61ed8-61c4-11ec-bc1e-acde48001122/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 4781
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: OldTargetUserName
+  confidence: high
+false_positives:
+- description: Renaming a computer account name to a name that not end with '$' is
+    highly unsual and may not have any legitimate scenarios.
+  mitigation: Review context and user activity
+references:
+- https://exploit.ph/cve-2021-42287-cve-2021-42278-weaponisation.html
+- https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-42278
+- https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-42287
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1078.002/suspicious_computer_account_name_change/windows-xml.log

@@ -1,0 +1,346 @@
+/* Progress Page - Matching index.html Design System */
+
+/* Page Layout */
+.progress-container {
+  padding: 0;  /* Remove horizontal padding to match results page */
+  padding-top: 80px; /* Consistent top spacing */
+  position: relative;
+}
+
+#main-content.page-shell {
+  margin-top: 0 !important;
+}
+
+.content-wrap {
+  padding: 0;  /* Remove horizontal padding to match results page */
+  padding-bottom: 2em;
+}
+
+/* Navigation */
+.nav-row {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  z-index: 1000;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #C53030;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95em;
+  padding: 8px 16px;
+  border: 2px solid #C53030;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background: #C53030;
+  color: white;
+  transform: none;
+}
+
+.back-btn .arrow {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* How Archer Works Button */
+.how-archer-link {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  color: #C53030;
+  text-decoration: none;
+  font-size: 0.95em;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 2px solid #C53030;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.2s;
+  z-index: 1000;
+}
+
+.how-archer-link:hover {
+  background: #C53030;
+  color: white;
+}
+
+/* Page Title */
+.page-title {
+  text-align: center;
+  font-size: 2em;
+  margin: 0 0 0.5em 0;
+  color: #333;
+  font-weight: 600;
+}
+
+/* Lead Text */
+.lead {
+  text-align: center;
+  color: #6c757d;
+  margin: 0 0 2em 0;
+  font-size: 1.05rem;
+}
+
+#group-name {
+  color: #007bff;
+  font-weight: 600;
+}
+
+/* Progress Content */
+#progress-content {
+  max-width: 100%;  /* Use full container width to match results page */
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* Sections */
+.section {
+  margin-bottom: 2.5em;
+  max-width: 100%;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Subheadings - Match form labels */
+.subheading,
+h3.subheading {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1em 0;
+  color: #333;
+}
+
+.correlations-title {
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+/* Progress Bars - Modern style matching index.html */
+.progress-bar {
+  width: 100%;
+  background: #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 24px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.5em;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  will-change: width;
+}
+
+.progress-fill.yaml {
+  background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+}
+
+.progress-fill.genai {
+  background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+}
+
+.progress-fill.cross-vendor {
+  background: linear-gradient(90deg, #e91e63 0%, #c2185b 100%);
+}
+
+.progress-fill.complete {
+  width: 100% !important;
+}
+
+/* Cross-vendor section greyed out state */
+#cross-vendor-section.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#cross-vendor-section.disabled .subheading {
+  color: #999;
+}
+
+#cross-vendor-section.disabled .progress-bar {
+  background: #f0f0f0;
+}
+
+#cross-vendor-section.disabled .progress-fill {
+  background: #ccc !important;
+}
+
+/* Last YAML File Display */
+#last-yaml-file {
+  margin-top: 0.75em;
+  padding: 0.75em 1em;
+  background: #f8f9fa;
+  border-left: 4px solid #28a745;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #495057;
+  word-break: break-word;
+}
+
+/* Last Correlation Display - Same style as YAML file display */
+#last-correlation {
+  margin-top: 0.75em;
+  padding: 0.75em 1em;
+  background: #f8f9fa;
+  border-left: 4px solid #007bff;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #495057;
+  word-break: break-word;
+}
+
+/* Cross-Vendor Correlation Display - Pink theme */
+#last-cross-vendor {
+  margin-top: 0.75em;
+  padding: 0.75em 1em;
+  background: #f8f9fa;
+  border-left: 4px solid #e91e63;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #495057;
+  word-break: break-word;
+}
+
+/* Correlations Grid - Match index.html card style */
+.corr-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5em;
+  margin-top: 1em;
+}
+
+@media (min-width: 700px) {
+  .corr-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.corr-card {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5em;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.corr-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #007bff;
+}
+
+.corr-card h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1em 0;
+  color: #333;
+  padding-bottom: 0.5em;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.corr-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.corr-card li {
+  padding: 0.5em 0;
+  color: #495057;
+  font-size: 0.95rem;
+}
+
+.corr-card li:before {
+  content: "→";
+  color: #007bff;
+  font-weight: bold;
+  margin-right: 0.5em;
+}
+
+/* Buttons - Match index.html style */
+.btn {
+  padding: 0.875em 2em;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn.ghost {
+  background: white;
+  color: #007bff;
+  border: 2px solid #007bff;
+}
+
+.btn.ghost:hover {
+  background: #007bff;
+  color: white;
+}
+
+/* Loading State */
+.section.loading {
+  opacity: 0.6;
+}
+
+/* Success State */
+.section.complete .subheading {
+  color: #28a745;
+}
+
+.section.complete .subheading:before {
+  content: "✓ ";
+  font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .progress-container {
+    padding: 0;  /* Keep full width even on mobile */
+    padding-top: 80px;
+  }
+
+  .page-title {
+    font-size: 1.75em;
+  }
+
+  .lead {
+    font-size: 1rem;
+  }
+
+  .corr-card {
+    padding: 1em;
+  }
+
+  .progress-bar {
+    height: 20px;
+  }
+}

@@ -1,0 +1,46 @@
+technique_id: T1484.001
+technique_name: Windows Default Group Policy Object Modified
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`wineventlog_security` EventCode=5136 ObjectClass=groupPolicyContainer AttributeLDAPDisplayName=versionNumber
+  (ObjectDN="CN={31B2F340-016D-11D2-945F-00C04FB984F9},CN=POLICIES,CN=SYSTEM,DC=*"
+  OR ObjectDN="CN={6AC1786C-016F-11D2-945F-00C04fB984F9},CN=POLICIES,CN=SYSTEM,DC=*")
+  | stats min(_time) as firstTime max(_time) as lastTime by ObjectDN SubjectUserSid
+  AttributeValue Computer DSName dest | rename AttributeValue as versionNumber | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_default_group_policy_object_modified_filter`'
+explanation: The following analytic detects modifications to default Group Policy
+  Objects (GPOs) using Event ID 5136. It monitors changes to the `Default Domain Controllers
+  Policy` and `Default Domain Policy`, which are critical for enforcing security settings
+  across domain controllers and all users/computers, respectively. This activity is
+  significant because unauthorized changes to these GPOs can indicate an adversary
+  with privileged access attempting to deploy persistence mechanisms or execute malware
+  across the network. If confirmed malicious, such modifications could lead to widespread
+  compromise, allowing attackers to maintain control and execute arbitrary code on
+  numerous hosts.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/fe6a6cc4-9e0d-4d66-bcf4-2c7f44860876/
+indicators:
+- type: data_source
+  value: Windows Event Log Security 5136
+  confidence: high
+- type: risk_system
+  value: Computer
+  confidence: high
+- type: risk_user
+  value: SubjectUserSid
+  confidence: high
+false_positives:
+- description: The default Group Policy Objects within an AD network may be legitimately
+    updated for administrative operations, filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1484/
+- https://attack.mitre.org/techniques/T1484/001
+- https://www.trustedsec.com/blog/weaponizing-group-policy-objects-access/
+- https://adsecurity.org/?p=2716
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1484.001/default_domain_policy_modified/windows-security.log

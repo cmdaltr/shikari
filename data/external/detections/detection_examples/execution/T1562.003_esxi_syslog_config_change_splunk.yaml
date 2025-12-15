@@ -1,0 +1,29 @@
+technique_id: T1562.003
+technique_name: ESXi Syslog Config Change
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`esxi_syslog` Message="*syslog config set*" AND Message="*esxcli*" | rex field=_raw
+  "\].*\[\s*(?P<user>[^\]]+)\]:\s(?P<command>.+)" | rex field=_raw "Z (?<dest>[\w\.]+)\s"
+  | stats min(_time) as firstTime max(_time) as lastTime count by dest user command
+  | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `esxi_syslog_config_change_filter`'
+explanation: This detection identifies changes to the syslog configuration on an ESXi
+  host using esxcli, which may indicate an attempt to disrupt log collection and evade
+  detection.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e530beb9-9b8c-4c9b-9776-0a05521ff32d/
+indicators:
+- type: data_source
+  value: VMWare ESXi Syslog
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Limited false positives in most environments, however tune as needed
+  mitigation: Review context and user activity
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.003/esxi_syslog_config/esxi_syslog_config.log

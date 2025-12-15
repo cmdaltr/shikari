@@ -1,0 +1,38 @@
+technique_id: T1114.003
+technique_name: O365 New Email Forwarding Rule Created
+tactic: persistence
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` (Operation=New-InboxRule OR Operation=set-InboxRule)
+  | eval match1=mvfind(''Parameters{}.Name'', "ForwardTo") | eval match2=mvfind(''Parameters{}.Name'',
+  "ForwardAsAttachmentTo") | eval match3=mvfind(''Parameters{}.Name'', "RedirectTo")
+  | where match1>= 0 OR match2>= 0 OR match3>= 0 | eval ForwardTo=coalesce(ForwardTo,
+  ForwardAsAttachmentTo, RedirectTo) | fillnull | stats count min(_time) as firstTime
+  max(_time) as lastTime values(Name) as Name by signature dest user src vendor_account
+  vendor_product ForwardTo | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `o365_new_email_forwarding_rule_created_filter`'
+explanation: The following analytic identifies the creation of new email forwarding
+  rules in an Office 365 environment. It detects events logged under New-InboxRule
+  and Set-InboxRule operations within the o365_management_activity data source, focusing
+  on parameters like ForwardTo, ForwardAsAttachmentTo, and RedirectTo. This activity
+  is significant as unauthorized email forwarding can lead to data exfiltration and
+  unauthorized access to sensitive information. If confirmed malicious, attackers
+  could intercept and redirect emails, potentially compromising confidential communications
+  and leading to data breaches.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/68469fd0-1315-44ba-b7e4-e92847bb76d6/
+indicators:
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Users may create email forwarding rules for legitimate purposes. Filter
+    as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1114/003/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1114.003/o365_email_forwarding_rule_created/o365_email_forwarding_rule_created.log

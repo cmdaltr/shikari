@@ -1,0 +1,49 @@
+technique_id: T1485
+technique_name: AWS RDS Snapshot Deleted
+tactic: impact
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "any where event.dataset == \"aws.cloudtrail\"\n    and event.provider == \"\
+  rds.amazonaws.com\"\n    and event.outcome == \"success\"\n    and (\n        event.action\
+  \ in (\"DeleteDBSnapshot\", \"DeleteDBClusterSnapshot\") or\n        (event.action\
+  \ == \"ModifyDBInstance\" and stringContains(aws.cloudtrail.request_parameters,\
+  \ \"backupRetentionPeriod=0\"))\n    )"
+explanation: Identifies the deletion of an AWS RDS DB snapshot. Snapshots contain
+  a full backup of an entire DB instance. Unauthorized deletion of snapshots can make
+  it impossible to recover critical or sensitive data. This rule detects deleted snapshots
+  and instances modified so that backupRetentionPeriod is set to 0 which disables
+  automated backups and is functionally similar to deleting the system snapshot.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b36c99af-b944-4509-a523-7e0fad275be1.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS RDS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine maintenance activities by database administrators may involve deleting
+    old or unnecessary snapshots. To manage this, create exceptions for specific user
+    accounts or roles known to perform these tasks regularly.
+
+    - Automated scripts or tools used for database management might delete snapshots
+    as part of their normal operation. Identify these scripts and exclude their actions
+    from triggering alerts by whitelisting their associated IAM roles or user accounts.
+
+    - Tes'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteSnapshot.html
+- https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DeleteDBSnapshot.html
+has_investigation_guide: true
+risk_score: 47

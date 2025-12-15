@@ -1,0 +1,42 @@
+technique_id: T1021.003
+technique_name: Suspicious Speech Runtime Binary Child Process
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 78f10490-f2f4-4d19-a75b-4e0683bf3b8d
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  ParentImage|endswith: \\SpeechRuntime.exe\n"
+explanation: 'Detects suspicious Speech Runtime Binary Execution by monitoring its
+  child processes.
+
+  Child processes spawned by SpeechRuntime.exe could indicate an attempt for lateral
+  movement via COM & DCOM hijacking.
+
+  '
+false_positives:
+- Unlikely.
+references:
+- https://github.com/rtecCyberSec/SpeechRuntimeMove
+tags:
+- attack.defense-evasion
+- attack.lateral-movement
+- attack.t1021.003
+- attack.t1218
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \SpeechRuntime.exe
+  condition: selection
+metadata:
+  created_date: 2025-10-23
+  modified_date: '2025-11-28'
+  author: andrewdanis
+  status: experimental
+  imported_date: '2025-11-28'

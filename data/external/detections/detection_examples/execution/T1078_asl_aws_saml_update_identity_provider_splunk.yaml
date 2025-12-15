@@ -1,0 +1,44 @@
+technique_id: T1078
+technique_name: ASL AWS SAML Update identity provider
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`amazon_security_lake` api.operation=UpdateSAMLProvider | fillnull | stats
+  count min(_time) as firstTime max(_time) as lastTime by actor.user.uid api.operation
+  api.service.name http_request.user_agent src_endpoint.ip actor.user.account.uid
+  cloud.provider cloud.region | rename actor.user.uid as user api.operation as action
+  api.service.name as dest http_request.user_agent as user_agent src_endpoint.ip as
+  src actor.user.account.uid as vendor_account cloud.provider as vendor_product cloud.region
+  as vendor_region | `security_content_ctime(firstTime)`| `security_content_ctime(lastTime)`
+  | `asl_aws_saml_update_identity_provider_filter`'
+explanation: The following analytic detects updates to the SAML provider in AWS. It
+  leverages AWS CloudTrail logs to identify the `UpdateSAMLProvider` event, analyzing
+  fields such as `sAMLProviderArn`, `sourceIPAddress`, and `userIdentity` details.
+  Monitoring updates to the SAML provider is crucial as it may indicate a perimeter
+  compromise of federated credentials or unauthorized backdoor access set by an attacker.
+  If confirmed malicious, this activity could allow attackers to manipulate identity
+  federation, potentially leading to unauthorized access to cloud resources and sensitive
+  data.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/635c26cc-0fd1-4098-8ec9-824bf9544b11/
+indicators:
+- type: data_source
+  value: ASL AWS CloudTrail
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Updating a SAML provider or creating a new one may not necessarily
+    be malicious however it needs to be closely monitored.
+  mitigation: Review context and user activity
+references:
+- https://www.cisa.gov/uscert/ncas/alerts/aa21-008a
+- https://www.splunk.com/en_us/blog/security/a-golden-saml-journey-solarwinds-continued.html
+- https://www.fireeye.com/content/dam/fireeye-www/blog/pdfs/wp-m-unc2452-2021-000343-01.pdf
+- https://www.cyberark.com/resources/threat-research-blog/golden-saml-newly-discovered-attack-technique-forges-authentication-to-cloud-apps
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1078/update_saml_provider/asl_ocsf_cloudtrail.json

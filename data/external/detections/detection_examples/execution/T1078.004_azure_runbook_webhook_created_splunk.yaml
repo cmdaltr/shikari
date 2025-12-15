@@ -1,0 +1,44 @@
+technique_id: T1078.004
+technique_name: Azure Runbook Webhook Created
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`azure_audit` operationName.value="Microsoft.Automation/automationAccounts/webhooks/write"
+  status.value=Succeeded | dedup object | rename claims.ipaddr as src_ip | rename
+  caller as user | stats count min(_time) as firstTime max(_time) as lastTime values(dest)
+  as dest by object user, src_ip, resourceGroupName, object_path | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `azure_runbook_webhook_created_filter`'
+explanation: The following analytic detects the creation of a new Automation Runbook
+  Webhook within an Azure tenant. It leverages Azure Audit events, specifically the
+  "Create or Update an Azure Automation webhook" operation, to identify this activity.
+  This behavior is significant because Webhooks can trigger Automation Runbooks via
+  unauthenticated URLs exposed to the Internet, posing a security risk. If confirmed
+  malicious, an attacker could use this to execute code, create users, or maintain
+  persistence within the environment, potentially leading to unauthorized access and
+  control over Azure resources.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/e98944a9-92e4-443c-81b8-a322e33ce75a/
+indicators:
+- type: data_source
+  value: Azure Audit Create or Update an Azure Automation webhook
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Administrators may legitimately create Azure Runbook Webhooks. Filter
+    as needed.
+  mitigation: Review context and user activity
+references:
+- https://docs.microsoft.com/en-us/azure/automation/overview
+- https://docs.microsoft.com/en-us/azure/automation/automation-runbook-types
+- https://docs.microsoft.com/en-us/azure/automation/automation-webhooks?tabs=portal
+- https://www.inversecos.com/2021/12/how-to-detect-malicious-azure.html
+- https://www.netspi.com/blog/technical/cloud-penetration-testing/maintaining-azure-persistence-via-automation-accounts/
+- https://microsoft.github.io/Azure-Threat-Research-Matrix/Persistence/AZT503/AZT503-3/
+- https://attack.mitre.org/techniques/T1078/004/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1078.004/azure_runbook_webhook/azure-activity.log

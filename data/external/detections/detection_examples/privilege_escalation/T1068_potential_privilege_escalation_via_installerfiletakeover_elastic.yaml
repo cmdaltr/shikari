@@ -1,0 +1,57 @@
+technique_id: T1068
+technique_name: Potential Privilege Escalation via InstallerFileTakeOver
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\n\
+  \    process.Ext.token.integrity_level_name : \"System\" and\n    (\n      (process.name\
+  \ : \"elevation_service.exe\" and\n       not process.pe.original_file_name == \"\
+  elevation_service.exe\") or\n      \n      (process.name : \"elevation_service.exe\"\
+  \ and\n       not process.code_signature.trusted == true) or\n\n      (process.parent.name\
+  \ : \"elevation_service.exe\" and\n       process.name : (\"rundll32.exe\", \"cmd.exe\"\
+  , \"powershell.exe\"))\n    ) and\n    not\n    (\n      process.name : \"elevation_service.exe\"\
+  \ and process.code_signature.trusted == true and\n      process.pe.original_file_name\
+  \ == null\n    )"
+explanation: 'Identifies a potential exploitation of InstallerTakeOver (CVE-2021-41379)
+  default PoC execution. Successful exploitation
+
+  allows an unprivileged user to escalate privileges to SYSTEM.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/58c6d58b-a0d3-412d-b3b8-0981a9400607.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Verify whether a digital signature exists in the executable, and if it is valid.
+
+
+    ### Related rules
+
+
+    - Suspicious DLL Loaded for Persistence or Privilege Escalation - bfeaf89b-a2a7-48a3-817f-e41829dc61ee
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - If the triage identified malware, search the environment for additional compromised
+    ho'
+  mitigation: Review investigation guide for details
+references:
+- https://github.com/klinix5/InstallerFileTakeOver
+has_investigation_guide: true
+risk_score: 73

@@ -1,0 +1,42 @@
+technique_id: T1098.002
+technique_name: O365 ApplicationImpersonation Role Assigned
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`o365_management_activity` Workload=Exchange Operation="New-ManagementRoleAssignment"
+  Role=ApplicationImpersonation | rename User as target_user | fillnull | stats count
+  min(_time) as firstTime max(_time) as lastTime by signature dest user src vendor_account
+  vendor_product target_user | `security_content_ctime(lastTime)` | `o365_applicationimpersonation_role_assigned_filter`'
+explanation: The following analytic detects the assignment of the ApplicationImpersonation
+  role in Office 365 to a user or application. It uses the Office 365 Management Activity
+  API to monitor Azure Active Directory audit logs for role assignment events. This
+  activity is significant because the ApplicationImpersonation role allows impersonation
+  of any user, enabling access to and modification of their mailbox. If confirmed
+  malicious, an attacker could gain unauthorized access to sensitive information,
+  manipulate mailbox data, and perform actions as a legitimate user, posing a severe
+  security risk to the organization.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/49cdce75-f814-4d56-a7a4-c64ec3a481f2/
+indicators:
+- type: data_source
+  value: O365
+  confidence: high
+- type: risk_user
+  value: target_user
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: While infrequent, the ApplicationImpersonation role may be granted
+    for leigimate reasons, filter as needed.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1098/002/
+- https://www.mandiant.com/resources/blog/remediation-and-hardening-strategies-for-microsoft-365-to-defend-against-unc2452
+- https://www.mandiant.com/media/17656
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1098.002/application_impersonation_role_assigned/application_impersonation_role_assigned.log

@@ -1,0 +1,34 @@
+technique_id: T1127
+technique_name: Remote Thread Creation Ttdinject.exe Proxy
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: c15e99a3-c474-48ab-b9a7-84549a7a9d16
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  SourceImage|endswith: \\ttdinject.exe\n"
+explanation: Detects a remote thread creation of Ttdinject.exe used as proxy
+false_positives:
+- Unknown
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Ttdinject/
+tags:
+- attack.defense-evasion
+- attack.t1127
+logsource:
+  product: windows
+  category: create_remote_thread
+detection:
+  selection:
+    SourceImage|endswith: \ttdinject.exe
+  condition: selection
+metadata:
+  created_date: 2022-05-16
+  modified_date: 2022-06-02
+  author: frack113
+  status: test
+  imported_date: '2025-11-28'

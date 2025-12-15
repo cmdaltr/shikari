@@ -1,0 +1,46 @@
+technique_id: T1098
+technique_name: Administrator Role Assigned to an Okta User
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.dataset:okta.system and event.action:user.account.privilege.grant
+explanation: 'Identifies when an administrator role is assigned to an Okta user. An
+  adversary may attempt to assign an administrator
+
+  role to an Okta user in order to assign additional permissions to a user account
+  and maintain access to their target''s
+
+  environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/f06414a6-f2a4-466d-8eba-10f85e8abf71.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Routine administrative tasks may trigger the rule when legitimate IT staff assign
+    administrator roles for maintenance or onboarding purposes. To manage this, create
+    exceptions for known IT personnel or scheduled maintenance windows.
+
+    - Automated scripts or integrations that require elevated permissions might cause
+    false positives. Identify these scripts and whitelist their associated accounts
+    to prevent unnecessary alerts.
+
+    - Organizational changes such as mergers or dep'
+  mitigation: Review investigation guide for details
+references:
+- https://help.okta.com/en/prod/Content/Topics/Security/administrators-admin-comparison.htm
+- https://developer.okta.com/docs/reference/api/system-log/
+- https://developer.okta.com/docs/reference/api/event-types/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+- https://www.elastic.co/security-labs/okta-and-lapsus-what-you-need-to-know
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,41 @@
+technique_id: T1562.008
+technique_name: ASL AWS Defense Evasion Update Cloudtrail
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`amazon_security_lake` api.operation=UpdateTrail | fillnull | stats count
+  min(_time) as firstTime max(_time) as lastTime by actor.user.uid api.operation api.service.name
+  http_request.user_agent src_endpoint.ip actor.user.account.uid cloud.provider cloud.region
+  | rename actor.user.uid as user api.operation as action api.service.name as dest
+  http_request.user_agent as user_agent src_endpoint.ip as src actor.user.account.uid
+  as vendor_account cloud.provider as vendor_product cloud.region as vendor_region
+  | `security_content_ctime(firstTime)`| `security_content_ctime(lastTime)` | `asl_aws_defense_evasion_update_cloudtrail_filter`'
+explanation: The following analytic detects `UpdateTrail` events within AWS CloudTrail
+  logs, aiming to identify attempts by attackers to evade detection by altering logging
+  configurations. By updating CloudTrail settings with incorrect parameters, such
+  as changing multi-regional logging to a single region, attackers can impair the
+  logging of their activities across other regions. This behavior is crucial for Security
+  Operations Centers (SOCs) to identify, as it indicates an adversary's intent to
+  operate undetected within a compromised AWS environment. The impact of such evasion
+  tactics is significant, potentially allowing malicious activities to proceed without
+  being logged, thereby hindering incident response and forensic investigations.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/f3eb471c-16d0-404d-897c-7653f0a78cba/
+indicators:
+- type: data_source
+  value: ASL AWS CloudTrail
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: While this search has no known false positives, it is possible that
+    an AWS admin has updated cloudtrail logging. Please investigate this activity.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1562/008/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.008/update_cloudtrail/asl_ocsf_cloudtrail.json

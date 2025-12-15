@@ -1,0 +1,38 @@
+technique_id: T1558
+technique_name: HackTool - Mimikatz Kirbi File Creation
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.89
+validated: true
+source: sigma
+sigma_id: 9e099d99-44c2-42b6-a6d8-54c3545cab29
+level: critical
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  TargetFilename|endswith:\n  - .kirbi\n  - mimilsa.log\n"
+explanation: Detects the creation of files created by mimikatz such as ".kirbi", "mimilsa.log",
+  etc.
+false_positives:
+- Unlikely
+references:
+- https://cobalt.io/blog/kerberoast-attack-techniques
+- https://pentestlab.blog/2019/10/21/persistence-security-support-provider/
+tags:
+- attack.credential-access
+- attack.t1558
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|endswith:
+    - .kirbi
+    - mimilsa.log
+  condition: selection
+metadata:
+  created_date: 2021-11-08
+  modified_date: 2024-06-27
+  author: Florian Roth (Nextron Systems), David ANDRE
+  status: test
+  imported_date: '2025-11-28'

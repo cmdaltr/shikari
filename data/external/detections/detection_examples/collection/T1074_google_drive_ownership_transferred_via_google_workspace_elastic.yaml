@@ -1,0 +1,52 @@
+technique_id: T1074
+technique_name: Google Drive Ownership Transferred via Google Workspace
+tactic: collection
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset:\"google_workspace.admin\" and event.action:\"CREATE_DATA_TRANSFER_REQUEST\"\
+  \n  and event.category:\"iam\" and google_workspace.admin.application.name:Drive*"
+explanation: 'Drive and Docs is a Google Workspace service that allows users to leverage
+  Google Drive and Google Docs. Access to files
+
+  is based on inherited permissions from the child organizational unit the user belongs
+  to which is scoped by
+
+  administrators. Typically if a user is removed, their files can be transferred to
+  another user by the administrator.
+
+  This service can also be abused by adversaries to transfer files to an adversary
+  account for potential exfiltration.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/07b5f85a-240f-11ed-b3d9-f661ea17fbce.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Google Workspace
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Transferring drives requires Google Workspace administration permissions related
+    to Google Drive. Check if this action was planned/expected from the requester
+    and is appropriately targeting the correct receiver.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Disable or limit the account during the investigation and response.
+
+    - Identify the possible impact of the incident and prioritize accordingly; the
+    foll'
+  mitigation: Review investigation guide for details
+references:
+- https://support.google.com/a/answer/1247799?hl=en
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-one
+- https://www.elastic.co/security-labs/google-workspace-attack-surface-part-two
+has_investigation_guide: true
+risk_score: 47

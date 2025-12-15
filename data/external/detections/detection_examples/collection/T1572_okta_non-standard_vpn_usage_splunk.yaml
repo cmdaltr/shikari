@@ -1,0 +1,37 @@
+technique_id: T1572
+technique_name: Okta Non-Standard VPN Usage
+tactic: collection
+platform: Splunk
+fidelity_score: 0.85
+validated: false
+query: '`okta` debugContext.debugData.tunnels IN (*Astrill*,*Azire*,*CyberGhost*,*Express*VPN,*HideMe*,
+  *IPVanish*,*Mullvad*,*Nord*VPN*,*OVPN*,*PIA*VPN*,*Proton*VPN*,*Pure*VPN*,*Slick*VPN*,*Surf*Easy*,
+  *SurfShark*,*Star*VPN*,*TorGuard*,*TorProxy*,*Tiger*VPN*,*TunnelBear*,*Unblock*VPN*,*Warp*VPN*,*WarpSpeed*,
+  *VPNReactor*,*VPN*Shield*,*VPN*Super*VPN*,*ZenMate*) ```listing of commonly used
+  known VPN providers. Add or remove whatever is appropriate for your environment```
+  | eval user=coalesce(''actor.alternateId'',user), user=mvindex(split(user, "@"),
+  0) | rename targetUserAlternateId as user client.* as * request.* as * ipChain{}.*
+  as * geographicalContext.* as * debugContext.* as * debugData.* as * | eval status=case(match(_raw,
+  "FAILURE"), "failure", !match(_raw, "FAILURE"), "success") | stats count values(status)
+  as status max(published) as UTC min(_time) as firsttime max(_time) as lasttime values(target_data)
+  as target_data values(displayMessage) as displayMessage values(eventType) as eventType
+  values(city) as city values(country) as country values(action) as action values(src_ip)
+  as src_ip values(outcome.*) as * values(user) as user by tunnels,_time,host sourcetype
+  index | fillnull value="N/A" | convert ctime(*ttime) | `okta_non_standard_vpn_usage_filter`'
+explanation: Remote Employment Fraud (REF) actors will often use virtual private networks
+  (VPNs) to conceal their true physical location. Threat actors mask their originating
+  IP address and instead appear to be situated in any location where the VPN service
+  has a node.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/58eb9f80-896c-42f8-86c6-27ab59026c9c/
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Limited to no expected false positives once a baseline of common VPN
+    software has been completed.
+  mitigation: Review context and user activity

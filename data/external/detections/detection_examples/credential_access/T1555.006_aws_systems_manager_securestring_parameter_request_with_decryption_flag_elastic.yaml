@@ -1,0 +1,56 @@
+technique_id: T1555.006
+technique_name: AWS Systems Manager SecureString Parameter Request with Decryption
+  Flag
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: aws.cloudtrail\n    and event.provider: \"ssm.amazonaws.com\"\
+  \n    and event.action: (GetParameters or GetParameter)\n    and event.outcome:\
+  \ success\n    and aws.cloudtrail.flattened.request_parameters.withDecryption: true\n\
+  \    and not source.address: (\n        \"cloudformation.amazonaws.com\" or\n  \
+  \      \"servicecatalog.amazonaws.com\"\n    )"
+explanation: Detects the first occurrence of a user identity accessing AWS Systems
+  Manager (SSM) SecureString parameters using the GetParameter or GetParameters API
+  actions with credentials in the request parameters. This could indicate that the
+  user is accessing sensitive information. This rule detects when a user accesses
+  a SecureString parameter with the withDecryption parameter set to true. This is
+  a New Terms rule that detects the first occurrence of an AWS identity accessing
+  SecureString parameters with decryption.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/fd332492-0bc6-11ef-b5be-f661ea17fbcc.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS Systems Manager
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - **Legitimate Administrative Use**: Verify if the decryption of SecureString
+    parameters is a common practice for the user’s role, particularly if used in automation
+    scripts or deployment processes like those involving Terraform or similar tools.
+
+    - **Authorized Access**: Ensure that the user or role has a legitimate reason
+    to access the SecureString parameters and that the access is part of their expected
+    job responsibilities.
+
+
+    ### Response and Remediation
+
+
+    - **Immediate'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/vsts/latest/userguide/systemsmanager-getparameter.html
+- https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
+has_investigation_guide: true
+risk_score: 47

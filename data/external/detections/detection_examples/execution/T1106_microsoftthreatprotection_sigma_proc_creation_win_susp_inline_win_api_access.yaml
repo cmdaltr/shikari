@@ -1,0 +1,105 @@
+technique_id: T1106
+technique_name: Potential WinAPI Calls Via CommandLine
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.88
+validated: true
+source: sigma
+sigma_id: ba3f5c1b-6272-4119-9dbd-0bc8d21c2702
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not 1 of\
+  \ filter_optional_*\nfilter_optional_compatTelRunner:\n  CommandLine|contains:\n\
+  \  - FreeHGlobal\n  - PtrToString\n  - kernel32\n  - CloseHandle\n  ParentImage|endswith:\
+  \ \\CompatTelRunner.exe\nfilter_optional_mpcmdrun:\n  CommandLine|contains: GetLoadLibraryWAddress32\n\
+  \  Image|endswith: \\MpCmdRun.exe\nselection:\n  CommandLine|contains:\n  - AddSecurityPackage\n\
+  \  - AdjustTokenPrivileges\n  - Advapi32\n  - CloseHandle\n  - CreateProcessWithToken\n\
+  \  - CreatePseudoConsole\n  - CreateRemoteThread\n  - CreateThread\n  - CreateUserThread\n\
+  \  - DangerousGetHandle\n  - DuplicateTokenEx\n  - EnumerateSecurityPackages\n \
+  \ - FreeHGlobal\n  - FreeLibrary\n  - GetDelegateForFunctionPointer\n  - GetLogonSessionData\n\
+  \  - GetModuleHandle\n  - GetProcAddress\n  - GetProcessHandle\n  - GetTokenInformation\n\
+  \  - ImpersonateLoggedOnUser\n  - kernel32\n  - LoadLibrary\n  - memcpy\n  - MiniDumpWriteDump\n\
+  \  - ntdll\n  - OpenDesktop\n  - OpenProcess\n  - OpenProcessToken\n  - OpenThreadToken\n\
+  \  - OpenWindowStation\n  - PtrToString\n  - QueueUserApc\n  - ReadProcessMemory\n\
+  \  - RevertToSelf\n  - RtlCreateUserThread\n  - secur32\n  - SetThreadToken\n  -\
+  \ VirtualAlloc\n  - VirtualFree\n  - VirtualProtect\n  - WaitForSingleObject\n \
+  \ - WriteInt32\n  - WriteProcessMemory\n  - ZeroFreeGlobalAllocUnicode\n"
+explanation: Detects the use of WinAPI Functions via the commandline. As seen used
+  by threat actors via the tool winapiexec
+false_positives:
+- Some legitimate action or applications may use these functions. Investigate further
+  to determine the legitimacy of the activity.
+references:
+- https://twitter.com/m417z/status/1566674631788007425
+tags:
+- attack.execution
+- attack.t1106
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - AddSecurityPackage
+    - AdjustTokenPrivileges
+    - Advapi32
+    - CloseHandle
+    - CreateProcessWithToken
+    - CreatePseudoConsole
+    - CreateRemoteThread
+    - CreateThread
+    - CreateUserThread
+    - DangerousGetHandle
+    - DuplicateTokenEx
+    - EnumerateSecurityPackages
+    - FreeHGlobal
+    - FreeLibrary
+    - GetDelegateForFunctionPointer
+    - GetLogonSessionData
+    - GetModuleHandle
+    - GetProcAddress
+    - GetProcessHandle
+    - GetTokenInformation
+    - ImpersonateLoggedOnUser
+    - kernel32
+    - LoadLibrary
+    - memcpy
+    - MiniDumpWriteDump
+    - ntdll
+    - OpenDesktop
+    - OpenProcess
+    - OpenProcessToken
+    - OpenThreadToken
+    - OpenWindowStation
+    - PtrToString
+    - QueueUserApc
+    - ReadProcessMemory
+    - RevertToSelf
+    - RtlCreateUserThread
+    - secur32
+    - SetThreadToken
+    - VirtualAlloc
+    - VirtualFree
+    - VirtualProtect
+    - WaitForSingleObject
+    - WriteInt32
+    - WriteProcessMemory
+    - ZeroFreeGlobalAllocUnicode
+  filter_optional_mpcmdrun:
+    Image|endswith: \MpCmdRun.exe
+    CommandLine|contains: GetLoadLibraryWAddress32
+  filter_optional_compatTelRunner:
+    ParentImage|endswith: \CompatTelRunner.exe
+    CommandLine|contains:
+    - FreeHGlobal
+    - PtrToString
+    - kernel32
+    - CloseHandle
+  condition: selection and not 1 of filter_optional_*
+metadata:
+  created_date: 2022-09-06
+  modified_date: 2025-03-06
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

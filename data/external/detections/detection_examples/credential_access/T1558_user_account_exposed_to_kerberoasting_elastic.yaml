@@ -1,0 +1,49 @@
+technique_id: T1558
+technique_name: User account exposed to Kerberoasting
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.code:5136 and winlog.event_data.OperationType:\"%%14674\" and\n  winlog.event_data.ObjectClass:\"\
+  user\" and\n  winlog.event_data.AttributeLDAPDisplayName:\"servicePrincipalName\""
+explanation: 'Detects when a user account has the servicePrincipalName attribute modified.
+  Attackers can abuse write privileges over a
+
+  user to configure Service Principle Names (SPNs) so that they can perform Kerberoasting.
+  Administrators can also
+
+  configure this for legitimate purposes, exposing the account to Kerberoasting.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0b2f3da5-b5ec-47d1-908b-6ebb74814289.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Active Directory
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - The use of user accounts as service accounts is a bad security practice and
+    should not be allowed in the domain. The security team should map and monitor
+    any potential benign true positive (B-TP), especially if the account is privileged.
+    Domain Administrators that define this kind of setting can put the domain at risk
+    as user accounts don''t have the same security standards as computer accounts
+    (which have long, complex, random passwords that change frequently), exposin'
+  mitigation: Review investigation guide for details
+references:
+- https://www.thehacker.recipes/ad/movement/access-controls/targeted-kerberoasting
+- https://www.qomplx.com/qomplx-knowledge-kerberoasting-attacks-explained/
+- https://www.thehacker.recipes/ad/movement/kerberos/kerberoast
+- https://attack.stealthbits.com/cracking-kerberos-tgs-tickets-using-kerberoasting
+- https://adsecurity.org/?p=280
+- https://github.com/OTRF/Set-AuditRule
+has_investigation_guide: true
+risk_score: 47

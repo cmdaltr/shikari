@@ -1,0 +1,48 @@
+technique_id: T1548.003
+technique_name: Sudoers File Modification
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "file where host.os.type in (\"linux\", \"macos\") and event.type in (\"creation\"\
+  , \"change\") and\nfile.path like (\"/etc/sudoers*\", \"/private/etc/sudoers*\"\
+  ) and not (\n  process.name in (\"dpkg\", \"platform-python\", \"puppet\", \"yum\"\
+  , \"dnf\") or\n  process.executable in (\"/opt/chef/embedded/bin/ruby\", \"/opt/puppetlabs/puppet/bin/ruby\"\
+  , \"/usr/bin/dockerd\")\n)"
+explanation: 'A sudoers file specifies the commands that users or groups can run and
+  from which terminals. Adversaries can take
+
+  advantage of these configurations to execute commands as other users or spawn processes
+  with higher privileges.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/931e25a5-0f5e-4ae0-ba0d-9e94eff7e3a4.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - System updates and package installations can trigger changes to the sudoers
+    file. Exclude processes like dpkg, yum, dnf, and platform-python from triggering
+    alerts as they are commonly involved in legitimate updates.
+
+    - Configuration management tools such as Puppet and Chef may modify the sudoers
+    file as part of their normal operations. Exclude process executables like /opt/chef/embedded/bin/ruby
+    and /opt/puppetlabs/puppet/bin/ruby to prevent false positives.
+
+    - Docker d'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/primer-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

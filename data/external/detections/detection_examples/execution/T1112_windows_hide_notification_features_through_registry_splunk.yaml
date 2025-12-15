@@ -1,0 +1,40 @@
+technique_id: T1112
+technique_name: Windows Hide Notification Features Through Registry
+tactic: execution
+platform: Splunk
+fidelity_score: 0.85
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\*"
+  Registry.registry_value_name IN ("HideClock", "HideSCAHealth", "HideSCANetwork",
+  "HideSCAPower", "HideSCAVolume") Registry.registry_value_data = "0x00000001") by
+  Registry.action Registry.dest Registry.process_guid Registry.process_id Registry.registry_hive
+  Registry.registry_path Registry.registry_key_name Registry.registry_value_data Registry.registry_value_name
+  Registry.registry_value_type Registry.status Registry.user Registry.vendor_product
+  | `drop_dm_object_name(Registry)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+  | `windows_hide_notification_features_through_registry_filter`'
+explanation: The following analytic detects suspicious registry modifications aimed
+  at hiding common Windows notification features on a compromised host. It leverages
+  data from the Endpoint.Registry data model, focusing on specific registry paths
+  and values. This activity is significant as it is often used by ransomware to obscure
+  visual indicators, increasing the impact of the attack. If confirmed malicious,
+  this could prevent users from noticing critical system alerts, thereby aiding the
+  attacker in maintaining persistence and furthering their malicious activities undetected.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/cafa4bce-9f06-11ec-a7b2-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 13
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.trendmicro.com/vinfo/us/threat-encyclopedia/malware/Ransom.Win32.ONALOCKER.A/
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1112/ransomware_disable_reg/sysmon.log

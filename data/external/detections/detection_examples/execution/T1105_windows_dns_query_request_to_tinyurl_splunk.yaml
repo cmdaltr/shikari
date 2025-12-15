@@ -1,0 +1,43 @@
+technique_id: T1105
+technique_name: Windows DNS Query Request To TinyUrl
+tactic: execution
+platform: Splunk
+fidelity_score: 0.9
+validated: true
+query: "`sysmon` \nEventCode=22 \nQueryName = \"tinyurl.com\"\nImage IN (\n  \"*\\\
+  \\AppData\\\\*\",\n  \"*\\\\Perflogs\\\\*\",\n  \"*\\\\ProgramData\\\\*\",\n  \"\
+  *\\\\Temp\\\\*\",\n  \"*\\\\Users\\\\Public\\\\*\",\n  \"*\\\\Windows\\\\Tasks\\\
+  \\*\"\n  ) \n| stats count min(_time) as firstTime max(_time) as lastTime \n  by\
+  \ answer answer_count dvc process_exec process_guid process_name query query_count\
+  \ \n     reply_code_id signature signature_id src user_id vendor_product QueryName\
+  \ QueryResults QueryStatus \n| `security_content_ctime(firstTime)` \n| `security_content_ctime(lastTime)`\
+  \ \n| `windows_dns_query_request_to_tinyurl_filter`"
+explanation: "The following analytic detects a process located in a potentially suspicious\
+  \ location making DNS queries to known URL shortening services, specifically tinyurl.\n\
+  URL shorteners are frequently used by threat actors to obfuscate malicious destinations,\
+  \ including phishing pages, malware distribution sites, or command-and-control (C2)\
+  \ endpoints. \nWhile tinyurl.com is a legitimate service, its use in enterprise\
+  \ environments—particularly by non-browser processes or scripts—should be considered\
+  \ suspicious, especially if correlated with subsequent outbound connections, file\
+  \ downloads, process file path or credential prompts. Analysts should investigate\
+  \ the source process, execution context, and destination domain to determine intent\
+  \ and risk."
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/b1ea79da-719c-437c-acaf-5c93f838f425/
+indicators:
+- type: data_source
+  value: Sysmon EventID 22
+  confidence: high
+- type: risk_system
+  value: dvc
+  confidence: high
+false_positives:
+- description: "Noise and false positive can be seen if the following instant \nmessaging\
+    \ is allowed to use within corporate network. In this case, a filter is needed."
+  mitigation: Review context and user activity
+references:
+- https://x.com/Unit42_Intel/status/1919418143476199869
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1105/tinyurl_dns_query/tinyurl.log

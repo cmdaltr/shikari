@@ -1,0 +1,48 @@
+technique_id: T1556
+technique_name: New Okta Identity Provider (IdP) Added by Admin
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: 'event.dataset: "okta.system" and event.action: "system.idp.lifecycle.create"
+  and okta.outcome.result: "SUCCESS"'
+explanation: 'Detects the creation of a new Identity Provider (IdP) by a Super Administrator
+  or Organization Administrator within
+
+  Okta.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/29b53942-7cd4-11ee-b70e-f661ea17fbcd.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Okta
+  confidence: high
+false_positives:
+- description: 'False positive analysis:
+
+    - It might be a false positive if the action was part of a planned activity or
+    performed by an authorized person.
+
+    - Several unsuccessful attempts prior to this success, may indicate an adversary
+    attempting to add an unauthorized IdP multiple times.
+
+
+    ### Response and remediation:
+
+    - If the IdP is unauthorized, deactivate it immediately via the Okta console.
+
+    - If the IdP is authorized, ensure that the actor who created it is authorized
+    to do so.
+
+    - If the actor is unauthoriz'
+  mitigation: Review investigation guide for details
+references:
+- https://blog.cloudflare.com/cloudflare-investigation-of-the-january-2022-okta-compromise/
+- https://www.elastic.co/security-labs/testing-okta-visibility-and-detection-dorothy
+- https://sec.okta.com/articles/2023/08/cross-tenant-impersonation-prevention-and-detection
+- https://unit42.paloaltonetworks.com/muddled-libra/
+- https://www.elastic.co/security-labs/monitoring-okta-threats-with-elastic-security
+- https://www.elastic.co/security-labs/starter-guide-to-understanding-okta
+has_investigation_guide: true
+risk_score: 47

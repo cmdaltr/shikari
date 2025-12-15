@@ -1,0 +1,46 @@
+technique_id: T1574.011
+technique_name: Service DACL Abuse To Hide Services Via Sc.EXE
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: a537cfc3-4297-4789-92b5-345bfd845ad0
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cli:\n  CommandLine|contains|all:\n  - sdset\n  - DCLCWPDTSD\nselection_img:\n\
+  - Image|endswith: \\sc.exe\n- OriginalFileName: sc.exe\n"
+explanation: Detects usage of the "sc.exe" utility adding a new service with special
+  permission seen used by threat actors which makes the service hidden and unremovable.
+false_positives:
+- Unknown
+references:
+- https://blog.talosintelligence.com/2021/10/threat-hunting-in-large-datasets-by.html
+- https://www.sans.org/blog/red-team-tactics-hiding-windows-services/
+- https://twitter.com/Alh4zr3d/status/1580925761996828672
+- https://itconnect.uw.edu/tools-services-support/it-systems-infrastructure/msinf/other-help/understanding-sddl-syntax/
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.privilege-escalation
+- attack.t1574.011
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith: \sc.exe
+  - OriginalFileName: sc.exe
+  selection_cli:
+    CommandLine|contains|all:
+    - sdset
+    - DCLCWPDTSD
+  condition: all of selection_*
+metadata:
+  created_date: 2021-12-20
+  modified_date: 2022-08-08
+  author: Andreas Hunkeler (@Karneades)
+  status: test
+  imported_date: '2025-11-28'

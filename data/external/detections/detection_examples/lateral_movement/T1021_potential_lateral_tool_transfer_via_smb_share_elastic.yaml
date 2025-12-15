@@ -1,0 +1,43 @@
+technique_id: T1021
+technique_name: Potential Lateral Tool Transfer via SMB Share
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id with maxspan=30s\n  [network where host.os.type == \"\
+  windows\" and event.type == \"start\" and process.pid == 4 and destination.port\
+  \ == 445 and\n   network.direction : (\"incoming\", \"ingress\") and\n   network.transport\
+  \ == \"tcp\" and source.ip != \"127.0.0.1\" and source.ip != \"::1\"\n  ] by process.entity_id\n\
+  \  /* add more executable extensions here if they are not noisy in your environment\
+  \ */\n  [file where host.os.type == \"windows\" and event.type in (\"creation\"\
+  , \"change\") and process.pid == 4 and \n   (file.Ext.header_bytes : \"4d5a*\" or\
+  \ file.extension : (\"exe\", \"scr\", \"pif\", \"com\", \"dll\"))] by process.entity_id"
+explanation: 'Identifies the creation or change of a Windows executable file over
+  network shares. Adversaries may transfer tools or
+
+  other files between systems in a compromised environment.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/58bc134c-e8d2-4291-a552-b4b3e537c60b.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: "False positive analysis\n\n- This activity can happen legitimately.\
+    \ Consider adding exceptions if it is expected and noisy in your environment.\n\
+    \n### Response and remediation\n\n- Initiate the incident response process based\
+    \ on the outcome of the triage.\n- Isolate the involved host to prevent further\
+    \ post-compromise behavior.\n- If the triage identified malware, search the environment\
+    \ for additional compromised hosts.\n  - Implement temporary network rules, procedures,\
+    \ and segmentation to contain the m"
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/elastic-protects-against-data-wiper-malware-targeting-ukraine-hermeticwiper
+- https://www.elastic.co/security-labs/hunting-for-lateral-movement-using-event-query-language
+has_investigation_guide: true
+risk_score: 47

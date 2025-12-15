@@ -1,0 +1,49 @@
+{
+  "name": "Legitimate Administrative Tools",
+  "description": "Common administrative tools that may trigger false positives",
+  "patterns": [
+    {
+      "category": "Process Access",
+      "description": "Legitimate security software accessing LSASS",
+      "processes": [
+        "MsMpEng.exe",
+        "MsSense.exe",
+        "CrowdStrike\\\\CSFalconService.exe",
+        "SentinelOne\\\\SentinelAgent.exe",
+        "Tanium\\\\TaniumClient.exe"
+      ],
+      "applies_to": [
+        "T1003.001",
+        "T1003.002"
+      ]
+    },
+    {
+      "category": "System Processes",
+      "description": "Windows system processes",
+      "processes": [
+        "wininit.exe",
+        "services.exe",
+        "csrss.exe",
+        "svchost.exe",
+        "lsass.exe"
+      ],
+      "applies_to": [
+        "T1003.*",
+        "T1055.*"
+      ]
+    },
+    {
+      "category": "Monitoring Tools",
+      "description": "Legitimate monitoring and management tools",
+      "processes": [
+        "procexp.exe",
+        "procexp64.exe",
+        "ProcessHacker.exe",
+        "taskmgr.exe"
+      ],
+      "note": "May be legitimate in some environments",
+      "confidence": "medium"
+    }
+  ],
+  "updated": "2024-11-28"
+}

@@ -1,0 +1,40 @@
+technique_id: T1110
+technique_name: Potential macOS SSH Brute Force Detected
+tactic: credential_access
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: event.category:process and host.os.type:macos and event.type:start and process.name:"sshd-keygen-wrapper"
+  and process.parent.name:launchd
+explanation: 'Identifies a high number (20) of macOS SSH KeyGen process executions
+  from the same host. An adversary may attempt a
+
+  brute force attack to obtain unauthorized access to user accounts.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/ace1e989-a541-44df-93a8-a8b0591b63c0.toml
+query_type: threshold
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: macOS
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks may trigger the rule if an administrator is
+    performing routine maintenance or updates that involve generating SSH keys. To
+    handle this, create an exception for known administrative accounts or scheduled
+    maintenance windows.
+
+    - Automated scripts or applications that require frequent SSH key generation for
+    legitimate purposes can cause false positives. Identify these scripts or applications
+    and exclude their associated processes or hosts fr'
+  mitigation: Review investigation guide for details
+references:
+- https://themittenmac.com/detecting-ssh-activity-via-process-monitoring/
+has_investigation_guide: true
+risk_score: 47

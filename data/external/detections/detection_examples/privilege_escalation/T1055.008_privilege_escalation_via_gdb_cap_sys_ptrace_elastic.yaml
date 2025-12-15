@@ -1,0 +1,53 @@
+technique_id: T1055.008
+technique_name: Privilege Escalation via GDB CAP_SYS_PTRACE
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.91
+validated: true
+query: "sequence by host.id, process.entry_leader.entity_id with maxspan=1m\n  [process\
+  \ where host.os.type == \"linux\" and event.type == \"start\" and event.action ==\
+  \ \"exec\" and process.name == \"gdb\" and\n   (process.thread.capabilities.effective\
+  \ : \"CAP_SYS_PTRACE\" or process.thread.capabilities.permitted : \"CAP_SYS_PTRACE\"\
+  ) and\n   user.id != \"0\"]\n  [process where host.os.type == \"linux\" and event.type\
+  \ == \"start\" and event.action == \"exec\" and\n   process.name != null and user.id\
+  \ == \"0\"]"
+explanation: 'Identifies instances where GDB (granted the CAP_SYS_PTRACE capability)
+  is executed, after which the user''s access is
+
+  elevated to UID/GID 0 (root). In Linux, the CAP_SYS_PTRACE capability grants a process
+  the ability to use the ptrace
+
+  system call, which is typically used for debugging and allows the process to trace
+  and control other processes.
+
+  Attackers may leverage this capability to hook and inject into a process that is
+  running with root permissions in order
+
+  to escalate their privileges to root.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/c296f888-eac6-4543-8da5-b6abb0d3304f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Development environments where GDB is frequently used for legitimate debugging
+    purposes may trigger false positives. To mitigate this, consider excluding specific
+    user accounts or processes that are known to use GDB regularly for debugging.
+
+    - Automated testing systems that utilize GDB for testing applications with elevated
+    privileges might be flagged. Implement exceptions for these systems by identifying
+    and excluding their specific process names or user IDs.
+
+    - Securit'
+  mitigation: Review investigation guide for details
+has_investigation_guide: true
+risk_score: 47

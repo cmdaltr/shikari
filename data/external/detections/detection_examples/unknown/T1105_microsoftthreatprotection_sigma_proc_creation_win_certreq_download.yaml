@@ -1,0 +1,52 @@
+technique_id: T1105
+technique_name: Suspicious CertReq Command to Download
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: 4480827a-9799-4232-b2c4-ccc6c4e9e12b
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: all of selection_*\n\
+  selection_cli_flag_config:\n  CommandLine|contains|windash: -config\nselection_cli_flag_post:\n\
+  \  CommandLine|contains|windash: -Post\nselection_cli_http:\n  CommandLine|contains:\
+  \ http\nselection_img:\n- Image|endswith: \\certreq.exe\n- OriginalFileName: CertReq.exe\n"
+explanation: 'Detects a suspicious CertReq execution downloading a file.
+
+  This behavior is often used by attackers to download additional payloads or configuration
+  files.
+
+  Certreq is a built-in Windows utility used to request and retrieve certificates
+  from a certification authority (CA). However, it can be abused by threat actors
+  for malicious purposes.
+
+  '
+false_positives:
+- Unlikely
+references:
+- https://lolbas-project.github.io/lolbas/Binaries/Certreq/
+tags:
+- attack.command-and-control
+- attack.t1105
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_img:
+  - Image|endswith: \certreq.exe
+  - OriginalFileName: CertReq.exe
+  selection_cli_flag_post:
+    CommandLine|contains|windash: -Post
+  selection_cli_flag_config:
+    CommandLine|contains|windash: -config
+  selection_cli_http:
+    CommandLine|contains: http
+  condition: all of selection_*
+metadata:
+  created_date: 2021-11-24
+  modified_date: 2025-10-29
+  author: Christian Burkard (Nextron Systems)
+  status: experimental
+  imported_date: '2025-11-28'

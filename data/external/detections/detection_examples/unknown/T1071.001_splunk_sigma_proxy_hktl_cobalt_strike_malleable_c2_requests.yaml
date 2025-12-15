@@ -1,0 +1,78 @@
+technique_id: T1071.001
+technique_name: HackTool - CobaltStrike Malleable Profile Patterns - Proxy
+tactic: unknown
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: f3f21ce1-cdef-4bfc-8328-ed2e826f5fac
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: 1 of selection_* and\
+  \ not 1 of filter_main_*\nfilter_main_onedrive:\n  c-uri|contains: ://onedrive.live.com/\n\
+  \  c-uri|startswith: http\nselection_amazon_1:\n  c-uri: /s/ref=nb_sb_noss_1/167-3294888-0262949/field-keywords=books\n\
+  \  c-useragent: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko\n\
+  \  cs-cookie|endswith: =csm-hit=s-24KU11BB82RZSYGJ3BDK|1419899012996\n  cs-host:\
+  \ www.amazon.com\n  cs-method: GET\nselection_amazon_2:\n  c-uri: /N4215/adj/amzn.us.sr.aps\n\
+  \  c-useragent: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko\n\
+  \  cs-host: www.amazon.com\n  cs-method: POST\nselection_generic_1:\n  c-useragent:\n\
+  \  - Mozilla/4.0 (compatible; MSIE 6.0;Windows NT 5.1)\n  - Mozilla/4.0 (compatible;\
+  \ MSIE 7.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2;\n    .NET CLR 3.0.30729;\
+  \ .NET4.0C; .NET4.0E )\n  - Mozilla/5.0 (Windows; U; MSIE 7.0; Windows NT 5.2) Java/1.5.0_08\n\
+  selection_generic_2:\n  c-useragent|endswith: ; MANM; MANM)\nselection_onedrive:\n\
+  \  c-uri|endswith: \\?manifest=wac\n  cs-host: onedrive.live.com\n  cs-method: GET\n\
+  selection_oscp:\n  c-uri|contains: /oscp/\n  cs-host: ocsp.verisign.com\n"
+explanation: Detects cobalt strike malleable profiles patterns (URI, User-Agents,
+  Methods).
+false_positives:
+- Unknown
+references:
+- https://github.com/rsmudge/Malleable-C2-Profiles/blob/26323784672913923d20c5a638c6ca79459e8529/normal/amazon.profile
+- https://www.hybrid-analysis.com/sample/ee5eca8648e45e2fea9dac0d920ef1a1792d8690c41ee7f20343de1927cc88b9?environmentId=100
+- https://github.com/rsmudge/Malleable-C2-Profiles/blob/26323784672913923d20c5a638c6ca79459e8529/normal/ocsp.profile
+- https://github.com/yeyintminthuhtut/Malleable-C2-Profiles-Collection/
+- https://github.com/rsmudge/Malleable-C2-Profiles/blob/26323784672913923d20c5a638c6ca79459e8529/normal/onedrive_getonly.profile
+tags:
+- attack.defense-evasion
+- attack.command-and-control
+- attack.t1071.001
+logsource:
+  category: proxy
+detection:
+  selection_amazon_1:
+    c-useragent: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko
+    cs-method: GET
+    c-uri: /s/ref=nb_sb_noss_1/167-3294888-0262949/field-keywords=books
+    cs-host: www.amazon.com
+    cs-cookie|endswith: =csm-hit=s-24KU11BB82RZSYGJ3BDK|1419899012996
+  selection_amazon_2:
+    c-useragent: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko
+    cs-method: POST
+    c-uri: /N4215/adj/amzn.us.sr.aps
+    cs-host: www.amazon.com
+  selection_generic_1:
+    c-useragent:
+    - Mozilla/4.0 (compatible; MSIE 6.0;Windows NT 5.1)
+    - Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2;
+      .NET CLR 3.0.30729; .NET4.0C; .NET4.0E )
+    - Mozilla/5.0 (Windows; U; MSIE 7.0; Windows NT 5.2) Java/1.5.0_08
+  selection_generic_2:
+    c-useragent|endswith: ; MANM; MANM)
+  selection_oscp:
+    c-uri|contains: /oscp/
+    cs-host: ocsp.verisign.com
+  selection_onedrive:
+    cs-method: GET
+    c-uri|endswith: \?manifest=wac
+    cs-host: onedrive.live.com
+  filter_main_onedrive:
+    c-uri|startswith: http
+    c-uri|contains: ://onedrive.live.com/
+  condition: 1 of selection_* and not 1 of filter_main_*
+metadata:
+  created_date: 2024-02-15
+  modified_date: '2025-11-28'
+  author: Markus Neis, Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

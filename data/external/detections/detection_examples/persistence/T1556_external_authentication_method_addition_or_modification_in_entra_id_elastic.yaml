@@ -1,0 +1,47 @@
+technique_id: T1556
+technique_name: External Authentication Method Addition or Modification in Entra ID
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.9
+validated: true
+query: "event.dataset: azure.graphactivitylogs and\n    url.path: *authenticationMethodsPolicy*\
+  \ and\n    http.request.method: \"PATCH\" and\n    http.response.status_code: 200"
+explanation: 'Identifies when an external authentication method (EAM) is added or
+  modified in Entra ID. EAM may allow adversaries to
+
+  bypass multi-factor authentication (MFA) requirements, potentially leading to unauthorized
+  access to user accounts and
+
+  sensitive resources by using bring-your-own IdP (BYOIDP) methods.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/42c97e6e-60c3-11f0-832a-f661ea17fbcd.toml
+query_type: new_terms
+query_language: kuery
+indicators:
+- type: data_source
+  value: Azure
+  confidence: high
+- type: data_source
+  value: Microsoft Graph
+  confidence: high
+- type: data_source
+  value: Microsoft Graph Activity Logs
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+    - Legitimate administrative activity may trigger this rule, such as configuring
+    FIDO2 or enabling passwordless sign-in methods during onboarding or security upgrades.
+
+    - Some enterprise integrations or federated identity providers may programmatically
+    update EAM settings as part of legitimate operations.
+
+    - Routine security assessments or red team exercises may include changes to authentication
+    policies. Validate with internal teams when in doubt.
+
+    - If appropriate, filter o'
+  mitigation: Review investigation guide for details
+references:
+- https://dirkjanm.io/persisting-with-federated-credentials-entra-apps-managed-identities/
+has_investigation_guide: true
+risk_score: 47

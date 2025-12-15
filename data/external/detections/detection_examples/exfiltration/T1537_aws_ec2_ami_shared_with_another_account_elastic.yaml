@@ -1,0 +1,49 @@
+technique_id: T1537
+technique_name: AWS EC2 AMI Shared with Another Account
+tactic: exfiltration
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "event.dataset: \"aws.cloudtrail\" and event.provider: \"ec2.amazonaws.com\"\
+  \n    and event.action: ModifyImageAttribute and event.outcome: success\n    and\
+  \ aws.cloudtrail.request_parameters: *add=*\n    and not aws.cloudtrail.user_identity.invoked_by:\
+  \ \"assets.marketplace.amazonaws.com\""
+explanation: Identifies an AWS Amazon Machine Image (AMI) being shared with another
+  AWS account. Adversaries with access may share an AMI with an external AWS account
+  as a means of data exfiltration. AMIs can contain secrets, bash histories, code
+  artifacts, and other sensitive data that adversaries may abuse if shared with unauthorized
+  accounts. AMIs can be made publicly available accidentally as well.
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/6a309864-fc3f-11ee-b8cc-f661ea17fbce.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: AWS
+  confidence: high
+- type: data_source
+  value: Amazon Web Services
+  confidence: high
+- type: data_source
+  value: AWS EC2
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - **Legitimate Sharing Practices**: AMI sharing is a common and legitimate practice
+    for collaboration and resource management in AWS. Always verify that the sharing
+    activity was unauthorized before escalating.
+
+    - **Automation Tools**: Some organizations use automation tools for AMI management
+    which might programmatically share AMIs. Verify if such tools are in operation
+    and whether their actions are responsible for the observed behavior.
+
+    - **AWS Services**: Some AWS servi'
+  mitigation: Review investigation guide for details
+references:
+- https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html
+- https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharingamis-explicit.html
+- https://stratus-red-team.cloud/attack-techniques/AWS/aws.exfiltration.ec2-share-ami/
+has_investigation_guide: true
+risk_score: 47

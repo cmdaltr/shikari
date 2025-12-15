@@ -1,0 +1,39 @@
+technique_id: T1071.004
+technique_name: Windows Visual Basic Commandline Compiler DNSQuery
+tactic: execution
+platform: Splunk
+fidelity_score: 0.8999999999999999
+validated: true
+query: '`sysmon` EventCode=22 process_name="vbc.exe" | rename dvc as dest | stats
+  count min(_time) as firstTime max(_time) as lastTime by answer answer_count dest
+  process_exec process_guid process_name  query query_count reply_code_id signature
+  signature_id src user_id vendor_product QueryName QueryResults QueryStatus | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `windows_visual_basic_commandline_compiler_dnsquery_filter`'
+explanation: The following analytic detects instances where vbc.exe, the Visual Basic
+  Command Line Compiler, initiates DNS queries. Normally, vbc.exe operates locally
+  to compile Visual Basic code and does not require internet access or to perform
+  DNS lookups. Therefore, any observed DNS activity originating from vbc.exe is highly
+  suspicious and indicative of potential malicious activity. This behavior often suggests
+  that a malicious payload is masquerading as the legitimate vbc.exe process to establish
+  command-and-control (C2) communication, resolve domains for data exfiltration, or
+  download additional stages of malware. Security teams should investigate the process's
+  parent, command-line arguments, and the resolved domains for further indicators
+  of compromise.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/8976744a-ae7a-46a4-8128-690df85c2af4/
+indicators:
+- type: data_source
+  value: Sysmon EventID 22
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: unknown
+  mitigation: Review context and user activity
+references:
+- https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-266a
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1071.004/vbc_dnsquery/vbc_dns_query.log

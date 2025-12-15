@@ -1,0 +1,61 @@
+technique_id: T1562.001
+technique_name: NetNTLM Downgrade Attack - Registry
+tactic: persistence
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.9
+validated: true
+source: sigma
+sigma_id: d67572a0-e2ec-45d6-b8db-c100d14b8ef2
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_regkey and\
+  \ 1 of selection_value_*\nselection_regkey:\n  TargetObject|contains|all:\n  - SYSTEM\\\
+  \n  - ControlSet\n  - \\Control\\Lsa\nselection_value_lmcompatibilitylevel:\n  Details:\n\
+  \  - DWORD (0x00000000)\n  - DWORD (0x00000001)\n  - DWORD (0x00000002)\n  TargetObject|endswith:\
+  \ \\lmcompatibilitylevel\nselection_value_ntlmminclientsec:\n  Details:\n  - DWORD\
+  \ (0x00000000)\n  - DWORD (0x00000010)\n  - DWORD (0x00000020)\n  - DWORD (0x00000030)\n\
+  \  TargetObject|endswith: \\NtlmMinClientSec\nselection_value_restrictsendingntlmtraffic:\n\
+  \  TargetObject|endswith: \\RestrictSendingNTLMTraffic\n"
+explanation: Detects NetNTLM downgrade attack
+false_positives:
+- Services or tools that set the values to more restrictive values
+references:
+- https://web.archive.org/web/20171113231705/https://www.optiv.com/blog/post-exploitation-using-netntlm-downgrade-attacks
+- https://www.ultimatewindowssecurity.com/wiki/page.aspx?spid=NSrpcservers
+tags:
+- attack.persistence
+- attack.defense-evasion
+- attack.t1562.001
+- attack.t1112
+logsource:
+  product: windows
+  category: registry_event
+detection:
+  selection_regkey:
+    TargetObject|contains|all:
+    - SYSTEM\
+    - ControlSet
+    - \Control\Lsa
+  selection_value_lmcompatibilitylevel:
+    TargetObject|endswith: \lmcompatibilitylevel
+    Details:
+    - DWORD (0x00000000)
+    - DWORD (0x00000001)
+    - DWORD (0x00000002)
+  selection_value_ntlmminclientsec:
+    TargetObject|endswith: \NtlmMinClientSec
+    Details:
+    - DWORD (0x00000000)
+    - DWORD (0x00000010)
+    - DWORD (0x00000020)
+    - DWORD (0x00000030)
+  selection_value_restrictsendingntlmtraffic:
+    TargetObject|endswith: \RestrictSendingNTLMTraffic
+  condition: selection_regkey and 1 of selection_value_*
+metadata:
+  created_date: 2018-03-20
+  modified_date: 2024-12-03
+  author: Florian Roth (Nextron Systems), wagga, Nasreddine Bencherchali (Splunk STRT)
+  status: test
+  imported_date: '2025-11-28'

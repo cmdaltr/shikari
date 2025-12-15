@@ -1,0 +1,40 @@
+technique_id: T1568
+technique_name: Machine Learning Detected DGA activity using a known SUNBURST DNS
+  domain
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: ml_is_dga.malicious_prediction:1 and dns.question.registered_domain:avsvmcloud.com
+explanation: 'A supervised machine learning model has identified a DNS question name
+  that used by the SUNBURST malware and is
+
+  predicted to be the result of a Domain Generation Algorithm.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/bcaa15ce-2d41-44d7-a322-918f9db77766.toml
+query_type: query
+query_language: kuery
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or network services may occasionally use domain
+    generation algorithms for load balancing or redundancy, leading to false positives.
+    Users should monitor and whitelist these known benign services.
+
+    - Internal testing environments or security tools that simulate DGA behavior for
+    research or training purposes might trigger alerts. Exclude these environments
+    by adding them to an exception list.
+
+    - Some cloud services might use dynamic DNS techniqu'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/guide/en/security/current/prebuilt-ml-jobs.html
+- https://docs.elastic.co/en/integrations/dga
+- https://www.elastic.co/security-labs/detect-domain-generation-algorithm-activity-with-new-kibana-integration
+has_investigation_guide: true
+risk_score: 73

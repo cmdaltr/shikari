@@ -1,0 +1,44 @@
+technique_id: T1574.001
+technique_name: Windows SqlWriter SQLDumper DLL Sideload
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`sysmon` EventCode=7 (Image="*\\SQLDumper.exe" OR Image="*\\SQLWriter.exe")
+  ImageLoaded="*\\vcruntime140.dll" NOT ImageLoaded="C:\\Windows\\System32\\*" | fillnull
+  | stats count min(_time) as firstTime max(_time) as lastTime by Image ImageLoaded
+  dest loaded_file loaded_file_path original_file_name process_exec process_guid process_hash
+  process_id process_name process_path service_dll_signature_exists service_dll_signature_verified
+  signature signature_id user_id vendor_product | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)`| `windows_sqlwriter_sqldumper_dll_sideload_filter`'
+explanation: The following analytic detects the abuse of SqlWriter and SQLDumper executables
+  to sideload the vcruntime140.dll library. It leverages Sysmon EventCode 7 logs,
+  focusing on instances where SQLDumper.exe or SQLWriter.exe load vcruntime140.dll,
+  excluding legitimate loads from the System32 directory. This activity is significant
+  as it indicates potential DLL sideloading, a technique used by adversaries to execute
+  malicious code within trusted processes. If confirmed malicious, this could allow
+  attackers to execute arbitrary code, maintain persistence, and evade detection by
+  blending with legitimate processes.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2ed89ba9-c6c7-46aa-9f08-a2a1c2955aa3/
+indicators:
+- type: data_source
+  value: Sysmon EventID 7
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: False positives are possible if legitimate processes are loading vcruntime140.dll
+    from non-standard directories. It is recommended to investigate the context of
+    the process loading vcruntime140.dll to determine if it is malicious or not. Modify
+    the search to include additional known good paths for vcruntime140.dll to reduce
+    false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.mandiant.com/resources/blog/apt29-wineloader-german-political-parties
+- https://www.zscaler.com/blogs/security-research/european-diplomats-targeted-spikedwine-wineloader
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1574.002/wineloader/sqlwriter_sqldumper_sideload_windows-sysmon.log

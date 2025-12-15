@@ -1,0 +1,50 @@
+technique_id: T1127
+technique_name: Potential Arbitrary Code Execution Via Node.EXE
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 6640f31c-01ad-49b5-beb5-83498a5cd8bd
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_main and 1\
+  \ of selection_action_*\nselection_action_reverse_shell:\n  CommandLine|contains|all:\n\
+  \  - .exec(\n  - net.socket\n  - .connect\n  - child_process\nselection_main:\n\
+  \  CommandLine|contains:\n  - ' -e '\n  - ' --eval '\n  Image|endswith: \\node.exe\n"
+explanation: Detects the execution node.exe which is shipped with multiple software
+  such as VMware, Adobe...etc. In order to execute arbitrary code. For example to
+  establish reverse shell as seen in Log4j attacks...etc
+false_positives:
+- Unlikely
+references:
+- http://blog.talosintelligence.com/2022/09/lazarus-three-rats.html
+- https://www.sprocketsecurity.com/resources/crossing-the-log4j-horizon-a-vulnerability-with-no-return
+- https://www.rapid7.com/blog/post/2022/01/18/active-exploitation-of-vmware-horizon-servers/
+- https://nodejs.org/api/cli.html
+tags:
+- attack.defense-evasion
+- attack.t1127
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_main:
+    Image|endswith: \node.exe
+    CommandLine|contains:
+    - ' -e '
+    - ' --eval '
+  selection_action_reverse_shell:
+    CommandLine|contains|all:
+    - .exec(
+    - net.socket
+    - .connect
+    - child_process
+  condition: selection_main and 1 of selection_action_*
+metadata:
+  created_date: 2022-09-09
+  modified_date: 2023-02-03
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

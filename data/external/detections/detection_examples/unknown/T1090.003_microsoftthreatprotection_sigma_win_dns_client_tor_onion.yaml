@@ -1,0 +1,93 @@
+technique_id: T1090.003
+technique_name: Query Tor Onion Address - DNS Client
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 8384bd26-bde6-4da9-8e5d-4174a7a47ca2
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  EventID: 3008\n  QueryName|endswith:\n  - .hiddenservice.net\n  - .onion.ca\n\
+  \  - .onion.cab\n  - .onion.casa\n  - .onion.city\n  - .onion.direct\n  - .onion.dog\n\
+  \  - .onion.glass\n  - .onion.gq\n  - .onion.guide\n  - .onion.in.net\n  - .onion.ink\n\
+  \  - .onion.it\n  - .onion.link\n  - .onion.lt\n  - .onion.lu\n  - .onion.ly\n \
+  \ - .onion.mn\n  - .onion.network\n  - .onion.nu\n  - .onion.pet\n  - .onion.plus\n\
+  \  - .onion.pt\n  - .onion.pw\n  - .onion.rip\n  - .onion.sh\n  - .onion.si\n  -\
+  \ .onion.to\n  - .onion.top\n  - .onion.ws\n  - .onion\n  - .s1.tor-gateways.de\n\
+  \  - .s2.tor-gateways.de\n  - .s3.tor-gateways.de\n  - .s4.tor-gateways.de\n  -\
+  \ .s5.tor-gateways.de\n  - .t2w.pw\n  - .tor2web.ae.org\n  - .tor2web.blutmagie.de\n\
+  \  - .tor2web.com\n  - .tor2web.fi\n  - .tor2web.io\n  - .tor2web.org\n  - .tor2web.xyz\n\
+  \  - .torlink.co\n"
+explanation: Detects DNS resolution of an .onion address related to Tor routing networks
+false_positives:
+- Unlikely
+references:
+- https://www.logpoint.com/en/blog/detecting-tor-use-with-logpoint/
+- https://github.com/Azure/Azure-Sentinel/blob/f99542b94afe0ad2f19a82cc08262e7ac8e1428e/Detections/ASimDNS/imDNS_TorProxies.yaml
+tags:
+- attack.command-and-control
+- attack.t1090.003
+logsource:
+  product: windows
+  service: dns-client
+  definition: 'Requirements: Microsoft-Windows-DNS Client Events/Operational Event
+    Log must be enabled/collected in order to receive the events.'
+detection:
+  selection:
+    EventID: 3008
+    QueryName|endswith:
+    - .hiddenservice.net
+    - .onion.ca
+    - .onion.cab
+    - .onion.casa
+    - .onion.city
+    - .onion.direct
+    - .onion.dog
+    - .onion.glass
+    - .onion.gq
+    - .onion.guide
+    - .onion.in.net
+    - .onion.ink
+    - .onion.it
+    - .onion.link
+    - .onion.lt
+    - .onion.lu
+    - .onion.ly
+    - .onion.mn
+    - .onion.network
+    - .onion.nu
+    - .onion.pet
+    - .onion.plus
+    - .onion.pt
+    - .onion.pw
+    - .onion.rip
+    - .onion.sh
+    - .onion.si
+    - .onion.to
+    - .onion.top
+    - .onion.ws
+    - .onion
+    - .s1.tor-gateways.de
+    - .s2.tor-gateways.de
+    - .s3.tor-gateways.de
+    - .s4.tor-gateways.de
+    - .s5.tor-gateways.de
+    - .t2w.pw
+    - .tor2web.ae.org
+    - .tor2web.blutmagie.de
+    - .tor2web.com
+    - .tor2web.fi
+    - .tor2web.io
+    - .tor2web.org
+    - .tor2web.xyz
+    - .torlink.co
+  condition: selection
+metadata:
+  created_date: 2022-02-20
+  modified_date: 2025-09-12
+  author: Nasreddine Bencherchali (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

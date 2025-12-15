@@ -1,0 +1,73 @@
+technique_id: T1071
+technique_name: Network Activity to a Suspicious Top Level Domain
+tactic: command_and_control
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "network where host.os.type == \"windows\" and dns.question.name != null and\n\
+  \ (\n  process.name : (\"MSBuild.exe\", \"mshta.exe\", \"wscript.exe\", \"powershell.exe\"\
+  , \"pwsh.exe\", \"msiexec.exe\", \"rundll32.exe\",\n                  \"bitsadmin.exe\"\
+  , \"InstallUtil.exe\", \"python.exe\", \"regsvr32.exe\", \"dllhost.exe\", \"node.exe\"\
+  ,\n                  \"java.exe\", \"javaw.exe\", \"*.pif\", \"*.com\", \"*.scr\"\
+  ) or\n  (?process.code_signature.trusted == false or ?process.code_signature.exists\
+  \ == false) or\n  ?process.code_signature.subject_name : (\"AutoIt Consulting Ltd\"\
+  , \"OpenJS Foundation\", \"Python Software Foundation\") or\n  ?process.executable\
+  \ : (\"?:\\\\Users\\\\*.exe\", \"?:\\\\ProgramData\\\\*.exe\")\n ) and\ndns.question.name\
+  \ regex \"\"\".*\\.(top|buzz|xyz|rest|ml|cf|gq|ga|onion|monster|cyou|quest|cc|bar|cfd|click|cam|surf|tk|shop|club|icu|pw|ws|online|fun|life|boats|store|hair|skin|motorcycles|christmas|lol|makeup|mom|bond|beauty|biz|live|work|zip|country|accountant|date|party|science|loan|win|men|faith|review|racing|download|host)\
+  \ \"\"\""
+explanation: 'Identifies DNS queries to commonly abused Top Level Domains by common
+  LOLBINs or executable running from world writable
+
+  directories or unsigned binaries. This behavior matches on common malware C2 abusing
+  less formal domain names.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/e516bf56-d51b-43e8-91ec-9e276331f433.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Trusted domain from an expected process running in the environment.
+
+
+    ### Response and remediation
+
+
+    - Initiate the incident response process based on the outcome of the triage.
+
+    - Isolate the involved host to prevent further post-compromise behavior.
+
+    - Immediately block the identified indicators of compromise (IoCs).
+
+    - Implement any temporary network rules, procedures, and segmentation required
+    to contain the attack.
+
+    - Investigate credential exposure on systems compromis'
+  mitigation: Review investigation guide for details
+references:
+- https://www.cybercrimeinfocenter.org/top-20-tlds-by-malicious-phishing-domains
+has_investigation_guide: true
+risk_score: 73

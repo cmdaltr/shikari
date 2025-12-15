@@ -1,0 +1,75 @@
+technique_id: T1047
+technique_name: Suspicious WmiPrvSE Child Process
+tactic: execution
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.92
+validated: true
+source: sigma
+sigma_id: 8a582fe2-0882-4b89-a82a-da6b2dc32937
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection_parent and\
+  \ 1 of selection_children_* and not 1 of filter_main_*\nfilter_main_msiexec:\n \
+  \ CommandLine|contains: '/i '\n  Image|endswith: \\msiexec.exe\nfilter_main_werfault:\n\
+  \  Image|endswith: \\WerFault.exe\nfilter_main_wmiprvse:\n  Image|endswith: \\WmiPrvSE.exe\n\
+  selection_children_1:\n  Image|endswith:\n  - \\certutil.exe\n  - \\cscript.exe\n\
+  \  - \\mshta.exe\n  - \\msiexec.exe\n  - \\regsvr32.exe\n  - \\rundll32.exe\n  -\
+  \ \\verclsid.exe\n  - \\wscript.exe\nselection_children_2:\n  CommandLine|contains:\n\
+  \  - cscript\n  - mshta\n  - powershell\n  - pwsh\n  - regsvr32\n  - rundll32\n\
+  \  - wscript\n  Image|endswith: \\cmd.exe\nselection_parent:\n  ParentImage|endswith:\
+  \ \\wbem\\WmiPrvSE.exe\n"
+explanation: Detects suspicious and uncommon child processes of WmiPrvSE
+false_positives:
+- Unknown
+references:
+- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/
+- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml
+- https://blog.osarmor.com/319/onenote-attachment-delivers-asyncrat-malware/
+- https://twitter.com/ForensicITGuy/status/1334734244120309760
+tags:
+- attack.execution
+- attack.defense-evasion
+- attack.t1047
+- attack.t1204.002
+- attack.t1218.010
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_parent:
+    ParentImage|endswith: \wbem\WmiPrvSE.exe
+  selection_children_1:
+    Image|endswith:
+    - \certutil.exe
+    - \cscript.exe
+    - \mshta.exe
+    - \msiexec.exe
+    - \regsvr32.exe
+    - \rundll32.exe
+    - \verclsid.exe
+    - \wscript.exe
+  selection_children_2:
+    Image|endswith: \cmd.exe
+    CommandLine|contains:
+    - cscript
+    - mshta
+    - powershell
+    - pwsh
+    - regsvr32
+    - rundll32
+    - wscript
+  filter_main_werfault:
+    Image|endswith: \WerFault.exe
+  filter_main_wmiprvse:
+    Image|endswith: \WmiPrvSE.exe
+  filter_main_msiexec:
+    Image|endswith: \msiexec.exe
+    CommandLine|contains: '/i '
+  condition: selection_parent and 1 of selection_children_* and not 1 of filter_main_*
+metadata:
+  created_date: 2021-08-23
+  modified_date: 2023-11-10
+  author: Vadim Khrykov (ThreatIntel), Cyb3rEng, Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

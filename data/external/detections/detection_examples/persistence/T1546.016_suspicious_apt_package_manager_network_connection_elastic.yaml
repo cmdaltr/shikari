@@ -1,0 +1,63 @@
+technique_id: T1546.016
+technique_name: Suspicious APT Package Manager Network Connection
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "sequence by host.id with maxspan=5s\n  [process where host.os.type == \"linux\"\
+  \ and event.type == \"start\" and event.action == \"exec\" and\n   process.parent.name\
+  \ == \"apt\" and process.args == \"-c\" and process.name in (\n     \"bash\", \"\
+  dash\", \"sh\", \"tcsh\", \"csh\", \"zsh\", \"ksh\", \"fish\"\n    )\n  ] by process.entity_id\n\
+  \  [network where host.os.type == \"linux\" and event.action == \"connection_attempted\"\
+  \ and event.type == \"start\" and not (\n     destination.ip == null or destination.ip\
+  \ == \"0.0.0.0\" or cidrmatch(\n     destination.ip, \"10.0.0.0/8\", \"127.0.0.0/8\"\
+  , \"169.254.0.0/16\", \"172.16.0.0/12\", \"192.0.0.0/24\", \"192.0.0.0/29\",\n \
+  \    \"192.0.0.8/32\", \"192.0.0.9/32\", \"192.0.0.10/32\", \"192.0.0.170/32\",\
+  \ \"192.0.0.171/32\", \"192.0.2.0/24\",\n     \"192.31.196.0/24\", \"192.52.193.0/24\"\
+  , \"192.168.0.0/16\", \"192.88.99.0/24\", \"224.0.0.0/4\", \"100.64.0.0/10\",\n\
+  \     \"192.175.48.0/24\",\"198.18.0.0/15\", \"198.51.100.0/24\", \"203.0.113.0/24\"\
+  , \"240.0.0.0/4\", \"::1\", \"FE80::/10\",\n     \"FF00::/8\", \"172.31.0.0/16\"\
+  \n     )\n   ) and not process.executable == \"/usr/bin/apt-listbugs\"\n  ] by process.parent.entity_id"
+explanation: 'Detects suspicious network events executed by the APT package manager,
+  potentially indicating persistence through an APT
+
+  backdoor. In Linux, APT (Advanced Package Tool) is a command-line utility used for
+  handling packages on Debian-based
+
+  systems, providing functions for installing, updating, upgrading, and removing software
+  along with managing package
+
+  repositories. Attackers can backdoor APT to gain persistence by injecting malicious
+  code into scripts that APT runs,
+
+  thereby ensuring continued unauthorized access or control each time APT is used
+  for package management.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/eaef8a35-12e0-4ac0-bc14-81c72b6bd27c.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative scripts executed by APT may trigger the rule if they
+    involve shell commands followed by network connections. Users can create exceptions
+    for known scripts by specifying their paths or hashes.
+
+    - Automated system updates or package installations that involve network connections
+    might be flagged. Users should monitor and whitelist these routine operations
+    by identifying the specific processes and network destinations involved.
+
+    - Network connectio'
+  mitigation: Review investigation guide for details
+references:
+- https://www.elastic.co/security-labs/sequel-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

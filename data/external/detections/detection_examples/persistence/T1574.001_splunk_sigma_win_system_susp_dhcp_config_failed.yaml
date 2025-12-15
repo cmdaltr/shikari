@@ -1,0 +1,43 @@
+technique_id: T1574.001
+technique_name: DHCP Server Error Failed Loading the CallOut DLL
+tactic: persistence
+platform: Splunk
+connectorId: Splunk
+fidelity_score: 0.84
+validated: true
+source: sigma
+sigma_id: 75edd3fd-7146-48e5-9848-3013d7f0282c
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection\nselection:\n\
+  \  EventID:\n  - 1031\n  - 1032\n  - 1034\n  Provider_Name: Microsoft-Windows-DHCP-Server\n"
+explanation: This rule detects a DHCP server error in which a specified Callout DLL
+  (in registry) could not be loaded
+false_positives:
+- Unknown
+references:
+- https://blog.3or.de/mimilib-dhcp-server-callout-dll-injection.html
+- https://technet.microsoft.com/en-us/library/cc726884(v=ws.10).aspx
+- https://msdn.microsoft.com/de-de/library/windows/desktop/aa363389(v=vs.85).aspx
+tags:
+- attack.privilege-escalation
+- attack.persistence
+- attack.defense-evasion
+- attack.t1574.001
+logsource:
+  product: windows
+  service: system
+detection:
+  selection:
+    EventID:
+    - 1031
+    - 1032
+    - 1034
+    Provider_Name: Microsoft-Windows-DHCP-Server
+  condition: selection
+metadata:
+  created_date: 2017-05-15
+  modified_date: 2022-12-25
+  author: Dimitrios Slamaris, @atc_project (fix)
+  status: test
+  imported_date: '2025-11-28'

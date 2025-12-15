@@ -1,0 +1,94 @@
+technique_id: T1569.002
+technique_name: Potential Privilege Escalation via Service ImagePath Modification
+tactic: privilege_escalation
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "registry where host.os.type == \"windows\" and event.type == \"change\" and\
+  \ process.executable != null and\n  registry.data.strings != null and registry.value\
+  \ == \"ImagePath\" and\n  registry.key : (\n    \"*\\\\ADWS\", \"*\\\\AppHostSvc\"\
+  , \"*\\\\AppReadiness\", \"*\\\\AudioEndpointBuilder\", \"*\\\\AxInstSV\", \"*\\\
+  \\camsvc\", \"*\\\\CertSvc\",\n    \"*\\\\COMSysApp\", \"*\\\\CscService\", \"*\\\
+  \\defragsvc\", \"*\\\\DeviceAssociationService\", \"*\\\\DeviceInstall\", \"*\\\\\
+  DevQueryBroker\",\n    \"*\\\\Dfs\", \"*\\\\DFSR\", \"*\\\\diagnosticshub.standardcollector.service\"\
+  , \"*\\\\DiagTrack\", \"*\\\\DmEnrollmentSvc\", \"*\\\\DNS\",\n    \"*\\\\dot3svc\"\
+  , \"*\\\\Eaphost\", \"*\\\\GraphicsPerfSvc\", \"*\\\\hidserv\", \"*\\\\HvHost\"\
+  , \"*\\\\IISADMIN\", \"*\\\\IKEEXT\",\n    \"*\\\\InstallService\", \"*\\\\iphlpsvc\"\
+  , \"*\\\\IsmServ\", \"*\\\\LanmanServer\", \"*\\\\MSiSCSI\", \"*\\\\NcbService\"\
+  , \"*\\\\Netlogon\",\n    \"*\\\\Netman\", \"*\\\\NtFrs\", \"*\\\\PlugPlay\", \"\
+  *\\\\Power\", \"*\\\\PrintNotify\", \"*\\\\ProfSvc\", \"*\\\\PushToInstall\", \"\
+  *\\\\RSoPProv\",\n    \"*\\\\sacsvr\", \"*\\\\SENS\", \"*\\\\SensorDataService\"\
+  , \"*\\\\SgrmBroker\", \"*\\\\ShellHWDetection\", \"*\\\\shpamsvc\", \"*\\\\StorSvc\"\
+  ,\n    \"*\\\\svsvc\", \"*\\\\swprv\", \"*\\\\SysMain\", \"*\\\\Themes\", \"*\\\\\
+  TieringEngineService\", \"*\\\\TokenBroker\", \"*\\\\TrkWks\",\n    \"*\\\\UALSVC\"\
+  , \"*\\\\UserManager\", \"*\\\\vm3dservice\", \"*\\\\vmicguestinterface\", \"*\\\
+  \\vmicheartbeat\", \"*\\\\vmickvpexchange\",\n    \"*\\\\vmicrdv\", \"*\\\\vmicshutdown\"\
+  , \"*\\\\vmicvmsession\", \"*\\\\vmicvss\", \"*\\\\vmvss\", \"*\\\\VSS\", \"*\\\\\
+  w3logsvc\", \"*\\\\W3SVC\",\n    \"*\\\\WalletService\", \"*\\\\WAS\", \"*\\\\wercplsupport\"\
+  , \"*\\\\WerSvc\", \"*\\\\Winmgmt\", \"*\\\\wisvc\", \"*\\\\wmiApSrv\",\n    \"\
+  *\\\\WPDBusEnum\", \"*\\\\WSearch\"\n  ) and\n  not (\n    registry.data.strings\
+  \ : (\n        \"?:\\\\Windows\\\\system32\\\\*.exe\",\n        \"%systemroot%\\\
+  \\system32\\\\*.exe\",\n        \"%windir%\\\\system32\\\\*.exe\",\n        \"%SystemRoot%\\\
+  \\system32\\\\svchost.exe -k *\",\n        \"%windir%\\\\system32\\\\svchost.exe\
+  \ -k *\"\n    ) and\n        not registry.data.strings : (\n            \"*\\\\\
+  cmd.exe\",\n            \"*\\\\cscript.exe\",\n            \"*\\\\ieexec.exe\",\n\
+  \            \"*\\\\iexpress.exe\",\n            \"*\\\\installutil.exe\",\n   \
+  \         \"*\\\\Microsoft.Workflow.Compiler.exe\",\n            \"*\\\\msbuild.exe\"\
+  ,\n            \"*\\\\mshta.exe\",\n            \"*\\\\msiexec.exe\",\n        \
+  \    \"*\\\\msxsl.exe\",\n            \"*\\\\net.exe\",\n            \"*\\\\powershell.exe\"\
+  ,\n            \"*\\\\pwsh.exe\",\n            \"*\\\\reg.exe\",\n            \"\
+  *\\\\RegAsm.exe\",\n            \"*\\\\RegSvcs.exe\",\n            \"*\\\\regsvr32.exe\"\
+  ,\n            \"*\\\\rundll32.exe\",\n            \"*\\\\vssadmin.exe\",\n    \
+  \        \"*\\\\wbadmin.exe\",\n            \"*\\\\wmic.exe\",\n            \"*\\\
+  \\wscript.exe\"\n        )\n  )"
+explanation: 'Identifies registry modifications to default services that could enable
+  privilege escalation to SYSTEM. Attackers with
+
+  privileges from groups like Server Operators may change the ImagePath of services
+  to executables under their control or
+
+  to execute commands.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/b66b7e2b-d50a-49b9-a6fc-3a383baedc6b.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate software updates or installations may modify service ImagePaths.
+    Users can create exceptions for known update processes or installation paths to
+    prevent false positives.
+
+    - System administrators might intentionally change service configurations for
+    maintenance or troubleshooting. Document and exclude these changes by adding exceptions
+    for specific administrator actions or paths.
+
+    - Custom scripts or automation tools that modify service settings as part of thei'
+  mitigation: Review investigation guide for details
+references:
+- https://cube0x0.github.io/Pocing-Beyond-DA/
+has_investigation_guide: true
+risk_score: 47

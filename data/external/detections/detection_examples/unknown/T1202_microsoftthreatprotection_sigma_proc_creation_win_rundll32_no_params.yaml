@@ -1,0 +1,45 @@
+technique_id: T1202
+technique_name: Rundll32 Execution Without CommandLine Parameters
+tactic: unknown
+platform: MicrosoftThreatProtection
+connectorId: MicrosoftThreatProtection
+fidelity_score: 0.86
+validated: true
+source: sigma
+sigma_id: 1775e15e-b61b-4d14-a1a3-80981298085a
+level: high
+query: "# Sigma Detection Logic\n# Convert to platform-specific query using Sigma\
+  \ tools:\n# https://github.com/SigmaHQ/sigma\n\ncondition: selection and not filter\n\
+  filter:\n  ParentImage|contains:\n  - \\AppData\\Local\\\n  - \\Microsoft\\Edge\\\
+  \nselection:\n  CommandLine|endswith:\n  - \\rundll32.exe\n  - \\rundll32.exe\"\n\
+  \  - \\rundll32\n"
+explanation: Detects suspicious start of rundll32.exe without any parameters as found
+  in CobaltStrike beacon activity
+false_positives:
+- Possible but rare
+references:
+- https://www.cobaltstrike.com/help-opsec
+- https://twitter.com/ber_m1ng/status/1397948048135778309
+tags:
+- attack.defense-evasion
+- attack.t1202
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|endswith:
+    - \rundll32.exe
+    - \rundll32.exe"
+    - \rundll32
+  filter:
+    ParentImage|contains:
+    - \AppData\Local\
+    - \Microsoft\Edge\
+  condition: selection and not filter
+metadata:
+  created_date: 2021-05-27
+  modified_date: 2023-08-31
+  author: Florian Roth (Nextron Systems)
+  status: test
+  imported_date: '2025-11-28'

@@ -1,0 +1,71 @@
+technique_id: T1037
+technique_name: rc.local/rc.common File Creation
+tactic: persistence
+platform: Elastic
+fidelity_score: 0.95
+validated: true
+query: "file where host.os.type == \"linux\" and event.action in (\"rename\", \"creation\"\
+  ) and\nfile.path in (\"/etc/rc.local\", \"/etc/rc.common\") and not (\n  process.executable\
+  \ in (\n    \"/bin/dpkg\", \"/usr/bin/dpkg\", \"/bin/dockerd\", \"/usr/bin/dockerd\"\
+  , \"/usr/sbin/dockerd\", \"/bin/microdnf\",\n    \"/usr/bin/microdnf\", \"/bin/rpm\"\
+  , \"/usr/bin/rpm\", \"/bin/snapd\", \"/usr/bin/snapd\", \"/bin/yum\", \"/usr/bin/yum\"\
+  ,\n    \"/bin/dnf\", \"/usr/bin/dnf\", \"/bin/podman\", \"/usr/bin/podman\", \"\
+  /bin/dnf-automatic\", \"/usr/bin/dnf-automatic\",\n    \"/bin/pacman\", \"/usr/bin/pacman\"\
+  , \"/usr/bin/dpkg-divert\", \"/bin/dpkg-divert\", \"/sbin/apk\", \"/usr/sbin/apk\"\
+  ,\n    \"/usr/local/sbin/apk\", \"/usr/bin/apt\", \"/usr/sbin/pacman\", \"/bin/podman\"\
+  , \"/usr/bin/podman\", \"/usr/bin/puppet\",\n    \"/bin/puppet\", \"/opt/puppetlabs/puppet/bin/puppet\"\
+  , \"/usr/bin/chef-client\", \"/bin/chef-client\",\n    \"/bin/autossl_check\", \"\
+  /usr/bin/autossl_check\", \"/proc/self/exe\", \"/dev/fd/*\",  \"/usr/bin/pamac-daemon\"\
+  ,\n    \"/bin/pamac-daemon\", \"/usr/lib/snapd/snapd\", \"/usr/local/bin/dockerd\"\
+  , \"/usr/libexec/platform-python\"\n  ) or\n  file.extension in (\"swp\", \"swpx\"\
+  , \"swx\", \"dpkg-remove\") or\n  file.Ext.original.extension == \"dpkg-new\" or\n\
+  \  process.executable : (\n    \"/nix/store/*\", \"/var/lib/dpkg/*\", \"/snap/*\"\
+  , \"/dev/fd/*\", \"/usr/lib/virtualbox/*\"\n  ) or\n  process.executable == null\
+  \ or\n  process.name in (\"ssm-agent-worker\", \"convert2rhel\", \"platform-python*\"\
+  ) or\n  (process.name == \"sed\" and file.name : \"sed*\") or\n  (process.name ==\
+  \ \"perl\" and file.name : \"e2scrub_all.tmp*\") \n)"
+explanation: 'This rule monitors the creation/alteration of the rc.local/rc.common
+  file. The /etc/rc.local file is used to start
+
+  custom applications, services, scripts or commands during start-up. The rc.local
+  file has mostly been replaced by
+
+  Systemd. However, through the "systemd-rc-local-generator", rc.local files can be
+  converted to services that run at
+
+  boot. Adversaries may alter rc.local/rc.common to execute malicious code at start-up,
+  and gain persistence onto the
+
+  system.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/0f4d35e4-925e-4959-ab24-911be207ee6f.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: operating_system
+  value: Linux
+  confidence: high
+false_positives:
+- description: 'False Positive Analysis
+
+
+    - If this activity is related to new benign software installation activity, consider
+    adding exceptions — preferably with a combination of user and command line conditions.
+
+    - If this activity is related to a system administrator who uses `rc.local` for
+    administrative purposes, consider adding exceptions for this specific administrator
+    user account.
+
+    - Try to understand the context of the execution by thinking about the user, machine,
+    or business purpose. A small number of'
+  mitigation: Review investigation guide for details
+references:
+- https://www.intezer.com/blog/malware-analysis/hiddenwasp-malware-targeting-linux-systems/
+- https://pberba.github.io/security/2022/02/06/linux-threat-hunting-for-persistence-initialization-scripts-and-shell-configuration/#8-boot-or-logon-initialization-scripts-rc-scripts
+- https://www.cyberciti.biz/faq/how-to-enable-rc-local-shell-script-on-systemd-while-booting-linux-system/
+- https://www.elastic.co/security-labs/sequel-on-persistence-mechanisms
+has_investigation_guide: true
+risk_score: 47

@@ -1,0 +1,66 @@
+technique_id: T1210
+technique_name: Potential WSUS Abuse for Lateral Movement
+tactic: lateral_movement
+platform: Elastic
+fidelity_score: 0.93
+validated: true
+query: "process where host.os.type == \"windows\" and event.type == \"start\" and\
+  \ process.parent.name : \"wuauclt.exe\" and\nprocess.executable : (\n    \"?:\\\\\
+  Windows\\\\SoftwareDistribution\\\\Download\\\\Install\\\\*\",\n    \"\\\\Device\\\
+  \\HarddiskVolume?\\\\Windows\\\\SoftwareDistribution\\\\Download\\\\Install\\\\\
+  *\"\n) and\n(process.name : \"psexec64.exe\" or ?process.pe.original_file_name :\
+  \ \"psexec.c\")"
+explanation: 'Identifies a potential Windows Server Update Services (WSUS) abuse to
+  execute psexec to enable for lateral movement.
+
+  WSUS is limited to executing Microsoft signed binaries, which limits the executables
+  that can be used to tools published
+
+  by Microsoft.'
+source: Elastic Detection Rules
+source_url: https://github.com/elastic/detection-rules/tree/main/rules/8e2485b6-a74f-411b-bf7f-38b819f3a846.toml
+query_type: eql
+query_language: eql
+indicators:
+- type: data_source
+  value: Elastic Endgame
+  confidence: high
+- type: data_source
+  value: Elastic Defend
+  confidence: high
+- type: data_source
+  value: Sysmon
+  confidence: high
+- type: data_source
+  value: SentinelOne
+  confidence: high
+- type: data_source
+  value: Microsoft Defender for Endpoint
+  confidence: high
+- type: data_source
+  value: Windows Security Event Logs
+  confidence: high
+- type: data_source
+  value: Crowdstrike
+  confidence: high
+- type: operating_system
+  value: Windows
+  confidence: high
+false_positives:
+- description: 'False positive analysis
+
+
+    - Legitimate administrative tasks using PsExec may trigger the rule. To manage
+    this, create exceptions for known administrative accounts or specific times when
+    these tasks are scheduled.
+
+    - Automated scripts or software deployment tools that use PsExec for legitimate
+    purposes can cause false positives. Identify these tools and exclude their process
+    hashes or specific execution paths from the rule.
+
+    - Security software or monitoring tools that utilize PsExec for scanning or'
+  mitigation: Review investigation guide for details
+references:
+- https://www.thehacker.recipes/a-d/movement/mitm-and-coerced-authentications/wsus-spoofing
+has_investigation_guide: true
+risk_score: 47

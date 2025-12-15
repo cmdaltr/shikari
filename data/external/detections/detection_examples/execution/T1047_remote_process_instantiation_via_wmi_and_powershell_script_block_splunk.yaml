@@ -1,0 +1,41 @@
+technique_id: T1047
+technique_name: Remote Process Instantiation via WMI and PowerShell Script Block
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '`powershell` EventCode=4104 ScriptBlockText="*Invoke-WmiMethod*" AND (ScriptBlockText="*-CN*"
+  OR ScriptBlockText="*-ComputerName*") AND ScriptBlockText="*-Class Win32_Process*"
+  AND ScriptBlockText="*-Name create*" | fillnull | stats count min(_time) as firstTime
+  max(_time) as lastTime by dest signature signature_id user_id vendor_product EventID
+  Guid Opcode Name Path ProcessID ScriptBlockId ScriptBlockText | `security_content_ctime(firstTime)`
+  | `security_content_ctime(lastTime)` | `remote_process_instantiation_via_wmi_and_powershell_script_block_filter`'
+explanation: The following analytic detects the execution of the `Invoke-WmiMethod`
+  commandlet with parameters used to start a process on a remote endpoint via WMI,
+  leveraging PowerShell Script Block Logging (EventCode=4104). This method identifies
+  specific script block text patterns associated with remote process instantiation.
+  This activity is significant as it may indicate lateral movement or remote code
+  execution attempts by adversaries. If confirmed malicious, this could allow attackers
+  to execute arbitrary code on remote systems, potentially leading to further compromise
+  and persistence within the network.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/2a048c14-4634-11ec-a618-3e22fbd008af/
+indicators:
+- type: data_source
+  value: Powershell Script Block Logging 4104
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+false_positives:
+- description: Administrators may leverage WWMI and powershell.exe to start a process
+    on remote systems, but this activity is usually limited to a small set of hosts
+    or users.
+  mitigation: Review context and user activity
+references:
+- https://attack.mitre.org/techniques/T1047/
+- https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/invoke-wmimethod?view=powershell-5.1
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1047/lateral_movement/wmi_remote_process_powershell.log

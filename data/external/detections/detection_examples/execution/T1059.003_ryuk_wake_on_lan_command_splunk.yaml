@@ -1,0 +1,52 @@
+technique_id: T1059.003
+technique_name: Ryuk Wake on LAN Command
+tactic: execution
+platform: Splunk
+fidelity_score: 0.95
+validated: true
+query: '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where (Processes.process="*8 LAN*"
+  OR Processes.process="*9 REP*") by Processes.action Processes.dest Processes.original_file_name
+  Processes.parent_process Processes.parent_process_exec Processes.parent_process_guid
+  Processes.parent_process_id Processes.parent_process_name Processes.parent_process_path
+  Processes.process Processes.process_exec Processes.process_guid Processes.process_hash
+  Processes.process_id Processes.process_integrity_level Processes.process_name Processes.process_path
+  Processes.user Processes.user_id Processes.vendor_product | `drop_dm_object_name(Processes)`
+  | `security_content_ctime(firstTime)`| `security_content_ctime(lastTime)` | `ryuk_wake_on_lan_command_filter`'
+explanation: The following analytic detects the use of Wake-on-LAN commands associated
+  with Ryuk ransomware. It leverages data from Endpoint Detection and Response (EDR)
+  agents, focusing on specific process and command-line activities. This behavior
+  is significant as Ryuk ransomware uses Wake-on-LAN to power on devices in a compromised
+  network, increasing its encryption success rate. If confirmed malicious, this activity
+  could lead to widespread ransomware encryption across multiple endpoints, causing
+  significant operational disruption and data loss. Immediate isolation and thorough
+  investigation of the affected endpoints are crucial to mitigate the impact.
+source: Splunk Security Content
+source_url: https://research.splunk.com/detections/538d0152-7aaa-11eb-beaa-acde48001122/
+indicators:
+- type: data_source
+  value: Sysmon EventID 1
+  confidence: high
+- type: data_source
+  value: Windows Event Log Security 4688
+  confidence: high
+- type: data_source
+  value: CrowdStrike ProcessRollup2
+  confidence: high
+- type: risk_system
+  value: dest
+  confidence: high
+- type: risk_user
+  value: user
+  confidence: high
+false_positives:
+- description: Limited to no known false positives.
+  mitigation: Review context and user activity
+references:
+- https://www.bleepingcomputer.com/news/security/ryuk-ransomware-uses-wake-on-lan-to-encrypt-offline-devices/
+- https://www.bleepingcomputer.com/news/security/ryuk-ransomware-now-self-spreads-to-other-windows-lan-devices/
+- https://www.cert.ssi.gouv.fr/uploads/CERTFR-2021-CTI-006.pdf
+validation:
+  test_available: true
+  test_count: 1
+  test_data_url: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1059.003/ryuk/windows-sysmon.log

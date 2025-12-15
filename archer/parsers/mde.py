@@ -1,0 +1,460 @@
+"""
+Parser for Microsoft Defender for Endpoint (MDE) / KQL queries.
+"""
+
+import re
+from dataclasses import dataclass
+from typing import List, Dict, Optional, Any, Tuple
+
+
+@dataclass
+class KQLOperator:
+    """Represents a KQL operator like where, project, etc."""
+
+    name: str
+    expression: str  # Raw expression string
+    parsed_expr: Dict[str, Any] = None  # Parsed expression where applicable
+
+
+@dataclass
+class KQLQuery:
+    """Represents a parsed KQL query with components."""
+
+    raw_query: str
+    table_name: Optional[str] = None
+    time_filter: Optional[str] = None  # Time filter expression
+    operators: List[KQLOperator] = None
+    projected_fields: List[str] = None  # Fields in project operators
+
+    def __post_init__(self):
+        if self.operators is None:
+            self.operators = []
+        if self.projected_fields is None:
+            self.projected_fields = []
+
+
+def parse_kql_query(query: str) -> KQLQuery:
+    """
+    Parse a KQL/MDE query into its components.
+
+    Args:
+        query: The KQL query string to parse
+
+    Returns:
+        KQLQuery object with parsed components
+    """
+    if not query or not isinstance(query, str):
+        return KQLQuery(raw_query="")
+
+    # Normalize whitespace and clean up query
+    query = query.strip()
+    result = KQLQuery(raw_query=query)
+
+    # Extract table name (first word before any operator)
+    lines = query.split("\n")
+    first_line = lines[0].strip() if lines else ""
+
+    # Handle comments at the beginning
+    if first_line.startswith("//"):
+        comment_lines = []
+        for i, line in enumerate(lines):
+            if line.strip().startswith("//"):
+                comment_lines.append(i)
+            else:
+                break
+
+        # Skip comment lines for table name extraction
+        if len(lines) > len(comment_lines):
+            first_line = lines[len(comment_lines)].strip()
+        else:
+            first_line = ""
+
+    # Extract table name
+    table_match = re.match(r"^(\w+)(\s|$)", first_line)
+    if table_match:
+        result.table_name = table_match.group(1)
+
+    # Process operators
+    operators = []
+    current_op = None
+    current_expr = []
+
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("//"):
+            continue
+
+        # Check if this line starts a new operator
+        op_match = re.match(r"^(?:(?:\|\s*)?(\w+))(.*)$", line)
+
+        if op_match:
+            # Save previous operator if there was one
+            if current_op and current_expr:
+                operators.append(
+                    KQLOperator(name=current_op, expression="\n".join(current_expr))
+                )
+                current_expr = []
+
+            # Start new operator
+            current_op = op_match.group(1)
+            expr = op_match.group(2).strip()
+            if expr:
+                current_expr.append(expr)
+        elif current_op:
+            # Continue previous operator
+            current_expr.append(line)
+
+    # Add the last operator if there is one
+    if current_op and current_expr:
+        operators.append(
+            KQLOperator(name=current_op, expression="\n".join(current_expr))
+        )
+
+    result.operators = operators
+
+    # Extract time filter if present
+    for op in operators:
+        if op.name == "where" and (
+            "ago(" in op.expression or "timestamp" in op.expression.lower()
+        ):
+            time_filter_match = re.search(
+                r"(timestamp\s*[><]=?\s*ago\([^)]+\))", op.expression, re.IGNORECASE
+            )
+            if time_filter_match:
+                result.time_filter = time_filter_match.group(1)
+
+    # Extract projected fields
+    for op in operators:
+        if (
+            op.name == "project"
+            or op.name == "project-away"
+            or op.name == "project-keep"
+        ):
+            fields = [f.strip() for f in re.split(r",|\s+", op.expression) if f.strip()]
+            result.projected_fields.extend(fields)
+
+    return result
+
+
+def validate_kql_query(query: str) -> Tuple[bool, str]:
+    """
+    Validate a KQL/MDE query for basic syntax correctness.
+
+    Args:
+        query: The KQL query to validate
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not query or not isinstance(query, str):
+        return False, "Query is empty or not a string"
+
+    # Check for balanced quotes
+    single_quotes = query.count("'") % 2
+    double_quotes = query.count('"') % 2
+
+    if single_quotes != 0:
+        return False, "Unbalanced single quotes"
+    if double_quotes != 0:
+        return False, "Unbalanced double quotes"
+
+    # Check for balanced parentheses
+    if query.count("(") != query.count(")"):
+        return False, "Unbalanced parentheses"
+
+    # Check for table name
+    try:
+        parsed = parse_kql_query(query)
+        if not parsed.table_name:
+            return False, "No table name found"
+    except Exception as e:
+        return False, f"Parse error: {str(e)}"
+
+    return True, ""
+
+
+def combine_kql_queries(query_a: str, query_b: str) -> str:
+    """
+    Intelligently combine two KQL/MDE queries.
+
+    Args:
+        query_a: First KQL query
+        query_b: Second KQL query
+
+    Returns:
+        Combined query string
+    """
+    # Parse both queries
+    parsed_a = parse_kql_query(query_a)
+    parsed_b = parse_kql_query(query_b)
+
+    # Check if tables match for a simple join
+    if parsed_a.table_name and parsed_b.table_name:
+        if parsed_a.table_name == parsed_b.table_name:
+            # Same table - use union approach
+            return _combine_same_table(parsed_a, parsed_b)
+        else:
+            # Different tables - try a join approach
+            return _combine_different_tables(parsed_a, parsed_b)
+    elif parsed_a.table_name:
+        # Only query_a has a table
+        return _enhance_single_query(parsed_a, parsed_b)
+    elif parsed_b.table_name:
+        # Only query_b has a table
+        return _enhance_single_query(parsed_b, parsed_a)
+    else:
+        # No tables detected - return a commented error
+        return f"""
+// Error: Could not detect table names in the queries
+// Query A:
+{query_a}
+
+// Query B:
+{query_b}
+
+// Could not generate a combined query
+"""
+
+
+def _combine_same_table(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
+    """Combine queries operating on the same table using proper correlation join."""
+    table = parsed_a.table_name
+
+    # Get time filters from both queries, or use default
+    time_filter_a = parsed_a.time_filter or "Timestamp > ago(1d)"
+    time_filter_b = parsed_b.time_filter or "Timestamp > ago(1d)"
+
+    # Extract where conditions (excluding time filters)
+    where_conditions_a = []
+    where_conditions_b = []
+
+    for op in parsed_a.operators:
+        if op.name == "where" and op.expression:
+            # Remove time filter from expression if present
+            expr = op.expression
+
+            # Skip this where clause entirely if it ONLY contains the time filter
+            if parsed_a.time_filter and expr.strip() == parsed_a.time_filter.strip():
+                continue  # Skip this operator entirely
+
+            if parsed_a.time_filter and parsed_a.time_filter in expr:
+                # Remove the time filter and any leading "and" or "or"
+                expr = expr.replace(parsed_a.time_filter, "").strip()
+                expr = expr.lstrip("and").lstrip("or").strip()
+            if expr and expr != "true":
+                where_conditions_a.append(expr)
+
+    for op in parsed_b.operators:
+        if op.name == "where" and op.expression:
+            # Remove time filter from expression if present
+            expr = op.expression
+
+            # Skip this where clause entirely if it ONLY contains the time filter
+            if parsed_b.time_filter and expr.strip() == parsed_b.time_filter.strip():
+                continue  # Skip this operator entirely
+
+            if parsed_b.time_filter and parsed_b.time_filter in expr:
+                # Remove the time filter and any leading "and" or "or"
+                expr = expr.replace(parsed_b.time_filter, "").strip()
+                expr = expr.lstrip("and").lstrip("or").strip()
+            if expr and expr != "true":
+                where_conditions_b.append(expr)
+
+    # Build combined query using proper KQL join syntax for correlation
+    def simplify_where_clause(conditions):
+        if not conditions:
+            return "true"
+
+        # Join conditions
+        clause = " and ".join(conditions)
+
+        import re
+
+        # Process each has_any() call
+        def replace_has_any(match):
+            full_match = match.group(0)
+            # Extract all quoted values
+            values = re.findall(r'"([^"]+)"', full_match)
+
+            # Filter out overly generic terms (common words unlikely to be useful indicators)
+            generic_terms = {
+                "condition", "access", "policy", "policies", "data", "file",
+                "process", "user", "system", "service", "event", "log",
+                "network", "security", "admin", "administrator", "account"
+            }
+
+            # Remove duplicates and filter generic terms
+            unique_values = []
+            seen = set()
+            for v in values:
+                if v not in seen and v.lower() not in generic_terms:
+                    unique_values.append(v)
+                    seen.add(v)
+
+            # Get the field name (e.g., "FileName", "ProcessCommandLine")
+            field_match = re.search(r'(\w+)\s+has_any', full_match)
+            field_name = field_match.group(1) if field_match else ""
+
+            if len(unique_values) == 0:
+                # All values were generic/filtered out - return empty string to signal removal
+                return ""
+            elif len(unique_values) == 1:
+                value = unique_values[0]
+                # If value is very short (< 3 chars), use 'contains' instead of 'has'
+                if len(value) < 3:
+                    return f'{field_name} contains "{value}"'
+                else:
+                    return f'{field_name} has "{value}"'
+            else:
+                # Multiple distinct values - keep has_any
+                values_str = ", ".join([f'"{v}"' for v in unique_values])
+                return f'{field_name} has_any({values_str})'
+
+        # Replace all has_any() calls
+        clause = re.sub(r'\w+\s+has_any\([^)]+\)', replace_has_any, clause)
+
+        # Remove ProcessVersionInfo fields (metadata, not useful for detection)
+        clause = re.sub(r'\s*or\s*ProcessVersionInfoProductName\s+(?:has|has_any|contains)[^)]*\)', '', clause)
+        clause = re.sub(r'\s*or\s*ProcessVersionInfoCompanyName\s+(?:has|has_any|contains)[^)]*\)', '', clause)
+
+        # Clean up empty conditions left by filtering
+        # Remove patterns like "condition1 or  or condition2"
+        clause = re.sub(r'\s+or\s+or\s+', ' or ', clause)
+        clause = re.sub(r'^\s*or\s+', '', clause)  # Remove leading "or"
+        clause = re.sub(r'\s+or\s*$', '', clause)  # Remove trailing "or"
+        clause = re.sub(r'\s+and\s+and\s+', ' and ', clause)
+        clause = re.sub(r'^\s*and\s+', '', clause)  # Remove leading "and"
+        clause = re.sub(r'\s+and\s*$', '', clause)  # Remove trailing "and"
+
+        # If clause is empty after cleanup, return "true" (matches nothing specific)
+        if not clause.strip():
+            return "true"
+
+        return clause
+
+    where_clause_a = simplify_where_clause(where_conditions_a)
+    where_clause_b = simplify_where_clause(where_conditions_b)
+
+    # Get common fields for projection
+    all_fields = list(set(parsed_a.projected_fields + parsed_b.projected_fields))
+    common_fields = ["DeviceId", "DeviceName", "AccountName", "FileName", "ProcessCommandLine", "Timestamp"]
+    # Use common fields if no specific fields were projected
+    if not all_fields:
+        all_fields = [f for f in common_fields if f]
+
+    project_clause = f"| project {', '.join(all_fields)}" if all_fields else ""
+
+    combined = f"""// Correlation query for {table}
+// Query A
+let QueryA = materialize(
+    {table}
+    | where {time_filter_a}
+    | where {where_clause_a}
+    | extend CorrelationKey = strcat(DeviceId, "_", bin(Timestamp, 1h))
+    | extend QueryA_Match = "true"
+    {project_clause}
+    | project-rename QueryA_Timestamp = Timestamp, QueryA_FileName = FileName, QueryA_ProcessCommandLine = ProcessCommandLine
+    | project CorrelationKey, DeviceId, DeviceName, AccountName, QueryA_Match, QueryA_Timestamp, QueryA_FileName, QueryA_ProcessCommandLine
+);
+// Query B
+let QueryB = materialize(
+    {table}
+    | where {time_filter_b}
+    | where {where_clause_b}
+    | extend CorrelationKey = strcat(DeviceId, "_", bin(Timestamp, 1h))
+    | extend QueryB_Match = "true"
+    {project_clause}
+    | project-rename QueryB_Timestamp = Timestamp, QueryB_FileName = FileName, QueryB_ProcessCommandLine = ProcessCommandLine
+    | project CorrelationKey, DeviceId, DeviceName, AccountName, QueryB_Match, QueryB_Timestamp, QueryB_FileName, QueryB_ProcessCommandLine
+);
+// Correlate: Match events on same device within same hour
+QueryA
+| join kind=inner (QueryB) on CorrelationKey
+| project DeviceId, DeviceName, AccountName,
+          QueryA_Timestamp, QueryA_FileName, QueryA_ProcessCommandLine,
+          QueryB_Timestamp = QueryB_Timestamp1, QueryB_FileName = QueryB_FileName1, QueryB_ProcessCommandLine = QueryB_ProcessCommandLine1
+| summarize CorrelationCount = count(),
+            QueryA_FirstSeen = min(QueryA_Timestamp),
+            QueryB_FirstSeen = min(QueryB_Timestamp),
+            QueryA_Files = make_set(QueryA_FileName),
+            QueryB_Files = make_set(QueryB_FileName)
+            by DeviceId, DeviceName, AccountName
+| where CorrelationCount >= 1  // Both detection patterns observed
+"""
+
+    return combined
+
+
+def _combine_different_tables(parsed_a: KQLQuery, parsed_b: KQLQuery) -> str:
+    """Combine queries operating on different tables using join."""
+    table_a = parsed_a.table_name
+    table_b = parsed_b.table_name
+
+    # Default time filter
+    time_filter = "timestamp > ago(1d)"
+
+    # Use existing time filters if available
+    time_filter_a = parsed_a.time_filter or time_filter
+    time_filter_b = parsed_b.time_filter or time_filter
+
+    # Common join keys between MDE tables (educated guess)
+    join_candidates = ["DeviceId", "DeviceName", "Timestamp", "ReportId", "ActionType"]
+
+    combined = f"""
+// Combined query joining {table_a} and {table_b}
+let query_a = (
+    {table_a}
+    | where {time_filter_a}
+    {_extract_where_conditions(parsed_a)}
+);
+let query_b = (
+    {table_b}
+    | where {time_filter_b}
+    {_extract_where_conditions(parsed_b)}
+);
+query_a
+| join kind=inner query_b on $left.DeviceId == $right.DeviceId
+| project-away DeviceId1, Timestamp1
+"""
+
+    return combined
+
+
+def _enhance_single_query(parsed_main: KQLQuery, parsed_secondary: KQLQuery) -> str:
+    """Use one query as the main query and enhance it with elements from the second."""
+    table = parsed_main.table_name
+    time_filter = parsed_main.time_filter or "timestamp > ago(1d)"
+
+    # Extract where conditions from both
+    main_where = _extract_where_conditions(parsed_main)
+    secondary_where = _extract_where_conditions(parsed_secondary)
+
+    combined = f"""
+// Enhanced query for {table}
+{table}
+| where {time_filter}
+{main_where}
+// Additional conditions from secondary query:
+{secondary_where}
+"""
+
+    # Add projection if we have fields
+    all_fields = parsed_main.projected_fields
+    if all_fields:
+        combined += f"| project {', '.join(all_fields)}\n"
+
+    return combined
+
+
+def _extract_where_conditions(parsed: KQLQuery) -> str:
+    """Extract where conditions from parsed query, excluding time filters."""
+    conditions = []
+    for op in parsed.operators:
+        if (
+            op.name == "where"
+            and op.expression
+            and (not parsed.time_filter or parsed.time_filter not in op.expression)
+        ):
+            conditions.append(f"| where {op.expression}")
+
+    return "\n".join(conditions)
