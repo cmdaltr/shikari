@@ -733,31 +733,20 @@ def _build_merged_query(correlations: list) -> str:
     join_template = join_match.group(1) if join_match else ""
 
     # Build new combined query
-<<<<<<< HEAD
     conditions_joined = " or\n".join(second_conditions)
-=======
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
     merged = f"""{first_let}
 
 let {most_common_table}_Combined = {most_common_table}
 | where Timestamp > ago(1h)
 | where
-<<<<<<< HEAD
 {conditions_joined}
-=======
-{" or\n".join(second_conditions)}
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 | project Timestamp, DeviceName, AccountName=AccountName, *;
 
 {join_template}"""
 
     # Fix the join to use the new combined table
-<<<<<<< HEAD
     join_replacement = f'| join kind=inner (\n    {most_common_table}_Combined'
     merged = re.sub(r'\|\s*join\s+kind=inner\s*\(\s*\w+', join_replacement, merged)
-=======
-    merged = re.sub(r'\|\s*join\s+kind=inner\s*\(\s*\w+', f'| join kind=inner (\n    {most_common_table}_Combined', merged)
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 
     return merged
 
@@ -1293,11 +1282,7 @@ def initialize_database():
 @app.on_event("startup")
 def validate_mapping_files():
     """
-<<<<<<< HEAD
     Validate that all required mapping files exist in data/bespoke/mappings/.
-=======
-    Validate that all required mapping files exist in archer/mappings/.
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 
     Exits the application with a clear error message if any required files are missing.
     """
@@ -1314,11 +1299,7 @@ def validate_mapping_files():
         "techniquePlatformIndicators.json",
     ]
 
-<<<<<<< HEAD
     mappings_dir = Path("data/bespoke/mappings")
-=======
-    mappings_dir = Path("archer/mappings")
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
     missing_files = []
 
     for filename in required_files:
@@ -1579,19 +1560,11 @@ async def save_mapping_config(
                 if idx:
                     mappings[idx] = "| summarize by relevant_fields"
 
-<<<<<<< HEAD
         # Save to custom mapping file (in bespoke directory)
         mapping_file = Path(f"data/bespoke/mappings/schema{platform.capitalize()}_custom.json")
 
         # Read existing template if available
         template_file = Path(f"data/bespoke/mappings/schema{platform.capitalize()}.json")
-=======
-        # Save to custom mapping file
-        mapping_file = Path(f"archer/mappings/schema{platform.capitalize()}_custom.json")
-
-        # Read existing template if available
-        template_file = Path(f"archer/mappings/schema{platform.capitalize()}.json")
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
         if template_file.exists():
             with open(template_file, 'r') as f:
                 template = json.load(f)
@@ -1641,13 +1614,8 @@ async def load_mapping_config(
     db.close()
 
     try:
-<<<<<<< HEAD
         # Try to load custom mapping file first (from bespoke directory)
         mapping_file = Path(f"data/bespoke/mappings/schema{platform.capitalize()}_custom.json")
-=======
-        # Try to load custom mapping file first
-        mapping_file = Path(f"archer/mappings/schema{platform.capitalize()}_custom.json")
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 
         if mapping_file.exists():
             with open(mapping_file, 'r') as f:
@@ -1745,7 +1713,6 @@ async def accept_osint_failures():
     }
 
 
-<<<<<<< HEAD
 @app.get("/api/status/bespoke")
 async def get_bespoke_status():
     """
@@ -1831,8 +1798,6 @@ async def reload_bespoke_config():
         }
 
 
-=======
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 @app.get("/api/correlation/params")
 async def get_correlation_params():
     """Get current correlation parameters from config files."""

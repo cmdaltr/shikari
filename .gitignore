@@ -28,10 +28,6 @@ dist/
 # Project specific
 .temp/
 *.log
-<<<<<<< HEAD
-=======
-archer/mappings/*.json
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 prompt.txt
 
 # Sensitive data - NEVER commit these
@@ -127,16 +123,11 @@ htmlcov/
 .dmypy.json
 dmypy.json
 
-<<<<<<< HEAD
 # OSINT enrichment - local repo clones and cache
-=======
-# OSINT enrichment - local repo clones and cache - MIGRATED TO data/cache/osint and data/repos
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 data/osint_cache/
 data/osint_repos/
 data/cache/osint/*
 !data/cache/osint/.gitkeep
-<<<<<<< HEAD
 data/external/repos/*
 !data/external/repos/.gitkeep
 
@@ -152,7 +143,3 @@ data/bespoke/searches/*
 !data/bespoke/mappings/
 data/bespoke/mappings/*
 !data/bespoke/mappings/.gitkeep
-=======
-data/repos/*
-!data/repos/.gitkeep
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07

@@ -27,13 +27,8 @@ class QueryPromptEnhancer:
             schema_dir: Directory containing SIEM schema files (default: archer/mappings)
         """
         if schema_dir is None:
-<<<<<<< HEAD
             archer_dir = Path(__file__).parent.parent.parent
             schema_dir = archer_dir / "data" / "bespoke" / "mappings"
-=======
-            archer_dir = Path(__file__).parent.parent
-            schema_dir = archer_dir / "mappings"
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 
         self.schema_dir = Path(schema_dir)
         self.repository = get_repository()

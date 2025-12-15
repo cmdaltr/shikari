@@ -111,11 +111,7 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
 
     # Map identified log_sources with the data sources and return the logging table/indexes
     with open(
-<<<<<<< HEAD
         os.path.join("data", "bespoke", "mappings", "dataSources.json")
-=======
-        os.path.join("archer", "mappings", "dataSources.json")
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
     ) as datasourcesjson:
         data_sources = json.load(datasourcesjson)
 
@@ -136,13 +132,8 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
 
     # For each indicator type (cmd, evt, reg, sw) in operator_guidance, fetch mapping
     # Check for custom Splunk schema first, fall back to default
-<<<<<<< HEAD
     splunk_custom_file = os.path.join("data", "bespoke", "mappings", "schemaSplunk_custom.json")
     splunk_default_file = os.path.join("data", "bespoke", "mappings", "schemaSplunk.json")
-=======
-    splunk_custom_file = os.path.join("archer", "mappings", "schemaSplunk_custom.json")
-    splunk_default_file = os.path.join("archer", "mappings", "schemaSplunk.json")
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
     if os.path.exists(splunk_custom_file):
         with open(splunk_custom_file) as f:
             map_splunk_indices = json.load(f)
@@ -150,21 +141,12 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
         with open(splunk_default_file) as f:
             map_splunk_indices = json.load(f)
 
-<<<<<<< HEAD
     with open(os.path.join("data", "bespoke", "mappings", "indicatorMapping.json"), "r") as f:
         indicator_mapping = json.load(f)
 
     # Check for custom MDE schema first, fall back to default
     mde_custom_file = os.path.join("data", "bespoke", "mappings", "schemaMDE_custom.json")
     mde_default_file = os.path.join("data", "bespoke", "mappings", "schemaMDE.json")
-=======
-    with open(os.path.join("archer", "mappings", "indicatorMapping.json"), "r") as f:
-        indicator_mapping = json.load(f)
-
-    # Check for custom MDE schema first, fall back to default
-    mde_custom_file = os.path.join("archer", "mappings", "schemaMDE_custom.json")
-    mde_default_file = os.path.join("archer", "mappings", "schemaMDE.json")
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
     if os.path.exists(mde_custom_file):
         with open(mde_custom_file) as f:
             map_defender_tables = json.load(f)
