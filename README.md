@@ -25,11 +25,8 @@ Archer is a modular Python service for automated threat hunting with optional ad
 - 🔍 **Multi-Platform Support** - Splunk (SPL), KQL (Microsoft Defender/Sentinel), Google SecOps (YARA-L) and Elastic (DSL) queries
 - 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
-<<<<<<< HEAD
 - 🎯 **RAG Fidelity Enhancement** - Improve query quality using 4,800+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
-=======
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 
 ### Additional Features
 
@@ -60,10 +57,7 @@ Archer is a modular Python service for automated threat hunting with optional ad
 - **API Integration:** [API Integration Guide](docs/guides/API_INTEGRATION_GUIDE.md) | [Auto-Generated Docs](http://localhost:8000/docs)
 - **Correlation Tuning:** [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) | [Quick Reference](docs/architecture/CORRELATION_QUICK_REFERENCE.md)
 - **Features:** [Security](docs/features/SECURITY_FEATURES.md) | [AI Training](docs/ai/AI_TRAINING.md) | [OSINT](docs/features/OSINT_INTEGRATION.md)
-<<<<<<< HEAD
 - **RAG Enhancement:** [RAG User Guide](docs/rag/RAG_USER_GUIDE.md) | [Implementation Guide](docs/rag/FIDELITY_IMPLEMENTATION_GUIDE.md)
-=======
->>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 - **Architecture:** [Performance](docs/architecture/PERFORMANCE_ARCHITECTURE.md) | [Schema Normalization](docs/architecture/SCHEMA_NORMALIZATION.md)
 
 ### External Resources
