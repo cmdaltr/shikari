@@ -1,0 +1,34 @@
+[
+  {
+    "technique_id": "T1003.001",
+    "technique_name": "LSASS Memory Dumping",
+    "platform": "splunk",
+    "query": "index=windows EventCode=10 TargetImage=\"*\\\\lsass.exe\"\nGrantedAccess IN (\"0x1010\", \"0x1410\", \"0x147a\", \"0x1438\", \"0x143a\")\n| eval suspicious_process=if(match(SourceImage, \"(?i)(mimikatz|procdump|taskmgr|processhacker)\"), 1, 0)\n| stats count by Computer, SourceImage, TargetImage, GrantedAccess, suspicious_process\n| where count > 1 OR suspicious_process=1",
+    "quality": "high",
+    "rating": 5.0,
+    "notes": "High-fidelity detection for LSASS memory access. Filters specific access rights\ncommonly used in credential dumping. Reduces false positives by checking for\nknown dumping tools and aggregating multiple attempts.\n",
+    "tags": [
+      "credential-access",
+      "windows",
+      "lsass"
+    ],
+    "attack_scenario": "Attacker uses mimikatz, procdump, or similar tool to access LSASS process memory\nto extract plaintext passwords, NTLM hashes, and Kerberos tickets.\n",
+    "expected_detections": "- Mimikatz execution\n- ProcDump targeting LSASS\n- Custom credential dumpers\n- Task Manager LSASS dumps\n"
+  },
+  {
+    "technique_id": "T1053.005",
+    "technique_name": "Scheduled Task/Job: Scheduled Task",
+    "platform": "mde",
+    "query": "DeviceProcessEvents\n| where FileName =~ \"schtasks.exe\"\n| where ProcessCommandLine has_any (\"create\", \"/create\")\n| where ProcessCommandLine has_any (\"SYSTEM\", \"HIGHEST\", \"Administrator\")\n| extend TaskName = extract(@\"/TN\\s+([^\\s]+)\", 1, ProcessCommandLine)\n| extend Action = extract(@\"/TR\\s+([^/]+)\", 1, ProcessCommandLine)\n| project Timestamp, DeviceName, AccountName, TaskName, Action, ProcessCommandLine, InitiatingProcessFileName\n| where isnotempty(TaskName)",
+    "quality": "high",
+    "rating": 4.5,
+    "notes": "Detects creation of scheduled tasks with high privileges. Extracts task name and action for analysis. Reduces false positives by requiring privilege escalation indicators.",
+    "tags": [
+      "persistence",
+      "privilege-escalation",
+      "windows"
+    ],
+    "attack_scenario": "Attacker creates scheduled task for persistence or privilege escalation, often with SYSTEM or Administrator privileges",
+    "expected_detections": "Malicious scheduled tasks, persistence mechanisms, privilege escalation attempts"
+  }
+]

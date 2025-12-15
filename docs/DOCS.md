@@ -8,7 +8,10 @@ Complete documentation for the Archer threat detection automation platform.
 
 - **[GETTING_STARTED.md](../GETTING_STARTED.md)** - Complete setup and configuration guide
 - **[USAGE.md](USAGE.md)** - Web UI, CLI, and API usage guide
+<<<<<<< HEAD
 - **[BESPOKE.md](BESPOKE.md)** - Organization-specific customization (exclusions, mappings)
+=======
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 - **[README.md](../README.md)** - High-level project overview
 - **[UNTESTED.md](UNTESTED.md)** - Features implemented but not validated
 - **[FUTURE.md](FUTURE.md)** - Planned features and roadmap
@@ -43,6 +46,7 @@ User guides and setup instructions:
 - **[API Integration Guide](guides/API_INTEGRATION_GUIDE.md)** - REST API integration with code examples
 - **[Auto-Generated API Docs](http://localhost:8000/docs)** - Interactive Swagger UI (requires running server)
 
+<<<<<<< HEAD
 ### 🧠 [`rag/`](rag/)
 RAG (Retrieval-Augmented Generation) fidelity enhancement:
 - **[README.md](rag/README.md)** - RAG system overview
@@ -66,6 +70,8 @@ data/
 
 See **[data/bespoke/README.md](../data/bespoke/README.md)** for organization-specific customization.
 
+=======
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 ### ✨ [`features/`](features/)
 Feature-specific documentation:
 - **[AI_TRAINING.md](ai/AI_TRAINING.md)** - AI query training and generation
@@ -128,7 +134,10 @@ Architecture diagrams and flow charts
 - [Performance Architecture](architecture/PERFORMANCE_ARCHITECTURE.md) - System design
 - [Schema Normalization](architecture/SCHEMA_NORMALIZATION.md) - Field mapping
 - [API Integration Guide](guides/API_INTEGRATION_GUIDE.md) - REST API workflows and examples
+<<<<<<< HEAD
 - [RAG Implementation](rag/FIDELITY_IMPLEMENTATION_GUIDE.md) - RAG fidelity enhancement system
+=======
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 
 ---
 
@@ -140,5 +149,10 @@ Architecture diagrams and flow charts
 
 ---
 
+<<<<<<< HEAD
 **Version**: 1.1
 **Last Updated**: December 11, 2024
+=======
+**Version**: 1.0  
+**Last Updated**: November 2, 2024
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07

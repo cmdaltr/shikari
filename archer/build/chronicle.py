@@ -20,7 +20,11 @@ class ChronicleGenerator:
 
     def _load_schema(self) -> Dict:
         """Load Google SecOps UDM schema mappings"""
+<<<<<<< HEAD
         schema_path = Path(__file__).parent.parent.parent / "data" / "bespoke" / "mappings" / "schemaGoogleSecOps.json"
+=======
+        schema_path = Path(__file__).parent.parent / "mappings" / "schemaGoogleSecOps.json"
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
         if schema_path.exists():
             with open(schema_path, 'r') as f:
                 return json.load(f)

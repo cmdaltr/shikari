@@ -64,6 +64,7 @@ def load_indicator_mappings():
     import json
     import sys
 
+<<<<<<< HEAD
     # Use bespoke mappings directory (org-specific)
     mappings_dir = (
         Path(os.path.dirname(__file__)) / ".." / ".." / "data" / "bespoke" / "mappings"
@@ -72,6 +73,16 @@ def load_indicator_mappings():
     # Check for user-specific mappings first (not committed to GitHub)
     user_mapping_file = mappings_dir / "indicatorMapping.json"
     sample_mapping_file = mappings_dir / "indicatorMapping_sample.json"
+=======
+    # Use only one specific path for mappings
+    mappings_dir = (
+        Path(os.path.dirname(__file__)) / ".." / "mappings"
+    )  # archer/mappings
+
+    # Check for user-specific mappings first (not committed to GitHub)
+    user_mapping_file = mappings_dir / "indicatorMappings.json"
+    sample_mapping_file = mappings_dir / "indicatorMappings_sample.json"
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 
     # Check if directory exists
     if not mappings_dir.exists():

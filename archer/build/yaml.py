@@ -44,6 +44,7 @@ def check_id(existing_ids):
 
 
 def get_team(author):
+<<<<<<< HEAD
     """
     Get team assignment for an author based on members.json.
     Looks in data/bespoke/members.json first (org-specific).
@@ -72,6 +73,20 @@ def get_team(author):
 
     return team
 
+=======
+    with open(os.path.join("archer", "mappings", "members.json")) as membersjson:
+        members = json.load(membersjson)
+
+    team = "CTH"
+    for key, people in members.items():
+        for person in people:
+            if person["username"].lower() == author.lower():
+                team = key
+                break
+        if team:
+            return team
+
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 
 def additional_tactics(tid, tactic):
     """
@@ -176,7 +191,11 @@ def map_entities(query):
 
     # Process KQL/MDE queries with entity mapping
     fields = query.split("| summarize by Timestamp, ")[1].split(", ")
+<<<<<<< HEAD
     with open(os.path.join("data", "bespoke", "mappings", "entityMappings.json")) as f:
+=======
+    with open(os.path.join("archer", "mappings", "entityMappings.json")) as f:
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
         entity_mappings = json.load(f)
 
     # Find and print nested field/entity matches
@@ -557,6 +576,7 @@ def construct_yaml(
         mde_enhanced_count = sum(1 for enhanced in mde_queries_enhanced.values() if enhanced)
         print(f"  🔧 OSINT Enhancement: Successfully enhanced {mde_enhanced_count}/{len(appended_mde_queries)} MDE queries with datatables")
 
+<<<<<<< HEAD
     # Apply RAG enhancement if enabled
     # RAG uses community detection examples to improve query quality
     try:
@@ -633,6 +653,8 @@ def construct_yaml(
     except Exception as e:
         print(f"  ⚠️  Bespoke exclusions skipped: {e}")
 
+=======
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
     all_tactics = additional_tactics(tid, tactic)
 
     # Writing MDE YAML file

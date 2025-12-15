@@ -177,7 +177,11 @@ python scripts/data/update_osint.py
 
 **OSINT Repositories**:
 ```
+<<<<<<< HEAD
 data/external/repos/
+=======
+data/repos/
+>>>>>>> 534dbed55db820eea689f7a2b6dc4330fafc6b07
 ├── sigma/                    # SigmaHQ/sigma
 ├── elastic/detection_rules/  # elastic/detection-rules
 └── splunk/security_content/  # splunk/security_content
