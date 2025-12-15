@@ -79,11 +79,13 @@ def write_progress(group_name: str, data: Dict[str, Any]):
             if attempt < max_retries - 1:
                 time.sleep(retry_delay)
             else:
-                # Last attempt failed, give up
-                pass
-        except Exception:
-            # Other error, give up
-            pass
+                # Last attempt failed, log and give up
+                print(f"⚠️  Progress write failed after {max_retries} retries for '{group_name}': {e}")
+        except Exception as e:
+            # Other error, log and give up
+            print(f"⚠️  Progress write error for '{group_name}': {e}")
+            import traceback
+            traceback.print_exc()
 
 
 def read_progress(group_name: str) -> Dict[str, Any]:

@@ -6,11 +6,17 @@
  */
 
 /* ========== Base HTML Positioning ========== */
-html, body {
+html {
     margin: 0 !important;
     padding: 0 !important;
-    overflow-y: scroll !important;
-    zoom: 1.0;
+}
+
+body {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 /* ========== Dark Header Bar ========== */
@@ -43,12 +49,11 @@ body::before {
     align-items: center;
 }
 
-/* Adjust for smaller screens */
+/* Adjust for smaller screens - keep icons on right */
 @media (max-width: 1400px) {
     .global-nav-controls {
-        right: auto;
-        left: 20px;
-        top: 70px;
+        right: 20px;
+        top: 28px;
     }
 }
 
@@ -84,18 +89,12 @@ body::before {
 }
 
 /* ========== Flexbox Footer Layout ========== */
-/* Ensures footer stays at bottom of viewport or content, whichever is lower */
-html, body {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    margin: 0;
-    padding: 0;
-}
-
+/* Main content expands to push footer to bottom */
 #main-content,
-.page-shell {
-    flex: 1;
+.page-shell,
+.main-wrapper,
+main {
+    flex: 1 0 auto;
     width: 100%;
 }
 
@@ -249,6 +248,88 @@ html, body {
     color: #9A3412;
     padding: 4px 10px;
     border-radius: 4px;
+}
+
+/* ========== Page Footer ========== */
+/* Sticky footer that stays at bottom of viewport or content */
+.page-footer {
+    flex-shrink: 0 !important;
+    margin-top: auto !important;
+    margin-bottom: 0 !important;
+    padding: 30px 0;
+    background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
+    border-top: 3px solid var(--accent, #C53030);
+    text-align: center;
+    width: 100%;
+}
+
+/* Also target generic footer element */
+footer.page-footer,
+body > footer:last-of-type {
+    flex-shrink: 0 !important;
+    margin-top: auto !important;
+}
+
+.page-footer .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.page-footer .github-link {
+    flex: 1;
+    min-width: 200px;
+    text-align: left;
+}
+
+.page-footer .github-link a {
+    color: #8B9AA3;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95em;
+    transition: color 0.2s;
+}
+
+.page-footer .github-link a:hover {
+    color: #C53030;
+}
+
+.page-footer .quote {
+    flex: 2;
+    min-width: 300px;
+    text-align: center;
+}
+
+.page-footer .quote p {
+    color: #a8b5bd;
+    font-style: italic;
+    font-size: 0.95em;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.page-footer .quote span {
+    font-size: 0.9em;
+    color: #8B9AA3;
+}
+
+.page-footer .spacer {
+    flex: 1;
+    min-width: 200px;
+}
+
+.page-footer .timestamp {
+    text-align: center;
+    margin-top: 20px;
+    color: #8B9AA3;
+    font-size: 0.9em;
 }
 
 /* ========== Utility Classes ========== */

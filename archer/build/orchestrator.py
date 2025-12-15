@@ -21,11 +21,13 @@ from pathlib import Path
 
 
 def safe_progress_update(group_name, status_data):
-    """Helper function to safely update progress"""
+    """Helper function to safely update progress with error logging"""
     try:
         write_progress(group_name, status_data)
-    except Exception:
-        pass
+    except Exception as e:
+        import traceback
+        print(f"⚠️  Progress update failed for '{group_name}': {e}")
+        traceback.print_exc()
 
 
 def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, excluded_vendors=None):
@@ -126,26 +128,41 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 retrieved_data["activity_desc"] = tech_info.get("detect_guidance", "") or f"Detection for {technique}"
 
                 # Build detection queries and YAML
-                compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors)
-                created += 1
-                safe_progress_update(
-                    group_name,
-                    {
-                        "status": "creating_yamls",
-                        "stage": "yaml",
-                        "created_yaml": created,
-                        "total_yaml": total,
-                    },
-                )
+                try:
+                    compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors)
+                    created += 1
+                    safe_progress_update(
+                        group_name,
+                        {
+                            "status": "creating_yamls",
+                            "stage": "yaml",
+                            "created_yaml": created,
+                            "total_yaml": total,
+                        },
+                    )
+                except Exception as e:
+                    import traceback
+                    print(f"❌ Error processing technique {technique}: {e}")
+                    traceback.print_exc()
+                    # Continue to next technique instead of failing completely
+                    continue
 
     else:
         # retrieve group id based on group name provided
-        group_id = retrieve_group(bundle, group_name)
-        retrieved_techniques = retrieve_techniques(bundle, group_id)
-        procedures = retrieve_procedures(bundle, retrieved_techniques)
+        try:
+            group_id = retrieve_group(bundle, group_name)
+            retrieved_techniques = retrieve_techniques(bundle, group_id)
+            procedures = retrieve_procedures(bundle, retrieved_techniques)
+        except Exception as e:
+            import traceback
+            print(f"❌ Error retrieving MITRE data for '{group_name}': {e}")
+            traceback.print_exc()
+            safe_progress_update(group_name, {"status": "failed", "error": str(e)})
+            raise
 
         created = 0
         total = len(procedures)
+        print(f"📋 Processing {total} procedures for '{group_name}'")
         safe_progress_update(
             group_name,
             {
@@ -175,17 +192,24 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 retrieved_data["technique_description"] = procedure[9]
                 retrieved_data["technique_platforms"] = procedure[10]
 
-            compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors)
-            created += 1
-            safe_progress_update(
-                group_name,
-                {
-                    "status": "creating_yamls",
-                    "stage": "yaml",
-                    "created_yaml": created,
-                    "total_yaml": total,
-                },
-            )
+            try:
+                compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors)
+                created += 1
+                safe_progress_update(
+                    group_name,
+                    {
+                        "status": "creating_yamls",
+                        "stage": "yaml",
+                        "created_yaml": created,
+                        "total_yaml": total,
+                    },
+                )
+            except Exception as e:
+                import traceback
+                print(f"❌ Error processing procedure {procedure[0]} ({procedure[1]}): {e}")
+                traceback.print_exc()
+                # Continue to next procedure instead of failing completely
+                continue
 
     # After YAMLs are created, run the GenAI correlation generator only if requested and YAMLs exist
     if run_correlation and created > 0:
