@@ -123,6 +123,9 @@ htmlcov/
 .dmypy.json
 dmypy.json
 
+# External detection repos (cloned at runtime)
+data/repos/
+
 # OSINT enrichment - local repo clones and cache
 data/osint_cache/
 data/osint_repos/

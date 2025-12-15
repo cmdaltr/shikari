@@ -74,11 +74,11 @@ multidict==6.6.4
 narwhals==2.5.0
 nest-asyncio==1.6.0
 networkx==3.5
-numpy==1.26.4  # faiss-cpu 1.7.4 requires numpy <2.0
+numpy==1.26.4
 oauthlib==3.3.1
 openpyxl==3.1.5
 outcome==1.3.0.post0
-packaging==25.0
+packaging>=24.1,<25.0
 pandas==2.3.2
 pandocfilters==1.5.1
 param==2.2.1
@@ -161,8 +161,8 @@ reportlab==4.2.5  # For PDF export
 # RAG-based Fidelity Enhancement System Requirements
 
 # Vector embeddings and similarity search
-sentence-transformers==2.2.2
-faiss-cpu==1.7.4  # Use faiss-gpu if you have CUDA; requires numpy <2.0
+sentence-transformers>=2.2.2
+faiss-cpu>=1.8.0  # Use faiss-gpu if you have CUDA
 
 # YAML parsing - PyYAML already specified above
 
