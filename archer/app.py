@@ -1798,6 +1798,70 @@ async def reload_bespoke_config():
         }
 
 
+@app.get("/api/reference/coverage")
+async def get_reference_coverage():
+    """
+    Get reference query coverage map.
+    Returns technique coverage by platform.
+    """
+    try:
+        from .build.reference_queries import get_coverage_map
+        return get_coverage_map()
+    except ImportError:
+        return {
+            "error": "Reference queries module not available",
+            "coverage": {}
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "coverage": {}
+        }
+
+
+@app.get("/api/reference/queries")
+async def get_reference_queries(technique_id: str = None, platform: str = None):
+    """
+    Get reference queries, optionally filtered by technique or platform.
+    """
+    try:
+        from .build.reference_queries import get_reference_queries
+        queries = get_reference_queries(technique_id=technique_id, platform=platform)
+        return {
+            "count": len(queries),
+            "queries": queries
+        }
+    except ImportError:
+        return {
+            "count": 0,
+            "queries": [],
+            "error": "Reference queries module not available"
+        }
+    except Exception as e:
+        return {
+            "count": 0,
+            "queries": [],
+            "error": str(e)
+        }
+
+
+@app.get("/coverage", response_class=HTMLResponse)
+async def coverage_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Reference query coverage visualization page."""
+    # Check if user is logged in (but don't require it)
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+    return templates.TemplateResponse(
+        "coverage.html",
+        {"request": request, "user": user}
+    )
+
+
 @app.get("/api/correlation/params")
 async def get_correlation_params():
     """Get current correlation parameters from config files."""

@@ -115,8 +115,8 @@ def search_sigma_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
         if files:
             print(f"  ✓ Found {len(files)} Sigma rules for {technique_id}")
 
-            # Process first few files to extract indicators
-            for file_path in files[:5]:  # Limit to first 5 rules
+            # Process more files for comprehensive coverage
+            for file_path in files[:15]:  # Increased from 5 to 15 rules
                 try:
                     with open(file_path, 'r') as f:
                         rule_content = f.read()
@@ -163,13 +163,13 @@ def search_sigma_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
                                 "rule_name": rule_data.get("title", file_path.split("/")[-1])
                             }
                             if cmd_patterns:
-                                indicator_data["cmd"] = cmd_patterns[:5]  # Limit to 5
+                                indicator_data["cmd"] = cmd_patterns[:20]  # Increased for comprehensive detection
                             if image_patterns:
-                                indicator_data["file"] = image_patterns[:5]
+                                indicator_data["file"] = image_patterns[:20]
                             if file_patterns:
-                                indicator_data["target_files"] = file_patterns[:5]
+                                indicator_data["target_files"] = file_patterns[:20]
                             if registry_patterns:
-                                indicator_data["registry"] = registry_patterns[:5]
+                                indicator_data["registry"] = registry_patterns[:20]
 
                             indicators.append(indicator_data)
 
@@ -280,7 +280,7 @@ def search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
             print(f"  ✓ Found {len(files)} Elastic rules for {technique_id}")
 
             # Process first few files
-            for file_path in files[:5]:  # Limit to first 5
+            for file_path in files[:15]:  # Increased from 5 to 15
                 try:
                     # Elastic rules are in TOML format
                     with open(file_path, 'r') as f:
@@ -306,7 +306,7 @@ def search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
                             "source": "Elastic",
                             "source_url": github_url,  # Include the source URL
                             "rule_name": rule_section.get("name", file_path.split("/")[-1]),
-                            "query_snippet": query[:200]  # First 200 chars
+                            "query_snippet": query[:500]  # Increased from 200 to 500 chars
                         })
 
                 except Exception as e:
@@ -338,7 +338,7 @@ def search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
             print(f"  ✓ Found {len(files)} Splunk detections for {technique_id}")
 
             # Process first few files
-            for file_path in files[:5]:  # Limit to first 5
+            for file_path in files[:15]:  # Increased from 5 to 15
                 try:
                     with open(file_path, 'r') as f:
                         content = f.read()
@@ -358,7 +358,7 @@ def search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
                             "source": "Splunk",
                             "source_url": github_url,  # Include the source URL
                             "detection_name": detection_data.get("name", file_path.split("/")[-1]),
-                            "search_snippet": search_query[:200]
+                            "search_snippet": search_query[:500]  # Increased from 200 to 500 chars
                         })
 
                 except Exception as e:
@@ -390,7 +390,7 @@ def search_azure_sentinel(technique_id: str) -> Tuple[List[str], List[Dict]]:
             print(f"  ✓ Found {len(files)} Azure Sentinel rules for {technique_id}")
 
             # Process first few files
-            for file_path in files[:5]:  # Limit to first 5
+            for file_path in files[:15]:  # Increased from 5 to 15
                 try:
                     # Azure Sentinel rules can be in YAML or JSON
                     with open(file_path, 'r') as f:
@@ -416,7 +416,7 @@ def search_azure_sentinel(technique_id: str) -> Tuple[List[str], List[Dict]]:
                         indicators.append({
                             "source": "Azure Sentinel",
                             "rule_name": rule_data.get("name", rule_data.get("displayName", file_path.split("/")[-1])),
-                            "query_snippet": query[:200]
+                            "query_snippet": query[:500]  # Increased from 200 to 500 chars
                         })
 
                 except Exception as e:
@@ -479,7 +479,7 @@ def extract_indicators_from_sources(indicators_data: List[Dict]) -> Dict[str, Li
 
     # Remove duplicates and empty values, limit to reasonable numbers
     for key in extracted:
-        extracted[key] = list(set([x for x in extracted[key] if x]))[:15]  # Max 15 per category
+        extracted[key] = list(set([x for x in extracted[key] if x]))[:100]  # Max 100 per category
 
     # Remove empty categories
     extracted = {k: v for k, v in extracted.items() if v}

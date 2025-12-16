@@ -9,6 +9,8 @@ Complete guide to installing, configuring, and using Archer for automated threat
 1. [Prerequisites](#prerequisites)
 2. [Installation](#installation)
 3. [Initial Configuration](#initial-configuration)
+   - [Configure Mapping Files](#step-4-configure-mapping-files-critical)
+   - [Configure Bespoke Settings](#step-5-configure-bespoke-settings-recommended)
 4. [First Steps](#first-steps)
 5. [Usage](#usage)
 6. [Additional Information](#additional-information)
@@ -226,6 +228,45 @@ vim archer/mappings/schemaSplunk_custom.json
 - Detections are production-ready
 
 **📚 Detailed Documentation**: [docs/guides/MAPPING_SETUP_GUIDE.md](docs/guides/MAPPING_SETUP_GUIDE.md)
+
+### Step 5: Configure Bespoke Settings (RECOMMENDED)
+
+The `data/bespoke/` directory contains customizations that significantly improve detection quality:
+
+```
+data/bespoke/
+├── mappings/              # Your environment-specific field mappings
+│   ├── splunk/
+│   └── mde/
+└── reference_queries/     # High-quality query examples for the LLM
+    ├── splunk/
+    └── mde/
+```
+
+#### Bespoke Mappings
+
+These extend the base schema mappings with your organization's specific configurations:
+- Custom field names and index patterns
+- Environment-specific data source names
+- Platform-specific query optimizations
+
+#### Reference Queries
+
+Reference queries are real-world examples that improve generated detection quality:
+- Provide platform-specific syntax examples to the LLM
+- Ensure consistent query structure and best practices
+- Cover edge cases from production detections
+
+**View current reference query coverage**:
+```bash
+# Via API
+curl http://localhost:8000/api/reference/coverage
+
+# Via Web UI
+http://localhost:8000/coverage
+```
+
+**📚 Complete Guide**: [docs/BESPOKE.md](docs/BESPOKE.md) - Full documentation for bespoke mappings and reference queries
 
 ---
 
