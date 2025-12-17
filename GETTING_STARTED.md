@@ -238,7 +238,7 @@ data/bespoke/
 ├── mappings/              # Your environment-specific field mappings
 │   ├── splunk/
 │   └── mde/
-└── reference_queries/     # High-quality query examples for the LLM
+└── references/     # High-quality query examples for the LLM
     ├── splunk/
     └── mde/
 ```

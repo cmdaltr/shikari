@@ -47,11 +47,11 @@ Reference queries are **production-tested detection queries** that Archer uses a
 
 ### Adding Reference Queries
 
-Add queries to the appropriate vendor directory in `reference_queries/`:
+Add queries to the appropriate vendor directory in `references/`:
 
 | Vendor | Location | Format |
 |--------|----------|--------|
-| Splunk | `Splunk/all_reference_queries.yaml` or individual files | SPL |
+| Splunk | `Splunk/all_references.yaml` or individual files | SPL |
 | MDE | `MDE/*.yaml` (one file per query) | KQL |
 
 **Required fields (all vendors):**
@@ -411,7 +411,7 @@ curl -X POST http://localhost:8000/api/bespoke/reload
 |------|---------|-------|
 | `mappings/` directory | Yes | Structure only |
 | `mappings/*.json` | No | Org-specific schema files |
-| `reference_queries/` | Yes | Shared reference queries |
+| `references/` | Yes | Shared reference queries |
 | `exclusions.yaml` | No | Org-specific exclusions |
 | `config.yaml` | No | Org-specific settings |
 | `searches/` contents | No | Org-specific detections |

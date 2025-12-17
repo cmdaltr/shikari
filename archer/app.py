@@ -117,7 +117,7 @@ def load_yaml_file(file_path: str) -> Optional[dict]:
         Parsed YAML data as dictionary, or None if loading fails
     """
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             return yaml.safe_load(f)
     except yaml.YAMLError as e:
         # YAML parsing error - log filename and specific error
@@ -132,7 +132,9 @@ def load_yaml_file(file_path: str) -> Optional[dict]:
         return None
 
 
-def calculate_detection_likelihood(indicators: list, query: str, technique: str, yaml_data: dict) -> int:
+def calculate_detection_likelihood(
+    indicators: list, query: str, technique: str, yaml_data: dict
+) -> int:
     """
     Calculate the likelihood of successfully detecting this technique based on indicator strength,
     data source requirements, and query complexity.
@@ -167,15 +169,45 @@ def calculate_detection_likelihood(indicators: list, query: str, technique: str,
             indicator_lower = indicator.lower()
 
             # Strong indicators: hashes, specific malware names, specific commands
-            if any(x in indicator_lower for x in ['sha256', 'sha1', 'md5', '.exe', 'mimikatz', 'powershell.exe', 'cmd.exe',
-                                                    'psexec', 'cobalt', 'beacon', 'meterpreter', 'empire']):
+            if any(
+                x in indicator_lower
+                for x in [
+                    "sha256",
+                    "sha1",
+                    "md5",
+                    ".exe",
+                    "mimikatz",
+                    "powershell.exe",
+                    "cmd.exe",
+                    "psexec",
+                    "cobalt",
+                    "beacon",
+                    "meterpreter",
+                    "empire",
+                ]
+            ):
                 strong_indicators += 1
             # Medium indicators: file paths, registry keys, specific patterns
-            elif any(x in indicator_lower for x in [':\\\\', 'hkey', 'software\\\\', 'system32', 'appdata',
-                                                      'temp\\\\', '.dll', '.bat', '.ps1', '.vbs']):
+            elif any(
+                x in indicator_lower
+                for x in [
+                    ":\\\\",
+                    "hkey",
+                    "software\\\\",
+                    "system32",
+                    "appdata",
+                    "temp\\\\",
+                    ".dll",
+                    ".bat",
+                    ".ps1",
+                    ".vbs",
+                ]
+            ):
                 medium_indicators += 1
             # Weak indicators: generic terms, config files
-            elif any(x in indicator_lower for x in ['hosts', 'config', 'settings', 'user', 'admin']):
+            elif any(
+                x in indicator_lower for x in ["hosts", "config", "settings", "user", "admin"]
+            ):
                 weak_indicators += 1
             else:
                 medium_indicators += 1
@@ -183,23 +215,31 @@ def calculate_detection_likelihood(indicators: list, query: str, technique: str,
         # Add points based on indicator strength
         score += min(strong_indicators * 8, 30)  # Cap at +30
         score += min(medium_indicators * 5, 20)  # Cap at +20
-        score += min(weak_indicators * 2, 10)   # Cap at +10
+        score += min(weak_indicators * 2, 10)  # Cap at +10
 
     else:
         # No indicators extracted - behavioral detection
         score -= 20
 
     # Data source reliability analysis
-    required_connectors = yaml_data.get('requiredDataConnectors', []) if yaml_data else []
+    required_connectors = yaml_data.get("requiredDataConnectors", []) if yaml_data else []
     if required_connectors:
         for connector in required_connectors:
-            connector_id = connector.get('connectorId', '').lower() if isinstance(connector, dict) else str(connector).lower()
+            connector_id = (
+                connector.get("connectorId", "").lower()
+                if isinstance(connector, dict)
+                else str(connector).lower()
+            )
 
             # Reliable, commonly available data sources
-            if any(x in connector_id for x in ['threatprotection', 'defender', 'sysmon', 'windows']):
+            if any(
+                x in connector_id for x in ["threatprotection", "defender", "sysmon", "windows"]
+            ):
                 score += 10
             # Cloud/specialized data sources (may not be configured)
-            elif any(x in connector_id for x in ['azureactivedirectory', 'office365', 'aws', 'gcp']):
+            elif any(
+                x in connector_id for x in ["azureactivedirectory", "office365", "aws", "gcp"]
+            ):
                 score -= 5
 
     # Query specificity analysis
@@ -207,40 +247,49 @@ def calculate_detection_likelihood(indicators: list, query: str, technique: str,
         query_lower = query.lower()
 
         # Specific, high-fidelity queries
-        if any(x in query_lower for x in ['sha256', 'sha1', 'md5', '==', 'has_all']):
+        if any(x in query_lower for x in ["sha256", "sha1", "md5", "==", "has_all"]):
             score += 10
         # Generic "contains" queries (higher false positive risk)
-        elif query_lower.count('contains') > 3:
+        elif query_lower.count("contains") > 3:
             score -= 5
 
         # Network-based detections (generally reliable if you have network monitoring)
-        if any(x in query_lower for x in ['remoteip', 'destinationip', 'destinationport', 'url', 'domain']):
+        if any(
+            x in query_lower
+            for x in ["remoteip", "destinationip", "destinationport", "url", "domain"]
+        ):
             score += 10
 
         # File/Process-based detections (very reliable)
-        if any(x in query_lower for x in ['processcommandline', 'filename', 'filepath', 'deviceprocessevents']):
+        if any(
+            x in query_lower
+            for x in ["processcommandline", "filename", "filepath", "deviceprocessevents"]
+        ):
             score += 10
 
     # Check for weak indicator patterns that reduce likelihood
     if indicators:
         for indicator in indicators:
             # MFA/hosts file example - very weak indicator
-            if 'hosts' in indicator.lower() and 'etc' in indicator.lower():
+            if "hosts" in indicator.lower() and "etc" in indicator.lower():
                 score -= 25  # Major penalty for weak indicators
 
             # Generic admin/system paths
-            if indicator.lower() in ['admin', 'administrator', 'system', 'user']:
+            if indicator.lower() in ["admin", "administrator", "system", "user"]:
                 score -= 10
 
     # OSINT enrichment adds confidence
-    if yaml_data and yaml_data.get('osint_enriched'):
+    if yaml_data and yaml_data.get("osint_enriched"):
         score += 15
 
     # Ensure score is within 0-100 range
     final_score = max(0, min(100, score))
 
     # Debug output
-    print(f"[LIKELIHOOD] Technique: {technique}, Indicators: {len(indicators)}, Score: {final_score}", flush=True)
+    print(
+        f"[LIKELIHOOD] Technique: {technique}, Indicators: {len(indicators)}, Score: {final_score}",
+        flush=True,
+    )
 
     return final_score
 
@@ -260,18 +309,25 @@ def extract_tables_indexes(query: str, vendor: str) -> list:
 
     tables_indexes = []
 
-    if vendor.lower() == 'mde':
+    if vendor.lower() == "mde":
         # Extract MDE table names - pattern: TableName | where ...
         # Common tables: DeviceProcessEvents, DeviceNetworkEvents, DeviceFileEvents, etc.
         # Exclude column names like DeviceId, DeviceName
-        pattern = r'\b(Device\w+Events|Device\w+Info|Identity\w+Events|Identity\w+Info|Email\w+Events|CloudApp\w+|Alert\w+)\b'
+        pattern = r"\b(Device\w+Events|Device\w+Info|Identity\w+Events|Identity\w+Info|Email\w+Events|CloudApp\w+|Alert\w+)\b"
         matches = re.findall(pattern, query)
 
         # Filter out common column names that aren't tables
-        column_names = {'DeviceId', 'DeviceName', 'DeviceType', 'IdentityName', 'EmailSender', 'EmailRecipient'}
+        column_names = {
+            "DeviceId",
+            "DeviceName",
+            "DeviceType",
+            "IdentityName",
+            "EmailSender",
+            "EmailRecipient",
+        }
         tables_indexes = sorted([m for m in set(matches) if m not in column_names])
 
-    elif vendor.lower() == 'splunk':
+    elif vendor.lower() == "splunk":
         # Extract Splunk index names - pattern: index=indexname or index="indexname"
         pattern = r'index\s*=\s*["\']?([a-zA-Z0-9_\-]+)["\']?'
         matches = re.findall(pattern, query, re.IGNORECASE)
@@ -303,7 +359,7 @@ def format_technique_name(name: str) -> str:
         return name
 
     # Keep short all-caps acronyms unchanged (like NTDS, LSASS, etc)
-    if name.isupper() and len(name) <= 5 and ' ' not in name:
+    if name.isupper() and len(name) <= 5 and " " not in name:
         return name
 
     # Handle longer all-caps names (like "TRUSTMODIFICATION")
@@ -311,19 +367,84 @@ def format_technique_name(name: str) -> str:
     if name.isupper() and len(name) > 5:  # Process longer all-caps strings
         # Common English words that might appear in technique names
         common_words = [
-            'TRUST', 'MODIFICATION', 'DATA', 'ENCRYPTED', 'FOR', 'IMPACT',
-            'ACCESS', 'ACCOUNT', 'ADMIN', 'APPLICATION', 'AUTH', 'AUTHENTICATION',
-            'BACKUP', 'BOOT', 'BROWSER', 'CACHE', 'CERTIFICATE', 'CLOUD',
-            'CODE', 'COMMAND', 'COMMUNICATION', 'COMPROMISE', 'CONFIG', 'CONFIGURATION',
-            'CONTROL', 'CREDENTIAL', 'DEFENSE', 'DISCOVERY', 'DOMAIN',
-            'ELEVATION', 'ESCALATION', 'EVASION', 'EVENT', 'EXECUTION', 'EXPLOIT',
-            'FILE', 'FILTER', 'FIREWALL', 'GROUP', 'HIJACK', 'HOOK',
-            'INJECTION', 'LATERAL', 'LOG', 'LOGIN', 'MALWARE', 'MANAGEMENT',
-            'MEMORY', 'MOVEMENT', 'NETWORK', 'OBJECT', 'PASSWORD', 'PATH',
-            'PERMISSION', 'POLICY', 'PORT', 'PRIVILEGE', 'PROCESS', 'PROTOCOL',
-            'PROXY', 'REGISTRY', 'REMOTE', 'RESOURCE', 'ROOT', 'SCRIPT',
-            'SECURITY', 'SERVER', 'SERVICE', 'SESSION', 'SHELL', 'SOFTWARE',
-            'STORAGE', 'SYSTEM', 'TASK', 'TOKEN', 'USER', 'WEB', 'WINDOWS'
+            "TRUST",
+            "MODIFICATION",
+            "DATA",
+            "ENCRYPTED",
+            "FOR",
+            "IMPACT",
+            "ACCESS",
+            "ACCOUNT",
+            "ADMIN",
+            "APPLICATION",
+            "AUTH",
+            "AUTHENTICATION",
+            "BACKUP",
+            "BOOT",
+            "BROWSER",
+            "CACHE",
+            "CERTIFICATE",
+            "CLOUD",
+            "CODE",
+            "COMMAND",
+            "COMMUNICATION",
+            "COMPROMISE",
+            "CONFIG",
+            "CONFIGURATION",
+            "CONTROL",
+            "CREDENTIAL",
+            "DEFENSE",
+            "DISCOVERY",
+            "DOMAIN",
+            "ELEVATION",
+            "ESCALATION",
+            "EVASION",
+            "EVENT",
+            "EXECUTION",
+            "EXPLOIT",
+            "FILE",
+            "FILTER",
+            "FIREWALL",
+            "GROUP",
+            "HIJACK",
+            "HOOK",
+            "INJECTION",
+            "LATERAL",
+            "LOG",
+            "LOGIN",
+            "MALWARE",
+            "MANAGEMENT",
+            "MEMORY",
+            "MOVEMENT",
+            "NETWORK",
+            "OBJECT",
+            "PASSWORD",
+            "PATH",
+            "PERMISSION",
+            "POLICY",
+            "PORT",
+            "PRIVILEGE",
+            "PROCESS",
+            "PROTOCOL",
+            "PROXY",
+            "REGISTRY",
+            "REMOTE",
+            "RESOURCE",
+            "ROOT",
+            "SCRIPT",
+            "SECURITY",
+            "SERVER",
+            "SERVICE",
+            "SESSION",
+            "SHELL",
+            "SOFTWARE",
+            "STORAGE",
+            "SYSTEM",
+            "TASK",
+            "TOKEN",
+            "USER",
+            "WEB",
+            "WINDOWS",
         ]
 
         # Try to split the all-caps string using word boundaries
@@ -336,7 +457,7 @@ def format_technique_name(name: str) -> str:
             for word in sorted(common_words, key=len, reverse=True):
                 if remaining.startswith(word):
                     words_found.append(word)
-                    remaining = remaining[len(word):]
+                    remaining = remaining[len(word) :]
                     found = True
                     break
 
@@ -351,45 +472,45 @@ def format_technique_name(name: str) -> str:
 
         if len(words_found) > 1:
             # Successfully split into multiple words
-            name = ' '.join(words_found).title()
+            name = " ".join(words_found).title()
         else:
             # Couldn't split - just title case it
             name = name.title()
 
     # If already has spaces, clean up extra spaces and fix known issues
-    if ' ' in name:
+    if " " in name:
         # Fix "Multi- Factor" -> "Multi-Factor"
-        result = re.sub(r'(\w+)-\s+(\w+)', r'\1-\2', name)
+        result = re.sub(r"(\w+)-\s+(\w+)", r"\1-\2", name)
         # Fix "Data Encryptedfor" -> "Data Encrypted for"
-        result = re.sub(r'([a-z])for\b', r'\1 for', result)
-        result = re.sub(r'([a-z])to\b', r'\1 to', result)
-        result = re.sub(r'([a-z])from\b', r'\1 from', result)
+        result = re.sub(r"([a-z])for\b", r"\1 for", result)
+        result = re.sub(r"([a-z])to\b", r"\1 to", result)
+        result = re.sub(r"([a-z])from\b", r"\1 from", result)
         # Fix "N T D S" -> "NTDS"
-        result = re.sub(r'\b([A-Z])\s+([A-Z])\s+([A-Z])\s+([A-Z])\b', r'\1\2\3\4', result)
-        result = re.sub(r'\b([A-Z])\s+([A-Z])\s+([A-Z])\b', r'\1\2\3', result)
+        result = re.sub(r"\b([A-Z])\s+([A-Z])\s+([A-Z])\s+([A-Z])\b", r"\1\2\3\4", result)
+        result = re.sub(r"\b([A-Z])\s+([A-Z])\s+([A-Z])\b", r"\1\2\3", result)
         return result
 
     # Special case: PowerShell should stay as one word (not "Power Shell")
-    if name == 'PowerShell':
-        return 'PowerShell'
+    if name == "PowerShell":
+        return "PowerShell"
 
     # Special case: Windows Management Instrumentation (WMI) variations
-    if name in ['WindowsManagementInstrumentation', 'WMI']:
-        return 'Windows Management Instrumentation'
+    if name in ["WindowsManagementInstrumentation", "WMI"]:
+        return "Windows Management Instrumentation"
 
     # Insert space before uppercase letters (except at start)
-    result = re.sub(r'(?<!^)(?=[A-Z])', ' ', name)
+    result = re.sub(r"(?<!^)(?=[A-Z])", " ", name)
 
     # Special case: handle specific known lowercase words in the middle
     # "Datafrom Cloud Storage" -> "Data from Cloud Storage"
     # "Exfiltrationto Cloud Storage" -> "Exfiltration to Cloud Storage"
-    result = re.sub(r'([a-z])(from)(?=[A-Z\s]|$)', r'\1 \2', result)
-    result = re.sub(r'([a-z])(to)(?=[A-Z\s]|$)', r'\1 \2', result)
-    result = re.sub(r'([a-z])(for)(?=[A-Z\s]|$)', r'\1 \2', result)
+    result = re.sub(r"([a-z])(from)(?=[A-Z\s]|$)", r"\1 \2", result)
+    result = re.sub(r"([a-z])(to)(?=[A-Z\s]|$)", r"\1 \2", result)
+    result = re.sub(r"([a-z])(for)(?=[A-Z\s]|$)", r"\1 \2", result)
 
     # Fix hyphenated words: "Multi Factor" -> "Multi-Factor"
-    result = re.sub(r'\bMulti\s+Factor\b', 'Multi-Factor', result)
-    result = re.sub(r'\bTwo\s+Factor\b', 'Two-Factor', result)
+    result = re.sub(r"\bMulti\s+Factor\b", "Multi-Factor", result)
+    result = re.sub(r"\bTwo\s+Factor\b", "Two-Factor", result)
 
     return result
 
@@ -420,8 +541,8 @@ def merge_correlations(vendor_corrs: list) -> list:
     # Group correlations by (vendor, file_a)
     groups = {}
     for corr in vendor_corrs:
-        vendor = corr.get('vendor', 'unknown')
-        file_a = corr.get('a', '')
+        vendor = corr.get("vendor", "unknown")
+        file_a = corr.get("a", "")
         key = (vendor, file_a)
 
         if key not in groups:
@@ -442,10 +563,10 @@ def merge_correlations(vendor_corrs: list) -> list:
         by_tactic = {}
 
         # Common tactics that should NOT trigger merging (too broad)
-        common_tactics = {'Persistence', 'Defense Evasion', 'Privilege Escalation'}
+        common_tactics = {"Persistence", "Defense Evasion", "Privilege Escalation"}
 
         for corr in group:
-            file_b = corr.get('b', '')
+            file_b = corr.get("b", "")
             if not file_b:
                 continue
 
@@ -454,7 +575,7 @@ def merge_correlations(vendor_corrs: list) -> list:
             if os.path.exists(full_path):
                 yaml_data = load_yaml_file(full_path)
                 if yaml_data:
-                    tactics = yaml_data.get('tactics', [])
+                    tactics = yaml_data.get("tactics", [])
 
                     # Find the first tactic as primary (prefer non-common tactics)
                     primary_tactic = "Unknown"
@@ -473,7 +594,7 @@ def merge_correlations(vendor_corrs: list) -> list:
                     by_tactic[primary_tactic].append(corr)
             else:
                 # If file doesn't exist, add to "Unknown" tactic with unique key
-                basename_b = os.path.basename(file_b).replace('.yaml', '').split('_')[0]
+                basename_b = os.path.basename(file_b).replace(".yaml", "").split("_")[0]
                 unique_key = f"_unique_{basename_b}"
                 if unique_key not in by_tactic:
                     by_tactic[unique_key] = []
@@ -481,7 +602,7 @@ def merge_correlations(vendor_corrs: list) -> list:
 
         # Merge groups with 2+ techniques in same SPECIFIC tactic
         for tactic, tactic_corrs in by_tactic.items():
-            if len(tactic_corrs) >= 2 and not tactic.startswith('_unique_'):
+            if len(tactic_corrs) >= 2 and not tactic.startswith("_unique_"):
                 # Merge these correlations (they share a specific tactic)
                 merged = _merge_correlation_group(tactic_corrs)
                 merged_correlations.append(merged)
@@ -506,24 +627,24 @@ def find_yaml_for_technique(technique_name: str, yaml_dir: str) -> str:
     import glob
 
     # Normalize technique name for filename matching (remove spaces, special chars)
-    normalized = technique_name.replace(' ', '').replace('-', '').lower()
+    normalized = technique_name.replace(" ", "").replace("-", "").lower()
 
     # Search for YAML files
-    yaml_files = glob.glob(os.path.join(yaml_dir, '*.yaml'))
+    yaml_files = glob.glob(os.path.join(yaml_dir, "*.yaml"))
 
     for yaml_file in yaml_files:
         yaml_data = load_yaml_file(yaml_file)
         if yaml_data:
             # Check if the 'name' field matches
-            yaml_name = yaml_data.get('name', '')
+            yaml_name = yaml_data.get("name", "")
             if yaml_name == technique_name:
                 return os.path.basename(yaml_file)
 
     # Fallback: try filename matching
     for yaml_file in yaml_files:
-        basename = os.path.basename(yaml_file).replace('.yaml', '')
+        basename = os.path.basename(yaml_file).replace(".yaml", "")
         # Remove data source suffix (e.g., "_DeviceProcessEvents")
-        basename_clean = basename.split('_')[0].lower()
+        basename_clean = basename.split("_")[0].lower()
         if basename_clean == normalized:
             return os.path.basename(yaml_file)
 
@@ -551,15 +672,15 @@ def _merge_correlation_group(correlations: list) -> dict:
     techniques_with_tactics = []
 
     # Get first technique
-    first_tech = base.get('techniques_involved', [])[0] if base.get('techniques_involved') else None
+    first_tech = base.get("techniques_involved", [])[0] if base.get("techniques_involved") else None
     if first_tech:
         # Get primary tactic of first technique
-        file_a = base.get('a', '')
+        file_a = base.get("a", "")
         full_path_a = os.path.join(GENERATE_DIR, os.path.basename(file_a))
         if os.path.exists(full_path_a):
             yaml_data = load_yaml_file(full_path_a)
             if yaml_data:
-                tactics_a = yaml_data.get('tactics', [])
+                tactics_a = yaml_data.get("tactics", [])
                 primary_tactic_a = tactics_a[0] if tactics_a else "Unknown"
                 techniques_with_tactics.append((first_tech, primary_tactic_a))
 
@@ -567,39 +688,54 @@ def _merge_correlation_group(correlations: list) -> dict:
     # This ensures we capture all techniques that appear in the merged queries
     for corr in correlations:
         # Process file_a (first technique) - skip if already added
-        file_a = corr.get('a', '')
+        file_a = corr.get("a", "")
         if file_a:
-            basename_a = os.path.basename(file_a).replace('.yaml', '').replace('.yml', '')
-            full_path_a = os.path.join(GENERATE_DIR, basename_a + '.yaml')
+            basename_a = os.path.basename(file_a).replace(".yaml", "").replace(".yml", "")
+            full_path_a = os.path.join(GENERATE_DIR, basename_a + ".yaml")
             if os.path.exists(full_path_a):
                 yaml_data_a = load_yaml_file(full_path_a)
                 if yaml_data_a:
-                    tech_name_a = yaml_data_a.get('name', '')
-                    if tech_name_a and not any(t[0] == tech_name_a for t in techniques_with_tactics):
-                        tactics_a = yaml_data_a.get('tactics', [])
+                    tech_name_a = yaml_data_a.get("name", "")
+                    if tech_name_a and not any(
+                        t[0] == tech_name_a for t in techniques_with_tactics
+                    ):
+                        tactics_a = yaml_data_a.get("tactics", [])
                         primary_tactic_a = tactics_a[0] if tactics_a else "Unknown"
                         techniques_with_tactics.append((tech_name_a, primary_tactic_a))
 
         # Process file_b (second technique)
-        file_b = corr.get('b', '')
+        file_b = corr.get("b", "")
         if file_b:
             files_b.append(file_b)
 
-            basename_b = os.path.basename(file_b).replace('.yaml', '').replace('.yml', '')
-            full_path_b = os.path.join(GENERATE_DIR, basename_b + '.yaml')
+            basename_b = os.path.basename(file_b).replace(".yaml", "").replace(".yml", "")
+            full_path_b = os.path.join(GENERATE_DIR, basename_b + ".yaml")
             if os.path.exists(full_path_b):
                 yaml_data_b = load_yaml_file(full_path_b)
                 if yaml_data_b:
-                    tech_name_b = yaml_data_b.get('name', '')
-                    if tech_name_b and not any(t[0] == tech_name_b for t in techniques_with_tactics):
-                        tactics_b = yaml_data_b.get('tactics', [])
+                    tech_name_b = yaml_data_b.get("name", "")
+                    if tech_name_b and not any(
+                        t[0] == tech_name_b for t in techniques_with_tactics
+                    ):
+                        tactics_b = yaml_data_b.get("tactics", [])
                         primary_tactic_b = tactics_b[0] if tactics_b else "Unknown"
                         techniques_with_tactics.append((tech_name_b, primary_tactic_b))
 
     # Sort techniques by MITRE ATT&CK tactic order
-    tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation',
-                   'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement',
-                   'Collection', 'Command and Control', 'Exfiltration', 'Impact']
+    tactic_order = [
+        "Initial Access",
+        "Execution",
+        "Persistence",
+        "Privilege Escalation",
+        "Defense Evasion",
+        "Credential Access",
+        "Discovery",
+        "Lateral Movement",
+        "Collection",
+        "Command and Control",
+        "Exfiltration",
+        "Impact",
+    ]
 
     def get_tactic_index(tech_tuple):
         tactic = tech_tuple[1]
@@ -613,25 +749,27 @@ def _merge_correlation_group(correlations: list) -> dict:
 
     # Debug: Log what techniques were collected
     if len(techniques_involved) > 2:
-        print(f"DEBUG _merge_correlation_group: Collected {len(techniques_involved)} techniques: {techniques_involved}")
+        print(
+            f"DEBUG _merge_correlation_group: Collected {len(techniques_involved)} techniques: {techniques_involved}"
+        )
 
     # Merge queries using OR logic
     merged_query = _build_merged_query(correlations)
 
     # Update base correlation with merged data
-    base['b'] = files_b  # Now an array
-    base['merged'] = True
-    base['techniques_involved'] = techniques_involved
-    base['combined_query'] = merged_query
+    base["b"] = files_b  # Now an array
+    base["merged"] = True
+    base["techniques_involved"] = techniques_involved
+    base["combined_query"] = merged_query
 
     # Combine all tactics
     all_tactics = set()
     for corr in correlations:
-        all_tactics.update(corr.get('tactics', []))
-    base['tactics'] = sorted(list(all_tactics))
+        all_tactics.update(corr.get("tactics", []))
+    base["tactics"] = sorted(list(all_tactics))
 
     # Use highest relevance score
-    base['relevance_score'] = max(c.get('relevance_score', 0.0) for c in correlations)
+    base["relevance_score"] = max(c.get("relevance_score", 0.0) for c in correlations)
 
     return base
 
@@ -652,16 +790,17 @@ def _build_merged_query(correlations: list) -> str:
 
     # Extract first technique query (same for all correlations)
     first_corr = correlations[0]
-    combined_query = first_corr.get('combined_query', '')
-    vendor = first_corr.get('vendor', '').lower()
+    combined_query = first_corr.get("combined_query", "")
+    vendor = first_corr.get("vendor", "").lower()
 
     # Parse out the first technique section
     import re
 
     # Detect if this is a Splunk query
-    is_splunk = (vendor == 'splunk' or
-                 (isinstance(combined_query, str) and
-                  ('index=' in combined_query or 'earliest=' in combined_query)))
+    is_splunk = vendor == "splunk" or (
+        isinstance(combined_query, str)
+        and ("index=" in combined_query or "earliest=" in combined_query)
+    )
 
     # For Splunk queries, we can't easily merge the transaction-based correlation syntax
     # Return the first correlation's combined query as-is
@@ -673,7 +812,7 @@ def _build_merged_query(correlations: list) -> str:
 
     # KQL/MDE query merging logic below
     # Extract the first "let" statement (first technique)
-    first_let_match = re.search(r'(let\s+\w+\s*=.*?\|\s*project[^;]+;)', combined_query, re.DOTALL)
+    first_let_match = re.search(r"(let\s+\w+\s*=.*?\|\s*project[^;]+;)", combined_query, re.DOTALL)
     if not first_let_match:
         return combined_query  # Can't parse, return original
 
@@ -685,12 +824,18 @@ def _build_merged_query(correlations: list) -> str:
     table_counter = {}
 
     for idx, corr in enumerate(correlations):
-        query = corr.get('combined_query', '')
-        techniques = corr.get('techniques_involved', [])
+        query = corr.get("combined_query", "")
+        techniques = corr.get("techniques_involved", [])
 
         # Extract second let statement
         # Find all let statements after the first one
-        let_matches = list(re.finditer(r'let\s+(\w+)\s*=\s*(\w+)\s*\n\|\s*where\s+Timestamp[^;]+\|\s*where\s+([^\n]+(?:\n(?!\|)[^\n]+)*)', query, re.DOTALL))
+        let_matches = list(
+            re.finditer(
+                r"let\s+(\w+)\s*=\s*(\w+)\s*\n\|\s*where\s+Timestamp[^;]+\|\s*where\s+([^\n]+(?:\n(?!\|)[^\n]+)*)",
+                query,
+                re.DOTALL,
+            )
+        )
 
         if len(let_matches) > 1:
             # Get the second let statement
@@ -704,18 +849,20 @@ def _build_merged_query(correlations: list) -> str:
 
             # Extract the technique name from the existing comment in the WHERE condition
             # Look for // TechniqueName pattern
-            comment_match = re.search(r'//\s*([^\n]+)', where_condition)
+            comment_match = re.search(r"//\s*([^\n]+)", where_condition)
             if comment_match:
                 technique_name = comment_match.group(1).strip()
             else:
                 # Fallback: use second technique from list, or all techniques after the first
-                technique_name = ' / '.join(techniques[1:]) if len(techniques) > 1 else f"Technique{idx+1}"
+                technique_name = (
+                    " / ".join(techniques[1:]) if len(techniques) > 1 else f"Technique{idx+1}"
+                )
 
             # Strip any existing comment lines from the where_condition to avoid duplication
             # Remove lines that start with // (with optional leading whitespace)
-            condition_lines = where_condition.split('\n')
-            cleaned_lines = [line for line in condition_lines if not line.lstrip().startswith('//')]
-            cleaned_condition = '\n'.join(cleaned_lines).strip()
+            condition_lines = where_condition.split("\n")
+            cleaned_lines = [line for line in condition_lines if not line.lstrip().startswith("//")]
+            cleaned_condition = "\n".join(cleaned_lines).strip()
 
             # Format the condition with technique comment
             second_conditions.append(f"  // {technique_name}\n  ({cleaned_condition})")
@@ -726,10 +873,14 @@ def _build_merged_query(correlations: list) -> str:
 
     # Create the second technique query with OR conditions
     # Determine which table is most common
-    most_common_table = max(table_counter.keys(), key=lambda k: table_counter[k]) if table_counter else "DeviceEvents"
+    most_common_table = (
+        max(table_counter.keys(), key=lambda k: table_counter[k])
+        if table_counter
+        else "DeviceEvents"
+    )
 
     # Parse the original query to extract join template
-    join_match = re.search(r'(//\s*Chain events.*?\|\s*project\s+\*)', combined_query, re.DOTALL)
+    join_match = re.search(r"(//\s*Chain events.*?\|\s*project\s+\*)", combined_query, re.DOTALL)
     join_template = join_match.group(1) if join_match else ""
 
     # Build new combined query
@@ -745,8 +896,8 @@ let {most_common_table}_Combined = {most_common_table}
 {join_template}"""
 
     # Fix the join to use the new combined table
-    join_replacement = f'| join kind=inner (\n    {most_common_table}_Combined'
-    merged = re.sub(r'\|\s*join\s+kind=inner\s*\(\s*\w+', join_replacement, merged)
+    join_replacement = f"| join kind=inner (\n    {most_common_table}_Combined"
+    merged = re.sub(r"\|\s*join\s+kind=inner\s*\(\s*\w+", join_replacement, merged)
 
     return merged
 
@@ -792,7 +943,9 @@ def get_platform_from_data_source(data_source: str) -> str:
         return "McAfee"
     else:
         # Default: title case the data source
-        return DATA_SOURCE_DISPLAY_NAMES.get(data_source_lower, data_source.replace("_", " ").title())
+        return DATA_SOURCE_DISPLAY_NAMES.get(
+            data_source_lower, data_source.replace("_", " ").title()
+        )
 
 
 def markdown_links_to_html(text):
@@ -863,6 +1016,7 @@ def check_osint_enriched(yaml_file, file_content=None):
 
                 # Extract osint_indicators using proper YAML parsing
                 import yaml as yaml_lib
+
                 try:
                     yaml_data = yaml_lib.safe_load(content)
                     if yaml_data and "osint_indicators" in yaml_data:
@@ -872,10 +1026,14 @@ def check_osint_enriched(yaml_file, file_content=None):
                 except yaml_lib.YAMLError as e:
                     # YAML parsing error - skip with warning
                     filename = os.path.basename(yaml_file)
-                    logger.debug(f"Skipping OSINT indicators for {filename}: {str(e).split(chr(10))[0]}")
+                    logger.debug(
+                        f"Skipping OSINT indicators for {filename}: {str(e).split(chr(10))[0]}"
+                    )
                     osint_data["indicators"] = {}
                 except Exception as e:
-                    logger.warning(f"Error extracting OSINT indicators from {os.path.basename(yaml_file)}: {e}")
+                    logger.warning(
+                        f"Error extracting OSINT indicators from {os.path.basename(yaml_file)}: {e}"
+                    )
                     # Fallback to empty indicators
                     osint_data["indicators"] = {}
 
@@ -968,32 +1126,32 @@ def extract_indicators_from_query(yaml_file):
                 # Match returns tuples, flatten and add non-empty values
                 for val in match:
                     if val and len(val.strip()) >= 3:
-                        cleaned = val.strip().strip('*').strip()
+                        cleaned = val.strip().strip("*").strip()
                         if cleaned:
                             indicators.append(cleaned)
 
             # KQL has_any() - alternate approach to catch all values in the parentheses
-            has_any_full_pattern = r'has_any\s*\(([^)]+)\)'
+            has_any_full_pattern = r"has_any\s*\(([^)]+)\)"
             has_any_full_matches = re.findall(has_any_full_pattern, query_text, re.IGNORECASE)
             for match_group in has_any_full_matches:
                 # Split by comma and extract quoted values
                 values = re.findall(r'"([^"]+)"', match_group)
                 for val in values:
                     if val and len(val.strip()) >= 3:
-                        cleaned = val.strip().strip('*').strip()
+                        cleaned = val.strip().strip("*").strip()
                         if cleaned and cleaned not in indicators:
                             indicators.append(cleaned)
 
             # Splunk IN () syntax - extract values from IN ("val1", "val2", ...)
             # Example: | search process IN ("wevtutil", "evtx")
-            in_pattern = r'\bIN\s*\(([^)]+)\)'
+            in_pattern = r"\bIN\s*\(([^)]+)\)"
             in_matches = re.findall(in_pattern, query_text, re.IGNORECASE)
             for match_group in in_matches:
                 # Extract quoted values
                 values = re.findall(r'"([^"]+)"', match_group)
                 for val in values:
                     if val and len(val.strip()) >= 3:
-                        cleaned = val.strip().strip('*').strip()
+                        cleaned = val.strip().strip("*").strip()
                         if cleaned and cleaned not in indicators:
                             indicators.append(cleaned)
 
@@ -1017,14 +1175,29 @@ def extract_indicators_from_query(yaml_file):
             unix_paths = re.findall(unix_path_pattern, query_text, re.IGNORECASE)
             # Filter to only include common Unix paths
             for path in unix_paths:
-                if any(common in path for common in ['/var/', '/tmp/', '/etc/', '/home/', '/usr/', '/opt/', '/bin/', '/sbin/', '/dev/', '/proc/', '/sys/']):
+                if any(
+                    common in path
+                    for common in [
+                        "/var/",
+                        "/tmp/",
+                        "/etc/",
+                        "/home/",
+                        "/usr/",
+                        "/opt/",
+                        "/bin/",
+                        "/sbin/",
+                        "/dev/",
+                        "/proc/",
+                        "/sys/",
+                    ]
+                ):
                     indicators.append(path)
 
             # File extensions and patterns (e.g., .pid, .lock, .log)
             extension_pattern = r'["\']?(\.[a-z]{2,5})["\']?'
             extensions = re.findall(extension_pattern, query_text, re.IGNORECASE)
             # Only include meaningful extensions
-            meaningful_exts = ['.pid', '.lock', '.log', '.tmp', '.conf', '.cfg', '.ini', '.dat']
+            meaningful_exts = [".pid", ".lock", ".log", ".tmp", ".conf", ".cfg", ".ini", ".dat"]
             for ext in extensions:
                 if ext.lower() in meaningful_exts:
                     indicators.append(ext)
@@ -1057,8 +1230,13 @@ def extract_indicators_from_query(yaml_file):
                 # Include values that are alphanumeric, not just generic words
                 # Skip very short values (< 3 chars) and pure numbers
                 # Strip asterisks and leading/trailing spaces (wildcards from queries)
-                cleaned_val = val.strip().strip('*').strip()
-                if len(cleaned_val) >= 3 and not cleaned_val.isdigit() and cleaned_val.lower() not in ['and', 'or', 'not', 'null', 'none', 'true', 'false']:
+                cleaned_val = val.strip().strip("*").strip()
+                if (
+                    len(cleaned_val) >= 3
+                    and not cleaned_val.isdigit()
+                    and cleaned_val.lower()
+                    not in ["and", "or", "not", "null", "none", "true", "false"]
+                ):
                     indicators.append(cleaned_val)
 
             # Common suspicious strings (base64, encoded, etc.)
@@ -1082,14 +1260,31 @@ def extract_indicators_from_query(yaml_file):
 
             # Generic terms that are too common to be useful indicators
             generic_terms = {
-                'condition', 'conditions', 'value', 'values', 'data', 'file',
-                'process', 'command', 'user', 'system', 'event', 'log', 'entry',
-                'action', 'type', 'name', 'path', 'string', 'text', 'info'
+                "condition",
+                "conditions",
+                "value",
+                "values",
+                "data",
+                "file",
+                "process",
+                "command",
+                "user",
+                "system",
+                "event",
+                "log",
+                "entry",
+                "action",
+                "type",
+                "name",
+                "path",
+                "string",
+                "text",
+                "info",
             }
 
             for item in indicators:
                 # Strip whitespace AND asterisks for consistent deduplication
-                item_str = str(item).strip().strip('*').strip()
+                item_str = str(item).strip().strip("*").strip()
                 item_lower = item_str.lower()
 
                 # Skip if empty or too short
@@ -1148,7 +1343,7 @@ def get_indicators_from_yaml(yaml_file, yaml_data=None):
                     if values and isinstance(values, list):
                         # Strip asterisks (wildcards) from indicators for display
                         for val in values:
-                            cleaned = str(val).strip().strip('*').strip()
+                            cleaned = str(val).strip().strip("*").strip()
 
                             # Decode HTML entities (e.g., &lt; -> <, &gt; -> >)
                             cleaned = html.unescape(cleaned)
@@ -1164,24 +1359,47 @@ def get_indicators_from_yaml(yaml_file, yaml_data=None):
                                 continue
 
                             # Skip common filler words
-                            common_words = {'and', 'or', 'to', 'the', 'a', 'an', 'in', 'on', 'at', 'for', 'with', 'from'}
+                            common_words = {
+                                "and",
+                                "or",
+                                "to",
+                                "the",
+                                "a",
+                                "an",
+                                "in",
+                                "on",
+                                "at",
+                                "for",
+                                "with",
+                                "from",
+                            }
                             if cleaned.lower() in common_words:
                                 continue
 
                             # Skip if it contains citation markers or ends with period (likely description)
-                            if 'Citation:' in cleaned or cleaned.endswith('.'):
+                            if "Citation:" in cleaned or cleaned.endswith("."):
                                 continue
 
                             # Skip if it looks like a sentence (contains "may", "can", "to the", etc.)
                             sentence_patterns = [
-                                r'\bmay\b', r'\bcan\b', r'\bwill\b', r'\bshould\b',
-                                r'to the\b', r'to ensure\b', r'to modify\b',
-                                r'Adversaries', r'Users may', r'file to\b',
-                                r'\. And$',  # Ends with ". And"
-                                r'memory is mapped',  # Descriptive phrase
-                                r'virtual address space'  # Descriptive phrase
+                                r"\bmay\b",
+                                r"\bcan\b",
+                                r"\bwill\b",
+                                r"\bshould\b",
+                                r"to the\b",
+                                r"to ensure\b",
+                                r"to modify\b",
+                                r"Adversaries",
+                                r"Users may",
+                                r"file to\b",
+                                r"\. And$",  # Ends with ". And"
+                                r"memory is mapped",  # Descriptive phrase
+                                r"virtual address space",  # Descriptive phrase
                             ]
-                            if any(re.search(pattern, cleaned, re.IGNORECASE) for pattern in sentence_patterns):
+                            if any(
+                                re.search(pattern, cleaned, re.IGNORECASE)
+                                for pattern in sentence_patterns
+                            ):
                                 continue
 
                             # Skip if too long (> 150 chars, likely a sentence)
@@ -1308,17 +1526,18 @@ def validate_mapping_files():
             missing_files.append(filename)
 
     if missing_files:
-        error_message = "\n" + "="*80 + "\n"
+        error_message = "\n" + "=" * 80 + "\n"
         error_message += "ERROR: Required mapping files are missing!\n"
-        error_message += "="*80 + "\n"
+        error_message += "=" * 80 + "\n"
         error_message += f"\nThe following required files are missing from {mappings_dir}:\n\n"
         for filename in missing_files:
             error_message += f"  ✗ {filename}\n"
         error_message += "\nPlease ensure all required mapping files are present before starting the application.\n"
-        error_message += "="*80 + "\n"
+        error_message += "=" * 80 + "\n"
 
         print(error_message, flush=True)
         import sys
+
         sys.exit(1)
 
 
@@ -1399,7 +1618,9 @@ async def initialize_osint_repos():
 
     async def init_repos():
         try:
-            app.state.osint_status = "Cloning detection repositories (this may take 15-20 minutes on first run)..."
+            app.state.osint_status = (
+                "Cloning detection repositories (this may take 15-20 minutes on first run)..."
+            )
 
             # Run in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
@@ -1413,7 +1634,9 @@ async def initialize_osint_repos():
                 app.state.osint_repos[repo_name] = {"status": "cloning", "error": None}
 
                 try:
-                    success = await loop.run_in_executor(None, clone_or_update_repo, repo_name, False)
+                    success = await loop.run_in_executor(
+                        None, clone_or_update_repo, repo_name, False
+                    )
 
                     if success:
                         app.state.osint_repos[repo_name] = {"status": "ready", "error": None}
@@ -1421,7 +1644,10 @@ async def initialize_osint_repos():
                     else:
                         # Check if it's a timeout by looking at the printed output
                         # The clone_or_update_repo function returns False for timeouts
-                        app.state.osint_repos[repo_name] = {"status": "failed", "error": "Clone failed (possibly timeout)"}
+                        app.state.osint_repos[repo_name] = {
+                            "status": "failed",
+                            "error": "Clone failed (possibly timeout)",
+                        }
                         failed_repos.append(repo_name)
                 except Exception as e:
                     error_msg = str(e)
@@ -1465,10 +1691,7 @@ async def detect_local_llm():
     async def check_endpoint(name, url):
         try:
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: requests.get(url, timeout=2)
-            )
+            response = await loop.run_in_executor(None, lambda: requests.get(url, timeout=2))
             if response.ok:
                 return {"name": name, "url": url, "available": True}
         except:
@@ -1555,7 +1778,7 @@ async def save_mapping_config(
         # Build mapping configuration
         mappings = {}
         if cmd:
-            for idx in cmd.split(','):
+            for idx in cmd.split(","):
                 idx = idx.strip()
                 if idx:
                     mappings[idx] = "| summarize by relevant_fields"
@@ -1566,34 +1789,31 @@ async def save_mapping_config(
         # Read existing template if available
         template_file = Path(f"data/bespoke/mappings/schema{platform.capitalize()}.json")
         if template_file.exists():
-            with open(template_file, 'r') as f:
+            with open(template_file, "r") as f:
                 template = json.load(f)
         else:
             template = {}
 
         # Create simplified mapping structure
         custom_mappings = {
-            "cmd": cmd.split(',') if cmd else [],
-            "file": file.split(',') if file else [],
-            "reg": reg.split(',') if reg else [],
-            "network": network.split(',') if network else []
+            "cmd": cmd.split(",") if cmd else [],
+            "file": file.split(",") if file else [],
+            "reg": reg.split(",") if reg else [],
+            "network": network.split(",") if network else [],
         }
 
         # Write custom mappings
-        with open(mapping_file, 'w') as f:
+        with open(mapping_file, "w") as f:
             json.dump(custom_mappings, f, indent=2)
 
         return {
             "success": True,
             "message": f"Mapping configuration saved for {platform}",
-            "file": str(mapping_file)
+            "file": str(mapping_file),
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/api/mappings/load")
@@ -1618,7 +1838,7 @@ async def load_mapping_config(
         mapping_file = Path(f"data/bespoke/mappings/schema{platform.capitalize()}_custom.json")
 
         if mapping_file.exists():
-            with open(mapping_file, 'r') as f:
+            with open(mapping_file, "r") as f:
                 custom_mappings = json.load(f)
 
             # Convert arrays back to comma-separated strings
@@ -1628,20 +1848,14 @@ async def load_mapping_config(
                     "cmd": ", ".join(custom_mappings.get("cmd", [])),
                     "file": ", ".join(custom_mappings.get("file", [])),
                     "reg": ", ".join(custom_mappings.get("reg", [])),
-                    "network": ", ".join(custom_mappings.get("network", []))
-                }
+                    "network": ", ".join(custom_mappings.get("network", [])),
+                },
             }
         else:
-            return {
-                "success": False,
-                "message": "No custom configuration found"
-            }
+            return {"success": False, "message": "No custom configuration found"}
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
 
 
 @app.post("/api/mappings/test")
@@ -1666,26 +1880,21 @@ async def test_mapping_config(
     try:
         # Basic validation: check that index names don't contain invalid characters
         import re
-        valid_pattern = re.compile(r'^[a-zA-Z0-9_\-,\s]+$')
+
+        valid_pattern = re.compile(r"^[a-zA-Z0-9_\-,\s]+$")
 
         all_values = [cmd, file, reg, network]
         for value in all_values:
             if value and not valid_pattern.match(value):
                 return {
                     "success": False,
-                    "error": "Index names can only contain letters, numbers, underscores, hyphens, commas, and spaces"
+                    "error": "Index names can only contain letters, numbers, underscores, hyphens, commas, and spaces",
                 }
 
-        return {
-            "success": True,
-            "message": "Configuration is valid"
-        }
+        return {"success": True, "message": "Configuration is valid"}
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/api/status/osint")
@@ -1707,10 +1916,7 @@ async def accept_osint_failures():
     # If we have at least one successful repo, consider it ready
     if app.state.osint_ready == "partial":
         app.state.osint_ready = True
-    return {
-        "accepted": True,
-        "message": "Continuing without failed repositories"
-    }
+    return {"accepted": True, "message": "Continuing without failed repositories"}
 
 
 @app.get("/api/status/bespoke")
@@ -1726,17 +1932,12 @@ async def get_bespoke_status():
     """
     try:
         from .build.bespoke import get_bespoke_status
+
         return get_bespoke_status()
     except ImportError:
-        return {
-            "enabled": False,
-            "error": "Bespoke module not available"
-        }
+        return {"enabled": False, "error": "Bespoke module not available"}
     except Exception as e:
-        return {
-            "enabled": False,
-            "error": str(e)
-        }
+        return {"enabled": False, "error": str(e)}
 
 
 @app.get("/api/bespoke/sample-searches")
@@ -1750,23 +1951,13 @@ async def get_bespoke_sample_searches(technique_id: str = None, platform: str = 
     """
     try:
         from .build.bespoke import get_sample_searches
+
         searches = get_sample_searches(technique_id=technique_id, platform=platform)
-        return {
-            "count": len(searches),
-            "searches": searches
-        }
+        return {"count": len(searches), "searches": searches}
     except ImportError:
-        return {
-            "count": 0,
-            "searches": [],
-            "error": "Bespoke module not available"
-        }
+        return {"count": 0, "searches": [], "error": "Bespoke module not available"}
     except Exception as e:
-        return {
-            "count": 0,
-            "searches": [],
-            "error": str(e)
-        }
+        return {"count": 0, "searches": [], "error": str(e)}
 
 
 @app.post("/api/bespoke/reload")
@@ -1779,23 +1970,14 @@ async def reload_bespoke_config():
     """
     try:
         from .build.bespoke import clear_cache, get_bespoke_status
+
         clear_cache()
         status = get_bespoke_status()
-        return {
-            "success": True,
-            "message": "Bespoke configuration reloaded",
-            "status": status
-        }
+        return {"success": True, "message": "Bespoke configuration reloaded", "status": status}
     except ImportError:
-        return {
-            "success": False,
-            "error": "Bespoke module not available"
-        }
+        return {"success": False, "error": "Bespoke module not available"}
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/api/reference/coverage")
@@ -1805,44 +1987,29 @@ async def get_reference_coverage():
     Returns technique coverage by platform.
     """
     try:
-        from .build.reference_queries import get_coverage_map
+        from .build.references import get_coverage_map
+
         return get_coverage_map()
     except ImportError:
-        return {
-            "error": "Reference queries module not available",
-            "coverage": {}
-        }
+        return {"error": "Reference queries module not available", "coverage": {}}
     except Exception as e:
-        return {
-            "error": str(e),
-            "coverage": {}
-        }
+        return {"error": str(e), "coverage": {}}
 
 
 @app.get("/api/reference/queries")
-async def get_reference_queries(technique_id: str = None, platform: str = None):
+async def get_references(technique_id: str = None, platform: str = None):
     """
     Get reference queries, optionally filtered by technique or platform.
     """
     try:
-        from .build.reference_queries import get_reference_queries
-        queries = get_reference_queries(technique_id=technique_id, platform=platform)
-        return {
-            "count": len(queries),
-            "queries": queries
-        }
+        from .build.references import get_references
+
+        queries = get_references(technique_id=technique_id, platform=platform)
+        return {"count": len(queries), "queries": queries}
     except ImportError:
-        return {
-            "count": 0,
-            "queries": [],
-            "error": "Reference queries module not available"
-        }
+        return {"count": 0, "queries": [], "error": "Reference queries module not available"}
     except Exception as e:
-        return {
-            "count": 0,
-            "queries": [],
-            "error": str(e)
-        }
+        return {"count": 0, "queries": [], "error": str(e)}
 
 
 @app.get("/coverage", response_class=HTMLResponse)
@@ -1856,44 +2023,47 @@ async def coverage_page(request: Request, archer_session: Optional[str] = Cookie
             user = get_user_from_session_id(archer_session, db)
         finally:
             db.close()
-    return templates.TemplateResponse(
-        "coverage.html",
-        {"request": request, "user": user}
-    )
+    return templates.TemplateResponse("coverage.html", {"request": request, "user": user})
 
 
 @app.get("/api/correlation/params")
 async def get_correlation_params():
     """Get current correlation parameters from config files."""
     import re
+
     try:
         # Read config.py for threshold
-        config_path = os.path.join(os.path.dirname(__file__), 'config.py')
-        with open(config_path, 'r') as f:
+        config_path = os.path.join(os.path.dirname(__file__), "config.py")
+        with open(config_path, "r") as f:
             config_content = f.read()
 
         # Extract threshold
-        threshold_match = re.search(r'correlation_min_relevance = float\(os\.getenv\("CORRELATION_MIN_RELEVANCE", "([0-9.]+)"\)\)', config_content)
+        threshold_match = re.search(
+            r'correlation_min_relevance = float\(os\.getenv\("CORRELATION_MIN_RELEVANCE", "([0-9.]+)"\)\)',
+            config_content,
+        )
         threshold = float(threshold_match.group(1)) if threshold_match else 0.40
 
         # Read engine.py for per_vendor and tech_freq
-        engine_path = os.path.join(os.path.dirname(__file__), 'genai', 'engine.py')
-        with open(engine_path, 'r') as f:
+        engine_path = os.path.join(os.path.dirname(__file__), "genai", "engine.py")
+        with open(engine_path, "r") as f:
             engine_content = f.read()
 
         # Extract max_per_vendor
-        per_vendor_match = re.search(r'max_per_vendor: int = (\d+)', engine_content)
+        per_vendor_match = re.search(r"max_per_vendor: int = (\d+)", engine_content)
         per_vendor = int(per_vendor_match.group(1)) if per_vendor_match else 25
 
         # Extract tech frequency limit
-        tech_freq_match = re.search(r'if max_occurrences < (\d+):\s*#.*simple correlations', engine_content)
+        tech_freq_match = re.search(
+            r"if max_occurrences < (\d+):\s*#.*simple correlations", engine_content
+        )
         tech_freq = int(tech_freq_match.group(1)) if tech_freq_match else 20
 
         return {
             "success": True,
             "threshold": threshold,
             "per_vendor": per_vendor,
-            "tech_freq": tech_freq
+            "tech_freq": tech_freq,
         }
 
     except Exception as e:
@@ -1902,7 +2072,7 @@ async def get_correlation_params():
             "error": str(e),
             "threshold": 0.40,
             "per_vendor": 25,
-            "tech_freq": 20
+            "tech_freq": 20,
         }
 
 
@@ -1910,11 +2080,12 @@ async def get_correlation_params():
 async def save_correlation_params(request: Request):
     """Save correlation parameters to config files."""
     import re
+
     try:
         data = await request.json()
-        threshold = float(data.get('threshold', 0.40))
-        per_vendor = int(data.get('per_vendor', 25))
-        tech_freq = int(data.get('tech_freq', 20))
+        threshold = float(data.get("threshold", 0.40))
+        per_vendor = int(data.get("per_vendor", 25))
+        tech_freq = int(data.get("tech_freq", 20))
 
         # Validate inputs
         if not (0.0 <= threshold <= 1.0):
@@ -1927,52 +2098,51 @@ async def save_correlation_params(request: Request):
             return {"success": False, "message": "Tech frequency limit must be at least 1"}
 
         # Update config.py
-        config_path = os.path.join(os.path.dirname(__file__), 'config.py')
-        with open(config_path, 'r') as f:
+        config_path = os.path.join(os.path.dirname(__file__), "config.py")
+        with open(config_path, "r") as f:
             lines = f.readlines()
 
         for i, line in enumerate(lines):
             if 'correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE"' in line:
-                lines[i] = f'    correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", "{threshold}"))\n'
+                lines[i] = (
+                    f'    correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", "{threshold}"))\n'
+                )
 
-        with open(config_path, 'w') as f:
+        with open(config_path, "w") as f:
             f.writelines(lines)
 
         # Update engine.py
-        engine_path = os.path.join(os.path.dirname(__file__), 'genai', 'engine.py')
-        with open(engine_path, 'r') as f:
+        engine_path = os.path.join(os.path.dirname(__file__), "genai", "engine.py")
+        with open(engine_path, "r") as f:
             content = f.read()
 
         # Update max_per_vendor parameter default
         content = re.sub(
-            r'max_per_vendor: int = \d+',
-            f'max_per_vendor: int = {per_vendor}',
-            content
+            r"max_per_vendor: int = \d+", f"max_per_vendor: int = {per_vendor}", content
         )
 
         # Update tech frequency limit
-        lines = content.split('\n')
+        lines = content.split("\n")
         for i, line in enumerate(lines):
-            if 'if max_occurrences <' in line and 'simple correlations' in line:
-                lines[i] = f'            if max_occurrences < {tech_freq}:  # Allow each technique in up to {tech_freq} simple correlations'
+            if "if max_occurrences <" in line and "simple correlations" in line:
+                lines[i] = (
+                    f"            if max_occurrences < {tech_freq}:  # Allow each technique in up to {tech_freq} simple correlations"
+                )
                 break
 
-        with open(engine_path, 'w') as f:
-            f.write('\n'.join(lines))
+        with open(engine_path, "w") as f:
+            f.write("\n".join(lines))
 
         return {
             "success": True,
             "message": "Correlation parameters updated successfully",
             "threshold": threshold,
             "per_vendor": per_vendor,
-            "tech_freq": tech_freq
+            "tech_freq": tech_freq,
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error saving parameters: {str(e)}"
-        }
+        return {"success": False, "message": f"Error saving parameters: {str(e)}"}
 
 
 @app.post("/api/status/osint/retry-failed")
@@ -1984,11 +2154,7 @@ async def retry_failed_osint_repos():
     failed_repos = getattr(app.state, "osint_failed_repos", [])
 
     if not failed_repos:
-        return {
-            "success": True,
-            "message": "No failed repositories to retry",
-            "retried": []
-        }
+        return {"success": True, "message": "No failed repositories to retry", "retried": []}
 
     # Reset state for retry
     app.state.osint_ready = False
@@ -2037,7 +2203,7 @@ async def retry_failed_osint_repos():
     return {
         "success": True,
         "message": f"Retrying {len(failed_repos)} failed repository/repositories",
-        "retried": failed_repos
+        "retried": failed_repos,
     }
 
 
@@ -2671,9 +2837,17 @@ async def hunt_technique(
                 # Build technique entry
                 technique_entry = {
                     "technique": tech_id,
-                    "op_guidance": tech_info.get("description", f"Hunt for {tech_id}") if tech_info else f"Hunt for {tech_id}",
+                    "op_guidance": (
+                        tech_info.get("description", f"Hunt for {tech_id}")
+                        if tech_info
+                        else f"Hunt for {tech_id}"
+                    ),
                     "red_tool": {},
-                    "detect_guidance": tech_info.get("description", f"Detect usage of {tech_id}") if tech_info else f"Detect usage of {tech_id}",
+                    "detect_guidance": (
+                        tech_info.get("description", f"Detect usage of {tech_id}")
+                        if tech_info
+                        else f"Detect usage of {tech_id}"
+                    ),
                 }
 
                 # Add platforms if available
@@ -2688,7 +2862,9 @@ async def hunt_technique(
                 manual_data.append({"tactic": tactic, "techniques": techniques})
 
             if not manual_data:
-                raise ValueError(f"Could not build detection data for techniques: {technique_id_list}")
+                raise ValueError(
+                    f"Could not build detection data for techniques: {technique_id_list}"
+                )
 
             # Process using existing pipeline
             modified_process_group_wrapper(
@@ -2707,6 +2883,7 @@ async def hunt_technique(
         except Exception as e:
             print(f"Technique hunt error: {e}", flush=True)
             import traceback
+
             traceback.print_exc()
             try:
                 write_progress(group_name, {"status": "failed", "error": str(e)})
@@ -3153,12 +3330,22 @@ def start_genai_processing(group_name):
 
 # Modify the orchestrator process to ensure completion
 def modified_process_group_wrapper(
-    group_name, hypothesis, manual_data=None, genai_mode=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, merge_by_tactic=False, merge_by_parent=False, excluded_vendors=None
+    group_name,
+    hypothesis,
+    manual_data=None,
+    genai_mode=None,
+    run_correlation=False,
+    osint_enhancement=False,
+    osint_comparison=False,
+    merge_by_tactic=False,
+    merge_by_parent=False,
+    excluded_vendors=None,
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
     # Capture start time for duration tracking
     import time
+
     start_time = time.time()
 
     # Set GENAI_MODE environment variable if provided
@@ -3306,6 +3493,7 @@ def modified_process_group_wrapper(
 
     except Exception as e:
         import traceback
+
         print(f"Error in process group: {e}")
         print("Full traceback:")
         traceback.print_exc()
@@ -4277,6 +4465,7 @@ def _get_technique_info_by_name(technique_name: str) -> dict:
     # If not available, load from cache
     if not bundle:
         from archer.mitre.enterprise import get_stix_data
+
         url = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
         bundle = get_stix_data(url)
     if not bundle:
@@ -4496,7 +4685,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             else:
                 # Check if it's an actual technique ID (T followed by digits) vs a technique name
                 import re
-                is_technique_id = bool(re.match(r'^T\d{4}', technique_upper))
+
+                is_technique_id = bool(re.match(r"^T\d{4}", technique_upper))
 
                 if is_technique_id:
                     # It's a technique ID like T1234 without a name - display as-is
@@ -4514,7 +4704,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             indicators = get_indicators_from_yaml(yaml_file, yaml_data=yaml_data)
 
             # Check for OSINT enrichment (use pre-read content)
-            is_osint_enriched, osint_data = check_osint_enriched(yaml_file, file_content=file_content)
+            is_osint_enriched, osint_data = check_osint_enriched(
+                yaml_file, file_content=file_content
+            )
 
             # Debug: Log what we're passing to template
             if is_osint_enriched or osint_data:
@@ -4529,10 +4721,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
             # Calculate detection likelihood score (0-100)
             detection_likelihood = calculate_detection_likelihood(
-                indicators=indicators,
-                query=query_text,
-                technique=technique,
-                yaml_data=yaml_data
+                indicators=indicators, query=query_text, technique=technique, yaml_data=yaml_data
             )
 
             detection_files[vendor].append(
@@ -4545,7 +4734,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "description_html": desc_html,
                     "description_plain": desc_plain,
                     "indicators": indicators,
-                    "needs_review": bool(osint_data) and not is_osint_enriched,  # True if OSINT comparison found results but didn't integrate them
+                    "needs_review": bool(osint_data)
+                    and not is_osint_enriched,  # True if OSINT comparison found results but didn't integrate them
                     "osint_enriched": is_osint_enriched,  # OSINT enhanced flag (purple badge) - only true if enhancement checkbox was enabled
                     "osint_data": osint_data,  # OSINT comparison data (for Show Details button) - included if OSINT comparison ran
                     "query": query_text,  # Add query for preview
@@ -4622,13 +4812,16 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "description_html": data.get("description_html", description),
                     "description_plain": data.get("description_plain", description),
                     "indicators": data.get("indicators", []),
-                    "needs_review": bool(osint_data) and not is_osint,  # True if OSINT comparison found results but didn't integrate them
+                    "needs_review": bool(osint_data)
+                    and not is_osint,  # True if OSINT comparison found results but didn't integrate them
                     "osint_enriched": is_osint,  # Purple badge
                     "osint_data": osint_data,
                     "queries": data.get("queries", []),  # Pass queries for preview
                     "tactic": data.get("tactic", "Unknown"),  # Primary tactic
                     "tactics": data.get("tactics", []),  # All tactics
-                    "detection_likelihood": data.get("detection_likelihood", 50),  # Likelihood score
+                    "detection_likelihood": data.get(
+                        "detection_likelihood", 50
+                    ),  # Likelihood score
                 }
             )
 
@@ -4638,11 +4831,17 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             ungrouped_files.append(
                 {
                     "technique": file_data.get("technique", ""),
-                    "technique_display": file_data.get("technique_display", file_data.get("technique", "")),
+                    "technique_display": file_data.get(
+                        "technique_display", file_data.get("technique", "")
+                    ),
                     "title": file_data["title"],
                     "description": file_data.get("description", ""),
-                    "description_html": file_data.get("description_html", file_data.get("description", "")),
-                    "description_plain": file_data.get("description_plain", file_data.get("description", "")),
+                    "description_html": file_data.get(
+                        "description_html", file_data.get("description", "")
+                    ),
+                    "description_plain": file_data.get(
+                        "description_plain", file_data.get("description", "")
+                    ),
                     "indicators": file_data.get("indicators", []),
                     "query": file_data.get("query", ""),
                     "tactic": file_data.get("tactic", "Unknown"),
@@ -4698,12 +4897,13 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
                 # Update progress with post-merge correlation count
                 from archer.build.progress import write_progress
+
                 write_progress(
                     group_name,
                     {
                         "correlation_count_pre_merge": pre_merge_count,
                         "correlation_count_post_merge": post_merge_count,
-                    }
+                    },
                 )
 
                 # Extract technique and data source information from filenames
@@ -4762,15 +4962,15 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
                                 if yaml_data:
                                     # Get actual technique name from YAML and format it with spaces
-                                    raw_name = yaml_data.get('name', technique_id)
+                                    raw_name = yaml_data.get("name", technique_id)
                                     technique_name = format_technique_name(raw_name)
 
                                     # Extract data source from YAML requiredDataConnectors or dataTypes
-                                    data_connectors = yaml_data.get('requiredDataConnectors', [])
+                                    data_connectors = yaml_data.get("requiredDataConnectors", [])
                                     if data_connectors and len(data_connectors) > 0:
                                         # Get the first data type from first connector
                                         first_connector = data_connectors[0]
-                                        data_types = first_connector.get('dataTypes', [])
+                                        data_types = first_connector.get("dataTypes", [])
                                         if data_types and len(data_types) > 0:
                                             data_source = data_types[0]
                                             # Map to friendly name
@@ -4779,11 +4979,11 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                             )
 
                                     # Get severity
-                                    severity = yaml_data.get('severity', 'Medium')
+                                    severity = yaml_data.get("severity", "Medium")
                                     severities.append(severity)
 
                                     # Get tactics
-                                    tactics = yaml_data.get('tactics', [])
+                                    tactics = yaml_data.get("tactics", [])
                                     primary_tactic = "Unknown"
                                     if isinstance(tactics, list):
                                         tactics_set.update(tactics)
@@ -4791,8 +4991,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                         primary_tactic = tactics[0] if tactics else "Unknown"
 
                                     # Extract time window from combined query if available
-                                    if 'maxspan' in combined_query:
-                                        match = re.search(r'maxspan=(\d+[hmd])', combined_query)
+                                    if "maxspan" in combined_query:
+                                        match = re.search(r"maxspan=(\d+[hmd])", combined_query)
                                         if match:
                                             time_window = match.group(1)
 
@@ -4810,7 +5010,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                         # This indicates the correlation cannot be effectively used as both detections
                         # require manual review and have no IOCs/patterns to search for
                         if total_indicators == 0:
-                            print(f"Skipping correlation {idx+1} - 0 total indicators across both detections")
+                            print(
+                                f"Skipping correlation {idx+1} - 0 total indicators across both detections"
+                            )
                             continue
 
                         # Needs Review badge should NOT be shown if there are indicators
@@ -4822,13 +5024,17 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                         highest_severity = "Medium"
                         for sev in severities:
                             if sev in SEVERITY_ORDER:
-                                if SEVERITY_ORDER.index(sev) < SEVERITY_ORDER.index(highest_severity):
+                                if SEVERITY_ORDER.index(sev) < SEVERITY_ORDER.index(
+                                    highest_severity
+                                ):
                                     highest_severity = sev
 
                         # The vendor field indicates where the query runs (Splunk, MDE, etc.)
                         # This is the query platform, NOT the data sources being queried
                         # Map vendor to display name (splunk -> Splunk, mde -> MDE, etc.)
-                        vendor_display = DATA_SOURCE_DISPLAY_NAMES.get(vendor.lower(), vendor.title())
+                        vendor_display = DATA_SOURCE_DISPLAY_NAMES.get(
+                            vendor.lower(), vendor.title()
+                        )
 
                         # Extract tables (MDE) or indexes (Splunk) from the combined query
                         tables_indexes = extract_tables_indexes(combined_query, vendor)
@@ -4853,10 +5059,10 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                 yaml_data = load_yaml_file(matching_files[0])
                                 if yaml_data:
                                     # Get formatted name from YAML
-                                    raw_name = yaml_data.get('name', tech_name)
+                                    raw_name = yaml_data.get("name", tech_name)
                                     formatted_name = format_technique_name(raw_name)
 
-                                    tech_tactics = yaml_data.get('tactics', [])
+                                    tech_tactics = yaml_data.get("tactics", [])
                                     # Use first tactic as primary
                                     primary_tactic = tech_tactics[0] if tech_tactics else "Unknown"
                                     technique_tactic_map[formatted_name] = primary_tactic
@@ -4887,9 +5093,20 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
                         # Sort techniques_involved_formatted by MITRE ATT&CK tactic order
                         # Sort by PRIMARY tactic to match how techniques are highlighted
-                        tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation',
-                                       'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement',
-                                       'Collection', 'Command and Control', 'Exfiltration', 'Impact']
+                        tactic_order = [
+                            "Initial Access",
+                            "Execution",
+                            "Persistence",
+                            "Privilege Escalation",
+                            "Defense Evasion",
+                            "Credential Access",
+                            "Discovery",
+                            "Lateral Movement",
+                            "Collection",
+                            "Command and Control",
+                            "Exfiltration",
+                            "Impact",
+                        ]
 
                         def get_technique_sort_key(tech_name):
                             # Use the primary tactic from technique_tactic_map
@@ -4932,7 +5149,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                             if matching_files:
                                 yaml_data = load_yaml_file(matching_files[0])
                                 if yaml_data:
-                                    tech_tactics = yaml_data.get('tactics', [])
+                                    tech_tactics = yaml_data.get("tactics", [])
                                     # Add this technique to all its tactics
                                     for tactic in tech_tactics:
                                         if tactic not in techniques_by_tactic_filtered:
@@ -4944,10 +5161,23 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                         techniques_by_tactic = techniques_by_tactic_filtered
 
                         # Calculate attack chain length (number of tactics in attack flow order)
-                        tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation',
-                                       'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement',
-                                       'Collection', 'Command and Control', 'Exfiltration', 'Impact']
-                        attack_chain_length = sum(1 for tactic in tactic_order if tactic in techniques_by_tactic)
+                        tactic_order = [
+                            "Initial Access",
+                            "Execution",
+                            "Persistence",
+                            "Privilege Escalation",
+                            "Defense Evasion",
+                            "Credential Access",
+                            "Discovery",
+                            "Lateral Movement",
+                            "Collection",
+                            "Command and Control",
+                            "Exfiltration",
+                            "Impact",
+                        ]
+                        attack_chain_length = sum(
+                            1 for tactic in tactic_order if tactic in techniques_by_tactic
+                        )
 
                         # Rebuild techniques list to match techniques_involved_formatted order and content
                         # This ensures the displayed techniques match what's being used for highlighting
@@ -4956,26 +5186,30 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                             # Find matching technique in the original techniques list
                             matching_tech = None
                             for tech in techniques:
-                                if tech['name'] == formatted_name:
+                                if tech["name"] == formatted_name:
                                     matching_tech = tech
                                     break
 
                             if matching_tech:
                                 # Update the tactic field to use the PRIMARY tactic
-                                primary_tactic = technique_tactic_map.get(formatted_name, matching_tech.get('tactic', 'Unknown'))
+                                primary_tactic = technique_tactic_map.get(
+                                    formatted_name, matching_tech.get("tactic", "Unknown")
+                                )
                                 matching_tech_copy = matching_tech.copy()
-                                matching_tech_copy['tactic'] = primary_tactic
+                                matching_tech_copy["tactic"] = primary_tactic
                                 techniques_rebuilt.append(matching_tech_copy)
                             else:
                                 # Create a minimal technique entry if not found in original list
                                 # This happens when techniques_involved has techniques not in files_to_process
                                 primary_tactic = technique_tactic_map.get(formatted_name, "Unknown")
-                                techniques_rebuilt.append({
-                                    "id": formatted_name.replace(" ", "-"),
-                                    "name": formatted_name,
-                                    "source": vendor_display,
-                                    "tactic": primary_tactic,
-                                })
+                                techniques_rebuilt.append(
+                                    {
+                                        "id": formatted_name.replace(" ", "-"),
+                                        "name": formatted_name,
+                                        "source": vendor_display,
+                                        "tactic": primary_tactic,
+                                    }
+                                )
 
                         # Use the rebuilt list
                         techniques = techniques_rebuilt
@@ -4986,7 +5220,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                 "flow_file": f"{safe_group}_corr_{idx+1}.html",
                                 "vendor": vendor_display,
                                 "needs_review": has_needs_review,
-                                "relevance_score": int(relevance_score * 100),  # Convert to percentage
+                                "relevance_score": int(
+                                    relevance_score * 100
+                                ),  # Convert to percentage
                                 "severity": highest_severity,
                                 "time_window": time_window,
                                 "tactics": list(tactics_set),
@@ -4997,7 +5233,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                 "techniques_by_tactic": techniques_by_tactic,  # Group techniques by tactic
                                 "attack_chain_length": attack_chain_length,  # Number of tactics in ordered attack flow
                                 "is_merged": is_merged,  # Flag indicating if this is a merged correlation
-                                "primary_tactics": list(primary_tactics),  # Tactics containing the original correlation pair
+                                "primary_tactics": list(
+                                    primary_tactics
+                                ),  # Tactics containing the original correlation pair
                             }
                         )
         except Exception as e:
@@ -5022,15 +5260,13 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             vendor_corrs,
             key=lambda c: (
                 -c.get("relevance_score", 0),  # Higher relevance first
-                -c.get("attack_chain_length", 0)  # Longer attack chains first (as tiebreaker)
-            )
+                -c.get("attack_chain_length", 0),  # Longer attack chains first (as tiebreaker)
+            ),
         )
 
-        grouped_correlations.append({
-            "name": vendor,
-            "count": len(sorted_corrs),
-            "correlations": sorted_corrs
-        })
+        grouped_correlations.append(
+            {"name": vendor, "count": len(sorted_corrs), "correlations": sorted_corrs}
+        )
 
     # Sort by count descending
     grouped_correlations.sort(key=lambda x: -x["count"])
@@ -5156,7 +5392,7 @@ def download_all_detections(group_name: str):
         if os.path.exists(generate_dir):
             for yaml_file in glob.glob(os.path.join(generate_dir, "*.yaml")):
                 try:
-                    with open(yaml_file, 'r', encoding='utf-8') as f:
+                    with open(yaml_file, "r", encoding="utf-8") as f:
                         content = f.read()
                         # Check if this YAML file contains the group tag
                         if formatted_tag in content:
@@ -5330,7 +5566,12 @@ def require_auth(request: Request, archer_session: Optional[str] = Cookie(None))
 
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request, response: Response, registered: Optional[str] = None, next_url: Optional[str] = None):
+async def login_page(
+    request: Request,
+    response: Response,
+    registered: Optional[str] = None,
+    next_url: Optional[str] = None,
+):
     """
     Render the login page with CSRF protection.
     """
@@ -5350,7 +5591,13 @@ async def login_page(request: Request, response: Response, registered: Optional[
     # Store temp session ID in a cookie for CSRF validation
     template_response = templates.TemplateResponse(
         "login.html",
-        {"request": request, "error": None, "success": success_message, "csrf_token": csrf_token, "next_url": next_url or "/"},
+        {
+            "request": request,
+            "error": None,
+            "success": success_message,
+            "csrf_token": csrf_token,
+            "next_url": next_url or "/",
+        },
     )
 
     template_response.set_cookie(
@@ -5681,9 +5928,7 @@ async def forgot_password_page(request: Request):
     """
     Render the forgot password page (coming soon).
     """
-    return templates.TemplateResponse(
-        "forgot_password.html", {"request": request}
-    )
+    return templates.TemplateResponse("forgot_password.html", {"request": request})
 
 
 @app.post("/register")
@@ -5901,7 +6146,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             "microsoft": "MDE",
             "elastic": "Elastic",
             "google_secops": "Google SecOps",
-            "sentinel": "Azure Sentinel"
+            "sentinel": "Azure Sentinel",
         }
 
         # Helper function to safely parse JSON fields
@@ -5941,7 +6186,9 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         for det in detections:
             # Parse the content JSON to extract detection details
             try:
-                content_data = json.loads(det.content) if isinstance(det.content, str) else det.content
+                content_data = (
+                    json.loads(det.content) if isinstance(det.content, str) else det.content
+                )
             except (json.JSONDecodeError, ValueError):
                 content_data = {}
 
@@ -5953,14 +6200,21 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             if isinstance(content_data, dict):
                 # Check if this is a detection object from results page (has 'technique' and 'queries' fields)
                 # But NOT an imported YAML (which would have 'mde_tables' or 'splunk_indexes' or 'name' field)
-                if "technique" in content_data and "queries" in content_data and "name" not in content_data and "mde_tables" not in content_data and "splunk_indexes" not in content_data:
+                if (
+                    "technique" in content_data
+                    and "queries" in content_data
+                    and "name" not in content_data
+                    and "mde_tables" not in content_data
+                    and "splunk_indexes" not in content_data
+                ):
                     # This is a detection saved from results page or imported YAML
                     # The "technique" field could be either technique_id (like "T1555.006") or technique_name
                     technique_value = content_data.get("technique") or det.title
 
                     # Check if technique_value looks like a technique ID (starts with T followed by digits)
                     import re
-                    if re.match(r'^T\d{4}(\.\d{3})?$', technique_value):
+
+                    if re.match(r"^T\d{4}(\.\d{3})?$", technique_value):
                         # This is a technique ID, look up the name
                         tech_info = _get_technique_info(technique_value)
                         if tech_info:
@@ -6007,9 +6261,20 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
 
                 # Check if this is a YAML-like structure (has 'name' and 'requiredDataConnectors')
                 # OR if it's an imported YAML detection (has 'technique', 'queries', and other YAML fields)
-                elif "name" in content_data or "requiredDataConnectors" in content_data or "technique_id" in content_data or ("technique" in content_data and "queries" in content_data and isinstance(content_data.get("queries"), list)):
+                elif (
+                    "name" in content_data
+                    or "requiredDataConnectors" in content_data
+                    or "technique_id" in content_data
+                    or (
+                        "technique" in content_data
+                        and "queries" in content_data
+                        and isinstance(content_data.get("queries"), list)
+                    )
+                ):
                     # This is a YAML detection (either from data/groups or imported via import_yaml_to_library.py)
-                    technique_id = content_data.get("technique", "") or content_data.get("technique_id", "")
+                    technique_id = content_data.get("technique", "") or content_data.get(
+                        "technique_id", ""
+                    )
 
                     # Look up technique name and tactics from MITRE ATT&CK using technique ID
                     tech_info = _get_technique_info(technique_id) if technique_id else None
@@ -6020,7 +6285,9 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         # Fallback to technique ID if lookup fails (don't use detection title)
                         technique_name = technique_id or content_data.get("name", "Unknown")
 
-                    description = content_data.get("description_html") or content_data.get("description", "")
+                    description = content_data.get("description_html") or content_data.get(
+                        "description", ""
+                    )
                     # Convert markdown links to HTML anchor tags
                     description = markdown_links_to_html(description)
 
@@ -6064,17 +6331,21 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                             tactics = [single_tactic]
 
                     # Extract group/threat actor
-                    group_name = content_data.get("group") or content_data.get("threat_actor", "Unknown")
+                    group_name = content_data.get("group") or content_data.get(
+                        "threat_actor", "Unknown"
+                    )
 
                     # Check if OSINT enriched
-                    osint_enriched = content_data.get("osint_enriched") or content_data.get("osint_enhanced", False)
+                    osint_enriched = content_data.get("osint_enriched") or content_data.get(
+                        "osint_enhanced", False
+                    )
 
                     # Extract OSINT data if available
                     osint_data = None
                     if osint_enriched and "osint_indicators" in content_data:
                         osint_data = {
                             "indicators": content_data.get("osint_indicators", {}),
-                            "enrichment_date": content_data.get("comparison_date", "")
+                            "enrichment_date": content_data.get("comparison_date", ""),
                         }
 
                 # Check if this is a correlation object (has 'techniques' and 'combined_query')
@@ -6100,11 +6371,24 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 # Check if this is a detection saved from results page
                 # Results page detections have: technique, title, description, and optionally: query, indicators, tactic, etc.
                 # But NOT queries (plural) or technique_id
-                elif "technique" in content_data and "title" in content_data and "queries" not in content_data and "technique_id" not in content_data:
+                elif (
+                    "technique" in content_data
+                    and "title" in content_data
+                    and "queries" not in content_data
+                    and "technique_id" not in content_data
+                ):
                     # This is a detection saved from results page (may have full data or minimal data)
-                    technique_name = content_data.get("technique_display", content_data.get("technique", det.title))
-                    technique_id = content_data.get("technique", "") if content_data.get("technique", "").startswith("T") else ""
-                    description = content_data.get("description_html", content_data.get("description", ""))
+                    technique_name = content_data.get(
+                        "technique_display", content_data.get("technique", det.title)
+                    )
+                    technique_id = (
+                        content_data.get("technique", "")
+                        if content_data.get("technique", "").startswith("T")
+                        else ""
+                    )
+                    description = content_data.get(
+                        "description_html", content_data.get("description", "")
+                    )
                     # Results page has "query" (singular), not "queries" (plural)
                     query_content = content_data.get("query", "")
                     # Use platform for vendor, title contains table/index names
@@ -6120,7 +6404,9 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     indicators = content_data.get("indicators", [])
                     # Results page has "tactic" (singular primary tactic) and "tactics" (array)
                     primary_tactic = content_data.get("tactic", "Unknown")
-                    tactics = content_data.get("tactics", [primary_tactic] if primary_tactic != "Unknown" else [])
+                    tactics = content_data.get(
+                        "tactics", [primary_tactic] if primary_tactic != "Unknown" else []
+                    )
                     group_name = "Unknown"  # Will extract from tags
                     osint_enriched = content_data.get("osint_enriched", False)
                     osint_data = content_data.get("osint_data") if osint_enriched else None
@@ -6183,11 +6469,13 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "tags": tags,
                 "group": group_name,
                 "tactic": tactics[0] if tactics else "Unknown",
-                "saved_date": det.created_at.strftime('%Y-%m-%d') if det.created_at else "",
+                "saved_date": det.created_at.strftime("%Y-%m-%d") if det.created_at else "",
                 "osint_enriched": osint_enriched,
                 "osint_data": osint_data,
                 "needs_review": False,  # Generated detections always have indicators
-                "detection_likelihood": content_data.get("detection_likelihood", 75),  # Added to match results page
+                "detection_likelihood": content_data.get(
+                    "detection_likelihood", 75
+                ),  # Added to match results page
                 # Add correlation-specific fields from content_data (for attack flow visualization)
                 "is_merged": content_data.get("is_merged", False),
                 "techniques": content_data.get("techniques", []),
@@ -6199,7 +6487,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "techniques_by_tactic": content_data.get("techniques_by_tactic", {}),
                 "technique_tactic_map": content_data.get("technique_tactic_map", {}),
                 "tables_indexes": content_data.get("tables_indexes", []),
-                "combined_query": content_data.get("combined_query", "")
+                "combined_query": content_data.get("combined_query", ""),
             }
 
             # Normalize vendor/platform based on query content and data sources
@@ -6219,7 +6507,15 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             elif normalized_vendor.lower() in ["microsoft", "microsoft defender"]:
                 normalized_vendor = "mde"
             # Normalize common Splunk index names to "splunk"
-            elif normalized_vendor.lower() in ['mcafee', 'unix', 'windows', 'linux', 'network', 'firewall', 'web']:
+            elif normalized_vendor.lower() in [
+                "mcafee",
+                "unix",
+                "windows",
+                "linux",
+                "network",
+                "firewall",
+                "web",
+            ]:
                 normalized_vendor = "splunk"
             # Otherwise keep the data_source/platform as-is
 
@@ -6230,8 +6526,12 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             # Check if this is a correlation (detection_type contains "correlation")
             # Handle both enum value ("sole_correlation") and enum name ("SOLE_CORRELATION")
             detection_type_str = str(det.detection_type).lower() if det.detection_type else ""
-            detection_type_name = det.detection_type.name.lower() if hasattr(det.detection_type, 'name') else ""
-            is_correlation = "correlation" in detection_type_str or "correlation" in detection_type_name
+            detection_type_name = (
+                det.detection_type.name.lower() if hasattr(det.detection_type, "name") else ""
+            )
+            is_correlation = (
+                "correlation" in detection_type_str or "correlation" in detection_type_name
+            )
 
             if is_correlation:
                 # Add to correlations list instead of vendors
@@ -6251,7 +6551,9 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         for corr in correlations_db:
             # Parse the content JSON
             try:
-                content_data = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                content_data = (
+                    json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                )
             except (json.JSONDecodeError, ValueError):
                 content_data = {}
 
@@ -6303,13 +6605,15 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     "group": group_name,
                     "tactic": tactics[0] if tactics else "Unknown",
                     "tactics": tactics,
-                    "saved_date": corr.created_at.strftime('%Y-%m-%d') if corr.created_at else "",
+                    "saved_date": corr.created_at.strftime("%Y-%m-%d") if corr.created_at else "",
                     "osint_enriched": osint_enriched,
                     "osint_data": osint_data,
                     "needs_review": False,
                     "detection_likelihood": content_data.get("detection_likelihood", 75),
                     # Correlation-specific fields
-                    "vendor": content_data.get("vendor", "unknown"),  # Query platform (Splunk, MDE, etc.)
+                    "vendor": content_data.get(
+                        "vendor", "unknown"
+                    ),  # Query platform (Splunk, MDE, etc.)
                     "is_merged": content_data.get("is_merged", False),
                     "techniques": content_data.get("techniques", []),
                     "severity": content_data.get("severity"),
@@ -6320,7 +6624,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     "techniques_by_tactic": content_data.get("techniques_by_tactic", {}),
                     "technique_tactic_map": content_data.get("technique_tactic_map", {}),
                     "tables_indexes": content_data.get("tables_indexes", []),
-                    "combined_query": content_data.get("combined_query", "")
+                    "combined_query": content_data.get("combined_query", ""),
                 }
 
                 # Add to correlations list
@@ -6360,7 +6664,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         "osint_data": det.get("osint_data"),
                         "detection_likelihood": det.get("detection_likelihood", 75),
                         "data_source": det.get("data_source", "Unknown"),
-                        "ids": []  # Track ALL detection IDs in this group
+                        "ids": [],  # Track ALL detection IDs in this group
                     }
 
                 # Add this detection's ID to the group
@@ -6398,60 +6702,72 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
 
             # Convert grouped data to list format
             detection_list = []
-            for (technique, description), data in sorted(grouped.items(), key=lambda x: x[0][0].lower()):
+            for (technique, description), data in sorted(
+                grouped.items(), key=lambda x: x[0][0].lower()
+            ):
                 # Sort titles and join with " | "
                 sorted_titles = sorted(data["titles"])
                 combined_title = " | ".join(sorted_titles)
 
-                detection_list.append({
-                    "ids": data["ids"],  # All IDs in this group
-                    "id": data["ids"][0] if data["ids"] else None,  # First ID for backwards compatibility
-                    "technique": technique,
-                    "title": combined_title,
-                    "data_source": data["data_source"],
-                    "description_html": description,
-                    "queries": data["queries"],
-                    "indicators": sorted(list(data["indicators"])),
-                    "mde_tables": sorted(list(data["mde_tables"])),
-                    "splunk_indexes": sorted(list(data["splunk_indexes"])),
-                    "tags": sorted(list(data["tags"])),
-                    "group": data["group"],
-                    "tactic": data["tactic"],
-                    "tactics": sorted(list(data["tactics"])),
-                    "osint_enriched": data["osint_enriched"],
-                    "osint_data": data["osint_data"],
-                    "detection_likelihood": data["detection_likelihood"]
-                })
+                detection_list.append(
+                    {
+                        "ids": data["ids"],  # All IDs in this group
+                        "id": (
+                            data["ids"][0] if data["ids"] else None
+                        ),  # First ID for backwards compatibility
+                        "technique": technique,
+                        "title": combined_title,
+                        "data_source": data["data_source"],
+                        "description_html": description,
+                        "queries": data["queries"],
+                        "indicators": sorted(list(data["indicators"])),
+                        "mde_tables": sorted(list(data["mde_tables"])),
+                        "splunk_indexes": sorted(list(data["splunk_indexes"])),
+                        "tags": sorted(list(data["tags"])),
+                        "group": data["group"],
+                        "tactic": data["tactic"],
+                        "tactics": sorted(list(data["tactics"])),
+                        "osint_enriched": data["osint_enriched"],
+                        "osint_data": data["osint_data"],
+                        "detection_likelihood": data["detection_likelihood"],
+                    }
+                )
 
             # Count total individual detections (sum of IDs across all groups)
             total_individual_detections = sum(len(det.get("ids", [])) for det in detection_list)
 
-            vendors.append({
-                "name": vendor_name,
-                "display_name": VENDOR_DISPLAY_NAMES.get(vendor_name, vendor_name.title()),
-                "count": total_individual_detections,  # Total individual detections (matching results.html)
-                "detections": detection_list
-            })
+            vendors.append(
+                {
+                    "name": vendor_name,
+                    "display_name": VENDOR_DISPLAY_NAMES.get(vendor_name, vendor_name.title()),
+                    "count": total_individual_detections,  # Total individual detections (matching results.html)
+                    "detections": detection_list,
+                }
+            )
 
         # Add Splunk as empty placeholder (if not already present)
         if not any(v["name"] == "splunk" for v in vendors):
-            vendors.append({
-                "name": "splunk",
-                "display_name": "Splunk",
-                "count": 0,
-                "detections": [],
-                "empty_state": True
-            })
+            vendors.append(
+                {
+                    "name": "splunk",
+                    "display_name": "Splunk",
+                    "count": 0,
+                    "detections": [],
+                    "empty_state": True,
+                }
+            )
 
         # Add MDE as empty placeholder (if not already present)
         if not any(v["name"] in ["mde", "microsoft"] for v in vendors):
-            vendors.append({
-                "name": "mde",
-                "display_name": "MDE",
-                "count": 0,
-                "detections": [],
-                "empty_state": True
-            })
+            vendors.append(
+                {
+                    "name": "mde",
+                    "display_name": "MDE",
+                    "count": 0,
+                    "detections": [],
+                    "empty_state": True,
+                }
+            )
 
         # Sort vendors: Splunk, MDE, Google SecOps, Elastic, then others
         vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "googlesecops": 2, "elastic": 3}
@@ -6460,19 +6776,29 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         # Calculate summary statistics
         # Count detections that are NOT correlations (exclude correlation detection_types from LibraryDetection)
         total_detections = sum(
-            1 for d in detections
-            if not d.detection_type or not (
-                "correlation" in str(d.detection_type).lower() or
-                (hasattr(d.detection_type, 'name') and "correlation" in d.detection_type.name.lower())
+            1
+            for d in detections
+            if not d.detection_type
+            or not (
+                "correlation" in str(d.detection_type).lower()
+                or (
+                    hasattr(d.detection_type, "name")
+                    and "correlation" in d.detection_type.name.lower()
+                )
             )
         )
 
         # Count correlations from both tables (LibraryDetection with correlation type + LibraryCorrelation)
         total_correlations_from_detections = sum(
-            1 for d in detections
-            if d.detection_type and (
-                "correlation" in str(d.detection_type).lower() or
-                (hasattr(d.detection_type, 'name') and "correlation" in d.detection_type.name.lower())
+            1
+            for d in detections
+            if d.detection_type
+            and (
+                "correlation" in str(d.detection_type).lower()
+                or (
+                    hasattr(d.detection_type, "name")
+                    and "correlation" in d.detection_type.name.lower()
+                )
             )
         )
         total_correlations = total_correlations_from_detections + len(correlations_db)
@@ -6504,57 +6830,78 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         for vendor, vendor_corrs in correlations_by_vendor.items():
             # Normalize vendor name to lowercase for lookup
             vendor_lower = vendor.lower()
-            grouped_correlations.append({
-                "name": vendor_lower,
-                "display_name": VENDOR_DISPLAY_NAMES.get(vendor_lower, vendor),
-                "count": len(vendor_corrs),
-                "correlations": vendor_corrs
-            })
+            grouped_correlations.append(
+                {
+                    "name": vendor_lower,
+                    "display_name": VENDOR_DISPLAY_NAMES.get(vendor_lower, vendor),
+                    "count": len(vendor_corrs),
+                    "correlations": vendor_corrs,
+                }
+            )
 
         # Add Splunk as empty placeholder (if not already present)
         if not any(v["name"] in ["Splunk", "splunk"] for v in grouped_correlations):
-            grouped_correlations.append({
-                "name": "splunk",
-                "display_name": "Splunk",
-                "count": 0,
-                "correlations": [],
-                "empty_state": True
-            })
+            grouped_correlations.append(
+                {
+                    "name": "splunk",
+                    "display_name": "Splunk",
+                    "count": 0,
+                    "correlations": [],
+                    "empty_state": True,
+                }
+            )
 
         # Add MDE as empty placeholder (if not already present)
-        if not any(v["name"] in ["MDE", "mde", "microsoft", "Microsoft"] for v in grouped_correlations):
-            grouped_correlations.append({
-                "name": "mde",
-                "display_name": "MDE",
-                "count": 0,
-                "correlations": [],
-                "empty_state": True
-            })
+        if not any(
+            v["name"] in ["MDE", "mde", "microsoft", "Microsoft"] for v in grouped_correlations
+        ):
+            grouped_correlations.append(
+                {
+                    "name": "mde",
+                    "display_name": "MDE",
+                    "count": 0,
+                    "correlations": [],
+                    "empty_state": True,
+                }
+            )
 
         # Add Google SecOps as "Coming Soon" placeholder (if not already present)
         if not any(v["name"] in ["google_secops", "Google SecOps"] for v in grouped_correlations):
-            grouped_correlations.append({
-                "name": "google_secops",
-                "display_name": "Google SecOps",
-                "count": 0,
-                "correlations": [],
-                "coming_soon": True
-            })
+            grouped_correlations.append(
+                {
+                    "name": "google_secops",
+                    "display_name": "Google SecOps",
+                    "count": 0,
+                    "correlations": [],
+                    "coming_soon": True,
+                }
+            )
 
         # Add Elastic as "Coming Soon" placeholder (if not already present)
         if not any(v["name"] in ["elastic", "Elastic"] for v in grouped_correlations):
-            grouped_correlations.append({
-                "name": "elastic",
-                "display_name": "Elastic",
-                "count": 0,
-                "correlations": [],
-                "coming_soon": True
-            })
+            grouped_correlations.append(
+                {
+                    "name": "elastic",
+                    "display_name": "Elastic",
+                    "count": 0,
+                    "correlations": [],
+                    "coming_soon": True,
+                }
+            )
 
         # Sort correlations: Splunk, MDE, Google SecOps, Elastic, then others
         # Priority: empty_state and coming_soon go after actual data
         def sort_correlations(v):
-            vendor_order = {"Splunk": 0, "splunk": 0, "MDE": 1, "mde": 1, "googlesecops": 2, "Google SecOps": 2, "elastic": 3, "Elastic": 3}
+            vendor_order = {
+                "Splunk": 0,
+                "splunk": 0,
+                "MDE": 1,
+                "mde": 1,
+                "googlesecops": 2,
+                "Google SecOps": 2,
+                "elastic": 3,
+                "Elastic": 3,
+            }
             is_placeholder = v.get("coming_soon", False) or v.get("empty_state", False)
             has_data = v["count"] > 0
             return (not has_data, is_placeholder, vendor_order.get(v["name"], 99), v["name"])
@@ -6576,8 +6923,8 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "all_techniques": sorted(filter(None, all_techniques)),
                 "hours_saved": hours_saved,
                 "manual_hours": manual_hours,
-                "archer_hours": archer_hours
-            }
+                "archer_hours": archer_hours,
+            },
         )
         return template_response
     finally:
@@ -6619,7 +6966,11 @@ async def get_library_detections(request: Request, archer_session: Optional[str]
             # Extract OSINT sources from content if available
             osint_sources = []
             try:
-                content_data = json.loads(detection.content) if isinstance(detection.content, str) else detection.content
+                content_data = (
+                    json.loads(detection.content)
+                    if isinstance(detection.content, str)
+                    else detection.content
+                )
                 if isinstance(content_data, dict) and "osint_sources" in content_data:
                     osint_sources = content_data["osint_sources"]
             except:
@@ -6761,7 +7112,9 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
         else:
             # Original flow: Get data from library using IDs
             if not detection_ids and not correlation_ids:
-                raise HTTPException(status_code=400, detail="No detections or correlations selected")
+                raise HTTPException(
+                    status_code=400, detail="No detections or correlations selected"
+                )
 
             # Get detections
             detections = []
@@ -6780,6 +7133,7 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
             correlations = []
             if correlation_ids:
                 from archer.database.models import LibraryCorrelation
+
                 correlations = (
                     db.query(LibraryCorrelation)
                     .filter(
@@ -6803,12 +7157,12 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
                         "title": detection.title,
                         "type": detection.detection_type.value,
                         "visibility": detection.visibility.value,
-                    "creator": creator.full_name if creator else "Unknown",
-                    "platform": detection.platform,
-                    "content": json.loads(detection.content) if detection.content else {},
-                    "created_at": detection.created_at.isoformat(),
-                }
-            )
+                        "creator": creator.full_name if creator else "Unknown",
+                        "platform": detection.platform,
+                        "content": json.loads(detection.content) if detection.content else {},
+                        "created_at": detection.created_at.isoformat(),
+                    }
+                )
 
         # Export based on format
         if export_format == "json":
@@ -6886,7 +7240,7 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
                     "indicators": content_data.get("indicators", []),
                     "vendor": item["platform"],
                     "severity": content_data.get("severity", "Medium"),
-                    "detection_likelihood": content_data.get("detection_likelihood", 75)
+                    "detection_likelihood": content_data.get("detection_likelihood", 75),
                 }
                 report_detections.append(detection_dict)
 
@@ -6903,20 +7257,22 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
                             "severity": content_data.get("severity", "High"),
                             "time_window": content_data.get("time_window", "N/A"),
                             "vendor": item.get("platform", "Multi-platform"),
-                            "combined_query": content_data.get("combined_query", "")
+                            "combined_query": content_data.get("combined_query", ""),
                         }
                         report_correlations.append(correlation_dict)
             else:
                 # Original flow: Get correlations from database query result
                 for corr in correlations:
-                    corr_content = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                    corr_content = (
+                        json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                    )
                     correlation_dict = {
                         "name": corr.title,
                         "techniques": corr_content.get("techniques", []),
                         "severity": corr_content.get("severity", "High"),
                         "time_window": corr_content.get("time_window", "N/A"),
                         "vendor": corr.platform or "Multi-platform",
-                        "combined_query": corr_content.get("combined_query", "")
+                        "combined_query": corr_content.get("combined_query", ""),
                     }
                     report_correlations.append(correlation_dict)
 
@@ -6934,14 +7290,14 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
             generator = WordReportGenerator()
             # Merge user info with additional metadata from request
             full_metadata = {
-                "user": user.full_name if hasattr(user, 'full_name') else "Archer User",
-                **report_metadata  # Include metrics, stats, etc. from results page
+                "user": user.full_name if hasattr(user, "full_name") else "Archer User",
+                **report_metadata,  # Include metrics, stats, etc. from results page
             }
             content_bytes = generator.generate(
                 group_name=report_group_name,
                 detections=report_detections,
                 correlations=report_correlations if report_correlations else None,
-                metadata=full_metadata
+                metadata=full_metadata,
             )
 
             media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -6975,7 +7331,7 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
                     "indicators": content_data.get("indicators", []),
                     "vendor": item["platform"],
                     "severity": content_data.get("severity", "Medium"),
-                    "detection_likelihood": content_data.get("detection_likelihood", 75)
+                    "detection_likelihood": content_data.get("detection_likelihood", 75),
                 }
                 report_detections.append(detection_dict)
 
@@ -6992,20 +7348,22 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
                             "severity": content_data.get("severity", "High"),
                             "time_window": content_data.get("time_window", "N/A"),
                             "vendor": item.get("platform", "Multi-platform"),
-                            "combined_query": content_data.get("combined_query", "")
+                            "combined_query": content_data.get("combined_query", ""),
                         }
                         report_correlations.append(correlation_dict)
             else:
                 # Original flow: Get correlations from database query result
                 for corr in correlations:
-                    corr_content = json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                    corr_content = (
+                        json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                    )
                     correlation_dict = {
                         "name": corr.title,
                         "techniques": corr_content.get("techniques", []),
                         "severity": corr_content.get("severity", "High"),
                         "time_window": corr_content.get("time_window", "N/A"),
                         "vendor": corr.platform or "Multi-platform",
-                        "combined_query": corr_content.get("combined_query", "")
+                        "combined_query": corr_content.get("combined_query", ""),
                     }
                     report_correlations.append(correlation_dict)
 
@@ -7023,14 +7381,14 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
             generator = PDFReportGenerator()
             # Merge user info with additional metadata from request
             full_metadata = {
-                "user": user.full_name if hasattr(user, 'full_name') else "Archer User",
-                **report_metadata  # Include metrics, stats, etc. from results page
+                "user": user.full_name if hasattr(user, "full_name") else "Archer User",
+                **report_metadata,  # Include metrics, stats, etc. from results page
             }
             content_bytes = generator.generate(
                 group_name=report_group_name,
                 detections=report_detections,
                 correlations=report_correlations if report_correlations else None,
-                metadata=full_metadata
+                metadata=full_metadata,
             )
 
             media_type = "application/pdf"
@@ -7077,7 +7435,12 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
     """
     Save a new detection or correlation to the library.
     """
-    from archer.database.models import LibraryDetection, LibraryCorrelation, DetectionType, VisibilityType
+    from archer.database.models import (
+        LibraryDetection,
+        LibraryCorrelation,
+        DetectionType,
+        VisibilityType,
+    )
     import json
 
     # Check authentication
@@ -7131,7 +7494,9 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
                 # Update existing correlation
                 is_update = True
                 existing_item.visibility = VisibilityType(visibility)
-                existing_item.content = json.dumps(content) if isinstance(content, dict) else content
+                existing_item.content = (
+                    json.dumps(content) if isinstance(content, dict) else content
+                )
                 existing_item.platform = platform
                 existing_item.tags = tags_json
                 item_to_return = existing_item
@@ -7188,7 +7553,9 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
                 is_update = True
                 existing_detection.detection_type = DetectionType(detection_type)
                 existing_detection.visibility = VisibilityType(visibility)
-                existing_detection.content = json.dumps(content) if isinstance(content, dict) else content
+                existing_detection.content = (
+                    json.dumps(content) if isinstance(content, dict) else content
+                )
                 existing_detection.platform = platform
                 existing_detection.tags = tags_json
                 detection_to_return = existing_detection
@@ -7240,6 +7607,7 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
         db.rollback()
         logger.error(f"Error saving to library: {e}")
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to save to library: {str(e)}")
     finally:
@@ -7390,7 +7758,9 @@ async def delete_library_detections(request: Request, archer_session: Optional[s
             )
 
             if len(detections) != len(detection_ids):
-                raise HTTPException(status_code=403, detail="Some detections not found or unauthorized")
+                raise HTTPException(
+                    status_code=403, detail="Some detections not found or unauthorized"
+                )
 
             for detection in detections:
                 db.delete(detection)
@@ -7407,7 +7777,10 @@ async def delete_library_detections(request: Request, archer_session: Optional[s
             # Try to delete from LibraryCorrelation table first
             correlations_from_corr_table = (
                 db.query(LibraryCorrelation)
-                .filter(LibraryCorrelation.id.in_(correlation_ids), LibraryCorrelation.user_id == user.id)
+                .filter(
+                    LibraryCorrelation.id.in_(correlation_ids),
+                    LibraryCorrelation.user_id == user.id,
+                )
                 .all()
             )
 
@@ -7419,7 +7792,9 @@ async def delete_library_detections(request: Request, archer_session: Optional[s
             if remaining_ids:
                 correlations_from_det_table = (
                     db.query(LibraryDetection)
-                    .filter(LibraryDetection.id.in_(remaining_ids), LibraryDetection.user_id == user.id)
+                    .filter(
+                        LibraryDetection.id.in_(remaining_ids), LibraryDetection.user_id == user.id
+                    )
                     .all()
                 )
 
@@ -7428,8 +7803,12 @@ async def delete_library_detections(request: Request, archer_session: Optional[s
                 print(f"[DELETE] Expected {len(correlation_ids)} correlations, found {total_found}")
                 print(f"[DELETE] Requested IDs: {correlation_ids}")
                 print(f"[DELETE] Found in LibraryCorrelation: {corr_table_ids}")
-                print(f"[DELETE] Found in LibraryDetection: {[d.id for d in correlations_from_det_table]}")
-                raise HTTPException(status_code=403, detail="Some correlations not found or unauthorized")
+                print(
+                    f"[DELETE] Found in LibraryDetection: {[d.id for d in correlations_from_det_table]}"
+                )
+                raise HTTPException(
+                    status_code=403, detail="Some correlations not found or unauthorized"
+                )
 
             # Delete from both tables
             for correlation in correlations_from_corr_table:
@@ -8464,4 +8843,3 @@ async def get_activities(request: Request, archer_session: Optional[str] = Cooki
 
     finally:
         db.close()
- 

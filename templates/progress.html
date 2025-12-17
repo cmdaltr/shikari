@@ -25,8 +25,13 @@ body, html {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;  /* Changed from 100% to 100vh for sticky footer */
+  min-height: calc(100vh - 85px);  /* Account for header height */
   box-sizing: border-box;  /* Consolidated */
+}
+
+/* Make results container flex to push footer to bottom */
+.results-container {
+  flex: 1;
 }
 
 /* Global navigation buttons */
@@ -349,15 +354,15 @@ body, html {
 
 /* Footer - matching index.html - full width */
 .page-footer {
-  margin-top: 60px;
-  margin-left: calc(-50vw + 50%);
-  margin-right: calc(-50vw + 50%);
+  margin-top: auto;  /* Push to bottom with flexbox */
+  margin-left: 0;
+  margin-right: 0;
   margin-bottom: 0 !important;
   padding: 30px 0 30px 0;
   background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
   border-top: 3px solid #C53030;
   text-align: center;
-  width: 100vw;
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -682,7 +687,7 @@ body, html {
 
   </div>
 
-<!-- Footer - matching index.html with timestamp -->
+<!-- Footer - outside results-container for proper sticky positioning -->
 <footer class="page-footer">
   <div class="footer-content">
     <!-- GitHub Link -->
