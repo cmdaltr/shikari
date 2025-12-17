@@ -71,7 +71,11 @@ class DetectionRetriever:
         """Load embedding model."""
         try:
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer(self.model_name)
+            # Use local_files_only to avoid SSL issues with HuggingFace
+            try:
+                self.model = SentenceTransformer(self.model_name, local_files_only=True)
+            except Exception:
+                self.model = SentenceTransformer(self.model_name)
         except ImportError:
             print("Error: sentence-transformers not installed")
             raise

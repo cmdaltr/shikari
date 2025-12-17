@@ -35,7 +35,13 @@ class EmbeddingGenerator:
         try:
             from sentence_transformers import SentenceTransformer
             print(f"Loading embedding model: {self.model_name}")
-            self.model = SentenceTransformer(self.model_name)
+            # Use local_files_only to avoid SSL issues with HuggingFace
+            # Fall back to online if local cache doesn't exist
+            try:
+                self.model = SentenceTransformer(self.model_name, local_files_only=True)
+            except Exception:
+                print("Local model not found, downloading...")
+                self.model = SentenceTransformer(self.model_name)
             print("✓ Model loaded successfully")
         except ImportError:
             print("Error: sentence-transformers not installed")
