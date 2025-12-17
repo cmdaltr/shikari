@@ -121,6 +121,57 @@ def extract_network_indicators(combined_desc):
     return result
 
 
+def transform_url_to_api_method(url_indicator):
+    """
+    Transform URL-based API indicators to method name format.
+
+    Examples:
+        GET https://cloudidentity.googleapis.com/v1/groups -> cloudidentity.groups.list
+        POST https://iam.googleapis.com/v1/projects/{project}/serviceAccounts -> iam.serviceAccounts.create
+        https://graph.microsoft.com/v1.0/users -> microsoft.graph.users.list
+    """
+    import re
+
+    # Remove HTTP method if present
+    url = re.sub(r'^(GET|POST|PUT|DELETE|PATCH)\s+', '', url_indicator.strip())
+
+    # GCP API URLs
+    gcp_match = re.match(r'https?://([^.]+)\.googleapis\.com/v\d+/(.+)', url)
+    if gcp_match:
+        service = gcp_match.group(1)  # e.g., cloudidentity, iam
+        path = gcp_match.group(2)     # e.g., groups, projects/{project}/serviceAccounts
+
+        # Clean path - remove variable placeholders and trailing slashes
+        path = re.sub(r'\{[^}]+\}/?', '', path)
+        path = path.rstrip('/')
+
+        # Convert path to method name
+        # groups -> groups.list, projects/serviceAccounts -> serviceAccounts
+        parts = [p for p in path.split('/') if p and not p.startswith('{')]
+        if parts:
+            resource = parts[-1]  # Last part is the resource
+            return f"{service}.{resource}.list"
+
+    # Azure/Microsoft Graph API URLs
+    azure_match = re.match(r'https?://(?:graph\.microsoft\.com|management\.azure\.com)/[^/]+/(.+)', url)
+    if azure_match:
+        path = azure_match.group(1)
+        path = re.sub(r'\{[^}]+\}/?', '', path)
+        path = path.rstrip('/')
+        parts = [p for p in path.split('/') if p]
+        if parts:
+            return '.'.join(parts[-2:]) if len(parts) >= 2 else parts[-1]
+
+    # AWS API - typically already in method format, but handle URLs
+    aws_match = re.match(r'https?://([^.]+)\.amazonaws\.com', url)
+    if aws_match:
+        service = aws_match.group(1)
+        return service
+
+    # Return original if no transformation applied
+    return url_indicator
+
+
 def extract_commands(combined_desc):
     cleaned_desc = (
         combined_desc.replace(""", '"')
@@ -142,6 +193,15 @@ def extract_commands(combined_desc):
         r'^[A-Z][a-z]+(?:[A-Z][a-z]+)*$',  # DescribeInstances, ListBuckets, GetPublicAccessBlock
     ]
 
+    # Patterns that indicate URL-based API calls
+    url_api_patterns = [
+        r'^(GET|POST|PUT|DELETE|PATCH)\s+https?://',  # HTTP method + URL
+        r'^https?://[^/]+\.googleapis\.com/',          # GCP API URLs
+        r'^https?://graph\.microsoft\.com/',           # Microsoft Graph API
+        r'^https?://management\.azure\.com/',          # Azure Management API
+        r'^https?://[^/]+\.amazonaws\.com/',           # AWS API URLs
+    ]
+
     # Patterns that indicate CLI commands (not API calls)
     cli_patterns = [
         r'^aws\s',      # aws iam list-users (AWS CLI)
@@ -153,10 +213,19 @@ def extract_commands(combined_desc):
     ]
 
     for cmd in normalised_cmds:
+        # Check if it's a URL-based API call
+        is_url_api = any(re.search(pattern, cmd, re.IGNORECASE) for pattern in url_api_patterns)
+
+        if is_url_api:
+            # Transform URL to method name format
+            method_name = transform_url_to_api_method(cmd)
+            api_calls.append(method_name)
+            continue
+
         # Check if it's clearly a CLI command
         is_cli = any(re.search(pattern, cmd) for pattern in cli_patterns)
 
-        # Check if it looks like an API call
+        # Check if it looks like an API call (PascalCase)
         is_api = any(re.match(pattern, cmd) for pattern in api_patterns)
 
         if is_api and not is_cli:

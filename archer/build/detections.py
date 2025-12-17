@@ -121,7 +121,7 @@ def load_indicator_mappings():
                 print(f"WARNING: Could not parse {mapping_file}: {e}")
 
     # Make sure we have the expected indicator types
-    required_types = ["cmd", "reg", "evt", "sw", "port", "protocol", "service"]
+    required_types = ["cmd", "reg", "evt", "sw", "port", "protocol", "service", "api", "network"]
     missing_types = [t for t in required_types if t not in mappings]
     if missing_types:
         print(

@@ -1,5 +1,6 @@
 from archer.build.collate import collate_data
 from archer.config import GENERATE_DIR
+from archer.validation.mde_field_validator import format_mde_query
 
 import getpass
 import json
@@ -700,6 +701,9 @@ def construct_yaml(
 
         # Extract query and entity mappings separately
         query_only, entity_mappings_str = map_entities(query)
+
+        # Format MDE query: strip excluded fields, remove duplicates, add line breaks
+        query_only = format_mde_query(query_only)
 
         """if len(query_with_entities) > 10:
             print(

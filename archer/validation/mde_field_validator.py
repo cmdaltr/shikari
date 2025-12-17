@@ -24,7 +24,12 @@ class MDEFieldValidator:
         """Load MDE field mappings from JSON file."""
         # Try multiple possible locations
         possible_paths = [
-            Path(__file__).parent.parent.parent / "data" / "external" / "detections" / "field_mappings" / "mde.json",
+            Path(__file__).parent.parent.parent
+            / "data"
+            / "external"
+            / "detections"
+            / "field_mappings"
+            / "mde.json",
             Path("data/external/detections/field_mappings/mde.json"),
         ]
 
@@ -45,59 +50,112 @@ class MDEFieldValidator:
             "tables": {
                 "DeviceProcessEvents": {
                     "fields": [
-                        "Timestamp", "DeviceId", "DeviceName", "ActionType",
-                        "FileName", "FolderPath", "SHA1", "SHA256", "MD5",
-                        "ProcessId", "ProcessCommandLine", "AccountDomain",
-                        "AccountName", "AccountSid", "InitiatingProcessFileName",
-                        "InitiatingProcessFolderPath", "InitiatingProcessCommandLine",
-                        "InitiatingProcessId", "InitiatingProcessParentFileName"
+                        "Timestamp",
+                        "DeviceId",
+                        "DeviceName",
+                        "ActionType",
+                        "FileName",
+                        "FolderPath",
+                        "SHA1",
+                        "SHA256",
+                        "MD5",
+                        "ProcessId",
+                        "ProcessCommandLine",
+                        "AccountDomain",
+                        "AccountName",
+                        "AccountSid",
+                        "InitiatingProcessFileName",
+                        "InitiatingProcessFolderPath",
+                        "InitiatingProcessCommandLine",
+                        "InitiatingProcessId",
+                        "InitiatingProcessParentFileName",
                     ],
-                    "invalid_fields": ["RegistryKey", "RegistryValueName", "RegistryValueData"]
+                    "invalid_fields": ["RegistryKey", "RegistryValueName", "RegistryValueData"],
                 },
                 "DeviceRegistryEvents": {
                     "fields": [
-                        "Timestamp", "DeviceId", "DeviceName", "ActionType",
-                        "RegistryKey", "RegistryValueType", "RegistryValueName",
-                        "RegistryValueData", "InitiatingProcessFileName",
-                        "InitiatingProcessFolderPath", "InitiatingProcessCommandLine"
+                        "Timestamp",
+                        "DeviceId",
+                        "DeviceName",
+                        "ActionType",
+                        "RegistryKey",
+                        "RegistryValueType",
+                        "RegistryValueName",
+                        "RegistryValueData",
+                        "InitiatingProcessFileName",
+                        "InitiatingProcessFolderPath",
+                        "InitiatingProcessCommandLine",
                     ],
-                    "invalid_fields": ["FileName", "FolderPath", "ProcessCommandLine"]
+                    "invalid_fields": ["FileName", "FolderPath", "ProcessCommandLine"],
                 },
                 "DeviceFileEvents": {
                     "fields": [
-                        "Timestamp", "DeviceId", "DeviceName", "ActionType",
-                        "FileName", "FolderPath", "SHA1", "SHA256", "MD5",
-                        "InitiatingProcessFileName", "InitiatingProcessFolderPath",
-                        "InitiatingProcessCommandLine"
+                        "Timestamp",
+                        "DeviceId",
+                        "DeviceName",
+                        "ActionType",
+                        "FileName",
+                        "FolderPath",
+                        "SHA1",
+                        "SHA256",
+                        "MD5",
+                        "InitiatingProcessFileName",
+                        "InitiatingProcessFolderPath",
+                        "InitiatingProcessCommandLine",
                     ],
-                    "invalid_fields": ["RegistryKey", "RegistryValueName", "ProcessCommandLine"]
+                    "invalid_fields": ["RegistryKey", "RegistryValueName", "ProcessCommandLine"],
                 },
                 "DeviceNetworkEvents": {
                     "fields": [
-                        "Timestamp", "DeviceId", "DeviceName", "ActionType",
-                        "RemoteIP", "RemotePort", "RemoteUrl", "LocalIP", "LocalPort",
-                        "Protocol", "InitiatingProcessFileName", "InitiatingProcessCommandLine"
+                        "Timestamp",
+                        "DeviceId",
+                        "DeviceName",
+                        "ActionType",
+                        "RemoteIP",
+                        "RemotePort",
+                        "RemoteUrl",
+                        "LocalIP",
+                        "LocalPort",
+                        "Protocol",
+                        "InitiatingProcessFileName",
+                        "InitiatingProcessCommandLine",
                     ],
-                    "invalid_fields": ["RegistryKey", "FileName", "FolderPath"]
+                    "invalid_fields": ["RegistryKey", "FileName", "FolderPath"],
                 },
                 "DeviceEvents": {
                     "fields": [
-                        "Timestamp", "DeviceId", "DeviceName", "ActionType",
-                        "FileName", "FolderPath", "SHA1", "SHA256", "MD5",
-                        "AccountDomain", "AccountName", "ProcessId", "ProcessCommandLine",
-                        "RegistryKey", "RegistryValueName", "RegistryValueData",
-                        "RemoteIP", "RemotePort", "LocalIP", "LocalPort",
-                        "InitiatingProcessFileName", "InitiatingProcessCommandLine"
+                        "Timestamp",
+                        "DeviceId",
+                        "DeviceName",
+                        "ActionType",
+                        "FileName",
+                        "FolderPath",
+                        "SHA1",
+                        "SHA256",
+                        "MD5",
+                        "AccountDomain",
+                        "AccountName",
+                        "ProcessId",
+                        "ProcessCommandLine",
+                        "RegistryKey",
+                        "RegistryValueName",
+                        "RegistryValueData",
+                        "RemoteIP",
+                        "RemotePort",
+                        "LocalIP",
+                        "LocalPort",
+                        "InitiatingProcessFileName",
+                        "InitiatingProcessCommandLine",
                     ],
-                    "invalid_fields": []
-                }
+                    "invalid_fields": [],
+                },
             },
             "common_aliases": {
                 "CommandLine": "ProcessCommandLine",
                 "Process": "FileName",
                 "ProcessName": "FileName",
-                "ParentProcess": "InitiatingProcessFileName"
-            }
+                "ParentProcess": "InitiatingProcessFileName",
+            },
         }
 
     def _build_table_fields(self) -> Dict[str, Set[str]]:
@@ -134,7 +192,7 @@ class MDEFieldValidator:
             "DeviceLogonEvents",
             "DeviceImageLoadEvents",
             "DeviceInfo",
-            "DeviceNetworkInfo"
+            "DeviceNetworkInfo",
         ]
 
         # Check if query starts with a table name
@@ -148,7 +206,7 @@ class MDEFieldValidator:
 
         # Try regex to find table in query
         for table in mde_tables:
-            if re.search(rf'\b{table}\b', query, re.IGNORECASE):
+            if re.search(rf"\b{table}\b", query, re.IGNORECASE):
                 return table
 
         return None
@@ -167,22 +225,22 @@ class MDEFieldValidator:
 
         # Common KQL patterns for field usage
         patterns = [
-            r'\b(\w+)\s*==\s*',      # FieldName ==
-            r'\b(\w+)\s*=~\s*',      # FieldName =~ (case insensitive)
-            r'\b(\w+)\s*!=\s*',      # FieldName !=
-            r'\b(\w+)\s+has\s+',     # FieldName has
-            r'\b(\w+)\s+has_any\s*\(', # FieldName has_any()
-            r'\b(\w+)\s+has_all\s*\(', # FieldName has_all()
-            r'\b(\w+)\s+contains\s+', # FieldName contains
-            r'\b(\w+)\s+startswith\s+', # FieldName startswith
-            r'\b(\w+)\s+endswith\s+', # FieldName endswith
-            r'\b(\w+)\s+matches\s+regex\s+', # FieldName matches regex
-            r'\b(\w+)\s+in\s*\(',    # FieldName in ()
-            r'\b(\w+)\s+!in\s*\(',   # FieldName !in ()
-            r'\|\s*where\s+(\w+)\s+', # | where FieldName
-            r'\|\s*project\s+([^|]+)', # | project fields
-            r'\|\s*extend\s+\w+\s*=\s*(\w+)', # | extend x = FieldName
-            r'\|\s*summarize\s+[^|]*\bby\s+([^|]+)', # | summarize by fields
+            r"\b(\w+)\s*==\s*",  # FieldName ==
+            r"\b(\w+)\s*=~\s*",  # FieldName =~ (case insensitive)
+            r"\b(\w+)\s*!=\s*",  # FieldName !=
+            r"\b(\w+)\s+has\s+",  # FieldName has
+            r"\b(\w+)\s+has_any\s*\(",  # FieldName has_any()
+            r"\b(\w+)\s+has_all\s*\(",  # FieldName has_all()
+            r"\b(\w+)\s+contains\s+",  # FieldName contains
+            r"\b(\w+)\s+startswith\s+",  # FieldName startswith
+            r"\b(\w+)\s+endswith\s+",  # FieldName endswith
+            r"\b(\w+)\s+matches\s+regex\s+",  # FieldName matches regex
+            r"\b(\w+)\s+in\s*\(",  # FieldName in ()
+            r"\b(\w+)\s+!in\s*\(",  # FieldName !in ()
+            r"\|\s*where\s+(\w+)\s+",  # | where FieldName
+            r"\|\s*project\s+([^|]+)",  # | project fields
+            r"\|\s*extend\s+\w+\s*=\s*(\w+)",  # | extend x = FieldName
+            r"\|\s*summarize\s+[^|]*\bby\s+([^|]+)",  # | summarize by fields
         ]
 
         for pattern in patterns:
@@ -190,18 +248,36 @@ class MDEFieldValidator:
             for match in matches:
                 if isinstance(match, str):
                     # Handle comma-separated fields
-                    for field in match.split(','):
+                    for field in match.split(","):
                         field = field.strip()
                         # Extract just the field name (remove any operators/functions)
-                        field_match = re.match(r'^(\w+)', field)
+                        field_match = re.match(r"^(\w+)", field)
                         if field_match:
                             field_name = field_match.group(1)
                             # Filter out KQL keywords
                             if field_name.lower() not in [
-                                'where', 'project', 'extend', 'summarize', 'by',
-                                'and', 'or', 'not', 'true', 'false', 'null',
-                                'let', 'ago', 'now', 'datetime', 'timespan',
-                                'count', 'sum', 'avg', 'min', 'max', 'dcount'
+                                "where",
+                                "project",
+                                "extend",
+                                "summarize",
+                                "by",
+                                "and",
+                                "or",
+                                "not",
+                                "true",
+                                "false",
+                                "null",
+                                "let",
+                                "ago",
+                                "now",
+                                "datetime",
+                                "timespan",
+                                "count",
+                                "sum",
+                                "avg",
+                                "min",
+                                "max",
+                                "dcount",
                             ]:
                                 fields.add(field_name)
 
@@ -228,7 +304,7 @@ class MDEFieldValidator:
                 "table": None,
                 "message": "Could not determine table from query",
                 "invalid_fields": [],
-                "suggestions": {}
+                "suggestions": {},
             }
 
         # Get valid fields for this table
@@ -240,7 +316,7 @@ class MDEFieldValidator:
                 "table": table,
                 "message": f"No field mapping available for table {table}",
                 "invalid_fields": [],
-                "suggestions": {}
+                "suggestions": {},
             }
 
         # Extract fields from query
@@ -270,10 +346,12 @@ class MDEFieldValidator:
             "invalid_fields": invalid_fields,
             "suggestions": suggestions,
             "fields_checked": list(query_fields),
-            "valid_fields_for_table": len(valid_fields)
+            "valid_fields_for_table": len(valid_fields),
         }
 
-    def _find_similar_fields(self, field: str, valid_fields: Set[str], max_suggestions: int = 3) -> List[str]:
+    def _find_similar_fields(
+        self, field: str, valid_fields: Set[str], max_suggestions: int = 3
+    ) -> List[str]:
         """Find similar field names for suggestions."""
         field_lower = field.lower()
         similar = []
@@ -316,11 +394,7 @@ class MDEFieldValidator:
                 if match:
                     canonical = match.group(1)
                     # Replace field with canonical name (preserve case sensitivity context)
-                    fixed_query = re.sub(
-                        rf'\b{re.escape(field)}\b',
-                        canonical,
-                        fixed_query
-                    )
+                    fixed_query = re.sub(rf"\b{re.escape(field)}\b", canonical, fixed_query)
                     changes.append(f"Replaced '{field}' with '{canonical}'")
 
         return fixed_query, changes
@@ -334,6 +408,252 @@ class MDEFieldValidator:
         """Get list of fields that are invalid for a specific table."""
         table_info = self.field_mappings.get("tables", {}).get(table, {})
         return table_info.get("invalid_fields", [])
+
+
+# Fields to always exclude from MDE queries (not useful for detection)
+EXCLUDED_MDE_FIELDS = [
+    "SHA256",
+    "SHA1",
+    "MD5",
+    "InitiatingProcessSHA256",
+    "InitiatingProcessSHA1",
+    "InitiatingProcessMD5",
+    "InitiatingProcessVersionInfoCompanyName",
+    "InitiatingProcessVersionInfoProductName",
+    "ProcessVersionInfoCompanyName",
+    "ProcessVersionInfoProductName",
+    "IsRemoteSession",
+    "IsProcessRemoteSession",
+    "AdditionalFields",
+    "LocalIP",
+    "RemoteIP",
+    "FileOriginUrl",
+]
+
+# Fields to conditionally exclude (only include if query searches for related indicators)
+CONDITIONAL_FIELDS = {
+    # Registry fields: only include if query searches for registry patterns
+    "RegistryKey": ["RegistryKey", "Registry", "HKLM", "HKCU", "HKEY_"],
+    "RegistryValueName": ["RegistryKey", "RegistryValueName", "Registry", "HKLM", "HKCU", "HKEY_"],
+    "RegistryValueData": ["RegistryKey", "RegistryValueData", "Registry", "HKLM", "HKCU", "HKEY_"],
+}
+
+
+def _should_include_field(field: str, query: str) -> bool:
+    """
+    Check if a conditional field should be included based on query content.
+
+    Args:
+        field: The field name to check
+        query: The full query text
+
+    Returns:
+        True if field should be included, False if it should be excluded
+    """
+    if field not in CONDITIONAL_FIELDS:
+        return True  # Not a conditional field, include by default
+
+    # Check if any of the related patterns are in the query's where clause
+    patterns = CONDITIONAL_FIELDS[field]
+    for pattern in patterns:
+        if pattern.lower() in query.lower():
+            return True
+
+    return False
+
+
+def strip_excluded_fields(query: str) -> str:
+    """
+    Remove excluded fields from MDE query projection clauses.
+
+    These fields (SHA256, SHA1, etc.) are not useful for behavioral detection
+    and add noise to queries.
+
+    Args:
+        query: The KQL query
+
+    Returns:
+        Query with excluded fields removed from project clauses
+    """
+    if not query:
+        return query
+
+    result = query
+
+    # Remove excluded fields from project clauses
+    # Pattern: | project Field1, SHA256, Field2 -> | project Field1, Field2
+    for field in EXCLUDED_MDE_FIELDS:
+        # Remove field with comma before
+        result = re.sub(rf",\s*{field}\b", "", result)
+        # Remove field with comma after
+        result = re.sub(rf"\b{field}\s*,\s*", "", result)
+        # Remove standalone field in project (between | project and next |)
+        result = re.sub(rf"(\|\s*project[^|]*)\b{field}\b([^|]*)", r"\1\2", result)
+
+    # Clean up any double commas or trailing commas in project
+    result = re.sub(r",\s*,", ",", result)
+    result = re.sub(r",\s*(\|)", r" \1", result)
+    result = re.sub(r"(\|\s*project)\s*,", r"\1 ", result)
+
+    # Remove these fields from where clauses too
+    for field in EXCLUDED_MDE_FIELDS:
+        # Remove conditions like: SHA256 == "value" or SHA256 has "value"
+        result = re.sub(
+            rf"\s*(?:and|or)?\s*{field}\s*(?:==|=~|!=|has|has_any|contains|startswith|endswith)[^|)\n]+",
+            "",
+            result,
+            flags=re.IGNORECASE,
+        )
+        # Remove conditions at start of where: | where SHA256 == "value" and ...
+        result = re.sub(
+            rf"(\|\s*where\s+){field}\s*(?:==|=~|!=|has|has_any|contains|startswith|endswith)[^|)\n]*\s*(?:and|or)?\s*",
+            r"\1",
+            result,
+            flags=re.IGNORECASE,
+        )
+
+    # Clean up empty where clauses
+    result = re.sub(r"\|\s*where\s+\|", "|", result)
+    result = re.sub(r"\|\s*where\s*$", "", result)
+
+    # Clean up leading/trailing and/or in where clauses
+    result = re.sub(r"(\|\s*where\s+)(?:and|or)\s+", r"\1", result)
+    result = re.sub(r"\s+(?:and|or)\s*(\|)", r" \1", result)
+
+    return result
+
+
+def format_mde_query(query: str) -> str:
+    """
+    Format an MDE/KQL query for readability with proper line breaks and indentation.
+    Also removes duplicate conditions.
+
+    Args:
+        query: The KQL query
+
+    Returns:
+        Formatted query with line breaks and deduplication
+    """
+    if not query:
+        return query
+
+    # First, strip excluded fields
+    query = strip_excluded_fields(query)
+
+    # Split into lines and process
+    lines = query.split('\n')
+    formatted_lines = []
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Check if this is a where clause with multiple conditions
+        if '| where' in line and ' or ' in line:
+            # Extract the where clause
+            match = re.match(r'^(.*?\|\s*where\s+)(.+)$', line)
+            if match:
+                prefix = match.group(1)
+                conditions = match.group(2)
+
+                # Split conditions by ' or ' while preserving parentheses
+                # Use regex to find top-level 'or' separators
+                condition_list = _split_conditions(conditions, ' or ')
+
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_conditions = []
+                for cond in condition_list:
+                    cond_normalized = cond.strip()
+                    if cond_normalized and cond_normalized not in seen:
+                        seen.add(cond_normalized)
+                        unique_conditions.append(cond_normalized)
+
+                if len(unique_conditions) > 1:
+                    # Format with line breaks
+                    formatted_lines.append(prefix + unique_conditions[0])
+                    for cond in unique_conditions[1:]:
+                        formatted_lines.append('        or ' + cond)
+                else:
+                    formatted_lines.append(prefix + ' or '.join(unique_conditions))
+            else:
+                formatted_lines.append(line)
+        # Check if this is a summarize clause with many fields
+        elif '| summarize' in line and line.count(',') > 5:
+            # Format summarize with line breaks every few fields
+            match = re.match(r'^(.*?\|\s*summarize\s+(?:by\s+)?)(.+)$', line)
+            if match:
+                prefix = match.group(1)
+                fields = match.group(2)
+                field_list = [f.strip() for f in fields.split(',')]
+
+                # Remove excluded fields and conditional fields that don't apply
+                field_list = [
+                    f for f in field_list
+                    if f not in EXCLUDED_MDE_FIELDS and _should_include_field(f, query)
+                ]
+
+                # Group fields (5 per line)
+                groups = []
+                for i in range(0, len(field_list), 5):
+                    groups.append(', '.join(field_list[i:i+5]))
+
+                if len(groups) > 1:
+                    formatted_lines.append(prefix + groups[0] + ',')
+                    for i, group in enumerate(groups[1:], 1):
+                        if i < len(groups) - 1:
+                            formatted_lines.append('        ' + group + ',')
+                        else:
+                            formatted_lines.append('        ' + group)
+                else:
+                    formatted_lines.append(prefix + ', '.join(field_list))
+            else:
+                formatted_lines.append(line)
+        else:
+            formatted_lines.append(line)
+
+    return '\n'.join(formatted_lines)
+
+
+def _split_conditions(text: str, separator: str) -> List[str]:
+    """
+    Split conditions by separator while respecting parentheses.
+
+    Args:
+        text: The text to split
+        separator: The separator to split by (e.g., ' or ')
+
+    Returns:
+        List of conditions
+    """
+    conditions = []
+    depth = 0
+    current = []
+    i = 0
+
+    while i < len(text):
+        # Track parentheses depth
+        if text[i] == '(':
+            depth += 1
+            current.append(text[i])
+        elif text[i] == ')':
+            depth -= 1
+            current.append(text[i])
+        # Check for separator at depth 0
+        elif depth == 0 and text[i:i+len(separator)].lower() == separator.lower():
+            conditions.append(''.join(current).strip())
+            current = []
+            i += len(separator) - 1
+        else:
+            current.append(text[i])
+        i += 1
+
+    # Add the last condition
+    if current:
+        conditions.append(''.join(current).strip())
+
+    return conditions
 
 
 # Singleton instance

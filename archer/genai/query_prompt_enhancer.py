@@ -198,10 +198,11 @@ Here are {len(examples)} professionally-written detection queries for similar te
 
 **Common KQL/MDE Fields**:
 - DeviceProcessEvents: FileName, ProcessCommandLine, AccountName, InitiatingProcessFileName
-- DeviceFileEvents: FileName, FolderPath, SHA256, InitiatingProcessFileName
+- DeviceFileEvents: FileName, FolderPath, InitiatingProcessFileName
 - DeviceRegistryEvents: RegistryKey, RegistryValueData, ActionType
 - DeviceNetworkEvents: RemoteIP, RemoteUrl, RemotePort
 - All tables: DeviceId, DeviceName, Timestamp
+- Note: Do NOT use SHA256, SHA1, MD5, or VersionInfo fields - these are not useful for behavioral detection
 """
             )
 

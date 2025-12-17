@@ -13,6 +13,27 @@ import yaml
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
+# MITRE ATT&CK Tactics in kill chain order
+MITRE_TACTICS = [
+    ("reconnaissance", "Reconnaissance"),
+    ("resource-development", "Resource Development"),
+    ("initial-access", "Initial Access"),
+    ("execution", "Execution"),
+    ("persistence", "Persistence"),
+    ("privilege-escalation", "Privilege Escalation"),
+    ("defense-evasion", "Defense Evasion"),
+    ("credential-access", "Credential Access"),
+    ("discovery", "Discovery"),
+    ("lateral-movement", "Lateral Movement"),
+    ("collection", "Collection"),
+    ("command-and-control", "Command and Control"),
+    ("exfiltration", "Exfiltration"),
+    ("impact", "Impact"),
+]
+
+# Mapping of tactic IDs to display names
+TACTIC_DISPLAY_NAMES = {tactic_id: name for tactic_id, name in MITRE_TACTICS}
+
 
 class ReferenceQueryLoader:
     """Loads and manages reference queries for detection generation."""
@@ -33,6 +54,49 @@ class ReferenceQueryLoader:
 
         self.base_dir = Path(base_dir)
         self._cache: Dict[str, Any] = {}
+        self._technique_tactics: Dict[str, List[str]] = {}  # Cache for technique-to-tactic mapping
+
+    def _load_technique_tactics(self) -> Dict[str, List[str]]:
+        """
+        Load technique-to-tactic mapping from MITRE STIX data.
+
+        Returns:
+            Dictionary mapping technique IDs to list of tactic names.
+        """
+        if self._technique_tactics:
+            return self._technique_tactics
+
+        try:
+            from archer.mitre.enterprise import get_stix_data
+
+            url = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
+            bundle = get_stix_data(url)
+
+            for obj in bundle.objects:
+                if obj.get("type") == "attack-pattern":
+                    # Get technique ID
+                    tech_id = None
+                    for ref in obj.get("external_references", []):
+                        if ref.get("source_name") == "mitre-attack":
+                            tech_id = ref.get("external_id")
+                            break
+
+                    if tech_id:
+                        # Get tactics from kill chain phases
+                        tactics = []
+                        for phase in obj.get("kill_chain_phases", []):
+                            if phase.get("kill_chain_name") == "mitre-attack":
+                                tactic_id = phase.get("phase_name")
+                                if tactic_id in TACTIC_DISPLAY_NAMES:
+                                    tactics.append(TACTIC_DISPLAY_NAMES[tactic_id])
+
+                        if tactics:
+                            self._technique_tactics[tech_id] = tactics
+
+        except Exception as e:
+            print(f"Warning: Could not load technique-tactic mapping: {e}")
+
+        return self._technique_tactics
 
     def load_splunk_references(self) -> Dict[str, Any]:
         """
@@ -49,7 +113,7 @@ class ReferenceQueryLoader:
             return {}
 
         # Load the consolidated file first
-        all_queries_file = splunk_dir / "all_references.yaml"
+        all_queries_file = splunk_dir / "all_reference_queries.yaml"
         if all_queries_file.exists():
             with open(all_queries_file, "r") as f:
                 # Handle multiple YAML documents in one file
@@ -65,7 +129,7 @@ class ReferenceQueryLoader:
         # Fall back to loading individual files
         queries = {"queries": []}
         for yaml_file in splunk_dir.glob("*.yaml"):
-            if yaml_file.name != "all_references.yaml":
+            if yaml_file.name != "all_reference_queries.yaml":
                 with open(yaml_file, "r") as f:
                     query_data = yaml.safe_load(f)
                     if query_data:
@@ -322,14 +386,19 @@ class ReferenceQueryLoader:
                 "platforms_covered": set(),
                 "vendors": {},
             },
-            "by_technique": {},  # technique_id -> {vendors, platforms, count}
+            "by_technique": {},  # technique_id -> {vendors, platforms, count, tactics}
             "by_platform": {},  # platform -> {techniques, count}
             "by_vendor": {},  # vendor -> {techniques, platforms, count}
+            "by_tactic": {},  # tactic_name -> {techniques: [{id, name, count}, ...]}
+            "tactics_list": [name for _, name in MITRE_TACTICS],  # Ordered list of tactics
             "gaps": {
                 "techniques_without_splunk": [],
                 "techniques_without_mde": [],
             },
         }
+
+        # Load technique-to-tactic mapping
+        tech_tactics = self._load_technique_tactics()
 
         # Process Splunk queries
         splunk_refs = self.load_splunk_references()
@@ -362,6 +431,8 @@ class ReferenceQueryLoader:
                             "platforms": set(),
                             "queries": [],
                             "count": 0,
+                            "tactics": tech_tactics.get(tech_id, []),
+                            "name": query.get("technique_name", tech_id),
                         }
                     coverage["by_technique"][tech_id]["vendors"].add("Splunk")
                     coverage["by_technique"][tech_id]["platforms"].add(platform)
@@ -430,6 +501,8 @@ class ReferenceQueryLoader:
                     "platforms": set(),
                     "queries": [],
                     "count": 0,
+                    "tactics": tech_tactics.get(tech_id, []),
+                    "name": query.get("name", tech_id),
                 }
             coverage["by_technique"][tech_id]["vendors"].add("MDE")
             coverage["by_technique"][tech_id]["platforms"].add(platform)
@@ -465,6 +538,25 @@ class ReferenceQueryLoader:
         all_techniques = coverage["summary"]["techniques_covered"]
         coverage["gaps"]["techniques_without_splunk"] = list(all_techniques - splunk_techniques)
         coverage["gaps"]["techniques_without_mde"] = list(all_techniques - mde_techniques)
+
+        # Build by_tactic groupings
+        for tactic_name in coverage["tactics_list"]:
+            coverage["by_tactic"][tactic_name] = {"techniques": []}
+
+        for tech_id, tech_info in coverage["by_technique"].items():
+            tactics = tech_info.get("tactics", [])
+            for tactic in tactics:
+                if tactic in coverage["by_tactic"]:
+                    coverage["by_tactic"][tactic]["techniques"].append({
+                        "id": tech_id,
+                        "name": tech_info.get("name", tech_id),
+                        "count": tech_info.get("count", 0),
+                        "vendors": list(tech_info.get("vendors", set())),
+                    })
+
+        # Sort techniques within each tactic by ID
+        for tactic in coverage["by_tactic"]:
+            coverage["by_tactic"][tactic]["techniques"].sort(key=lambda x: x["id"])
 
         # Convert sets to lists for JSON serialization
         coverage["summary"]["techniques_covered"] = list(coverage["summary"]["techniques_covered"])
