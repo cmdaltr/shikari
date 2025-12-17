@@ -222,6 +222,37 @@ def retrieve_techniques(bundle, group_id):
                 techniques.append((combined_desc, tech_ref))
                 sw_tech_count += 1
 
+    # Also include techniques from campaigns attributed to this group
+    # This matches how MITRE ATT&CK website displays group techniques
+    campaign_ids = []
+    for obj in bundle.objects:
+        if (
+            obj.get("type") == "relationship"
+            and obj.get("relationship_type") == "attributed-to"
+            and obj.get("target_ref") == group_id
+        ):
+            campaign_ids.append(obj.get("source_ref"))
+
+    # Get techniques used by each campaign
+    existing_tech_refs = {t[1] for t in techniques}  # Track existing techniques to avoid duplicates
+    for campaign_id in campaign_ids:
+        for obj in bundle.objects:
+            if (
+                obj.get("type") == "relationship"
+                and obj.get("relationship_type") == "uses"
+                and obj.get("source_ref") == campaign_id
+            ):
+                target_ref = obj.get("target_ref")
+                # Only add if not already in techniques list
+                if target_ref not in existing_tech_refs:
+                    # Check if target is a technique
+                    for target_obj in bundle.objects:
+                        if target_obj.get("id") == target_ref and target_obj.get("type") == "attack-pattern":
+                            description = obj.get("description")
+                            techniques.append((description, target_ref))
+                            existing_tech_refs.add(target_ref)
+                            break
+
     return techniques
 
 

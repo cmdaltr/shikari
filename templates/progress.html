@@ -13,25 +13,31 @@
 body, html {
   background: #f7fafc !important;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
-.page-shell {
+/* Override style.css display:block to enable flexbox footer positioning */
+#main-content.page-shell {
   background: #f7fafc !important;
-  flex: 1;
-  padding: 0;  /* Consolidated - no padding */
-  margin: 0;   /* Consolidated - no margin */
+  padding: 0 !important;
+  margin: 0 !important;
   overflow-x: hidden;
   max-width: 100%;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 85px);  /* Account for header height */
-  box-sizing: border-box;  /* Consolidated */
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: calc(100vh - 85px) !important;
+  box-sizing: border-box;
 }
 
 /* Make results container flex to push footer to bottom */
 .results-container {
-  flex: 1;
+  flex: 1 0 auto;
+}
+
+/* Ensure footer stays at bottom of viewport */
+.page-footer {
+  flex-shrink: 0;
 }
 
 /* Global navigation buttons */

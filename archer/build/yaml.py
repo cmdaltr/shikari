@@ -202,7 +202,7 @@ def map_entities(query):
     return (query, entities)
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None):
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None):
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
@@ -424,6 +424,18 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
 
         yaml_content += osint_section
 
+    # Add Reference Query metadata if references were used
+    if reference_used:
+        reference_section = "\n# Reference Query Metadata\n"
+        reference_section += f"reference_used: true\n"
+
+        if reference_sources:
+            reference_section += "reference_sources:\n"
+            for source in reference_sources:
+                reference_section += f"  - {source}\n"
+
+        yaml_content += reference_section
+
     if "()" in query or "( OR )" in query or "\n  | where \n  | " in query:
         pass
     else:
@@ -519,6 +531,38 @@ def construct_yaml(
     osint_indicators_to_pass = None
     if osint_enhancement and osint_enhancement_data:
         osint_indicators_to_pass = osint_enhancement_data.get("osint_indicators", {})
+
+    # Check for reference queries from bespoke/references directory
+    reference_used = False
+    reference_sources = []
+    try:
+        from archer.build.references import get_loader
+        loader = get_loader()
+
+        # Check for MDE references
+        mde_refs = loader.get_queries_by_technique(tid, vendor="MDE")
+        if mde_refs:
+            reference_used = True
+            for ref in mde_refs:
+                source_name = ref.get("name", "MDE Reference")
+                if source_name not in reference_sources:
+                    reference_sources.append(f"MDE: {source_name}")
+
+        # Check for Splunk references
+        splunk_refs = loader.get_queries_by_technique(tid, vendor="Splunk")
+        if splunk_refs:
+            reference_used = True
+            for ref in splunk_refs:
+                source_name = ref.get("name", "Splunk Reference")
+                if source_name not in reference_sources:
+                    reference_sources.append(f"Splunk: {source_name}")
+
+        if reference_used:
+            print(f" 📚 Reference queries found for {tid}: {len(reference_sources)} source(s)")
+    except ImportError:
+        pass  # References module not available
+    except Exception as e:
+        print(f" ⚠️  Error checking reference queries: {e}")
 
     appended_mde_queries, appended_splunk_queries = collate_data(
         identifiers, log_sources, procedure_platforms, software_platforms, name, technique_id=tid, osint_indicators=osint_indicators_to_pass
@@ -686,6 +730,8 @@ def construct_yaml(
                 osint_data=osint_enhancement_data,  # Pass OSINT data dict
                 osint_enhanced=query_was_enhanced,    # Pass TRUE only if this query was actually enhanced
                 entity_mappings=entity_mappings_str,  # Pass entity mappings separately
+                reference_used=reference_used,  # Pass reference query flag
+                reference_sources=reference_sources,  # Pass reference sources
             )
         else:
             update_yaml(yamlfile, tag)
@@ -712,6 +758,8 @@ def construct_yaml(
                 indicators=identifiers,  # Pass indicators for YAML metadata
                 osint_data=osint_enhancement_data,  # Pass OSINT data dict
                 osint_enhanced=osint_enhancement,    # Pass enhancement flag
+                reference_used=reference_used,  # Pass reference query flag
+                reference_sources=reference_sources,  # Pass reference sources
             )
         else:
             update_yaml(yamlfile, tag)
@@ -755,6 +803,8 @@ def construct_yaml(
                     indicators=identifiers,
                     osint_data=osint_enhancement_data,
                     osint_enhanced=osint_enhancement,
+                    reference_used=reference_used,
+                    reference_sources=reference_sources,
                 )
                 print(f"  ✅ Generated Google SecOps YARA-L rule: {googlesecops_rule['rule_name']}")
             else:
@@ -805,6 +855,8 @@ def construct_yaml(
                         indicators=identifiers,
                         osint_data=osint_enhancement_data,
                         osint_enhanced=osint_enhancement,
+                        reference_used=reference_used,
+                        reference_sources=reference_sources,
                     )
                     print(f"  ✅ Generated Elastic Query DSL: {elastic_query_result['query_name']}")
                 else:

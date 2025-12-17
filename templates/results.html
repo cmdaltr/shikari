@@ -353,6 +353,21 @@
                   This detection was generated when MITRE ATT&CK provided insufficient indicators. The system searched additional OSINT sources (threat intelligence blogs, Sigma rules, Elastic/Splunk security content, MITRE CAR, and LOLBAs) to create meaningful detections. These require review to validate accuracy and relevance.
                 </p>
               </div>
+
+              <div style="margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; margin-left: 20px;">
+                  <span class="reference-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #0d9488 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    Referenced
+                  </span>
+                </div>
+                <p style="margin: 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
+                  This detection referenced example queries from the bespoke/references directory. Reference queries are production-tested detection patterns that provide proven query structures and best practices for your SIEM platform.
+                </p>
+              </div>
             </div>
 
             <!-- Confidence of Detection -->
@@ -592,6 +607,16 @@
                     Compared with OSINT
                   </span>
                   {% endif %}
+
+                  {% if detection.reference_used %}
+                  <span class="reference-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #0d9488 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3); margin-left: 8px;" title="This detection referenced example queries from the bespoke/references directory to improve query structure and patterns.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    Referenced
+                  </span>
+                  {% endif %}
                 </div>
                 {% if detection.osint_data %}
                 <button onclick="toggleOsintDetails('det-osint-{{ vendor.name }}-{{ loop.index }}-details')" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 500; margin-left: 12px; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3b82f6'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#3b82f6';">
@@ -712,8 +737,8 @@
 
 ---
 
-{% endif %}{% endfor %}<button onclick="expandCodeBlock('det-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 8px; right: 8px; background: rgba(255, 255, 255, 0.9); border: 1px solid #ddd; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75em; color: #666; display: flex; align-items: center; gap: 4px;" title="Expand to full screen">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+{% endif %}{% endfor %}<button onclick="expandCodeBlock('det-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: rgba(255, 255, 255, 0.95); border: 1px solid #ccc; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 11px; color: #555; display: inline-flex; align-items: center; gap: 3px; line-height: 1;" title="Expand to full screen">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
                       </svg>
                       Expand
@@ -912,6 +937,19 @@
                   </span>
                 </div>
                 {% endif %}
+
+                <!-- Reference Badge (Right-aligned) -->
+                {% if correlation.reference_used %}
+                <div style="flex-shrink: 0; margin-left: 12px;">
+                  <span class="reference-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #0d9488 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);" title="This correlation includes detections that referenced example queries from the bespoke/references directory.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    Referenced
+                  </span>
+                </div>
+                {% endif %}
               </div>
 
               <!-- Correlation Metadata -->
@@ -1064,8 +1102,8 @@
                   </button>
                 </div>
                 <div id="corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px;">
-                  <div id="corr-{{ vendor.name }}-{{ loop.index }}-content" style="position: relative; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}<button onclick="expandCodeBlock('corr-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 8px; right: 8px; background: rgba(255, 255, 255, 0.9); border: 1px solid #ddd; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75em; color: #666; display: flex; align-items: center; gap: 4px;" title="Expand to full screen">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <div id="corr-{{ vendor.name }}-{{ loop.index }}-content" style="position: relative; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}<button onclick="expandCodeBlock('corr-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: rgba(255, 255, 255, 0.95); border: 1px solid #ccc; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 11px; color: #555; display: inline-flex; align-items: center; gap: 3px; line-height: 1;" title="Expand to full screen">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
                       </svg>
                       Expand
