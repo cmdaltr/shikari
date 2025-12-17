@@ -235,12 +235,12 @@ The `data/bespoke/` directory contains customizations that significantly improve
 
 ```
 data/bespoke/
-├── mappings/              # Your environment-specific field mappings
+├── mappings/           # Your environment-specific field mappings
 │   ├── splunk/
 │   └── mde/
-└── references/     # High-quality query examples for the LLM
-    ├── splunk/
-    └── mde/
+└── references/         # High-quality query examples for the LLM
+    ├── Splunk/
+    └── MDE/
 ```
 
 #### Bespoke Mappings

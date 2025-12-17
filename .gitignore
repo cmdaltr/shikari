@@ -142,9 +142,9 @@ data/bespoke/*
 data/bespoke/searches/*
 !data/bespoke/searches/.gitkeep
 !data/bespoke/searches/example.yaml
-!data/bespoke/reference_queries/
-data/bespoke/reference_queries/*
-!data/bespoke/reference_queries/.gitkeep
+!data/bespoke/references/
+data/bespoke/references/*
+!data/bespoke/references/.gitkeep
 # Mappings directory structure tracked, but files are org-specific
 !data/bespoke/mappings/
 data/bespoke/mappings/*
