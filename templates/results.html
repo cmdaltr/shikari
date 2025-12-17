@@ -737,7 +737,7 @@
 
 ---
 
-{% endif %}{% endfor %}<button onclick="expandCodeBlock('det-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: rgba(255, 255, 255, 0.95); border: 1px solid #ccc; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 11px; color: #555; display: inline-flex; align-items: center; gap: 3px; line-height: 1; width: auto; white-space: nowrap;" title="Expand to full screen"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Expand</button></div>
+{% endif %}{% endfor %}<button onclick="expandCodeBlock('det-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333; display: inline-flex; align-items: center; gap: 4px;" title="Expand to full screen"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Expand</button></div>
                 </div>
               </div>
               {% endif %}
@@ -1097,7 +1097,7 @@
                   </button>
                 </div>
                 <div id="corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px;">
-                  <div id="corr-{{ vendor.name }}-{{ loop.index }}-content" style="position: relative; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}<button onclick="expandCodeBlock('corr-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: rgba(255, 255, 255, 0.95); border: 1px solid #ccc; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 11px; color: #555; display: inline-flex; align-items: center; gap: 3px; line-height: 1; width: auto; white-space: nowrap;" title="Expand to full screen"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Expand</button></div>
+                  <div id="corr-{{ vendor.name }}-{{ loop.index }}-content" style="position: relative; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}<button onclick="expandCodeBlock('corr-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333; display: inline-flex; align-items: center; gap: 4px;" title="Expand to full screen"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Expand</button></div>
                 </div>
               </div>
 
