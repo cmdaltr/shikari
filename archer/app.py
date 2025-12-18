@@ -4724,6 +4724,10 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                 indicators=indicators, query=query_text, technique=technique, yaml_data=yaml_data
             )
 
+            # Check if reference queries were used
+            reference_used = yaml_data.get("reference_used", False)
+            reference_sources = yaml_data.get("reference_sources", [])
+
             detection_files[vendor].append(
                 {
                     "file": filename,
@@ -4742,6 +4746,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                     "tactic": primary_tactic,  # Primary tactic for color coding
                     "tactics": tactics_list,  # All tactics
                     "detection_likelihood": detection_likelihood,  # Likelihood score (0-100)
+                    "reference_used": reference_used,  # Reference query flag (green badge)
+                    "reference_sources": reference_sources,  # List of reference sources used
                 }
             )
 

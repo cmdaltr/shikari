@@ -571,10 +571,14 @@ def format_mde_query(query: str) -> str:
                         unique_conditions.append(cond_normalized)
 
                 if len(unique_conditions) > 1:
-                    # Format with line breaks
-                    formatted_lines.append(prefix + unique_conditions[0])
-                    for cond in unique_conditions[1:]:
-                        formatted_lines.append('        or ' + cond)
+                    # Format with line breaks - put 'or' at end of previous line
+                    for i, cond in enumerate(unique_conditions):
+                        if i == 0:
+                            formatted_lines.append(prefix + cond + ' or')
+                        elif i < len(unique_conditions) - 1:
+                            formatted_lines.append('        ' + cond + ' or')
+                        else:
+                            formatted_lines.append('        ' + cond)
                 else:
                     formatted_lines.append(prefix + ' or '.join(unique_conditions))
             else:

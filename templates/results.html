@@ -546,7 +546,7 @@
                     {% set bg_color = '#FFF8E1' %}
                     {% set text_color = '#FF6F00' %}
                     {% set emoji = '📦' %}
-                  {% elif tactic == 'Command and Control' %}
+                  {% elif tactic == 'Command and Control' or tactic == 'Command And Control' %}
                     {% set bg_color = '#E1F5FE' %}
                     {% set text_color = '#006064' %}
                     {% set emoji = '📡' %}
@@ -986,7 +986,7 @@
                     <div style="flex: 1; min-width: {{ min_box_width }}; background: white; border: 2px solid {% if is_primary %}#1976d2{% else %}#ddd{% endif %}; border-radius: 4px; padding: 8px; position: relative; {% if is_primary %}box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);{% endif %}">
                       <!-- Tactic Header -->
                       <div style="font-size: 0.75em; font-weight: 700; color: {% if is_primary %}#1976d2{% else %}#555{% endif %}; text-align: center; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        {% if tactic == 'Command and Control' %}
+                        {% if tactic == 'Command and Control' or tactic == 'Command And Control' %}
                           Command<br>and Control
                         {% elif ' ' in tactic %}
                           {{ tactic.replace(' ', '<br>', 1)|safe }}
@@ -1038,7 +1038,7 @@
                           {% set flow_emoji = '📦' %}
                           {% set flow_bg = '#FFF8E1' %}
                           {% set flow_border = '#FF6F00' %}
-                        {% elif tactic == 'Command and Control' %}
+                        {% elif tactic == 'Command and Control' or tactic == 'Command And Control' %}
                           {% set flow_emoji = '📡' %}
                           {% set flow_bg = '#E1F5FE' %}
                           {% set flow_border = '#006064' %}
