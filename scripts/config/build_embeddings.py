@@ -6,9 +6,9 @@ This script generates embeddings for all detection examples and builds
 a FAISS index for fast similarity search.
 
 Usage:
-    python scripts/build_embeddings.py
-    python scripts/build_embeddings.py --kb-path data/external/detections
-    python scripts/build_embeddings.py --model sentence-transformers/all-MiniLM-L6-v2
+    python scripts/config/build_embeddings.py
+    python scripts/config/build_embeddings.py --kb-path data/external/detections
+    python scripts/config/build_embeddings.py --model sentence-transformers/all-MiniLM-L6-v2
 """
 
 import argparse
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from archer.rag.embeddings import EmbeddingGenerator
 
@@ -28,13 +28,13 @@ def main():
         epilog="""
 Examples:
   # Build embeddings with default settings
-  python scripts/build_embeddings.py
+  python scripts/config/build_embeddings.py
 
   # Use custom knowledge base path
-  python scripts/build_embeddings.py --kb-path /path/to/kb
+  python scripts/config/build_embeddings.py --kb-path /path/to/kb
 
   # Use different embedding model
-  python scripts/build_embeddings.py --model sentence-transformers/all-mpnet-base-v2
+  python scripts/config/build_embeddings.py --model sentence-transformers/all-mpnet-base-v2
 
 Models:
   - all-MiniLM-L6-v2: Fast, 384 dimensions (default)
@@ -77,20 +77,20 @@ Models:
     # Check if KB exists
     if not args.kb_path.exists():
         print(f"Error: Knowledge base not found at {args.kb_path}")
-        print("Run setup first: python scripts/setup_knowledge_base.py")
+        print("Run setup first: python scripts/config/setup_knowledge_base.py")
         sys.exit(1)
 
     detection_examples = args.kb_path / 'detection_examples'
     if not detection_examples.exists():
         print(f"Error: No detection examples found at {detection_examples}")
-        print("Import community rules first: python scripts/import_community_rules.py --all")
+        print("Import community rules first: python scripts/config/import_community_rules.py --all")
         sys.exit(1)
 
     # Count detection files
     yaml_files = list(detection_examples.glob("**/*.yaml")) + list(detection_examples.glob("**/*.yml"))
     if not yaml_files:
         print(f"Error: No YAML files found in {detection_examples}")
-        print("Import community rules first: python scripts/import_community_rules.py --all")
+        print("Import community rules first: python scripts/config/import_community_rules.py --all")
         sys.exit(1)
 
     print(f"Found {len(yaml_files)} detection files")
@@ -110,7 +110,7 @@ Models:
             print()
             print("Next steps:")
             print("  1. Test retrieval:")
-            print(f"     python scripts/test_retrieval.py --technique T1003.001 --platform Splunk")
+            print(f"     python scripts/config/search_similar_detections.py --technique T1003.001 --platform Splunk")
             print()
             print("  2. Test enhancement:")
             print(f"     python scripts/test_enhancement.py --technique T1003.001")

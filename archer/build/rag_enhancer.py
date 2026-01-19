@@ -46,7 +46,7 @@ def is_rag_enabled() -> bool:
 
         if not _KB_ENABLED:
             print(" ℹ️  RAG enhancement disabled (knowledge base not available)")
-            print("    Run: python scripts/build_embeddings.py")
+            print("    Run: python scripts/config/build_embeddings.py")
 
         return _KB_ENABLED
 

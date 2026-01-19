@@ -14,10 +14,10 @@ This directory contains documentation for the RAG (Retrieval-Augmented Generatio
 
 ```bash
 # 1. Build embeddings (one-time setup)
-python3 scripts/build_embeddings.py
+python3 scripts/config/build_embeddings.py
 
 # 2. Test retrieval
-python3 scripts/test_retrieval.py --technique T1003.001 --platform Splunk
+python3 scripts/config/search_similar_detections.py --technique T1003.001 --platform Splunk
 
 # 3. RAG is now active for query generation
 ```

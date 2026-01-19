@@ -66,7 +66,7 @@ class DetectionKnowledgeBase:
             self._build_index()
         else:
             print("Warning: Knowledge base index not found")
-            print("Run: python scripts/build_embeddings.py")
+            print("Run: python scripts/config/build_embeddings.py")
 
     def _build_index(self):
         """Build the vector index."""

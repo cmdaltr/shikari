@@ -75,13 +75,13 @@ data_sources:
 
 ```bash
 # Import Sigma rules
-python scripts/import_community_rules.py --source sigma
+python scripts/config/import_community_rules.py --source sigma
 
 # Import Splunk Security Content
-python scripts/import_community_rules.py --source splunk
+python scripts/config/import_community_rules.py --source splunk
 
 # Import all sources
-python scripts/import_community_rules.py --all
+python scripts/config/import_community_rules.py --all
 ```
 
 ## Maintenance
@@ -90,13 +90,13 @@ python scripts/import_community_rules.py --all
 
 ```bash
 cd data/external/sigma && git pull
-python scripts/import_community_rules.py --source sigma --update
+python scripts/config/import_community_rules.py --source sigma --update
 ```
 
 ### Rebuild Embeddings
 
 ```bash
-python scripts/build_embeddings.py --incremental
+python scripts/config/build_embeddings.py --incremental
 ```
 
 ### Check Statistics

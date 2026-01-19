@@ -255,7 +255,7 @@ def main():
 
     if not index_path.exists():
         print(f"Error: Index not found at {index_path}")
-        print("Run: python scripts/build_embeddings.py first")
+        print("Run: python scripts/config/build_embeddings.py first")
         sys.exit(1)
 
     retriever = DetectionRetriever(index_path, metadata_path, kb_path)

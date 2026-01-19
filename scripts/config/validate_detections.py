@@ -5,9 +5,9 @@ Detection Validation Script
 Validates detection queries in the knowledge base.
 
 Usage:
-    python scripts/validate_detections.py                    # Validate all detections
-    python scripts/validate_detections.py --platform Splunk  # Validate only Splunk
-    python scripts/validate_detections.py --query "..."      # Validate a single query
+    python scripts/config/validate_detections.py                    # Validate all detections
+    python scripts/config/validate_detections.py --platform Splunk  # Validate only Splunk
+    python scripts/config/validate_detections.py --query "..."      # Validate a single query
 """
 
 import argparse
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from archer.validation.test_runner import TestRunner
 
@@ -27,16 +27,16 @@ def main():
         epilog="""
 Examples:
   # Validate all detections in knowledge base
-  python scripts/validate_detections.py
+  python scripts/config/validate_detections.py
 
   # Validate only Splunk detections
-  python scripts/validate_detections.py --platform Splunk
+  python scripts/config/validate_detections.py --platform Splunk
 
   # Validate a single query
-  python scripts/validate_detections.py --query 'index=windows EventCode=4688' --platform Splunk
+  python scripts/config/validate_detections.py --query 'index=windows EventCode=4688' --platform Splunk
 
   # Generate detailed report
-  python scripts/validate_detections.py --report
+  python scripts/config/validate_detections.py --report
         """
     )
 

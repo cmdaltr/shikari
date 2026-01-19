@@ -23,7 +23,7 @@ Run this once to prepare all the detection examples:
 
 ```bash
 cd /path/to/archer
-python3 scripts/build_embeddings.py
+python3 scripts/config/build_embeddings.py
 ```
 
 **What it does:** Creates a searchable index of ~4,800 detection examples
@@ -43,7 +43,7 @@ Generating embeddings... ━━━━━━━━━━━━━━━━━━ 
 Try finding similar detections for a technique:
 
 ```bash
-python3 scripts/test_retrieval.py --technique T1003.001 --platform Splunk
+python3 scripts/config/search_similar_detections.py --technique T1003.001 --platform Splunk
 ```
 
 You should see:
@@ -190,7 +190,7 @@ Check the quality of your detections:
 ### Validate a Single Query
 
 ```bash
-python3 scripts/validate_detections.py \
+python3 scripts/config/validate_detections.py \
   --query 'index=windows EventCode=4688 CommandLine="*mimikatz*"' \
   --platform Splunk
 ```
@@ -206,7 +206,7 @@ Suggestions:
 ### Validate All Imported Detections
 
 ```bash
-python3 scripts/validate_detections.py --report
+python3 scripts/config/validate_detections.py --report
 ```
 
 Output:
@@ -235,28 +235,28 @@ Already have ~4,800 examples, but want more?
 
 ```bash
 # Import additional Splunk detections
-python3 scripts/import_community_rules.py --source splunk
+python3 scripts/config/import_community_rules.py --source splunk
 
 # Import Elastic detections
-python3 scripts/import_community_rules.py --source elastic
+python3 scripts/config/import_community_rules.py --source elastic
 
 # Import all available sources
-python3 scripts/import_community_rules.py --all
+python3 scripts/config/import_community_rules.py --all
 ```
 
 After importing, rebuild embeddings:
 ```bash
-python3 scripts/build_embeddings.py
+python3 scripts/config/build_embeddings.py
 ```
 
 ### Find Examples for a Specific Technique
 
 ```bash
 # Show similar detections
-python3 scripts/test_retrieval.py --technique T1059.001 --platform Splunk
+python3 scripts/config/search_similar_detections.py --technique T1059.001 --platform Splunk
 
 # Show with full queries
-python3 scripts/test_retrieval.py --technique T1059.001 --show-query
+python3 scripts/config/search_similar_detections.py --technique T1059.001 --show-query
 ```
 
 ### Check What's in the Knowledge Base
@@ -297,7 +297,7 @@ find data/external/detections/detection_examples -name "*_elastic.yaml" | wc -l
 
 **Solution:** Build the embeddings first
 ```bash
-python3 scripts/build_embeddings.py
+python3 scripts/config/build_embeddings.py
 ```
 
 ### "No examples found for technique"
@@ -308,7 +308,7 @@ python3 scripts/build_embeddings.py
 
 **Solution:** Check what's available
 ```bash
-python3 scripts/test_retrieval.py --technique T1003.001
+python3 scripts/config/search_similar_detections.py --technique T1003.001
 ```
 
 ### "RAG enhancement disabled"
@@ -324,7 +324,7 @@ python3 -c "from archer.build.rag_enhancer import is_rag_enabled; print(is_rag_e
 
 **Fix:**
 ```bash
-python3 scripts/build_embeddings.py
+python3 scripts/config/build_embeddings.py
 export ENABLE_RAG=true
 ```
 
@@ -431,7 +431,7 @@ if metadata['enhanced']:
 ### 5. Validate Everything
 Run validation on generated queries:
 ```bash
-python3 scripts/validate_detections.py --query "$QUERY" --platform Splunk
+python3 scripts/config/validate_detections.py --query "$QUERY" --platform Splunk
 ```
 
 ---
@@ -476,13 +476,13 @@ A: You can disable RAG with `export ENABLE_RAG=false` or review and manually adj
 ### Quick Commands:
 ```bash
 # Setup (once)
-python3 scripts/build_embeddings.py
+python3 scripts/config/build_embeddings.py
 
 # Test
-python3 scripts/test_retrieval.py --technique T1003.001 --platform Splunk
+python3 scripts/config/search_similar_detections.py --technique T1003.001 --platform Splunk
 
 # Validate
-python3 scripts/validate_detections.py --query "$QUERY" --platform Splunk
+python3 scripts/config/validate_detections.py --query "$QUERY" --platform Splunk
 
 # Use local LLM (free)
 ollama pull llama2
@@ -496,4 +496,4 @@ export RAG_LLM_PROVIDER=ollama
 - Implementation status: `IMPLEMENTATION_STATUS.md`
 - Quick reference: `docs/rag/FIDELITY_SYSTEM_SUMMARY.md`
 
-**Ready to start?** Run `python3 scripts/build_embeddings.py` now!
+**Ready to start?** Run `python3 scripts/config/build_embeddings.py` now!

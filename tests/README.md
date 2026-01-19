@@ -38,22 +38,22 @@ pip install pytest requests
 
 ### Run Functionality Tests Only (Default)
 ```bash
-pytest tests/test_comprehensive.py -v
+pytest tests/test_suite.py -v
 ```
 
 ### Run All Tests (Including Feature Tests)
 ```bash
-pytest tests/test_comprehensive.py -v --run-feature-tests
+pytest tests/test_suite.py -v --run-feature-tests
 ```
 
 ### Run Specific Test Class
 ```bash
 # Functionality tests
-pytest tests/test_comprehensive.py::TestArcherHealth -v
-pytest tests/test_comprehensive.py::TestArcherAPIs -v
+pytest tests/test_suite.py::TestArcherHealth -v
+pytest tests/test_suite.py::TestArcherAPIs -v
 
 # Feature tests (requires --run-feature-tests)
-pytest tests/test_comprehensive.py::TestArcherThreatGroups -v --run-feature-tests
+pytest tests/test_suite.py::TestArcherThreatGroups -v --run-feature-tests
 ```
 
 ## Standalone Runner
@@ -62,28 +62,28 @@ The test suite can also be run directly with Python for more control:
 
 ```bash
 # Run all tests
-python tests/test_comprehensive.py
+python tests/test_suite.py
 
 # Skip feature tests
-python tests/test_comprehensive.py --skip-feature-tests
+python tests/test_suite.py --skip-feature-tests
 
 # Test specific items
-python tests/test_comprehensive.py --group "Scattered Spider"
-python tests/test_comprehensive.py --cve "CVE-2025-55182"
-python tests/test_comprehensive.py --blog "https://thedfirreport.com/2025/11/17/cats-got-your-files-lynx-ransomware/"
-python tests/test_comprehensive.py --profile "example"
+python tests/test_suite.py --group "Scattered Spider"
+python tests/test_suite.py --cve "CVE-2025-55182"
+python tests/test_suite.py --blog "https://thedfirreport.com/2025/11/17/cats-got-your-files-lynx-ransomware/"
+python tests/test_suite.py --profile "example"
 
 # Limit number of items tested
-python tests/test_comprehensive.py --groups 2 --cves 2 --blogs 3 --profiles 2
+python tests/test_suite.py --groups 2 --cves 2 --blogs 3 --profiles 2
 
 # Output as JSON
-python tests/test_comprehensive.py --json
+python tests/test_suite.py --json
 
 # Custom Archer URL
-python tests/test_comprehensive.py --url http://localhost:8080
+python tests/test_suite.py --url http://localhost:8080
 
 # Custom timeout (default 900s = 15 minutes)
-python tests/test_comprehensive.py --group "Scattered Spider" --timeout 1800
+python tests/test_suite.py --group "Scattered Spider" --timeout 1800
 ```
 
 ## Test Data
@@ -124,5 +124,5 @@ tests/
 ├── README.md              # This file
 ├── __init__.py            # Package marker
 ├── conftest.py            # Pytest configuration and fixtures
-└── test_comprehensive.py  # Main test suite
+└── test_suite.py  # Main test suite
 ```

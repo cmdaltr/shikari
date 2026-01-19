@@ -11,8 +11,8 @@ system resources. It will:
 5. Start Ollama server
 
 Usage:
-    python scripts/setup_local_llm.py
-    python scripts/setup_local_llm.py --ram 32  # Specify RAM manually
+    python scripts/ai/setup_local_llm.py
+    python scripts/ai/setup_local_llm.py --ram 32  # Specify RAM manually
 """
 
 import argparse
@@ -365,13 +365,13 @@ def main():
         epilog="""
 Examples:
   # Auto-detect RAM and configure
-  python scripts/setup_local_llm.py
+  python scripts/ai/setup_local_llm.py
 
   # Specify RAM manually (32GB)
-  python scripts/setup_local_llm.py --ram 32
+  python scripts/ai/setup_local_llm.py --ram 32
 
   # Skip confirmation prompts
-  python scripts/setup_local_llm.py --yes
+  python scripts/ai/setup_local_llm.py --yes
         """
     )
     parser.add_argument('--ram', type=int, help='Available RAM in GB')

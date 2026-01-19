@@ -12,7 +12,7 @@ from pathlib import Path
 import json
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
 def create_directory_structure():
@@ -137,13 +137,13 @@ data_sources:
 
 ```bash
 # Import Sigma rules
-python scripts/import_community_rules.py --source sigma
+python scripts/config/import_community_rules.py --source sigma
 
 # Import Splunk Security Content
-python scripts/import_community_rules.py --source splunk
+python scripts/config/import_community_rules.py --source splunk
 
 # Import all sources
-python scripts/import_community_rules.py --all
+python scripts/config/import_community_rules.py --all
 ```
 
 ## Maintenance
@@ -152,13 +152,13 @@ python scripts/import_community_rules.py --all
 
 ```bash
 cd data/external/sigma && git pull
-python scripts/import_community_rules.py --source sigma --update
+python scripts/config/import_community_rules.py --source sigma --update
 ```
 
 ### Rebuild Embeddings
 
 ```bash
-python scripts/build_embeddings.py --incremental
+python scripts/config/build_embeddings.py --incremental
 ```
 
 ### Check Statistics
@@ -523,10 +523,10 @@ def main():
     print("     git clone https://github.com/SigmaHQ/sigma.git")
     print()
     print("  2. Import community rules:")
-    print("     python scripts/import_community_rules.py --all")
+    print("     python scripts/config/import_community_rules.py --all")
     print()
     print("  3. Build vector embeddings:")
-    print("     python scripts/build_embeddings.py")
+    print("     python scripts/config/build_embeddings.py")
     print()
     print("See FIDELITY_IMPLEMENTATION_GUIDE.md for detailed instructions.")
     print()

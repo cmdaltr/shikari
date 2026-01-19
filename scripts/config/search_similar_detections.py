@@ -6,8 +6,8 @@ This script tests the RAG retrieval system by searching for similar
 detection examples.
 
 Usage:
-    python scripts/test_retrieval.py --technique T1003.001 --platform Splunk
-    python scripts/test_retrieval.py --technique T1059.001 --top-k 10
+    python scripts/config/search_similar_detections.py --technique T1003.001 --platform Splunk
+    python scripts/config/search_similar_detections.py --technique T1059.001 --top-k 10
 """
 
 import argparse
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from archer.rag.knowledge_base import DetectionKnowledgeBase
 
@@ -27,13 +27,13 @@ def main():
         epilog="""
 Examples:
   # Search for LSASS memory dump detections on Splunk
-  python scripts/test_retrieval.py --technique T1003.001 --platform Splunk
+  python scripts/config/search_similar_detections.py --technique T1003.001 --platform Splunk
 
   # Search for PowerShell execution with more results
-  python scripts/test_retrieval.py --technique T1059.001 --top-k 10
+  python scripts/config/search_similar_detections.py --technique T1059.001 --top-k 10
 
   # Search with minimum fidelity threshold
-  python scripts/test_retrieval.py --technique T1003.001 --min-fidelity 0.85
+  python scripts/config/search_similar_detections.py --technique T1003.001 --min-fidelity 0.85
         """
     )
 
@@ -87,8 +87,8 @@ Examples:
         print("Error: Knowledge base not available")
         print()
         print("Make sure you have:")
-        print("  1. Imported community rules: python scripts/import_community_rules.py --all")
-        print("  2. Built embeddings: python scripts/build_embeddings.py")
+        print("  1. Imported community rules: python scripts/config/import_community_rules.py --all")
+        print("  2. Built embeddings: python scripts/config/build_embeddings.py")
         sys.exit(1)
 
     # Show KB stats
@@ -122,10 +122,10 @@ Examples:
         print()
         if args.platform:
             print(f"Try searching without platform filter:")
-            print(f"  python scripts/test_retrieval.py --technique {args.technique}")
+            print(f"  python scripts/config/search_similar_detections.py --technique {args.technique}")
         if args.min_fidelity > 0.7:
             print(f"Try lowering fidelity threshold:")
-            print(f"  python scripts/test_retrieval.py --technique {args.technique} --min-fidelity 0.6")
+            print(f"  python scripts/config/search_similar_detections.py --technique {args.technique} --min-fidelity 0.6")
         sys.exit(0)
 
     # Display results

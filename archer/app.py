@@ -63,6 +63,7 @@ from archer.auth import (
     validate_password,
 )
 from archer.database.models import User, UserRole, APIKey
+from archer.validation.query_syntax_validator import validate_query_syntax
 
 
 templates = Jinja2Templates(directory="templates")
@@ -4727,6 +4728,16 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             # Check if reference queries were used
             reference_used = yaml_data.get("reference_used", False)
             reference_sources = yaml_data.get("reference_sources", [])
+
+            # Validate query syntax matches vendor and uses valid tables/indexes
+            query_validation = validate_query_syntax(query_text, vendor)
+            is_query_valid = query_validation.get("is_valid", True)
+            query_warnings = query_validation.get("warnings", [])
+
+            # Skip invalid queries (wrong language or invalid tables)
+            if not is_query_valid:
+                print(f"   Skipping invalid query in {filename}: {', '.join(query_warnings)}")
+                continue
 
             detection_files[vendor].append(
                 {

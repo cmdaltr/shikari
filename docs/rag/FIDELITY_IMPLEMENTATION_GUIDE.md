@@ -154,7 +154,7 @@ archer/
 
 ```bash
 # Run the setup script
-python scripts/setup_knowledge_base.py
+python scripts/config/setup_knowledge_base.py
 
 # Or manually:
 mkdir -p data/external/detections/{detection_examples,field_mappings,false_positive_patterns,embeddings}
@@ -186,19 +186,19 @@ cd ../../..
 
 ```bash
 # Import Sigma rules
-python scripts/import_community_rules.py \
+python scripts/config/import_community_rules.py \
   --source sigma \
   --input data/external/repos/sigma/rules \
   --output data/external/detections/detection_examples/
 
 # Import Splunk rules
-python scripts/import_community_rules.py \
+python scripts/config/import_community_rules.py \
   --source splunk \
   --input data/external/repos/splunk/detections \
   --output data/external/detections/detection_examples/
 
 # Import all at once
-python scripts/import_community_rules.py --all
+python scripts/config/import_community_rules.py --all
 ```
 
 **Expected Output:**
@@ -283,7 +283,7 @@ pip install -r requirements.txt
 
 ```bash
 # Build embeddings for all detection examples
-python scripts/build_embeddings.py \
+python scripts/config/build_embeddings.py \
   --knowledge-base data/external/detections/detection_examples/ \
   --output data/external/detections/embeddings/vector_store.faiss \
   --model sentence-transformers/all-MiniLM-L6-v2
@@ -316,7 +316,7 @@ Total time: 7m 23s
 
 ```bash
 # Test retrieval for a specific technique
-python scripts/test_retrieval.py \
+python scripts/config/search_similar_detections.py \
   --technique T1003.001 \
   --platform splunk \
   --top-k 5
@@ -743,7 +743,7 @@ pip install faiss-gpu
 export CUDA_VISIBLE_DEVICES=0
 
 # Or use quantized model for faster inference
-python scripts/build_embeddings.py \
+python scripts/config/build_embeddings.py \
   --model sentence-transformers/all-MiniLM-L6-v2 \
   --quantize int8
 ```
@@ -779,10 +779,10 @@ python archer.py generate APT29 --parallel --workers 4
 python scripts/check_kb_status.py
 
 # Import community rules
-python scripts/import_community_rules.py --all
+python scripts/config/import_community_rules.py --all
 
 # Build embeddings
-python scripts/build_embeddings.py
+python scripts/config/build_embeddings.py
 ```
 
 ### Issue: "Field validation failed"
@@ -805,7 +805,7 @@ python scripts/generate_field_catalogs.py --update
 **Solution:**
 ```bash
 # Import more community rules
-python scripts/import_community_rules.py --all
+python scripts/config/import_community_rules.py --all
 
 # Add custom examples
 python scripts/add_to_kb.py --from-directory my_detections/
@@ -846,10 +846,10 @@ cd ../splunk && git pull
 cd ../elastic && git pull
 
 # Re-import updated rules
-python scripts/import_community_rules.py --all --update
+python scripts/config/import_community_rules.py --all --update
 
 # Rebuild embeddings
-python scripts/build_embeddings.py --incremental
+python scripts/config/build_embeddings.py --incremental
 ```
 
 ### Monitoring

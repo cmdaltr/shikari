@@ -9,9 +9,9 @@ Imports detection rules from community repositories:
 - Microsoft Sentinel (https://github.com/Azure/Azure-Sentinel)
 
 Usage:
-    python scripts/import_community_rules.py --source sigma
-    python scripts/import_community_rules.py --source splunk
-    python scripts/import_community_rules.py --all
+    python scripts/config/import_community_rules.py --source sigma
+    python scripts/config/import_community_rules.py --source splunk
+    python scripts/config/import_community_rules.py --all
 """
 
 import argparse
@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from archer.importers import SigmaImporter, SplunkImporter, ElasticImporter
 
@@ -104,16 +104,16 @@ def main():
         epilog="""
 Examples:
   # Import Sigma rules (medium and above)
-  python scripts/import_community_rules.py --source sigma
+  python scripts/config/import_community_rules.py --source sigma
 
   # Import Sigma rules (high and critical only)
-  python scripts/import_community_rules.py --source sigma --min-level high
+  python scripts/config/import_community_rules.py --source sigma --min-level high
 
   # Import Splunk Security Content
-  python scripts/import_community_rules.py --source splunk
+  python scripts/config/import_community_rules.py --source splunk
 
   # Import all sources
-  python scripts/import_community_rules.py --all
+  python scripts/config/import_community_rules.py --all
 
 Prerequisites:
   Clone community repositories first:
@@ -236,8 +236,8 @@ Prerequisites:
     print()
     print("Next steps:")
     print("  1. Review imported rules")
-    print("  2. Build vector embeddings: python scripts/build_embeddings.py")
-    print("  3. Test retrieval: python scripts/test_retrieval.py --technique T1003.001")
+    print("  2. Build vector embeddings: python scripts/config/build_embeddings.py")
+    print("  3. Test retrieval: python scripts/config/search_similar_detections.py --technique T1003.001")
     print()
 
 

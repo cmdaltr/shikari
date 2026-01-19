@@ -5,8 +5,8 @@ Comprehensive Test Suite for Archer Detection Generation Platform
 This test suite validates all major components of Archer using realistic
 threat intelligence inputs including threat groups, CVEs, blogs, and company profiles.
 
-Run with: pytest tests/test_comprehensive.py -v --tb=short
-Or individually: python tests/test_comprehensive.py
+Run with: pytest tests/test_suite.py -v --tb=short
+Or individually: python tests/test_suite.py
 """
 
 import pytest
@@ -172,6 +172,8 @@ class ArcherTestSuite:
             poll_interval = 5
             waited = 0
             last_progress = None
+            last_progress_report = 0  # Track when we last printed progress
+            progress_report_interval = 60  # Print progress every 60 seconds
 
             while waited < max_wait:
                 time.sleep(poll_interval)
@@ -190,6 +192,15 @@ class ArcherTestSuite:
                         progress = data.get("progress", data)
                         last_progress = progress
                         status = progress.get("status", "")
+
+                        # Print progress every 60 seconds
+                        if waited - last_progress_report >= progress_report_interval:
+                            last_progress_report = waited
+                            created = progress.get("created_yaml", 0)
+                            total = progress.get("total_yaml", 0)
+                            stage = progress.get("stage", status)
+                            elapsed_mins = waited // 60
+                            self.log(f"    Progress ({elapsed_mins}m): {stage} - {created}/{total} YAMLs")
 
                         if status == "complete":
                             duration = time.time() - start
@@ -260,6 +271,8 @@ class ArcherTestSuite:
             poll_interval = 5
             waited = 0
             last_progress = None
+            last_progress_report = 0
+            progress_report_interval = 60
 
             while waited < max_wait:
                 time.sleep(poll_interval)
@@ -278,6 +291,13 @@ class ArcherTestSuite:
                         progress = data.get("progress", data)
                         last_progress = progress
                         status = progress.get("status", "")
+
+                        # Print progress every 60 seconds
+                        if waited - last_progress_report >= progress_report_interval:
+                            last_progress_report = waited
+                            stage = progress.get("stage", status)
+                            elapsed_mins = waited // 60
+                            self.log(f"    Progress ({elapsed_mins}m): {stage}")
 
                         if status == "complete":
                             duration = time.time() - start

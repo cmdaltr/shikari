@@ -8,23 +8,16 @@ Automated scripts to configure Archer with a local LLM (Ollama) based on your sy
 
 ```bash
 # Auto-detect RAM and configure everything automatically
-python scripts/setup_local_llm.py
+python scripts/ai/setup_local_llm.py
 
 # Specify RAM manually (useful for servers/VMs)
-python scripts/setup_local_llm.py --ram 32
+python scripts/ai/setup_local_llm.py --ram 32
 
 # Skip confirmation prompts (for automation)
-python scripts/setup_local_llm.py --yes
+python scripts/ai/setup_local_llm.py --yes
 ```
 
-### Shell Script (Linux/macOS Only)
-
-```bash
-# Interactive setup
-bash scripts/setup_local_llm.sh
-```
-
-## What These Scripts Do
+## What This Script Does
 
 1. **Detect System RAM**: Auto-detects available RAM or allows manual input
 2. **Recommend Best Model**: Selects optimal model based on resources
@@ -48,7 +41,7 @@ bash scripts/setup_local_llm.sh
 ### Example 1: Default Setup (Auto-detect)
 
 ```bash
-$ python scripts/setup_local_llm.py
+$ python scripts/ai/setup_local_llm.py
 
 ═══════════════════════════════════════════════════════════════
   Archer Local LLM Setup
@@ -74,17 +67,17 @@ Proceed with this configuration? (y/n): y
 
 ```bash
 # For a server with 64GB RAM
-python scripts/setup_local_llm.py --ram 64
+python scripts/ai/setup_local_llm.py --ram 64
 
 # For a laptop with 16GB RAM
-python scripts/setup_local_llm.py --ram 16
+python scripts/ai/setup_local_llm.py --ram 16
 ```
 
 ### Example 3: Automated/Non-Interactive
 
 ```bash
 # Useful for scripts or automation
-python scripts/setup_local_llm.py --ram 32 --yes
+python scripts/ai/setup_local_llm.py --ram 32 --yes
 ```
 
 ## What Gets Configured
@@ -159,7 +152,7 @@ Your system doesn't have enough RAM for the selected model. Re-run with a smalle
 
 ```bash
 # Use smaller model
-python scripts/setup_local_llm.py --ram 8  # Will select mistral:7b-instruct-q4_K_M
+python scripts/ai/setup_local_llm.py --ram 8  # Will select mistral:7b-instruct-q4_K_M
 ```
 
 ### Issue: "Model download is slow"

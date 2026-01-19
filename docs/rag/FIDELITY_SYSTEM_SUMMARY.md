@@ -40,8 +40,8 @@ A complete **RAG (Retrieval-Augmented Generation)** system that improves detecti
 - `setup_knowledge_base.py` - Initialize KB structure
 - `import_community_rules.py` - Import from Sigma/Splunk/etc
 - `build_embeddings.py` - Generate vector embeddings
-- `test_retrieval.py` - Test similarity search
-- Location: `scripts/`
+- `search_similar_detections.py` - Test similarity search
+- Location: `scripts/config/`
 
 ✅ **Documentation**
 - Comprehensive implementation guide
@@ -93,7 +93,7 @@ archer/
     ├── setup_knowledge_base.py          # Initialize structure
     ├── import_community_rules.py        # Import rules
     ├── build_embeddings.py              # Build vectors
-    └── test_retrieval.py                # Test RAG system
+    └── search_similar_detections.py                # Test RAG system
 ```
 
 ---
@@ -104,14 +104,14 @@ archer/
 
 ```bash
 # Step 1: Initialize structure
-python scripts/setup_knowledge_base.py
+python scripts/config/setup_knowledge_base.py
 
 # Step 2: Clone community repos
 cd data/external/repos
 git clone https://github.com/SigmaHQ/sigma.git
 
 # Step 3: Import rules
-python scripts/import_community_rules.py --source sigma
+python scripts/config/import_community_rules.py --source sigma
 ```
 
 Result: 1000+ high-quality detection examples imported
@@ -120,7 +120,7 @@ Result: 1000+ high-quality detection examples imported
 
 ```bash
 # Build vector index
-python scripts/build_embeddings.py
+python scripts/config/build_embeddings.py
 ```
 
 Result: FAISS index created at `data/external/detections/embeddings/vector_store.faiss`
@@ -168,7 +168,7 @@ pip install sentence-transformers==2.2.2 faiss-cpu==1.7.4 pyyaml==6.0.1 openai>=
 
 ```bash
 # 1. Initialize knowledge base
-python scripts/setup_knowledge_base.py
+python scripts/config/setup_knowledge_base.py
 
 # 2. Clone Sigma rules
 cd data/external/repos
@@ -176,17 +176,17 @@ git clone https://github.com/SigmaHQ/sigma.git
 cd ../../..
 
 # 3. Import Sigma rules (takes ~5 minutes)
-python scripts/import_community_rules.py --source sigma
+python scripts/config/import_community_rules.py --source sigma
 
 # 4. Build embeddings (takes ~7 minutes for 2000+ rules)
-python scripts/build_embeddings.py
+python scripts/config/build_embeddings.py
 ```
 
 ### Test the System
 
 ```bash
 # Test retrieval
-python scripts/test_retrieval.py --technique T1003.001 --platform Splunk
+python scripts/config/search_similar_detections.py --technique T1003.001 --platform Splunk
 
 # Test with OpenAI enhancement (requires OPENAI_API_KEY)
 export OPENAI_API_KEY="your-key-here"
@@ -359,7 +359,7 @@ The core RAG system is **fully functional** without these components:
 1. **Test the System**
    ```bash
    # Run the quick start guide above
-   python scripts/setup_knowledge_base.py
+   python scripts/config/setup_knowledge_base.py
    # ... follow the steps
    ```
 
@@ -368,17 +368,17 @@ The core RAG system is **fully functional** without these components:
    cd data/external/repos
    git clone https://github.com/SigmaHQ/sigma.git
    cd ../../..
-   python scripts/import_community_rules.py --source sigma
+   python scripts/config/import_community_rules.py --source sigma
    ```
 
 3. **Build Embeddings**
    ```bash
-   python scripts/build_embeddings.py
+   python scripts/config/build_embeddings.py
    ```
 
 4. **Test Retrieval**
    ```bash
-   python scripts/test_retrieval.py --technique T1003.001 --platform Splunk --show-query
+   python scripts/config/search_similar_detections.py --technique T1003.001 --platform Splunk --show-query
    ```
 
 ### Short-term (This Week)
@@ -453,14 +453,14 @@ pip install faiss-gpu==1.7.4
 
 ```bash
 # Import Sigma rules first
-python scripts/import_community_rules.py --source sigma
+python scripts/config/import_community_rules.py --source sigma
 ```
 
 ### Issue: "Knowledge base not available"
 
 ```bash
 # Build embeddings
-python scripts/build_embeddings.py
+python scripts/config/build_embeddings.py
 ```
 
 ### Issue: "LLM enhancement failed"
