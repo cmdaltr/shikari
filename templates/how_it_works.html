@@ -734,6 +734,7 @@
                         <li>6 generation modes</li>
                         <li>Multi-vendor queries</li>
                         <li>Multi-stage attack correlations</li>
+                        <li>Threat Briefing with detection gap analysis</li>
                         <li>MITRE ATT&CK Flow visualizations</li>
                         <li>OSINT enhancement</li>
                         <li>Adversary emulation integration</li>
@@ -859,6 +860,8 @@ python archer.py run_vectr_command export "APT29"</code></pre>
                     <li><strong>Admin Panel:</strong> User management, role assignment, audit logs (admin-only)</li>
                     <li><strong>Real-Time Progress:</strong> Progress JSON polled every 500ms for live status updates</li>
                     <li><strong>Results Page:</strong> Filter by vendor, group, tactic, technique with bulk operations</li>
+                    <li><strong>Individual Query Blocks:</strong> Stacked per-technique queries with "chained with" connectors on the results page</li>
+                    <li><strong>Threat Briefing:</strong> LLM-grounded detection gap analysis — ranks top-N uncovered techniques with priority reasoning and detection approach</li>
                     <li><strong>Emulation:</strong> Atomic Red Team integration (simulate/live modes, SSH/WinRM support)</li>
                     <li><strong>VECTR Export:</strong> Campaign and test case creation for purple team collaboration</li>
                 </ul>
@@ -1289,6 +1292,11 @@ Create multi-stage detection:
     - Stage 2: Monitor remote service usage
     - Stage 3: Alert on credential access
 
+Results page shows:
+    - Individual query block per technique (stacked)
+    - "chained with" connectors between techniques
+    - Combined JOIN query collapsed below
+
 Output: data/APT29/correlations/vendor_correlations.json</code></pre>
             </div>
 
@@ -1522,6 +1530,7 @@ data/APT29/
                 <summary class="faq-question">Correlations and Cross-vendor?</summary>
                 <div class="faq-answer">
                     <p><strong>Correlations:</strong> Combines similar queries from the same vendor (either Splunk or MDE) into multi-stage detections. This is enabled by default and helps create detection chains that track attack progressions within a single SIEM platform.</p>
+                    <p>The results page shows each technique in a correlation as an <strong>individual query block</strong>, stacked with "chained with" connectors. The combined JOIN query is available via "Show Combined Query" below the stack.</p>
                     <p><strong>Cross-vendor:</strong> (Coming Soon) Will correlate queries across different vendors (Splunk + MDE) to create unified detection workflows across multiple security platforms.</p>
                 </div>
             </details>
@@ -1544,6 +1553,52 @@ data/APT29/
                 <summary class="faq-question">What is the Profile tab used for?</summary>
                 <div class="faq-answer">
                     <p>The Profile tab lets you analyze an organization's threat landscape based on their domain. It automatically identifies industry-specific threats, geographic threat actors, technology stack vulnerabilities, and optionally supply chain dependencies. It then recommends relevant threat groups and can auto-generate detection queries for them.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is Threat Briefing and how is it different from the AI Ask feature?</summary>
+                <div class="faq-answer">
+                    <p><strong>Threat Briefing</strong> generates a grounded, prioritised detection plan for a threat group. It is different from the Ask feature in a critical way:</p>
+                    <ul>
+                        <li><strong>Ask:</strong> Sends only the group name to the LLM — the LLM draws on its training data, which may be incomplete or outdated</li>
+                        <li><strong>Threat Briefing:</strong> Sends the actual MITRE ATT&CK technique list (all three attribution paths: direct, via software, via campaign) <em>plus</em> your current detection coverage — the LLM prioritises based on real data</li>
+                    </ul>
+                    <h4>What it produces</h4>
+                    <ul>
+                        <li><strong>Coverage stats:</strong> How many techniques are already covered by your detection library vs. gaps</li>
+                        <li><strong>Top-N priority list:</strong> Ranked techniques with priority reasoning and specific detection approach per technique</li>
+                        <li><strong>Attack chain:</strong> Kill chain tactic progression for the group</li>
+                        <li><strong>Executive summary:</strong> 2–3 sentence briefing for SOC leadership</li>
+                    </ul>
+                    <h4>How to use it</h4>
+                    <ol>
+                        <li>Enter a threat group name in the Generate tab (e.g., "Scattered Spider")</li>
+                        <li>Click <strong>Threat Briefing</strong> (the button below Generate Detections)</li>
+                        <li>Select the number of top techniques to prioritise (5 or 10)</li>
+                        <li>The briefing panel loads with coverage statistics, the ranked technique cards, and the attack chain</li>
+                    </ol>
+                    <p><strong>Requires:</strong> An LLM configured (Anthropic, OpenAI, or local Ollama). The briefing uses <code>POST /api/threat-briefing</code> and passes the complete technique/coverage context to the model.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What are the individual query blocks on the results page?</summary>
+                <div class="faq-answer">
+                    <p>After generating detections and correlations, the results page now shows <strong>individual detection queries per technique</strong> within each correlation, stacked visually with "chained with" connectors between them. This replaces the previous single combined-query view.</p>
+                    <h4>What you see</h4>
+                    <ul>
+                        <li><strong>Technique name</strong> — the MITRE ATT&CK technique name</li>
+                        <li><strong>ATT&CK ID badge</strong> — e.g., <code>T1078</code> in a blue pill</li>
+                        <li><strong>Tactic badge</strong> — e.g., <code>Initial Access</code> in a green pill</li>
+                        <li><strong>Query block</strong> — the individual Splunk SPL or KQL query for that technique</li>
+                        <li><strong>Copy button</strong> — copies the individual query to clipboard</li>
+                        <li><strong>"chained with" connector</strong> — visual divider between techniques in a correlation</li>
+                    </ul>
+                    <h4>Combined query</h4>
+                    <p>The JOIN query that combines all techniques is still available — click <strong>Show Combined Query</strong> below the stacked blocks to expand it. This is the query you deploy to your SIEM as a single multi-stage alert.</p>
+                    <h4>Why this matters</h4>
+                    <p>Previously you could only see the combined JOIN query. The individual blocks let you understand exactly which technique each sub-query detects, copy individual queries for testing, and understand the attack chain before deploying the combined rule.</p>
                 </div>
             </details>
 

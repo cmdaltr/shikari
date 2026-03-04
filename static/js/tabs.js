@@ -23,6 +23,15 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add active class to clicked button and corresponding pane
             this.classList.add('active');
             document.getElementById('tab-' + tabId).classList.add('active');
+
+            // Initialize validation panel when switching to emulate/validate tab
+            if (tabId === 'emulate' && typeof initDetectionValidation === 'function') {
+                const validationPanel = document.getElementById('validation-panel');
+                if (validationPanel) {
+                    validationPanel.style.display = 'block';
+                }
+                initDetectionValidation();
+            }
         });
     });
 

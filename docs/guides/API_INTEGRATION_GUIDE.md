@@ -1,7 +1,7 @@
 # Archer API Integration Guide
 
-**Version**: 2.0
-**Last Updated**: 2024-11-14
+**Version**: 2.1
+**Last Updated**: 2025-03-04
 **Base URL**: `http://localhost:8000` (default)
 
 ---
@@ -454,6 +454,236 @@ session.post(
     json={'ids': [123, 456]}
 )
 ```
+
+### Workflow 7: Detection Validation
+
+Validate detection queries against containerized SIEMs with sample events.
+
+> **Requirement:** Docker must be running on the Archer server.
+
+```python
+import requests
+import time
+
+session = requests.Session()
+session.post('http://localhost:8000/login',
+    data={'email': 'user@example.com', 'password': 'password'})
+
+# 1. Check Docker availability
+docker_status = session.get('http://localhost:8000/api/validation/docker-status').json()
+if not docker_status['available']:
+    print(f"Docker not available: {docker_status['message']}")
+    exit(1)
+
+# 2. Create validation session
+session_response = session.post(
+    'http://localhost:8000/api/validation/sessions',
+    json={
+        'technique_id': 'T1059.001',
+        'technique_name': 'PowerShell',
+        'query': 'index=windows_events process_name="powershell.exe" process_command_line="*-NoP*"',
+        'vendor': 'splunk'
+    }
+).json()
+
+session_id = session_response['session']['session_id']
+
+# 3. Start SIEM container
+siem_result = session.post(
+    'http://localhost:8000/api/validation/start-siem',
+    json={'session_id': session_id}
+).json()
+
+if not siem_result['success']:
+    print(f"Failed to start SIEM: {siem_result['error']}")
+    exit(1)
+
+# 4. Generate sample events
+events_result = session.post(
+    'http://localhost:8000/api/validation/generate-events',
+    json={
+        'session_id': session_id,
+        'indicators': {
+            'cmd': ['powershell.exe -NoP -W Hidden'],
+            'sw': ['mimikatz.exe']
+        },
+        'malicious_count': 10,
+        'benign_count': 20
+    }
+).json()
+
+# 5. Test detection
+test_result = session.post(
+    'http://localhost:8000/api/validation/test',
+    json={'session_id': session_id}
+).json()
+
+result = test_result['result']
+print(f"Detection {'PASSED' if result['passed'] else 'FAILED'}")
+print(f"True Positives: {result['true_positives']}")
+print(f"False Negatives: {result['false_negatives']}")
+print(f"Precision: {result['precision']:.2%}")
+print(f"Recall: {result['recall']:.2%}")
+print(f"F1 Score: {result['f1_score']:.2%}")
+
+# 6. Get suggestions if failed
+if not result['passed']:
+    suggestions = session.get(
+        f'http://localhost:8000/api/validation/suggestions/{session_id}'
+    ).json()
+
+    for i, suggestion in enumerate(suggestions.get('suggestions', [])):
+        print(f"\nSuggestion {i+1}: {suggestion['type']}")
+        print(f"  Description: {suggestion['description']}")
+        print(f"  Original: {suggestion['original']}")
+        print(f"  Suggested: {suggestion['suggested']}")
+        print(f"  Confidence: {suggestion['confidence']:.0%}")
+
+# 7. Clean up
+session.post(f'http://localhost:8000/api/validation/stop/{session_id}')
+```
+
+**Validation API Endpoints:**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/validation/docker-status` | GET | Check Docker availability |
+| `/api/validation/sessions` | POST | Create validation session |
+| `/api/validation/start-siem` | POST | Start SIEM container |
+| `/api/validation/generate-events` | POST | Generate sample events |
+| `/api/validation/test` | POST | Execute detection query |
+| `/api/validation/suggestions/{session_id}` | GET | Get refinement suggestions |
+| `/api/validation/refine` | POST | Apply a refinement |
+| `/api/validation/stop/{session_id}` | POST | Stop session and cleanup |
+| `/api/validation/quick-validate` | POST | All-in-one validation |
+
+**📚 Detailed Guide:** [Runtime Validation Documentation](../features/RUNTIME_VALIDATION.md)
+
+---
+
+### Workflow 8: Threat Briefing
+
+**Use Case**: Get a grounded, prioritised detection plan for a threat group, grounded in real MITRE ATT&CK technique data and your existing detection coverage.
+
+Unlike the general `/api/ask` endpoint (which uses only the group name as context), `/api/threat-briefing` reads Archer's ATT&CK database and checks your detection library before calling the LLM — so prioritisation is based on actual facts.
+
+#### Endpoint
+
+```
+POST /api/threat-briefing
+Content-Type: application/json
+```
+
+#### Request Body
+
+```json
+{
+  "group": "Scattered Spider",
+  "top_n": 5
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `group` | string | ✅ | Group name (e.g. `"Scattered Spider"`) or ATT&CK ID (e.g. `"G1015"`) |
+| `top_n` | integer | ❌ | Number of techniques to return (default: 5) |
+
+#### Response
+
+```json
+{
+  "group_name": "Scattered Spider",
+  "group_id": "G1015",
+  "total_techniques": 150,
+  "covered_count": 12,
+  "gap_count": 138,
+  "top_techniques": [
+    {
+      "priority_rank": 1,
+      "technique_id": "T1078.004",
+      "technique_name": "Cloud Accounts",
+      "tactic": "Initial Access",
+      "attribution_type": "direct",
+      "covered": false,
+      "priority_reason": "Scattered Spider's primary initial access vector. No detection exists yet. Detecting this early stops the entire attack chain.",
+      "detection_approach": "Monitor Azure AD SignInLogs for logins from new countries/ASNs, impossible travel, or MFA bypass patterns (phish-kit OTP relay)."
+    }
+  ],
+  "attack_chain": ["Initial Access", "Persistence", "Defense Evasion", "Lateral Movement", "Exfiltration"],
+  "briefing_summary": "Scattered Spider is a social-engineering-heavy group targeting cloud identities. Priority gaps are in Initial Access and Credential Access — detection here stops the kill chain before lateral movement begins.",
+  "provider": "Claude (Anthropic)"
+}
+```
+
+#### Python Example
+
+```python
+import requests
+
+session = requests.Session()
+session.post('http://localhost:8000/login',
+    data={'email': 'user@example.com', 'password': 'password'})
+
+# Get threat briefing for Scattered Spider
+briefing = session.post(
+    'http://localhost:8000/api/threat-briefing',
+    json={'group': 'Scattered Spider', 'top_n': 5}
+).json()
+
+print(f"Group: {briefing['group_name']} ({briefing['group_id']})")
+print(f"Coverage: {briefing['covered_count']}/{briefing['total_techniques']} techniques covered")
+print(f"Gaps: {briefing['gap_count']} techniques without detections")
+print()
+print(f"Attack chain: {' → '.join(briefing['attack_chain'])}")
+print()
+print(f"Summary: {briefing['briefing_summary']}")
+print()
+
+for tech in briefing['top_techniques']:
+    status = '✓ Covered' if tech['covered'] else '✗ Gap'
+    print(f"#{tech['priority_rank']} [{status}] {tech['technique_id']} {tech['technique_name']} [{tech['tactic']}]")
+    print(f"   Why: {tech['priority_reason']}")
+    print(f"   How: {tech['detection_approach']}")
+    print()
+```
+
+#### cURL Example
+
+```bash
+curl -b cookies.txt -X POST http://localhost:8000/api/threat-briefing \
+  -H "Content-Type: application/json" \
+  -d '{"group": "Scattered Spider", "top_n": 5}'
+```
+
+#### JavaScript Example
+
+```javascript
+const briefing = await fetch('/api/threat-briefing', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ group: 'Scattered Spider', top_n: 5 })
+}).then(r => r.json());
+
+console.log(`${briefing.covered_count}/${briefing.total_techniques} techniques covered`);
+briefing.top_techniques.forEach(t => {
+  console.log(`#${t.priority_rank} ${t.technique_id} ${t.technique_name} — ${t.covered ? 'Covered' : 'GAP'}`);
+});
+```
+
+#### Error Responses
+
+| Code | Reason |
+|------|--------|
+| `401` | Not authenticated |
+| `404` | Group not found in ATT&CK data |
+| `503` | No LLM provider configured (add API key under Profile → API Keys) |
+
+#### Notes
+
+- The briefing reads from `data/mitre_procedures.csv` (all three ATT&CK attribution paths: direct, via software, via campaign)
+- Coverage check scans your detection library (`data/groups/`) for YAML files matching each technique ID
+- The LLM prompt is capped at 80 gap techniques to stay within token limits — groups with 150+ techniques will show the 80 highest-priority gaps
+- Requires an LLM provider (Anthropic, OpenAI, or local Ollama) — same as Ask Archer
 
 ---
 

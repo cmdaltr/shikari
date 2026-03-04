@@ -1,0 +1,44 @@
+# Git
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+archer/build/
+
+# Large runtime-generated data (cloned at startup or generated at runtime)
+data/repos/
+data/cache/
+data/uploads/
+data/ml_training/
+data/progress/
+
+# Large external data (available via volume mount in docker-compose)
+data/external/
+
+# Logs
+logs/
+*.log
+
+# Tests and docs (not needed in image)
+tests/
+docs/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Dev/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

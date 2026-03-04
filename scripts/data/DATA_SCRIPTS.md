@@ -49,23 +49,31 @@ python scripts/data/extract_mitre_procedures.py
 ```
 
 **What it does**:
-- Downloads latest MITRE ATT&CK STIX data
-- Extracts threat group procedures
-- Maps techniques to tactics
-- Creates procedure-based detection opportunities
+- Downloads latest MITRE ATT&CK STIX data (canonical `mitre-attack/attack-stix-data`)
+- Captures all three attribution paths: direct group→technique, via software, via campaign
+- Cross-validates against official XLSX relationships spreadsheet
+- Writes `attribution_type` column so downstream code knows how each mapping was derived
 
-**Output**: `data/mitre_procedures.json`
+All logic lives in `archer.mitre.procedures` — this script is a thin CLI wrapper.
+Can also be run as: `python -m archer.mitre.procedures`
+
+**Output**: `data/mitre_procedures.csv`
 
 **Example**:
 ```bash
 $ python scripts/data/extract_mitre_procedures.py
-Downloading MITRE ATT&CK data...
-✓ Enterprise ATT&CK v14.1 downloaded
-Extracting procedures...
-✓ Processed 647 techniques
-✓ Extracted 3,214 procedures
-✓ Mapped 129 threat groups
-Output: data/mitre_procedures.json
+Downloading MITRE ATT&CK v18.1 (24,772 objects)
+Loaded 19,431 relationship pairs from XLSX
+
+Attribution breakdown:
+  PATH 1 direct:            5,211 rows
+  PATH 2 via software:      20,248 rows
+  PATH 3 via campaign:        609 rows
+  Total unique rows:         26,068
+
+✓ XLSX cross-reference: all XLSX group→technique pairs present in STIX
+Scattered Spider (G1015) unique techniques: 150
+✓ Saved 26,068 rows to data/mitre_procedures.csv
 ```
 
 **Use cases**:
@@ -186,7 +194,7 @@ data/external/repos/
 **Processed Data**:
 ```
 data/
-├── mitre_procedures.json     # Extracted procedures
+├── mitre_procedures.csv      # Extracted procedures (26,068 rows, 9 columns)
 ├── osint_index.json          # Indexed OSINT rules
 └── attack_data.json          # MITRE ATT&CK data
 ```

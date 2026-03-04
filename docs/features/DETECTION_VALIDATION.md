@@ -1,7 +1,9 @@
 # Detection Validation System Documentation
 
-**Last Updated:** 2025-10-29
-**Status:** ✅ Fully Operational
+**Last Updated:** 2026-02-08
+**Status:** Fully Operational
+
+> **Note:** This document covers **pre-generation validation** that prevents cross-platform contamination during detection generation. For **runtime validation** that tests queries against containerized SIEMs with sample events, see [Runtime Validation Guide](RUNTIME_VALIDATION.md).
 
 ---
 

@@ -64,6 +64,8 @@ from archer.auth import (
 )
 from archer.database.models import User, UserRole, APIKey
 from archer.validation.query_syntax_validator import validate_query_syntax
+from archer.validation import get_validation_router
+from archer.chat import router as chat_router
 
 
 templates = Jinja2Templates(directory="templates")
@@ -763,6 +765,17 @@ def _merge_correlation_group(correlations: list) -> dict:
     base["techniques_involved"] = techniques_involved
     base["combined_query"] = merged_query
 
+    # Merge individual_queries from all correlations in the group
+    merged_individual_queries = []
+    seen_tech_ids = set()
+    for corr in correlations:
+        for iq in corr.get("individual_queries", []):
+            tid = iq.get("technique_id", "")
+            if tid not in seen_tech_ids:
+                merged_individual_queries.append(iq)
+                seen_tech_ids.add(tid)
+    base["individual_queries"] = merged_individual_queries
+
     # Combine all tactics
     all_tactics = set()
     for corr in correlations:
@@ -1430,6 +1443,12 @@ def get_indicators_from_yaml(yaml_file, yaml_data=None):
 app = FastAPI(title="Archer Threat Hunting Service")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Include validation API router
+app.include_router(get_validation_router())
+
+# Include Ask Archer chat router
+app.include_router(chat_router)
+
 
 # Favicon route - ensure favicon is served from root with no-cache headers
 @app.get("/favicon.ico", include_in_schema=False)
@@ -1712,6 +1731,17 @@ async def detect_local_llm():
 
     app.state.local_llm_detected = {"available": False}
     print("ℹ️  No local LLM detected")
+
+
+@app.on_event("startup")
+def check_docker_on_startup():
+    """Check Docker availability at startup and log the result."""
+    from archer.validation import check_docker_available
+    available, message = check_docker_available()
+    if available:
+        print("✓ Docker is available — detection validation with SIEM containers is enabled")
+    else:
+        print(f"⚠  Detection validation unavailable: {message}")
 
 
 @app.get("/api/llm/detect")
@@ -2284,6 +2314,7 @@ async def generate(
     exclude_mde: str = Form(None),
     exclude_chronicle: str = Form(None),
     exclude_elastic: str = Form(None),
+    auto_validate: str = Form(None),
 ):
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
@@ -2364,6 +2395,103 @@ async def generate(
                     except Exception as e:
                         print(f"VECTR export error: {e}")
 
+                # Auto-validate detections if requested
+                if auto_validate == "true":
+                    try:
+                        from archer.validation import check_docker_available
+                        from archer.validation.orchestrator import get_orchestrator
+
+                        docker_available, _ = check_docker_available()
+                        if docker_available:
+                            print(f"Auto-validating detections for {group_name}...")
+                            write_progress(group_name, {"stage": "validating"})
+
+                            orchestrator = get_orchestrator()
+                            validation_results = {}
+
+                            # Load generated detections from build folder
+                            build_dir = Path("data/build") / group_name.replace(" ", "_")
+                            if build_dir.exists():
+                                for yaml_file in build_dir.glob("*.yaml"):
+                                    try:
+                                        import yaml
+                                        with open(yaml_file) as f:
+                                            detection_data = yaml.safe_load(f)
+
+                                        if not detection_data:
+                                            continue
+
+                                        # Determine vendor from file name or content
+                                        vendor = None
+                                        filename = yaml_file.stem.lower()
+                                        if "splunk" in filename or "spl" in filename:
+                                            vendor = "splunk"
+                                        elif "elastic" in filename or "eql" in filename:
+                                            vendor = "elastic"
+                                        elif "secops" in filename or "yaral" in filename or "chronicle" in filename:
+                                            vendor = "secops"
+                                        elif "mde" in filename or "kql" in filename:
+                                            vendor = "mde"
+
+                                        if vendor and vendor not in excluded:
+                                            # Get query from detection
+                                            query = detection_data.get("query") or detection_data.get("detection", {}).get("query")
+                                            technique_id = detection_data.get("technique_id", "Unknown")
+                                            technique_name = detection_data.get("technique_name", "Unknown")
+
+                                            if query:
+                                                # Create validation session
+                                                session = orchestrator.create_session(
+                                                    technique_id=technique_id,
+                                                    technique_name=technique_name,
+                                                    query=query,
+                                                    vendor=vendor,
+                                                )
+
+                                                # Start SIEM (uses docker-compose if available)
+                                                siem_result = orchestrator.start_siem(session.session_id)
+
+                                                if siem_result.get("success"):
+                                                    # Generate sample events
+                                                    indicators = detection_data.get("indicators", {"cmd": [], "sw": []})
+                                                    events_result = orchestrator.generate_events(
+                                                        session_id=session.session_id,
+                                                        indicators=indicators,
+                                                        malicious_count=5,
+                                                        benign_count=10,
+                                                    )
+
+                                                    if events_result.get("success"):
+                                                        # Test detection
+                                                        test_result = orchestrator.test_detection(session.session_id)
+
+                                                        if test_result.get("success"):
+                                                            validation_results[yaml_file.stem] = {
+                                                                "vendor": vendor,
+                                                                "technique_id": technique_id,
+                                                                "passed": test_result["result"]["passed"],
+                                                                "f1_score": test_result["result"].get("f1_score", 0),
+                                                                "precision": test_result["result"].get("precision", 0),
+                                                                "recall": test_result["result"].get("recall", 0),
+                                                            }
+
+                                                # Stop session (releases but doesn't stop compose containers)
+                                                orchestrator.stop_session(session.session_id)
+
+                                    except Exception as e:
+                                        print(f"Validation error for {yaml_file.name}: {e}")
+
+                            # Store validation results
+                            if validation_results:
+                                validation_file = build_dir / "validation_results.json"
+                                import json
+                                with open(validation_file, "w") as f:
+                                    json.dump(validation_results, f, indent=2)
+                                print(f"Validation complete: {len(validation_results)} detections validated")
+
+                    except Exception as e:
+                        print(f"Auto-validation error: {e}")
+
             except Exception:
                 try:
                     write_progress(group_name, {"status": "failed"})
@@ -2380,6 +2508,7 @@ async def generate(
                     "stage": "queued",
                     "created_yaml": 0,
                     "cross_vendor_enabled": (cross_vendor_correlation == "true"),
+                    "auto_validate_enabled": (auto_validate == "true"),
                 },
             )
         except Exception:
@@ -3880,9 +4009,30 @@ async def analyze_blog(
         result = analyze_blog_post(url)
 
         if not result.get("success"):
+            error_msg = result.get("error", "Failed to analyze blog post")
+
+            # Determine appropriate status code based on error type
+            status_code = 500  # Default for server errors
+            error_lower = error_msg.lower()
+
+            # Validation errors (400)
+            if any(phrase in error_lower for phrase in [
+                "invalid url", "no hostname", "unable to resolve"
+            ]):
+                status_code = 400
+            # Security blocks (403)
+            elif any(phrase in error_lower for phrase in [
+                "not allowed", "private ip", "localhost", "link-local",
+                "multicast", "reserved"
+            ]):
+                status_code = 403
+            # Fetch failures (422 - Unprocessable Entity)
+            elif "failed to fetch" in error_lower:
+                status_code = 422
+
             return JSONResponse(
-                {"success": False, "message": result.get("error", "Failed to analyze blog post")},
-                status_code=500,
+                {"success": False, "message": error_msg},
+                status_code=status_code,
             )
 
         # Extract data
@@ -5019,6 +5169,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                         "name": technique_name,
                                         "source": friendly_source,
                                         "tactic": primary_tactic,
+                                        "query": yaml_data.get("query", "") if yaml_data else "",
+                                        "file": full_path,
                                     }
                                 )
 
@@ -5231,6 +5383,17 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                         # Use the rebuilt list
                         techniques = techniques_rebuilt
 
+                        individual_queries = [
+                            {
+                                "technique_name": t["name"],
+                                "technique_id": t["id"],
+                                "tactic": t["tactic"],
+                                "query": t.get("query", ""),
+                            }
+                            for t in techniques
+                            if t.get("query")
+                        ]
+
                         correlations.append(
                             {
                                 "techniques": techniques,
@@ -5253,6 +5416,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                 "primary_tactics": list(
                                     primary_tactics
                                 ),  # Tactics containing the original correlation pair
+                                "individual_queries": individual_queries,  # Per-technique queries for chained display
                             }
                         )
         except Exception as e:
@@ -5332,6 +5496,24 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         except:
             pass
 
+    # Load auto-validation results if they exist
+    validation_results = {}
+    validation_summary = {"total": 0, "passed": 0, "failed": 0, "avg_f1": 0}
+    build_dir = Path("data/build") / safe_group
+    validation_file = build_dir / "validation_results.json"
+    if validation_file.exists():
+        try:
+            with open(validation_file, "r") as f:
+                validation_results = json.load(f)
+            if validation_results:
+                validation_summary["total"] = len(validation_results)
+                validation_summary["passed"] = sum(1 for v in validation_results.values() if v.get("passed"))
+                validation_summary["failed"] = validation_summary["total"] - validation_summary["passed"]
+                f1_scores = [v.get("f1_score", 0) for v in validation_results.values()]
+                validation_summary["avg_f1"] = sum(f1_scores) / len(f1_scores) if f1_scores else 0
+        except Exception as e:
+            print(f"Error loading validation results: {e}")
+
     return templates.TemplateResponse(
         "results.html",
         {
@@ -5349,6 +5531,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             "correlations": grouped_correlations,
             "attack_flow_exists": attack_flow_exists,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "validation_results": validation_results,
+            "validation_summary": validation_summary,
         },
     )
 
@@ -6505,6 +6689,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "technique_tactic_map": content_data.get("technique_tactic_map", {}),
                 "tables_indexes": content_data.get("tables_indexes", []),
                 "combined_query": content_data.get("combined_query", ""),
+                "individual_queries": content_data.get("individual_queries", []),
             }
 
             # Normalize vendor/platform based on query content and data sources
@@ -6642,6 +6827,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     "technique_tactic_map": content_data.get("technique_tactic_map", {}),
                     "tables_indexes": content_data.get("tables_indexes", []),
                     "combined_query": content_data.get("combined_query", ""),
+                    "individual_queries": content_data.get("individual_queries", []),
                 }
 
                 # Add to correlations list

@@ -306,3 +306,89 @@ For issues:
 | **OSINT update** | Automatic (hourly check) |
 
 Archer is ready when you see: `🚀 Starting Archer application...`
+
+---
+
+## Detection Validation Containers
+
+The **Validate** tab uses additional Docker containers to test detection queries against sample events. These are ephemeral containers that start on-demand when you run validation.
+
+### Available SIEM Containers
+
+| SIEM | Image | Ports | RAM Required |
+|------|-------|-------|--------------|
+| **Splunk** | `splunk/splunk:latest` | 8000, 8089, 8088 | ~2GB |
+| **Elasticsearch** | `docker.elastic.co/elasticsearch/elasticsearch:8.x` | 9200 | ~2GB |
+| **Google SecOps Simulator** | Custom Python app | 8081 | ~256MB |
+| **MDE Simulator** | Custom Python app | 8082 | ~256MB |
+
+### Docker Compose for Validation
+
+The validation containers are integrated into the main `docker-compose.yml` file. All SIEM services are optional and can be started individually or in combination.
+
+### Usage
+
+**Default startup** (Archer only):
+```bash
+docker-compose up -d
+```
+
+**Start specific SIEMs** (combine as needed):
+```bash
+# Single SIEM
+docker-compose --profile secops up -d
+docker-compose --profile mde up -d
+docker-compose --profile splunk up -d
+docker-compose --profile elastic up -d
+
+# Multiple SIEMs
+docker-compose --profile secops --profile mde up -d
+docker-compose --profile splunk --profile elastic up -d
+
+# All SIEMs
+docker-compose --profile validation up -d
+```
+
+### Available Services
+
+| Service | Profile | Ports | RAM |
+|---------|---------|-------|-----|
+| Archer | (always) | 8000 | - |
+| Google SecOps | `secops` | 8081 | ~512MB |
+| MDE | `mde` | 8082 | ~512MB |
+| Splunk | `splunk` | 8001, 8088, 8089 | ~2GB |
+| Elasticsearch | `elastic` | 9200 | ~1GB |
+
+### Container Management
+
+```bash
+# View all running containers
+docker-compose ps
+
+# View validation container logs
+docker-compose logs -f secops-simulator mde-simulator
+
+# Stop all containers
+docker-compose down
+```
+
+### Port Conflicts
+
+If you're running Splunk or Elasticsearch locally, validation containers may conflict. Use port offsets:
+
+```python
+# In validation session
+orchestrator.start_siem(session_id, port_offset=100)
+# Splunk will use 8100, 8189, 8188 instead
+```
+
+### Resource Recommendations
+
+For validation testing:
+- **Minimum**: 4GB RAM (1 SIEM at a time)
+- **Recommended**: 8GB RAM (multiple SIEMs)
+- **Disk**: 2GB free space per SIEM
+
+### Related Documentation
+
+- [Runtime Validation Guide](RUNTIME_VALIDATION.md) - Complete validation feature documentation

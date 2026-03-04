@@ -214,6 +214,21 @@ Example Score: 46/140 = 33% ❌ FILTERED OUT
 }
 ```
 
+### Results Page Fields
+
+When correlations are rendered in the Web UI, additional fields are added:
+
+| Field | Description |
+|-------|-------------|
+| `individual_queries` | Per-technique query blocks shown stacked above the combined query |
+| `techniques_by_tactic` | Techniques grouped by kill-chain tactic (used for the attack flow diagram) |
+| `primary_tactics` | Tactics highlighted with a blue border in the flow |
+| `attack_chain_length` | Number of tactics in the kill-chain progression |
+| `tables_indexes` | Data sources shown as pill tags (MDE tables or Splunk indexes) |
+
+See [CORRELATION_ENGINE.md — Results Page](CORRELATION_ENGINE.md#results-page--per-technique-queries) for the full field reference.
+```
+
 ---
 
 ## Common Issues & Solutions
@@ -513,5 +528,5 @@ cat data/correlate/Group_Name.json | jq '.vendor_correlations[0]'
 
 **For Full Details:** See [CORRELATION_ENGINE.md](CORRELATION_ENGINE.md)
 
-**Version:** 1.4 (November 2, 2024)
+**Version:** 1.5 (March 4, 2025)
 **Parameters:** threshold=40%, per_vendor=60, tech_freq=20

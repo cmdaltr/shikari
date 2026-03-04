@@ -92,6 +92,36 @@ APT29/
 - **Versioning**: Track changes to detections over time
 - **Collaboration**: Share detections with team members
 
+### Threat Briefing
+
+Generate a grounded, prioritised detection plan for any MITRE ATT&CK threat group. Unlike the general Ask Archer chat, the Threat Briefing reads real technique data from Archer's ATT&CK database and checks your existing detection coverage before calling the LLM — so the answer is always grounded in facts, not generalities.
+
+1. Navigate to the **Generate** tab
+2. Enter a threat group name (e.g., "Scattered Spider", "APT29") in the group name field
+3. Click **Threat Briefing** (the secondary button below Generate)
+4. Wait for the briefing to load — Archer will:
+   - Load all techniques attributed to the group from MITRE ATT&CK STIX data (all three attribution paths: direct, via software, via campaign)
+   - Check which techniques already have detection YAML files in your library
+   - Send the full technique list with coverage status to the LLM
+5. Review the results:
+   - **Coverage stats** — total techniques, how many are already covered, how many are gaps
+   - **Attack chain** — kill-chain tactic progression for this group
+   - **Briefing summary** — 2–3 sentence executive overview
+   - **Top 5 prioritised techniques** — ranked by: coverage gap, kill-chain position, attribution confidence, detection opportunity
+
+**Why use Threat Briefing?**
+
+The general "Ask Archer" chat answers from general ATT&CK knowledge. Threat Briefing answers from your actual data:
+- Technique list sourced from MITRE ATT&CK STIX (all three attribution paths)
+- Coverage check uses your generated detection library, not generic assumptions
+- Prioritisation accounts for which gaps are most operationally critical
+
+**Coverage badge meanings:**
+- **✓ Covered** — Archer has a detection YAML for this technique in your library
+- **✗ Gap** — No detection exists yet; this is where to focus
+
+---
+
 ### Company Profiling
 
 Generate targeted detections based on your organization's threat profile.
@@ -112,6 +142,37 @@ Generate targeted detections based on your organization's threat profile.
 - Prioritize high-risk threat actors
 - Optimize detection coverage for your environment
 - Reduce false positives from irrelevant detections
+
+### Validate Detections
+
+Test your detection queries against sample events in containerized SIEM environments.
+
+> **Requirement:** Docker must be installed and running for validation to work.
+
+#### Step-by-Step Usage
+
+1. Navigate to **Validate** tab
+2. Paste your detection query
+3. Select the target SIEM vendor (auto-detected from query syntax)
+4. Enter indicators for event generation:
+   - **Command Line Patterns**: `powershell.exe -NoP -W Hidden`
+   - **Process/File Names**: `mimikatz.exe`
+5. Click **Start Validation**
+6. Review results:
+   - **True Positives**: Malicious events detected
+   - **False Negatives**: Malicious events missed
+   - **False Positives**: Benign events incorrectly flagged
+   - **Precision/Recall/F1**: Overall detection effectiveness
+7. Apply suggested refinements if detection fails
+8. Re-run until satisfied
+
+**Supported SIEM Vendors:**
+- **Splunk (SPL)**: Uses official Splunk Docker image
+- **Elastic (Query DSL)**: Uses Elasticsearch Docker image
+- **Google SecOps (YARA-L)**: Custom Google SecOps simulator
+- **MDE (KQL)**: Custom Advanced Hunting simulator
+
+**📚 Detailed Guide**: [Runtime Validation Guide](features/RUNTIME_VALIDATION.md)
 
 ### Settings
 
@@ -138,6 +199,63 @@ Tune correlation quality and coverage:
 - **Password Policy**: Enforce password complexity
 
 **Note**: For untested features (Query Execution, Adversary Emulation), see [docs/UNTESTED.md](UNTESTED.md)
+
+### Reading Correlation Results
+
+When correlations are generated, the results page shows each correlation with an **attack flow diagram** and **per-technique detection queries**.
+
+#### Attack Flow Diagram
+
+Each correlation displays a horizontal tactic flow — boxes connected by arrows representing the kill-chain stages covered:
+
+```
+PERSISTENCE → PRIVILEGE ESCALATION → DEFENSE EVASION → LATERAL MOVEMENT
+```
+
+- **Blue border** — primary tactics directly involved in the correlation pair
+- **Technique count badge** — number of techniques covering that tactic
+- **Tactic emoji** — quick visual reference for each kill-chain stage
+
+#### Individual Detection Queries
+
+Below the attack flow, each technique in the correlation has its own detection query block:
+
+```
+┌─────────────────────────────────────────────┐
+│ Technique Name   T1078.004   Initial Access  │  📋
+│─────────────────────────────────────────────│
+│ DeviceSignInLogs                            │
+│ | where Application == "Office 365"...      │
+└─────────────────────────────────────────────┘
+          ── chained with ──
+┌─────────────────────────────────────────────┐
+│ Technique Name   T1484.001   Persistence    │  📋
+│─────────────────────────────────────────────│
+│ DeviceRegistryEvents                        │
+│ | where RegistryKey contains "Run"...       │
+└─────────────────────────────────────────────┘
+```
+
+Each block shows:
+- **Technique name** — formatted name from the YAML file
+- **ATT&CK ID badge** — e.g., `T1078.004`
+- **Tactic badge** — kill-chain stage
+- **📋 Copy button** — copy the individual query to clipboard
+
+Click **Show Combined Query** to see the full chained JOIN query that combines all individual queries into a single correlation rule.
+
+#### Metadata Row
+
+Above the attack flow, each correlation shows:
+- **Relevance %** — correlation quality score (0–100%)
+- **Time Window** — JOIN window (e.g., 1h)
+- **Tactics** — all MITRE ATT&CK tactics covered
+
+#### Tables/Indexes
+
+Below the metadata, the data sources referenced by the correlation are shown as pills:
+- MDE: table names (e.g., `DeviceEvents`, `DeviceProcessEvents`)
+- Splunk: index names (e.g., `index=windows_events`)
 
 ---
 
@@ -562,4 +680,4 @@ python3 /path/to/archer/archer.py --help
 
 **Need Help?** Check the [documentation index](DOCS.md) or open an [issue](https://github.com/cmdaltr/archer/issues).
 
-**Last Updated**: 2024-11-14
+**Last Updated**: 2025-03-04

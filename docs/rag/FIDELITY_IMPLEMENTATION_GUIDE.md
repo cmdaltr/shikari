@@ -12,7 +12,7 @@
 2. [Architecture](#architecture)
 3. [Phase 1: Knowledge Base Setup](#phase-1-knowledge-base-setup)
 4. [Phase 2: RAG Retrieval System](#phase-2-rag-retrieval-system)
-5. [Phase 3: Validation Framework](#phase-3-validation-framework)
+5. [Phase 3: Validation Module](#phase-3-validation-module)
 6. [Phase 4: Integration](#phase-4-integration)
 7. [Phase 5: Testing & Validation](#phase-5-testing--validation)
 8. [Configuration](#configuration)
@@ -39,7 +39,7 @@ This system improves detection quality through:
 
 1. **Knowledge Base**: Curated collection of high-quality detection examples
 2. **RAG (Retrieval-Augmented Generation)**: Find similar examples to guide query generation
-3. **Validation Framework**: Automated testing against known good/bad samples
+3. **Validation Module**: Automated testing against known good/bad samples
 4. **Community Integration**: Import proven detections from open-source projects
 
 ### Key Benefits
@@ -75,7 +75,7 @@ This system improves detection quality through:
 │  └────────────────────────────────────────────┘                │
 │           ↓                                                      │
 │  ┌────────────────────────────────────────────┐                │
-│  │        Validation Framework                │                │
+│  │        Validation Module                │                │
 │  │  - Syntax validation                       │                │
 │  │  - Field existence checks                  │                │
 │  │  - Test data validation                    │                │
@@ -119,7 +119,7 @@ archer/
 │   │   ├── sample_searches/          # Custom search examples
 │   │   ├── exclusions.yaml           # Global exclusions for all queries
 │   │   └── config.yaml               # Org-specific settings
-│   ├── validation/                   # Validation framework
+│   ├── validation/                   # Validation module
 │   │   ├── test_samples/
 │   │   └── validation_results/
 │   └── ml_training/                  # ML training data
@@ -130,7 +130,7 @@ archer/
 │   │   ├── retrieval.py              # Vector search
 │   │   ├── embeddings.py             # Embedding generation
 │   │   └── enhancer.py               # Query enhancement with LLM
-│   ├── validation/                   # Validation framework
+│   ├── validation/                   # Validation module
 │   │   ├── field_validator.py        # Field existence checks
 │   │   ├── query_validator.py        # Syntax & logic validation
 │   │   ├── test_runner.py            # Automated testing
@@ -349,7 +349,7 @@ Query: |
 
 ---
 
-## Phase 3: Validation Framework
+## Phase 3: Validation Module
 
 ### Step 3.1: Create Test Data Samples
 
@@ -884,7 +884,7 @@ python scripts/archive_kb.py --older-than-days 365
 
 1. ✅ Complete Phase 1: Knowledge Base Setup
 2. ✅ Complete Phase 2: RAG System Implementation
-3. ✅ Complete Phase 3: Validation Framework
+3. ✅ Complete Phase 3: Validation Module
 4. ✅ Complete Phase 4: Integration
 5. → Test with real threat groups
 6. → Collect user feedback

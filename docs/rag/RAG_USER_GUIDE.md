@@ -463,7 +463,7 @@ A: You can disable RAG with `export ENABLE_RAG=false` or review and manually adj
 ### What You Get:
 - ✅ 4,800+ production-quality detection examples
 - ✅ Automatic query enhancement based on real-world experience
-- ✅ Validation framework to ensure quality
+- ✅ Validation module to ensure quality
 - ✅ Works with local (free) or cloud LLMs
 - ✅ 20-25% fidelity improvement
 - ✅ 30% reduction in false positives

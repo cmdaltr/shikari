@@ -1205,12 +1205,25 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
         or (isinstance(query_b, str) and query_b.lstrip().startswith("index="))
     )
 
-    # For Splunk queries, return the already-generated combined query
-    # The _combine_queries() function already handles Splunk correlation syntax properly
+    # For Splunk queries, rebuild the combined query using valid SPL syntax.
+    # The merged query_a/query_b may contain an internal "\nUNION\n" separator that
+    # is not valid SPL. Split those back out and recombine with _combine_splunk_queries_simple.
     if is_splunk:
-        combined = corr_data.get("combined_query", "")
-        if combined:
-            return combined
+        all_splunk_queries: List[str] = []
+        for q in [query_a, query_b]:
+            if "\nUNION\n" in q:
+                all_splunk_queries.extend(q.split("\nUNION\n"))
+            elif q.strip():
+                all_splunk_queries.append(q)
+        # Deduplicate while preserving order
+        seen_q: List[str] = []
+        for q in all_splunk_queries:
+            if q.strip() and q.strip() not in seen_q:
+                seen_q.append(q.strip())
+        if len(seen_q) >= 2:
+            return _combine_splunk_queries_simple(seen_q)
+        elif len(seen_q) == 1:
+            return seen_q[0]
         # Fallback: call _combine_queries to generate it
         return _combine_queries(vendor, query_a, query_b, corr_data.get("a"), corr_data.get("b"))
 
@@ -1493,14 +1506,17 @@ def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> Li
                 if query_b and query_b not in all_queries_b:
                     all_queries_b.append(query_b)
 
-            # Combine queries with UNION
+            # Combine queries - use internal UNION marker (for MDE/KQL only).
+            # This marker is later resolved by _build_join_correlation_query.
+            # For Splunk the marker is stripped and rebuilt into valid SPL there.
             if len(all_queries_a) > 1:
                 merged["query_a"] = "\nUNION\n".join(all_queries_a)
             if len(all_queries_b) > 1:
                 merged["query_b"] = "\nUNION\n".join(all_queries_b)
 
-            # Update combined query
-            merged["combined_query"] = merged["query_a"] + "\n" + merged["query_b"]
+            # combined_query is intentionally left stale here; it will be
+            # overwritten by _build_join_correlation_query below.
+            merged["combined_query"] = merged.get("combined_query", "")
 
             print(
                 f"      Merged {len(corr_list)} correlations for {pair_key} into 1 multi-source correlation"
@@ -2344,9 +2360,9 @@ def _basic_combine_queries(
   ({search_a_clean}) OR ({search_b_clean})
   | eval pattern_a=if(({search_a_clean}), "true", "false")
   | eval pattern_b=if(({search_b_clean}), "true", "false")
-  | transaction properties.DeviceName maxspan=1h
+  | transaction host maxspan=1h
   | search pattern_a="true" AND pattern_b="true"
-  | stats count AS event_count, min(_time) AS first_seen, max(_time) AS last_seen, values(properties.FileName) AS file_names, values(properties.ProcessCommandLine) AS command_lines, values(properties.AccountName) AS accounts BY properties.DeviceName
+  | stats count AS event_count, min(_time) AS first_seen, max(_time) AS last_seen, values(file_name) AS file_names, values(process_command_line) AS command_lines, values(user) AS accounts BY host
   | eval first_seen=strftime(first_seen, "%Y-%m-%d %H:%M:%S"), last_seen=strftime(last_seen, "%Y-%m-%d %H:%M:%S")
   | where event_count >= 2
   | sort - event_count"""
@@ -2915,13 +2931,13 @@ def _combine_splunk_queries_simple(query_list: List[str]) -> str:
             eval_statements.append(f'  | eval pattern_{idx}=if(({clean_search}), "true", "false")')
             search_filters.append(f'pattern_{idx}="true"')
 
-    # Build correlation using transaction to find devices where ALL patterns occur
+    # Build correlation using transaction to find hosts where ALL patterns occur
     combined = f"""index={index} earliest=-1d
   {' OR '.join(search_conditions)}
 {''.join(eval_statements)}
-  | transaction properties.DeviceName maxspan=1h
+  | transaction host maxspan=1h
   | search {' AND '.join(search_filters)}
-  | stats count AS event_count, min(_time) AS first_seen, max(_time) AS last_seen, values(properties.FileName) AS file_names, values(properties.ProcessCommandLine) AS command_lines, values(properties.AccountName) AS accounts BY properties.DeviceName
+  | stats count AS event_count, min(_time) AS first_seen, max(_time) AS last_seen, values(file_name) AS file_names, values(process_command_line) AS command_lines, values(user) AS accounts BY host
   | eval first_seen=strftime(first_seen, "%Y-%m-%d %H:%M:%S"), last_seen=strftime(last_seen, "%Y-%m-%d %H:%M:%S")
   | where event_count >= {len(query_list)}
   | sort - event_count"""

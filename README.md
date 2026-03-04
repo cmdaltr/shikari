@@ -1,6 +1,6 @@
 <div align="center">
 <a href="https://github.com/cmdaltr/archer">
-<img src="static/images/archer_banner.png" alt="Archer - Automated Multi-Vendor Threat Hunting & Detection Framework" width="600px" height="600px">
+<img src="static/images/archer_banner.png" alt="Archer - Automated Multi-Vendor Threat HUNTING & DETECTION SUITE" width="600px" height="600px">
 </a>
 </div>
 
@@ -23,16 +23,18 @@ Archer is a modular Python service for automated threat hunting with optional ad
 - 🎯 **MITRE ATT&CK Integration** - Automated detection generation from threat group TTPs
 - 📤 **File Upload & Intelligence Extraction** - Upload threat intel files (PDF, TXT, JSON, CSV, YARA) for automatic TTP/IOC extraction
 - 🔍 **Multi-Platform Support** - Splunk (SPL), KQL (Microsoft Defender/Sentinel), Google SecOps (YARA-L) and Elastic (DSL) queries
-- 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation
+- 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries
+- 🛡️ **Threat Briefing** - Grounded ATT&CK prioritisation grounded in real MITRE data and your detection coverage gaps
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
 - 🎯 **RAG Fidelity Enhancement** - Improve query quality using 4,800+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
 
 ### Additional Features
 
-- 💥 **Adversary Emulation** - Atomic Red Team integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
-- 🔍 **Query Execution** - MDE/Splunk API integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
-- 📊 **VECTR, CALDERA, MACAT** - Planned integrations (see [FUTURE.md](docs/FUTURE.md))
+- **Detection Validation** - Test queries against containerized SIEMs with sample events ([docs](docs/features/RUNTIME_VALIDATION.md))
+- **Adversary Emulation** - Atomic Red Team integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
+- **Query Execution** - MDE/Splunk API integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
+- **VECTR, CALDERA, MACAT** - Planned integrations (see [FUTURE.md](docs/other/FUTURE.md))
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)
@@ -55,6 +57,7 @@ Archer is a modular Python service for automated threat hunting with optional ad
 **Quick Links:**
 - **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](docs/guides/MAPPING_SETUP_GUIDE.md)
 - **API Integration:** [API Integration Guide](docs/guides/API_INTEGRATION_GUIDE.md) | [Auto-Generated Docs](http://localhost:8000/docs)
+- **Threat Briefing:** [Usage Guide — Threat Briefing](docs/USAGE.md#threat-briefing) | [API Reference](docs/guides/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
 - **Correlation Tuning:** [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) | [Quick Reference](docs/architecture/CORRELATION_QUICK_REFERENCE.md)
 - **Features:** [Security](docs/features/SECURITY_FEATURES.md) | [AI Training](docs/ai/AI_TRAINING.md) | [OSINT](docs/features/OSINT_INTEGRATION.md)
 - **RAG Enhancement:** [RAG User Guide](docs/rag/RAG_USER_GUIDE.md) | [Implementation Guide](docs/rag/FIDELITY_IMPLEMENTATION_GUIDE.md)

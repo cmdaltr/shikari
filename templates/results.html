@@ -253,6 +253,56 @@
 
           </div>
 
+          <!-- Auto-Validation Results (if available) -->
+          {% if validation_summary and validation_summary.total > 0 %}
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px;">
+            <!-- Validated Detections -->
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">SIEM Validated</div>
+              <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                {{ validation_summary.passed }}/{{ validation_summary.total }}
+              </div>
+              <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
+                Tested in containerized SIEMs<br>
+                {{ validation_summary.failed }} need refinement
+              </div>
+            </div>
+
+            <!-- Average F1 Score -->
+            <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Avg F1 Score</div>
+              <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                {{ (validation_summary.avg_f1 * 100)|round(0)|int }}%
+              </div>
+              <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
+                Detection effectiveness<br>
+                Precision × Recall balance
+              </div>
+            </div>
+
+            <!-- Validation Status -->
+            <div style="background: linear-gradient(135deg, {% if validation_summary.passed == validation_summary.total %}#10b981 0%, #059669{% else %}#f59e0b 0%, #d97706{% endif %} 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Validation Status</div>
+              <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
+                {% if validation_summary.passed == validation_summary.total %}
+                  ✓ Pass
+                {% else %}
+                  Review
+                {% endif %}
+              </div>
+              <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
+                {% if validation_summary.passed == validation_summary.total %}
+                  All detections validated<br>
+                  Ready for production
+                {% else %}
+                  {{ validation_summary.failed }} detections need fixes<br>
+                  Check Validate tab
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
           <!-- Value Proposition -->
           <div style="background: linear-gradient(135deg, #f59e0b15 0%, #f59e0b15 100%); border-left: 4px solid #f59e0b; border-radius: 6px; padding: 16px; margin-top: 16px;">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
@@ -1089,11 +1139,36 @@
               </div>
               {% endif %}
 
-              <!-- Combined Query Preview (Collapsible) -->
+              <!-- Individual Queries — stacked with chain connectors -->
+              {% if correlation.individual_queries %}
+              <div class="individual-queries" style="margin-top: 10px;">
+                {% for iq in correlation.individual_queries %}
+                <div class="iq-block">
+                  <div class="iq-header">
+                    <span class="iq-name">{{ iq.technique_name }}</span>
+                    {% if iq.technique_id %}<span class="iq-id">{{ iq.technique_id }}</span>{% endif %}
+                    {% if iq.tactic %}<span class="iq-tactic">{{ iq.tactic }}</span>{% endif %}
+                    <button class="iq-copy" title="Copy query"
+                            onclick="navigator.clipboard.writeText(this.closest('.iq-block').querySelector('code').textContent)">📋</button>
+                  </div>
+                  <pre class="iq-query"><code>{{ iq.query }}</code></pre>
+                </div>
+                {% if not loop.last %}
+                <div class="iq-connector">
+                  <div class="iq-line"></div>
+                  <span class="iq-label">chained with</span>
+                  <div class="iq-line"></div>
+                </div>
+                {% endif %}
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              <!-- Combined Query (collapsible) -->
               <div style="margin-top: 10px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <button onclick="toggleQuery('corr-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
-                    <span id="corr-{{ vendor.name }}-{{ loop.index }}-toggle">▶ View Combined Query</span>
+                    <span id="corr-{{ vendor.name }}-{{ loop.index }}-toggle">▶ {% if correlation.individual_queries %}Show Combined Query{% else %}View Query{% endif %}</span>
                   </button>
                   <button id="corr-{{ vendor.name }}-{{ loop.index }}-copy-btn" onclick="copyToClipboard('corr-{{ vendor.name }}-{{ loop.index }}-content', this)" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;" title="Copy to clipboard">
                     📋 Copy Query
@@ -1101,7 +1176,7 @@
                 </div>
                 <div id="corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px;">
                   <div style="position: relative;">
-                    <div id="corr-{{ vendor.name }}-{{ loop.index }}-content" style="background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ correlation.combined_query }}</div>
+                    <div id="corr-{{ vendor.name }}-{{ loop.index }}-content" style="background: #1e1e2e; border: 1px solid #3d3d5c; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Fira Code', 'Cascadia Code', 'Courier New', monospace; font-size: 0.85em; color: #cdd6f4; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; line-height: 1.6;">{{ correlation.combined_query }}</div>
                     <button onclick="expandCodeBlock('corr-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333; display: inline-flex; align-items: center; gap: 4px;" title="Expand to full screen"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Expand</button>
                   </div>
                 </div>

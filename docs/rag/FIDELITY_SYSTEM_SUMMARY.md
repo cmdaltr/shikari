@@ -75,7 +75,7 @@ archer/
 │   │   ├── sample_searches/             # Custom search examples
 │   │   ├── exclusions.yaml              # Global query exclusions
 │   │   └── config.yaml                  # Org-specific settings
-│   ├── validation/                      # Validation framework
+│   ├── validation/                      # Validation module
 │   │   ├── test_samples/
 │   │   └── validation_results/
 │   └── ml_training/                     # ML training data
@@ -323,7 +323,7 @@ These were documented but not yet coded:
    - Validates fields exist in target platform
    - Suggests alternatives for missing fields
 
-2. **Query Validation Framework** (`archer/validation/`)
+2. **Query Validation Module** (`archer/validation/`)
    - Syntax validation
    - Logic validation
    - Test data validation
@@ -417,7 +417,7 @@ The core RAG system is **fully functional** without these components:
 
 10. **Implement Field Validation** (Optional)
     - If you see field-related errors
-    - Follow validation framework design in guide
+    - Follow validation module design in guide
 
 ### Long-term (Next Month)
 

@@ -69,11 +69,17 @@ See **[data/bespoke/README.md](../data/bespoke/README.md)** for organization-spe
 ### ✨ [`features/`](features/)
 Feature-specific documentation:
 - **[AI_TRAINING.md](ai/AI_TRAINING.md)** - AI query training and generation
-- **[DETECTION_VALIDATION.md](features/DETECTION_VALIDATION.md)** - Detection quality validation
+- **[DETECTION_VALIDATION.md](features/DETECTION_VALIDATION.md)** - Pre-generation validation (cross-platform contamination prevention)
+- **[RUNTIME_VALIDATION.md](features/RUNTIME_VALIDATION.md)** - Runtime detection testing in containerized SIEMs
 - **[DOCKER.md](features/DOCKER.md)** - Docker deployment guide
 - **[OSINT_INTEGRATION.md](features/OSINT_INTEGRATION.md)** - OSINT repository integration
 - **[PARENT_SUBTECHNIQUE_EXPANSION.md](features/PARENT_SUBTECHNIQUE_EXPANSION.md)** - Automatic subtechnique generation
 - **[SECURITY_FEATURES.md](features/SECURITY_FEATURES.md)** - Authentication, encryption, audit logging
+
+### 🛡️ Threat Briefing
+Grounded threat actor prioritisation:
+- **[USAGE.md — Threat Briefing](USAGE.md#threat-briefing)** - Web UI walkthrough
+- **[API Integration Guide — Workflow 8](guides/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)** - API endpoint reference and code examples
 
 ### 📝 [`notion/`](notion/)
 Notion-formatted versions of documentation (for Notion import)
@@ -108,6 +114,7 @@ Architecture diagrams and flow charts
 ### For SOC Analysts
 - [Getting Started Guide](../GETTING_STARTED.md) - Basic setup
 - [Usage Guide](USAGE.md) - Web UI, CLI, and API reference
+- [Threat Briefing](USAGE.md#threat-briefing) - Grounded detection prioritisation for a threat group
 - [Correlation Guide](guides/CORRELATION_GUIDE.md) - Using the correlation builder
 - [CVE Hunting Guide](guides/CVE_HUNTING_GUIDE.md) - CVE-based detection
 
@@ -124,10 +131,11 @@ Architecture diagrams and flow charts
 
 ### For Developers
 - [Usage Guide](USAGE.md#api-integration) - API usage and workflows
-- [Correlation Engine](architecture/CORRELATION_ENGINE.md) - Engine internals
+- [Correlation Engine](architecture/CORRELATION_ENGINE.md) - Engine internals and per-technique query output
 - [Performance Architecture](architecture/PERFORMANCE_ARCHITECTURE.md) - System design
 - [Schema Normalization](architecture/SCHEMA_NORMALIZATION.md) - Field mapping
 - [API Integration Guide](guides/API_INTEGRATION_GUIDE.md) - REST API workflows and examples
+- [Threat Briefing API](guides/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing) - `/api/threat-briefing` endpoint
 - [RAG Implementation](rag/FIDELITY_IMPLEMENTATION_GUIDE.md) - RAG fidelity enhancement system
 
 ---
@@ -140,5 +148,5 @@ Architecture diagrams and flow charts
 
 ---
 
-**Version**: 1.1
-**Last Updated**: December 11, 2024
+**Version**: 1.2
+**Last Updated**: March 4, 2025

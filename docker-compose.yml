@@ -1,6 +1,19 @@
 version: "3.8"
 
+# ============================================================================
+# Archer Docker Compose
+#
+# Usage:
+#   docker-compose up -d                                    # Just Archer
+#   docker-compose --profile secops up -d                   # Archer + Google SecOps
+#   docker-compose --profile mde up -d                      # Archer + MDE
+#   docker-compose --profile secops --profile mde up -d     # Archer + SecOps + MDE
+#   docker-compose --profile splunk --profile elastic up -d # Archer + Splunk + Elastic
+#   docker-compose --profile validation up -d               # Archer + ALL SIEMs
+# ============================================================================
+
 services:
+  # Main Archer application
   archer:
     build:
       context: .
@@ -15,3 +28,106 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+    networks:
+      - archer-network
+
+  # ============================================================================
+  # Detection Validation SIEM Services (all optional)
+  # Use --profile to start the ones you need
+  # ============================================================================
+
+  # Splunk Enterprise for SPL query validation (~2GB RAM)
+  splunk:
+    image: splunk/splunk:latest
+    container_name: archer-splunk
+    ports:
+      - "8001:8000"   # Web UI (offset to avoid conflict with Archer)
+      - "8089:8089"   # REST API
+      - "8088:8088"   # HEC
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_PASSWORD=Validation123!
+      - SPLUNK_HEC_TOKEN=validation-hec-token
+    mem_limit: 2g
+    profiles:
+      - validation
+      - splunk
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8089/services/server/health/splunkd", "-u", "admin:Validation123!"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    networks:
+      - archer-network
+
+  # Elasticsearch for Query DSL validation (~1GB RAM)
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: archer-elastic
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    mem_limit: 1g
+    profiles:
+      - validation
+      - elastic
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - archer-network
+
+  # Google SecOps Simulator for YARA-L validation (~512MB RAM)
+  secops-simulator:
+    build:
+      context: ./archer/siem/secops
+      dockerfile: Dockerfile
+    image: archer-secops-simulator:latest
+    container_name: archer-secops
+    ports:
+      - "8081:8080"
+    mem_limit: 512m
+    profiles:
+      - validation
+      - secops
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - archer-network
+
+  # MDE Simulator for KQL validation (~512MB RAM)
+  mde-simulator:
+    build:
+      context: ./archer/siem/mde
+      dockerfile: Dockerfile
+    image: archer-mde-simulator:latest
+    container_name: archer-mde
+    ports:
+      - "8082:8080"
+    mem_limit: 512m
+    profiles:
+      - validation
+      - mde
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - archer-network
+
+networks:
+  archer-network:
+    driver: bridge
+    name: archer-network

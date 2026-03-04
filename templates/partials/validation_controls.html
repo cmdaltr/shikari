@@ -1,0 +1,315 @@
+<!-- Detection Validation Controls
+     Include this partial in pages where validation is needed.
+     Requires: validation.js, validation.css -->
+
+<div id="validation-panel" class="validation-panel" style="display: none;">
+  <!-- Docker Status Warning -->
+  <div id="docker-warning" class="validation-warning" style="display: none;">
+    <svg class="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <div class="warning-content">
+      <strong>Docker Required</strong>
+      <span id="docker-warning-message">Docker is required for detection validation.</span>
+    </div>
+  </div>
+
+  <!-- Session Status -->
+  <div id="validation-status" class="validation-status">
+    <div class="status-indicator">
+      <span id="status-dot" class="status-dot"></span>
+      <span id="status-text">Ready</span>
+    </div>
+    <div id="session-info" class="session-info" style="display: none;">
+      <span>Session: <code id="session-id-display"></code></span>
+      <span>Iteration: <span id="iteration-count">0</span></span>
+    </div>
+  </div>
+
+  <!-- Query Input -->
+  <div class="validation-section">
+    <label class="validation-label">Detection Query</label>
+    <textarea id="validation-query" class="validation-textarea" rows="6"
+              placeholder="Paste your detection query here..."></textarea>
+    <div class="query-meta">
+      <select id="vendor-select" class="vendor-select">
+        <option value="splunk">Splunk (SPL)</option>
+        <option value="elastic">Elastic (Query DSL)</option>
+        <option value="secops">Google SecOps (YARA-L)</option>
+        <option value="mde">MDE (KQL)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Technique Info (optional, for context) -->
+  <div class="validation-section" id="technique-section" style="display: none;">
+    <label class="validation-label">Technique</label>
+    <div class="technique-display">
+      <span id="technique-id-display"></span>
+      <span id="technique-name-display"></span>
+    </div>
+  </div>
+
+  <!-- Indicators (for event generation) -->
+  <div class="validation-section" id="indicators-section">
+    <label class="validation-label">
+      Indicators
+      <span class="label-hint">(for generating test events)</span>
+    </label>
+    <div class="indicators-grid">
+      <div class="indicator-group">
+        <label>Command Line Patterns</label>
+        <textarea id="indicators-cmd" class="indicator-input" rows="2"
+                  placeholder="powershell.exe -NoP -W Hidden&#10;cmd.exe /c"></textarea>
+      </div>
+      <div class="indicator-group">
+        <label>Process/File Names</label>
+        <textarea id="indicators-sw" class="indicator-input" rows="2"
+                  placeholder="mimikatz.exe&#10;procdump.exe"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="validation-actions">
+    <button id="btn-start-validation" class="btn-validation btn-primary" onclick="startValidation()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      Start Validation
+    </button>
+    <button id="btn-stop-validation" class="btn-validation btn-secondary" onclick="stopValidation()" style="display: none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="6" y="6" width="12" height="12"/>
+      </svg>
+      Stop
+    </button>
+  </div>
+
+  <!-- Progress Indicator -->
+  <div id="validation-progress" class="validation-progress" style="display: none;">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="progress-steps">
+      <div class="step" id="step-siem">Starting SIEM</div>
+      <div class="step" id="step-events">Generating Events</div>
+      <div class="step" id="step-test">Testing Detection</div>
+      <div class="step" id="step-results">Analyzing Results</div>
+    </div>
+  </div>
+
+  <!-- Results Panel -->
+  <div id="validation-results" class="validation-results" style="display: none;">
+    <h3 class="results-header">
+      <span id="result-status-icon"></span>
+      <span id="result-status-text">Validation Results</span>
+    </h3>
+
+    <!-- Metrics Grid -->
+    <div class="metrics-grid">
+      <div class="metric-card metric-good">
+        <div class="metric-value" id="metric-tp">0</div>
+        <div class="metric-label">True Positives</div>
+      </div>
+      <div class="metric-card metric-bad">
+        <div class="metric-value" id="metric-fn">0</div>
+        <div class="metric-label">False Negatives</div>
+      </div>
+      <div class="metric-card metric-bad">
+        <div class="metric-value" id="metric-fp">0</div>
+        <div class="metric-label">False Positives</div>
+      </div>
+      <div class="metric-card metric-good">
+        <div class="metric-value" id="metric-tn">0</div>
+        <div class="metric-label">True Negatives</div>
+      </div>
+    </div>
+
+    <!-- Scores -->
+    <div class="scores-row">
+      <div class="score">
+        <span class="score-label">Precision:</span>
+        <span class="score-value" id="score-precision">0%</span>
+      </div>
+      <div class="score">
+        <span class="score-label">Recall:</span>
+        <span class="score-value" id="score-recall">0%</span>
+      </div>
+      <div class="score">
+        <span class="score-label">F1 Score:</span>
+        <span class="score-value" id="score-f1">0%</span>
+      </div>
+    </div>
+
+    <!-- Suggestions -->
+    <div id="suggestions-panel" class="suggestions-panel" style="display: none;">
+      <h4>Improvement Suggestions</h4>
+      <div id="suggestions-list" class="suggestions-list"></div>
+    </div>
+
+    <!-- Refined Query -->
+    <div id="refined-query-panel" class="refined-query-panel" style="display: none;">
+      <h4>Refined Query</h4>
+      <pre id="refined-query-display" class="query-display"></pre>
+      <div class="refined-actions">
+        <button class="btn-validation btn-primary" onclick="testRefinedQuery()">
+          Test Refined Query
+        </button>
+        <button class="btn-validation btn-secondary" onclick="copyRefinedQuery()">
+          Copy Query
+        </button>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="results-actions">
+      <button class="btn-validation btn-primary" onclick="rerunValidation()" id="btn-rerun">
+        Re-run Validation
+      </button>
+      <button class="btn-validation btn-success" onclick="saveValidatedDetection()" id="btn-save" style="display: none;">
+        Save Validated Detection
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Inline critical styles - full styles in validation.css */
+.validation-panel {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.validation-warning {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 1rem;
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.validation-warning .warning-icon {
+  width: 24px;
+  height: 24px;
+  color: #eab308;
+  flex-shrink: 0;
+}
+
+.validation-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1rem;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6b7280;
+  margin-right: 8px;
+}
+
+.status-dot.ready { background: #6b7280; }
+.status-dot.running { background: #3b82f6; animation: pulse 1.5s infinite; }
+.status-dot.success { background: #10b981; }
+.status-dot.error { background: #ef4444; }
+.status-dot.warning { background: #f59e0b; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.validation-textarea {
+  width: 100%;
+  font-family: 'Fira Code', 'Monaco', monospace;
+  font-size: 0.875rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.btn-validation {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-validation svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-validation.btn-primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+
+.btn-validation.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-validation.btn-success {
+  background: #10b981;
+  color: white;
+  border: none;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.metric-card {
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.metric-card.metric-good {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.metric-card.metric-bad {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+</style>

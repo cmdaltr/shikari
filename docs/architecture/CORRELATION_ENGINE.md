@@ -12,7 +12,8 @@ The Archer Correlation Engine automatically generates high-quality detection cor
 4. [Grouping & Merging](#grouping--merging)
 5. [JOIN Query Generation](#join-query-generation)
 6. [Configuration Parameters](#configuration-parameters)
-7. [Examples](#examples)
+7. [Results Page — Per-Technique Queries](#results-page--per-technique-queries)
+8. [Examples](#examples)
 
 ---
 
@@ -865,6 +866,69 @@ Already fixed! New limits ensure:
 
 ---
 
+---
+
+## Results Page — Per-Technique Queries
+
+When correlations are displayed on the results page (`/results`), each correlation now surfaces **individual detection queries per technique** in addition to the combined JOIN query.
+
+### What Is Shown
+
+For each correlation, the results page renders:
+
+1. **Attack flow diagram** — tactic boxes connected by arrows (e.g., `PERSISTENCE → PRIVILEGE ESCALATION → DEFENSE EVASION`)
+2. **Per-technique query blocks** — one code block per technique, stacked vertically with "chained with" connectors
+3. **Combined JOIN query** — the full chained correlation rule, collapsible below the individual queries
+
+### Per-Technique Query Block Structure
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Technique Name   T1078.004   Initial Access         📋  │
+├─────────────────────────────────────────────────────────┤
+│ DeviceSignInLogs                                        │
+│ | where Application == "Office 365"                     │
+│ | where ConditionalAccessStatus == "failure"            │
+└─────────────────────────────────────────────────────────┘
+              ── chained with ──
+┌─────────────────────────────────────────────────────────┐
+│ Lateral Movement   T1021.001   Remote Services      📋  │
+├─────────────────────────────────────────────────────────┤
+│ DeviceNetworkEvents                                     │
+│ | where RemotePort == 3389                              │
+│ | where InitiatingProcessCommandLine contains ...       │
+└─────────────────────────────────────────────────────────┘
+```
+
+Each block shows:
+- **Technique name** (from the YAML `name` field)
+- **ATT&CK ID** (e.g., `T1078.004`) as a blue pill
+- **Tactic** (e.g., `Initial Access`) as a green pill
+- **📋 Copy** — copies the individual query to clipboard
+
+After all individual blocks, **Show Combined Query** expands the full JOIN query.
+
+### Correlation Result Object Fields
+
+The correlation result dict passed to the template includes the following fields relevant to query display:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `individual_queries` | `List[Dict]` | One entry per technique: `{technique_name, technique_id, tactic, query}` |
+| `combined_query` | `str` | Full JOIN query combining all techniques |
+| `techniques_by_tactic` | `Dict[str, List[str]]` | Techniques grouped by kill-chain tactic |
+| `primary_tactics` | `List[str]` | Tactics directly involved in the correlation pair |
+| `attack_chain_length` | `int` | Number of distinct tactics in the correlation |
+| `tables_indexes` | `List[str]` | Data sources referenced (MDE tables or Splunk indexes) |
+| `relevance_score` | `int` | Correlation quality score (0–100%) |
+| `time_window` | `str` | JOIN time window (e.g., `"1h"`) |
+
+### Saved Correlations
+
+The `individual_queries` field is preserved when correlations are saved to the library (`/api/library/save`) and restored when loading saved detections from the database. Legacy saved correlations (created before this feature) will have `individual_queries: []` — only the combined query will show for those.
+
+---
+
 ## References
 
 - MITRE ATT&CK Framework: https://attack.mitre.org/
@@ -881,9 +945,10 @@ Already fixed! New limits ensure:
 | 1.1 | 2024-10-31 | Added 8-technique limit, 2-tactic minimum |
 | 1.2 | 2024-10-31 | JOIN-based query generation |
 | 1.3 | 2024-10-31 | Tactic-based color coding in UI |
+| 1.4 | 2025-03-04 | Per-technique query blocks on results page |
 
 ---
 
-**Last Updated:** October 31, 2024
+**Last Updated:** March 4, 2025
 **Author:** Archer Development Team
 **Location:** `docs/CORRELATION_ENGINE.md`

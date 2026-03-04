@@ -314,21 +314,23 @@ Password: £missary_0f_the_G0rg0nite$
 ---
 
 #### extract_mitre_procedures.py
-**Purpose**: Extract MITRE ATT&CK procedures.
+**Purpose**: Rebuild `data/mitre_procedures.csv` from MITRE ATT&CK STIX data.
 
 **Features**:
-- Downloads latest MITRE ATT&CK STIX data
-- Extracts threat group procedures
-- Maps techniques to tactics
-- Software-to-technique traversal
+- Downloads latest ATT&CK STIX bundle (`mitre-attack/attack-stix-data`, currently v18.1)
+- Captures all three attribution paths: direct, via software, via campaign
+- Cross-validates against official XLSX relationships spreadsheet
+- Thin wrapper — all logic lives in `archer.mitre.procedures`
 
-**Output**: `data/mitre_procedures.json`
+Also runnable as: `python -m archer.mitre.procedures [--output] [--group G1015]`
 
-**Statistics** (recent):
-- 4,840 unique procedure combinations
-- 458 unique techniques
+**Output**: `data/mitre_procedures.csv`
+
+**Statistics** (ATT&CK v18.1):
+- 26,068 unique procedure rows
+- 575 unique techniques
 - 14 unique tactics
-- 162 unique threat groups
+- 172 unique threat groups
 
 ---
 

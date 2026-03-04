@@ -349,6 +349,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Enable button if either group name OR CVE input has a value
     if (btn) btn.disabled = (trimmed === '' && cveTrimmed === '');
+
+    // Enable threat briefing button only when group name is present
+    var briefingBtn = document.getElementById('briefing-btn');
+    if (briefingBtn) briefingBtn.disabled = (trimmed === '');
   }
 
   // Get CVE input reference before validate is called

@@ -5,8 +5,24 @@ Comprehensive Test Suite for Archer Detection Generation Platform
 This test suite validates all major components of Archer using realistic
 threat intelligence inputs including threat groups, CVEs, blogs, and company profiles.
 
-Run with: pytest tests/test_suite.py -v --tb=short
-Or individually: python tests/test_suite.py
+Run with: pytest tests/run_test.py -v --tb=short
+Or individually: python tests/run_test.py
+
+List available test data:
+    python tests/run_test.py --list
+    python tests/run_test.py --list groups
+    python tests/run_test.py --list cves
+    python tests/run_test.py --list blogs
+    python tests/run_test.py --list profiles
+
+Add custom test data:
+    python tests/run_test.py --add groups "Volt Typhoon"
+    python tests/run_test.py --add cves "CVE-2025-99999"
+    python tests/run_test.py --add blogs "https://example.com/blog-post"
+    python tests/run_test.py --add profiles "Acme Corp"
+
+Remove custom test data:
+    python tests/run_test.py --remove groups "Volt Typhoon"
 """
 
 import pytest
@@ -14,6 +30,8 @@ import requests
 import json
 import time
 import os
+import sys
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
 from dataclasses import dataclass
@@ -37,28 +55,81 @@ THREAT_GROUPS = [
 ]
 
 CVES = [
-    "CVE-2025-55182",
-    "CVE-2025-5777",
-    "CVE-2025-62221",
-    "CVE-2025-62215",
+    "CVE-2026-24061",   # Telnet RCE
+    "CVE-2026-0915",    # GNU C Library ASLR Bypass
+    "CVE-2025-55182",   # React2Shell
+    "CVE-2025-5777",    # CitrixBleed2
+    "CVE-2025-62221",   # Windows Cloud Files Mini Filter Driver EoP
 ]
+
+CVE_NAMES = {
+    "CVE-2026-24061": "Telnet RCE",
+    "CVE-2026-0915": "GNU C Library ASLR Bypass",
+    "CVE-2025-55182": "React2Shell",
+    "CVE-2025-5777": "CitrixBleed2",
+    "CVE-2025-62221": "Windows Cloud Files Mini Filter Driver EoP",
+}
 
 BLOG_URLS = [
     "https://thedfirreport.com/2025/11/17/cats-got-your-files-lynx-ransomware/",
     "https://thedfirreport.com/2025/09/29/from-a-single-click-how-lunar-spider-enabled-a-near-two-month-intrusion/",
-    "https://thedfirreport.com/2025/08/05/from-bing-search-to-ransomware-bumblebee-and-adaptixc2-deliver-akira/",
     "https://thedfirreport.com/2025/03/31/fake-zoom-ends-in-blacksuit-ransomware/",
     "https://www.crowdstrike.com/en-us/blog/warp-panda-cloud-threats/",
     "https://www.crowdstrike.com/en-us/blog/murky-panda-trusted-relationship-threat-in-cloud/",
-    "https://www.crowdstrike.com/en-us/blog/falcon-prevents-cookie-spider-shamos-delivery-macos/",
-    "https://www.crowdstrike.com/en-us/blog/crowdstrike-services-observes-scattered-spider-escalate-attacks/",
 ]
 
 COMPANY_PROFILES = [
     "SANS Institute",
     "Splunk",
     "BBC",
+    "MacPaw",
+    "LEGO",
 ]
+
+# Custom test data persistence
+CUSTOM_DATA_FILE = Path(__file__).parent / "custom_test_data.json"
+
+CATEGORY_MAP = {
+    "groups": "threat_groups",
+    "cves": "cves",
+    "blogs": "blogs",
+    "profiles": "profiles",
+}
+
+LIST_MAP = {
+    "threat_groups": THREAT_GROUPS,
+    "cves": CVES,
+    "blogs": BLOG_URLS,
+    "profiles": COMPANY_PROFILES,
+}
+
+
+def load_custom_data() -> Dict:
+    """Load custom test data from JSON file"""
+    if CUSTOM_DATA_FILE.exists():
+        with open(CUSTOM_DATA_FILE) as f:
+            return json.load(f)
+    return {"threat_groups": [], "cves": [], "blogs": [], "profiles": []}
+
+
+def save_custom_data(data: Dict):
+    """Save custom test data to JSON file"""
+    with open(CUSTOM_DATA_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Saved to {CUSTOM_DATA_FILE}")
+
+
+def merge_custom_data():
+    """Merge custom data into the module-level test data lists"""
+    custom = load_custom_data()
+    for key, builtin_list in LIST_MAP.items():
+        for item in custom.get(key, []):
+            if item not in builtin_list:
+                builtin_list.append(item)
+
+
+# Merge custom data on import so both CLI and pytest pick it up
+merge_custom_data()
 
 
 @dataclass
@@ -223,7 +294,7 @@ class ArcherTestSuite:
                 created = last_progress.get("created_yaml", 0)
                 total = last_progress.get("total_yaml", 0)
 
-                if status in ("creating_yamls", "correlating", "processing"):
+                if status and status not in ("complete", "error"):
                     # Still running - report as success with progress info
                     duration = time.time() - start
                     details = f"Still running: {created}/{total} YAMLs ({status})"
@@ -319,7 +390,7 @@ class ArcherTestSuite:
             # Timeout reached - check if still making progress
             if last_progress:
                 status = last_progress.get("status", "")
-                if status in ("creating_yamls", "correlating", "processing", "fetching"):
+                if status and status not in ("complete", "error"):
                     duration = time.time() - start
                     details = f"Still running ({status})"
                     self.record_result(test_name, True, duration, details)
@@ -1081,6 +1152,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Archer Comprehensive Test Suite")
+    parser.add_argument("--list", nargs="?", const="all", metavar="TYPE",
+                        help="List available test data. Options: all, groups, cves, blogs, profiles")
+    parser.add_argument("--add", nargs=2, metavar=("TYPE", "VALUE"),
+                        help="Add custom test data. TYPE: groups, cves, blogs, profiles")
+    parser.add_argument("--remove", nargs=2, metavar=("TYPE", "VALUE"),
+                        help="Remove custom test data. TYPE: groups, cves, blogs, profiles")
     parser.add_argument("--url", default=BASE_URL, help="Archer base URL")
     parser.add_argument("--skip-feature-tests", action="store_true",
                         help="Skip feature tests (generation tests)")
@@ -1094,14 +1171,14 @@ if __name__ == "__main__":
                         help="Number of company profiles to test")
     parser.add_argument("--json", action="store_true",
                         help="Output results as JSON")
-    parser.add_argument("--group", type=str, default=None,
-                        help="Test a specific threat group (e.g., 'Scattered Spider')")
-    parser.add_argument("--cve", type=str, default=None,
-                        help="Test a specific CVE (e.g., 'CVE-2025-55182')")
-    parser.add_argument("--blog", type=str, default=None,
-                        help="Test a specific blog URL")
-    parser.add_argument("--profile", type=str, default=None,
-                        help="Test a specific company profile (e.g., 'example')")
+    parser.add_argument("--group", nargs="?", const="__list__", default=None,
+                        help="Test a specific threat group, or combine with --list to list groups")
+    parser.add_argument("--cve", nargs="?", const="__list__", default=None,
+                        help="Test a specific CVE, or combine with --list to list CVEs")
+    parser.add_argument("--blog", nargs="?", const="__list__", default=None,
+                        help="Test a specific blog URL, or combine with --list to list blogs")
+    parser.add_argument("--profile", nargs="?", const="__list__", default=None,
+                        help="Test a specific company profile, or combine with --list to list profiles")
     parser.add_argument("--timeout", type=int, default=TIMEOUT,
                         help=f"Timeout in seconds for generation tests (default: {TIMEOUT})")
     parser.add_argument("--osint", action="store_true", default=True,
@@ -1112,6 +1189,149 @@ if __name__ == "__main__":
                         help="Enable correlation generation (default: disabled)")
 
     args = parser.parse_args()
+
+    # Handle --group/--cve/--blog/--profile used without a value (with or without --list)
+    # e.g. --group --list  or  --group  (both show available groups)
+    _flag_to_list = {
+        "group": "groups",
+        "cve": "cves",
+        "blog": "blogs",
+        "profile": "profiles",
+    }
+    for flag, list_name in _flag_to_list.items():
+        if getattr(args, flag) == "__list__":
+            args.list = list_name
+            setattr(args, flag, None)
+            break
+
+    # Handle --list option
+    if args.list:
+        list_type = args.list.lower()
+        custom = load_custom_data()
+
+        def _format_item(item, custom_list):
+            return f"{item} (custom)" if item in custom_list else item
+
+        if list_type in ("all", "groups"):
+            print("\nThreat Groups:")
+            print("-" * 40)
+            for i, group in enumerate(THREAT_GROUPS, 1):
+                print(f"  {i}. {_format_item(group, custom.get('threat_groups', []))}")
+
+        if list_type in ("all", "cves"):
+            print("\nCVEs:")
+            print("-" * 40)
+            for i, cve in enumerate(CVES, 1):
+                name = CVE_NAMES.get(cve, "")
+                label = f"{cve} ({name})" if name else cve
+                custom_tag = " (custom)" if cve in custom.get("cves", []) else ""
+                print(f"  {i}. {label}{custom_tag}")
+
+        if list_type in ("all", "blogs"):
+            print("\nBlog URLs:")
+            print("-" * 40)
+            for i, url in enumerate(BLOG_URLS, 1):
+                display_url = url if len(url) <= 70 else url[:67] + "..."
+                suffix = " (custom)" if url in custom.get("blogs", []) else ""
+                print(f"  {i}. {display_url}{suffix}")
+
+        if list_type in ("all", "profiles"):
+            print("\nCompany Profiles:")
+            print("-" * 40)
+            for i, profile in enumerate(COMPANY_PROFILES, 1):
+                print(f"  {i}. {_format_item(profile, custom.get('profiles', []))}")
+
+        if list_type not in ("all", "groups", "cves", "blogs", "profiles"):
+            print(f"Unknown list type: {list_type}")
+            print("Valid options: all, groups, cves, blogs, profiles")
+            exit(1)
+
+        print()
+        exit(0)
+
+    # Handle --add option
+    if args.add:
+        add_type, add_value = args.add
+        add_type = add_type.lower()
+        if add_type not in CATEGORY_MAP:
+            print(f"Unknown type: {add_type}")
+            print(f"Valid types: {', '.join(CATEGORY_MAP.keys())}")
+            exit(1)
+        key = CATEGORY_MAP[add_type]
+        custom = load_custom_data()
+        builtin = LIST_MAP[key]
+        # Check if it already exists (built-in or custom)
+        if add_value in builtin:
+            print(f"'{add_value}' already exists in {add_type}")
+            exit(0)
+        custom[key].append(add_value)
+        save_custom_data(custom)
+        print(f"Added '{add_value}' to {add_type}")
+        exit(0)
+
+    # Handle --remove option
+    if args.remove:
+        rm_type, rm_value = args.remove
+        rm_type = rm_type.lower()
+        if rm_type not in CATEGORY_MAP:
+            print(f"Unknown type: {rm_type}")
+            print(f"Valid types: {', '.join(CATEGORY_MAP.keys())}")
+            exit(1)
+        key = CATEGORY_MAP[rm_type]
+        custom = load_custom_data()
+        if rm_value in custom[key]:
+            custom[key].remove(rm_value)
+            save_custom_data(custom)
+            # Also remove from the in-memory list
+            builtin = LIST_MAP[key]
+            if rm_value in builtin:
+                builtin.remove(rm_value)
+            print(f"Removed '{rm_value}' from {rm_type}")
+        else:
+            print(f"'{rm_value}' is not a custom entry in {rm_type} (built-in entries cannot be removed)")
+        exit(0)
+
+    # Pre-flight check: ensure Archer is running
+    def _check_archer(url):
+        try:
+            requests.get(f"{url}/health", timeout=3)
+            return True
+        except Exception:
+            return False
+
+    if not _check_archer(args.url):
+        start_script = Path(__file__).parent.parent / "scripts" / "deployment" / "start-archer.py"
+        if not start_script.exists():
+            print(f"Archer is not running at {args.url} and start script not found.")
+            exit(1)
+
+        try:
+            answer = input(f"Archer is not running at {args.url}. Start it now? [Y/n] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            exit(1)
+
+        if answer in ("", "y", "yes"):
+            print("Starting Archer in the background...")
+            subprocess.Popen(
+                [sys.executable, str(start_script), "--background"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            # Wait for Archer to become available
+            max_wait = 30
+            waited = 0
+            while waited < max_wait:
+                time.sleep(1)
+                waited += 1
+                if _check_archer(args.url):
+                    print(f"Archer is running at {args.url}")
+                    break
+            else:
+                print(f"Archer did not start within {max_wait}s.")
+                exit(1)
+        else:
+            exit(0)
 
     suite = ArcherTestSuite(args.url, args.timeout)
 

@@ -4,13 +4,13 @@ This document describes planned features and integrations for Archer that are no
 
 > ⚠️ **Status**: Not Functional
 
-These features have configuration stubs or framework code but are not yet functional. They are planned for future development.
+These features have configuration stubs or placeholder code but are not yet functional. They are planned for future development.
 
 ---
 
 ## VECTR Integration
 
-**Status**: CLI framework stub exists but not yet functional
+**Status**: CLI stub exists but not yet functional
 
 ### Overview
 
@@ -223,13 +223,21 @@ python3 archer.py macat test-suite --category persistence
 - Automated detection quality scoring
 - False positive prediction
 
-### Detection Testing Framework
+### Detection Testing Suite
 
-**Planned**:
-- Automated detection validation
-- False positive testing
+**Status**: Implemented
+
+The Runtime Detection Validation feature is now available:
+- Automated detection validation in containerized SIEMs
+- False positive/negative testing with precision/recall metrics
+- AI-assisted query refinement
+- Coverage gap identification through F1 score analysis
+
+**Documentation**: [Runtime Validation Guide](../features/RUNTIME_VALIDATION.md)
+
+**Remaining Work**:
 - Performance impact analysis
-- Coverage gap identification
+- Integration with CI/CD pipelines
 
 ### API Enhancements
 
@@ -316,7 +324,7 @@ Have an idea for a new feature? We'd love to hear it!
 ### Q1 2025
 - [ ] VECTR integration (basic)
 - [ ] Enhanced API documentation
-- [ ] Detection testing framework (v1)
+- [x] Detection testing suite (v1) - **Completed Feb 2026**
 
 ### Q2 2025
 - [ ] CALDERA integration (basic)
@@ -342,7 +350,7 @@ Have an idea for a new feature? We'd love to hear it!
 Based on community interest and impact, current priority features are:
 
 1. **VECTR Integration** - High demand, clear use case
-2. **Detection Testing Framework** - Critical for production deployments
+2. **Detection Testing Suite** - Critical for production deployments
 3. **Elastic Support** - Frequently requested SIEM platform
 4. **Local LLM Support** - Reduce dependency on external AI providers
 

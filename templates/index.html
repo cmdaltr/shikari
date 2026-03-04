@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/detection_validation.css') }}">
     {% block head %}
     <style>
       /* Ensure consistent positioning across all browsers */
@@ -257,7 +258,7 @@
           <img src="{{ url_for('static', path='images/archer_banner.png') }}" alt="Archer" style="width: auto; height: auto; max-height: 220px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
         </div>
         <p style="color: #666666; font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px;">
-          AUTOMATED MULTI-VENDOR THREAT HUNTING & DETECTION FRAMEWORK
+          AUTOMATED MULTI-VENDOR THREAT HUNTING & DETECTION SUITE
         </p>
       </div>
 
@@ -292,12 +293,11 @@
             </svg>
             <span>Profile</span>
           </button>
-          <button class="tab-button" data-tab="emulate" disabled style="opacity: 0.5; cursor: not-allowed;">
+          <button class="tab-button" data-tab="emulate">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
               <polygon points="5 3 19 12 5 21" stroke="#f59e0b" fill="none"/>
             </svg>
-            <span>Emulate</span>
-            <span style="font-size: 0.7em; color: #999; display: block; margin-top: -2px;">(Coming Soon)</span>
+            <span>Validate</span>
           </button>
         </div>
 
@@ -529,6 +529,24 @@
                 </div>
               </details>
 
+              <!-- Detection Validation -->
+              <div style="padding: 0.25rem 0 0.5rem 0;">
+                <label class="option-item" id="auto-validate-label" style="align-items: flex-start;">
+                  <input type="checkbox" name="auto_validate" id="auto_validate_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
+                  <div style="flex: 1; min-width: 0;">
+                    <span class="option-label" style="font-size: 1.5em;">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;">
+                        <path d="M9 12l2 2 4-4"/>
+                        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
+                      </svg>
+                      Auto-validate detections after generation
+                      <span id="docker-status-badge" class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
+                    </span>
+                    <span class="option-hint" id="auto-validate-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
+                  </div>
+                </label>
+              </div>
+
               <!-- VECTR Integration -->
               <details class="options-section" style="opacity: 0.6;">
                 <summary class="options-header">VECTR Integration <span style="font-size: 0.8em; color: #999; margin-left: 0.5em;">(Coming Soon)</span></summary>
@@ -549,7 +567,188 @@
               <button type="submit" class="btn-primary" id="generate_btn" disabled>
                 Generate
               </button>
+
+              <!-- Threat Briefing button — secondary action for group-based input -->
+              <button type="button" id="briefing-btn" class="btn-secondary" disabled
+                      style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <path d="M9 12l2 2 4-4"/>
+                </svg>
+                Threat Briefing
+              </button>
             </form>
+
+            <!-- Threat Briefing Results Panel -->
+            <div id="briefing-panel" style="display:none;margin-top:16px;">
+              <!-- Loading state -->
+              <div id="briefing-loading" style="display:none;text-align:center;padding:32px;color:#6366f1;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;display:inline-block;">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                <div style="margin-top:8px;font-size:14px;">Analyzing techniques — grounding in ATT&CK data…</div>
+              </div>
+              <!-- Results -->
+              <div id="briefing-results" style="display:none;">
+                <!-- Header bar -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                  <div>
+                    <span id="briefing-group-name" style="font-weight:700;font-size:16px;color:#1a1a2e;"></span>
+                    <span id="briefing-group-id" style="font-size:12px;color:#6b7280;margin-left:8px;font-family:monospace;"></span>
+                  </div>
+                  <div style="display:flex;gap:8px;font-size:12px;">
+                    <span style="background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:10px;font-weight:600;" id="briefing-covered-badge"></span>
+                    <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:10px;font-weight:600;" id="briefing-gap-badge"></span>
+                    <span style="background:#f1f5f9;color:#475569;padding:3px 10px;border-radius:10px;" id="briefing-total-badge"></span>
+                  </div>
+                </div>
+                <!-- Attack chain -->
+                <div id="briefing-chain-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;"></div>
+                <!-- Summary -->
+                <div id="briefing-summary" style="font-size:13px;color:#374151;margin-bottom:14px;padding:10px 14px;background:#eff6ff;border-radius:6px;border-left:3px solid #3b82f6;line-height:1.5;"></div>
+                <!-- Techniques table -->
+                <div id="briefing-techniques"></div>
+                <!-- Provider -->
+                <div id="briefing-provider" style="margin-top:10px;font-size:11px;color:#94a3b8;text-align:right;"></div>
+              </div>
+              <!-- Error state -->
+              <div id="briefing-error" style="display:none;padding:12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;color:#991b1b;font-size:13px;"></div>
+            </div>
+
+            <style>
+            @keyframes spin { to { transform: rotate(360deg); } }
+            .briefing-rank {
+              display: inline-flex; align-items: center; justify-content: center;
+              width: 24px; height: 24px; border-radius: 50%; font-size: 12px;
+              font-weight: 700; background: #e0e7ff; color: #4338ca; flex-shrink: 0;
+            }
+            .briefing-tech-card {
+              display: flex; flex-direction: column; gap: 6px;
+              padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 6px;
+              margin-bottom: 8px; background: #fff;
+            }
+            .briefing-tech-card:first-child { border-left: 3px solid #6366f1; }
+            .briefing-tech-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+            .briefing-tech-id { font-family: monospace; font-size: 11px; background: #e3f2fd; color: #1565c0; padding: 2px 7px; border-radius: 10px; }
+            .briefing-tech-name { font-weight: 600; font-size: 13px; color: #1a1a2e; }
+            .briefing-tactic { font-size: 11px; background: #e8f5e9; color: #2e7d32; padding: 2px 7px; border-radius: 10px; }
+            .briefing-covered { font-size: 11px; padding: 2px 7px; border-radius: 10px; }
+            .briefing-covered.yes { background: #dcfce7; color: #15803d; }
+            .briefing-covered.no  { background: #fee2e2; color: #dc2626; }
+            .briefing-reason { font-size: 12px; color: #374151; line-height: 1.5; }
+            .briefing-approach { font-size: 12px; color: #4b5563; background: #f8fafc; padding: 8px 10px; border-radius: 4px; border-left: 2px solid #6366f1; line-height: 1.5; }
+            </style>
+
+            <script>
+            (function() {
+              const briefingBtn = document.getElementById('briefing-btn');
+              const groupInput  = document.getElementById('group_name_input');
+              const panel       = document.getElementById('briefing-panel');
+              const loading     = document.getElementById('briefing-loading');
+              const results     = document.getElementById('briefing-results');
+              const errorEl     = document.getElementById('briefing-error');
+
+              // Enable briefing button only when group name is filled
+              if (groupInput) {
+                groupInput.addEventListener('input', function() {
+                  const val = (this.value || '').trim();
+                  briefingBtn.disabled = val.length === 0;
+                });
+              }
+
+              briefingBtn.addEventListener('click', async function() {
+                const group = (groupInput ? groupInput.value : '').trim();
+                if (!group) return;
+
+                // Show panel, loading state
+                panel.style.display = 'block';
+                loading.style.display = 'block';
+                results.style.display = 'none';
+                errorEl.style.display = 'none';
+
+                try {
+                  const res = await fetch('/api/threat-briefing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ group: group, top_n: 5 }),
+                  });
+                  loading.style.display = 'none';
+                  if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: res.statusText }));
+                    errorEl.textContent = 'Error: ' + (err.detail || res.statusText);
+                    errorEl.style.display = 'block';
+                    return;
+                  }
+                  const data = await res.json();
+                  renderBriefing(data);
+                } catch (e) {
+                  loading.style.display = 'none';
+                  errorEl.textContent = 'Request failed: ' + e.message;
+                  errorEl.style.display = 'block';
+                }
+              });
+
+              function renderBriefing(d) {
+                document.getElementById('briefing-group-name').textContent = d.group_name;
+                document.getElementById('briefing-group-id').textContent = d.group_id;
+                document.getElementById('briefing-covered-badge').textContent = d.covered_count + ' covered';
+                document.getElementById('briefing-gap-badge').textContent = d.gap_count + ' gaps';
+                document.getElementById('briefing-total-badge').textContent = d.total_techniques + ' total';
+
+                // Attack chain
+                const chainRow = document.getElementById('briefing-chain-row');
+                chainRow.innerHTML = '';
+                if (d.attack_chain && d.attack_chain.length) {
+                  d.attack_chain.forEach(function(tactic, i) {
+                    if (i > 0) {
+                      const arrow = document.createElement('span');
+                      arrow.style.cssText = 'color:#94a3b8;font-size:14px;';
+                      arrow.textContent = '→';
+                      chainRow.appendChild(arrow);
+                    }
+                    const pill = document.createElement('span');
+                    pill.style.cssText = 'background:#e0e7ff;color:#4338ca;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:500;';
+                    pill.textContent = tactic;
+                    chainRow.appendChild(pill);
+                  });
+                }
+
+                // Summary
+                const summaryEl = document.getElementById('briefing-summary');
+                summaryEl.textContent = d.briefing_summary || '';
+                summaryEl.style.display = d.briefing_summary ? 'block' : 'none';
+
+                // Techniques
+                const techContainer = document.getElementById('briefing-techniques');
+                techContainer.innerHTML = '';
+                (d.top_techniques || []).forEach(function(t) {
+                  const card = document.createElement('div');
+                  card.className = 'briefing-tech-card';
+                  const isCovered = t.covered;
+                  card.innerHTML =
+                    '<div class="briefing-tech-header">' +
+                      '<span class="briefing-rank">' + t.priority_rank + '</span>' +
+                      '<span class="briefing-tech-id">' + (t.technique_id || '') + '</span>' +
+                      '<span class="briefing-tech-name">' + escHtml(t.technique_name || '') + '</span>' +
+                      '<span class="briefing-tactic">' + escHtml(t.tactic || '') + '</span>' +
+                      '<span class="briefing-covered ' + (isCovered ? 'yes' : 'no') + '">' +
+                        (isCovered ? '✓ Covered' : '✗ Gap') +
+                      '</span>' +
+                    '</div>' +
+                    '<div class="briefing-reason">' + escHtml(t.priority_reason || '') + '</div>' +
+                    '<div class="briefing-approach">' + escHtml(t.detection_approach || '') + '</div>';
+                  techContainer.appendChild(card);
+                });
+
+                document.getElementById('briefing-provider').textContent = 'via ' + (d.provider || 'LLM');
+                results.style.display = 'block';
+              }
+
+              function escHtml(s) {
+                return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+              }
+            })();
+            </script>
           </div>
 
           <!-- UPLOAD TAB -->
@@ -862,87 +1061,17 @@
             </form>
           </div>
 
-          <!-- EMULATE TAB -->
+          <!-- VALIDATE TAB (Detection Validation) -->
           <div class="tab-pane" id="tab-emulate">
-            <div style="text-align: center; padding: 3em 2em; background: #f8f9fa; border-radius: 8px; border: 2px dashed #dee2e6;">
-              <svg style="width: 64px; height: 64px; margin: 0 auto 1em; opacity: 0.3;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-              </svg>
-              <h2 style="color: #6c757d; margin: 0 0 0.5em 0;">Emulation Feature Coming Soon</h2>
-              <p style="color: #868e96; max-width: 500px; margin: 0 auto; line-height: 1.6;">
-                Adversary emulation capabilities using Atomic Red Team will be available in an upcoming release.
-                This feature will allow you to test your detections against real adversary techniques.
+            <div class="emulate-validation-container">
+              <h2 style="font-size: 1.25rem; margin: 0 0 0.5rem 0; color: var(--text-primary);">Detection Validation</h2>
+              <p style="color: var(--text-secondary); margin: 0 0 1.5rem 0; font-size: 0.875rem;">
+                Test your detection queries against sample events in containerized SIEM environments.
+                Requires Docker to be installed and running.
               </p>
+
+              {% include 'partials/validation_controls.html' %}
             </div>
-
-            <form id="emulate-form" action="/emulate" method="post" autocomplete="off" style="opacity: 0.4; pointer-events: none; margin-top: 2em;">
-              <div class="form-section">
-                <label for="emulate_technique" class="form-label">Technique or Threat Group</label>
-                <input type="text" name="technique" id="emulate_technique" class="form-input"
-                       placeholder="e.g., T1059.001, APT29" maxlength="100" disabled>
-              </div>
-
-              <div class="form-section">
-                <label class="form-label">Execution Mode</label>
-                <div class="radio-group">
-                  <label class="radio-item">
-                    <input type="radio" name="emulation_mode" value="simulate" checked disabled>
-                    <span class="radio-label">
-                      <strong>Simulate Only</strong>
-                      <span class="radio-hint">Safe simulation without actual execution (Recommended)</span>
-                    </span>
-                  </label>
-                  <label class="radio-item">
-                    <input type="radio" name="emulation_mode" value="live" disabled>
-                    <span class="radio-label">
-                      <strong>Live Execution</strong>
-                      <span class="radio-hint">⚠️ Actually execute techniques (LAB ONLY!)</span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Emulation Options -->
-              <details class="options-section">
-                <summary class="options-header">Emulation Options</summary>
-                <div class="options-grid">
-                  <label class="option-item">
-                    <input type="checkbox" name="enrich_detections" value="true" checked disabled>
-                    <span class="option-label">Enrich Detections</span>
-                    <span class="option-hint">Update detection queries with test evidence</span>
-                  </label>
-                  <label class="option-item">
-                    <input type="checkbox" name="remote_execution" value="true" disabled>
-                    <span class="option-label">Remote Execution</span>
-                    <span class="option-hint">Execute on remote host (requires config)</span>
-                  </label>
-                </div>
-
-                <div id="remote-config" style="display: none; margin-top: 1em;">
-                  <div class="form-section">
-                    <label for="remote_host" class="form-label-small">Remote Host</label>
-                    <input type="text" name="remote_host" id="remote_host" class="form-input-small"
-                           placeholder="192.168.1.100" disabled>
-                  </div>
-                  <div class="form-section">
-                    <label for="remote_user" class="form-label-small">Username</label>
-                    <input type="text" name="remote_user" id="remote_user" class="form-input-small" disabled>
-                  </div>
-                  <div class="form-section">
-                    <label for="remote_platform" class="form-label-small">Platform</label>
-                    <select name="remote_platform" id="remote_platform" class="form-input-small" disabled>
-                      <option value="linux">Linux</option>
-                      <option value="macos">macOS</option>
-                      <option value="windows">Windows</option>
-                    </select>
-                  </div>
-                </div>
-              </details>
-
-              <button type="submit" class="btn-primary" id="emulate_btn" disabled>
-                Run Emulation
-              </button>
-            </form>
           </div>
         </div>
       </div>
@@ -987,6 +1116,7 @@
 
     <script src="{{ url_for('static', path='js/tabs.js') }}?v={{ request.app.state.asset_version }}" defer></script>
     <script src="{{ url_for('static', path='js/index.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+    <script src="{{ url_for('static', path='js/detection_validation.js') }}?v={{ request.app.state.asset_version }}" defer></script>
 
     <!-- Dark Mode Toggle Script -->
     <script>
@@ -1096,6 +1226,350 @@
             techniqueInput.setAttribute('title', 'Enter ATT&CK Technique ID(s) in format T1234 or T1234.567. Multiple techniques separated by commas.');
         }
     </script>
+
+    <!-- Auto-Validate Docker Status Check -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const checkbox = document.getElementById('auto_validate_checkbox');
+            const badge = document.getElementById('docker-status-badge');
+            const hint = document.getElementById('auto-validate-hint');
+            const label = document.getElementById('auto-validate-label');
+
+            if (!checkbox || !badge) return;
+
+            try {
+                const response = await fetch('/api/validation/docker-status');
+                const data = await response.json();
+
+                if (data.available) {
+                    // Docker is available
+                    badge.textContent = 'Docker Ready';
+                    badge.style.display = 'inline';
+                    badge.style.background = 'rgba(16, 185, 129, 0.15)';
+                    badge.style.color = '#059669';
+                    checkbox.disabled = false;
+                } else {
+                    // Docker not available
+                    badge.textContent = 'Docker Required';
+                    badge.style.display = 'inline';
+                    badge.style.background = 'rgba(245, 158, 11, 0.15)';
+                    badge.style.color = '#d97706';
+                    checkbox.disabled = true;
+                    checkbox.checked = false;
+                    if (hint) {
+                        hint.textContent = data.message || 'Docker is required for validation';
+                    }
+                    if (label) {
+                        label.style.opacity = '0.6';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check Docker status:', error);
+                badge.textContent = 'Status Unknown';
+                badge.style.display = 'inline';
+                badge.style.background = 'rgba(107, 114, 128, 0.15)';
+                badge.style.color = '#6b7280';
+                checkbox.disabled = true;
+            }
+        });
+    </script>
+
+    <!-- ================================================================
+         Ask Archer – floating chat widget
+         ================================================================ -->
+    <style>
+      /* ---- trigger button ---- */
+      #ask-archer-btn {
+        position: fixed;
+        bottom: 28px;
+        right: 28px;
+        z-index: 9000;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(99,102,241,.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .2s, transform .15s;
+      }
+      #ask-archer-btn:hover { background: #4f46e5; transform: scale(1.08); }
+
+      /* ---- panel ---- */
+      #ask-archer-panel {
+        position: fixed;
+        bottom: 92px;
+        right: 28px;
+        z-index: 8999;
+        width: 380px;
+        max-height: 540px;
+        background: #1e1e2e;
+        border: 1px solid #3d3d5c;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,.5);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(12px) scale(.97);
+        pointer-events: none;
+        transition: opacity .2s, transform .2s;
+      }
+      #ask-archer-panel.open {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: all;
+      }
+
+      /* header */
+      .aap-header {
+        padding: 12px 16px;
+        background: #181825;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid #3d3d5c;
+        flex-shrink: 0;
+      }
+      .aap-header svg { flex-shrink: 0; }
+      .aap-title {
+        font-size: .95em;
+        font-weight: 600;
+        color: #cdd6f4;
+        flex: 1;
+      }
+      .aap-subtitle {
+        font-size: .72em;
+        color: #6c7086;
+      }
+      #aap-close {
+        background: none;
+        border: none;
+        color: #6c7086;
+        cursor: pointer;
+        padding: 2px;
+        line-height: 1;
+        font-size: 1.2em;
+      }
+      #aap-close:hover { color: #cdd6f4; }
+
+      /* messages */
+      .aap-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 14px 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .aap-msg {
+        max-width: 92%;
+        padding: 9px 13px;
+        border-radius: 10px;
+        font-size: .83em;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .aap-msg.user {
+        align-self: flex-end;
+        background: #6366f1;
+        color: #fff;
+        border-bottom-right-radius: 3px;
+      }
+      .aap-msg.archer {
+        align-self: flex-start;
+        background: #313244;
+        color: #cdd6f4;
+        border-bottom-left-radius: 3px;
+      }
+      .aap-msg.error {
+        align-self: flex-start;
+        background: #3d1a1a;
+        color: #f38ba8;
+        border-bottom-left-radius: 3px;
+      }
+      .aap-typing {
+        align-self: flex-start;
+        color: #6c7086;
+        font-size: .78em;
+        padding: 4px 8px;
+      }
+
+      /* input row */
+      .aap-input-row {
+        display: flex;
+        gap: 8px;
+        padding: 10px 12px 12px;
+        border-top: 1px solid #3d3d5c;
+        flex-shrink: 0;
+        background: #181825;
+      }
+      #aap-input {
+        flex: 1;
+        background: #313244;
+        border: 1px solid #45475a;
+        border-radius: 8px;
+        color: #cdd6f4;
+        font-size: .84em;
+        padding: 8px 11px;
+        resize: none;
+        height: 38px;
+        line-height: 1.4;
+        font-family: inherit;
+        outline: none;
+        transition: border-color .15s;
+      }
+      #aap-input:focus { border-color: #6366f1; }
+      #aap-input::placeholder { color: #6c7086; }
+      #aap-send {
+        background: #6366f1;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        cursor: pointer;
+        padding: 0 14px;
+        font-size: .84em;
+        font-weight: 600;
+        transition: background .15s;
+        flex-shrink: 0;
+      }
+      #aap-send:hover { background: #4f46e5; }
+      #aap-send:disabled { background: #45475a; cursor: not-allowed; }
+
+      /* provider badge */
+      .aap-provider {
+        font-size: .68em;
+        color: #6c7086;
+        padding: 0 14px 8px;
+        background: #181825;
+        text-align: right;
+        flex-shrink: 0;
+      }
+    </style>
+
+    <!-- Trigger button -->
+    <button id="ask-archer-btn" title="Ask Archer" aria-label="Ask Archer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+
+    <!-- Chat panel -->
+    <div id="ask-archer-panel" role="dialog" aria-label="Ask Archer">
+      <div class="aap-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div>
+          <div class="aap-title">Ask Archer</div>
+          <div class="aap-subtitle">ATT&amp;CK, queries, threat groups</div>
+        </div>
+        <button id="aap-close" aria-label="Close">&#10005;</button>
+      </div>
+
+      <div class="aap-messages" id="aap-messages">
+        <div class="aap-msg archer">Hi! Ask me anything about threat detection — techniques, SIEM queries, threat groups, or anything in your generated detections.</div>
+      </div>
+
+      <div class="aap-provider" id="aap-provider"></div>
+
+      <div class="aap-input-row">
+        <textarea id="aap-input" placeholder="e.g. Give me a Splunk query for Scattered Spider…" rows="1"></textarea>
+        <button id="aap-send">Send</button>
+      </div>
+    </div>
+
+    <script>
+    (function () {
+      const btn   = document.getElementById('ask-archer-btn');
+      const panel = document.getElementById('ask-archer-panel');
+      const close = document.getElementById('aap-close');
+      const msgs  = document.getElementById('aap-messages');
+      const input = document.getElementById('aap-input');
+      const send  = document.getElementById('aap-send');
+      const provEl = document.getElementById('aap-provider');
+
+      btn.addEventListener('click', () => {
+        panel.classList.toggle('open');
+        if (panel.classList.contains('open')) input.focus();
+      });
+      close.addEventListener('click', () => panel.classList.remove('open'));
+
+      function addMsg(text, role) {
+        const d = document.createElement('div');
+        d.className = 'aap-msg ' + role;
+        d.textContent = text;
+        msgs.appendChild(d);
+        msgs.scrollTop = msgs.scrollHeight;
+        return d;
+      }
+
+      async function doAsk() {
+        const q = input.value.trim();
+        if (!q) return;
+        input.value = '';
+        input.style.height = '38px';
+        send.disabled = true;
+
+        addMsg(q, 'user');
+
+        const typing = document.createElement('div');
+        typing.className = 'aap-typing';
+        typing.textContent = 'Archer is thinking…';
+        msgs.appendChild(typing);
+        msgs.scrollTop = msgs.scrollHeight;
+
+        // Pick up group context if set on the page
+        const groupInput = document.getElementById('group_name') || document.querySelector('[name="group_name"]');
+        const context = groupInput && groupInput.value ? { group: groupInput.value } : {};
+
+        try {
+          const res = await fetch('/api/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: q, context }),
+          });
+          msgs.removeChild(typing);
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ detail: res.statusText }));
+            addMsg('Error: ' + (err.detail || res.statusText), 'error');
+          } else {
+            const data = await res.json();
+            addMsg(data.answer, 'archer');
+            if (data.provider) provEl.textContent = 'Powered by ' + data.provider;
+          }
+        } catch (e) {
+          msgs.removeChild(typing);
+          addMsg('Network error: ' + e.message, 'error');
+        }
+
+        send.disabled = false;
+        input.focus();
+      }
+
+      send.addEventListener('click', doAsk);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doAsk(); }
+      });
+
+      // Auto-grow textarea
+      input.addEventListener('input', () => {
+        input.style.height = '38px';
+        input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+      });
+    })();
+    </script>
+
     {% endblock %}
 </body>
 </html>
