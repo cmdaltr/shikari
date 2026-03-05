@@ -4507,6 +4507,263 @@ async def get_technique_names(request: Request):
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
+@app.post("/api/actors/techniques")
+async def get_actors_techniques(request: Request):
+    """
+    Get consolidated ATT&CK techniques for a list of threat actors.
+
+    Request body: {"actors": ["APT29", "Lazarus Group"]}
+    Returns a consolidated list of techniques with per-actor attribution,
+    following all three MITRE attribution paths (direct, via software, via campaign).
+    """
+    from archer.mitre.procedures import (
+        _build_indexes,
+        _resolve_group,
+        _walk_path1,
+        _walk_path2,
+        _walk_path3,
+    )
+
+    try:
+        body = await request.json()
+        actors = body.get("actors", [])
+
+        if not actors:
+            return JSONResponse({"ok": False, "error": "No actors provided"}, status_code=400)
+
+        if len(actors) > 20:
+            return JSONResponse({"ok": False, "error": "Maximum 20 actors per request"}, status_code=400)
+
+        bundle = getattr(app.state, "bundle", None)
+        if not bundle:
+            return JSONResponse({"ok": False, "error": "MITRE ATT&CK data not loaded"}, status_code=503)
+
+        # Build indexes once for all actor lookups
+        objects = list(bundle.objects)
+        groups, techniques, software, campaigns = _build_indexes(objects)
+
+        # technique_map: (technique_id, tactic) -> {technique_id, technique_name, tactic,
+        #                                            actors: {actor_name: set(attribution_types)}}
+        technique_map = {}
+        actors_found = []
+        actors_not_found = []
+        actor_metadata: dict = {}
+
+        for raw_actor in actors:
+            actor_name = raw_actor.strip()
+            if not actor_name:
+                continue
+
+            stix_id = _resolve_group(groups, actor_name)
+            if not stix_id:
+                actors_not_found.append(actor_name)
+                continue
+
+            actors_found.append(actor_name)
+            actor_metadata[actor_name] = _actor_stix_metadata(groups[stix_id])
+
+            # Walk all three attribution paths for this single actor
+            rows = []
+            seen = set()
+            single_group = {stix_id: groups[stix_id]}
+            _walk_path1(objects, single_group, techniques, rows, seen)
+            _walk_path2(objects, single_group, techniques, software, rows, seen)
+            _walk_path3(objects, single_group, techniques, campaigns, rows, seen)
+
+            for row in rows:
+                tech_id = row["technique_id"]
+                tactic = row["tactic"]
+                key = (tech_id, tactic)
+
+                if key not in technique_map:
+                    technique_map[key] = {
+                        "technique_id": tech_id,
+                        "technique_name": row["technique_name"],
+                        "tactic": tactic,
+                        "actors": {},
+                    }
+
+                actor_entry = technique_map[key]["actors"]
+                if actor_name not in actor_entry:
+                    actor_entry[actor_name] = set()
+                actor_entry[actor_name].add(row["attribution_type"])
+
+        # Build output list sorted by technique_id then tactic
+        consolidated = []
+        for (tech_id, tactic), data in sorted(technique_map.items()):
+            actors_list = [
+                {
+                    "name": actor,
+                    "attribution_types": sorted(atypes),
+                }
+                for actor, atypes in sorted(data["actors"].items())
+            ]
+            consolidated.append({
+                "technique_id": tech_id,
+                "technique_name": data["technique_name"],
+                "tactic": tactic,
+                "actors": actors_list,
+                "actor_count": len(actors_list),
+            })
+
+        shared_count = sum(1 for t in consolidated if t["actor_count"] > 1)
+
+        return JSONResponse({
+            "ok": True,
+            "techniques": consolidated,
+            "actors_found": actors_found,
+            "actors_not_found": actors_not_found,
+            "actor_metadata": actor_metadata,
+            "total_techniques": len(consolidated),
+            "shared_count": shared_count,
+        })
+
+    except Exception as e:
+        print(f"Error in /api/actors/techniques: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+def _actor_stix_metadata(obj: dict) -> dict:
+    """Extract exportable metadata from a STIX intrusion-set object."""
+    mitre_id = ""
+    mitre_url = ""
+    for ref in obj.get("external_references", []):
+        if ref.get("source_name") == "mitre-attack":
+            mitre_id = ref.get("external_id", "")
+            mitre_url = ref.get("url", "")
+            break
+
+    raw_domains = obj.get("x_mitre_domains", [])
+    domain_map = {"enterprise-attack": "Enterprise", "mobile-attack": "Mobile", "ics-attack": "ICS"}
+    domains = "; ".join(domain_map.get(d, d) for d in raw_domains) or "Enterprise"
+
+    name = obj.get("name", "")
+    aliases = [a for a in (obj.get("aliases") or []) if a != name]
+    aliases_str = "; ".join(aliases)
+
+    enterprise_layer = f"https://attack.mitre.org/groups/{mitre_id}/enterprise-layer.json" if mitre_id and "Enterprise" in domains else ""
+    mobile_layer     = f"https://attack.mitre.org/groups/{mitre_id}/mobile-layer.json"     if mitre_id and "Mobile"     in domains else ""
+    ics_layer        = f"https://attack.mitre.org/groups/{mitre_id}/ics-layer.json"        if mitre_id and "ICS"        in domains else ""
+
+    return {
+        "mitre_group_id":   mitre_id,
+        "domains":          domains,
+        "aliases":          aliases_str,
+        "mitre_url":        mitre_url,
+        "enterprise_layer": enterprise_layer,
+        "mobile_layer":     mobile_layer,
+        "ics_layer":        ics_layer,
+    }
+
+
+import re as _re
+
+# Country keywords that need attribution-context matching (not just any mention)
+_COUNTRY_KEYWORDS: set = {
+    "china", "russia", "iran", "north korea", "pakistan",
+    "vietnam", "india", "ukraine", "israel", "united states", "turkey", "lebanon",
+}
+
+# Words that indicate the country is the ORIGIN/SPONSOR of the group, not a target
+_ATTRIBUTION_CTX_RE = _re.compile(
+    r'(?:attributed|sponsored|nexus|likely|believed|assessed|operating|based in|'
+    r'on behalf|nation.state|state.sponsored|threat actor|threat group|'
+    r'cyber espionage|intelligence service|military intelligence)',
+    _re.IGNORECASE,
+)
+
+def _country_in_attribution_context(description: str, terms: list) -> bool:
+    """Return True only if a country term appears near attribution language."""
+    for term in terms:
+        for m in _re.finditer(_re.escape(term), description, _re.IGNORECASE):
+            start = max(0, m.start() - 200)
+            end   = min(len(description), m.end() + 200)
+            window = description[start:end]
+            if _ATTRIBUTION_CTX_RE.search(window):
+                return True
+    return False
+
+
+# Industry / country keyword → description search terms
+_ACTOR_KEYWORD_VARIANTS: dict = {
+    # Industries
+    "finance":           ["financial", "finance", "banking", "bank", "insurance", "cryptocurrency", "fintech"],
+    "retail":            ["retail", "consumer goods", "e-commerce", "ecommerce", "supermarket"],
+    "defence":           ["defense", "defence", "military", "armed forces", "department of defense", "dod", "nato"],
+    "healthcare":        ["healthcare", "health care", "hospital", "medical", "pharmaceutical", "pharma", "biotech"],
+    "energy":            ["energy", "oil and gas", "oil & gas", "utilities", "power grid", "electric", "nuclear"],
+    "technology":        ["technology", "tech sector", "semiconductor", "software company", "it sector", "high-tech"],
+    "telecommunications": ["telecommunications", "telecom", "telco", "internet service provider", "isp"],
+    "government":        ["government", "public sector", "federal", "ministry", "civil service", "state-owned"],
+    "aerospace":         ["aerospace", "aviation", "space industry", "satellite"],
+    "education":         ["education", "university", "academic", "research institution"],
+    "manufacturing":     ["manufacturing", "industrial", "factory", "production"],
+    "media":             ["media", "news", "journalism", "broadcasting", "entertainment"],
+    "legal":             ["legal", "law firm", "judiciary"],
+    # Countries / regions
+    "china":             ["chinese", "china", "prc", "people's republic of china", "beijing"],
+    "russia":            ["russian", "russia", "kremlin", "moscow", "gru", "fsb", "svr"],
+    "iran":              ["iranian", "iran", "tehran", "irgc"],
+    "north korea":       ["north korean", "north korea", "dprk", "pyongyang", "lazarus"],
+    "pakistan":          ["pakistan", "pakistani", "islamabad"],
+    "vietnam":           ["vietnam", "vietnamese"],
+    "india":             ["india", "indian"],
+    "ukraine":           ["ukraine", "ukrainian"],
+    "israel":            ["israel", "israeli"],
+    "united states":     ["united states", "us-based", "american actor"],
+    "turkey":            ["turkey", "turkish"],
+    "lebanon":           ["lebanon", "lebanese", "hezbollah"],
+}
+
+
+@app.get("/api/actors/by-keyword")
+async def get_actors_by_keyword(keyword: str = "", keywords: str = "", mode: str = "AND"):
+    """
+    Return actor names whose MITRE descriptions match given keyword(s).
+
+    Single:   ?keyword=Iran
+    Multiple: ?keywords=Iran,Finance&mode=AND  (actors matching ALL keywords)
+              ?keywords=Iran,Finance&mode=OR   (actors matching ANY keyword)
+    Returns: {"ok": true, "actors": [...], "count": N}
+    """
+    raw = keywords if keywords else keyword
+    kw_list = [k.strip() for k in raw.split(",") if k.strip()]
+    if not kw_list:
+        return JSONResponse({"ok": False, "error": "No keyword provided"}, status_code=400)
+
+    bundle = getattr(app.state, "bundle", None)
+    if not bundle:
+        return JSONResponse({"ok": False, "error": "MITRE ATT&CK data not loaded"}, status_code=503)
+
+    per_kw_terms = [
+        _ACTOR_KEYWORD_VARIANTS.get(kw.lower(), [kw.lower()])
+        for kw in kw_list
+    ]
+
+    use_and = mode.upper() != "OR"
+    matched = []
+    for obj in bundle.objects:
+        if obj.get("type") == "intrusion-set":
+            description = (obj.get("description") or "")
+
+            def kw_hit(kw: str, terms: list) -> bool:
+                if kw.lower() in _COUNTRY_KEYWORDS:
+                    return _country_in_attribution_context(description, terms)
+                return any(t in description.lower() for t in terms)
+
+            if use_and:
+                hit = all(kw_hit(kw, terms) for kw, terms in zip(kw_list, per_kw_terms))
+            else:
+                hit = any(kw_hit(kw, terms) for kw, terms in zip(kw_list, per_kw_terms))
+            if hit:
+                matched.append(obj.get("name", ""))
+
+    matched = sorted(filter(None, matched))
+    return JSONResponse({"ok": True, "actors": matched, "count": len(matched), "keywords": kw_list, "mode": mode.upper()})
+
+
 @app.post("/profile/generate-detections")
 async def generate_detections_from_profile(
     request: Request,

@@ -321,14 +321,132 @@
                 <span class="separator-line"></span>
               </div>
 
-              <!-- CVE Input -->
-              <div class="form-section">
-                <label for="cve_input" class="form-label">
-                  Generate queries based on CVE(s)
-                  <span style="font-weight: 400; color: #666; font-size: 0.9em;">(Supports multiple, comma-separated)</span>
+              <!-- Actor Technique Consolidation -->
+              <div id="actor-consolidation-section">
+                <label class="form-label" style="margin-bottom:8px;display:block;font-size:16px;">
+                  Consolidate Techniques by Actor(s)
+                  <span style="font-weight: 400; color: #666; font-size: 1em;">(Compare techniques across multiple threat groups)</span>
                 </label>
-                <input type="text" name="cve_id" id="cve_input" class="form-input"
-                       placeholder="e.g., CVE-2024-1234 or CVE-2021-44228, CVE-2022-22965">
+
+                <!-- Box 1: Keyword search + AND/OR toggle -->
+                <div style="margin-bottom:10px;">
+                  <label style="font-size:14px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Filter by keyword</label>
+                  <div style="display:flex;align-items:stretch;gap:10px;">
+                    <div id="keyword-input-wrap" class="form-input" style="flex:1;position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text;height:auto;min-height:44px;" onclick="document.getElementById('keyword-text-input').focus()">
+                      <div id="keyword-filters-row" style="display:contents;"></div>
+                      <input type="text" id="keyword-text-input" autocomplete="off" placeholder="e.g. Iran, Finance…"
+                        style="flex:1;min-width:140px;border:none;outline:none;font-size:16px;background:transparent;padding:0;margin:0;">
+                    </div>
+                    <!-- AND / OR single toggle button -->
+                    <button id="kw-mode-btn" type="button"
+                      style="width:70px;border:2px solid #d1d5db;border-radius:6px;background:#374151;color:#fff;cursor:pointer;font-size:16px;font-weight:600;font-family:inherit;white-space:nowrap;flex-shrink:0;">
+                      AND
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Box 2: Actor name tags -->
+                <div>
+                  <label style="font-size:14px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Actor groups</label>
+                  <div id="actor-tag-input-wrap" class="form-input" style="position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text;height:auto;min-height:44px;" onclick="document.getElementById('actor-text-input').focus()">
+                    <div id="actor-tags-list" style="display:contents;"></div>
+                    <input type="text" id="actor-text-input" autocomplete="off" placeholder="Type an actor name…"
+                      style="flex:1;min-width:160px;border:none;outline:none;font-size:16px;background:transparent;padding:0;margin:0;">
+                    <div id="actor-autocomplete" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:200;max-height:260px;overflow-y:auto;"></div>
+                  </div>
+                </div>
+
+                <!-- Results panel -->
+                <div id="actor-results-panel" style="display:none;margin-top:16px;">
+                  <div id="actor-results-loading" style="display:none;text-align:center;padding:28px;color:#6366f1;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;display:inline-block;">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    </svg>
+                    <div style="margin-top:8px;font-size:20px;">Consolidating techniques across actors…</div>
+                  </div>
+                  <div id="actor-results-error" style="display:none;padding:10px 14px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;color:#991b1b;font-size:20px;"></div>
+                  <div id="actor-results-content" style="display:none;">
+                    <div id="actor-summary-bar" style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:12px;padding:14px 14px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;text-align:center;"></div>
+                    <div id="actor-not-found-bar" style="display:none;margin-bottom:10px;padding:8px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;font-size:18px;color:#92400e;"></div>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;">
+                      <span style="font-size:15px;color:#6b7280;display:flex;align-items:center;gap:5px;">
+                        <span style="display:inline-block;width:3px;height:14px;background:#f59e0b;border-radius:2px;"></span>
+                        = &gt;1 actor
+                      </span>
+                      <div id="tactic-multiselect" style="position:relative;">
+                        <button id="tactic-ms-btn" type="button"
+                          style="font-size:15px;border:1px solid #d1d5db;border-radius:4px;padding:0 10px;background:#fff;height:35px;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:130px;">
+                          <span id="tactic-ms-label">All tactics</span>
+                          <svg style="width:12px;height:12px;flex-shrink:0;margin-left:auto;" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+                        </button>
+                        <div id="tactic-ms-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:200px;max-height:320px;overflow-y:auto;">
+                          <label style="display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;font-size:15px;font-weight:600;border-bottom:1px solid #e5e7eb;margin-bottom:4px;">
+                            <input type="checkbox" id="tactic-ms-all" checked style="width:15px;height:15px;cursor:pointer;"> All tactics
+                          </label>
+                          <div id="tactic-ms-options"></div>
+                        </div>
+                      </div>
+                      <!-- View toggle: Grouped / Per Actor -->
+                      <div style="display:flex;border:1px solid #d1d5db;border-radius:4px;overflow:hidden;">
+                        <button id="actor-view-grouped" type="button"
+                          style="padding:0 16px;border:none;background:#374151;color:#fff;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
+                          Grouped
+                        </button>
+                        <button id="actor-view-flat" type="button"
+                          style="padding:0 16px;border:none;background:#fff;color:#6b7280;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;border-left:1px solid #d1d5db;height:35px;box-sizing:border-box;">
+                          Per Actor
+                        </button>
+                      </div>
+                      <!-- Hide/Show table toggle -->
+                      <button id="actor-toggle-table" type="button"
+                        style="padding:0 16px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
+                        Hide Table
+                      </button>
+                      <!-- Clear -->
+                      <button id="actor-btn-clear" type="button"
+                        style="padding:0 16px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
+                        Clear
+                      </button>
+                      <div style="margin-left:auto;display:flex;align-items:center;gap:0;">
+                        <span style="font-size:15px;color:#6b7280;margin-right:8px;font-weight:500;">Export</span>
+                        <button id="actor-export-csv" type="button"
+                          style="font-size:15px;padding:6px 14px;border-radius:4px 0 0 4px;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
+                          CSV
+                        </button>
+                        <button id="actor-export-xlsx" type="button"
+                          style="font-size:15px;padding:6px 14px;border-radius:0;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
+                          XLSX
+                        </button>
+                        <button id="actor-export-json" type="button"
+                          style="font-size:15px;padding:6px 14px;border-radius:0 4px 4px 0;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
+                          JSON
+                        </button>
+                      </div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                      <table id="actor-techniques-table" style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;">
+                        <colgroup>
+                          <col style="width:11%">
+                          <col><!-- Name: flexible -->
+                          <col style="width:17%">
+                          <col style="width:22%">
+                          <col style="width:14%">
+                        </colgroup>
+                        <thead>
+                          <tr style="background:#f1f5f9;text-align:left;">
+                            <th data-col="technique_id"   class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;">ID ↕</th>
+                            <th data-col="technique_name" class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Name ↕</th>
+                            <th data-col="tactic"         class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Tactic ↕</th>
+                            <th data-col="actor_count"    class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;">Actors ↕</th>
+                            <th data-col="attribution"    class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Attribution ↕</th>
+                          </tr>
+                        </thead>
+                        <tbody id="actor-techniques-body"></tbody>
+                      </table>
+                    </div>
+                    <div id="actor-row-count" style="margin-top:8px;font-size:18px;color:#6b7280;text-align:right;"></div>
+                  </div>
+                </div>
               </div>
 
               <!-- OR Separator -->
@@ -338,20 +456,27 @@
                 <span class="separator-line"></span>
               </div>
 
-              <!-- Technique Hunt Input -->
-              <div class="form-section" style="opacity: 0.6; pointer-events: none; position: relative;">
-                <!-- Coming Soon Badge -->
-                <div style="position: absolute; top: 8px; right: 8px; background: #6b7280; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.75em; font-weight: 600; letter-spacing: 0.5px; z-index: 10;">
-                  COMING SOON
-                </div>
-                <label for="technique_input" class="form-label" style="color: #9ca3af;">
-                  Generate queries based on ATT&CK Technique IDs
-                  <span style="font-weight: 400; color: #9ca3af; font-size: 0.9em;">(Hunt specific techniques)</span>
-                </label>
-                <input type="text" name="technique_ids" id="technique_input" class="form-input"
-                       placeholder="e.g., T1003, T1021.001, T1078 or T1003, T1021, T1078" disabled>
-                <div style="margin-top: 8px; font-size: 0.85em; color: #9ca3af;">
-                  Enter one or more MITRE ATT&CK Technique IDs separated by commas. Supports both parent techniques (T1003) and subtechniques (T1003.001).
+              <!-- CVE + ATT&CK Technique IDs (50/50) -->
+              <div class="form-section" style="padding-bottom:4px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:start;">
+                  <!-- Left: CVE(s) -->
+                  <div style="padding-right:20px;border-right:1px solid #e5e7eb;">
+                    <label for="cve_input" class="form-label" style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;">
+                      <span>Generate queries based on</span>
+                      <span>…&thinsp;<strong>CVE(s)</strong></span>
+                    </label>
+                    <input type="text" name="cve_id" id="cve_input" class="form-input"
+                           placeholder="e.g., CVE-2024-1234 or CVE-2021-44228, CVE-2022-22965">
+                  </div>
+                  <!-- Right: ATT&CK Technique IDs -->
+                  <div style="padding-left:20px;opacity:0.6;pointer-events:none;">
+                    <label for="technique_input" class="form-label" style="color:#9ca3af;margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;">
+                      <span style="background:#6b7280;color:white;padding:3px 10px;border-radius:10px;font-size:0.75em;font-weight:600;letter-spacing:0.5px;white-space:nowrap;">COMING SOON</span>
+                      <span>…&thinsp;<strong style="color:#9ca3af;">ATT&amp;CK Technique IDs</strong></span>
+                    </label>
+                    <input type="text" name="technique_ids" id="technique_input" class="form-input"
+                           placeholder="e.g., T1003, T1021.001, T1078" disabled>
+                  </div>
                 </div>
               </div>
 
@@ -534,7 +659,7 @@
                 <label class="option-item" id="auto-validate-label" style="align-items: flex-start;">
                   <input type="checkbox" name="auto_validate" id="auto_validate_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
                   <div style="flex: 1; min-width: 0;">
-                    <span class="option-label" style="font-size: 1.5em;">
+                    <span class="option-label">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;">
                         <path d="M9 12l2 2 4-4"/>
                         <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
@@ -564,19 +689,27 @@
                 </div>
               </details>
 
-              <button type="submit" class="btn-primary" id="generate_btn" disabled>
-                Generate
-              </button>
-
-              <!-- Threat Briefing button — secondary action for group-based input -->
-              <button type="button" id="briefing-btn" class="btn-secondary" disabled
-                      style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  <path d="M9 12l2 2 4-4"/>
-                </svg>
-                Threat Briefing
-              </button>
+              <!-- Action buttons -->
+              <div style="border-top:1px solid #dee2e6;margin-top:20px;padding-top:16px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                <button type="submit" class="btn-primary" id="generate_btn" disabled
+                        style="margin:0;font-size:1rem;">
+                  Generate
+                </button>
+                <button type="button" id="briefing-btn" class="btn-secondary" disabled
+                        style="margin:0;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M9 12l2 2 4-4"/>
+                  </svg>
+                  Threat Briefing
+                </button>
+                <button id="actor-consolidate-btn" type="button" disabled
+                        style="margin:0;padding:10px;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;border:none;background:#10b981;color:#fff;opacity:0.45;transition:opacity .15s;">
+                  Consolidate Techniques
+                </button>
+                </div>
+              </div>
             </form>
 
             <!-- Threat Briefing Results Panel -->
@@ -629,7 +762,7 @@
             }
             .briefing-tech-card:first-child { border-left: 3px solid #6366f1; }
             .briefing-tech-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-            .briefing-tech-id { font-family: monospace; font-size: 11px; background: #e3f2fd; color: #1565c0; padding: 2px 7px; border-radius: 10px; }
+            .briefing-tech-id { font-family: monospace; font-size: 16px; background: #e3f2fd; color: #1565c0; padding: 2px 7px; border-radius: 10px; }
             .briefing-tech-name { font-weight: 600; font-size: 13px; color: #1a1a2e; }
             .briefing-tactic { font-size: 11px; background: #e8f5e9; color: #2e7d32; padding: 2px 7px; border-radius: 10px; }
             .briefing-covered { font-size: 11px; padding: 2px 7px; border-radius: 10px; }
@@ -749,6 +882,983 @@
               }
             })();
             </script>
+
+
+            <style>
+            .actor-tag {
+              display:inline-flex;align-items:center;gap:5px;
+              background:#e0e7ff;color:#3730a3;
+              padding:4px 13px;border-radius:12px;font-size:16px;font-weight:600;
+              white-space:nowrap;
+            }
+            .actor-tag-remove {
+              cursor:pointer;font-size:21px;line-height:1;color:#6366f1;font-weight:700;
+              background:none;border:none;padding:0 0 0 2px;
+            }
+            .actor-tag-remove:hover { color:#dc2626; }
+            .actor-ac-item {
+              padding:10px 14px;cursor:pointer;font-size:20px;border-bottom:1px solid #f3f4f6;
+            }
+            .actor-ac-item:last-child { border-bottom:none; }
+            .actor-ac-item:hover { background:#f0f9ff; }
+            .actor-ac-alias { font-size:17px;color:#9ca3af;margin-left:6px; }
+            .actor-th { user-select:none; }
+            .actor-th:hover { background:#e2e8f0; }
+            .actor-row-shared td:first-child { border-left:3px solid #f59e0b; padding-left:7px; }
+            </style>
+
+            <script>
+            (function () {
+              /* ---- state ---- */
+              var actorTags      = [];   // array of primary actor name strings
+              var activeKeywords = [];   // active keyword filters (intersection)
+              var allRows        = [];   // full result set from API
+              var sortCol   = 'tactic';
+              var sortAsc   = true;
+              var viewMode  = 'grouped'; // 'grouped' | 'flat'
+              var kwMode    = 'AND';     // 'AND' | 'OR' keyword filter mode
+              var actorMetadata = {};    // actor_metadata from last API call
+
+              /* ---- DOM refs ---- */
+              var textInput        = document.getElementById('actor-text-input');
+              var tagsList         = document.getElementById('actor-tags-list');
+              var acDropdown       = document.getElementById('actor-autocomplete');
+              var tagWrap          = document.getElementById('actor-tag-input-wrap');
+              var consolidateBtn   = document.getElementById('actor-consolidate-btn');
+              var kwFiltersRow     = document.getElementById('keyword-filters-row');
+              var kwTextInput      = document.getElementById('keyword-text-input');
+              var kwModeBtn        = document.getElementById('kw-mode-btn');
+              var kwInputWrap      = document.getElementById('keyword-input-wrap');
+
+              /* Match form-input focus style */
+              textInput.addEventListener('focus', function () { tagWrap.style.borderColor = '#007bff'; });
+              textInput.addEventListener('blur',  function () { tagWrap.style.borderColor = ''; });
+
+              /* keyword-text-input focus styles */
+              kwTextInput.addEventListener('focus', function () { kwInputWrap.style.borderColor = '#007bff'; });
+              kwTextInput.addEventListener('blur',  function () { kwInputWrap.style.borderColor = ''; });
+
+              /* AND / OR single toggle */
+              kwModeBtn.addEventListener('click', function () {
+                kwMode = kwMode === 'AND' ? 'OR' : 'AND';
+                kwModeBtn.textContent = kwMode;
+                kwModeBtn.style.background  = kwMode === 'AND' ? '#374151' : '#fff';
+                kwModeBtn.style.color       = kwMode === 'AND' ? '#fff'    : '#374151';
+                kwModeBtn.style.borderColor = kwMode === 'AND' ? '#d1d5db' : '#374151';
+                if (activeKeywords.length) runKeywordIntersection();
+              });
+
+              /* keyword-text-input — typed keyword → chip on Enter, with client-side AC */
+              var kwAcDropdown = document.createElement('div');
+              kwAcDropdown.style.cssText = 'display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:200;max-height:200px;overflow-y:auto;';
+              kwInputWrap.appendChild(kwAcDropdown);
+
+              function hideKwAC() { kwAcDropdown.style.display = 'none'; kwAcDropdown.innerHTML = ''; }
+
+              function renderKwAC(matches) {
+                kwAcDropdown.innerHTML = '';
+                if (!matches.length) { hideKwAC(); return; }
+                matches.forEach(function (kw) {
+                  var s = KW_STYLE[kw.type] || KW_STYLE.other;
+                  var m = KEYWORD_META[kw.label] || {};
+                  var div = document.createElement('div');
+                  div.style.cssText = 'padding:9px 14px;cursor:pointer;font-size:16px;display:flex;align-items:center;gap:8px;';
+                  var badge = '<span style="background:' + s.bg + ';color:' + s.color + ';border:1px solid ' + s.border + ';padding:1px 7px;border-radius:8px;font-size:12px;font-weight:600;">' + s.badge + '</span>';
+                  div.innerHTML = badge + (m.emoji ? m.emoji + ' ' : '') + escActor(kw.label);
+                  div.dataset.kwLabel = kw.label;
+                  div.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    kwTextInput.value = '';
+                    hideKwAC();
+                    expandKeyword(this.dataset.kwLabel);
+                  });
+                  div.addEventListener('mouseenter', function () { this.style.background = '#f8fafc'; });
+                  div.addEventListener('mouseleave', function () { this.style.background = ''; });
+                  kwAcDropdown.appendChild(div);
+                });
+                kwAcDropdown.style.display = 'block';
+              }
+
+              kwTextInput.addEventListener('input', function () {
+                var q = this.value.trim().toLowerCase();
+                if (!q) { hideKwAC(); return; }
+                var matches = [];
+                ['industry','country'].forEach(function (type) {
+                  AC_KEYWORDS[type].forEach(function (kw) {
+                    if (kw.toLowerCase().includes(q)) matches.push({ type: type, label: kw });
+                  });
+                });
+                renderKwAC(matches);
+              });
+
+              kwTextInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  var val = this.value.trim();
+                  if (val) { kwTextInput.value = ''; hideKwAC(); expandKeyword(val); }
+                } else if (e.key === 'Escape') {
+                  hideKwAC();
+                }
+              });
+              var resultsPanel  = document.getElementById('actor-results-panel');
+              var loadingEl     = document.getElementById('actor-results-loading');
+              var errorEl       = document.getElementById('actor-results-error');
+              var contentEl     = document.getElementById('actor-results-content');
+              var summaryBar    = document.getElementById('actor-summary-bar');
+              var notFoundBar   = document.getElementById('actor-not-found-bar');
+              var selectedTactics = [];   // empty = All
+
+              /* ---- tactic multiselect wiring ---- */
+              (function () {
+                var msBtn      = document.getElementById('tactic-ms-btn');
+                var msDropdown = document.getElementById('tactic-ms-dropdown');
+                var msLabel    = document.getElementById('tactic-ms-label');
+                var msAll      = document.getElementById('tactic-ms-all');
+                var msOptions  = document.getElementById('tactic-ms-options');
+
+                msBtn.addEventListener('click', function (e) {
+                  e.stopPropagation();
+                  msDropdown.style.display = msDropdown.style.display === 'none' ? 'block' : 'none';
+                });
+                document.addEventListener('click', function (e) {
+                  if (!document.getElementById('tactic-multiselect').contains(e.target)) {
+                    msDropdown.style.display = 'none';
+                  }
+                });
+
+                function updateLabel() {
+                  if (selectedTactics.length === 0) {
+                    msLabel.textContent = 'All tactics';
+                  } else if (selectedTactics.length === 1) {
+                    msLabel.textContent = selectedTactics[0];
+                  } else {
+                    msLabel.textContent = selectedTactics.length + ' tactics';
+                  }
+                }
+
+                msAll.addEventListener('change', function () {
+                  selectedTactics = [];
+                  msOptions.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
+                  updateLabel();
+                  renderTable();
+                });
+
+                window._tacticMsRebuild = function (tactics) {
+                  msOptions.innerHTML = '';
+                  selectedTactics = [];
+                  msAll.checked = true;
+                  updateLabel();
+                  tactics.forEach(function (t) {
+                    var lbl = document.createElement('label');
+                    lbl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:15px;';
+                    var cb = document.createElement('input');
+                    cb.type = 'checkbox'; cb.value = t;
+                    cb.style.cssText = 'width:15px;height:15px;cursor:pointer;';
+                    cb.addEventListener('change', function () {
+                      selectedTactics = Array.from(msOptions.querySelectorAll('input:checked')).map(function (x) { return x.value; });
+                      msAll.checked = selectedTactics.length === 0;
+                      updateLabel();
+                      renderTable();
+                    });
+                    lbl.appendChild(cb);
+                    lbl.appendChild(document.createTextNode(t));
+                    msOptions.appendChild(lbl);
+                  });
+                };
+              })();
+              var exportCsvBtn   = document.getElementById('actor-export-csv');
+              var exportXlsxBtn  = document.getElementById('actor-export-xlsx');
+              var exportJsonBtn  = document.getElementById('actor-export-json');
+              var viewGroupedBtn  = document.getElementById('actor-view-grouped');
+              var viewFlatBtn     = document.getElementById('actor-view-flat');
+              var toggleTableBtn  = document.getElementById('actor-toggle-table');
+              var clearBtn        = document.getElementById('actor-btn-clear');
+              var tbody           = document.getElementById('actor-techniques-body');
+              var tableVisible    = true;
+              var rowCountEl    = document.getElementById('actor-row-count');
+
+              /* ---- tag management ---- */
+              function actorTagStyle(name) {
+                var info = GROUP_INFO[name];
+                if (!info)  return KW_STYLE.other;     // unknown → purple
+                if (info.$) return KW_STYLE.industry;  // financial → blue
+                if (info.f) return KW_STYLE.country;   // country-attributed → pink
+                return KW_STYLE.other;
+              }
+
+              function renderTags() {
+                tagsList.innerHTML = '';
+                actorTags.forEach(function (name, idx) {
+                  var s = actorTagStyle(name);
+                  var span = document.createElement('span');
+                  span.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:' + s.bg + ';color:' + s.color + ';border:1px solid ' + s.border + ';padding:4px 13px;border-radius:12px;font-size:16px;font-weight:600;white-space:nowrap;line-height:1.4;min-height:32px;box-sizing:border-box;';
+                  span.innerHTML = '<span style="font-size:15px;line-height:1;display:inline-block;width:1.2em;text-align:center;">' + actorEmoji(name) + '</span>' + escActor(name) +
+                    '<button style="background:none;border:none;cursor:pointer;color:' + s.color + ';padding:0;margin-left:2px;font-size:14px;line-height:1;font-weight:700;" title="Remove" data-idx="' + idx + '">&times;</button>';
+                  tagsList.appendChild(span);
+                });
+                consolidateBtn.disabled = actorTags.length === 0;
+                consolidateBtn.style.opacity = actorTags.length ? '1' : '0.45';
+              }
+
+              tagsList.addEventListener('click', function (e) {
+                var btn = e.target.closest('button[data-idx]');
+                if (!btn) return;
+                var idx = parseInt(btn.dataset.idx, 10);
+                actorTags.splice(idx, 1);
+                renderTags();
+              });
+
+              function addActor(name) {
+                name = name.trim();
+                if (!name) return;
+                // avoid duplicates (case-insensitive)
+                var lower = name.toLowerCase();
+                if (actorTags.some(function (a) { return a.toLowerCase() === lower; })) return;
+                actorTags.push(name);
+                renderTags();
+                textInput.value = '';
+                hideAC();
+              }
+
+              /* ---- autocomplete ---- */
+              var acTimer = null;
+              textInput.addEventListener('input', function () {
+                clearTimeout(acTimer);
+                var q = this.value.trim();
+                if (!q) { hideAC(); return; }
+                acTimer = setTimeout(function () { fetchAC(q); }, 200);
+              });
+
+              textInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  var highlighted = acDropdown.querySelector('.actor-ac-item.highlighted');
+                  if (highlighted) {
+                    addActor(highlighted.dataset.name);
+                  } else if (this.value.trim()) {
+                    addActor(this.value.trim());
+                  }
+                } else if (e.key === 'Escape') {
+                  hideAC();
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  moveHighlight(1);
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  moveHighlight(-1);
+                }
+              });
+
+              /* ---- group country / motivation lookup ---- */
+              var GROUP_INFO = {
+                // Iran 🇮🇷
+                'APT33':{'f':'🇮🇷'},'APT34':{'f':'🇮🇷'},'APT35':{'f':'🇮🇷'},'APT39':{'f':'🇮🇷'},
+                'APT42':{'f':'🇮🇷'},'Agrius':{'f':'🇮🇷'},'Ajax Security Team':{'f':'🇮🇷'},
+                'Charming Kitten':{'f':'🇮🇷'},'Cleaver':{'f':'🇮🇷'},'CopyKittens':{'f':'🇮🇷'},
+                'Ferocious Kitten':{'f':'🇮🇷'},'Fox Kitten':{'f':'🇮🇷'},'HEXANE':{'f':'🇮🇷'},
+                'Leafminer':{'f':'🇮🇷'},'Magic Hound':{'f':'🇮🇷'},'MuddyWater':{'f':'🇮🇷'},
+                'OilRig':{'f':'🇮🇷'},'Pioneer Kitten':{'f':'🇮🇷'},'Rocket Kitten':{'f':'🇮🇷'},
+                'Silent Librarian':{'f':'🇮🇷'},'TA453':{'f':'🇮🇷'},'Seedworm':{'f':'🇮🇷'},
+                'Group5':{'f':'🇮🇷'},'CURIUM':{'f':'🇮🇷'},'Moses Staff':{'f':'🇮🇷'},
+                'Tortoiseshell':{'f':'🇮🇷'},'Yellow Maggot':{'f':'🇮🇷'},
+                // Lebanon 🇱🇧
+                'POLONIUM':{'f':'🇱🇧'},'Volatile Cedar':{'f':'🇱🇧'},'Lebanese Cedar':{'f':'🇱🇧'},
+                // Russia 🇷🇺
+                'APT28':{'f':'🇷🇺'},'APT29':{'f':'🇷🇺'},'APT44':{'f':'🇷🇺'},
+                'Berserk Bear':{'f':'🇷🇺'},'Cozy Bear':{'f':'🇷🇺'},'Fancy Bear':{'f':'🇷🇺'},
+                'Sandworm Team':{'f':'🇷🇺'},'Sofacy Group':{'f':'🇷🇺'},'Turla':{'f':'🇷🇺'},
+                'Gamaredon Group':{'f':'🇷🇺'},'InvisiMole':{'f':'🇷🇺'},
+                'Midnight Blizzard':{'f':'🇷🇺'},'Seashell Blizzard':{'f':'🇷🇺'},
+                'Star Blizzard':{'f':'🇷🇺'},'Voodoo Bear':{'f':'🇷🇺'},'Dragonfly':{'f':'🇷🇺'},
+                'IRON TWILIGHT':{'f':'🇷🇺'},'TEMP.Veles':{'f':'🇷🇺'},'ALLANITE':{'f':'🇷🇺'},
+                'Callisto Group':{'f':'🇷🇺'},'Forest Blizzard':{'f':'🇷🇺'},
+                // China 🇨🇳
+                'APT1':{'f':'🇨🇳'},'APT10':{'f':'🇨🇳'},'APT15':{'f':'🇨🇳'},'APT16':{'f':'🇨🇳'},
+                'APT17':{'f':'🇨🇳'},'APT18':{'f':'🇨🇳'},'APT19':{'f':'🇨🇳'},'APT20':{'f':'🇨🇳'},
+                'APT26':{'f':'🇨🇳'},'APT27':{'f':'🇨🇳'},'APT30':{'f':'🇨🇳'},'APT31':{'f':'🇨🇳'},
+                'APT40':{'f':'🇨🇳'},'APT41':{'f':'🇨🇳'},'Axiom':{'f':'🇨🇳'},
+                'Bronze Butler':{'f':'🇨🇳'},'Chimera':{'f':'🇨🇳'},'Codoso':{'f':'🇨🇳'},
+                'Deep Panda':{'f':'🇨🇳'},'GALLIUM':{'f':'🇨🇳'},'Hafnium':{'f':'🇨🇳'},
+                'Hurricane Panda':{'f':'🇨🇳'},'Ke3chang':{'f':'🇨🇳'},'Leviathan':{'f':'🇨🇳'},
+                'Menupass':{'f':'🇨🇳'},'Naikon':{'f':'🇨🇳'},'Night Dragon':{'f':'🇨🇳'},
+                'Putter Panda':{'f':'🇨🇳'},'Red Apollo':{'f':'🇨🇳'},'Salt Typhoon':{'f':'🇨🇳'},
+                'Silk Typhoon':{'f':'🇨🇳'},'Stone Panda':{'f':'🇨🇳'},'TA413':{'f':'🇨🇳'},
+                'TA459':{'f':'🇨🇳'},'Volt Typhoon':{'f':'🇨🇳'},'Winnti Group':{'f':'🇨🇳'},
+                'Granite Typhoon':{'f':'🇨🇳'},'Lotus Blossom':{'f':'🇨🇳'},'Wicked Panda':{'f':'🇨🇳'},
+                'Threat Group-3390':{'f':'🇨🇳'},'TEMP.Periscope':{'f':'🇨🇳'},
+                // North Korea 🇰🇵
+                'APT37':{'f':'🇰🇵'},'APT38':{'f':'🇰🇵'},'APT43':{'f':'🇰🇵'},
+                'Andariel':{'f':'🇰🇵'},'Bluenoroff':{'f':'🇰🇵'},'Kimsuky':{'f':'🇰🇵'},
+                'Konni':{'f':'🇰🇵'},'Lazarus Group':{'f':'🇰🇵'},'Reaper':{'f':'🇰🇵'},
+                'TA444':{'f':'🇰🇵'},'Zinc':{'f':'🇰🇵'},'DarkHotel':{'f':'🇰🇵'},
+                'Temp.Hermit':{'f':'🇰🇵'},'Stardust Chollima':{'f':'🇰🇵'},
+                // Pakistan 🇵🇰
+                'Transparent Tribe':{'f':'🇵🇰'},'APT36':{'f':'🇵🇰'},'SideCopy':{'f':'🇵🇰'},
+                // Vietnam 🇻🇳
+                'APT32':{'f':'🇻🇳'},'OceanLotus':{'f':'🇻🇳'},'Bismuth':{'f':'🇻🇳'},
+                // India 🇮🇳
+                'Sidewinder':{'f':'🇮🇳'},'Patchwork':{'f':'🇮🇳'},
+                'Dropping Elephant':{'f':'🇮🇳'},'Donot Team':{'f':'🇮🇳'},
+                // Turkey 🇹🇷
+                'Sea Turtle':{'f':'🇹🇷'},'StrongPity':{'f':'🇹🇷'},
+                // Belarus 🇧🇾
+                'Ghostwriter':{'f':'🇧🇾'},
+                // Financially motivated 💰
+                'FIN6':{'$':true},'FIN7':{'$':true},'FIN8':{'$':true},
+                'FIN10':{'$':true},'FIN11':{'$':true},'Wizard Spider':{'$':true},
+                'Carbanak':{'$':true},'Scattered Spider':{'$':true},'Lapsus$':{'$':true},
+                'Evil Corp':{'$':true},'Indrik Spider':{'$':true},'TA505':{'$':true},
+                'TA543':{'$':true},'Dridex':{'$':true},'Gold Southfield':{'$':true},
+                'Exotic Lily':{'$':true},'TA577':{'$':true},
+              };
+
+              function actorEmoji(name) {
+                var info = GROUP_INFO[name];
+                if (!info) return '👹';
+                if (info.f) return info.f;
+                if (info.$) return '💰';
+                return '👹';
+              }
+
+              /* ---- keyword catalogue with emoji / colour metadata ---- */
+              var KEYWORD_META = {
+                // Industries
+                'Finance':            { emoji: '💰', type: 'industry' },
+                'Retail':             { emoji: '🛒', type: 'industry' },
+                'Defence':            { emoji: '🛡️', type: 'industry' },
+                'Healthcare':         { emoji: '🏥', type: 'industry' },
+                'Energy':             { emoji: '⚡', type: 'industry' },
+                'Technology':         { emoji: '💻', type: 'industry' },
+                'Telecommunications': { emoji: '📡', type: 'industry' },
+                'Government':         { emoji: '🏛️', type: 'industry' },
+                'Aerospace':          { emoji: '✈️', type: 'industry' },
+                'Education':          { emoji: '🎓', type: 'industry' },
+                'Manufacturing':      { emoji: '🏭', type: 'industry' },
+                'Media':              { emoji: '📺', type: 'industry' },
+                'Legal':              { emoji: '⚖️', type: 'industry' },
+                // Countries
+                'China':              { emoji: '🇨🇳', type: 'country' },
+                'Russia':             { emoji: '🇷🇺', type: 'country' },
+                'Iran':               { emoji: '🇮🇷', type: 'country' },
+                'North Korea':        { emoji: '🇰🇵', type: 'country' },
+                'Pakistan':           { emoji: '🇵🇰', type: 'country' },
+                'Vietnam':            { emoji: '🇻🇳', type: 'country' },
+                'India':              { emoji: '🇮🇳', type: 'country' },
+                'Ukraine':            { emoji: '🇺🇦', type: 'country' },
+                'Israel':             { emoji: '🇮🇱', type: 'country' },
+                'United States':      { emoji: '🇺🇸', type: 'country' },
+                'Turkey':             { emoji: '🇹🇷', type: 'country' },
+                'Lebanon':            { emoji: '🇱🇧', type: 'country' },
+              };
+
+              var KW_STYLE = {
+                industry: { bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe', badge: 'Industry' },
+                country:  { bg: '#fce7f3', color: '#9d174d', border: '#fbcfe8', badge: 'Country'  },
+                other:    { bg: '#ede9fe', color: '#5b21b6', border: '#c4b5fd', badge: 'Keyword'  },
+              };
+
+              function kwMeta(label)  { return KEYWORD_META[label] || { emoji: '', type: 'other' }; }
+              function kwStyleFor(label) { return KW_STYLE[kwMeta(label).type]; }
+
+              // Derive AC_KEYWORDS from KEYWORD_META
+              var AC_KEYWORDS = { industry: [], country: [] };
+              Object.keys(KEYWORD_META).forEach(function (k) {
+                var t = KEYWORD_META[k].type;
+                if (AC_KEYWORDS[t]) AC_KEYWORDS[t].push(k);
+              });
+
+              function fetchAC(q) {
+                // Actor name matches from server only — keywords handled by Box 1 input
+                fetch('/threat_groups?query=' + encodeURIComponent(q))
+                  .then(function (r) { return r.json(); })
+                  .then(function (data) {
+                    renderAC([], data.ok ? data.groups : []);
+                  })
+                  .catch(function () { renderAC([], []); });
+              }
+
+              function renderAC(keywords, groups) {
+                acDropdown.innerHTML = '';
+                var hasItems = false;
+
+                keywords.forEach(function (kw) {
+                  hasItems = true;
+                  var div = document.createElement('div');
+                  div.className = 'actor-ac-item actor-ac-keyword';
+                  var bg    = kw.type === 'industry' ? '#dbeafe' : '#fce7f3';
+                  var color = kw.type === 'industry' ? '#1e40af' : '#9d174d';
+                  var badge = '<span style="background:' + bg + ';color:' + color + ';padding:1px 7px;border-radius:8px;font-size:11px;font-weight:600;margin-right:6px;">' +
+                    (kw.type === 'industry' ? 'Industry' : 'Country') + '</span>';
+                  div.innerHTML = badge + escActor(kw.label);
+                  div.dataset.kwLabel = kw.label;
+                  div.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    expandKeyword(this.dataset.kwLabel);
+                  });
+                  acDropdown.appendChild(div);
+                });
+
+                // Divider between keywords and actors
+                if (keywords.length && groups.length) {
+                  var hr = document.createElement('div');
+                  hr.style.cssText = 'border-top:1px solid #f3f4f6;margin:2px 0;';
+                  acDropdown.appendChild(hr);
+                }
+
+                groups.forEach(function (g) {
+                  hasItems = true;
+                  var div = document.createElement('div');
+                  div.className = 'actor-ac-item';
+                  div.dataset.name = g.is_alias ? g.primary : g.name;
+                  var label = escActor(g.name);
+                  if (g.is_alias) label += '<span class="actor-ac-alias">alias of ' + escActor(g.primary) + '</span>';
+                  div.innerHTML = label;
+                  div.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    addActor(this.dataset.name);
+                  });
+                  acDropdown.appendChild(div);
+                });
+
+                if (hasItems) acDropdown.style.display = 'block';
+                else hideAC();
+              }
+
+              /* ---- keyword filter management ---- */
+              function renderKeywordFilters() {
+                kwFiltersRow.innerHTML = '';
+                if (!activeKeywords.length) { kwFiltersRow.style.display = 'none'; return; }
+                kwFiltersRow.style.display = 'flex';
+                activeKeywords.forEach(function (kw) {
+                  var s = kwStyleFor(kw);
+                  var m = kwMeta(kw);
+                  var chip = document.createElement('span');
+                  chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:' + s.bg + ';color:' + s.color + ';border:1px solid ' + s.border + ';border-radius:12px;padding:4px 12px;font-size:16px;font-weight:600;';
+                  chip.innerHTML = (m.emoji ? m.emoji + ' ' : '') + escActor(kw) + '<button style="background:none;border:none;cursor:pointer;color:' + s.color + ';padding:0;margin-left:2px;font-size:14px;line-height:1;" data-kw="' + escActor(kw) + '" title="Remove filter">&times;</button>';
+                  chip.querySelector('button').addEventListener('click', function () {
+                    activeKeywords = activeKeywords.filter(function (k) { return k !== this.dataset.kw; }, this);
+                    renderKeywordFilters();
+                    if (activeKeywords.length) runKeywordIntersection();
+                  });
+                  kwFiltersRow.appendChild(chip);
+                });
+              }
+
+              function runKeywordIntersection() {
+                var joined = activeKeywords.join(',');
+                var prev = kwTextInput.placeholder;
+                kwTextInput.placeholder = 'Finding actors matching ' + activeKeywords.join(' ' + kwMode + ' ') + '…';
+                fetch('/api/actors/by-keyword?keywords=' + encodeURIComponent(joined) + '&mode=' + encodeURIComponent(kwMode))
+                  .then(function (r) { return r.json(); })
+                  .then(function (data) {
+                    kwTextInput.placeholder = prev;
+                    if (data.ok && data.actors.length) {
+                      actorTags = [];
+                      tagsList.innerHTML = '';
+                      data.actors.forEach(function (a) { addActor(a); });
+                    } else {
+                      kwTextInput.placeholder = 'No actors match ' + activeKeywords.join(' ' + kwMode + ' ');
+                      setTimeout(function () { kwTextInput.placeholder = prev; }, 2500);
+                    }
+                  })
+                  .catch(function () { kwTextInput.placeholder = prev; });
+              }
+
+              function expandKeyword(keyword) {
+                hideAC();
+                if (!activeKeywords.includes(keyword)) activeKeywords.push(keyword);
+                renderKeywordFilters();
+                runKeywordIntersection();
+              }
+
+              function hideAC() { acDropdown.style.display = 'none'; acDropdown.innerHTML = ''; }
+
+              function moveHighlight(dir) {
+                var items = acDropdown.querySelectorAll('.actor-ac-item');
+                if (!items.length) return;
+                var cur = acDropdown.querySelector('.actor-ac-item.highlighted');
+                var idx = Array.prototype.indexOf.call(items, cur);
+                items.forEach(function (i) { i.classList.remove('highlighted'); i.style.background = ''; });
+                idx = ((idx + dir) + items.length) % items.length;
+                items[idx].classList.add('highlighted');
+                items[idx].style.background = '#e0f2fe';
+              }
+
+              document.addEventListener('click', function (e) {
+                if (!document.getElementById('actor-tag-input-wrap').contains(e.target)) hideAC();
+                if (!document.getElementById('keyword-input-wrap').contains(e.target)) hideKwAC();
+              });
+
+              /* ---- consolidate ---- */
+              consolidateBtn.addEventListener('click', function () {
+                if (!actorTags.length) return;
+                resultsPanel.style.display = 'block';
+                loadingEl.style.display    = 'block';
+                errorEl.style.display      = 'none';
+                contentEl.style.display    = 'none';
+
+                fetch('/api/actors/techniques', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ actors: actorTags }),
+                })
+                  .then(function (r) { return r.json(); })
+                  .then(function (data) {
+                    loadingEl.style.display = 'none';
+                    if (!data.ok) {
+                      errorEl.textContent = 'Error: ' + (data.error || 'Unknown error');
+                      errorEl.style.display = 'block';
+                      return;
+                    }
+                    allRows = data.techniques;
+                    actorMetadata = data.actor_metadata || {};
+                    renderSummary(data);
+                    populateTacticFilter(allRows);
+                    renderTable();
+                    contentEl.style.display = 'block';
+                  })
+                  .catch(function (e) {
+                    loadingEl.style.display = 'none';
+                    errorEl.textContent = 'Request failed: ' + e.message;
+                    errorEl.style.display = 'block';
+                  });
+              });
+
+              function summaryCell(num, label) {
+                return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">' +
+                  '<span style="font-weight:700;font-size:32px;color:#1a1a2e;line-height:1.1;">' + num + '</span>' +
+                  '<span style="font-size:18px;color:#6b7280;">' + label + '</span>' +
+                '</div>';
+              }
+
+              /* ---- summary ---- */
+              function renderSummary(data) {
+                summaryBar.innerHTML =
+                  summaryCell(data.actors_found.length, 'actor' + (data.actors_found.length !== 1 ? 's' : '')) +
+                  summaryCell(data.total_techniques, 'technique' + (data.total_techniques !== 1 ? 's' : '')) +
+                  summaryCell(data.shared_count, 'shared');
+
+                if (data.actors_not_found && data.actors_not_found.length) {
+                  notFoundBar.innerHTML = '&#9888; Not found in MITRE ATT&CK: <strong>' +
+                    data.actors_not_found.map(escActor).join(', ') + '</strong>';
+                  notFoundBar.style.display = 'block';
+                } else {
+                  notFoundBar.style.display = 'none';
+                }
+              }
+
+              function badge(text, bg, color) {
+                return '<span style="background:' + bg + ';color:' + color + ';padding:3px 10px;border-radius:10px;font-weight:600;font-size:12px;">' + escActor(text) + '</span> ';
+              }
+
+              /* ---- tactic filter ---- */
+              /* ---- attribution badge colours (solid fill so they're distinct from pale tactic chips) ---- */
+              var ATTRIB_STYLE = {
+                direct:   { bg: '#15803d', color: '#ffffff' },   /* solid green  */
+                software: { bg: '#1d4ed8', color: '#ffffff' },   /* solid blue   */
+                campaign: { bg: '#6d28d9', color: '#ffffff' },   /* solid purple */
+              };
+
+              function attribBadge(key) {
+                var s = ATTRIB_STYLE[key] || { bg: '#f1f5f9', color: '#374151' };
+                var label = key === 'direct' ? 'Direct' : key === 'software' ? 'Software' : key === 'campaign' ? 'Campaign' : key;
+                return '<span style="display:inline-block;background:' + s.bg + ';color:' + s.color + ';padding:3px 10px;border-radius:8px;font-size:16px;font-weight:600;margin:2px 2px 2px 0;white-space:nowrap;">' + label + '</span>';
+              }
+
+              /* ---- tactic badge colours (kill-chain order) ---- */
+              var TACTIC_COLORS = {
+                'Reconnaissance':        { bg: '#fef3c7', color: '#92400e' },
+                'Resource Development':  { bg: '#ffedd5', color: '#9a3412' },
+                'Initial Access':        { bg: '#fee2e2', color: '#991b1b' },
+                'Execution':             { bg: '#fce7f3', color: '#9d174d' },
+                'Persistence':           { bg: '#f3e8ff', color: '#6b21a8' },
+                'Privilege Escalation':  { bg: '#ede9fe', color: '#5b21b6' },
+                'Defense Evasion':       { bg: '#e0e7ff', color: '#3730a3' },
+                'Credential Access':     { bg: '#dbeafe', color: '#1e40af' },
+                'Discovery':             { bg: '#cffafe', color: '#155e75' },
+                'Lateral Movement':      { bg: '#d1fae5', color: '#065f46' },
+                'Collection':            { bg: '#dcfce7', color: '#166534' },
+                'Command And Control':   { bg: '#f0fdf4', color: '#14532d' },
+                'Exfiltration':          { bg: '#ecfdf5', color: '#047857' },
+                'Impact':                { bg: '#fff1f2', color: '#881337' },
+              };
+
+              function tacticBadge(tactic) {
+                var s = TACTIC_COLORS[tactic] || { bg: '#f1f5f9', color: '#374151' };
+                return '<span style="display:inline-block;background:' + s.bg + ';color:' + s.color + ';padding:3px 12px;border-radius:10px;font-size:16px;font-weight:600;white-space:nowrap;">' + escActor(tactic) + '</span>';
+              }
+
+              /* MITRE ATT&CK tactic kill-chain order */
+              var TACTIC_ORDER = [
+                'Reconnaissance','Resource Development','Initial Access','Execution',
+                'Persistence','Privilege Escalation','Defense Evasion','Credential Access',
+                'Discovery','Lateral Movement','Collection','Command And Control',
+                'Exfiltration','Impact'
+              ];
+
+              function tacticRank(t) {
+                var idx = TACTIC_ORDER.indexOf(t);
+                return idx === -1 ? TACTIC_ORDER.length : idx;
+              }
+
+              function populateTacticFilter(rows) {
+                var present = Array.from(new Set(rows.map(function (r) { return r.tactic; })));
+                present.sort(function (a, b) { return tacticRank(a) - tacticRank(b); });
+                window._tacticMsRebuild(present);
+              }
+
+              function setViewMode(mode) {
+                viewMode = mode;
+                if (mode === 'grouped') {
+                  viewGroupedBtn.style.background = '#374151'; viewGroupedBtn.style.color = '#fff';
+                  viewFlatBtn.style.background = '#fff';       viewFlatBtn.style.color = '#6b7280';
+                } else {
+                  viewFlatBtn.style.background = '#374151';    viewFlatBtn.style.color = '#fff';
+                  viewGroupedBtn.style.background = '#fff';    viewGroupedBtn.style.color = '#6b7280';
+                }
+                renderTable();
+              }
+              viewGroupedBtn.addEventListener('click', function () { setViewMode('grouped'); });
+              viewFlatBtn.addEventListener('click',    function () { setViewMode('flat'); });
+
+              /* ---- hide / show table ---- */
+              toggleTableBtn.addEventListener('click', function () {
+                var tableWrap = document.querySelector('#actor-results-content div[style*="overflow-x"]');
+                var rowCount  = document.getElementById('actor-row-count');
+                tableVisible = !tableVisible;
+                if (tableWrap) tableWrap.style.display = tableVisible ? '' : 'none';
+                if (rowCount)  rowCount.style.display  = tableVisible ? '' : 'none';
+                toggleTableBtn.textContent = tableVisible ? 'Hide Table' : 'Show Table';
+              });
+
+              /* ---- clear: reset everything back to initial state ---- */
+              clearBtn.addEventListener('click', function () {
+                actorTags = [];
+                renderTags();
+                allRows = [];
+                actorMetadata = {};
+
+                if (window._tacticMsRebuild) window._tacticMsRebuild([]);
+                document.getElementById('actor-results-panel').style.display = 'none';
+                tableVisible = true;
+                toggleTableBtn.textContent = 'Hide Table';
+                activeKeywords = [];
+                renderKeywordFilters();
+                kwTextInput.value = '';
+                hideKwAC();
+              });
+
+
+              /* tactic filtering now handled by multiselect checkboxes */
+
+              /* ---- sorting ---- */
+              document.querySelectorAll('.actor-th').forEach(function (th) {
+                th.addEventListener('click', function () {
+                  var col = this.dataset.col;
+                  if (sortCol === col) { sortAsc = !sortAsc; }
+                  else { sortCol = col; sortAsc = true; }
+                  renderTable();
+                });
+              });
+
+              /* ---- render table ---- */
+              function renderTable() {
+                var rows = allRows.slice();
+
+                // filter
+                if (selectedTactics.length > 0) rows = rows.filter(function (r) { return selectedTactics.indexOf(r.tactic) !== -1; });
+
+                // attribution sort key: 'direct' < 'software' < 'campaign' (rank 0,1,2)
+                function attribRank(row) {
+                  var types = [];
+                  row.actors.forEach(function (a) {
+                    a.attribution_types.forEach(function (t) {
+                      var k = t === 'direct' ? 'direct' : t.startsWith('via_software:') ? 'software' : 'campaign';
+                      if (types.indexOf(k) === -1) types.push(k);
+                    });
+                  });
+                  var order = { direct: 0, software: 1, campaign: 2 };
+                  return Math.min.apply(null, types.map(function (k) { return order[k] !== undefined ? order[k] : 9; }));
+                }
+
+                // sort — tactic uses kill-chain order, attribution uses rank, others natural
+                rows.sort(function (a, b) {
+                  var va = a[sortCol], vb = b[sortCol];
+                  if (sortCol === 'tactic') {
+                    var diff = tacticRank(va) - tacticRank(vb);
+                    return sortAsc ? diff : -diff;
+                  }
+                  if (sortCol === 'attribution') {
+                    var diff2 = attribRank(a) - attribRank(b);
+                    return sortAsc ? diff2 : -diff2;
+                  }
+                  if (typeof va === 'number') return sortAsc ? va - vb : vb - va;
+                  va = String(va || ''); vb = String(vb || '');
+                  return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+                });
+
+                tbody.innerHTML = '';
+
+                /* ---- FLAT view: one row per technique × actor ---- */
+                if (viewMode === 'flat') {
+                  // Update thead for flat columns
+                  document.querySelector('#actor-techniques-table thead tr').innerHTML =
+                    '<th class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;" data-col="technique_id">ID ↕</th>' +
+                    '<th class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;" data-col="technique_name">Name ↕</th>' +
+                    '<th class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;" data-col="tactic">Tactic ↕</th>' +
+                    '<th class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;" data-col="group">Group ↕</th>' +
+                    '<th class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;" data-col="attribution">Attribution ↕</th>';
+                  var flatCount = 0;
+                  rows.forEach(function (row) {
+                    row.actors.forEach(function (actor) {
+                      flatCount++;
+                      var tr = document.createElement('tr');
+                      tr.style.borderBottom = '1px solid #f3f4f6';
+                      // Deduplicate simplified labels per actor
+                      var flatAttrSeen = {};
+                      actor.attribution_types.forEach(function (t) {
+                        var key = t === 'direct' ? 'direct' : t.startsWith('via_software:') ? 'software' : t.startsWith('via_campaign:') ? 'campaign' : t;
+                        flatAttrSeen[key] = true;
+                      });
+                      var attribHtml = Object.keys(flatAttrSeen).map(attribBadge).join('');
+                      tr.innerHTML =
+                        '<td style="padding:8px 10px;"><span class="briefing-tech-id">' + escActor(row.technique_id) + '</span></td>' +
+                        '<td style="padding:8px 10px;font-weight:500;color:#1a1a2e;">' + escActor(row.technique_name) + '</td>' +
+                        '<td style="padding:8px 10px;">' + tacticBadge(row.tactic) + '</td>' +
+                        '<td style="padding:8px 10px;font-weight:500;">' + actorEmoji(actor.name) + ' ' + escActor(actor.name) + '</td>' +
+                        '<td style="padding:8px 10px;">' + attribHtml + '</td>';
+                      tbody.appendChild(tr);
+                    });
+                  });
+                  rowCountEl.textContent = flatCount + ' row' + (flatCount !== 1 ? 's' : '') + ' shown (' + rows.length + ' techniques)';
+                  return;
+                }
+
+                /* ---- GROUPED view (default) ---- */
+                // Restore grouped thead
+                document.querySelector('#actor-techniques-table thead tr').innerHTML =
+                  '<th data-col="technique_id" class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;">ID ↕</th>' +
+                  '<th data-col="technique_name" class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Name ↕</th>' +
+                  '<th data-col="tactic" class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Tactic ↕</th>' +
+                  '<th data-col="actor_count" class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;">Actors ↕</th>' +
+                  '<th data-col="attribution" class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Attribution ↕</th>';
+
+                rows.forEach(function (row) {
+                  var tr = document.createElement('tr');
+                  tr.style.borderBottom = '1px solid #f3f4f6';
+                  if (row.actor_count > 1) tr.classList.add('actor-row-shared');
+
+                  // actor names as badges — max 4 shown, +N for rest
+                  var MAX_ACTOR_BADGES = 4;
+                  var actorBadges = row.actors.slice(0, MAX_ACTOR_BADGES).map(function (a) {
+                    return '<span style="display:inline-block;background:#f1f5f9;color:#374151;padding:3px 10px;border-radius:10px;font-size:16px;margin:2px 2px 2px 0;white-space:nowrap;">' + actorEmoji(a.name) + ' ' + escActor(a.name) + '</span>';
+                  }).join('');
+                  var hiddenActors = row.actors.length - MAX_ACTOR_BADGES;
+                  if (hiddenActors > 0) {
+                    actorBadges += '<span style="display:inline-block;background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:10px;font-size:16px;font-weight:700;margin:2px 2px 2px 0;white-space:nowrap;">+' + hiddenActors + ' more</span>';
+                  }
+
+                  // attribution — simplified, deduplicated, consistent colours
+                  var attrSet = {};
+                  row.actors.forEach(function (a) {
+                    a.attribution_types.forEach(function (t) {
+                      attrSet[t === 'direct' ? 'direct' : t.startsWith('via_software:') ? 'software' : t.startsWith('via_campaign:') ? 'campaign' : t] = true;
+                    });
+                  });
+                  var attrBadges = Object.keys(attrSet).map(attribBadge).join('');
+
+                  tr.innerHTML =
+                    '<td style="padding:8px 10px;"><span class="briefing-tech-id">' + escActor(row.technique_id) + '</span></td>' +
+                    '<td style="padding:8px 10px;font-weight:500;color:#1a1a2e;">' + escActor(row.technique_name) + '</td>' +
+                    '<td style="padding:8px 10px;">' + tacticBadge(row.tactic) + '</td>' +
+                    '<td style="padding:8px 10px;">' +
+                      '<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;">' +
+                        actorBadges +
+                      '</span>' +
+                    '</td>' +
+                    '<td style="padding:8px 10px;">' + attrBadges + '</td>';
+                  tbody.appendChild(tr);
+                });
+
+                rowCountEl.textContent = rows.length + ' technique' + (rows.length !== 1 ? 's' : '') + ' shown';
+              }
+
+              /* ---- export helpers ---- */
+              function getExportRows() {
+                var rows = allRows.slice();
+                if (selectedTactics.length > 0) rows = rows.filter(function (r) { return selectedTactics.indexOf(r.tactic) !== -1; });
+                return rows;
+              }
+
+              /* Format raw attribution type → human label matching docs/ structure */
+              function fmtAttrib(t) {
+                if (t === 'direct') return 'Direct';
+                var m = t.match(/^via_software:(.+)$/);
+                if (m) return 'Software (' + m[1] + ')';
+                m = t.match(/^via_campaign:(.+)$/);
+                if (m) return 'Campaign (' + m[1] + ')';
+                return t;
+              }
+
+              /* Flatten to one row per (technique × actor), applying current filters */
+              function buildExportFlat() {
+                var rows = getExportRows();
+                var flat = [];
+                rows.forEach(function (row) {
+                  row.actors.forEach(function (actor) {
+                    flat.push({
+                      'Group Name':          actor.name,
+                      'target ID':           row.technique_id,
+                      'target name':         row.technique_name,
+                      'Tactic':              row.tactic,
+                      'mapping description': actor.attribution_types.map(fmtAttrib).join('; '),
+                    });
+                  });
+                });
+                return flat;
+              }
+
+              /* Build Technique Coverage pivot: one row per technique, one column per actor (1/0) */
+              function buildCoveragePivot() {
+                var rows = getExportRows();
+                // collect ordered unique actor names
+                var actorSet = {};
+                rows.forEach(function (r) { r.actors.forEach(function (a) { actorSet[a.name] = true; }); });
+                var actors = Object.keys(actorSet).sort();
+                // header row
+                var header = ['target ID', 'target name', 'Tactic'].concat(actors).concat(['Group_Count']);
+                var data = [header];
+                rows.forEach(function (row) {
+                  var hasActor = {};
+                  row.actors.forEach(function (a) { hasActor[a.name] = 1; });
+                  var cols = [row.technique_id, row.technique_name, row.tactic];
+                  actors.forEach(function (a) { cols.push(hasActor[a] || 0); });
+                  cols.push(row.actor_count);
+                  data.push(cols);
+                });
+                return data;
+              }
+
+              var EXPORT_HEADERS = ['Group Name','target ID','target name','Tactic','mapping description'];
+
+              var ACTORS_HEADERS = [
+                'Actor','MITRE Group ID','Domains','Aliases','Nexus','Sponsor / Affiliation',
+                'Activity since','Primary objectives','Target regions','Target sectors',
+                'Notable tools/malware','Notable campaigns/ops','Attribution confidence',
+                'MITRE URL','Enterprise layer','Mobile layer','ICS layer','Additional sources'
+              ];
+
+              function buildActorsSheet() {
+                var rows = [ACTORS_HEADERS];
+                actorTags.forEach(function (name) {
+                  var m = actorMetadata[name] || {};
+                  rows.push([
+                    name,
+                    m.mitre_group_id    || '',
+                    m.domains           || '',
+                    m.aliases           || '',
+                    '',   // Nexus
+                    '',   // Sponsor / Affiliation
+                    '',   // Activity since
+                    '',   // Primary objectives
+                    '',   // Target regions
+                    '',   // Target sectors
+                    '',   // Notable tools/malware
+                    '',   // Notable campaigns/ops
+                    '',   // Attribution confidence
+                    m.mitre_url         || '',
+                    m.enterprise_layer  || '',
+                    m.mobile_layer      || '',
+                    m.ics_layer         || '',
+                    '',   // Additional sources
+                  ]);
+                });
+                return rows;
+              }
+
+              function triggerDownload(blob, filename) {
+                var url = URL.createObjectURL(blob);
+                var a   = document.createElement('a');
+                a.href = url; a.download = filename; a.click();
+                URL.revokeObjectURL(url);
+              }
+
+              exportCsvBtn.addEventListener('click', function () {
+                var flat = buildExportFlat();
+                var lines = [EXPORT_HEADERS.join(',')];
+                flat.forEach(function (row) {
+                  lines.push(EXPORT_HEADERS.map(function (h) { return csvCell(row[h]); }).join(','));
+                });
+                triggerDownload(new Blob([lines.join('\n')], { type: 'text/csv' }), 'actor_techniques.csv');
+              });
+
+              exportXlsxBtn.addEventListener('click', function () {
+                function doXlsx() {
+                  var wb = XLSX.utils.book_new();
+
+                  /* Sheet 1: Raw Mappings — one row per technique × actor */
+                  var flat    = buildExportFlat();
+                  var rawData = [EXPORT_HEADERS].concat(flat.map(function (row) {
+                    return EXPORT_HEADERS.map(function (h) { return row[h]; });
+                  }));
+                  var wsRaw = XLSX.utils.aoa_to_sheet(rawData);
+                  wsRaw['!cols'] = [{wch:26},{wch:14},{wch:36},{wch:22},{wch:48}];
+                  XLSX.utils.book_append_sheet(wb, wsRaw, 'Raw Mappings');
+
+                  /* Sheet 2: Technique Coverage — pivot with binary actor columns */
+                  var covData = buildCoveragePivot();
+                  var wsCov = XLSX.utils.aoa_to_sheet(covData);
+                  // fixed cols for ID + name + tactic, then auto for actor cols
+                  var covCols = [{wch:14},{wch:36},{wch:22}];
+                  if (covData[0]) {
+                    for (var i = 3; i < covData[0].length - 1; i++) covCols.push({wch:18});
+                    covCols.push({wch:14}); // Group_Count
+                  }
+                  wsCov['!cols'] = covCols;
+                  XLSX.utils.book_append_sheet(wb, wsCov, 'Technique Coverage');
+
+                  /* Sheet 3: Actors — one row per actor with metadata */
+                  var actData = buildActorsSheet();
+                  var wsAct   = XLSX.utils.aoa_to_sheet(actData);
+                  wsAct['!cols'] = [
+                    {wch:28},{wch:16},{wch:18},{wch:30},{wch:16},{wch:22},
+                    {wch:16},{wch:24},{wch:22},{wch:22},{wch:28},{wch:28},
+                    {wch:22},{wch:40},{wch:40},{wch:36},{wch:32},{wch:22}
+                  ];
+                  XLSX.utils.book_append_sheet(wb, wsAct, 'Actors');
+
+                  XLSX.writeFile(wb, 'actor_techniques.xlsx');
+                }
+                if (typeof XLSX === 'undefined') {
+                  exportXlsxBtn.textContent = '…';
+                  var s = document.createElement('script');
+                  s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+                  s.onload = function () { exportXlsxBtn.textContent = 'XLSX'; doXlsx(); };
+                  document.head.appendChild(s);
+                } else { doXlsx(); }
+              });
+
+              exportJsonBtn.addEventListener('click', function () {
+                triggerDownload(
+                  new Blob([JSON.stringify(buildExportFlat(), null, 2)], { type: 'application/json' }),
+                  'actor_techniques.json'
+                );
+              });
+
+              function csvCell(v) {
+                v = String(v == null ? '' : v);
+                if (v.indexOf(',') >= 0 || v.indexOf('"') >= 0 || v.indexOf('\n') >= 0) {
+                  return '"' + v.replace(/"/g, '""') + '"';
+                }
+                return v;
+              }
+
+              function escActor(s) {
+                return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+              }
+            })();
+            </script>
+
           </div>
 
           <!-- UPLOAD TAB -->
@@ -1284,9 +2394,9 @@
         bottom: 28px;
         right: 28px;
         z-index: 9000;
-        width: 52px;
-        height: 52px;
-        border-radius: 50%;
+        width: auto;
+        height: auto;
+        border-radius: 28px;
         background: #6366f1;
         color: #fff;
         border: none;
@@ -1295,18 +2405,24 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        gap: 8px;
+        padding: 12px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: inherit;
+        white-space: nowrap;
         transition: background .2s, transform .15s;
       }
-      #ask-archer-btn:hover { background: #4f46e5; transform: scale(1.08); }
+      #ask-archer-btn:hover { background: #4f46e5; transform: scale(1.04); }
 
       /* ---- panel ---- */
       #ask-archer-panel {
         position: fixed;
-        bottom: 92px;
+        bottom: 88px;
         right: 28px;
         z-index: 8999;
-        width: 380px;
-        max-height: 540px;
+        width: 532px;
+        height: 400px;
         background: #1e1e2e;
         border: 1px solid #3d3d5c;
         border-radius: 12px;
@@ -1323,6 +2439,9 @@
         opacity: 1;
         transform: translateY(0) scale(1);
         pointer-events: all;
+      }
+      #ask-archer-panel.expanded {
+        height: calc(90vh - 108px);
       }
 
       /* header */
@@ -1450,14 +2569,51 @@
         text-align: right;
         flex-shrink: 0;
       }
+      /* ---- right-edge pin tab ---- */
+      #ask-archer-pin {
+        position: fixed;
+        top: 50%;
+        right: 0;
+        transform: translateY(-50%);
+        z-index: 9001;
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        border-radius: 8px 0 0 8px;
+        padding: 18px 10px;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        letter-spacing: .05em;
+        box-shadow: -2px 0 12px rgba(99,102,241,.35);
+        transition: background .2s, padding .2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      #ask-archer-pin:hover { background: #4f46e5; padding-right: 14px; }
+      #ask-archer-pin.panel-open { background: #4338ca; }
     </style>
+
+    <!-- Right-edge pin tab -->
+    <button id="ask-archer-pin" title="Ask Archer" aria-label="Ask Archer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg)">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      Ask Archer
+    </button>
 
     <!-- Trigger button -->
     <button id="ask-archer-btn" title="Ask Archer" aria-label="Ask Archer">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
+      <span>Ask Archer</span>
     </button>
 
     <!-- Chat panel -->
@@ -1469,15 +2625,16 @@
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
-        <div>
+        <div style="flex:1;">
           <div class="aap-title">Ask Archer</div>
           <div class="aap-subtitle">ATT&amp;CK, queries, threat groups</div>
         </div>
+        <button id="aap-expand" aria-label="Expand" title="Expand / Collapse" style="background:none;border:none;color:#6c7086;cursor:pointer;font-size:14px;padding:4px 6px;margin-right:2px;line-height:1;">&#x26F6;</button>
         <button id="aap-close" aria-label="Close">&#10005;</button>
       </div>
 
       <div class="aap-messages" id="aap-messages">
-        <div class="aap-msg archer">Hi! Ask me anything about threat detection — techniques, SIEM queries, threat groups, or anything in your generated detections.</div>
+        <div class="aap-msg archer">Greetings. Ask me anything about threat detection — techniques, SIEM queries, threat groups, or anything in your generated detections.</div>
       </div>
 
       <div class="aap-provider" id="aap-provider"></div>
@@ -1490,19 +2647,37 @@
 
     <script>
     (function () {
-      const btn   = document.getElementById('ask-archer-btn');
-      const panel = document.getElementById('ask-archer-panel');
-      const close = document.getElementById('aap-close');
+      const btn    = document.getElementById('ask-archer-btn');
+      const pin    = document.getElementById('ask-archer-pin');
+      const panel  = document.getElementById('ask-archer-panel');
+      const close  = document.getElementById('aap-close');
+      const expand = document.getElementById('aap-expand');
       const msgs  = document.getElementById('aap-messages');
       const input = document.getElementById('aap-input');
       const send  = document.getElementById('aap-send');
       const provEl = document.getElementById('aap-provider');
 
-      btn.addEventListener('click', () => {
-        panel.classList.toggle('open');
-        if (panel.classList.contains('open')) input.focus();
+      function setOpen(open) {
+        panel.classList.toggle('open', open);
+        pin.classList.toggle('panel-open', open);
+        if (open) input.focus();
+        try { localStorage.setItem('archerChatOpen', open ? '1' : '0'); } catch(e) {}
+      }
+
+      // Restore persisted state
+      try { if (localStorage.getItem('archerChatOpen') === '1') setOpen(true); } catch(e) {}
+
+      btn.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+      pin.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+      close.addEventListener('click', () => setOpen(false));
+      expand.addEventListener('click', () => {
+        const isExpanded = panel.classList.toggle('expanded');
+        expand.title = isExpanded ? 'Collapse' : 'Expand';
+        expand.innerHTML = isExpanded ? '&#x2922;' : '&#x26F6;';
+        try { localStorage.setItem('archerChatExpanded', isExpanded ? '1' : '0'); } catch(e) {}
       });
-      close.addEventListener('click', () => panel.classList.remove('open'));
+      // Restore persisted expand state
+      try { if (localStorage.getItem('archerChatExpanded') === '1') { panel.classList.add('expanded'); expand.innerHTML = '&#x2922;'; } } catch(e) {}
 
       function addMsg(text, role) {
         const d = document.createElement('div');

@@ -184,6 +184,37 @@ def _get_llm_provider(user_id: int, db, local_llm_state: Optional[dict] = None):
     return None, None
 
 
+def _get_llm_provider_anonymous(local_llm_state: Optional[dict] = None):
+    """LLM provider lookup using only environment variables — no DB, no user."""
+    from archer.llm.providers import LLMFactory
+
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        try:
+            return LLMFactory.create("anthropic", api_key=anthropic_key), "Claude (Anthropic)"
+        except Exception as e:
+            logger.warning("Anthropic provider failed: %s", e)
+
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        try:
+            return LLMFactory.create("openai", api_key=openai_key), "GPT-4o (OpenAI)"
+        except Exception as e:
+            logger.warning("OpenAI provider failed: %s", e)
+
+    local_available = (
+        local_llm_state.get("available", False) if local_llm_state else False
+    )
+    if local_available:
+        try:
+            base_url = local_llm_state.get("url", "http://localhost:11434")
+            return LLMFactory.create("ollama", base_url=base_url), "Local LLM (Ollama)"
+        except Exception as e:
+            logger.warning("Ollama provider failed: %s", e)
+
+    return None, None
+
+
 # ---------------------------------------------------------------------------
 # Route
 # ---------------------------------------------------------------------------
@@ -194,18 +225,31 @@ async def ask_archer(
     request: Request,
     archer_session: Optional[str] = Cookie(None),
 ):
-    """Answer a natural-language question using the configured LLM."""
-    if not archer_session:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    db = next(get_db())
+    """Answer a natural-language question using the configured LLM.
+    Works for authenticated users (uses their stored API keys) and
+    unauthenticated users (falls back to environment-variable API keys).
+    """
+    local_llm_state = getattr(request.app.state, "local_llm_detected", {})
+    db = None
     try:
-        user = get_user_from_session_id(archer_session, db)
-        if not user:
-            raise HTTPException(status_code=401, detail="Not authenticated")
+        # Try to resolve user for their stored API keys; fall back gracefully.
+        user_id = None
+        if archer_session:
+            db = next(get_db())
+            try:
+                user = get_user_from_session_id(archer_session, db)
+                if user:
+                    user_id = user.id
+            except Exception:
+                pass
 
-        local_llm_state = getattr(request.app.state, "local_llm_detected", {})
-        llm, provider_name = _get_llm_provider(user.id, db, local_llm_state)
+        if user_id is not None:
+            if db is None:
+                db = next(get_db())
+            llm, provider_name = _get_llm_provider(user_id, db, local_llm_state)
+        else:
+            # Unauthenticated – env-var keys only (no DB lookup)
+            llm, provider_name = _get_llm_provider_anonymous(local_llm_state)
 
         if llm is None:
             raise HTTPException(
@@ -237,7 +281,8 @@ async def ask_archer(
         logger.error("Ask Archer error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        db.close()
+        if db:
+            db.close()
 
 
 # ---------------------------------------------------------------------------
