@@ -965,18 +965,43 @@
                 return KW_STYLE.other;
               }
 
+              var ACTOR_LIMIT = 20;
+
               function renderTags() {
                 tagsList.innerHTML = '';
                 actorTags.forEach(function (name, idx) {
-                  var s = actorTagStyle(name);
-                  var span = document.createElement('span');
-                  span.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:' + s.bg + ';color:' + s.color + ';border:1px solid ' + s.border + ';padding:4px 13px;border-radius:12px;font-size:16px;font-weight:600;white-space:nowrap;line-height:1.4;min-height:32px;box-sizing:border-box;';
+                  var over  = idx >= ACTOR_LIMIT;
+                  var s     = actorTagStyle(name);
+                  var span  = document.createElement('span');
+                  span.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:4px 13px;border-radius:12px;font-size:16px;font-weight:600;white-space:nowrap;line-height:1.4;min-height:32px;box-sizing:border-box;' +
+                    (over
+                      ? 'background:#f3f4f6;color:#9ca3af;border:1px solid #d1d5db;opacity:0.55;'
+                      : 'background:' + s.bg + ';color:' + s.color + ';border:1px solid ' + s.border + ';');
+                  span.title = over ? 'Exceeds 20-actor limit — remove actors above to include this one' : '';
                   span.innerHTML = '<span style="font-size:15px;line-height:1;display:inline-block;width:1.2em;text-align:center;">' + actorEmoji(name) + '</span>' + escActor(name) +
-                    '<button style="background:none;border:none;cursor:pointer;color:' + s.color + ';padding:0;margin-left:2px;font-size:14px;line-height:1;font-weight:700;" title="Remove" data-idx="' + idx + '">&times;</button>';
+                    '<button style="background:none;border:none;cursor:pointer;color:' + (over ? '#9ca3af' : s.color) + ';padding:0;margin-left:2px;font-size:14px;line-height:1;font-weight:700;" title="Remove" data-idx="' + idx + '">&times;</button>';
                   tagsList.appendChild(span);
                 });
-                consolidateBtn.disabled = actorTags.length === 0;
-                consolidateBtn.style.opacity = actorTags.length ? '1' : '0.45';
+                var any = actorTags.length > 0;
+                consolidateBtn.disabled = !any;
+                consolidateBtn.style.opacity = any ? '1' : '0.45';
+                var huntGroupsBtn = document.getElementById('actor-hunt-groups-btn');
+                var huntTechBtn   = document.getElementById('actor-hunt-techniques-btn');
+                huntGroupsBtn.disabled = !any;
+                huntGroupsBtn.style.opacity = any ? '1' : '0.45';
+                // Hunt Techniques only enabled after consolidation results are loaded
+                var hasResults = document.getElementById('actor-results-content').style.display !== 'none';
+                huntTechBtn.disabled = !hasResults;
+                huntTechBtn.style.opacity = hasResults ? '1' : '0.45';
+                // Show/hide over-limit banner
+                var banner = document.getElementById('actor-overlimit-banner');
+                if (actorTags.length > ACTOR_LIMIT) {
+                  banner.style.display = 'block';
+                  banner.querySelector('#actor-overlimit-count').textContent =
+                    actorTags.length - ACTOR_LIMIT;
+                } else {
+                  banner.style.display = 'none';
+                }
               }
 
               tagsList.addEventListener('click', function (e) {
@@ -1269,8 +1294,7 @@
               });
 
               /* ---- consolidate ---- */
-              consolidateBtn.addEventListener('click', function () {
-                if (!actorTags.length) return;
+              function runConsolidate(actors) {
                 resultsPanel.style.display = 'block';
                 loadingEl.style.display    = 'block';
                 errorEl.style.display      = 'none';
@@ -1279,7 +1303,7 @@
                 fetch('/api/actors/techniques', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ actors: actorTags }),
+                  body: JSON.stringify({ actors: actors }),
                 })
                   .then(function (r) { return r.json(); })
                   .then(function (data) {
@@ -1295,12 +1319,83 @@
                     populateTacticFilter(allRows);
                     renderTable();
                     contentEl.style.display = 'block';
+                    // Enable "Hunt Techniques" now that results are loaded
+                    var htBtn = document.getElementById('actor-hunt-techniques-btn');
+                    htBtn.disabled = false;
+                    htBtn.style.opacity = '1';
                   })
                   .catch(function (e) {
                     loadingEl.style.display = 'none';
                     errorEl.textContent = 'Request failed: ' + e.message;
                     errorEl.style.display = 'block';
                   });
+              }
+
+              consolidateBtn.addEventListener('click', function () {
+                if (!actorTags.length) return;
+                if (actorTags.length > ACTOR_LIMIT) {
+                  document.getElementById('actor-overlimit-banner').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  return;
+                }
+                runConsolidate(actorTags);
+              });
+
+              document.getElementById('actor-overlimit-continue').addEventListener('click', function () {
+                // Trim actorTags to first 20, re-render, then run
+                actorTags = actorTags.slice(0, ACTOR_LIMIT);
+                renderTags();
+                runConsolidate(actorTags);
+              });
+
+              /* ── Hunt tab integration helpers ───────────────────────────── */
+              function switchToHuntTab() {
+                document.querySelectorAll('.tab-button').forEach(function (b) { b.classList.remove('active'); });
+                document.querySelectorAll('.tab-pane').forEach(function (p) { p.classList.remove('active'); });
+                document.querySelector('[data-tab="generate"]').classList.add('active');
+                document.getElementById('tab-generate').classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+
+              document.getElementById('actor-hunt-groups-btn').addEventListener('click', function () {
+                var names = actorTags.join(', ');
+                switchToHuntTab();
+                var inp = document.getElementById('group_name_input');
+                if (inp) {
+                  inp.value = names;
+                  inp.dispatchEvent(new Event('input'));
+                  // Force-enable generate button (multiple actors can exceed 30-char limit)
+                  var genBtn = document.getElementById('generate_btn');
+                  if (genBtn) genBtn.disabled = false;
+                  inp.focus();
+                }
+              });
+
+              document.getElementById('actor-hunt-techniques-btn').addEventListener('click', function () {
+                var rows = getExportRows();
+                var techIds = [];
+                var seen = {};
+                rows.forEach(function (r) {
+                  if (!seen[r.technique_id]) { techIds.push(r.technique_id); seen[r.technique_id] = 1; }
+                });
+                techIds.sort();
+
+                // Enable the technique input (remove COMING SOON lock)
+                var techWrap = document.getElementById('technique_input').parentElement;
+                techWrap.style.opacity = '1';
+                techWrap.style.pointerEvents = 'auto';
+                var techInp = document.getElementById('technique_input');
+                techInp.disabled = false;
+                techInp.value = techIds.join(', ');
+
+                // Clear group name so the form uses technique path
+                var groupInp = document.getElementById('group_name_input');
+                if (groupInp) groupInp.value = '';
+
+                switchToHuntTab();
+
+                var genBtn = document.getElementById('generate_btn');
+                if (genBtn) genBtn.disabled = false;
+                techInp.focus();
               });
 
               function summaryCell(num, label) {
@@ -1806,12 +1901,36 @@
                 </div>
               </div>
 
-              <!-- Consolidate button -->
+              <!-- Action buttons: Consolidate (50%) | Hunt Threat Groups (25%) | Hunt Techniques (25%) -->
               <div style="border-top:1px solid #dee2e6;margin-top:auto;padding-top:16px;">
-                <button id="actor-consolidate-btn" type="button" disabled
-                        style="width:100%;padding:10px;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#06b6d4 0%,#0891b2 100%);color:#fff;opacity:0.45;box-shadow:0 2px 8px rgba(6,182,212,0.3);transition:opacity .15s;">
-                  Consolidate Techniques
-                </button>
+                <div style="display:flex;gap:8px;">
+                  <button id="actor-consolidate-btn" type="button" disabled
+                          style="flex:2;padding:10px;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#06b6d4 0%,#0891b2 100%);color:#fff;opacity:0.45;box-shadow:0 2px 8px rgba(6,182,212,0.3);transition:opacity .15s;">
+                    Consolidate Techniques
+                  </button>
+                  <button id="actor-hunt-groups-btn" type="button" disabled
+                          style="flex:1;padding:10px;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);color:#fff;opacity:0.45;box-shadow:0 2px 8px rgba(99,102,241,0.3);transition:opacity .15s;">
+                    Hunt Threat Groups
+                  </button>
+                  <button id="actor-hunt-techniques-btn" type="button" disabled
+                          style="flex:1;padding:10px;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);color:#fff;opacity:0.45;box-shadow:0 2px 8px rgba(139,92,246,0.3);transition:opacity .15s;">
+                    Hunt Techniques
+                  </button>
+                </div>
+              </div>
+
+              <!-- Over-limit banner (shown when >20 actors are tagged) -->
+              <div id="actor-overlimit-banner" style="display:none;margin-top:14px;padding:12px 16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                  <div style="color:#92400e;font-size:15px;font-weight:500;">
+                    <strong><span id="actor-overlimit-count">0</span> actor(s) over the 20-actor limit</strong>
+                    — the greyed-out groups won't be included. Remove them, or continue with the first 20.
+                  </div>
+                  <button id="actor-overlimit-continue" type="button"
+                    style="flex-shrink:0;padding:7px 18px;border-radius:6px;border:none;background:linear-gradient(135deg,#06b6d4 0%,#0891b2 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                    Continue with first 20
+                  </button>
+                </div>
               </div>
 
               <!-- Results panel -->
