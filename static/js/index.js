@@ -605,8 +605,12 @@ document.addEventListener('DOMContentLoaded', function () {
   var dropzone = document.getElementById('upload-dropzone');
 
   function validateUpload() {
-    if (uploadBtn && fileInput) {
-      uploadBtn.disabled = !fileInput.files || fileInput.files.length === 0;
+    if (uploadBtn) {
+      var hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+      var urlInput = document.getElementById('blog_url_input');
+      var url = (urlInput && urlInput.value) || '';
+      var hasUrl = url.trim() !== '' && (url.startsWith('http://') || url.startsWith('https://')) && url.replace(/^https?:\/\//, '').includes('.');
+      uploadBtn.disabled = !hasFile && !hasUrl;
     }
   }
 
@@ -621,6 +625,11 @@ document.addEventListener('DOMContentLoaded', function () {
       validateUpload();
     });
     validateUpload(); // Initial validation
+  }
+
+  var blogUrlInput = document.getElementById('blog_url_input');
+  if (blogUrlInput) {
+    blogUrlInput.addEventListener('input', validateUpload);
   }
 
   // Drag and drop support
@@ -657,24 +666,56 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Attach click handler to button instead of form submit
   if (uploadBtn && uploadForm) {
-    console.log('[DEBUG] Upload button handler attached');
     uploadBtn.addEventListener('click', function (e) {
-      console.log('[DEBUG] Upload button clicked');
       e.preventDefault();
       e.stopPropagation();
 
-      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        console.log('[DEBUG] No file selected');
+      var urlInput = document.getElementById('blog_url_input');
+      var url = (urlInput && urlInput.value) || '';
+      var hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+      var hasUrl = url.trim() !== '' && (url.startsWith('http://') || url.startsWith('https://')) && url.replace(/^https?:\/\//, '').includes('.');
+
+      if (!hasFile && !hasUrl) {
         uploadBtn.disabled = true;
         return false;
       }
 
-      console.log('[DEBUG] File selected:', fileInput.files[0].name);
-      console.log('[DEBUG] Starting AJAX upload...');
-      showLoading('file upload');
+      if (hasUrl && !hasFile) {
+        // Blog URL analysis
+        showLoading('blog analysis');
+        var blogFormData = new FormData();
+        blogFormData.append('url', url.trim());
+        var useOpenAI = document.getElementById('upload_use_openai');
+        if (useOpenAI && useOpenAI.checked) blogFormData.append('use_openai', 'true');
 
+        fetch('/analyze_blog', {
+          method: 'POST',
+          body: blogFormData,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (response) {
+          var contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) return response.json();
+          return response.text();
+        })
+        .then(function (data) {
+          hideLoading();
+          if (typeof data === 'object' && data.show_extraction) { showExtractionResults(data); return; }
+          if (typeof data === 'object' && data.redirect_url) { window.location = data.redirect_url; return; }
+          if (typeof data === 'object' && data.redirect) { window.location = data.redirect; return; }
+          var parser = new DOMParser();
+          var doc = parser.parseFromString(data, 'text/html');
+          var newContent = doc.getElementById('main-content');
+          var oldContent = document.getElementById('main-content');
+          if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
+        })
+        .catch(function (err) { hideLoading(); alert('Error: ' + err.message); });
+        return;
+      }
+
+      // File upload
+      showLoading('file upload');
       var formData = new FormData(uploadForm);
-      console.log('[DEBUG] FormData created, sending fetch request...');
 
       fetch('/upload', {
         method: 'POST',
@@ -688,25 +729,15 @@ document.addEventListener('DOMContentLoaded', function () {
       })
       .then(function (data) {
         hideLoading();
-
-        // Debug logging
-        console.log('Upload response:', data);
-        console.log('show_extraction:', data.show_extraction);
-        console.log('Type check:', typeof data === 'object' && data.show_extraction);
-
         if (typeof data === 'object' && data.show_extraction) {
-          // Show extraction results modal
-          console.log('Showing extraction results modal');
           showExtractionResults(data);
           return;
         }
         if (typeof data === 'object' && data.redirect_url) {
-          console.log('Redirecting to:', data.redirect_url);
           window.location = data.redirect_url;
           return;
         }
         if (typeof data === 'object' && data.redirect) {
-          console.log('Redirecting to:', data.redirect);
           window.location = data.redirect;
           return;
         }
@@ -1011,109 +1042,6 @@ function showExtractionResults(data) {
   });
 }
 
-// Blog analysis form validation and option syncing
-document.addEventListener('DOMContentLoaded', function () {
-  var blogForm = document.getElementById('blog-form');
-  var blogUrlInput = document.getElementById('blog_url_input');
-  var blogBtn = document.getElementById('blog_btn');
-
-  // Sync options from upload form to blog form
-  function syncOptions() {
-    var uploadUseOpenAI = document.getElementById('upload_use_openai');
-    var uploadAutoGenerate = document.getElementById('upload_auto_generate');
-    var uploadRunCorrelation = document.getElementById('upload_run_correlation');
-
-    var blogUseOpenAI = document.getElementById('blog_use_openai');
-    var blogAutoGenerate = document.getElementById('blog_auto_generate');
-    var blogRunCorrelation = document.getElementById('blog_run_correlation');
-
-    if (uploadUseOpenAI && blogUseOpenAI) {
-      blogUseOpenAI.value = uploadUseOpenAI.checked ? 'true' : 'false';
-    }
-    if (uploadAutoGenerate && blogAutoGenerate) {
-      blogAutoGenerate.value = uploadAutoGenerate.checked ? 'true' : 'false';
-    }
-    if (uploadRunCorrelation && blogRunCorrelation) {
-      blogRunCorrelation.value = uploadRunCorrelation.checked ? 'true' : 'false';
-    }
-  }
-
-  // Add listeners to upload checkboxes to sync options
-  var uploadCheckboxes = document.querySelectorAll('#upload-form input[type="checkbox"]');
-  uploadCheckboxes.forEach(function(checkbox) {
-    checkbox.addEventListener('change', syncOptions);
-  });
-
-  function validateBlogUrl() {
-    var url = (blogUrlInput && blogUrlInput.value) || '';
-    // Basic URL validation
-    var isValid = url.trim() !== '' && (url.startsWith('http://') || url.startsWith('https://'));
-    if (blogBtn) blogBtn.disabled = !isValid;
-  }
-
-  if (blogUrlInput) {
-    blogUrlInput.addEventListener('input', validateBlogUrl);
-    validateBlogUrl(); // Initial validation
-  }
-
-  if (blogForm) {
-    blogForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      if (!blogUrlInput || blogUrlInput.value.trim() === '') {
-        if (blogBtn) blogBtn.disabled = true;
-        return false;
-      }
-
-      // Sync options before submitting
-      syncOptions();
-
-      showLoading('blog analysis');
-
-      var formData = new FormData(blogForm);
-      fetch('/analyze_blog', {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      })
-      .then(function (response) {
-        var contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) return response.json();
-        return response.text();
-      })
-      .then(function (data) {
-        hideLoading();
-
-        if (typeof data === 'object' && data.show_extraction) {
-          // Show extraction results modal (same as file upload)
-          showExtractionResults(data);
-          return;
-        }
-        if (typeof data === 'object' && data.redirect) {
-          window.location = data.redirect;
-          return;
-        }
-        if (typeof data === 'object' && data.success) {
-          if (data.message) {
-            alert(data.message);
-          }
-          // Clear the form
-          blogForm.reset();
-          validateBlogUrl();
-          return;
-        }
-        var parser = new DOMParser();
-        var doc = parser.parseFromString(data, 'text/html');
-        var newContent = doc.getElementById('main-content');
-        var oldContent = document.getElementById('main-content');
-        if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
-      })
-      .catch(function (err) {
-        hideLoading();
-        alert('Error: ' + err.message);
-      });
-    });
-  }
-});
 
 // Emulate form validation
 document.addEventListener('DOMContentLoaded', function () {

@@ -65,21 +65,21 @@
         /* Global navigation buttons */
         .global-nav-controls {
             position: fixed;
-            top: 28px;
-            right: max(2em, calc((100vw - 1320px) / 2 + 2em));
-            z-index: 10001;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(1500px, calc(100vw - 4em));
+            height: 85px;
             display: flex;
-            gap: 12px;
+            justify-content: flex-end;
             align-items: center;
+            gap: 12px;
+            padding-right: 3em;
+            z-index: 10001;
+            pointer-events: none;
         }
-
-        /* Adjust on smaller screens */
-        @media (max-width: 1400px) {
-            .global-nav-controls {
-                right: auto;
-                left: 20px;
-                top: 70px;
-            }
+        .global-nav-controls > * {
+            pointer-events: all;
         }
 
         .nav-icon-btn {

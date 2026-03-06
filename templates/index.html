@@ -48,7 +48,7 @@
       .how-archer-link {
         position: fixed !important;
         top: 20px !important;
-        right: calc((100vw - 1320px) / 2 + 52px) !important;
+        right: max(2em, calc((100vw - 1500px) / 2)) !important;
         z-index: 10000 !important;
       }
 
@@ -251,7 +251,7 @@
     {% include "partials/nav_controls.html" %}
     {% block content %}
     <div style="flex: 1; width: 100%;">
-    <div class="container" style="width: 1320px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
+    <div class="container" style="width: 1500px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">
         <div style="margin-bottom: 1em; margin-top: 28px;">
@@ -264,7 +264,7 @@
 
       <!-- Tabbed interface inspired by VirusTotal -->
       <div class="tabs-container">
-        <div class="tabs-header" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+        <div class="tabs-header" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
           <button class="tab-button active" data-tab="generate">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
               <circle cx="12" cy="12" r="10" stroke="#10b981"/>
@@ -276,6 +276,19 @@
               <line x1="18" y1="12" x2="22" y2="12" stroke="#10b981"/>
             </svg>
             <span>Hunt</span>
+          </button>
+          <button class="tab-button" data-tab="research">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
+              <circle cx="11" cy="11" r="7" stroke="#06b6d4"/>
+              <line x1="16.5" y1="16.5" x2="22" y2="22" stroke="#06b6d4"/>
+              <circle cx="8" cy="9" r="1.5" stroke="#06b6d4" fill="#06b6d4"/>
+              <circle cx="13" cy="9" r="1.5" stroke="#06b6d4" fill="#06b6d4"/>
+              <circle cx="11" cy="13" r="1.5" stroke="#06b6d4" fill="#06b6d4"/>
+              <line x1="8" y1="9" x2="13" y2="9" stroke="#06b6d4"/>
+              <line x1="8" y1="9" x2="11" y2="13" stroke="#06b6d4"/>
+              <line x1="13" y1="9" x2="11" y2="13" stroke="#06b6d4"/>
+            </svg>
+            <span>Research</span>
           </button>
           <button class="tab-button" data-tab="upload">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
@@ -311,141 +324,6 @@
                        placeholder="e.g., APT29, Scattered Spider" maxlength="200">
                 <div id="group-name-error" class="error-message" style="display:none;">
                   Name must be 30 characters or fewer.
-                </div>
-              </div>
-
-              <!-- OR Separator -->
-              <div class="form-separator">
-                <span class="separator-line"></span>
-                <span class="separator-text">OR</span>
-                <span class="separator-line"></span>
-              </div>
-
-              <!-- Actor Technique Consolidation -->
-              <div id="actor-consolidation-section">
-                <label class="form-label" style="margin-bottom:8px;display:block;font-size:16px;">
-                  Consolidate Techniques by Actor(s)
-                  <span style="font-weight: 400; color: #666; font-size: 1em;">(Compare techniques across multiple threat groups)</span>
-                </label>
-
-                <!-- Box 1: Keyword search + AND/OR toggle -->
-                <div style="margin-bottom:10px;">
-                  <label style="font-size:14px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Filter by keyword</label>
-                  <div style="display:flex;align-items:stretch;gap:10px;">
-                    <div id="keyword-input-wrap" class="form-input" style="flex:1;position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text;height:auto;min-height:44px;" onclick="document.getElementById('keyword-text-input').focus()">
-                      <div id="keyword-filters-row" style="display:contents;"></div>
-                      <input type="text" id="keyword-text-input" autocomplete="off" placeholder="e.g. Iran, Finance…"
-                        style="flex:1;min-width:140px;border:none;outline:none;font-size:16px;background:transparent;padding:0;margin:0;">
-                    </div>
-                    <!-- AND / OR single toggle button -->
-                    <button id="kw-mode-btn" type="button"
-                      style="width:70px;border:2px solid #d1d5db;border-radius:6px;background:#374151;color:#fff;cursor:pointer;font-size:16px;font-weight:600;font-family:inherit;white-space:nowrap;flex-shrink:0;">
-                      AND
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Box 2: Actor name tags -->
-                <div>
-                  <label style="font-size:14px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Actor groups</label>
-                  <div id="actor-tag-input-wrap" class="form-input" style="position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text;height:auto;min-height:44px;" onclick="document.getElementById('actor-text-input').focus()">
-                    <div id="actor-tags-list" style="display:contents;"></div>
-                    <input type="text" id="actor-text-input" autocomplete="off" placeholder="Type an actor name…"
-                      style="flex:1;min-width:160px;border:none;outline:none;font-size:16px;background:transparent;padding:0;margin:0;">
-                    <div id="actor-autocomplete" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:200;max-height:260px;overflow-y:auto;"></div>
-                  </div>
-                </div>
-
-                <!-- Results panel -->
-                <div id="actor-results-panel" style="display:none;margin-top:16px;">
-                  <div id="actor-results-loading" style="display:none;text-align:center;padding:28px;color:#6366f1;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;display:inline-block;">
-                      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                    </svg>
-                    <div style="margin-top:8px;font-size:20px;">Consolidating techniques across actors…</div>
-                  </div>
-                  <div id="actor-results-error" style="display:none;padding:10px 14px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;color:#991b1b;font-size:20px;"></div>
-                  <div id="actor-results-content" style="display:none;">
-                    <div id="actor-summary-bar" style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:12px;padding:14px 14px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;text-align:center;"></div>
-                    <div id="actor-not-found-bar" style="display:none;margin-bottom:10px;padding:8px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;font-size:18px;color:#92400e;"></div>
-                    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;">
-                      <span style="font-size:15px;color:#6b7280;display:flex;align-items:center;gap:5px;">
-                        <span style="display:inline-block;width:3px;height:14px;background:#f59e0b;border-radius:2px;"></span>
-                        = &gt;1 actor
-                      </span>
-                      <div id="tactic-multiselect" style="position:relative;">
-                        <button id="tactic-ms-btn" type="button"
-                          style="font-size:15px;border:1px solid #d1d5db;border-radius:4px;padding:0 10px;background:#fff;height:35px;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:130px;">
-                          <span id="tactic-ms-label">All tactics</span>
-                          <svg style="width:12px;height:12px;flex-shrink:0;margin-left:auto;" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
-                        </button>
-                        <div id="tactic-ms-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:200px;max-height:320px;overflow-y:auto;">
-                          <label style="display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;font-size:15px;font-weight:600;border-bottom:1px solid #e5e7eb;margin-bottom:4px;">
-                            <input type="checkbox" id="tactic-ms-all" checked style="width:15px;height:15px;cursor:pointer;"> All tactics
-                          </label>
-                          <div id="tactic-ms-options"></div>
-                        </div>
-                      </div>
-                      <!-- View toggle: Grouped / Per Actor -->
-                      <div style="display:flex;border:1px solid #d1d5db;border-radius:4px;overflow:hidden;">
-                        <button id="actor-view-grouped" type="button"
-                          style="padding:0 16px;border:none;background:#374151;color:#fff;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
-                          Grouped
-                        </button>
-                        <button id="actor-view-flat" type="button"
-                          style="padding:0 16px;border:none;background:#fff;color:#6b7280;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;border-left:1px solid #d1d5db;height:35px;box-sizing:border-box;">
-                          Per Actor
-                        </button>
-                      </div>
-                      <!-- Hide/Show table toggle -->
-                      <button id="actor-toggle-table" type="button"
-                        style="padding:0 16px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
-                        Hide Table
-                      </button>
-                      <!-- Clear -->
-                      <button id="actor-btn-clear" type="button"
-                        style="padding:0 16px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
-                        Clear
-                      </button>
-                      <div style="margin-left:auto;display:flex;align-items:center;gap:0;">
-                        <span style="font-size:15px;color:#6b7280;margin-right:8px;font-weight:500;">Export</span>
-                        <button id="actor-export-csv" type="button"
-                          style="font-size:15px;padding:6px 14px;border-radius:4px 0 0 4px;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
-                          CSV
-                        </button>
-                        <button id="actor-export-xlsx" type="button"
-                          style="font-size:15px;padding:6px 14px;border-radius:0;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
-                          XLSX
-                        </button>
-                        <button id="actor-export-json" type="button"
-                          style="font-size:15px;padding:6px 14px;border-radius:0 4px 4px 0;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
-                          JSON
-                        </button>
-                      </div>
-                    </div>
-                    <div style="overflow-x:auto;">
-                      <table id="actor-techniques-table" style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;">
-                        <colgroup>
-                          <col style="width:11%">
-                          <col><!-- Name: flexible -->
-                          <col style="width:17%">
-                          <col style="width:22%">
-                          <col style="width:14%">
-                        </colgroup>
-                        <thead>
-                          <tr style="background:#f1f5f9;text-align:left;">
-                            <th data-col="technique_id"   class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;">ID ↕</th>
-                            <th data-col="technique_name" class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Name ↕</th>
-                            <th data-col="tactic"         class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Tactic ↕</th>
-                            <th data-col="actor_count"    class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;">Actors ↕</th>
-                            <th data-col="attribution"    class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Attribution ↕</th>
-                          </tr>
-                        </thead>
-                        <tbody id="actor-techniques-body"></tbody>
-                      </table>
-                    </div>
-                    <div id="actor-row-count" style="margin-top:8px;font-size:18px;color:#6b7280;text-align:right;"></div>
-                  </div>
                 </div>
               </div>
 
@@ -654,8 +532,9 @@
                 </div>
               </details>
 
-              <!-- Detection Validation -->
-              <div style="padding: 0.25rem 0 0.5rem 0;">
+              <!-- Detection Validation + Threat Briefing row -->
+              <div style="padding: 0.25rem 0 0.5rem 0; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <!-- Left: Auto-validate -->
                 <label class="option-item" id="auto-validate-label" style="align-items: flex-start;">
                   <input type="checkbox" name="auto_validate" id="auto_validate_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
                   <div style="flex: 1; min-width: 0;">
@@ -668,6 +547,20 @@
                       <span id="docker-status-badge" class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
                     </span>
                     <span class="option-hint" id="auto-validate-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
+                  </div>
+                </label>
+                <!-- Right: Threat Briefing -->
+                <label class="option-item" id="briefing-checkbox-label" style="align-items: flex-start;">
+                  <input type="checkbox" id="briefing_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
+                  <div style="flex: 1; min-width: 0;">
+                    <span class="option-label">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="M9 12l2 2 4-4"/>
+                      </svg>
+                      Threat Briefing
+                    </span>
+                    <span class="option-hint" style="margin-top: 0.4em; display: block;">Generate an AI threat briefing after detection generation</span>
                   </div>
                 </label>
               </div>
@@ -691,24 +584,10 @@
 
               <!-- Action buttons -->
               <div style="border-top:1px solid #dee2e6;margin-top:20px;padding-top:16px;">
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
                 <button type="submit" class="btn-primary" id="generate_btn" disabled
-                        style="margin:0;font-size:1rem;">
+                        style="margin:0;font-size:1rem;background:linear-gradient(135deg,#10b981 0%,#059669 100%);box-shadow:0 2px 8px rgba(16,185,129,0.3);">
                   Generate
                 </button>
-                <button type="button" id="briefing-btn" class="btn-secondary" disabled
-                        style="margin:0;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:6px;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    <path d="M9 12l2 2 4-4"/>
-                  </svg>
-                  Threat Briefing
-                </button>
-                <button id="actor-consolidate-btn" type="button" disabled
-                        style="margin:0;padding:10px;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;border:none;background:#10b981;color:#fff;opacity:0.45;transition:opacity .15s;">
-                  Consolidate Techniques
-                </button>
-                </div>
               </div>
             </form>
 
@@ -908,7 +787,7 @@
             </style>
 
             <script>
-            (function () {
+            document.addEventListener('DOMContentLoaded', function () {
               /* ---- state ---- */
               var actorTags      = [];   // array of primary actor name strings
               var activeKeywords = [];   // active keyword filters (intersection)
@@ -1856,15 +1735,147 @@
               function escActor(s) {
                 return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
               }
-            })();
+            });
             </script>
 
           </div>
 
+          <!-- RESEARCH TAB -->
+          <div class="tab-pane" id="tab-research">
+            <div id="actor-consolidation-section" style="display:flex;flex-direction:column;min-height:340px;">
+              <!-- Box 1: Keyword search + AND/OR toggle -->
+              <div class="form-section">
+                <label class="form-label" style="font-size:1.05rem;">Find Shared Techniques across multiple Threat Groups</label>
+                <div style="display:flex;align-items:stretch;gap:10px;">
+                  <div id="keyword-input-wrap" class="form-input" style="flex:1;position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text;height:auto;min-height:44px;" onclick="document.getElementById('keyword-text-input').focus()">
+                    <div id="keyword-filters-row" style="display:contents;"></div>
+                    <input type="text" id="keyword-text-input" autocomplete="off" placeholder="Filter by keyword e.g. Iran, Finance etc."
+                      style="flex:1;min-width:140px;border:none;outline:none;font-size:16px;background:transparent;padding:0;margin:0;">
+                  </div>
+                  <!-- AND / OR single toggle button -->
+                  <button id="kw-mode-btn" type="button"
+                    style="width:70px;border:2px solid #d1d5db;border-radius:6px;background:#374151;color:#fff;cursor:pointer;font-size:16px;font-weight:600;font-family:inherit;white-space:nowrap;flex-shrink:0;">
+                    AND
+                  </button>
+                </div>
+              </div>
+
+              <!-- Box 2: Actor name tags -->
+              <div class="form-section">
+                <div id="actor-tag-input-wrap" class="form-input" style="position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text;height:auto;min-height:44px;" onclick="document.getElementById('actor-text-input').focus()">
+                  <div id="actor-tags-list" style="display:contents;"></div>
+                  <input type="text" id="actor-text-input" autocomplete="off" placeholder="Filter by Group e.g. APT33, Lazarus Group etc."
+                    style="flex:1;min-width:160px;border:none;outline:none;font-size:16px;background:transparent;padding:0;margin:0;">
+                  <div id="actor-autocomplete" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:200;max-height:260px;overflow-y:auto;"></div>
+                </div>
+              </div>
+
+              <!-- Consolidate button -->
+              <div style="border-top:1px solid #dee2e6;margin-top:auto;padding-top:16px;">
+                <button id="actor-consolidate-btn" type="button" disabled
+                        style="width:100%;padding:10px;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#06b6d4 0%,#0891b2 100%);color:#fff;opacity:0.45;box-shadow:0 2px 8px rgba(6,182,212,0.3);transition:opacity .15s;">
+                  Consolidate Techniques
+                </button>
+              </div>
+
+              <!-- Results panel -->
+              <div id="actor-results-panel" style="display:none;margin-top:16px;">
+                <div id="actor-results-loading" style="display:none;text-align:center;padding:28px;color:#6366f1;">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;display:inline-block;">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                  </svg>
+                  <div style="margin-top:8px;font-size:20px;">Consolidating techniques across actors…</div>
+                </div>
+                <div id="actor-results-error" style="display:none;padding:10px 14px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;color:#991b1b;font-size:20px;"></div>
+                <div id="actor-results-content" style="display:none;">
+                  <div id="actor-summary-bar" style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:12px;padding:14px 14px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;text-align:center;"></div>
+                  <div id="actor-not-found-bar" style="display:none;margin-bottom:10px;padding:8px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;font-size:18px;color:#92400e;"></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:15px;color:#6b7280;display:flex;align-items:center;gap:5px;">
+                      <span style="display:inline-block;width:3px;height:14px;background:#f59e0b;border-radius:2px;"></span>
+                      = &gt;1 actor
+                    </span>
+                    <div id="tactic-multiselect" style="position:relative;">
+                      <button id="tactic-ms-btn" type="button"
+                        style="font-size:15px;border:1px solid #d1d5db;border-radius:4px;padding:0 10px;background:#fff;height:35px;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:130px;">
+                        <span id="tactic-ms-label">All tactics</span>
+                        <svg style="width:12px;height:12px;flex-shrink:0;margin-left:auto;" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+                      </button>
+                      <div id="tactic-ms-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:200px;max-height:320px;overflow-y:auto;">
+                        <label style="display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;font-size:15px;font-weight:600;border-bottom:1px solid #e5e7eb;margin-bottom:4px;">
+                          <input type="checkbox" id="tactic-ms-all" checked style="width:15px;height:15px;cursor:pointer;"> All tactics
+                        </label>
+                        <div id="tactic-ms-options"></div>
+                      </div>
+                    </div>
+                    <!-- View toggle: Grouped / Per Actor -->
+                    <div style="display:flex;border:1px solid #d1d5db;border-radius:4px;overflow:hidden;">
+                      <button id="actor-view-grouped" type="button"
+                        style="padding:0 16px;border:none;background:#374151;color:#fff;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
+                        Grouped
+                      </button>
+                      <button id="actor-view-flat" type="button"
+                        style="padding:0 16px;border:none;background:#fff;color:#6b7280;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;border-left:1px solid #d1d5db;height:35px;box-sizing:border-box;">
+                        Per Actor
+                      </button>
+                    </div>
+                    <!-- Hide/Show table toggle -->
+                    <button id="actor-toggle-table" type="button"
+                      style="padding:0 16px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
+                      Hide Table
+                    </button>
+                    <!-- Clear -->
+                    <button id="actor-btn-clear" type="button"
+                      style="padding:0 16px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
+                      Clear
+                    </button>
+                    <div style="margin-left:auto;display:flex;align-items:center;gap:0;">
+                      <span style="font-size:15px;color:#6b7280;margin-right:8px;font-weight:500;">Export</span>
+                      <button id="actor-export-csv" type="button"
+                        style="font-size:15px;padding:6px 14px;border-radius:4px 0 0 4px;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
+                        CSV
+                      </button>
+                      <button id="actor-export-xlsx" type="button"
+                        style="font-size:15px;padding:6px 14px;border-radius:0;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
+                        XLSX
+                      </button>
+                      <button id="actor-export-json" type="button"
+                        style="font-size:15px;padding:6px 14px;border-radius:0 4px 4px 0;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
+                        JSON
+                      </button>
+                    </div>
+                  </div>
+                  <div style="overflow-x:auto;">
+                    <table id="actor-techniques-table" style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;">
+                      <colgroup>
+                        <col style="width:11%">
+                        <col><!-- Name: flexible -->
+                        <col style="width:17%">
+                        <col style="width:22%">
+                        <col style="width:14%">
+                      </colgroup>
+                      <thead>
+                        <tr style="background:#f1f5f9;text-align:left;">
+                          <th data-col="technique_id"   class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;">ID ↕</th>
+                          <th data-col="technique_name" class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Name ↕</th>
+                          <th data-col="tactic"         class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Tactic ↕</th>
+                          <th data-col="actor_count"    class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;">Actors ↕</th>
+                          <th data-col="attribution"    class="actor-th" style="padding:8px 10px;border-bottom:2px solid #e2e8f0;cursor:pointer;">Attribution ↕</th>
+                        </tr>
+                      </thead>
+                      <tbody id="actor-techniques-body"></tbody>
+                    </table>
+                  </div>
+                  <div id="actor-row-count" style="margin-top:8px;font-size:18px;color:#6b7280;text-align:right;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- UPLOAD TAB -->
           <div class="tab-pane" id="tab-upload">
-            <!-- URL Input Section -->
-            <form id="blog-form" action="/analyze_blog" method="post" style="margin-bottom: 2em;">
+            <form id="upload-form" method="post" enctype="multipart/form-data" onsubmit="return false;">
+              <!-- URL Input Section -->
               <div class="form-section">
                 <label for="blog_url_input" class="form-label">
                   <svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1873,29 +1884,16 @@
                   </svg>
                   Analyze a blog post
                 </label>
-                <input type="text" name="url" id="blog_url_input" class="form-input"
+                <input type="text" id="blog_url_input" class="form-input"
                        placeholder="e.g., https://thedfirreport.com/2024/..." maxlength="500">
               </div>
 
-              <!-- Blog Options (hidden, shares same options as file upload) -->
-              <input type="hidden" name="use_openai" id="blog_use_openai" value="false">
-              <input type="hidden" name="auto_generate" id="blog_auto_generate" value="true">
-              <input type="hidden" name="run_correlation" id="blog_run_correlation" value="false">
-
-              <button type="submit" class="btn-primary" id="blog_btn" disabled style="width:100%;">
-                Analyze Blog Post
-              </button>
-            </form>
-
-            <!-- Divider -->
-            <div style="display:flex;align-items:center;margin:2em 0;color:#999;">
-              <div style="flex:1;height:1px;background:#dee2e6;"></div>
-              <span style="padding:0 1em;font-size:0.9em;">OR</span>
-              <div style="flex:1;height:1px;background:#dee2e6;"></div>
-            </div>
-
-            <!-- File Upload Section -->
-            <form id="upload-form" method="post" enctype="multipart/form-data" onsubmit="return false;">
+              <!-- OR Separator -->
+              <div class="form-separator">
+                <span class="separator-line"></span>
+                <span class="separator-text">OR</span>
+                <span class="separator-line"></span>
+              </div>
               <div class="form-label" style="margin-bottom:0.5em;">
                 <svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"/>
@@ -2105,15 +2103,17 @@
                 </div>
               </details>
 
-              <button type="button" class="btn-primary" id="upload_btn" disabled style="width:100%;">
-                Upload & Process
-              </button>
+              <div style="border-top:1px solid #dee2e6;margin-top:20px;padding-top:16px;">
+                <button type="button" class="btn-primary" id="upload_btn" disabled style="width:100%;margin:0;background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);box-shadow:0 2px 8px rgba(59,130,246,0.3);">
+                  Upload & Process
+                </button>
+              </div>
             </form>
           </div>
 
           <!-- PROFILE TAB -->
           <div class="tab-pane" id="tab-profile">
-            <form id="profile-form" action="/profile" method="post" autocomplete="off">
+            <form id="profile-form" action="/profile" method="post" autocomplete="off" style="display:flex;flex-direction:column;min-height:340px;">
               <div class="form-section">
                 <label for="domain_input" class="form-label">Enter a company's primary domain to analyze their threat profile</label>
                 <input type="text" name="domain" id="domain_input" class="form-input"
@@ -2165,21 +2165,17 @@
                 </div>
               </details>
 
-              <button type="submit" class="btn-primary" id="profile_btn" disabled>
-                Profile Organization
-              </button>
+              <div style="border-top:1px solid #dee2e6;margin-top:auto;padding-top:16px;">
+                <button type="submit" class="btn-primary" id="profile_btn" disabled style="width:100%;margin:0;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);box-shadow:0 2px 8px rgba(139,92,246,0.3);">
+                  Profile Organization
+                </button>
+              </div>
             </form>
           </div>
 
           <!-- VALIDATE TAB (Detection Validation) -->
           <div class="tab-pane" id="tab-emulate">
             <div class="emulate-validation-container">
-              <h2 style="font-size: 1.25rem; margin: 0 0 0.5rem 0; color: var(--text-primary);">Detection Validation</h2>
-              <p style="color: var(--text-secondary); margin: 0 0 1.5rem 0; font-size: 0.875rem;">
-                Test your detection queries against sample events in containerized SIEM environments.
-                Requires Docker to be installed and running.
-              </p>
-
               {% include 'partials/validation_controls.html' %}
             </div>
           </div>
@@ -2388,26 +2384,23 @@
          Ask Archer – floating chat widget
          ================================================================ -->
     <style>
-      /* ---- trigger button ---- */
       #ask-archer-btn {
         position: fixed;
         bottom: 28px;
         right: 28px;
         z-index: 9000;
-        width: auto;
-        height: auto;
-        border-radius: 28px;
+        border-radius: 45px;
         background: #6366f1;
         color: #fff;
         border: none;
         cursor: pointer;
-        box-shadow: 0 4px 16px rgba(99,102,241,.45);
+        box-shadow: 0 6px 24px rgba(99,102,241,.5);
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        padding: 12px 20px;
-        font-size: 14px;
+        gap: 13px;
+        padding: 19px 32px;
+        font-size: 22px;
         font-weight: 600;
         font-family: inherit;
         white-space: nowrap;
@@ -2415,14 +2408,13 @@
       }
       #ask-archer-btn:hover { background: #4f46e5; transform: scale(1.04); }
 
-      /* ---- panel ---- */
       #ask-archer-panel {
         position: fixed;
-        bottom: 88px;
+        bottom: 140px;
         right: 28px;
         z-index: 8999;
-        width: 532px;
-        height: 400px;
+        width: 638px;
+        height: 480px;
         background: #1e1e2e;
         border: 1px solid #3d3d5c;
         border-radius: 12px;
@@ -2440,11 +2432,7 @@
         transform: translateY(0) scale(1);
         pointer-events: all;
       }
-      #ask-archer-panel.expanded {
-        height: calc(90vh - 108px);
-      }
-
-      /* header */
+      #ask-archer-panel.expanded { height: calc(90vh - 168px); }
       .aap-header {
         padding: 12px 16px;
         background: #181825;
@@ -2454,191 +2442,50 @@
         border-bottom: 1px solid #3d3d5c;
         flex-shrink: 0;
       }
-      .aap-header svg { flex-shrink: 0; }
-      .aap-title {
-        font-size: .95em;
-        font-weight: 600;
-        color: #cdd6f4;
-        flex: 1;
-      }
-      .aap-subtitle {
-        font-size: .72em;
-        color: #6c7086;
-      }
-      #aap-close {
-        background: none;
-        border: none;
-        color: #6c7086;
-        cursor: pointer;
-        padding: 2px;
-        line-height: 1;
-        font-size: 1.2em;
-      }
+      .aap-title { font-size: 1.14em; font-weight: 600; color: #cdd6f4; flex: 1; }
+      .aap-subtitle { font-size: .864em; color: #6c7086; }
+      #aap-close { background: none; border: none; color: #6c7086; cursor: pointer; padding: 2px; line-height: 1; font-size: 1.2em; }
       #aap-close:hover { color: #cdd6f4; }
-
-      /* messages */
-      .aap-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 14px 14px 8px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .aap-msg {
-        max-width: 92%;
-        padding: 9px 13px;
-        border-radius: 10px;
-        font-size: .83em;
-        line-height: 1.55;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-      .aap-msg.user {
-        align-self: flex-end;
-        background: #6366f1;
-        color: #fff;
-        border-bottom-right-radius: 3px;
-      }
-      .aap-msg.archer {
-        align-self: flex-start;
-        background: #313244;
-        color: #cdd6f4;
-        border-bottom-left-radius: 3px;
-      }
-      .aap-msg.error {
-        align-self: flex-start;
-        background: #3d1a1a;
-        color: #f38ba8;
-        border-bottom-left-radius: 3px;
-      }
-      .aap-typing {
-        align-self: flex-start;
-        color: #6c7086;
-        font-size: .78em;
-        padding: 4px 8px;
-      }
-
-      /* input row */
-      .aap-input-row {
-        display: flex;
-        gap: 8px;
-        padding: 10px 12px 12px;
-        border-top: 1px solid #3d3d5c;
-        flex-shrink: 0;
-        background: #181825;
-      }
-      #aap-input {
-        flex: 1;
-        background: #313244;
-        border: 1px solid #45475a;
-        border-radius: 8px;
-        color: #cdd6f4;
-        font-size: .84em;
-        padding: 8px 11px;
-        resize: none;
-        height: 38px;
-        line-height: 1.4;
-        font-family: inherit;
-        outline: none;
-        transition: border-color .15s;
-      }
+      .aap-messages { flex: 1; overflow-y: auto; padding: 14px 14px 8px; display: flex; flex-direction: column; gap: 10px; }
+      .aap-msg { max-width: 92%; padding: 9px 13px; border-radius: 10px; font-size: 1em; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+      .aap-msg.user { align-self: flex-end; background: #6366f1; color: #fff; border-bottom-right-radius: 3px; }
+      .aap-msg.archer { align-self: flex-start; background: #313244; color: #cdd6f4; border-bottom-left-radius: 3px; }
+      .aap-msg.error { align-self: flex-start; background: #3d1a1a; color: #f38ba8; border-bottom-left-radius: 3px; }
+      .aap-typing { align-self: flex-start; color: #6c7086; font-size: .936em; padding: 4px 8px; }
+      .aap-input-row { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid #3d3d5c; flex-shrink: 0; background: #181825; }
+      #aap-input { flex: 1; background: #313244; border: 1px solid #45475a; border-radius: 8px; color: #cdd6f4; font-size: 1.008em; padding: 8px 11px; resize: none; height: 38px; line-height: 1.4; font-family: inherit; outline: none; transition: border-color .15s; }
       #aap-input:focus { border-color: #6366f1; }
       #aap-input::placeholder { color: #6c7086; }
-      #aap-send {
-        background: #6366f1;
-        border: none;
-        border-radius: 8px;
-        color: #fff;
-        cursor: pointer;
-        padding: 0 14px;
-        font-size: .84em;
-        font-weight: 600;
-        transition: background .15s;
-        flex-shrink: 0;
-      }
+      #aap-send { background: #6366f1; border: none; border-radius: 8px; color: #fff; cursor: pointer; padding: 0 14px; font-size: 1.008em; font-weight: 600; transition: background .15s; flex-shrink: 0; }
       #aap-send:hover { background: #4f46e5; }
       #aap-send:disabled { background: #45475a; cursor: not-allowed; }
-
-      /* provider badge */
-      .aap-provider {
-        font-size: .68em;
-        color: #6c7086;
-        padding: 0 14px 8px;
-        background: #181825;
-        text-align: right;
-        flex-shrink: 0;
-      }
-      /* ---- right-edge pin tab ---- */
-      #ask-archer-pin {
-        position: fixed;
-        top: 50%;
-        right: 0;
-        transform: translateY(-50%);
-        z-index: 9001;
-        writing-mode: vertical-rl;
-        text-orientation: mixed;
-        background: #6366f1;
-        color: #fff;
-        border: none;
-        border-radius: 8px 0 0 8px;
-        padding: 18px 10px;
-        font-size: 13px;
-        font-weight: 600;
-        font-family: inherit;
-        cursor: pointer;
-        letter-spacing: .05em;
-        box-shadow: -2px 0 12px rgba(99,102,241,.35);
-        transition: background .2s, padding .2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      #ask-archer-pin:hover { background: #4f46e5; padding-right: 14px; }
-      #ask-archer-pin.panel-open { background: #4338ca; }
+      .aap-provider { font-size: .68em; color: #6c7086; padding: 0 14px 8px; background: #181825; text-align: right; flex-shrink: 0; }
     </style>
 
-    <!-- Right-edge pin tab -->
-    <button id="ask-archer-pin" title="Ask Archer" aria-label="Ask Archer">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg)">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      Ask Archer
-    </button>
-
-    <!-- Trigger button -->
     <button id="ask-archer-btn" title="Ask Archer" aria-label="Ask Archer">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      <svg width="29" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
       <span>Ask Archer</span>
     </button>
 
-    <!-- Chat panel -->
     <div id="ask-archer-panel" role="dialog" aria-label="Ask Archer">
       <div class="aap-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         <div style="flex:1;">
           <div class="aap-title">Ask Archer</div>
           <div class="aap-subtitle">ATT&amp;CK, queries, threat groups</div>
         </div>
-        <button id="aap-expand" aria-label="Expand" title="Expand / Collapse" style="background:none;border:none;color:#6c7086;cursor:pointer;font-size:14px;padding:4px 6px;margin-right:2px;line-height:1;">&#x26F6;</button>
+        <button id="aap-expand" aria-label="Expand" title="Expand" style="background:none;border:none;color:#6c7086;cursor:pointer;font-size:14px;padding:4px 6px;margin-right:2px;line-height:1;">&#x26F6;</button>
         <button id="aap-close" aria-label="Close">&#10005;</button>
       </div>
-
       <div class="aap-messages" id="aap-messages">
         <div class="aap-msg archer">Greetings. Ask me anything about threat detection — techniques, SIEM queries, threat groups, or anything in your generated detections.</div>
       </div>
-
       <div class="aap-provider" id="aap-provider"></div>
-
       <div class="aap-input-row">
         <textarea id="aap-input" placeholder="e.g. Give me a Splunk query for Scattered Spider…" rows="1"></textarea>
         <button id="aap-send">Send</button>
@@ -2648,36 +2495,28 @@
     <script>
     (function () {
       const btn    = document.getElementById('ask-archer-btn');
-      const pin    = document.getElementById('ask-archer-pin');
       const panel  = document.getElementById('ask-archer-panel');
       const close  = document.getElementById('aap-close');
       const expand = document.getElementById('aap-expand');
-      const msgs  = document.getElementById('aap-messages');
-      const input = document.getElementById('aap-input');
-      const send  = document.getElementById('aap-send');
+      const msgs   = document.getElementById('aap-messages');
+      const input  = document.getElementById('aap-input');
+      const send   = document.getElementById('aap-send');
       const provEl = document.getElementById('aap-provider');
 
       function setOpen(open) {
         panel.classList.toggle('open', open);
-        pin.classList.toggle('panel-open', open);
         if (open) input.focus();
         try { localStorage.setItem('archerChatOpen', open ? '1' : '0'); } catch(e) {}
       }
-
-      // Restore persisted state
       try { if (localStorage.getItem('archerChatOpen') === '1') setOpen(true); } catch(e) {}
 
       btn.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
-      pin.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
       close.addEventListener('click', () => setOpen(false));
       expand.addEventListener('click', () => {
-        const isExpanded = panel.classList.toggle('expanded');
-        expand.title = isExpanded ? 'Collapse' : 'Expand';
-        expand.innerHTML = isExpanded ? '&#x2922;' : '&#x26F6;';
-        try { localStorage.setItem('archerChatExpanded', isExpanded ? '1' : '0'); } catch(e) {}
+        const x = panel.classList.toggle('expanded');
+        expand.title = x ? 'Collapse' : 'Expand';
+        expand.innerHTML = x ? '&#x2922;' : '&#x26F6;';
       });
-      // Restore persisted expand state
-      try { if (localStorage.getItem('archerChatExpanded') === '1') { panel.classList.add('expanded'); expand.innerHTML = '&#x2922;'; } } catch(e) {}
 
       function addMsg(text, role) {
         const d = document.createElement('div');
@@ -2694,19 +2533,14 @@
         input.value = '';
         input.style.height = '38px';
         send.disabled = true;
-
         addMsg(q, 'user');
-
         const typing = document.createElement('div');
         typing.className = 'aap-typing';
         typing.textContent = 'Archer is thinking…';
         msgs.appendChild(typing);
         msgs.scrollTop = msgs.scrollHeight;
-
-        // Pick up group context if set on the page
         const groupInput = document.getElementById('group_name') || document.querySelector('[name="group_name"]');
         const context = groupInput && groupInput.value ? { group: groupInput.value } : {};
-
         try {
           const res = await fetch('/api/ask', {
             method: 'POST',
@@ -2714,7 +2548,6 @@
             body: JSON.stringify({ question: q, context }),
           });
           msgs.removeChild(typing);
-
           if (!res.ok) {
             const err = await res.json().catch(() => ({ detail: res.statusText }));
             addMsg('Error: ' + (err.detail || res.statusText), 'error');
@@ -2727,7 +2560,6 @@
           msgs.removeChild(typing);
           addMsg('Network error: ' + e.message, 'error');
         }
-
         send.disabled = false;
         input.focus();
       }
@@ -2736,8 +2568,6 @@
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doAsk(); }
       });
-
-      // Auto-grow textarea
       input.addEventListener('input', () => {
         input.style.height = '38px';
         input.style.height = Math.min(input.scrollHeight, 100) + 'px';

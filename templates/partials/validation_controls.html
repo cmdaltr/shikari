@@ -1,8 +1,13 @@
 <!-- Detection Validation Controls
      Include this partial in pages where validation is needed.
-     Requires: validation.js, validation.css -->
+     Requires: detection_validation.js, detection_validation.css -->
 
-<div id="validation-panel" class="validation-panel" style="display: none;">
+<div id="validation-panel" class="validation-panel">
+  <!-- Header -->
+  <div class="form-section">
+    <label class="form-label">Paste a detection query to validate it against containerized SIEM environments</label>
+  </div>
+
   <!-- Docker Status Warning -->
   <div id="docker-warning" class="validation-warning" style="display: none;">
     <svg class="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -12,7 +17,7 @@
     </svg>
     <div class="warning-content">
       <strong>Docker Required</strong>
-      <span id="docker-warning-message">Docker is required for detection validation.</span>
+      <span id="docker-warning-message">Install Docker Desktop to enable detection validation with SIEM containers.</span>
     </div>
   </div>
 
@@ -28,60 +33,132 @@
     </div>
   </div>
 
-  <!-- Query Input -->
-  <div class="validation-section">
-    <label class="validation-label">Detection Query</label>
-    <textarea id="validation-query" class="validation-textarea" rows="6"
-              placeholder="Paste your detection query here..."></textarea>
-    <div class="query-meta">
-      <select id="vendor-select" class="vendor-select">
-        <option value="splunk">Splunk (SPL)</option>
+  <!-- Detection Query -->
+  <div class="form-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5em;">
+      <label class="form-label" style="margin-bottom:0;">Detection Query</label>
+
+      <!-- Custom vendor dropdown (matches "All tactics" style) -->
+      <div id="vendor-select-wrap" style="position:relative;">
+        <button id="vendor-select-btn" type="button"
+          style="font-size:15px;border:1px solid #d1d5db;border-radius:4px;padding:0 12px;background:#fff;height:35px;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;min-width:160px;">
+          <span id="vendor-select-label">Splunk (SPL)</span>
+          <svg style="width:12px;height:12px;flex-shrink:0;margin-left:auto;" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+        <div id="vendor-select-dropdown"
+          style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:500;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:200px;">
+          <div class="vendor-opt" data-value="splunk" data-label="Splunk (SPL)"
+            style="display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:pointer;font-size:15px;">
+            <span class="vendor-check" style="width:16px;color:#2563eb;font-weight:700;">✓</span>Splunk (SPL)
+          </div>
+          <div class="vendor-opt" data-value="elastic" data-label="Elastic (Query DSL)"
+            style="display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:pointer;font-size:15px;">
+            <span class="vendor-check" style="width:16px;color:#2563eb;font-weight:700;visibility:hidden;">✓</span>Elastic (Query DSL)
+          </div>
+          <div class="vendor-opt" data-value="secops" data-label="Google SecOps (YARA-L)"
+            style="display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:pointer;font-size:15px;">
+            <span class="vendor-check" style="width:16px;color:#2563eb;font-weight:700;visibility:hidden;">✓</span>Google SecOps (YARA-L)
+          </div>
+          <div class="vendor-opt" data-value="mde" data-label="MDE (KQL)"
+            style="display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:pointer;font-size:15px;">
+            <span class="vendor-check" style="width:16px;color:#2563eb;font-weight:700;visibility:hidden;">✓</span>MDE (KQL)
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden native select kept for detection_validation.js compatibility -->
+      <select id="vendor-select" style="display:none;">
+        <option value="splunk" selected>Splunk (SPL)</option>
         <option value="elastic">Elastic (Query DSL)</option>
         <option value="secops">Google SecOps (YARA-L)</option>
         <option value="mde">MDE (KQL)</option>
       </select>
     </div>
+    <textarea id="validation-query" class="form-input validation-textarea" rows="7"
+              placeholder="Paste your detection query here..."></textarea>
   </div>
 
+  <script>
+  (function () {
+    var btn      = document.getElementById('vendor-select-btn');
+    var dd       = document.getElementById('vendor-select-dropdown');
+    var label    = document.getElementById('vendor-select-label');
+    var nativeSel = document.getElementById('vendor-select');
+    var opts     = dd.querySelectorAll('.vendor-opt');
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!document.getElementById('vendor-select-wrap').contains(e.target)) {
+        dd.style.display = 'none';
+      }
+    });
+
+    opts.forEach(function (opt) {
+      opt.addEventListener('mouseenter', function () { opt.style.background = '#f3f4f6'; });
+      opt.addEventListener('mouseleave', function () { opt.style.background = ''; });
+      opt.addEventListener('click', function () {
+        var val = opt.dataset.value;
+        var lbl = opt.dataset.label;
+        // Update checkmarks
+        opts.forEach(function (o) { o.querySelector('.vendor-check').style.visibility = 'hidden'; });
+        opt.querySelector('.vendor-check').style.visibility = 'visible';
+        // Update button label
+        label.textContent = lbl;
+        // Sync native select + fire change event for detection_validation.js
+        nativeSel.value = val;
+        nativeSel.dispatchEvent(new Event('change'));
+        dd.style.display = 'none';
+      });
+    });
+  })();
+  </script>
+
   <!-- Technique Info (optional, for context) -->
-  <div class="validation-section" id="technique-section" style="display: none;">
-    <label class="validation-label">Technique</label>
+  <div class="form-section" id="technique-section" style="display: none;">
+    <label class="form-label">Technique</label>
     <div class="technique-display">
       <span id="technique-id-display"></span>
       <span id="technique-name-display"></span>
     </div>
   </div>
 
-  <!-- Indicators (for event generation) -->
-  <div class="validation-section" id="indicators-section">
-    <label class="validation-label">
+  <!-- Indicators -->
+  <div class="form-section" id="indicators-section">
+    <label class="form-label">
       Indicators
-      <span class="label-hint">(for generating test events)</span>
+      <span style="font-weight:400; color:#6c757d; font-size:0.875rem;">(for generating test events)</span>
     </label>
     <div class="indicators-grid">
       <div class="indicator-group">
-        <label>Command Line Patterns</label>
-        <textarea id="indicators-cmd" class="indicator-input" rows="2"
+        <label class="form-label-small">Command Line Patterns</label>
+        <textarea id="indicators-cmd" class="indicator-input" rows="3"
                   placeholder="powershell.exe -NoP -W Hidden&#10;cmd.exe /c"></textarea>
       </div>
       <div class="indicator-group">
-        <label>Process/File Names</label>
-        <textarea id="indicators-sw" class="indicator-input" rows="2"
+        <label class="form-label-small">Process/File Names</label>
+        <textarea id="indicators-sw" class="indicator-input" rows="3"
                   placeholder="mimikatz.exe&#10;procdump.exe"></textarea>
       </div>
     </div>
   </div>
 
-  <!-- Action Buttons -->
-  <div class="validation-actions">
-    <button id="btn-start-validation" class="btn-validation btn-primary" onclick="startValidation()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  <!-- Action Button -->
+  <div style="border-top: 2px solid #dee2e6; padding-top: 1.5em; margin-top: auto; display:flex; gap:1em; align-items:center;">
+    <button id="btn-start-validation" class="btn-primary" onclick="startValidation()"
+            style="margin-top:0; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 8px rgba(245,158,11,0.3); display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:0.875em 2em;">
+      <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polygon points="5 3 19 12 5 21 5 3"/>
       </svg>
       Start Validation
     </button>
-    <button id="btn-stop-validation" class="btn-validation btn-secondary" onclick="stopValidation()" style="display: none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <button id="btn-stop-validation" class="btn-secondary" onclick="stopValidation()" style="display: none;">
+      <svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="6" y="6" width="12" height="12"/>
       </svg>
       Stop
@@ -155,10 +232,11 @@
       <h4>Refined Query</h4>
       <pre id="refined-query-display" class="query-display"></pre>
       <div class="refined-actions">
-        <button class="btn-validation btn-primary" onclick="testRefinedQuery()">
+        <button class="btn-primary" onclick="testRefinedQuery()"
+                style="margin-top:0; background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%); box-shadow:0 2px 8px rgba(245,158,11,0.3); width:auto; padding:0.75em 1.5em;">
           Test Refined Query
         </button>
-        <button class="btn-validation btn-secondary" onclick="copyRefinedQuery()">
+        <button class="btn-secondary" onclick="copyRefinedQuery()">
           Copy Query
         </button>
       </div>
@@ -166,7 +244,8 @@
 
     <!-- Action Buttons -->
     <div class="results-actions">
-      <button class="btn-validation btn-primary" onclick="rerunValidation()" id="btn-rerun">
+      <button class="btn-primary" onclick="rerunValidation()" id="btn-rerun"
+              style="margin-top:0; background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%); box-shadow:0 2px 8px rgba(245,158,11,0.3); width:auto; padding:0.75em 1.5em;">
         Re-run Validation
       </button>
       <button class="btn-validation btn-success" onclick="saveValidatedDetection()" id="btn-save" style="display: none;">
@@ -177,12 +256,15 @@
 </div>
 
 <style>
-/* Inline critical styles - full styles in validation.css */
 .validation-panel {
-  background: var(--bg-secondary);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin-top: 0 !important;
 }
 
 .validation-warning {
@@ -208,8 +290,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color, #dee2e6);
   margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: #495057;
 }
 
 .status-dot {
@@ -233,18 +317,34 @@
 }
 
 .validation-textarea {
-  width: 100%;
   font-family: 'Fira Code', 'Monaco', monospace;
-  font-size: 0.875rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  font-size: 1rem;
   resize: vertical;
 }
 
-.btn-validation {
+.indicator-input {
+  width: 100%;
+  padding: 0.5em 0.75em;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: 'Fira Code', 'Monaco', monospace;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.indicator-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.indicators-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1em;
+}
+
+.btn-validation.btn-success {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -253,26 +353,6 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.btn-validation svg {
-  width: 18px;
-  height: 18px;
-}
-
-.btn-validation.btn-primary {
-  background: var(--accent);
-  color: white;
-  border: none;
-}
-
-.btn-validation.btn-secondary {
-  background: transparent;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-}
-
-.btn-validation.btn-success {
   background: #10b981;
   color: white;
   border: none;
@@ -304,12 +384,12 @@
 .metric-value {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-primary, #333);
 }
 
 .metric-label {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #6c757d);
   margin-top: 0.25rem;
 }
 </style>

@@ -271,10 +271,10 @@
 }
 
 .btn-primary:disabled {
-  background: #6c757d;
+  background: #6c757d !important;
   cursor: not-allowed;
   opacity: 0.6;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .btn-secondary {
