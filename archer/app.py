@@ -1614,6 +1614,39 @@ def load_mitre_data():
     app.state.techniques_to_choose = obtain_all_techniques(bundle)
     app.state.technique_descriptions = obtain_technique_descriptions(bundle)
 
+    # Build / load enriched group metadata cache
+    # (heuristic extraction from STIX descriptions — no external APIs needed)
+    try:
+        from archer.config import GROUP_METADATA_CACHE
+        from archer.mitre.group_metadata import build_group_metadata_cache, load_group_metadata
+        import os, json as _json
+
+        cache_path = GROUP_METADATA_CACHE
+
+        # Determine whether cache needs rebuilding:
+        # rebuild if cache is absent or older than the STIX bundle cache
+        stix_cache = os.path.join("data", "cache", "enterprise-attack.json")
+        needs_build = not os.path.exists(cache_path)
+        if not needs_build and os.path.exists(stix_cache):
+            needs_build = os.path.getmtime(stix_cache) > os.path.getmtime(cache_path)
+
+        if needs_build:
+            print("Building group metadata cache from STIX bundle…")
+            objects = list(bundle.objects)
+            group_meta = build_group_metadata_cache(objects, cache_path)
+            group_count = sum(1 for k in group_meta if k.startswith("G"))
+            print(f"Group metadata cache built: {group_count} groups")
+        else:
+            group_meta = load_group_metadata(cache_path)
+
+        app.state.group_metadata = group_meta
+
+    except Exception as _e:
+        import traceback
+        traceback.print_exc()
+        print(f"Warning: group metadata enrichment failed: {_e}")
+        app.state.group_metadata = {}
+
 
 @app.on_event("startup")
 async def initialize_osint_repos():
@@ -4656,6 +4689,243 @@ def _actor_stix_metadata(obj: dict) -> dict:
         "mobile_layer":     mobile_layer,
         "ics_layer":        ics_layer,
     }
+
+
+@app.post("/api/research/export-xlsx")
+async def export_research_xlsx(request: Request):
+    """
+    Generate a professionally styled XLSX workbook for the Research tab.
+
+    Request body:
+      {"type": "actors"|"techniques", "actors": ["APT29", ...]}
+
+    Returns a .xlsx file as a streaming response.
+    - type=actors  → single "Actors" sheet (18 cols, matching reference format)
+    - type=techniques → "Raw Mappings" + "Technique Coverage" sheets
+    """
+    import io
+    from datetime import datetime as _dt
+
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        return JSONResponse({"ok": False, "error": "openpyxl not installed"}, status_code=500)
+
+    from fastapi.responses import StreamingResponse
+    from archer.mitre.procedures import (
+        _build_indexes, _resolve_group,
+        _walk_path1, _walk_path2, _walk_path3,
+        _attack_id, _clean,
+    )
+
+    try:
+        body = await request.json()
+        export_type = body.get("type", "techniques")
+        actor_names = body.get("actors", [])
+
+        if not actor_names:
+            return JSONResponse({"ok": False, "error": "No actors provided"}, status_code=400)
+
+        bundle = getattr(app.state, "bundle", None)
+        if not bundle:
+            return JSONResponse({"ok": False, "error": "MITRE data not loaded"}, status_code=503)
+
+        objects = list(bundle.objects)
+        groups_idx, techniques_idx, software_idx, campaigns_idx = _build_indexes(objects)
+
+        # Resolve actors → {stix_id: canonical_name}, preserving input order
+        resolved_stix: dict = {}   # stix_id → canonical name
+        input_order: list  = []    # canonical names in input order (deduped)
+        for raw in actor_names:
+            stix_id = _resolve_group(groups_idx, raw.strip())
+            if stix_id and stix_id not in resolved_stix:
+                canon = groups_idx[stix_id].get("name", raw.strip())
+                resolved_stix[stix_id] = canon
+                input_order.append(canon)
+
+        if not input_order:
+            return JSONResponse({"ok": False, "error": "No actors resolved"}, status_code=404)
+
+        # ── Styling helpers ──────────────────────────────────────────────────
+        HDR_FILL  = PatternFill("solid", fgColor="1F4E79")
+        HDR_FONT  = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        HDR_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        DATA_FONT = Font(name="Calibri", size=11)
+        DATA_ALIGN = Alignment(vertical="top", wrap_text=True)
+
+        def apply_header(ws, headers, widths):
+            for c, (h, w) in enumerate(zip(headers, widths), 1):
+                cell = ws.cell(1, c, h)
+                cell.fill = HDR_FILL
+                cell.font = HDR_FONT
+                cell.alignment = HDR_ALIGN
+                ws.column_dimensions[get_column_letter(c)].width = w
+            ws.row_dimensions[1].height = 30
+            ws.freeze_panes = "A2"
+
+        def write_row(ws, r, values):
+            for c, v in enumerate(values, 1):
+                cell = ws.cell(r, c, v if v is not None else "")
+                cell.font = DATA_FONT
+                cell.alignment = DATA_ALIGN
+
+        def fmt_date(d):
+            if not d:
+                return ""
+            # STIXdatetime (and plain datetime) objects already have .day/.month/.year
+            if hasattr(d, "day"):
+                return f"{d.day} {d.strftime('%B')} {d.year}"
+            # String fallback
+            s = str(d)
+            for fmt in ("%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ"):
+                try:
+                    dt = _dt.strptime(s, fmt)
+                    return f"{dt.day} {dt.strftime('%B')} {dt.year}"
+                except ValueError:
+                    pass
+            return s[:10] if len(s) >= 10 else s
+
+        # Load enriched group metadata from app.state cache (built at startup)
+        group_meta_cache: dict = getattr(app.state, "group_metadata", {})
+
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+
+        # ════════════════════════════════════════════════════════════════════
+        if export_type == "actors":
+            ACTORS_H = [
+                'Actor', 'MITRE Group ID', 'Domains', 'Aliases',
+                'Nexus', 'Sponsor / Affiliation', 'Activity since',
+                'Primary objectives', 'Target regions', 'Target sectors',
+                'Notable tools/malware', 'Notable campaigns/ops',
+                'Attribution confidence', 'MITRE URL',
+                'Enterprise layer', 'Mobile layer', 'ICS layer', 'Additional sources',
+            ]
+            ACTORS_W = [22,12,14,45,22,34,12,24,24,34,26,22,18,34,38,38,38,44]
+            ws = wb.create_sheet("Actors")
+            apply_header(ws, ACTORS_H, ACTORS_W)
+
+            r = 2
+            for raw in actor_names:
+                stix_id = _resolve_group(groups_idx, raw.strip())
+                if not stix_id:
+                    continue
+                grp = groups_idx[stix_id]
+                m   = _actor_stix_metadata(grp)
+                # Pull enriched fields from cache (keyed by ATT&CK ID or stix_id)
+                ec  = group_meta_cache.get(m["mitre_group_id"]) or \
+                      group_meta_cache.get(stix_id) or {}
+                write_row(ws, r, [
+                    grp.get("name", raw),
+                    m["mitre_group_id"],
+                    m["domains"],
+                    m["aliases"],
+                    ec.get("nexus", ""),
+                    ec.get("sponsor", ""),
+                    ec.get("activity_since", ""),
+                    ec.get("primary_objectives", ""),
+                    ec.get("target_regions", ""),
+                    ec.get("target_sectors", ""),
+                    ec.get("tools_malware", ""),
+                    ec.get("campaigns", ""),
+                    ec.get("attribution_confidence", ""),
+                    m["mitre_url"],
+                    m["enterprise_layer"],
+                    m["mobile_layer"],
+                    m["ics_layer"],
+                    "",  # Additional sources — manual field
+                ])
+                r += 1
+
+        # ════════════════════════════════════════════════════════════════════
+        else:  # type == "techniques"
+            resolved_set = set(resolved_stix.keys())
+
+            # ── Raw Mappings: direct path-1 relationships with descriptions ─
+            raw_rows = []
+            for obj in objects:
+                if obj.get("type") != "relationship" or obj.get("relationship_type") != "uses":
+                    continue
+                src, tgt = obj.get("source_ref", ""), obj.get("target_ref", "")
+                if src not in resolved_set or tgt not in techniques_idx:
+                    continue
+                grp  = groups_idx[src]
+                tech = techniques_idx[tgt]
+                g_att = _attack_id(grp)
+                t_att = _attack_id(tech)
+                if not g_att or not t_att:
+                    continue
+                raw_rows.append([
+                    g_att,
+                    grp.get("name", ""),
+                    t_att,
+                    tech.get("name", ""),
+                    _clean(obj.get("description", "")),
+                    fmt_date(obj.get("created", "")),
+                    fmt_date(obj.get("modified", "")),
+                ])
+            raw_rows.sort(key=lambda r: (r[1], r[2]))
+
+            RAW_H = ['source ID', 'Group Name', 'target ID', 'target name',
+                     'mapping description', 'created', 'last modified']
+            RAW_W = [11, 20, 11, 56, 60, 18, 15]
+            ws_raw = wb.create_sheet("Raw Mappings")
+            apply_header(ws_raw, RAW_H, RAW_W)
+            for i, row in enumerate(raw_rows, 2):
+                write_row(ws_raw, i, row)
+
+            # ── Technique Coverage: all 3 paths, pivot, sorted by count desc ─
+            all_rows: list = []
+            all_seen: set  = set()
+            for stix_id, canon in resolved_stix.items():
+                sg = {stix_id: groups_idx[stix_id]}
+                _walk_path1(objects, sg, techniques_idx, all_rows, all_seen)
+                _walk_path2(objects, sg, techniques_idx, software_idx, all_rows, all_seen)
+                _walk_path3(objects, sg, techniques_idx, campaigns_idx, all_rows, all_seen)
+
+            tech_pivot: dict = {}   # tid → {canon_name: 1}
+            tech_name_map: dict = {}
+            for row in all_rows:
+                tid   = row["technique_id"]
+                actor = row["group_name"]
+                tech_pivot.setdefault(tid, {})[actor] = 1
+                tech_name_map.setdefault(tid, row["technique_name"])
+
+            actor_order = sorted(input_order)
+            COV_H = ['target ID', 'target name'] + actor_order + ['Group_Count']
+            COV_W = [11, 47] + [max(12, len(a) + 2) for a in actor_order] + [14]
+
+            cov_data = []
+            for tid, amap in tech_pivot.items():
+                count = sum(1 for a in actor_order if amap.get(a))
+                row = [tid, tech_name_map[tid]]
+                for a in actor_order:
+                    row.append(1 if amap.get(a) else 0)
+                row.append(count)
+                cov_data.append(row)
+            cov_data.sort(key=lambda r: -r[-1])
+
+            ws_cov = wb.create_sheet("Technique Coverage")
+            apply_header(ws_cov, COV_H, COV_W)
+            for i, row in enumerate(cov_data, 2):
+                write_row(ws_cov, i, row)
+
+        # ── Stream XLSX bytes to client ──────────────────────────────────────
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        fname = "actors.xlsx" if export_type == "actors" else "techniques.xlsx"
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+        )
+
+    except Exception as exc:
+        import traceback; traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
 
 
 import re as _re

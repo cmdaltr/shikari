@@ -1662,65 +1662,101 @@
                 URL.revokeObjectURL(url);
               }
 
+              /* Build filename: YYYYMMDDThhmm_Keyword1_Keyword2_<label>.<ext> */
+              function buildFilename(label, ext) {
+                var now  = new Date();
+                var yyyy = now.getFullYear();
+                var mm   = String(now.getMonth() + 1).padStart(2, '0');
+                var dd   = String(now.getDate()).padStart(2, '0');
+                var hh   = String(now.getHours()).padStart(2, '0');
+                var min  = String(now.getMinutes()).padStart(2, '0');
+                var ts   = yyyy + mm + dd + 'T' + hh + min;
+                // Use active keywords if present, otherwise fall back to actor names (up to 3)
+                var parts;
+                if (activeKeywords && activeKeywords.length) {
+                  parts = activeKeywords.map(function (k) {
+                    return k.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\-]/g, '');
+                  });
+                } else {
+                  parts = actorTags.slice(0, 3).map(function (a) {
+                    return a.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\-]/g, '');
+                  });
+                  if (actorTags.length > 3) parts.push('et_al');
+                }
+                var context = parts.join('_');
+                return ts + (context ? '_' + context : '') + '_' + label + '.' + ext;
+              }
+
               exportCsvBtn.addEventListener('click', function () {
                 var flat = buildExportFlat();
                 var lines = [EXPORT_HEADERS.join(',')];
                 flat.forEach(function (row) {
                   lines.push(EXPORT_HEADERS.map(function (h) { return csvCell(row[h]); }).join(','));
                 });
-                triggerDownload(new Blob([lines.join('\n')], { type: 'text/csv' }), 'actor_techniques.csv');
+                triggerDownload(new Blob([lines.join('\n')], { type: 'text/csv' }), buildFilename('techniques', 'csv'));
               });
 
-              exportXlsxBtn.addEventListener('click', function () {
-                function doXlsx() {
-                  var wb = XLSX.utils.book_new();
-
-                  /* Sheet 1: Raw Mappings — one row per technique × actor */
-                  var flat    = buildExportFlat();
-                  var rawData = [EXPORT_HEADERS].concat(flat.map(function (row) {
-                    return EXPORT_HEADERS.map(function (h) { return row[h]; });
-                  }));
-                  var wsRaw = XLSX.utils.aoa_to_sheet(rawData);
-                  wsRaw['!cols'] = [{wch:26},{wch:14},{wch:36},{wch:22},{wch:48}];
-                  XLSX.utils.book_append_sheet(wb, wsRaw, 'Raw Mappings');
-
-                  /* Sheet 2: Technique Coverage — pivot with binary actor columns */
-                  var covData = buildCoveragePivot();
-                  var wsCov = XLSX.utils.aoa_to_sheet(covData);
-                  // fixed cols for ID + name + tactic, then auto for actor cols
-                  var covCols = [{wch:14},{wch:36},{wch:22}];
-                  if (covData[0]) {
-                    for (var i = 3; i < covData[0].length - 1; i++) covCols.push({wch:18});
-                    covCols.push({wch:14}); // Group_Count
+              /* ---- Shared XLSX download via server (openpyxl, professionally styled) ---- */
+              async function downloadXlsxFromServer(exportType, btnEl) {
+                var origText = btnEl.textContent;
+                btnEl.textContent = '…';
+                btnEl.disabled = true;
+                try {
+                  var resp = await fetch('/api/research/export-xlsx', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: exportType, actors: actorTags }),
+                  });
+                  if (!resp.ok) {
+                    var err = await resp.json().catch(function() { return {}; });
+                    alert('Export failed: ' + (err.error || resp.status));
+                    return;
                   }
-                  wsCov['!cols'] = covCols;
-                  XLSX.utils.book_append_sheet(wb, wsCov, 'Technique Coverage');
-
-                  /* Sheet 3: Actors — one row per actor with metadata */
-                  var actData = buildActorsSheet();
-                  var wsAct   = XLSX.utils.aoa_to_sheet(actData);
-                  wsAct['!cols'] = [
-                    {wch:28},{wch:16},{wch:18},{wch:30},{wch:16},{wch:22},
-                    {wch:16},{wch:24},{wch:22},{wch:22},{wch:28},{wch:28},
-                    {wch:22},{wch:40},{wch:40},{wch:36},{wch:32},{wch:22}
-                  ];
-                  XLSX.utils.book_append_sheet(wb, wsAct, 'Actors');
-
-                  XLSX.writeFile(wb, 'actor_techniques.xlsx');
+                  var blob = await resp.blob();
+                  triggerDownload(blob, buildFilename(exportType, 'xlsx'));
+                } catch (e) {
+                  alert('Export error: ' + e.message);
+                } finally {
+                  btnEl.textContent = origText;
+                  btnEl.disabled = false;
                 }
-                if (typeof XLSX === 'undefined') {
-                  exportXlsxBtn.textContent = '…';
-                  var s = document.createElement('script');
-                  s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-                  s.onload = function () { exportXlsxBtn.textContent = 'XLSX'; doXlsx(); };
-                  document.head.appendChild(s);
-                } else { doXlsx(); }
+              }
+
+              /* ---- Techniques exports ---- */
+              exportXlsxBtn.addEventListener('click', function () {
+                downloadXlsxFromServer('techniques', this);
               });
 
               exportJsonBtn.addEventListener('click', function () {
                 triggerDownload(
                   new Blob([JSON.stringify(buildExportFlat(), null, 2)], { type: 'application/json' }),
-                  'actor_techniques.json'
+                  buildFilename('techniques', 'json')
+                );
+              });
+
+              /* ---- Actors exports ---- */
+              document.getElementById('actor-export-actors-csv').addEventListener('click', function () {
+                var rows = buildActorsSheet();
+                var lines = [rows[0].map(csvCell).join(',')];
+                rows.slice(1).forEach(function (r) { lines.push(r.map(csvCell).join(',')); });
+                triggerDownload(new Blob([lines.join('\n')], { type: 'text/csv' }), buildFilename('actors', 'csv'));
+              });
+
+              document.getElementById('actor-export-actors-xlsx').addEventListener('click', function () {
+                downloadXlsxFromServer('actors', this);
+              });
+
+              document.getElementById('actor-export-actors-json').addEventListener('click', function () {
+                var rows = buildActorsSheet();
+                var headers = rows[0];
+                var data = rows.slice(1).map(function (r) {
+                  var obj = {};
+                  headers.forEach(function (h, i) { obj[h] = r[i] || ''; });
+                  return obj;
+                });
+                triggerDownload(
+                  new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+                  buildFilename('actors', 'json')
                 );
               });
 
@@ -1829,20 +1865,27 @@
                       style="padding:0 16px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;font-size:15px;font-weight:500;font-family:inherit;height:35px;box-sizing:border-box;">
                       Clear
                     </button>
-                    <div style="margin-left:auto;display:flex;align-items:center;gap:0;">
-                      <span style="font-size:15px;color:#6b7280;margin-right:8px;font-weight:500;">Export</span>
-                      <button id="actor-export-csv" type="button"
-                        style="font-size:15px;padding:6px 14px;border-radius:4px 0 0 4px;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
-                        CSV
-                      </button>
-                      <button id="actor-export-xlsx" type="button"
-                        style="font-size:15px;padding:6px 14px;border-radius:0;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
-                        XLSX
-                      </button>
-                      <button id="actor-export-json" type="button"
-                        style="font-size:15px;padding:6px 14px;border-radius:0 4px 4px 0;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:600;color:#374151;">
-                        JSON
-                      </button>
+                    <div style="margin-left:auto;display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
+                      <!-- Actors export row -->
+                      <div style="display:flex;align-items:center;gap:0;">
+                        <span style="font-size:13px;color:#6b7280;margin-right:8px;font-weight:500;min-width:68px;text-align:right;">Actors</span>
+                        <button id="actor-export-actors-csv" type="button"
+                          style="font-size:14px;padding:5px 11px;border-radius:4px 0 0 4px;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">CSV</button>
+                        <button id="actor-export-actors-xlsx" type="button"
+                          style="font-size:14px;padding:5px 11px;border-radius:0;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">XLSX</button>
+                        <button id="actor-export-actors-json" type="button"
+                          style="font-size:14px;padding:5px 11px;border-radius:0 4px 4px 0;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:600;color:#374151;">JSON</button>
+                      </div>
+                      <!-- Techniques export row -->
+                      <div style="display:flex;align-items:center;gap:0;">
+                        <span style="font-size:13px;color:#6b7280;margin-right:8px;font-weight:500;min-width:68px;text-align:right;">Techniques</span>
+                        <button id="actor-export-csv" type="button"
+                          style="font-size:14px;padding:5px 11px;border-radius:4px 0 0 4px;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">CSV</button>
+                        <button id="actor-export-xlsx" type="button"
+                          style="font-size:14px;padding:5px 11px;border-radius:0;border:1px solid #d1d5db;border-right:none;background:#fff;cursor:pointer;font-weight:600;color:#374151;">XLSX</button>
+                        <button id="actor-export-json" type="button"
+                          style="font-size:14px;padding:5px 11px;border-radius:0 4px 4px 0;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:600;color:#374151;">JSON</button>
+                      </div>
                     </div>
                   </div>
                   <div style="overflow-x:auto;">

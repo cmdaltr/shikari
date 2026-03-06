@@ -22,6 +22,7 @@ VALIDATION_CACHE_DIR = os.path.join(DATA_DIR, "validation_cache")
 AI_CACHE_DIR = os.path.join(DATA_DIR, "ai_cache")
 CVE_CACHE_DIR = os.path.join(DATA_DIR, "cache", "cve")
 OSINT_CACHE_DIR = os.path.join(DATA_DIR, "cache", "osint")
+GROUP_METADATA_CACHE = os.path.join(DATA_DIR, "cache", "group_metadata.json")
 OSINT_REPOS_DIR = os.path.join(DATA_DIR, "repos")
 
 # ========== Common Constants ==========
