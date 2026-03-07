@@ -33,29 +33,25 @@ def check_docker_available() -> Tuple[bool, str]:
     """
     try:
         # Check if docker command exists
-        result = subprocess.run(
-            ["docker", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+        result = subprocess.run(["docker", "--version"], capture_output=True, text=True, timeout=5)
         if result.returncode != 0:
-            return False, "Docker is not installed. Install Docker Desktop to enable detection validation with SIEM containers."
+            return (
+                False,
+                "Install Docker Desktop to enable detection validation with SIEM containers.",
+            )
 
         # Check if Docker daemon is running
-        result = subprocess.run(
-            ["docker", "info"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
+        result = subprocess.run(["docker", "info"], capture_output=True, text=True, timeout=10)
         if result.returncode != 0:
-            return False, "Docker is installed but not running. Start the Docker daemon to enable detection validation."
+            return (
+                False,
+                "Docker is installed but not running. Start the Docker daemon to enable detection validation.",
+            )
 
         return True, "Docker is available for validation testing."
 
     except FileNotFoundError:
-        return False, "Docker is not installed. Install Docker Desktop to enable detection validation with SIEM containers."
+        return False, "Install Docker Desktop to enable detection validation with SIEM containers."
     except subprocess.TimeoutExpired:
         return False, "Docker is not responding. Restart Docker to enable detection validation."
     except Exception as e:
@@ -67,24 +63,28 @@ def check_docker_available() -> Tuple[bool, str]:
 def get_docker_siem_manager():
     """Get DockerSIEMManager class (lazy import to handle Docker unavailability)"""
     from .docker_manager import DockerSIEMManager
+
     return DockerSIEMManager
 
 
 def get_event_generator():
     """Get SampleEventGenerator class (lazy import)"""
     from .event_generator import SampleEventGenerator
+
     return SampleEventGenerator
 
 
 def get_detection_tester():
     """Get DetectionTester class (lazy import)"""
     from .detection_tester import DetectionTester
+
     return DetectionTester
 
 
 def get_detection_refiner():
     """Get DetectionRefiner class (lazy import)"""
     from .detection_refiner import DetectionRefiner
+
     return DetectionRefiner
 
 
@@ -97,35 +97,37 @@ from .detection_refiner import RefinementSuggestion, RefinementType
 def get_validation_router():
     """Get the FastAPI router for validation endpoints"""
     from .api import router
+
     return router
 
 
 def get_orchestrator():
     """Get the global validation orchestrator instance"""
     from .orchestrator import get_orchestrator as _get_orchestrator
+
     return _get_orchestrator()
 
 
 __all__ = [
     # Core validators
-    'FieldValidator',
-    'QueryValidator',
-    'TestRunner',
+    "FieldValidator",
+    "QueryValidator",
+    "TestRunner",
     # Docker check
-    'check_docker_available',
+    "check_docker_available",
     # Lazy imports
-    'get_docker_siem_manager',
-    'get_event_generator',
-    'get_detection_tester',
-    'get_detection_refiner',
+    "get_docker_siem_manager",
+    "get_event_generator",
+    "get_detection_tester",
+    "get_detection_refiner",
     # Data classes
-    'GeneratedEventSet',
-    'ValidationResult',
-    'ValidationStatus',
-    'FailureAnalysis',
-    'RefinementSuggestion',
-    'RefinementType',
+    "GeneratedEventSet",
+    "ValidationResult",
+    "ValidationStatus",
+    "FailureAnalysis",
+    "RefinementSuggestion",
+    "RefinementType",
     # API
-    'get_validation_router',
-    'get_orchestrator',
+    "get_validation_router",
+    "get_orchestrator",
 ]
