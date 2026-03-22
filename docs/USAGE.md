@@ -7,6 +7,14 @@ Complete guide to using Archer for threat detection generation through Web UI, C
 ## Table of Contents
 
 1. [Web Interface](#web-interface)
+   - [Generate Detections](#generate-detections) (Threat Groups, CVEs, Files, Blog URLs)
+   - [Research Tab](#research-tab) (Actor Consolidation, Keyword Filtering, XLSX Export)
+   - [Ask Archer](#ask-archer) (Conversational Q&A)
+   - [Adversary Emulation](#adversary-emulation) (Atomic Red Team)
+   - [Manage Detection Library](#manage-detection-library)
+   - [Threat Briefing](#threat-briefing)
+   - [Company Profiling](#company-profiling)
+   - [Validate Detections](#validate-detections) (Docker)
 2. [Command Line Interface (CLI)](#command-line-interface-cli)
 3. [API Integration](#api-integration)
 
@@ -75,6 +83,91 @@ APT29/
 - **JSON** - Structured threat intelligence
 - **CSV** - Tabular threat data
 - **YARA** - YARA rules for automatic analysis
+- **XLSX/XLS** - Excel spreadsheets with indicator data
+- **MD** - Markdown threat reports
+
+#### From Blog URLs
+
+1. Navigate to **Upload** tab
+2. Enter a threat intelligence blog URL (e.g., a DFIR Report or CrowdStrike post)
+3. Click **Analyze**
+4. Archer fetches the page, extracts ATT&CK techniques and IOCs
+5. Review the extracted TTPs and IOCs in the results panel
+6. Select which TTPs to generate detections for
+7. Click **Generate from Selected**
+
+**SSRF Protection**: Internal/localhost URLs (127.0.0.1, 192.168.x.x, 10.x.x.x, 169.254.x.x) are blocked.
+
+**Supported Sources**:
+- DFIR Report, CrowdStrike, Microsoft Security Blog, Unit 42, Mandiant, Secureworks, Talos Intelligence, and any publicly accessible threat blog
+
+---
+
+### Research Tab
+
+The Research tab provides actor-level technique consolidation and filtering for threat landscape analysis.
+
+#### Keyword and Country Filtering
+
+1. Navigate to **Research** tab
+2. Enter keywords (e.g., "ransomware", "finance", "Iran") in the keyword filter
+3. Optionally filter by specific threat actor names in the actor filter
+4. Optionally filter by MITRE ATT&CK tactic using the tactic dropdown
+5. Results show matching threat groups and their consolidated techniques
+
+#### Actor Technique Consolidation
+
+Select one or more threat actors to see a consolidated, deduplicated view of all techniques used across the selected groups. This reveals overlapping TTPs and helps prioritise detection engineering.
+
+#### XLSX Export
+
+Click **Export XLSX** to download a professional spreadsheet containing:
+- Actor metadata (MITRE ID, aliases, description)
+- Consolidated technique list with tactic mappings
+- Coverage analysis
+
+#### Hunt Buttons
+
+From the Research tab results, click **Hunt** next to any technique to jump directly to the Generate tab with that technique pre-filled, ready for detection generation.
+
+**Note**: The Research tab limits results to 20 actors per query to maintain performance.
+
+---
+
+### Ask Archer
+
+The Ask Archer panel is a conversational Q&A interface available on the home page. It answers questions about ATT&CK techniques, threat groups, SIEM query languages, and Archer-generated detections using your configured LLM provider.
+
+1. Locate the Ask Archer input at the bottom of the home page
+2. Type a question (e.g., "Write a Splunk query to detect encoded PowerShell commands")
+3. Press Enter or click Send
+4. View the AI-generated response
+
+**Example questions**:
+- "What is T1059.001?"
+- "Give me a Splunk query for Scattered Spider"
+- "How does Lazarus Group typically gain initial access?"
+- "Compare KQL and SPL syntax for process creation events"
+
+---
+
+### Adversary Emulation
+
+The Emulate tab integrates with Atomic Red Team for adversary simulation and live technique execution.
+
+1. Navigate to **Emulate** tab
+2. Enter a technique ID (e.g., "T1059.001") or threat group name
+3. Select emulation mode:
+   - **Simulate** - Dry run without execution
+   - **Execute** - Live execution (use with caution)
+4. (Optional) Configure remote hosts for distributed execution
+5. Click **Emulate**
+
+> **Warning**: Live execution mode runs real attack commands. Only use in isolated lab environments with explicit authorization.
+
+**Requires**: Atomic Red Team installed locally or via Docker.
+
+---
 
 ### Manage Detection Library
 

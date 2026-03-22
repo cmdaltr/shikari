@@ -81,6 +81,23 @@ Grounded threat actor prioritisation:
 - **[USAGE.md — Threat Briefing](USAGE.md#threat-briefing)** - Web UI walkthrough
 - **[API Integration Guide — Workflow 8](guides/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)** - API endpoint reference and code examples
 
+### 🔬 Research Tab
+Actor technique consolidation and threat landscape analysis:
+- **[USAGE.md — Research Tab](USAGE.md#research-tab)** - Keyword/country filtering, actor consolidation, XLSX export, Hunt buttons
+
+### 💬 Ask Archer
+Conversational Q&A powered by your configured LLM:
+- **[USAGE.md — Ask Archer](USAGE.md#ask-archer)** - Chat interface for ATT&CK questions and SIEM queries
+
+### 🎭 Adversary Emulation
+Atomic Red Team integration:
+- **[USAGE.md — Adversary Emulation](USAGE.md#adversary-emulation)** - Simulate and execute techniques
+- **[Emulation Guide](guides/EMULATION_GUIDE.md)** - Detailed emulation workflows
+
+### 🧪 Testing
+Comprehensive test suite:
+- **[Test Suite README](../tests/README.md)** - Test categories, running tests, screenshot documentation
+
 ### 📝 [`notion/`](notion/)
 Notion-formatted versions of documentation (for Notion import)
 
@@ -114,7 +131,9 @@ Architecture diagrams and flow charts
 ### For SOC Analysts
 - [Getting Started Guide](../GETTING_STARTED.md) - Basic setup
 - [Usage Guide](USAGE.md) - Web UI, CLI, and API reference
+- [Research Tab](USAGE.md#research-tab) - Threat landscape analysis, actor consolidation, XLSX export
 - [Threat Briefing](USAGE.md#threat-briefing) - Grounded detection prioritisation for a threat group
+- [Ask Archer](USAGE.md#ask-archer) - Conversational Q&A for ATT&CK and SIEM queries
 - [Correlation Guide](guides/CORRELATION_GUIDE.md) - Using the correlation builder
 - [CVE Hunting Guide](guides/CVE_HUNTING_GUIDE.md) - CVE-based detection
 
@@ -148,5 +167,5 @@ Architecture diagrams and flow charts
 
 ---
 
-**Version**: 1.2
-**Last Updated**: March 4, 2025
+**Version**: 1.3
+**Last Updated**: March 22, 2026

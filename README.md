@@ -21,10 +21,13 @@ Archer is a modular Python service for automated threat hunting with optional ad
 
 ### Core Capabilities
 - 🎯 **MITRE ATT&CK Integration** - Automated detection generation from threat group TTPs
-- 📤 **File Upload & Intelligence Extraction** - Upload threat intel files (PDF, TXT, JSON, CSV, YARA) for automatic TTP/IOC extraction
+- 📤 **File Upload & Intelligence Extraction** - Upload threat intel files (PDF, TXT, JSON, CSV, XLSX, YARA, DOCX) for automatic TTP/IOC extraction
+- 🌐 **Blog Analysis** - Paste a threat intel blog URL and extract TTPs/IOCs automatically
 - 🔍 **Multi-Platform Support** - Splunk (SPL), KQL (Microsoft Defender/Sentinel), Google SecOps (YARA-L) and Elastic (DSL) queries
 - 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries
 - 🛡️ **Threat Briefing** - Grounded ATT&CK prioritisation grounded in real MITRE data and your detection coverage gaps
+- 🔬 **Research Tab** - Actor technique consolidation with keyword/country filtering, tactic filtering, and professional XLSX export
+- 💬 **Ask Archer** - Conversational Q&A panel for ATT&CK questions and SIEM query generation
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
 - 🎯 **RAG Fidelity Enhancement** - Improve query quality using 4,800+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
@@ -32,7 +35,10 @@ Archer is a modular Python service for automated threat hunting with optional ad
 ### Additional Features
 
 - **Detection Validation** - Test queries against containerized SIEMs with sample events ([docs](docs/features/RUNTIME_VALIDATION.md))
-- **Adversary Emulation** - Atomic Red Team integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
+- **Detection Library** - Save, search, tag, share, and export your generated detections
+- **Adversary Emulation** - Atomic Red Team integration for simulate/execute modes
+- **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
+- **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - MDE/Splunk API integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
 - **VECTR, CALDERA, MACAT** - Planned integrations (see [FUTURE.md](docs/other/FUTURE.md))
 
@@ -56,11 +62,15 @@ Archer is a modular Python service for automated threat hunting with optional ad
 
 **Quick Links:**
 - **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](docs/guides/MAPPING_SETUP_GUIDE.md)
-- **API Integration:** [API Integration Guide](docs/guides/API_INTEGRATION_GUIDE.md) | [Auto-Generated Docs](http://localhost:8000/docs)
-- **Threat Briefing:** [Usage Guide — Threat Briefing](docs/USAGE.md#threat-briefing) | [API Reference](docs/guides/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
+- **Usage:** [Web UI, CLI & API](docs/USAGE.md) | [Auto-Generated API Docs](http://localhost:8000/docs)
+- **Research Tab:** [Actor Consolidation & XLSX Export](docs/USAGE.md#research-tab)
+- **Threat Briefing:** [Usage Guide](docs/USAGE.md#threat-briefing) | [API Reference](docs/guides/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
+- **Ask Archer:** [Conversational Q&A](docs/USAGE.md#ask-archer)
+- **API Integration:** [API Integration Guide](docs/guides/API_INTEGRATION_GUIDE.md)
 - **Correlation Tuning:** [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) | [Quick Reference](docs/architecture/CORRELATION_QUICK_REFERENCE.md)
 - **Features:** [Security](docs/features/SECURITY_FEATURES.md) | [AI Training](docs/ai/AI_TRAINING.md) | [OSINT](docs/features/OSINT_INTEGRATION.md)
 - **RAG Enhancement:** [RAG User Guide](docs/rag/RAG_USER_GUIDE.md) | [Implementation Guide](docs/rag/FIDELITY_IMPLEMENTATION_GUIDE.md)
+- **Testing:** [Test Suite](tests/README.md) | [Run Tests](tests/run_all_tests.sh)
 - **Architecture:** [Performance](docs/architecture/PERFORMANCE_ARCHITECTURE.md) | [Schema Normalization](docs/architecture/SCHEMA_NORMALIZATION.md)
 
 ### External Resources
