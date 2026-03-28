@@ -402,7 +402,7 @@ class TestRowSchema:
 class TestGetAllProcedures:
     def test_returns_rows_for_all_groups(self, all_paths_bundle):
         rows = get_all_procedures(all_paths_bundle)
-        group_ids = {r["group_id"] for r in rows}
+        group_ids = {r["group_sw_id"] for r in rows}
         assert "G0001" in group_ids
 
     def test_empty_bundle_returns_empty(self):
@@ -415,13 +415,39 @@ class TestGetAllProcedures:
 # ---------------------------------------------------------------------------
 
 class TestBuildProceduresCSV:
-    def test_csv_written_with_correct_headers(self, minimal_bundle):
+    """Tests for build_procedures_csv which now delegates to run_mitresaw."""
+
+    @staticmethod
+    def _write_sample_csv(path: Path):
+        """Write a sample MITRESaw-format CSV for testing."""
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writeheader()
+            writer.writerow({
+                "group_sw_id": "G0001",
+                "group_sw_name": "TestGroup",
+                "group_sw_description": "A test group",
+                "technique_id": "T1059.001",
+                "technique_name": "PowerShell",
+                "technique_description": "Adversaries may use PowerShell",
+                "tactic": "Execution",
+                "platforms": "Windows",
+                "framework": "Enterprise",
+                "procedure_example": "TestGroup has used PowerShell",
+                "evidence": '{"cmd": ["powershell.exe"]}',
+                "detectable_via": "Sysmon: 1",
+            })
+
+    def test_csv_written_with_correct_headers(self):
         with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w") as f:
             out_path = Path(f.name)
 
-        with patch("archer.mitre.procedures.fetch_stix", return_value=minimal_bundle), \
-             patch("archer.mitre.procedures.fetch_xlsx_relationships", return_value=None):
-            result = build_procedures_csv(output_path=out_path, validate=False)
+        def mock_run(output_csv=None, output_xlsx=None):
+            self._write_sample_csv(output_csv or out_path)
+            return (output_csv or out_path, None)
+
+        with patch("archer.mitre.procedures.run_mitresaw", side_effect=mock_run):
+            result = build_procedures_csv(output_path=out_path)
 
         with open(result, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
@@ -429,47 +455,36 @@ class TestBuildProceduresCSV:
 
         out_path.unlink(missing_ok=True)
 
-    def test_csv_contains_correct_data(self, minimal_bundle):
+    def test_csv_contains_correct_data(self):
         with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w") as f:
             out_path = Path(f.name)
 
-        with patch("archer.mitre.procedures.fetch_stix", return_value=minimal_bundle), \
-             patch("archer.mitre.procedures.fetch_xlsx_relationships", return_value=None):
-            result = build_procedures_csv(output_path=out_path, validate=False)
+        def mock_run(output_csv=None, output_xlsx=None):
+            self._write_sample_csv(output_csv or out_path)
+            return (output_csv or out_path, None)
+
+        with patch("archer.mitre.procedures.run_mitresaw", side_effect=mock_run):
+            result = build_procedures_csv(output_path=out_path)
 
         with open(result, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
 
         assert len(rows) >= 1
         assert any(r["technique_id"] == "T1059.001" for r in rows)
-        assert any(r["group_id"] == "G0001" for r in rows)
-        assert any(r["attribution_type"] == "direct" for r in rows)
+        assert any(r["group_sw_id"] == "G0001" for r in rows)
 
         out_path.unlink(missing_ok=True)
 
-    def test_csv_sorted_by_technique_tactic_group(self, all_paths_bundle):
+    def test_returns_path_object(self):
         with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w") as f:
             out_path = Path(f.name)
 
-        with patch("archer.mitre.procedures.fetch_stix", return_value=all_paths_bundle), \
-             patch("archer.mitre.procedures.fetch_xlsx_relationships", return_value=None):
-            build_procedures_csv(output_path=out_path, validate=False)
+        def mock_run(output_csv=None, output_xlsx=None):
+            self._write_sample_csv(output_csv or out_path)
+            return (output_csv or out_path, None)
 
-        with open(out_path, newline="", encoding="utf-8") as f:
-            rows = list(csv.DictReader(f))
-
-        keys = [(r["technique_id"], r["tactic"], r["group_id"]) for r in rows]
-        assert keys == sorted(keys)
-
-        out_path.unlink(missing_ok=True)
-
-    def test_returns_path_object(self, minimal_bundle):
-        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w") as f:
-            out_path = Path(f.name)
-
-        with patch("archer.mitre.procedures.fetch_stix", return_value=minimal_bundle), \
-             patch("archer.mitre.procedures.fetch_xlsx_relationships", return_value=None):
-            result = build_procedures_csv(output_path=out_path, validate=False)
+        with patch("archer.mitre.procedures.run_mitresaw", side_effect=mock_run):
+            result = build_procedures_csv(output_path=out_path)
 
         assert isinstance(result, Path)
         assert result.exists()

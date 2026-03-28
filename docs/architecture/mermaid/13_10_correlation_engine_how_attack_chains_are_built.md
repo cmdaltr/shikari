@@ -1,0 +1,46 @@
+# 10. Correlation Engine — How Attack Chains Are Built
+
+How Archer links individual detections into attack chains: read detection metadata → group by tactic phase → score each pair on 5 criteria (group match 30pts, attack sequence 20pts, data availability 20pts, severity 15pts, specificity 15pts) → threshold at 70 → build combined correlation query.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
+flowchart TD
+    ALL_YAMLS(["All detection files<br/>generated for this actor"]) --> READ["Read each detection's<br/>metadata: technique, tactic,<br/>platform, severity, data sources"]
+
+    READ --> GROUP["Group detections<br/>by tactic phase<br/><i>Initial Access → Execution<br/>→ Persistence → ...</i>"]
+
+    GROUP --> SCORE["Score each pair of<br/>detections for relevance"]
+
+    subgraph "Scoring Criteria (0–100)"
+        S1["Do they target the<br/>same group/platform?<br/><b>+30 points</b>"]
+        S2["Do they form a<br/>logical attack sequence?<br/><b>+20 points</b>"]
+        S3["Is the data available<br/>in your environment?<br/><b>+20 points</b>"]
+        S4["How severe is<br/>the threat?<br/><b>+15 points</b>"]
+        S5["How specific is<br/>the tactic?<br/><b>+15 points</b>"]
+    end
+
+    SCORE --> S1
+    SCORE --> S2
+    SCORE --> S3
+    SCORE --> S4
+    SCORE --> S5
+
+    S1 --> THRESHOLD
+    S2 --> THRESHOLD
+    S3 --> THRESHOLD
+    S4 --> THRESHOLD
+    S5 --> THRESHOLD
+
+    THRESHOLD{"Total score<br/>≥ 70?"}
+    THRESHOLD -- "Yes" --> CHAIN["Link into an<br/>attack chain"]
+    THRESHOLD -- "No" --> DISCARD["Not included<br/><i>Weak connection</i>"]
+
+    CHAIN --> COMBINED["Build combined<br/>correlation query<br/><i>Detects the full<br/>attack sequence</i>"]
+
+    COMBINED --> OUTPUT(["Correlation result:<br/>• Individual technique queries<br/>• Combined chain query<br/>• Tactics covered<br/>• Time window<br/>• Relevance score"])
+
+    style ALL_YAMLS fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style OUTPUT fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style THRESHOLD fill:#f8e71c,stroke:#b8a700,color:#333
+    linkStyle default stroke:#ff6600,stroke-width:3px
+```

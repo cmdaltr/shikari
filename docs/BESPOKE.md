@@ -1,6 +1,6 @@
 # Bespoke Organization-Specific Configuration
 
-The data/bespoke directory contains **organization-specific** content that should NOT be committed to the public repository.
+The `bespoke/` directory (at the project root) contains **organization-specific** content. The directory structure is committed but files within are gitignored.
 
 ## Quick Start
 

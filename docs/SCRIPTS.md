@@ -314,17 +314,17 @@ Password: £missary_0f_the_G0rg0nite$
 ---
 
 #### extract_mitre_procedures.py
-**Purpose**: Rebuild `data/mitre_procedures.csv` from MITRE ATT&CK STIX data.
+**Purpose**: Rebuild `data/mitre_procedures.csv` and `data/mitre_procedures.xlsx` by running MITRESaw.
 
 **Features**:
-- Downloads latest ATT&CK STIX bundle (`mitre-attack/attack-stix-data`, currently v18.1)
-- Captures all three attribution paths: direct, via software, via campaign
-- Cross-validates against official XLSX relationships spreadsheet
-- Thin wrapper — all logic lives in `archer.mitre.procedures`
+- Runs MITRESaw (git submodule at `MITRESaw/`) with flags `-d -E -R`
+- MITRESaw extracts all three attribution paths from MITRE ATT&CK STIX data
+- Generates a styled XLSX evidence report with atomic indicators and reference material
+- Thin wrapper — delegates to `archer.mitre.procedures.run_mitresaw()`
 
-Also runnable as: `python -m archer.mitre.procedures [--output] [--group G1015]`
+Also runnable as: `python -m archer.mitre.procedures [--output]`
 
-**Output**: `data/mitre_procedures.csv`
+**Output**: `data/mitre_procedures.csv` (12 columns) + `data/mitre_procedures.xlsx`
 
 **Statistics** (ATT&CK v18.1):
 - 26,068 unique procedure rows

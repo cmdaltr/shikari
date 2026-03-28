@@ -149,3 +149,11 @@ data/bespoke/references/*
 !data/bespoke/mappings/
 data/bespoke/mappings/*
 !data/bespoke/mappings/.gitkeep
+
+# Root bespoke - directories committed empty, files never committed
+bespoke/prompts/*
+!bespoke/prompts/.gitkeep
+bespoke/query_templates/*
+!bespoke/query_templates/.gitkeep
+bespoke/mappings/*
+!bespoke/mappings/.gitkeep

@@ -1,0 +1,35 @@
+%% 7. User Interface — The Six Tabs
+%% Describes each of the 6 browser tabs: Generate (threat actor detections), Manual (custom threat data), Hunt (specific technique IDs), Research (browse actors and coverage), Emulate (attack simulation + validation), Library (save/search/tag detections). Generate, Manual and Hunt flow to the Results Page.
+%%
+
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
+graph LR
+    subgraph "Archer Web Interface"
+        direction TB
+
+        T1["<b>Generate</b><br/>Enter a threat actor name.<br/>Archer builds detections<br/>for everything that<br/>actor is known to do."]
+
+        T2["<b>Manual</b><br/>Paste your own threat data<br/>— IOCs, techniques, procedures —<br/>and Archer builds custom<br/>detections from it."]
+
+        T3["<b>Hunt</b><br/>Pick specific ATT&CK<br/>technique IDs and get<br/>targeted detection queries<br/>for just those techniques."]
+
+        T4["<b>Research</b><br/>Browse threat actors,<br/>view technique coverage,<br/>export intelligence data<br/>to Excel."]
+
+        T5["<b>Emulate</b><br/>Run attack simulations<br/>using Atomic Red Team.<br/>Validate that your<br/>detections actually fire."]
+
+        T6["<b>Library</b><br/>Save, search, tag, and<br/>manage your detection<br/>collection. Export or<br/>share with the team."]
+    end
+
+    T1 --> RESULT["<b>Results Page</b><br/>• Per-technique query blocks<br/>• Copy-to-clipboard<br/>• Attack chain view<br/>• Combined correlation query<br/>• Coverage metrics<br/>• Export options"]
+
+    T2 --> RESULT
+    T3 --> RESULT
+
+    style T1 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style T2 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style T3 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style T4 fill:#50e3c2,stroke:#2ca089,color:#333
+    style T5 fill:#f5a623,stroke:#c17d10,color:#fff
+    style T6 fill:#50e3c2,stroke:#2ca089,color:#333
+    style RESULT fill:#7ed321,stroke:#4a8c0f,color:#fff
+    linkStyle default stroke:#ff6600,stroke-width:3px

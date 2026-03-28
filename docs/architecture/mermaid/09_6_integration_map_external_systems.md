@@ -1,0 +1,54 @@
+# 6. Integration Map — External Systems
+
+Shows all external systems Archer connects to: MITRE ATT&CK (required), AI providers (Claude, GPT-4o, local LLM), vulnerability intel (NVD, GitHub PoC), simulation platforms (Atomic Red Team, CALDERA, Docker SIEMs), and export targets (VECTR, Excel). Solid lines = required, dashed = optional.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
+graph LR
+    ARCHER["ARCHER"]
+
+    subgraph REQUIRED ["Required"]
+        MITRE_I["MITRE ATT&CK"]
+    end
+
+    subgraph AI ["AI Providers · Optional"]
+        CLAUDE["Claude"]
+        GPT["GPT-4o"]
+        LLAMA["Local LLM"]
+    end
+
+    subgraph VULN ["Vulnerability Intel · Optional"]
+        NVD_I["NVD API"]
+        GH_I["GitHub PoC"]
+    end
+
+    subgraph SIM ["Simulation · Optional"]
+        ART["Atomic Red Team"]
+        CAL["CALDERA"]
+        SPL_D["Docker SIEMs"]
+    end
+
+    subgraph EXPORT ["Export · Optional"]
+        VECTR_E["VECTR"]
+        XLSX_E["Excel"]
+    end
+
+    ARCHER --> MITRE_I
+    ARCHER -.-> CLAUDE
+    ARCHER -.-> GPT
+    ARCHER -.-> LLAMA
+    ARCHER -.-> NVD_I
+    ARCHER -.-> GH_I
+    ARCHER -.-> ART
+    ARCHER -.-> CAL
+    ARCHER -.-> SPL_D
+    ARCHER -.-> VECTR_E
+    ARCHER --> XLSX_E
+
+    style ARCHER fill:#9013fe,stroke:#6b0fb8,color:#fff
+    style MITRE_I fill:#f5a623,stroke:#c17d10,color:#fff
+    style CLAUDE fill:#bd10e0,stroke:#8a0ba5,color:#fff
+    style GPT fill:#bd10e0,stroke:#8a0ba5,color:#fff
+    style LLAMA fill:#bd10e0,stroke:#8a0ba5,color:#fff
+    linkStyle default stroke:#ff6600,stroke-width:3px
+```

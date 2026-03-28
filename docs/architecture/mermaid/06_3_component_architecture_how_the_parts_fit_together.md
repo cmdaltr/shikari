@@ -1,0 +1,92 @@
+# 3. Component Architecture — How the Parts Fit Together
+
+Shows how Archer's modules connect: browser UI → web server (API, auth, workers) → intelligence layer → build pipeline (orchestrator, compiler, YAML writer) → correlation engine → validation framework → external integrations → storage.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
+graph TD
+    UI["Browser UI"]
+
+    subgraph SERVER ["Web Server"]
+        API["API Router<br/>84 endpoints"]
+        AUTH["Auth"]
+        BG["Background Workers"]
+    end
+
+    subgraph INTEL ["Intelligence"]
+        MITRE["MITRE ATT&CK"]
+        CVE_HUNT["CVE Researcher"]
+        BLOG["Blog Analyser"]
+        BRIEFING["Threat Briefing"]
+    end
+
+    subgraph PIPELINE ["Build Pipeline"]
+        ORCH["Orchestrator"]
+        COMPILE["Query Compiler"]
+        YAML_W["YAML Writer"]
+    end
+
+    subgraph CORR_ENG ["Correlation Engine"]
+        HEUR["Heuristic"]
+        SEM["Semantic"]
+        AIGEN["AI Generator"]
+    end
+
+    subgraph VALID ["Validation · Optional"]
+        DOCKER["Docker SIEMs"]
+        TESTER["Test & Refine"]
+    end
+
+    subgraph EXT ["External · Optional"]
+        LLM_P["LLM Providers"]
+        VECTR_I["VECTR"]
+        ATOMIC_I["Atomic Red Team"]
+        NVD["NVD / GitHub"]
+    end
+
+    subgraph STORE ["Storage"]
+        YAMLS["Detection YAMLs"]
+        CORR_F["Correlations"]
+        DB["Database"]
+    end
+
+    UI --> API
+    API --> AUTH
+    API --> BG
+
+    BG --> MITRE
+    BG --> CVE_HUNT
+    BG --> BLOG
+    BG --> BRIEFING
+
+    MITRE --> ORCH
+    CVE_HUNT --> ORCH
+    BLOG --> ORCH
+    ORCH --> COMPILE --> YAML_W
+
+    YAML_W --> HEUR
+    YAML_W --> SEM
+    YAML_W --> AIGEN
+
+    YAML_W --> YAMLS
+    HEUR --> CORR_F
+    SEM --> CORR_F
+    AUTH --> DB
+
+    AIGEN --> LLM_P
+    BRIEFING --> LLM_P
+    CVE_HUNT --> NVD
+    ORCH --> VECTR_I
+    ORCH --> ATOMIC_I
+    ORCH --> DOCKER --> TESTER
+
+    style UI fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style API fill:#9013fe,stroke:#6b0fb8,color:#fff
+    style ORCH fill:#f5a623,stroke:#c17d10,color:#fff
+    style COMPILE fill:#f5a623,stroke:#c17d10,color:#fff
+    style MITRE fill:#f5a623,stroke:#c17d10,color:#fff
+    style YAMLS fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style CORR_F fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style DB fill:#7ed321,stroke:#4a8c0f,color:#fff
+    linkStyle default stroke:#ff6600,stroke-width:3px
+```

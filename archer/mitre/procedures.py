@@ -2,45 +2,40 @@
 archer.mitre.procedures
 =======================
 
-Standalone module for extracting complete group-technique mappings from
-MITRE ATT&CK data using all three official attribution paths:
+Adapter module that delegates MITRE ATT&CK data extraction to MITRESaw
+(included as a git submodule at ./MITRESaw/) and provides the interface
+that Archer internals expect.
 
-  PATH 1 — Direct:     intrusion-set --[uses]--> attack-pattern
-  PATH 2 — Software:   intrusion-set --[uses]--> tool/malware --[uses]--> attack-pattern
-  PATH 3 — Campaign:   campaign --[attributed-to]--> intrusion-set
-                       campaign --[uses]--> attack-pattern
+Data generation (CSV / XLSX):
+    Runs MITRESaw CLI:  python MITRESaw/MITRESaw.py -d -E -R
+    Output: mitre_procedures.csv + mitre_procedures.xlsx
 
-Can be used three ways:
-
-  1. Imported by Archer internals:
-       from archer.mitre.procedures import get_group_techniques, build_procedures_csv
-
-  2. Run as a module (refreshes data/mitre_procedures.csv):
-       python -m archer.mitre.procedures
-
-  3. Called from the standalone CLI script:
-       python scripts/data/extract_mitre_procedures.py
-
-MITRE-official sources only:
-  - STIX bundle:     https://github.com/mitre-attack/attack-stix-data
-  - XLSX (cross-ref): https://attack.mitre.org/docs/attack-excel-files/...
+Real-time STIX operations (used by app.py hunter/export routes):
+    _build_indexes, _resolve_group, _walk_path1/2/3, _attack_id, _clean
+    These work on the in-memory STIX bundle (app.state.bundle) and are
+    retained here because MITRESaw's architecture uses MitreAttackData
+    rather than raw STIX dicts.
 """
 
 from __future__ import annotations
 
 import csv
-import json
+import glob as _glob
 import logging
 import os
+import shutil
+import subprocess
+import sys
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import requests
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Source URLs
+# Source URLs (kept for fetch_stix which is used by app.py at startup)
 # ---------------------------------------------------------------------------
 
 STIX_URL = (
@@ -53,25 +48,44 @@ XLSX_URL = (
     "/enterprise-attack/enterprise-attack-v18.1-relationships.xlsx"
 )
 
-# Default output path (relative to project root)
-_DEFAULT_CSV = Path(__file__).parent.parent.parent / "data" / "mitre_procedures.csv"
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
 
-# CSV column order
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+_DEFAULT_CSV = _PROJECT_ROOT / "data" / "mitre_procedures.csv"
+_DEFAULT_XLSX = _PROJECT_ROOT / "data" / "mitre_procedures.xlsx"
+_MITRESAW_DIR = _PROJECT_ROOT / "MITRESaw"
+
+# ---------------------------------------------------------------------------
+# MITRESaw CSV column order (12 columns)
+# ---------------------------------------------------------------------------
+
 FIELDNAMES: List[str] = [
+    "group_sw_id",
+    "group_sw_name",
+    "group_sw_description",
     "technique_id",
     "technique_name",
-    "tactic",
-    "group_id",
-    "group_name",
-    "procedure_example",
-    "group_description",
     "technique_description",
-    "attribution_type",
+    "tactic",
+    "platforms",
+    "framework",
+    "procedure_example",
+    "evidence",
+    "detectable_via",
 ]
+
+# Mapping from MITRESaw column names to Archer's legacy names (for callers
+# that reference the old schema). Used by get_group_coverage().
+_LEGACY_MAP = {
+    "group_sw_id": "group_id",
+    "group_sw_name": "group_name",
+}
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Internal helpers (used by app.py for real-time STIX operations)
 # ---------------------------------------------------------------------------
 
 def _attack_id(obj: dict) -> str:
@@ -121,157 +135,6 @@ def _build_indexes(
     return groups, techniques, software, campaigns
 
 
-# ---------------------------------------------------------------------------
-# Public: fetch STIX
-# ---------------------------------------------------------------------------
-
-def fetch_stix(url: str = STIX_URL, timeout: int = 120) -> dict:
-    """
-    Download and return the raw STIX bundle JSON dict.
-    Raises requests.HTTPError on non-200 responses.
-    """
-    logger.info("Downloading STIX bundle from %s", url)
-    resp = requests.get(url, timeout=timeout)
-    resp.raise_for_status()
-    data = resp.json()
-    version = next(
-        (o.get("x_mitre_version") for o in data.get("objects", [])
-         if o.get("type") == "x-mitre-collection"),
-        "unknown",
-    )
-    logger.info("Downloaded ATT&CK v%s (%d objects)", version, len(data.get("objects", [])))
-    return data
-
-
-# ---------------------------------------------------------------------------
-# Public: technique extraction
-# ---------------------------------------------------------------------------
-
-def get_group_techniques(
-    bundle: dict,
-    group_id_or_name: str,
-) -> List[Dict]:
-    """
-    Return all technique records for a group, following all three attribution paths.
-
-    Args:
-        bundle: Raw STIX bundle dict (from fetch_stix or json.load).
-        group_id_or_name: ATT&CK group ID (e.g. "G1015") or group name
-                          (e.g. "Scattered Spider"). Case-insensitive.
-
-    Returns:
-        List of dicts with keys matching FIELDNAMES. Each entry represents
-        one (technique, tactic, attribution_path) combination for the group.
-        Multiple rows per technique are emitted when a technique spans
-        multiple tactics.
-    """
-    objects = bundle.get("objects", [])
-    groups, techniques, software, campaigns = _build_indexes(objects)
-
-    # Resolve group STIX ID
-    target_stix_id = _resolve_group(groups, group_id_or_name)
-    if not target_stix_id:
-        raise ValueError(f"Group not found in ATT&CK bundle: {group_id_or_name!r}")
-
-    rows: List[dict] = []
-    seen: Set[Tuple] = set()
-    group_obj = groups[target_stix_id]
-
-    _walk_path1(objects, {target_stix_id: group_obj}, techniques, rows, seen)
-    _walk_path2(objects, {target_stix_id: group_obj}, techniques, software, rows, seen)
-    _walk_path3(objects, {target_stix_id: group_obj}, techniques, campaigns, rows, seen)
-
-    return rows
-
-
-def get_all_procedures(bundle: dict) -> List[Dict]:
-    """
-    Return all group-technique rows for every group in the bundle.
-    Follows all three attribution paths. Used to build mitre_procedures.csv.
-    """
-    objects = bundle.get("objects", [])
-    groups, techniques, software, campaigns = _build_indexes(objects)
-
-    rows: List[dict] = []
-    seen: Set[Tuple] = set()
-
-    _walk_path1(objects, groups, techniques, rows, seen)
-    _walk_path2(objects, groups, techniques, software, rows, seen)
-    _walk_path3(objects, groups, techniques, campaigns, rows, seen)
-
-    return rows
-
-
-def get_group_coverage(group: str, generate_dir) -> Optional[Dict]:
-    """
-    Load mitre_procedures.csv, filter by group name or ATT&CK ID, and check
-    which techniques already have detection YAML files in generate_dir.
-
-    Args:
-        group: Group name (e.g. "Scattered Spider") or ATT&CK ID (e.g. "G1015")
-        generate_dir: Path to the directory containing generated detection YAMLs
-
-    Returns:
-        Dict with keys: group_name, group_id, total, covered_count, gap_count,
-        covered (list), gaps (list). Returns None if group not found in CSV.
-    """
-    import csv as _csv
-    import glob as _glob
-
-    csv_path = _DEFAULT_CSV
-    if not csv_path.exists():
-        return None
-
-    rows = []
-    group_lower = group.lower()
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = _csv.DictReader(f)
-        for row in reader:
-            if (row.get("group_id", "").upper() == group.upper() or
-                    row.get("group_name", "").lower() == group_lower):
-                rows.append(row)
-
-    if not rows:
-        return None
-
-    group_name = rows[0]["group_name"]
-    group_id = rows[0]["group_id"]
-
-    # Deduplicate by technique_id — keep first occurrence per technique
-    seen: Dict[str, dict] = {}
-    for row in rows:
-        tid = row["technique_id"]
-        if tid not in seen:
-            seen[tid] = {
-                "technique_id": tid,
-                "technique_name": row["technique_name"],
-                "tactic": row["tactic"],
-                "attribution_type": row["attribution_type"],
-                "covered": False,
-            }
-
-    # Check coverage: any YAML whose filename starts with the technique ID
-    generate_path = Path(str(generate_dir))
-    for tid, data in seen.items():
-        safe_id = tid.replace(".", "-")
-        pattern = str(generate_path / f"{safe_id}*.yaml")
-        data["covered"] = bool(_glob.glob(pattern))
-
-    techniques = list(seen.values())
-    covered = [t for t in techniques if t["covered"]]
-    gaps = [t for t in techniques if not t["covered"]]
-
-    return {
-        "group_name": group_name,
-        "group_id": group_id,
-        "total": len(techniques),
-        "covered_count": len(covered),
-        "gap_count": len(gaps),
-        "covered": covered,
-        "gaps": gaps,
-    }
-
-
 def _resolve_group(groups: Dict[str, dict], identifier: str) -> Optional[str]:
     """Resolve an ATT&CK ID (G1015) or name to a STIX object ID."""
     ident_lower = identifier.lower()
@@ -305,16 +168,29 @@ def _emit(
         if key in seen:
             continue
         seen.add(key)
+        group_name = group_obj.get("name", "")
+        group_desc = _clean(group_obj.get("description", ""))
+        platforms = ", ".join(tech_obj.get("x_mitre_platforms", []))
         rows.append({
+            # MITRESaw column names (FIELDNAMES order)
+            "group_sw_id": group_id,
+            "group_sw_name": group_name,
+            "group_sw_description": group_desc,
             "technique_id": tech_id,
             "technique_name": tech_obj.get("name", ""),
-            "tactic": tactic,
-            "group_id": group_id,
-            "group_name": group_obj.get("name", ""),
-            "procedure_example": _clean(description),
-            "group_description": _clean(group_obj.get("description", "")),
             "technique_description": _clean(tech_obj.get("description", "")),
+            "tactic": tactic,
+            "platforms": platforms,
+            "framework": "Enterprise",
+            "procedure_example": _clean(description),
+            "evidence": "{}",
+            "detectable_via": "",
+            # Extra fields for in-memory callers
             "attribution_type": attribution_type,
+            # Legacy aliases
+            "group_id": group_id,
+            "group_name": group_name,
+            "group_description": group_desc,
         })
 
 
@@ -376,7 +252,264 @@ def _walk_path3(objects, groups, techniques, campaigns, rows, seen):
 
 
 # ---------------------------------------------------------------------------
-# Public: XLSX cross-reference
+# Public: fetch STIX (used by app.py at startup for in-memory bundle)
+# ---------------------------------------------------------------------------
+
+def fetch_stix(url: str = STIX_URL, timeout: int = 120) -> dict:
+    """
+    Download and return the raw STIX bundle JSON dict.
+    Raises requests.HTTPError on non-200 responses.
+    """
+    logger.info("Downloading STIX bundle from %s", url)
+    resp = requests.get(url, timeout=timeout)
+    resp.raise_for_status()
+    data = resp.json()
+    version = next(
+        (o.get("x_mitre_version") for o in data.get("objects", [])
+         if o.get("type") == "x-mitre-collection"),
+        "unknown",
+    )
+    logger.info("Downloaded ATT&CK v%s (%d objects)", version, len(data.get("objects", [])))
+    return data
+
+
+# ---------------------------------------------------------------------------
+# Public: run MITRESaw to generate CSV + XLSX
+# ---------------------------------------------------------------------------
+
+def run_mitresaw(
+    output_csv: Optional[Path] = None,
+    output_xlsx: Optional[Path] = None,
+) -> Tuple[Path, Optional[Path]]:
+    """
+    Run MITRESaw CLI (./MITRESaw.py -d -E -R) and copy the output files
+    to Archer's data directory.
+
+    Args:
+        output_csv:  Destination for mitre_procedures.csv (default: data/mitre_procedures.csv)
+        output_xlsx: Destination for mitre_procedures.xlsx (default: data/mitre_procedures.xlsx)
+
+    Returns:
+        Tuple of (csv_path, xlsx_path). xlsx_path may be None if generation failed.
+    """
+    if output_csv is None:
+        output_csv = _DEFAULT_CSV
+    if output_xlsx is None:
+        output_xlsx = _DEFAULT_XLSX
+
+    output_csv = Path(output_csv)
+    output_xlsx = Path(output_xlsx)
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+
+    mitresaw_script = _MITRESAW_DIR / "MITRESaw.py"
+    if not mitresaw_script.exists():
+        raise FileNotFoundError(
+            f"MITRESaw not found at {mitresaw_script}. "
+            "Run: git submodule update --init --recursive"
+        )
+
+    logger.info("Running MITRESaw: %s -d -E -R", mitresaw_script)
+
+    result = subprocess.run(
+        [sys.executable, str(mitresaw_script), "-d", "-E", "-R", "-q"],
+        cwd=str(_MITRESAW_DIR),
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+
+    if result.returncode != 0:
+        logger.error("MITRESaw failed (exit %d):\n%s", result.returncode, result.stderr)
+        raise RuntimeError(f"MITRESaw exited with code {result.returncode}: {result.stderr}")
+
+    logger.info("MITRESaw output:\n%s", result.stdout[-500:] if result.stdout else "(empty)")
+
+    # Find the output directory: MITRESaw creates ./YYYY-MM-DD/
+    today = datetime.now().strftime("%Y-%m-%d")
+    mitresaw_date_dir = _MITRESAW_DIR / today
+
+    # MITRESaw with -d -E puts mitre_procedures.csv and .xlsx in the date dir
+    src_csv = mitresaw_date_dir / "mitre_procedures.csv"
+    src_xlsx = mitresaw_date_dir / "mitre_procedures.xlsx"
+
+    if not src_csv.exists():
+        # Fallback: search for any mitre_procedures.csv under MITRESaw/
+        candidates = list(_MITRESAW_DIR.glob("*/mitre_procedures.csv"))
+        if candidates:
+            candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            src_csv = candidates[0]
+            src_xlsx = src_csv.parent / "mitre_procedures.xlsx"
+        else:
+            raise FileNotFoundError(
+                f"MITRESaw did not produce mitre_procedures.csv. "
+                f"Looked in {mitresaw_date_dir} and searched {_MITRESAW_DIR}/*/. "
+                f"stdout: {result.stdout[-200:]}"
+            )
+
+    # Copy to Archer's data directory
+    shutil.copy2(str(src_csv), str(output_csv))
+    logger.info("Copied MITRESaw CSV to %s", output_csv)
+
+    xlsx_result = None
+    if src_xlsx.exists():
+        shutil.copy2(str(src_xlsx), str(output_xlsx))
+        logger.info("Copied MITRESaw XLSX to %s", output_xlsx)
+        xlsx_result = output_xlsx
+
+    return output_csv, xlsx_result
+
+
+def build_procedures_csv(
+    output_path: Optional[Path] = None,
+    stix_url: str = STIX_URL,
+    xlsx_url: str = XLSX_URL,
+    validate: bool = True,
+) -> Path:
+    """
+    Generate mitre_procedures.csv by running MITRESaw.
+
+    This replaces the previous implementation that duplicated MITRESaw's
+    STIX extraction logic. The stix_url, xlsx_url, and validate parameters
+    are accepted for backward compatibility but are not used — MITRESaw
+    handles its own STIX fetching and validation.
+
+    Args:
+        output_path: Where to write the CSV. Defaults to data/mitre_procedures.csv.
+        stix_url:    Ignored (kept for API compatibility).
+        xlsx_url:    Ignored (kept for API compatibility).
+        validate:    Ignored (kept for API compatibility).
+
+    Returns:
+        Path to the written CSV file.
+    """
+    csv_path, _ = run_mitresaw(output_csv=output_path)
+    return csv_path
+
+
+# ---------------------------------------------------------------------------
+# Public: coverage check (reads MITRESaw's CSV output)
+# ---------------------------------------------------------------------------
+
+def get_group_coverage(group: str, generate_dir) -> Optional[Dict]:
+    """
+    Load mitre_procedures.csv (generated by MITRESaw), filter by group name
+    or ATT&CK ID, and check which techniques already have detection YAML
+    files in generate_dir.
+
+    Args:
+        group: Group name (e.g. "Scattered Spider") or ATT&CK ID (e.g. "G1015")
+        generate_dir: Path to the directory containing generated detection YAMLs
+
+    Returns:
+        Dict with keys: group_name, group_id, total, covered_count, gap_count,
+        covered (list), gaps (list). Returns None if group not found in CSV.
+    """
+    csv_path = _DEFAULT_CSV
+    if not csv_path.exists():
+        return None
+
+    rows = []
+    group_lower = group.lower()
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            gid = row.get("group_sw_id", "").upper()
+            gname = row.get("group_sw_name", "").lower()
+            if gid == group.upper() or gname == group_lower:
+                rows.append(row)
+
+    if not rows:
+        return None
+
+    group_name = rows[0]["group_sw_name"]
+    group_id = rows[0]["group_sw_id"]
+
+    # Deduplicate by technique_id — keep first occurrence per technique
+    seen: Dict[str, dict] = {}
+    for row in rows:
+        tid = row["technique_id"]
+        if tid not in seen:
+            seen[tid] = {
+                "technique_id": tid,
+                "technique_name": row["technique_name"],
+                "tactic": row["tactic"],
+                "covered": False,
+            }
+
+    # Check coverage: any YAML whose filename starts with the technique ID
+    generate_path = Path(str(generate_dir))
+    for tid, data in seen.items():
+        safe_id = tid.replace(".", "-")
+        pattern = str(generate_path / f"{safe_id}*.yaml")
+        data["covered"] = bool(_glob.glob(pattern))
+
+    techniques = list(seen.values())
+    covered = [t for t in techniques if t["covered"]]
+    gaps = [t for t in techniques if not t["covered"]]
+
+    return {
+        "group_name": group_name,
+        "group_id": group_id,
+        "total": len(techniques),
+        "covered_count": len(covered),
+        "gap_count": len(gaps),
+        "covered": covered,
+        "gaps": gaps,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Kept for backward compatibility — these were part of the old public API
+# but are no longer used for CSV generation. They use the in-memory STIX
+# bundle for real-time lookups.
+# ---------------------------------------------------------------------------
+
+def get_group_techniques(
+    bundle: dict,
+    group_id_or_name: str,
+) -> List[Dict]:
+    """
+    Return all technique records for a group, following all three attribution paths.
+    Uses the in-memory STIX bundle (not MITRESaw CLI).
+    """
+    objects = bundle.get("objects", [])
+    groups, techniques, software, campaigns = _build_indexes(objects)
+
+    target_stix_id = _resolve_group(groups, group_id_or_name)
+    if not target_stix_id:
+        raise ValueError(f"Group not found in ATT&CK bundle: {group_id_or_name!r}")
+
+    rows: List[dict] = []
+    seen: Set[Tuple] = set()
+    group_obj = groups[target_stix_id]
+
+    _walk_path1(objects, {target_stix_id: group_obj}, techniques, rows, seen)
+    _walk_path2(objects, {target_stix_id: group_obj}, techniques, software, rows, seen)
+    _walk_path3(objects, {target_stix_id: group_obj}, techniques, campaigns, rows, seen)
+
+    return rows
+
+
+def get_all_procedures(bundle: dict) -> List[Dict]:
+    """
+    Return all group-technique rows for every group in the bundle.
+    Kept for backward compatibility. Prefer run_mitresaw() for CSV generation.
+    """
+    objects = bundle.get("objects", [])
+    groups, techniques, software, campaigns = _build_indexes(objects)
+
+    rows: List[dict] = []
+    seen: Set[Tuple] = set()
+
+    _walk_path1(objects, groups, techniques, rows, seen)
+    _walk_path2(objects, groups, techniques, software, rows, seen)
+    _walk_path3(objects, groups, techniques, campaigns, rows, seen)
+
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# XLSX cross-reference (kept for backward compatibility)
 # ---------------------------------------------------------------------------
 
 def fetch_xlsx_relationships(
@@ -434,66 +567,13 @@ def cross_reference(
     """
     if xlsx_pairs is None:
         return []
-    stix_pairs = {(r["group_id"], r["technique_id"]) for r in rows}
+    stix_pairs = {(r.get("group_sw_id", r.get("group_id", "")), r["technique_id"]) for r in rows}
     return sorted(
         (src, tgt)
         for src, tgt in xlsx_pairs
         if src.startswith("G") and tgt.startswith("T")
         and (src, tgt) not in stix_pairs
     )
-
-
-# ---------------------------------------------------------------------------
-# Public: CSV builder
-# ---------------------------------------------------------------------------
-
-def build_procedures_csv(
-    output_path: Optional[Path] = None,
-    stix_url: str = STIX_URL,
-    xlsx_url: str = XLSX_URL,
-    validate: bool = True,
-) -> Path:
-    """
-    Download the latest ATT&CK STIX bundle, extract all group-technique
-    procedures via all three attribution paths, and write to CSV.
-
-    Args:
-        output_path: Where to write the CSV. Defaults to data/mitre_procedures.csv.
-        stix_url:    STIX bundle URL (defaults to canonical mitre-attack/attack-stix-data).
-        xlsx_url:    XLSX relationships URL for cross-validation.
-        validate:    If True, download XLSX and report any gaps.
-
-    Returns:
-        Path to the written CSV file.
-    """
-    if output_path is None:
-        output_path = _DEFAULT_CSV
-
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    bundle = fetch_stix(stix_url)
-    rows = get_all_procedures(bundle)
-
-    if validate:
-        xlsx_pairs = fetch_xlsx_relationships(xlsx_url)
-        gaps = cross_reference(rows, xlsx_pairs)
-        if gaps:
-            logger.warning(
-                "XLSX cross-reference: %d pairs in XLSX not found in STIX: %s",
-                len(gaps), gaps[:5],
-            )
-        else:
-            logger.info("XLSX cross-reference: all pairs present in STIX ✓")
-
-    sorted_rows = sorted(rows, key=lambda r: (r["technique_id"], r["tactic"], r["group_id"]))
-    with open(output_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        writer.writeheader()
-        writer.writerows(sorted_rows)
-
-    logger.info("Saved %d rows to %s", len(sorted_rows), output_path)
-    return output_path
 
 
 # ---------------------------------------------------------------------------
@@ -506,14 +586,12 @@ def _cli() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     parser = argparse.ArgumentParser(
-        description="Rebuild data/mitre_procedures.csv from MITRE ATT&CK STIX data.",
+        description="Rebuild data/mitre_procedures.csv by running MITRESaw.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   python -m archer.mitre.procedures
   python -m archer.mitre.procedures --output /tmp/procedures.csv
-  python -m archer.mitre.procedures --stix-url https://...custom.../enterprise-attack.json
-  python -m archer.mitre.procedures --no-validate
         """,
     )
     parser.add_argument(
@@ -522,41 +600,12 @@ Examples:
         default=None,
         help=f"Output CSV path (default: {_DEFAULT_CSV})",
     )
-    parser.add_argument(
-        "--stix-url",
-        default=STIX_URL,
-        help="STIX bundle URL (default: canonical mitre-attack/attack-stix-data)",
-    )
-    parser.add_argument(
-        "--xlsx-url",
-        default=XLSX_URL,
-        help="XLSX relationships URL for cross-validation",
-    )
-    parser.add_argument(
-        "--no-validate",
-        action="store_true",
-        help="Skip XLSX cross-reference validation",
-    )
-    parser.add_argument(
-        "--group",
-        help="Show technique count for a specific group after build (e.g. G1015)",
-    )
     args = parser.parse_args()
 
-    out = build_procedures_csv(
-        output_path=args.output,
-        stix_url=args.stix_url,
-        xlsx_url=args.xlsx_url,
-        validate=not args.no_validate,
-    )
-
-    print(f"\n✓ Written to {out}")
-
-    if args.group:
-        bundle = fetch_stix(args.stix_url)
-        rows = get_group_techniques(bundle, args.group)
-        unique = len({r["technique_id"] for r in rows})
-        print(f"  {args.group}: {unique} unique techniques")
+    csv_path, xlsx_path = run_mitresaw(output_csv=args.output)
+    print(f"\n✓ CSV written to {csv_path}")
+    if xlsx_path:
+        print(f"✓ XLSX written to {xlsx_path}")
 
 
 if __name__ == "__main__":

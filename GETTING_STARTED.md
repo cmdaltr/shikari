@@ -231,15 +231,13 @@ vim archer/mappings/schemaSplunk_custom.json
 
 ### Step 5: Configure Bespoke Settings (RECOMMENDED)
 
-The `data/bespoke/` directory contains customizations that significantly improve detection quality:
+The `bespoke/` directory (at the project root) contains customizations that significantly improve detection quality:
 
 ```
-data/bespoke/
-├── mappings/           # Your environment-specific field mappings
-│   ├── splunk/
-│   └── mde/
-└── references/         # High-quality query examples for the LLM
-    ├── Splunk/
+bespoke/
+├── prompts/            # LLM prompt templates for query generation
+├── query_templates/    # SIEM query templates per log source
+└── mappings/           # Environment-specific field and index mappings
     └── MDE/
 ```
 

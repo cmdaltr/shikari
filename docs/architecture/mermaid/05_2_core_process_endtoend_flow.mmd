@@ -1,0 +1,78 @@
+%% 2. Core Process — End-to-End Flow
+%% The full end-to-end journey from submitting a threat actor name to getting finished detection queries. Covers MITRE validation, the 3 attribution paths, indicator extraction, platform checks, vendor query builders, YAML generation, correlation, and optional enrichment steps.
+%%
+
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
+flowchart TD
+    START(["User submits a<br/>threat actor name"]) --> VALIDATE{"Does this actor<br/>exist in MITRE<br/>ATT&CK?"}
+
+    VALIDATE -- "No" --> ERR["Return error:<br/>actor not found"]
+    VALIDATE -- "Yes" --> RETRIEVE["Retrieve all known<br/>attack techniques<br/>for this actor"]
+
+    RETRIEVE --> PATHS["Gather techniques<br/>from 3 sources"]
+
+    subgraph "MITRE Attribution Paths"
+        P1["Path 1: Direct<br/><i>Actor → Technique</i>"]
+        P2["Path 2: Via Software<br/><i>Actor → Tool → Technique</i>"]
+        P3["Path 3: Via Campaign<br/><i>Actor → Campaign → Technique</i>"]
+    end
+
+    PATHS --> P1
+    PATHS --> P2
+    PATHS --> P3
+    P1 --> MERGE["Merge & deduplicate<br/>all techniques"]
+    P2 --> MERGE
+    P3 --> MERGE
+
+    MERGE --> LOOP["For each technique..."]
+
+    LOOP --> EXTRACT["Extract indicators:<br/>commands, files, registry keys,<br/>network addresses, hashes"]
+
+    EXTRACT --> PLATFORM{"Which platforms<br/>does this technique<br/>target?"}
+
+    PLATFORM --> VENDORS["Build queries for<br/>each enabled vendor"]
+
+    subgraph "Query Builders"
+        SPL["Splunk<br/><i>SPL query</i>"]
+        KQL["Microsoft Defender<br/><i>KQL query</i>"]
+        YARAL["Google SecOps<br/><i>YARAL rule</i>"]
+        EQL["Elastic<br/><i>EQL query</i>"]
+    end
+
+    VENDORS --> SPL
+    VENDORS --> KQL
+    VENDORS --> YARAL
+    VENDORS --> EQL
+
+    SPL --> YAML["Save as detection file<br/><i>YAML with metadata</i>"]
+    KQL --> YAML
+    YARAL --> YAML
+    EQL --> YAML
+
+    YAML --> NEXT{"More techniques<br/>to process?"}
+    NEXT -- "Yes" --> LOOP
+    NEXT -- "No" --> CORRELATE["Build attack chain<br/>correlations"]
+
+    CORRELATE --> ENRICH{"Optional enrichment<br/>steps enabled?"}
+
+    ENRICH -- "OSINT" --> OSINT["Cross-reference with<br/>open-source intel"]
+    ENRICH -- "Validation" --> TESTQ["Test queries in<br/>sandboxed SIEM"]
+    ENRICH -- "Emulation" --> ATOMIC["Run attack simulation<br/><i>Atomic Red Team</i>"]
+    ENRICH -- "Export" --> EXPORT["Send to VECTR<br/>or download XLSX"]
+    ENRICH -- "No" --> RESULTS
+
+    OSINT --> RESULTS
+    TESTQ --> RESULTS
+    ATOMIC --> RESULTS
+    EXPORT --> RESULTS
+
+    RESULTS(["Display results page<br/>with all detections,<br/>correlations & metrics"])
+
+    style START fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style RESULTS fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style ERR fill:#d0021b,stroke:#8b0000,color:#fff
+    style VALIDATE fill:#f8e71c,stroke:#b8a700,color:#333
+    style PLATFORM fill:#f8e71c,stroke:#b8a700,color:#333
+    style NEXT fill:#f8e71c,stroke:#b8a700,color:#333
+    style ENRICH fill:#f8e71c,stroke:#b8a700,color:#333
+    linkStyle default stroke:#ff6600,stroke-width:3px

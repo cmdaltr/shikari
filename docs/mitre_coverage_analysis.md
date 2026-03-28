@@ -270,26 +270,23 @@ The [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) is a vi
 │     ↓                                                            │
 │  6. Cross-reference against XLSX (validation)                    │
 │     ↓                                                            │
-│  7. Emit CSV with attribution_type column                        │
+│  7. Emit CSV (delegated to MITRESaw)                             │
 │                                                                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Output CSV schema
 
+Archer now delegates CSV generation to MITRESaw (included as a git submodule). The output CSV has 12 columns:
+
 ```
-technique_id, technique_name, tactic, group_id, group_name,
-procedure_example, group_description, technique_description,
-attribution_type
+group_sw_id, group_sw_name, group_sw_description,
+technique_id, technique_name, technique_description,
+tactic, platforms, framework,
+procedure_example, evidence, detectable_via
 ```
 
-The `attribution_type` column makes the attribution path explicit:
-
-| Value | Meaning |
-|-------|---------|
-| `direct` | Group directly uses this technique |
-| `via_software:Mimikatz` | Technique attributed via named software |
-| `via_campaign:C0027` | Technique attributed via named campaign |
+The `evidence` column contains a JSON dict of extracted indicators (commands, registry keys, file paths, CVEs, ports, software names, event IDs). The `detectable_via` column lists mapped log sources for each technique.
 
 ### Key implementation principles
 
@@ -371,58 +368,36 @@ T1614      T1621      T1649      T1656      T1657      T1680
 
 ---
 
-## 10. MITRESaw — A Standalone Tool for Complete ATT&CK Coverage
+## 10. MITRESaw — Integrated ATT&CK Extraction
 
-These findings during Archer's development led me to build **[MITRESaw](https://github.com/cmdaltr/MITRESaw)** — a standalone, open-source command-line tool that packages the same three-path STIX extraction logic for use outside of Archer.
+**[MITRESaw](https://github.com/cmdaltr/MITRESaw)** is included as a git submodule in Archer (at `MITRESaw/`). It is the single source of truth for MITRE ATT&CK procedure extraction — Archer delegates all CSV and XLSX generation to MITRESaw rather than duplicating the extraction logic.
 
-MITRESaw was created specifically because the coverage gap problem isn't unique to Archer. Any threat intelligence pipeline, detection engineering workflow, or threat-informed purple team that pulls MITRE ATT&CK data programmatically will hit the same issue if it doesn't implement all three attribution paths. MITRESaw makes the correct approach available as an independent tool.
+### How Archer uses MITRESaw
 
-### What MITRESaw Does
+Archer runs MITRESaw via `archer.mitre.procedures.run_mitresaw()`:
 
 ```bash
-# Extract all techniques across all threat actors (all platforms)
-python3 MITRESaw.py Enterprise . . .
-
-# Scattered Spider on Windows, with Navigator layers
-python3 MITRESaw.py Enterprise Windows . Scattered_Spider -n
-
-# Groups associated with the financial sector, with search queries
-python3 MITRESaw.py Enterprise . financial . -q
-
-# Rebuild the procedures CSV standalone
-python3 -m MITRESaw.toolbox.stix_core --group G1015
+python MITRESaw/MITRESaw.py -d -E -R
 ```
 
-For each matching threat actor, MITRESaw:
-- Extracts all 26,068 technique attribution rows via all three STIX paths
+This produces:
+- `mitre_procedures.csv` — 12-column CSV with all group-technique mappings, extracted indicators, and log source mappings
+- `mitre_procedures.xlsx` — Styled evidence report with atomic indicators and fetched reference material
+
+The output is copied to `data/mitre_procedures.csv` and `data/mitre_procedures.xlsx`.
+
+### What MITRESaw does
+
+For each threat actor, MITRESaw:
+- Extracts all technique attribution rows via all three STIX paths (direct, via software, via campaign)
 - Identifies searchable indicators (ports, Windows event IDs, registry keys, commands, CVEs) from procedure descriptions
 - Maps techniques to log sources (Windows event logs, Sysmon, Zeek, cloud audit logs, etc.)
-- Exports an ATT&CK Navigator layer JSON per group
-- Generates search queries for Splunk, Azure Sentinel, and Elastic/Kibana
-
-### Coverage stats (ATT&CK v18.1)
-
-| Metric | Value |
-|--------|-------|
-| Total procedure rows | 26,068 |
-| Unique techniques | 575 |
-| Unique threat groups | 172 |
-| Unique tactics | 14 |
-| Attribution breakdown | 5,211 direct · 20,248 via software · 609 via campaign |
+- Generates a styled XLSX evidence report with one row per atomic indicator
+- Fetches and extracts content from all citation sources (blog posts, reports, advisories)
 
 ### The connection to this research
 
-The extraction core in MITRESaw (`MITRESaw/toolbox/stix_core.py`) is directly derived from the same module built and validated for Archer — `archer.mitre.procedures`. The same three-path walker, the same XLSX cross-reference, the same attribution_type column. The findings described in this post are what justified building it that way.
-
-If you're building any kind of MITRE ATT&CK pipeline, MITRESaw's `stix_core.py` can be imported standalone:
-
-```python
-from MITRESaw.toolbox.stix_core import fetch_stix, get_group_techniques
-
-bundle = fetch_stix()
-rows = get_group_techniques(bundle, "Scattered Spider")
-# → 150 unique techniques, all attribution paths, no data lost
-```
+MITRESaw was originally derived from Archer's `archer.mitre.procedures` module. The three-path walking logic described in this analysis is what justified building it. Now that MITRESaw has matured into a more feature-rich tool (with indicator extraction, log source mapping, evidence reports, and reference collection), the dependency has been inverted — Archer imports MITRESaw as the upstream source.
 
 ---
 

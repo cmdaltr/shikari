@@ -1,0 +1,77 @@
+%% Part A — Input, Intelligence & Build
+%% Part A of the master diagram. Shows the journey from user input (threat actor, CVE, blog, technique IDs, manual data) through the browser UI and web server, into the intelligence layer (MITRE ATT&CK, CVE research, blog analysis) and the build pipeline that generates detection queries for each technique.
+%%
+
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
+flowchart TD
+    subgraph INPUTS ["INPUTS"]
+        direction LR
+        IN_GROUP["Threat Actor"]
+        IN_CVE["CVE"]
+        IN_BLOG["Blog / Report"]
+        IN_TECH["Technique IDs"]
+        IN_MANUAL["Manual Data"]
+    end
+
+    subgraph UI ["BROWSER — 6 Tabs"]
+        direction LR
+        TAB_GEN["Generate"]
+        TAB_MANUAL["Manual"]
+        TAB_HUNT["Hunt"]
+        TAB_RESEARCH["Research"]
+        TAB_EMULATE["Emulate"]
+        TAB_LIBRARY["Library"]
+    end
+
+    subgraph SERVER ["WEB SERVER — 84 endpoints"]
+        direction LR
+        API["API Router"]
+        AUTH["Auth"]
+        BG["Background Workers"]
+    end
+
+    subgraph INTEL ["INTELLIGENCE"]
+        direction LR
+        MITRE["MITRE ATT&CK<br/>3 attribution paths"]
+        CVE_R["CVE Research<br/>NVD + PoC search"]
+        BLOG_A["Blog Analyser"]
+        BRIEF["Threat Briefing"]
+    end
+
+    subgraph BUILD ["BUILD — For each technique"]
+        direction LR
+        ORCH["Orchestrator"]
+        COMPILE["Extract indicators<br/>→ Check platform<br/>→ Build queries"]
+        VENDORS["Splunk | MDE<br/>SecOps | Elastic"]
+        YAML_OUT["Save YAML"]
+        ORCH --> COMPILE --> VENDORS --> YAML_OUT
+    end
+
+    IN_GROUP & IN_CVE & IN_BLOG --> TAB_GEN
+    IN_TECH --> TAB_HUNT
+    IN_MANUAL --> TAB_MANUAL
+
+    UI --> SERVER
+    API --> AUTH
+    API --> BG
+
+    BG --> MITRE & CVE_R & BLOG_A & BRIEF
+    MITRE & CVE_R & BLOG_A --> ORCH
+
+    YAML_OUT ==>|"To Part B"| CONTINUE((" "))
+
+    style INPUTS fill:#e8f4fd,stroke:#4a90d9
+    style UI fill:#d4e8fc,stroke:#4a90d9
+    style SERVER fill:#e8d4f8,stroke:#9013fe
+    style INTEL fill:#fef3d4,stroke:#f5a623
+    style BUILD fill:#fef3d4,stroke:#f5a623
+    style IN_GROUP fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style IN_CVE fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style IN_BLOG fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style IN_TECH fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style IN_MANUAL fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style API fill:#9013fe,stroke:#6b0fb8,color:#fff
+    style ORCH fill:#f5a623,stroke:#c17d10,color:#fff
+    style COMPILE fill:#f5a623,stroke:#c17d10,color:#fff
+    style CONTINUE fill:#f5a623,stroke:#c17d10,color:#fff
+    linkStyle default stroke:#ff6600,stroke-width:3px

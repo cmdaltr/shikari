@@ -56,15 +56,19 @@ data/
 ├── external/                    # External/community content
 │   ├── repos/                   # Cloned git repos (Sigma, Splunk, Elastic)
 │   └── detections/              # Processed detection examples + embeddings
-├── bespoke/                     # Organization-specific content (gitignored)
-│   ├── sample_searches/         # Custom search examples
-│   ├── exclusions.yaml          # Global query exclusions
-│   └── config.yaml              # Org-specific settings
+├── bespoke/                     # Legacy org-specific content (gitignored)
 ├── validation/                  # Test samples and results
 └── ml_training/                 # ML training data
 ```
 
-See **[data/bespoke/README.md](../data/bespoke/README.md)** for organization-specific customization.
+Organization-specific configuration now lives in the root-level `bespoke/` directory:
+```
+bespoke/
+├── prompts/            # LLM prompt templates for query generation
+├── query_templates/    # SIEM query templates per log source
+└── mappings/           # Environment-specific field and index mappings
+```
+Directories are committed empty; files within are gitignored. See **[docs/BESPOKE.md](BESPOKE.md)** for details.
 
 ### ✨ [`features/`](features/)
 Feature-specific documentation:

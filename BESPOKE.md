@@ -1,12 +1,12 @@
 # Bespoke Organization-Specific Configuration
 
-The `data/bespoke/` directory contains **organization-specific** content for customizing Archer to your environment. This includes schema mappings, exclusions, reference queries, and configuration settings.
+The `bespoke/` directory contains **organization-specific** content for customizing Archer to your environment. This includes schema mappings, exclusions, reference queries, and configuration settings.
 
 ## 🎯 Quick Start
 
 1. **Copy the example files:**
    ```bash
-   cd data/bespoke
+   cd bespoke
    cp exclusions.yaml.example exclusions.yaml
    cp config.yaml.example config.yaml
    ```

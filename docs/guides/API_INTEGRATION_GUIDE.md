@@ -603,7 +603,7 @@ Content-Type: application/json
       "technique_id": "T1078.004",
       "technique_name": "Cloud Accounts",
       "tactic": "Initial Access",
-      "attribution_type": "direct",
+      "attribution_type": "direct",  // present in briefing response; not in MITRESaw CSV
       "covered": false,
       "priority_reason": "Scattered Spider's primary initial access vector. No detection exists yet. Detecting this early stops the entire attack chain.",
       "detection_approach": "Monitor Azure AD SignInLogs for logins from new countries/ASNs, impossible travel, or MFA bypass patterns (phish-kit OTP relay)."
