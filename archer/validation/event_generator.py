@@ -159,7 +159,7 @@ class SampleEventGenerator:
         """Initialize default LLM provider if not provided"""
         if self.llm is None:
             try:
-                from archer.llm.providers import LLMFactory
+                from archer.ai.llm.providers import LLMFactory
                 import os
                 # Try to create a provider based on available API keys
                 if os.getenv("OPENAI_API_KEY"):

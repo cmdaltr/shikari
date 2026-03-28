@@ -50,7 +50,7 @@ The current detection generation uses **heuristic-based** correlation rather tha
 
 ## Current Architecture
 
-### Location: [archer/genai/engine.py](../archer/genai/engine.py)
+### Location: [archer/ai/genai/engine.py](../archer/ai/genai/engine.py)
 
 Current system:
 ```python
@@ -1081,7 +1081,7 @@ Test that the AI system detects available backends:
 ```bash
 # Run detection test
 python3 << 'EOF'
-from archer.genai.engine import _HAS_LLAMA, _HAS_TRANSFORMERS
+from archer.ai.genai.engine import _HAS_LLAMA, _HAS_TRANSFORMERS
 import os
 
 print("=== AI Backend Detection ===")

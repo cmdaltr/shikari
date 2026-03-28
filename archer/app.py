@@ -25,7 +25,7 @@ from archer.mitre import (
 )
 from archer.mitre.enterprise import check_group_in_mitre
 from archer.build.orchestrator import process_group
-from archer.genai import process_genai
+from archer.ai.genai import process_genai
 from datetime import datetime
 import os
 import json

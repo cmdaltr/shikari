@@ -9,7 +9,7 @@ import sys
 # Add archer to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from archer.llm.providers import LLMFactory, AnthropicProvider
+from archer.ai.llm.providers import LLMFactory, AnthropicProvider
 
 
 def test_llm_factory():

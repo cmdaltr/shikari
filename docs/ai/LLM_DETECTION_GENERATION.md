@@ -85,7 +85,7 @@ python -m vllm.entrypoints.openai.api_server \
 
 ### 3. Configure Backend
 
-Edit `archer/ai_training/config.py`:
+Edit `archer/ai/training/config.py`:
 
 ```python
 MODEL_CONFIG = {
@@ -103,7 +103,7 @@ MODEL_CONFIG = {
 ### 4. Test Inference
 
 ```python
-from archer.ai_training.pipelines.llm_inference import LLMInference
+from archer.ai.training.pipelines.llm_inference import LLMInference
 
 # Initialize inference client
 llm = LLMInference(backend="ollama")
@@ -122,7 +122,7 @@ print(detection)
 ## Directory Structure
 
 ```
-archer/ai_training/
+archer/ai/training/
 ├── __init__.py                    # Module initialization
 ├── config.py                      # Configuration for backends and training
 │
@@ -271,8 +271,8 @@ The CVE enrichment pipeline combines technical CVE data with real-world blog pos
 python scripts/train_ai.py cve --cves CVE-2024-1234 CVE-2024-5678
 
 # Output:
-# ✓ Enriched CVE-2024-1234 → archer/ai_training/datasets/cve_data/enriched/CVE-2024-1234.json
-# ✓ Generated training example → archer/ai_training/datasets/cve_data/training_examples/CVE-2024-1234_training.json
+# ✓ Enriched CVE-2024-1234 → archer/ai/training/datasets/cve_data/enriched/CVE-2024-1234.json
+# ✓ Generated training example → archer/ai/training/datasets/cve_data/training_examples/CVE-2024-1234_training.json
 ```
 
 #### Enrich by Year and Severity
@@ -394,7 +394,7 @@ The enriched CVE is converted to a training example:
 python scripts/train_ai.py reports --pdf threat_report.pdf
 
 # Batch convert all PDFs in directory
-python scripts/train_ai.py reports --dir archer/ai_training/datasets/threat_reports/
+python scripts/train_ai.py reports --dir archer/ai/training/datasets/threat_reports/
 
 # Specify custom output directory
 python scripts/train_ai.py reports --dir reports/ --output custom_output/
@@ -428,7 +428,7 @@ python scripts/train_ai.py osint --source sigma --repo https://github.com/custom
 ### Basic Fine-Tuning
 
 ```python
-from archer.ai_training.pipelines.training import DetectionEngineeringTrainer
+from archer.ai.training.pipelines.training import DetectionEngineeringTrainer
 
 # Initialize trainer
 trainer = DetectionEngineeringTrainer(
@@ -458,13 +458,13 @@ trainer.train(
 ### Advanced Configuration
 
 ```python
-from archer.ai_training.pipelines.training import DetectionEngineeringTrainer
+from archer.ai.training.pipelines.training import DetectionEngineeringTrainer
 from pathlib import Path
 
 # Initialize with specific datasets
 trainer = DetectionEngineeringTrainer(
     base_model="meta-llama/Llama-3.1-70B-Instruct",
-    output_dir=Path("archer/ai_training/models/fine_tuned/llama3.1-detection-v1"),
+    output_dir=Path("archer/ai/training/models/fine_tuned/llama3.1-detection-v1"),
     use_lora=True,
     use_4bit=True,
 )
@@ -473,8 +473,8 @@ trainer.load_model()
 
 # Specify exact training files
 train_files = [
-    Path("archer/ai_training/datasets/hunting_queries/internal_soc.jsonl"),
-    Path("archer/ai_training/datasets/osint_samples/sigma_rules.jsonl"),
+    Path("archer/ai/training/datasets/hunting_queries/internal_soc.jsonl"),
+    Path("archer/ai/training/datasets/osint_samples/sigma_rules.jsonl"),
 ]
 
 trainer.load_datasets(train_files=train_files)
@@ -493,7 +493,7 @@ trainer.train(
 ### Detection Generation
 
 ```python
-from archer.ai_training.pipelines.llm_inference import LLMInference
+from archer.ai.training.pipelines.llm_inference import LLMInference
 
 # Initialize with Ollama backend
 llm = LLMInference(backend="ollama")
@@ -650,7 +650,7 @@ The LLM pipeline integrates with Archer's existing workflow:
 ```python
 # In archer/core/orchestrator.py
 
-from archer.ai_training.pipelines.llm_inference import LLMInference
+from archer.ai.training.pipelines.llm_inference import LLMInference
 
 class OrchestrationManager:
     def __init__(self, use_ai=False):

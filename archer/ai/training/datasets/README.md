@@ -178,7 +178,7 @@ python scripts/convert_pdf_to_jsonl.py datasets/threat_reports/report.pdf
 python scripts/fetch_cve_data.py --year 2024 --output datasets/cve_data/
 
 # Preprocess all new data
-python -m archer.ai_training.pipelines.preprocess --validate
+python -m archer.ai.training.pipelines.preprocess --validate
 ```
 
 ## Data Privacy and Security

@@ -595,7 +595,7 @@ Generated reports (Word, PDF, HTML) now display OSINT enrichment information:
    - Added `osint_query_snippets` section to detection YAML files
    - Parses and formats OSINT query snippets with source attribution
 
-2. **`archer/genai/engine.py`** (lines 2472-2494, 2713-2803)
+2. **`archer/ai/genai/engine.py`** (lines 2472-2494, 2713-2803)
    - Extracts OSINT metadata from detection YAMLs
    - Aggregates OSINT indicators across multiple detections in correlations
    - Includes OSINT enrichment data in correlation output JSON
@@ -938,7 +938,7 @@ python scripts/update_osint_repos.py --force
 | `archer/build/collate.py` | Data collation | Added `osint_indicators` parameter |
 | `archer/build/yaml.py` | YAML generation | Added OSINT metadata handling, query snippets |
 | `archer/build/queries.py` | Query compilation | Added OSINT indicator merging |
-| `archer/genai/engine.py` | Correlation engine | Added OSINT metadata extraction and aggregation |
+| `archer/ai/genai/engine.py` | Correlation engine | Added OSINT metadata extraction and aggregation |
 | `archer/reports/generator.py` | Report generation | Added OSINT display sections |
 
 ### Mapping Files

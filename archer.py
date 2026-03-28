@@ -88,7 +88,7 @@ def build_correlations(
     verbose=False,
 ):
     """Build correlation queries from YAML detection files"""
-    from archer.genai import build_correlation_queries
+    from archer.ai.genai import build_correlation_queries
 
     print("=" * 70)
     print("Correlation Query Builder")

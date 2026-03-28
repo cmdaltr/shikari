@@ -69,9 +69,9 @@ The CVE enrichment pipeline transforms raw CVE data into comprehensive training 
 python scripts/train_ai.py cve --cves CVE-2021-44228
 
 # Output files:
-# ✓ archer/ai_training/datasets/cve_data/cache/CVE-2021-44228.json
-# ✓ archer/ai_training/datasets/cve_data/enriched/CVE-2021-44228.json
-# ✓ archer/ai_training/datasets/cve_data/training_examples/CVE-2021-44228_training.json
+# ✓ archer/ai/training/datasets/cve_data/cache/CVE-2021-44228.json
+# ✓ archer/ai/training/datasets/cve_data/enriched/CVE-2021-44228.json
+# ✓ archer/ai/training/datasets/cve_data/training_examples/CVE-2021-44228_training.json
 ```
 
 ### 2. Enrich High-Severity CVEs from 2024
@@ -99,7 +99,7 @@ python scripts/train_ai.py cve --cves CVE-2021-44228
 ### Step 2: Review Enriched CVE
 
 ```bash
-cat archer/ai_training/datasets/cve_data/enriched/CVE-2021-44228.json | jq .
+cat archer/ai/training/datasets/cve_data/enriched/CVE-2021-44228.json | jq .
 ```
 
 **Enriched Output**:
@@ -207,7 +207,7 @@ cat archer/ai_training/datasets/cve_data/enriched/CVE-2021-44228.json | jq .
 ### Step 3: Review Generated Training Example
 
 ```bash
-cat archer/ai_training/datasets/cve_data/training_examples/CVE-2021-44228_training.json | jq .
+cat archer/ai/training/datasets/cve_data/training_examples/CVE-2021-44228_training.json | jq .
 ```
 
 **Training Example Output**:
@@ -246,7 +246,7 @@ cat archer/ai_training/datasets/cve_data/training_examples/CVE-2021-44228_traini
 
 ### Step 4: Add Detection Queries
 
-Edit `archer/ai_training/datasets/cve_data/training_examples/CVE-2021-44228_training.json` and add platform-specific detections to the empty `detections` array:
+Edit `archer/ai/training/datasets/cve_data/training_examples/CVE-2021-44228_training.json` and add platform-specific detections to the empty `detections` array:
 
 ```json
 {
@@ -290,14 +290,14 @@ Edit `archer/ai_training/datasets/cve_data/training_examples/CVE-2021-44228_trai
 
 ```bash
 # Validate JSONL format and query syntax
-python scripts/validate_training_data.py archer/ai_training/datasets/cve_data/training_examples/CVE-2021-44228_training.json
+python scripts/validate_training_data.py archer/ai/training/datasets/cve_data/training_examples/CVE-2021-44228_training.json
 ```
 
 ### Step 6: Add to Training Dataset
 
 ```bash
 # Convert to JSONL format
-cat archer/ai_training/datasets/cve_data/training_examples/CVE-2021-44228_training.json | jq -c . >> archer/ai_training/datasets/cve_training.jsonl
+cat archer/ai/training/datasets/cve_data/training_examples/CVE-2021-44228_training.json | jq -c . >> archer/ai/training/datasets/cve_training.jsonl
 ```
 
 ## Workflow for Multiple CVEs
@@ -332,7 +332,7 @@ python scripts/train_ai.py cve --file priority_cves.txt
 # Review each enriched CVE
 for cve in $(cat priority_cves.txt); do
     echo "=== Reviewing $cve ==="
-    cat archer/ai_training/datasets/cve_data/enriched/$cve.json | jq '.detection_context'
+    cat archer/ai/training/datasets/cve_data/enriched/$cve.json | jq '.detection_context'
 done
 ```
 
@@ -344,10 +344,10 @@ Manually edit each training example to add platform-specific detections.
 
 ```bash
 # Merge all training examples
-cat archer/ai_training/datasets/cve_data/training_examples/*_training.json | jq -c . > archer/ai_training/datasets/cve_training.jsonl
+cat archer/ai/training/datasets/cve_data/training_examples/*_training.json | jq -c . > archer/ai/training/datasets/cve_training.jsonl
 
 # Verify count
-wc -l archer/ai_training/datasets/cve_training.jsonl
+wc -l archer/ai/training/datasets/cve_training.jsonl
 ```
 
 ## Adding Blog Posts Manually
@@ -357,7 +357,7 @@ If the automatic search doesn't find relevant blog posts:
 ### 1. Create Blog Post JSON
 
 ```bash
-cat > archer/ai_training/datasets/blog_posts/log4shell_analysis.json << 'EOF'
+cat > archer/ai/training/datasets/blog_posts/log4shell_analysis.json << 'EOF'
 {
   "title": "Log4Shell: RCE 0-day exploit found in log4j 2",
   "author": "LunaSec",
@@ -384,11 +384,11 @@ Once you have enriched CVEs with manual detections:
 
 ```bash
 # Train LLM with CVE data
-python -m archer.ai_training.pipelines.training \
-    --data archer/ai_training/datasets/cve_training.jsonl \
+python -m archer.ai.training.pipelines.training \
+    --data archer/ai/training/datasets/cve_training.jsonl \
     --base-model llama3.1:70b \
     --epochs 5 \
-    --output archer/ai_training/models/fine_tuned/cve-detection-v1
+    --output archer/ai/training/models/fine_tuned/cve-detection-v1
 ```
 
 ## Best Practices
@@ -436,7 +436,7 @@ Focus on:
 
 ### Issue: No blog posts found
 
-**Solution**: Add blog posts manually to `archer/ai_training/datasets/blog_posts/`
+**Solution**: Add blog posts manually to `archer/ai/training/datasets/blog_posts/`
 
 ### Issue: Indicators not extracted correctly
 

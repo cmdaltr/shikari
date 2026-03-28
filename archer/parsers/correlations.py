@@ -28,7 +28,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from archer.genai import build_correlation_queries
+from archer.ai.genai import build_correlation_queries
 
 
 def main():

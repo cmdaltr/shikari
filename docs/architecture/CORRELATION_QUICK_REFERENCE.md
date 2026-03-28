@@ -490,7 +490,7 @@ elif num_targets > 15:  # Change from 10 to be more aggressive
 
 | Component | File Path |
 |-----------|-----------|
-| **Correlation Engine** | `archer/genai/engine.py` |
+| **Correlation Engine** | `archer/ai/genai/engine.py` |
 | **Configuration** | `archer/config.py` |
 | **Detection Files** | `data/groups/*.yaml` |
 | **Correlation Output** | `data/correlate/{group_name}.json` |
@@ -502,7 +502,7 @@ elif num_targets > 15:  # Change from 10 to be more aggressive
 
 ```bash
 # Generate correlations
-python -c "from archer.genai.engine import generate_correlations; \
+python -c "from archer.ai.genai.engine import generate_correlations; \
            generate_correlations('Group Name', 'data/groups')"
 
 # Check correlation output

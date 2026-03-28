@@ -283,7 +283,7 @@ class CVEHunter:
         - Affected product/version
         - CVSS metrics
         """
-        from archer.genai.models import get_llm_response
+        from archer.ai.genai.models import get_llm_response
 
         description = nvd_data.get("description", "")
         cwe = nvd_data.get("cwe", [])

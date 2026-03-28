@@ -36,11 +36,11 @@ from datetime import datetime
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from archer.ai_training.pipelines.cve_enrichment import (
+from archer.ai.training.pipelines.cve_enrichment import (
     CVEEnrichmentPipeline,
     enrich_cve_batch,
 )
-from archer.ai_training.config import (
+from archer.ai.training.config import (
     CVE_DATA_DIR,
     THREAT_REPORTS_DIR,
     OSINT_SAMPLES_DIR,

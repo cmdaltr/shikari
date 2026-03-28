@@ -140,7 +140,7 @@ def _get_llm_provider(user_id: int, db, local_llm_state: Optional[dict] = None):
     Priority: Anthropic → OpenAI → local Ollama.
     Returns (None, None) if no provider is available.
     """
-    from archer.llm.providers import LLMFactory
+    from archer.ai.llm.providers import LLMFactory
 
     # Build key_name → decrypted_value map for this user
     keys: Dict[str, str] = {}
@@ -186,7 +186,7 @@ def _get_llm_provider(user_id: int, db, local_llm_state: Optional[dict] = None):
 
 def _get_llm_provider_anonymous(local_llm_state: Optional[dict] = None):
     """LLM provider lookup using only environment variables — no DB, no user."""
-    from archer.llm.providers import LLMFactory
+    from archer.ai.llm.providers import LLMFactory
 
     anthropic_key = os.getenv("ANTHROPIC_API_KEY")
     if anthropic_key:

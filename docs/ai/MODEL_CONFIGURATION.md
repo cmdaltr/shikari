@@ -583,7 +583,7 @@ python -m vllm.entrypoints.openai.api_server \
     --port 8000
 ```
 
-**Configure Archer** (edit `archer/ai_training/config.py`):
+**Configure Archer** (edit `archer/ai/training/config.py`):
 ```python
 MODEL_CONFIG = {
     "backends": {
@@ -611,7 +611,7 @@ pip install llama-cpp-python
 wget https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGUF/resolve/main/llama-2-7b-chat.Q4_K_M.gguf
 ```
 
-**Configure Archer** (edit `archer/ai_training/config.py`):
+**Configure Archer** (edit `archer/ai/training/config.py`):
 ```python
 MODEL_CONFIG = {
     "backends": {
@@ -638,7 +638,7 @@ MODEL_CONFIG = {
 pip install transformers accelerate bitsandbytes peft
 ```
 
-**Configure Archer** (edit `archer/ai_training/config.py`):
+**Configure Archer** (edit `archer/ai/training/config.py`):
 ```python
 MODEL_CONFIG = {
     "backends": {
@@ -670,7 +670,7 @@ MODEL_CONFIG = {
 
 ### Default Models by Provider
 
-Configured in `archer/llm/providers.py`:
+Configured in `archer/ai/llm/providers.py`:
 
 - **Anthropic**: `claude-sonnet-4-5-20250929`
 - **OpenAI**: `gpt-4o`
@@ -679,7 +679,7 @@ Configured in `archer/llm/providers.py`:
 
 ### Task-Specific Model Recommendations
 
-From `archer/ai_training/config.py`:
+From `archer/ai/training/config.py`:
 
 **Detection Generation**:
 - Primary: `llama3.1:70b-instruct-q4_K_M`
@@ -757,7 +757,7 @@ LLM_MODEL=gpt-4o
 
 ### Configuration File
 
-Edit `archer/ai_training/config.py`:
+Edit `archer/ai/training/config.py`:
 
 ```python
 MODEL_CONFIG = {
@@ -818,8 +818,8 @@ TRAINING_CONFIG = {
 
 **Basic LoRA Training**:
 ```bash
-python -m archer.ai_training.pipelines.training \
-    --data archer/ai_training/datasets/hunting_queries/ \
+python -m archer.ai.training.pipelines.training \
+    --data archer/ai/training/datasets/hunting_queries/ \
     --model llama3.1:70b \
     --epochs 5 \
     --lora \
@@ -830,8 +830,8 @@ python -m archer.ai_training.pipelines.training \
 
 **Memory-Efficient (4-bit)**:
 ```bash
-python -m archer.ai_training.pipelines.training \
-    --data archer/ai_training/datasets/ \
+python -m archer.ai.training.pipelines.training \
+    --data archer/ai/training/datasets/ \
     --model llama3.1:70b \
     --epochs 3 \
     --lora \
@@ -936,7 +936,7 @@ LLM_MODEL=llama3.1:8b-instruct-q4_K_M
 **Issue**: CUDA out of memory
 ```bash
 # Solution: Enable 4-bit quantization
-python -m archer.ai_training.pipelines.training \
+python -m archer.ai.training.pipelines.training \
     --quantization 4bit \
     --batch-size 1 \
     --gradient-accumulation-steps 16
@@ -993,7 +993,7 @@ GOOGLE_API_KEY=AIza-your-key-here
 Then override for critical tasks in code:
 ```python
 # Use Claude for high-value detections
-from archer.llm.providers import LLMFactory
+from archer.ai.llm.providers import LLMFactory
 
 claude = LLMFactory.create_provider("anthropic")
 response = claude.generate(prompt, max_tokens=2000)

@@ -28,13 +28,13 @@ A complete **RAG (Retrieval-Augmented Generation)** system that improves detecti
 - Vector embeddings using sentence-transformers
 - FAISS-based similarity search
 - Fast retrieval of relevant examples
-- Location: `archer/rag/`
+- Location: `archer/ai/rag/`
 
 ✅ **Query Enhancement Engine**
 - LLM integration (OpenAI, Anthropic, Ollama)
 - Few-shot learning with examples
 - Fallback to heuristics
-- Location: `archer/rag/enhancer.py`
+- Location: `archer/ai/rag/enhancer.py`
 
 ✅ **Helper Scripts**
 - `setup_knowledge_base.py` - Initialize KB structure
@@ -128,7 +128,7 @@ Result: FAISS index created at `data/external/detections/embeddings/vector_store
 ### 3. Query Enhancement Flow
 
 ```python
-from archer.rag import DetectionKnowledgeBase
+from archer.ai.rag import DetectionKnowledgeBase
 
 # Initialize KB
 kb = DetectionKnowledgeBase()
@@ -190,7 +190,7 @@ python scripts/config/search_similar_detections.py --technique T1003.001 --platf
 
 # Test with OpenAI enhancement (requires OPENAI_API_KEY)
 export OPENAI_API_KEY="your-key-here"
-python -c "from archer.rag import DetectionKnowledgeBase; kb = DetectionKnowledgeBase(); print(kb.get_statistics())"
+python -c "from archer.ai.rag import DetectionKnowledgeBase; kb = DetectionKnowledgeBase(); print(kb.get_statistics())"
 ```
 
 ---
@@ -205,7 +205,7 @@ The RAG system can be integrated into your existing detection generation:
 
 ```python
 # Add at the top
-from archer.rag import DetectionKnowledgeBase
+from archer.ai.rag import DetectionKnowledgeBase
 
 # In compile_query function
 def compile_query(procedure, use_rag=True):

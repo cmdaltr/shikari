@@ -502,7 +502,7 @@ The system will:
 ### Step 4.3: API Integration
 
 ```python
-from archer.rag import DetectionKnowledgeBase
+from archer.ai.rag import DetectionKnowledgeBase
 from archer.validation import DetectionTestRunner
 
 # Initialize systems

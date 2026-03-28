@@ -371,7 +371,7 @@ enhanced, metadata = enhance_query_with_rag(
 ### Get Detection Statistics
 
 ```python
-from archer.rag import DetectionKnowledgeBase
+from archer.ai.rag import DetectionKnowledgeBase
 
 kb = DetectionKnowledgeBase()
 stats = kb.get_statistics()
@@ -384,7 +384,7 @@ print(f"Average fidelity: {stats['avg_fidelity']:.2f}")
 ### Direct Retrieval (No LLM)
 
 ```python
-from archer.rag import DetectionKnowledgeBase
+from archer.ai.rag import DetectionKnowledgeBase
 
 kb = DetectionKnowledgeBase()
 

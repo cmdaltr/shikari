@@ -95,7 +95,7 @@ class DetectionRefiner:
         """Initialize default LLM provider if not provided"""
         if self.llm is None:
             try:
-                from archer.llm.providers import LLMFactory
+                from archer.ai.llm.providers import LLMFactory
                 import os
                 if os.getenv("OPENAI_API_KEY"):
                     self.llm = LLMFactory.create("openai")

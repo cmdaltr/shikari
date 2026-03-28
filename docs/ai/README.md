@@ -125,7 +125,7 @@ uvicorn archer.app:app --reload
 1. Read [TRAIN_AI.md](TRAIN_AI.md) → Custom High-Fidelity Queries section
 2. Create JSONL training data with your queries
 3. Run training: `python scripts/ai/train_ai.py custom --import-dir custom_queries/`
-4. Fine-tune model: `python -m archer.ai_training.pipelines.training`
+4. Fine-tune model: `python -m archer.ai.training.pipelines.training`
 
 **Time**: 2-4 hours (setup + training)
 
@@ -215,8 +215,8 @@ python scripts/ai/train_ai.py osint --all
 python scripts/ai/train_ai.py custom --import queries.json
 
 # Train model
-python -m archer.ai_training.pipelines.training \
-    --data archer/ai_training/datasets/hunting_queries/ \
+python -m archer.ai.training.pipelines.training \
+    --data archer/ai/training/datasets/hunting_queries/ \
     --model llama3.1:70b \
     --epochs 5 --lora
 ```
@@ -269,7 +269,7 @@ python scripts/ai/setup_local_llm.py --ram 16  # Forces 8B model
 
 ```bash
 # Validate training data format
-python scripts/ai/train_ai.py custom --validate archer/ai_training/datasets/
+python scripts/ai/train_ai.py custom --validate archer/ai/training/datasets/
 
 # Check you have enough examples (minimum 20-50 recommended)
 ```

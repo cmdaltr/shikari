@@ -14,7 +14,7 @@ from archer.build import yaml_patch  # This patches yaml.additional_tactics()
 
 from archer.build.detections import compile_query
 from archer.build.progress import write_progress
-from archer.genai import generate_correlations
+from archer.ai.genai import generate_correlations
 from archer.config import GENERATE_DIR, CORRELATE_DIR
 import os
 from pathlib import Path

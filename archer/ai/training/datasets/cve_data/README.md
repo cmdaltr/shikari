@@ -38,7 +38,7 @@ python scripts/train_ai.py cve --year 2024 --itw-only
 
 ```bash
 # View enriched CVE with full context
-cat archer/ai_training/datasets/cve_data/enriched/CVE-2024-1234.json | jq .
+cat archer/ai/training/datasets/cve_data/enriched/CVE-2024-1234.json | jq .
 ```
 
 ### Step 3: Add Manual Detections
@@ -90,7 +90,7 @@ Add platform-specific detections:
 
 ```bash
 # Validate JSONL format
-python scripts/validate_training_data.py archer/ai_training/datasets/cve_data/training_examples/
+python scripts/validate_training_data.py archer/ai/training/datasets/cve_data/training_examples/
 
 # Check for required fields
 # Verify query syntax
@@ -344,7 +344,7 @@ python scripts/train_ai.py cve --year 2024 --min-cvss 9.0 --limit 100
 
 If automatic search doesn't find relevant blog posts, add them manually:
 
-1. Create a blog post JSON file in `archer/ai_training/datasets/blog_posts/`:
+1. Create a blog post JSON file in `archer/ai/training/datasets/blog_posts/`:
 
 ```json
 {
@@ -372,11 +372,11 @@ Once you have enriched CVEs with manual detections:
 
 ```bash
 # Combine all CVE training examples into single JSONL
-cat archer/ai_training/datasets/cve_data/training_examples/*.json | jq -c . > archer/ai_training/datasets/cve_training.jsonl
+cat archer/ai/training/datasets/cve_data/training_examples/*.json | jq -c . > archer/ai/training/datasets/cve_training.jsonl
 
 # Train model with CVE data
-python -m archer.ai_training.pipelines.training \
-    --data archer/ai_training/datasets/cve_training.jsonl \
+python -m archer.ai.training.pipelines.training \
+    --data archer/ai/training/datasets/cve_training.jsonl \
     --model llama3.1:70b \
     --epochs 5
 ```

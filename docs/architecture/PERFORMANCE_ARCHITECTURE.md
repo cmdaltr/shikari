@@ -162,7 +162,7 @@ def build_query(technique, indicators, platform):
 
 **Implementation:**
 ```python
-# archer/genai/engine.py - Scoring function
+# archer/ai/genai/engine.py - Scoring function
 def _score_correlation(corr, file_info):
     score = 0.0
 
@@ -347,7 +347,7 @@ app.state.groups = obtain_all_groups()       # 140+ threat actors
 
 **Implementation:**
 ```python
-# archer/genai/engine.py - AI integration points
+# archer/ai/genai/engine.py - AI integration points
 if ai_generators == "true" and OPENAI_API_KEY:
     try:
         # Optional: Use GPT for semantic analysis
@@ -544,7 +544,7 @@ Time = min(Pairs, 10000) × 0.001s
 
 ## References
 
-- **Source Code:** [archer/genai/engine.py](../archer/genai/engine.py) - Correlation engine
+- **Source Code:** [archer/ai/genai/engine.py](../archer/ai/genai/engine.py) - Correlation engine
 - **Detection Builder:** [archer/build/detections.py](../archer/build/detections.py) - Query generation
 - **MITRE Integration:** [archer/mitre/enterprise.py](../archer/mitre/enterprise.py) - Data fetching
 - **Performance Tests:** [test_correlation_filters.py](../test_correlation_filters.py) - Benchmarking script

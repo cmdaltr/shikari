@@ -40,7 +40,7 @@ The Archer Correlation Engine automatically generates high-quality detection cor
 
 ### Key Files
 
-- **`archer/genai/engine.py`** - Main correlation engine
+- **`archer/ai/genai/engine.py`** - Main correlation engine
 - **`archer/config.py`** - Configuration (GENERATE_DIR, CORRELATE_DIR)
 - **`data/correlate/`** - Output directory for correlation JSON files
 

@@ -39,7 +39,7 @@ def is_rag_enabled() -> bool:
 
     # Check if KB is available
     try:
-        from archer.rag import DetectionKnowledgeBase
+        from archer.ai.rag import DetectionKnowledgeBase
 
         kb = DetectionKnowledgeBase(auto_build=False)
         _KB_ENABLED = kb.is_available()
@@ -70,7 +70,7 @@ def get_knowledge_base():
 
     if _KB_INSTANCE is None:
         try:
-            from archer.rag import DetectionKnowledgeBase
+            from archer.ai.rag import DetectionKnowledgeBase
             _KB_INSTANCE = DetectionKnowledgeBase(auto_build=False)
         except Exception as e:
             print(f" ⚠️  Failed to initialize knowledge base: {e}")
