@@ -24,7 +24,7 @@ def load_splunk_schema() -> dict:
     if _splunk_schema is not None:
         return _splunk_schema
 
-    mappings_dir = Path(__file__).parent.parent.parent / "data" / "bespoke" / "mappings"
+    mappings_dir = Path(__file__).parent.parent.parent / "bespoke" / "mappings"
 
     # Try custom mapping file first
     custom_schema_file = mappings_dir / "schemaSplunk_custom.json"
@@ -57,7 +57,7 @@ def load_mde_schema() -> dict:
     if _mde_schema is not None:
         return _mde_schema
 
-    mappings_dir = Path(__file__).parent.parent.parent / "data" / "bespoke" / "mappings"
+    mappings_dir = Path(__file__).parent.parent.parent / "bespoke" / "mappings"
 
     # Try custom mapping file first
     custom_schema_file = mappings_dir / "schemaMDE_custom.json"

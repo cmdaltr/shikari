@@ -1,7 +1,7 @@
 """
 Bespoke Configuration Loader
 
-Loads organization-specific configuration from data/bespoke/ directory:
+Loads organization-specific configuration from bespoke/ directory:
 - exclusions.yaml: Global exclusions applied to all queries
 - config.yaml: Organization-specific settings
 - sample_searches/: Custom detection examples
@@ -14,13 +14,13 @@ from typing import Dict, List, Optional, Any
 from functools import lru_cache
 
 # Bespoke directory path
-BESPOKE_DIR = Path(__file__).parent.parent.parent / "data" / "bespoke"
+BESPOKE_DIR = Path(__file__).parent.parent.parent / "bespoke"
 
 
 @lru_cache(maxsize=1)
 def get_exclusions() -> Dict[str, List[str]]:
     """
-    Load global exclusions from data/bespoke/exclusions.yaml.
+    Load global exclusions from bespoke/exclusions.yaml.
 
     Returns dict with keys:
     - process_exclusions: List of process paths to exclude
@@ -61,7 +61,7 @@ def get_exclusions() -> Dict[str, List[str]]:
 @lru_cache(maxsize=1)
 def get_config() -> Dict[str, Any]:
     """
-    Load organization configuration from data/bespoke/config.yaml.
+    Load organization configuration from bespoke/config.yaml.
 
     Returns dict with keys:
     - organization: Dict with name, default_index, default_sourcetype
@@ -108,7 +108,7 @@ def get_config() -> Dict[str, Any]:
 
 def get_sample_searches(technique_id: Optional[str] = None, platform: Optional[str] = None) -> List[Dict]:
     """
-    Load custom sample searches from data/bespoke/searches/.
+    Load custom sample searches from bespoke/searches/.
 
     Args:
         technique_id: Filter by MITRE technique ID (e.g., "T1003.001")

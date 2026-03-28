@@ -279,11 +279,11 @@ class SplunkSchemaNormalizer:
         Initialize the schema normalizer.
 
         Args:
-            schema_path: Path to schemaSplunk.json (default: data/bespoke/mappings/schemaSplunk.json)
+            schema_path: Path to schemaSplunk.json (default: bespoke/mappings/schemaSplunk.json)
         """
         if schema_path is None:
             # Look in bespoke/mappings directory
-            schema_path = Path(__file__).parent.parent.parent / "data" / "bespoke" / "mappings" / "schemaSplunk.json"
+            schema_path = Path(__file__).parent.parent.parent / "bespoke" / "mappings" / "schemaSplunk.json"
 
         self.schema_path = schema_path
         self.schema = None
@@ -710,7 +710,7 @@ def main():
     parser.add_argument(
         '--schema',
         type=Path,
-        help='Path to schemaSplunk.json (default: data/bespoke/mappings/schemaSplunk.json)'
+        help='Path to schemaSplunk.json (default: bespoke/mappings/schemaSplunk.json)'
     )
     parser.add_argument(
         '--force',

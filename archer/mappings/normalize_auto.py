@@ -28,7 +28,7 @@ def normalize_auto_schema(
     4. Return statistics
 
     Args:
-        schema_path: Path to schema file (default: data/bespoke/mappings/schema{Platform}.json)
+        schema_path: Path to schema file (default: bespoke/mappings/schema{Platform}.json)
         platform: Platform type - "splunk", "googlesecops", or "elastic" (default: "splunk")
         force: Force re-normalization of all indexes (default: False)
         silent: Suppress output (default: False)

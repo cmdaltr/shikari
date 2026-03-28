@@ -448,7 +448,7 @@ A: Yes, if you use Ollama. The knowledge base and embeddings are all local.
 A: Only when you import new detections. Otherwise, once is enough.
 
 **Q: Can I add my own detections?**
-A: Yes! Add YAML files to `data/external/detections/detection_examples/[tactic]/` and rebuild embeddings. For organization-specific content, use `data/bespoke/sample_searches/`.
+A: Yes! Add YAML files to `data/external/detections/detection_examples/[tactic]/` and rebuild embeddings. For organization-specific content, use `bespoke/sample_searches/`.
 
 **Q: Does this replace my existing detections?**
 A: No. It enhances them. Your original logic remains, just improved with insights from community examples.

@@ -120,7 +120,7 @@ def load_splunk_schema():
     Checks for custom mapping file first (schemaSplunk_custom.json),
     then falls back to default mapping file (schemaSplunk.json).
     """
-    mappings_dir = Path(os.path.dirname(__file__)) / ".." / ".." / "data" / "bespoke" / "mappings"
+    mappings_dir = Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings"
 
     # Try custom mapping file first
     custom_schema_file = mappings_dir / "schemaSplunk_custom.json"
@@ -150,7 +150,7 @@ SPLUNK_SCHEMA = load_splunk_schema()
 def load_log_source_categories():
     """Load log source categorization from logSourceCategories.json"""
     categories_file = (
-        Path(os.path.dirname(__file__)) / ".." / ".." / "data" / "bespoke" / "mappings" / "logSourceCategories.json"
+        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "logSourceCategories.json"
     )
     if not categories_file.exists():
         return {}
@@ -724,7 +724,7 @@ def find_matching_field(osint_field, pipeline_fields):
 
 def load_platform_mappings():
     platforms_file = (
-        Path(os.path.dirname(__file__)) / ".." / ".." / "data" / "bespoke" / "mappings" / "platforms.json"
+        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "platforms.json"
     )
     if not platforms_file.exists():
         return {}

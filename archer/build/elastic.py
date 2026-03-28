@@ -21,7 +21,7 @@ class ElasticQueryGenerator:
 
     def _load_schema(self) -> Dict:
         """Load Elastic ECS schema mappings"""
-        schema_path = Path(__file__).parent.parent.parent / "data" / "bespoke" / "mappings" / "schemaElastic.json"
+        schema_path = Path(__file__).parent.parent.parent / "bespoke" / "mappings" / "schemaElastic.json"
         if schema_path.exists():
             with open(schema_path, 'r') as f:
                 return json.load(f)

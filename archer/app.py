@@ -1520,7 +1520,7 @@ def initialize_database():
 @app.on_event("startup")
 def validate_mapping_files():
     """
-    Validate that all required mapping files exist in data/bespoke/mappings/.
+    Validate that all required mapping files exist in bespoke/mappings/.
 
     Exits the application with a clear error message if any required files are missing.
     """
@@ -1537,7 +1537,7 @@ def validate_mapping_files():
         "techniquePlatformIndicators.json",
     ]
 
-    mappings_dir = Path("data/bespoke/mappings")
+    mappings_dir = Path("bespoke/mappings")
     missing_files = []
 
     for filename in required_files:
@@ -1848,10 +1848,10 @@ async def save_mapping_config(
                     mappings[idx] = "| summarize by relevant_fields"
 
         # Save to custom mapping file (in bespoke directory)
-        mapping_file = Path(f"data/bespoke/mappings/schema{platform.capitalize()}_custom.json")
+        mapping_file = Path(f"bespoke/mappings/schema{platform.capitalize()}_custom.json")
 
         # Read existing template if available
-        template_file = Path(f"data/bespoke/mappings/schema{platform.capitalize()}.json")
+        template_file = Path(f"bespoke/mappings/schema{platform.capitalize()}.json")
         if template_file.exists():
             with open(template_file, "r") as f:
                 template = json.load(f)
@@ -1899,7 +1899,7 @@ async def load_mapping_config(
 
     try:
         # Try to load custom mapping file first (from bespoke directory)
-        mapping_file = Path(f"data/bespoke/mappings/schema{platform.capitalize()}_custom.json")
+        mapping_file = Path(f"bespoke/mappings/schema{platform.capitalize()}_custom.json")
 
         if mapping_file.exists():
             with open(mapping_file, "r") as f:

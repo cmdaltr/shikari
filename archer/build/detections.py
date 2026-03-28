@@ -66,8 +66,8 @@ def load_indicator_mappings():
 
     # Use bespoke mappings directory (org-specific)
     mappings_dir = (
-        Path(os.path.dirname(__file__)) / ".." / ".." / "data" / "bespoke" / "mappings"
-    )  # data/bespoke/mappings
+        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings"
+    )  # bespoke/mappings
 
     # Check for user-specific mappings first (not committed to GitHub)
     user_mapping_file = mappings_dir / "indicatorMapping.json"
