@@ -30,7 +30,7 @@ def safe_progress_update(group_name, status_data):
         traceback.print_exc()
 
 
-def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, excluded_vendors=None):
+def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None):
     # mitre variables
     url = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
     bundle = get_stix_data(url)
@@ -129,7 +129,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
                 # Build detection queries and YAML
                 try:
-                    compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors)
+                    compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config)
                     created += 1
                     safe_progress_update(
                         group_name,
@@ -193,7 +193,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 retrieved_data["technique_platforms"] = procedure[10]
 
             try:
-                compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors)
+                compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config)
                 created += 1
                 safe_progress_update(
                     group_name,

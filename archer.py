@@ -610,6 +610,21 @@ Optional API Keys (for enhanced features):
         action="store_true",
         help="Run correlation after generating detections",
     )
+    generate_parser.add_argument(
+        "--llm",
+        action="store_const",
+        const="llm",
+        dest="use_llm",
+        default=False,
+        help="Use LLM (Mode 1) for bespoke query generation (requires API key)",
+    )
+    generate_parser.add_argument(
+        "--no-llm",
+        action="store_const",
+        const="fallback",
+        dest="use_llm",
+        help="Use template-based fallback (Mode 2) for bespoke query generation",
+    )
 
     # Step 2: Correlate generated detections
     correlate_parser = subparsers.add_parser(
@@ -740,7 +755,12 @@ Optional API Keys (for enhanced features):
     args = parser.parse_args()
 
     if args.command == "generate":
-        process_group(args.group_name, args.hypothesis, run_correlation=args.correlate)
+        process_group(
+            args.group_name,
+            hypothesis=args.hypothesis,
+            run_correlation=args.correlate,
+            use_llm=args.use_llm,
+        )
     elif args.command == "correlate":
         build_correlations(
             yaml_dir=args.yaml_dir,

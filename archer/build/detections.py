@@ -6,7 +6,9 @@ from archer.mitre.enterprise import (
     obtain_technique_descriptions,
 )
 from archer.mitre.retrieve import retrieve_procedures
+import json
 import os
+import re
 from pathlib import Path
 
 
@@ -195,7 +197,7 @@ def create_indicatorMappings():
     return indicatorMappings
 
 
-def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None):
+def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None):
     from archer.build.queries import is_query_applicable
     from archer.build.platform_validator_v2 import validate_procedure_for_index
     from archer.build.platform_indicator_validator import (
@@ -581,6 +583,119 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
             print(f" ❌ No OSINT data available (OSINT Comparison disabled); detection NOT created\n")
         else:
             print(f" ❌ No OSINT sources found for {name}; detection NOT created\n")
+
+    # -----------------------------------------------------------------
+    # Bespoke query generation (Mode 1: LLM / Mode 2: Fallback)
+    # Runs after the standard pipeline, using MITRESaw evidence data
+    # -----------------------------------------------------------------
+    if use_llm is not None and use_llm is not False:
+        _run_bespoke_generation(
+            retrieved_data, identifiers, use_llm, llm_config
+        )
+
+
+def _run_bespoke_generation(retrieved_data, identifiers, use_llm, llm_config):
+    """Run bespoke query generation (LLM or fallback)."""
+    name = retrieved_data.get("technique", "")
+    tid = retrieved_data.get("technique_id", "")
+    tactic = retrieved_data.get("tactic", "")
+    procedure_text = retrieved_data.get("procedure", "") or retrieved_data.get("activity_desc", "")
+    technique_platforms = retrieved_data.get("technique_platforms", [])
+    group_name = retrieved_data.get("group_name", "")
+
+    # Build evidence JSON from identifiers (MITRESaw format)
+    evidence_json = retrieved_data.get("evidence_json", "")
+    if not evidence_json and identifiers:
+        evidence_json = json.dumps(identifiers)
+
+    detectable_via = retrieved_data.get("detectable_via", "")
+
+    if use_llm == "llm":
+        # Mode 1: LLM-powered generation
+        from archer.build.llm_queries import generate_llm_queries
+        print(f"  🤖 Generating LLM-powered queries for {tid}...")
+        queries = generate_llm_queries(
+            technique_id=tid,
+            technique_name=name,
+            tactic=tactic,
+            procedure_example=procedure_text,
+            evidence_json=evidence_json,
+            platforms=technique_platforms,
+            detectable_via=detectable_via,
+            group_name=group_name,
+            config=llm_config,
+        )
+    else:
+        # Mode 2: Fallback template-based generation
+        from archer.build.bespoke_queries import generate_fallback_queries
+        print(f"  📋 Generating template-based queries for {tid}...")
+        queries = generate_fallback_queries(
+            technique_id=tid,
+            technique_name=name,
+            tactic=tactic,
+            evidence_json=evidence_json,
+            platforms=technique_platforms,
+            detectable_via=detectable_via,
+        )
+
+    if queries:
+        # Write bespoke queries to data/groups/ as YAML files
+        _write_bespoke_yamls(queries, group_name, tid, name, tactic)
+        print(f"  ✅ {len(queries)} bespoke queries generated for {tid}")
+    else:
+        print(f"  ⚠️  No bespoke queries generated for {tid}")
+
+
+def _write_bespoke_yamls(queries, group_name, technique_id, technique_name, tactic):
+    """Write bespoke-generated queries to YAML files in data/groups/."""
+    import yaml
+    import uuid
+    from datetime import datetime
+
+    output_dir = Path("data/groups")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for q in queries:
+        platform = q.get("platform", "Splunk")
+        data_source = q.get("data_source", "unknown")
+        query_text = q.get("query", "")
+        source_label = q.get("source", "bespoke")
+
+        if not query_text:
+            continue
+
+        # Build YAML structure matching Archer's detection format
+        detection = {
+            "id": str(uuid.uuid4()),
+            "name": technique_name,
+            "type": "detection",
+            "status": "new",
+            "date_created": datetime.now().strftime("%Y-%m-%d"),
+            "tactics": [tactic] if tactic else [],
+            "techniques": [technique_id] if technique_id else [],
+            "threat_groups": [group_name] if group_name else [],
+            "detection_platforms": [platform],
+            "queries": [{
+                "id": str(uuid.uuid4()),
+                "platform": platform,
+                "data_source": data_source,
+                "query": query_text,
+                "comment": f"Generated via {source_label} mode",
+            }],
+            "references": [{
+                "type": "MITRE",
+                "url": f"https://attack.mitre.org/techniques/{technique_id.replace('.', '/')}/",
+            }],
+        }
+
+        # Write YAML file
+        safe_name = re.sub(r"[^a-zA-Z0-9]", "", technique_name)
+        safe_source = re.sub(r"[^a-zA-Z0-9_]", "", data_source)
+        filename = f"{safe_name}_{safe_source}_bespoke.yaml"
+        filepath = output_dir / filename
+
+        with open(filepath, "w") as f:
+            yaml.dump(detection, f, default_flow_style=False, sort_keys=False)
 
 
 def main():
