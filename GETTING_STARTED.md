@@ -365,6 +365,15 @@ python archer.py generate "APT29" --correlate
 python archer.py hunt "PowerShell"
 ```
 
+**Interactive Console (adfconsole)**:
+```bash
+./adfconsole
+adfconsole > use generate
+adfconsole (generate) > set GROUP APT29
+adfconsole (generate) > set MODE llm
+adfconsole (generate) > run
+```
+
 **API**:
 ```python
 import requests

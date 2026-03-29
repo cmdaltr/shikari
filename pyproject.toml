@@ -235,6 +235,7 @@ Issues = "https://github.com/yourusername/archer/issues"
 
 [project.scripts]
 archer = "archer.app:main"
+adfconsole = "archer.cli.console:main"
 
 [tool.setuptools]
 packages = ["archer"]

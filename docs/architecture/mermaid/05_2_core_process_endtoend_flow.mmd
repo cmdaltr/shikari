@@ -4,7 +4,16 @@
 
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 flowchart TD
-    START(["User submits a<br/>threat actor name"]) --> VALIDATE{"Does this actor<br/>exist in MITRE<br/>ATT&CK?"}
+    subgraph "Entry Points"
+        WEB(["Web UI"])
+        CLI(["archer.py CLI"])
+        ADF(["adfconsole<br/><i>Interactive Shell</i>"])
+    end
+
+    WEB --> START
+    CLI --> START
+    ADF --> START
+    START(["Submit threat<br/>actor name"]) --> VALIDATE{"Does this actor<br/>exist in MITRE<br/>ATT&CK?"}
 
     VALIDATE -- "No" --> ERR["Return error:<br/>actor not found"]
     VALIDATE -- "Yes" --> RETRIEVE["Retrieve all known<br/>attack techniques<br/>for this actor"]
@@ -49,6 +58,13 @@ flowchart TD
     YARAL --> YAML
     EQL --> YAML
 
+    VENDORS --> BESPOKE{"Bespoke mode?"}
+    BESPOKE -- "LLM (Mode 1)" --> LLM["Send prompt + evidence<br/>to LLM → parse response"]
+    BESPOKE -- "Fallback (Mode 2)" --> TMPL["Map indicators to<br/>SIEM fields via templates"]
+    BESPOKE -- "Standard" --> YAML
+    LLM --> YAML
+    TMPL --> YAML
+
     YAML --> NEXT{"More techniques<br/>to process?"}
     NEXT -- "Yes" --> LOOP
     NEXT -- "No" --> CORRELATE["Build attack chain<br/>correlations"]
@@ -75,4 +91,6 @@ flowchart TD
     style PLATFORM fill:#f8e71c,stroke:#b8a700,color:#333
     style NEXT fill:#f8e71c,stroke:#b8a700,color:#333
     style ENRICH fill:#f8e71c,stroke:#b8a700,color:#333
+    style BESPOKE fill:#f8e71c,stroke:#b8a700,color:#333
+    style ADF fill:#9b59b6,stroke:#6c3483,color:#fff
     linkStyle default stroke:#ff6600,stroke-width:3px
