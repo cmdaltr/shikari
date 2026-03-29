@@ -113,6 +113,7 @@ Archer is a modular Python service for automated threat hunting with optional ad
 | `set <OPT> <val>` | Set a module option |
 | `unset <OPT>` | Clear a module option |
 | `run` | Execute the selected module |
+| `search <domain> <term>` | Search across bespoke, mitre, library, or all |
 | `info` | Show module details |
 | `back` | Deselect current module |
 | `exit` | Exit the console |
@@ -148,6 +149,26 @@ adfconsole (generate) > run
 [*] Generating detections for APT29 (mode: llm)
 ...
 ```
+
+### Search
+
+Search across three domains from the console:
+
+| Domain | What it searches |
+|--------|-----------------|
+| `bespoke` | Prompts, detection templates, reference queries, mapping files |
+| `mitre` | ATT&CK techniques, groups, software (from cached STIX data) |
+| `library` | Generated detection YAMLs in `data/groups/` and correlations in `data/correlate/` |
+| `all` | All three domains |
+
+```
+adfconsole > search mitre PowerShell
+adfconsole > search library APT29
+adfconsole > search bespoke credential
+adfconsole > search all T1059
+```
+
+Results are colour-coded by type (technique, group, software, detection, correlation, reference) with highlighted search terms.
 
 ### Query Generation Modes
 

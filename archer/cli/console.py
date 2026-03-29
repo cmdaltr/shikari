@@ -9,6 +9,7 @@ from typing import Optional
 from archer.cli.banner import get_banner
 from archer.cli.modules import MODULE_REGISTRY
 from archer.cli.modules.base import BaseModule
+from archer.cli.search import run_search, SEARCH_DOMAINS
 
 
 class AdfConsole(cmd.Cmd):
@@ -187,6 +188,41 @@ class AdfConsole(cmd.Cmd):
         return [m for m in MODULE_REGISTRY if m.startswith(text.lower())]
 
     # ------------------------------------------------------------------
+    # Search
+    # ------------------------------------------------------------------
+
+    def do_search(self, arg):
+        """Search across Archer: search <domain> <term>
+        Domains: bespoke | mitre | library | all
+        Examples:
+          search mitre PowerShell
+          search library APT29
+          search bespoke credential
+          search all T1059"""
+        parts = arg.strip().split(None, 1)
+        if len(parts) == 0:
+            print("  Usage: search <domain> <term>")
+            print("  Domains: bespoke | mitre | library | all")
+            return
+        if len(parts) == 1:
+            # Single arg — search all domains
+            run_search(parts[0], "all")
+        else:
+            domain, term = parts
+            if domain.lower() in list(SEARCH_DOMAINS.keys()) + ["all"]:
+                run_search(term, domain.lower())
+            else:
+                # Treat entire arg as search term across all domains
+                run_search(arg.strip(), "all")
+
+    def complete_search(self, text, line, begidx, endidx):
+        parts = line.split()
+        if len(parts) <= 2:
+            domains = list(SEARCH_DOMAINS.keys()) + ["all"]
+            return [d for d in domains if d.startswith(text.lower())]
+        return []
+
+    # ------------------------------------------------------------------
     # Exit
     # ------------------------------------------------------------------
 
@@ -224,6 +260,7 @@ class AdfConsole(cmd.Cmd):
             ("set", "Set a module option (e.g., set GROUP APT29)"),
             ("unset", "Clear a module option"),
             ("run", "Execute the selected module"),
+            ("search", "Search bespoke | mitre | library | all (e.g., search mitre PowerShell)"),
             ("info", "Show module information"),
             ("help", "Show this help"),
             ("exit", "Exit the console"),
