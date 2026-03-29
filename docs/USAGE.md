@@ -669,7 +669,7 @@ Archer provides auto-generated interactive API documentation:
 
 For comprehensive API documentation including authentication, error handling, and all workflows:
 
-**📚 [API Integration Guide](guides/API_INTEGRATION_GUIDE.md)** - Complete REST API documentation with examples
+**📚 [API Integration Guide](features/API_INTEGRATION_GUIDE.md)** - Complete REST API documentation with examples
 
 ---
 
@@ -767,7 +767,7 @@ python3 /path/to/archer/archer.py --help
 - **Review Generated Detections**: [Suggested First Steps](../GETTING_STARTED.md#suggested-first-steps)
 - **Import to SIEM**: [Import Detections Guide](../GETTING_STARTED.md#import-detections-to-your-siem)
 - **Tune Correlations**: [Correlation Quick Reference](architecture/CORRELATION_QUICK_REFERENCE.md)
-- **Explore API**: [API Integration Guide](guides/API_INTEGRATION_GUIDE.md)
+- **Explore API**: [API Integration Guide](features/API_INTEGRATION_GUIDE.md)
 
 ---
 

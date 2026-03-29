@@ -691,7 +691,7 @@ Each suggestion includes a confidence score (0.0-1.0):
 
 - [Pre-Generation Validation](DETECTION_VALIDATION.md) - Cross-platform validation during generation
 - [Docker Guide](DOCKER.md) - General Docker usage with Archer
-- [API Integration Guide](../guides/API_INTEGRATION_GUIDE.md) - Complete API reference
+- [API Integration Guide](../features/API_INTEGRATION_GUIDE.md) - Complete API reference
 
 ---
 

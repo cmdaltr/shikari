@@ -407,14 +407,14 @@ For complete workflows, parameter tuning, and troubleshooting, see **[docs/USAGE
 
 **For Platform Administrators**:
 - [Mapping Setup Guide](docs/guides/MAPPING_SETUP_GUIDE.md) - Configure for your environment
-- [API Integration Guide](docs/guides/API_INTEGRATION_GUIDE.md) - REST API integration
+- [API Integration Guide](docs/features/API_INTEGRATION_GUIDE.md) - REST API integration
 - [Security Features](docs/features/SECURITY_FEATURES.md) - User management and security
 
 **For Developers**:
 - [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) - Engine internals
 - [Performance Architecture](docs/architecture/PERFORMANCE_ARCHITECTURE.md) - System design
 - [Schema Normalization](docs/architecture/SCHEMA_NORMALIZATION.md) - Field mapping
-- [API Integration Guide](docs/guides/API_INTEGRATION_GUIDE.md) - REST API workflows
+- [API Integration Guide](docs/features/API_INTEGRATION_GUIDE.md) - REST API workflows
 
 ### Scripts & Utilities
 

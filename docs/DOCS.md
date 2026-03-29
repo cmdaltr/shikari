@@ -40,7 +40,7 @@ User guides and setup instructions:
 ### 📚 Technical References
 - **[Scripts Documentation](SCRIPTS.md)** - Command-line scripts and utilities
 - **[Usage Guide](USAGE.md)** - Complete Web UI, CLI, and API reference
-- **[API Integration Guide](guides/API_INTEGRATION_GUIDE.md)** - REST API integration with code examples
+- **[API Integration Guide](features/API_INTEGRATION_GUIDE.md)** - REST API integration with code examples
 - **[Auto-Generated API Docs](http://localhost:8000/docs)** - Interactive Swagger UI (requires running server)
 
 ### 🧠 [`rag/`](rag/)
@@ -83,7 +83,7 @@ Feature-specific documentation:
 ### 🛡️ Threat Briefing
 Grounded threat actor prioritisation:
 - **[USAGE.md — Threat Briefing](USAGE.md#threat-briefing)** - Web UI walkthrough
-- **[API Integration Guide — Workflow 8](guides/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)** - API endpoint reference and code examples
+- **[API Integration Guide — Workflow 8](features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)** - API endpoint reference and code examples
 
 ### 🔬 Research Tab
 Actor technique consolidation and threat landscape analysis:
@@ -123,7 +123,7 @@ Architecture diagrams and flow charts
 4. **Want to tune correlation quality?** See [Correlation Quick Reference](architecture/CORRELATION_QUICK_REFERENCE.md)
 
 ### Integration & Advanced Usage
-1. **Need API integration?** Check [API Integration Guide](guides/API_INTEGRATION_GUIDE.md)
+1. **Need API integration?** Check [API Integration Guide](features/API_INTEGRATION_GUIDE.md)
 2. **CLI workflows?** See [USAGE.md](USAGE.md#command-line-interface-cli)
 3. **Exploring untested features?** See [UNTESTED.md](UNTESTED.md)
 4. **Planning future deployments?** Review [FUTURE.md](FUTURE.md)
@@ -149,7 +149,7 @@ Architecture diagrams and flow charts
 
 ### For Platform Administrators
 - [Mapping Setup Guide](guides/MAPPING_SETUP_GUIDE.md) - Configure for your environment
-- [API Integration Guide](guides/API_INTEGRATION_GUIDE.md) - REST API integration
+- [API Integration Guide](features/API_INTEGRATION_GUIDE.md) - REST API integration
 - [Security Features](features/SECURITY_FEATURES.md) - User management and security
 
 ### For Developers
@@ -157,8 +157,8 @@ Architecture diagrams and flow charts
 - [Correlation Engine](architecture/CORRELATION_ENGINE.md) - Engine internals and per-technique query output
 - [Performance Architecture](architecture/PERFORMANCE_ARCHITECTURE.md) - System design
 - [Schema Normalization](architecture/SCHEMA_NORMALIZATION.md) - Field mapping
-- [API Integration Guide](guides/API_INTEGRATION_GUIDE.md) - REST API workflows and examples
-- [Threat Briefing API](guides/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing) - `/api/threat-briefing` endpoint
+- [API Integration Guide](features/API_INTEGRATION_GUIDE.md) - REST API workflows and examples
+- [Threat Briefing API](features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing) - `/api/threat-briefing` endpoint
 - [RAG Implementation](rag/FIDELITY_IMPLEMENTATION_GUIDE.md) - RAG fidelity enhancement system
 
 ---
