@@ -68,6 +68,47 @@ platforms:
     # Default index pattern
     index_pattern: "logs-*"
 
+# ---------------------------------------------------------------------------
+# LLM Configuration (for --llm mode in adfconsole / archer.py generate)
+# ---------------------------------------------------------------------------
+# Provider options: anthropic | openai | azure | copilot | local
+#
+# You can configure here OR use environment variables (env vars take
+# precedence if no provider is set here).
+#
+# Environment variable alternatives:
+#   Anthropic:    ANTHROPIC_API_KEY
+#   OpenAI:       OPENAI_API_KEY
+#   Azure OpenAI: AZURE_OPENAI_KEY + AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_DEPLOYMENT
+#   Local:        LLM_ENDPOINT
+
+llm:
+  # --- Option 1: Anthropic Claude ---
+  # provider: anthropic
+  # api_key: "sk-ant-..."
+  # model: "claude-sonnet-4-20250514"
+  # max_tokens: 4096
+
+  # --- Option 2: OpenAI / ChatGPT Enterprise ---
+  # provider: openai
+  # api_key: "sk-..."
+  # model: "gpt-4o"
+  # max_tokens: 4096
+  # base_url: "https://api.openai.com"  # Change for ChatGPT Enterprise
+
+  # --- Option 3: Azure OpenAI / Microsoft Copilot ---
+  # provider: azure
+  # api_key: "your-azure-openai-key"
+  # endpoint: "https://your-resource.openai.azure.com"
+  # deployment: "gpt-4o"                # Your deployment name
+  # api_version: "2024-06-01"
+
+  # --- Option 4: Local / Self-hosted (Ollama, vLLM, LiteLLM, etc.) ---
+  # provider: local
+  # endpoint: "http://localhost:11434"   # Ollama default
+  # model: "llama3"
+  # max_tokens: 4096
+
 # Custom detection categories to prioritize
 # Detections matching these categories will be highlighted
 priority_categories:

@@ -217,42 +217,104 @@ def parse_llm_response(response_text: str) -> List[Dict]:
 # LLM call wrapper
 # ---------------------------------------------------------------------------
 
+def _load_llm_config() -> Dict:
+    """Load LLM configuration from bespoke/config.yaml if present."""
+    config_path = _BESPOKE_DIR / "config.yaml"
+    if not config_path.exists():
+        return {}
+    try:
+        import yaml
+        with open(config_path) as f:
+            data = yaml.safe_load(f) or {}
+        return data.get("llm", {})
+    except Exception:
+        return {}
+
+
 def call_llm(prompt: str, config: Optional[Dict] = None) -> str:
     """Send a prompt to the configured LLM and return the response.
 
-    Supports multiple backends:
-    - Anthropic Claude API (ANTHROPIC_API_KEY)
-    - OpenAI API (OPENAI_API_KEY)
-    - Local LLM via HTTP endpoint (LLM_ENDPOINT)
+    Resolution order (first match wins):
+    1. Config dict passed directly (from adfconsole or API)
+    2. bespoke/config.yaml → llm section
+    3. Environment variables
+
+    Supported providers:
+    - Anthropic Claude     (ANTHROPIC_API_KEY)
+    - OpenAI / ChatGPT     (OPENAI_API_KEY)
+    - Azure OpenAI         (AZURE_OPENAI_KEY + AZURE_OPENAI_ENDPOINT)
+    - Microsoft Copilot    (same as Azure OpenAI)
+    - OpenAI-compatible    (LLM_ENDPOINT — covers local LLMs, LiteLLM, vLLM, etc.)
 
     Args:
         prompt: The assembled prompt string.
-        config: Optional config dict with model settings.
+        config: Optional config dict with provider/model/key overrides.
 
     Returns:
         Raw response text from the LLM.
     """
-    config = config or {}
+    # Merge: explicit config > config.yaml > env vars
+    file_config = _load_llm_config()
+    merged = {**file_config, **(config or {})}
 
-    # Try Anthropic Claude first
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if api_key:
-        return _call_anthropic(prompt, api_key, config)
+    provider = merged.get("provider", "").lower()
 
-    # Try OpenAI
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if api_key:
-        return _call_openai(prompt, api_key, config)
+    # Explicit provider selection from config
+    if provider == "anthropic":
+        key = merged.get("api_key") or os.environ.get("ANTHROPIC_API_KEY")
+        if key:
+            return _call_anthropic(prompt, key, merged)
 
-    # Try local endpoint
-    endpoint = os.environ.get("LLM_ENDPOINT")
-    if endpoint:
-        return _call_local(prompt, endpoint, config)
+    if provider == "openai":
+        key = merged.get("api_key") or os.environ.get("OPENAI_API_KEY")
+        if key:
+            return _call_openai(prompt, key, merged)
+
+    if provider in ("azure", "azure_openai", "copilot"):
+        key = merged.get("api_key") or os.environ.get("AZURE_OPENAI_KEY")
+        endpoint = merged.get("endpoint") or os.environ.get("AZURE_OPENAI_ENDPOINT")
+        deployment = merged.get("deployment") or os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
+        api_version = merged.get("api_version") or os.environ.get("AZURE_OPENAI_API_VERSION", "2024-06-01")
+        if key and endpoint:
+            return _call_azure_openai(prompt, key, endpoint, deployment, api_version, merged)
+
+    if provider == "local":
+        endpoint = merged.get("endpoint") or os.environ.get("LLM_ENDPOINT")
+        if endpoint:
+            return _call_local(prompt, endpoint, merged)
+
+    # Auto-detect from environment variables (no explicit provider)
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return _call_anthropic(prompt, os.environ["ANTHROPIC_API_KEY"], merged)
+
+    if os.environ.get("AZURE_OPENAI_KEY") and os.environ.get("AZURE_OPENAI_ENDPOINT"):
+        return _call_azure_openai(
+            prompt,
+            os.environ["AZURE_OPENAI_KEY"],
+            os.environ["AZURE_OPENAI_ENDPOINT"],
+            os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+            os.environ.get("AZURE_OPENAI_API_VERSION", "2024-06-01"),
+            merged,
+        )
+
+    if os.environ.get("OPENAI_API_KEY"):
+        return _call_openai(prompt, os.environ["OPENAI_API_KEY"], merged)
+
+    if os.environ.get("LLM_ENDPOINT"):
+        return _call_local(prompt, os.environ["LLM_ENDPOINT"], merged)
 
     raise RuntimeError(
-        "No LLM configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or LLM_ENDPOINT."
+        "No LLM configured. Set provider in bespoke/config.yaml or use environment variables:\n"
+        "  Anthropic:    ANTHROPIC_API_KEY\n"
+        "  OpenAI:       OPENAI_API_KEY\n"
+        "  Azure OpenAI: AZURE_OPENAI_KEY + AZURE_OPENAI_ENDPOINT\n"
+        "  Local:        LLM_ENDPOINT"
     )
 
+
+# ---------------------------------------------------------------------------
+# Provider implementations
+# ---------------------------------------------------------------------------
 
 def _call_anthropic(prompt: str, api_key: str, config: dict) -> str:
     """Call Anthropic Claude API."""
@@ -260,9 +322,10 @@ def _call_anthropic(prompt: str, api_key: str, config: dict) -> str:
 
     model = config.get("model", "claude-sonnet-4-20250514")
     max_tokens = config.get("max_tokens", 4096)
+    base_url = config.get("base_url", "https://api.anthropic.com")
 
     resp = requests.post(
-        "https://api.anthropic.com/v1/messages",
+        f"{base_url}/v1/messages",
         headers={
             "x-api-key": api_key,
             "anthropic-version": "2023-06-01",
@@ -273,7 +336,7 @@ def _call_anthropic(prompt: str, api_key: str, config: dict) -> str:
             "max_tokens": max_tokens,
             "messages": [{"role": "user", "content": prompt}],
         },
-        timeout=120,
+        timeout=180,
     )
     resp.raise_for_status()
     data = resp.json()
@@ -281,14 +344,15 @@ def _call_anthropic(prompt: str, api_key: str, config: dict) -> str:
 
 
 def _call_openai(prompt: str, api_key: str, config: dict) -> str:
-    """Call OpenAI API."""
+    """Call OpenAI API (including ChatGPT Enterprise with custom base_url)."""
     import requests
 
     model = config.get("model", "gpt-4o")
     max_tokens = config.get("max_tokens", 4096)
+    base_url = config.get("base_url", "https://api.openai.com")
 
     resp = requests.post(
-        "https://api.openai.com/v1/chat/completions",
+        f"{base_url}/v1/chat/completions",
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
@@ -298,7 +362,43 @@ def _call_openai(prompt: str, api_key: str, config: dict) -> str:
             "max_tokens": max_tokens,
             "messages": [{"role": "user", "content": prompt}],
         },
-        timeout=120,
+        timeout=180,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"]
+
+
+def _call_azure_openai(
+    prompt: str,
+    api_key: str,
+    endpoint: str,
+    deployment: str,
+    api_version: str,
+    config: dict,
+) -> str:
+    """Call Azure OpenAI (ChatGPT Enterprise / Microsoft Copilot).
+
+    Azure OpenAI uses a different URL pattern and auth header than standard OpenAI.
+    """
+    import requests
+
+    max_tokens = config.get("max_tokens", 4096)
+
+    # Azure OpenAI URL: https://<resource>.openai.azure.com/openai/deployments/<deployment>/chat/completions?api-version=<version>
+    url = f"{endpoint.rstrip('/')}/openai/deployments/{deployment}/chat/completions?api-version={api_version}"
+
+    resp = requests.post(
+        url,
+        headers={
+            "api-key": api_key,
+            "Content-Type": "application/json",
+        },
+        json={
+            "max_tokens": max_tokens,
+            "messages": [{"role": "user", "content": prompt}],
+        },
+        timeout=180,
     )
     resp.raise_for_status()
     data = resp.json()
@@ -306,7 +406,7 @@ def _call_openai(prompt: str, api_key: str, config: dict) -> str:
 
 
 def _call_local(prompt: str, endpoint: str, config: dict) -> str:
-    """Call a local LLM via HTTP endpoint (OpenAI-compatible)."""
+    """Call any OpenAI-compatible endpoint (local LLMs, LiteLLM, vLLM, Ollama, etc.)."""
     import requests
 
     model = config.get("model", "default")
