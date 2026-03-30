@@ -695,4 +695,4 @@ Each suggestion includes a confidence score (0.0-1.0):
 
 ---
 
-**Need Help?** Check the [documentation index](../DOCS.md) or open an [issue](https://github.com/cmdaltr/archer/issues).
+**Need Help?** Check the [documentation index](../DOCS_INDEX.md) or open an [issue](https://github.com/cmdaltr/archer/issues).

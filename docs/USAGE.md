@@ -771,6 +771,6 @@ python3 /path/to/archer/archer.py --help
 
 ---
 
-**Need Help?** Check the [documentation index](DOCS.md) or open an [issue](https://github.com/cmdaltr/archer/issues).
+**Need Help?** Check the [documentation index](DOCS_INDEX.md) or open an [issue](https://github.com/cmdaltr/archer/issues).
 
 **Last Updated**: 2025-03-04

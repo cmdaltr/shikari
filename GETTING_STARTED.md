@@ -391,7 +391,7 @@ For complete workflows, parameter tuning, and troubleshooting, see **[docs/USAGE
 
 ### Documentation
 
-**📖 [Complete Documentation Index](docs/DOCS.md)** - Browse all documentation by category
+**📖 [Complete Documentation Index](docs/DOCS_INDEX.md)** - Browse all documentation by category
 
 **Quick Links by Use Case**:
 
@@ -514,4 +514,4 @@ netstat -ano | findstr :8000  # Windows
 
 ---
 
-**Need Help?** Check the [documentation index](docs/DOCS.md) or open an [issue](https://github.com/cmdaltr/archer/issues).
+**Need Help?** Check the [documentation index](docs/DOCS_INDEX.md) or open an [issue](https://github.com/cmdaltr/archer/issues).

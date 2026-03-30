@@ -59,7 +59,7 @@ Archer is a modular Python service for automated threat hunting with optional ad
 
 ### Archer Documentation
 
-**📖 [Complete Documentation Index](docs/DOCS.md)** - Browse all documentation by category
+**📖 [Complete Documentation Index](docs/DOCS_INDEX.md)** - Browse all documentation by category
 
 **Quick Links:**
 - **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](docs/guides/MAPPING_SETUP_GUIDE.md)
