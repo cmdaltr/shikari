@@ -44,6 +44,12 @@ def main():
         metavar="SIEM[,SIEM...]",
         help=f"SIEMs to include: {', '.join(sorted(VALID_SIEMS))} (default: all)",
     )
+    parser.add_argument(
+        "--output", "-o",
+        default=None,
+        metavar="FILE",
+        help="Write full output to FILE instead of (or in addition to) stdout",
+    )
     args = parser.parse_args()
 
     siem_filter = args.siem  # None means all
@@ -51,21 +57,52 @@ def main():
     # Patch tactic lookups for speed
     from archer.build import yaml_patch  # noqa: F401
     from archer.build.orchestrator import process_group
+    import sys
 
-    if args.limit > 0:
-        from archer.build import detections as _det
-        _original = _det.compile_query
-        _count = [0]
+    # If --output specified, tee stdout to a file
+    if args.output:
+        import io
 
-        def _limited(*a, **kw):
-            if _count[0] >= args.limit:
-                return
-            kw["dry_run"] = True
-            kw.setdefault("siem_filter", siem_filter)
-            _original(*a, **kw)
-            _count[0] += 1
+        class _Tee:
+            def __init__(self, *streams):
+                self._streams = streams
 
-        _det.compile_query = _limited
-        process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter)
-    else:
-        process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter)
+            def write(self, data):
+                for s in self._streams:
+                    s.write(data)
+
+            def flush(self):
+                for s in self._streams:
+                    s.flush()
+
+            # Delegate other attribute lookups to the first stream
+            def __getattr__(self, name):
+                return getattr(self._streams[0], name)
+
+        out_file = open(args.output, "w", encoding="utf-8")
+        sys.stdout = _Tee(sys.__stdout__, out_file)
+        print(f"[preview] Writing output to: {args.output}\n")
+
+    try:
+        if args.limit > 0:
+            from archer.build import detections as _det
+            _original = _det.compile_query
+            _count = [0]
+
+            def _limited(*a, **kw):
+                if _count[0] >= args.limit:
+                    return
+                kw["dry_run"] = True
+                kw.setdefault("siem_filter", siem_filter)
+                _original(*a, **kw)
+                _count[0] += 1
+
+            _det.compile_query = _limited
+            process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter)
+        else:
+            process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter)
+    finally:
+        if args.output:
+            sys.stdout = sys.__stdout__
+            out_file.close()
+            print(f"\n[preview] Output saved to: {args.output}")
