@@ -107,7 +107,7 @@ Single-page index of all project documentation.
 | [bespoke/prompts/LocalLLM_Master.md](../bespoke/prompts/LocalLLM_Master.md) | Local LLM master prompt (smaller context) |
 | [bespoke/prompts/PROMPT_Interactive_Console.md](../bespoke/prompts/PROMPT_Interactive_Console.md) | Reusable prompt for creating interactive CLI consoles |
 | [bespoke/query_templates/DetectionGeneration_Templates.md](../bespoke/query_templates/DetectionGeneration_Templates.md) | Per-telemetry query templates (AWS, Windows, MDE, Unix, Proxy, etc.) |
-| [bespoke/references/README.md](../bespoke/references/README.md) | Reference query format and examples |
+| [bespoke/llm_references/README.md](../bespoke/llm_references/README.md) | Reference query format and examples |
 
 ---
 

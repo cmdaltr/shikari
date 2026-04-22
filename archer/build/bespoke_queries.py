@@ -19,11 +19,14 @@ from typing import Dict, List, Optional, Tuple
 
 _BESPOKE_DIR = Path(__file__).resolve().parent.parent.parent / "bespoke"
 _MAPPINGS_DIR = _BESPOKE_DIR / "mappings"
+_SCHEMAS_DIR = _MAPPINGS_DIR / "schemas"
+_SOURCES_DIR = _MAPPINGS_DIR / "sources"
 
 
-def _load_json(filename: str) -> dict:
-    """Load a JSON file from the bespoke mappings directory."""
-    path = _MAPPINGS_DIR / filename
+def _load_json(filename: str, subdir: Path = None) -> dict:
+    """Load a JSON file from the bespoke mappings directory (or a subdirectory)."""
+    base = subdir if subdir is not None else _MAPPINGS_DIR
+    path = base / filename
     if not path.exists():
         return {}
     with open(path) as f:
@@ -35,19 +38,19 @@ def load_indicator_mapping() -> dict:
 
 
 def load_data_sources() -> dict:
-    return _load_json("dataSources.json")
+    return _load_json("dataSources.json", _SOURCES_DIR)
 
 
 def load_splunk_schema() -> dict:
-    return _load_json("schemaSplunk.json")
+    return _load_json("schemaSplunk.json", _SCHEMAS_DIR)
 
 
 def load_mde_schema() -> dict:
-    return _load_json("schemaMDE.json")
+    return _load_json("schemaMDE.json", _SCHEMAS_DIR)
 
 
 def load_log_source_categories() -> dict:
-    return _load_json("logSourceCategories.json")
+    return _load_json("logSourceCategories.json", _SOURCES_DIR)
 
 
 # ---------------------------------------------------------------------------

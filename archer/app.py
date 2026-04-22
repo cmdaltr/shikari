@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from archer.security import sanitize_filename, validate_safe_path, sanitize_group_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from typing import Optional
+
+_PROJECT_ROOT = Path(__file__).parent.parent
 
 # -----------------------------------------------------------------------------
 # Archer service - main FastAPI application
@@ -1520,45 +1522,26 @@ def initialize_database():
 @app.on_event("startup")
 def validate_mapping_files():
     """
-    Validate that all required mapping files exist in bespoke/mappings/.
+    Validate bespoke components using the centralised validator.
 
-    Exits the application with a clear error message if any required files are missing.
+    Delegates to ``archer.build.bespoke.validate_bespoke_components()`` which
+    checks all component categories (mappings, prompts, references, searches,
+    config).  Missing critical components produce a warning; the app continues
+    with degraded functionality rather than hard-exiting so that optional
+    components (prompts, references, etc.) don't block startup.
     """
-    required_files = [
-        "dataSources.json",
-        "entityMappings.json",
-        "indicatorMapping.json",
-        "logSourceCategories.json",
-        "platforms.json",
-        "schemaSplunk.json",
-        "schemaMDE.json",
-        "schemaElastic.json",
-        "schemaGoogleSecOps.json",
-        "techniquePlatformIndicators.json",
-    ]
+    from archer.build.bespoke import validate_bespoke_components
 
-    mappings_dir = Path("bespoke/mappings")
-    missing_files = []
+    report = validate_bespoke_components(verbose=True)
 
-    for filename in required_files:
-        file_path = mappings_dir / filename
-        if not file_path.exists():
-            missing_files.append(filename)
-
-    if missing_files:
-        error_message = "\n" + "=" * 80 + "\n"
-        error_message += "ERROR: Required mapping files are missing!\n"
-        error_message += "=" * 80 + "\n"
-        error_message += f"\nThe following required files are missing from {mappings_dir}:\n\n"
-        for filename in missing_files:
-            error_message += f"  ✗ {filename}\n"
-        error_message += "\nPlease ensure all required mapping files are present before starting the application.\n"
-        error_message += "=" * 80 + "\n"
-
-        print(error_message, flush=True)
-        import sys
-
-        sys.exit(1)
+    if not report["all_critical_present"]:
+        # Still warn loudly, but don't exit — generation will degrade gracefully
+        missing = report["missing_critical"]
+        print(
+            f"\n  ⚠  {len(missing)} required bespoke mapping file(s) absent.  "
+            "Query generation for affected platforms will be skipped.\n",
+            flush=True,
+        )
 
 
 def get_mitre_lists():
@@ -1746,7 +1729,18 @@ async def detect_local_llm():
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(None, lambda: requests.get(url, timeout=2))
             if response.ok:
-                return {"name": name, "url": url, "available": True}
+                result = {"name": name, "url": url, "available": True, "models": [], "model": None}
+                # For Ollama, extract available model names and store clean base_url
+                if name == "Ollama":
+                    result["base_url"] = "http://localhost:11434"
+                    try:
+                        data = response.json()
+                        models = [m["name"] for m in data.get("models", []) if "name" in m]
+                        result["models"] = models
+                        result["model"] = models[0] if models else None
+                    except Exception:
+                        pass
+                return result
         except:
             pass
         return None
@@ -1759,7 +1753,9 @@ async def detect_local_llm():
     for result in results:
         if result:
             app.state.local_llm_detected = result
-            print(f"✓ Local LLM detected: {result['name']} at {result['url']}")
+            model_info = f" (model: {result['model']})" if result.get("model") else ""
+            models_info = f", {len(result['models'])} model(s) available" if result.get("models") else ""
+            print(f"✓ Local LLM detected: {result['name']} at {result['url']}{model_info}{models_info}")
             return
 
     app.state.local_llm_detected = {"available": False}
@@ -1779,8 +1775,57 @@ def check_docker_on_startup():
 
 @app.get("/api/llm/detect")
 async def get_local_llm_status():
-    """Get local LLM detection status."""
-    return getattr(app.state, "local_llm_detected", {"available": False})
+    """Get local LLM detection status, including available models for Ollama."""
+    import requests as _req
+    state = getattr(app.state, "local_llm_detected", {"available": False})
+    # If Ollama detected but models weren't fetched at startup, grab them now
+    if state.get("available") and state.get("name") == "Ollama" and not state.get("models"):
+        try:
+            r = _req.get("http://localhost:11434/api/tags", timeout=2)
+            if r.ok:
+                models = [m["name"] for m in r.json().get("models", []) if "name" in m]
+                state = dict(state)
+                state["models"] = models
+                state["model"] = state.get("model") or (models[0] if models else None)
+                state["base_url"] = "http://localhost:11434"
+                app.state.local_llm_detected = state
+        except Exception:
+            pass
+    return state
+
+
+@app.post("/api/llm/model")
+async def set_llm_model(request: Request):
+    """
+    Set the active local LLM model.
+
+    Body: {"model": "llama3.2:3b"}
+    Updates app.state.local_llm_detected['model'] so all subsequent LLM
+    calls use the selected model.
+    """
+    try:
+        body = await request.json()
+        model = body.get("model", "").strip()
+        if not model:
+            return JSONResponse({"success": False, "error": "model is required"}, status_code=400)
+
+        state = getattr(app.state, "local_llm_detected", {})
+        if not state.get("available"):
+            return JSONResponse({"success": False, "error": "No local LLM available"}, status_code=400)
+
+        available_models = state.get("models", [])
+        if available_models and model not in available_models:
+            return JSONResponse(
+                {"success": False, "error": f"Model '{model}' not in available models: {available_models}"},
+                status_code=400,
+            )
+
+        state["model"] = model
+        app.state.local_llm_detected = state
+        logger.info("Local LLM model set to: %s", model)
+        return JSONResponse({"success": True, "model": model})
+    except Exception as exc:
+        return JSONResponse({"success": False, "error": str(exc)}, status_code=500)
 
 
 @app.post("/api/llm/preference")
@@ -1848,10 +1893,10 @@ async def save_mapping_config(
                     mappings[idx] = "| summarize by relevant_fields"
 
         # Save to custom mapping file (in bespoke directory)
-        mapping_file = Path(f"bespoke/mappings/schema{platform.capitalize()}_custom.json")
+        mapping_file = Path(f"bespoke/mappings/schemas/schema{platform.capitalize()}_custom.json")
 
         # Read existing template if available
-        template_file = Path(f"bespoke/mappings/schema{platform.capitalize()}.json")
+        template_file = Path(f"bespoke/mappings/schemas/schema{platform.capitalize()}.json")
         if template_file.exists():
             with open(template_file, "r") as f:
                 template = json.load(f)
@@ -1899,7 +1944,7 @@ async def load_mapping_config(
 
     try:
         # Try to load custom mapping file first (from bespoke directory)
-        mapping_file = Path(f"bespoke/mappings/schema{platform.capitalize()}_custom.json")
+        mapping_file = Path(f"bespoke/mappings/schemas/schema{platform.capitalize()}_custom.json")
 
         if mapping_file.exists():
             with open(mapping_file, "r") as f:
@@ -1986,18 +2031,30 @@ async def accept_osint_failures():
 @app.get("/api/status/bespoke")
 async def get_bespoke_status():
     """
-    Get bespoke (organization-specific) configuration status.
+    Get bespoke (organization-specific) configuration status including component validation.
 
     Returns information about:
     - Whether bespoke customization is enabled
     - Number of exclusions configured (processes, users, hosts, IPs)
     - Number of custom sample searches
     - Organization name if configured
+    - Component validation: which mappings, prompts, references, and searches are present
     """
     try:
-        from .build.bespoke import get_bespoke_status
+        from .build.bespoke import get_bespoke_status as _get_bespoke_status, validate_bespoke_components
 
-        return get_bespoke_status()
+        status = _get_bespoke_status()
+        validation = validate_bespoke_components(verbose=False)
+        status["validation"] = {
+            "all_critical_present": validation["all_critical_present"],
+            "missing_critical": validation["missing_critical"],
+            "missing_optional": validation["missing_optional"],
+            "components": [
+                {"name": c["name"], "status": c["status"], "required": c["required"]}
+                for c in validation["components"]
+            ],
+        }
+        return status
     except ImportError:
         return {"enabled": False, "error": "Bespoke module not available"}
     except Exception as e:
@@ -6064,6 +6121,150 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
     )
 
 
+@app.post("/api/detections/splunk/generate")
+async def generate_splunk_detections(request: Request):
+    """
+    Trigger ATT&CK-aligned Splunk detection query generation.
+
+    Workflow
+    --------
+    1. Checks whether the Archer-side MITRESaw cache (data/mitre_procedures.csv)
+       is older than 7 days.
+         - Fresh (≤7 days): runs  MITRESaw.py -d -E -q        (-DEC)
+         - Stale (>7 days): runs  MITRESaw.py -d -E -F -q     (-DECF)
+    2. Reads unique MITRE ATT&CK techniques from the updated CSV.
+    3. For each technique, calls the configured LLM (Claude → GPT → Ollama)
+       using bespoke/prompts/ master and template prompts.
+       Queries are restricted to the Splunk indexes defined in
+       bespoke/mappings/schemas/schemaSplunk.json.
+    4. Saves one JSON detection file per technique to data/detections/splunk/.
+
+    Request body (JSON, all optional)
+    ----------------------------------
+    {
+        "force_refresh": false,   // true to force MITRESaw re-run regardless of cache age
+        "group": null,            // ATT&CK group name or ID to limit scope (e.g. "APT29")
+        "skip_existing": true     // false to regenerate files that already exist
+    }
+
+    Response
+    --------
+    {
+        "success": true,
+        "cache_refreshed": bool,
+        "total_techniques": int,
+        "generated": int,
+        "skipped": int,
+        "failed": int,
+        "files": ["data/detections/splunk/T1059-001_command_scripting_interpreter.json", ...]
+    }
+    """
+    from archer.detection.splunk import run_splunk_detection_generation
+
+    try:
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+
+        force_refresh = bool(body.get("force_refresh", False))
+        group_filter = body.get("group") or None
+        skip_existing = bool(body.get("skip_existing", True))
+
+        local_llm_state = getattr(request.app.state, "local_llm_detected", {})
+
+        llm = None
+        llm_type = "cloud"
+        try:
+            from archer.chat import _get_llm_provider_anonymous
+            llm_obj, provider_name = _get_llm_provider_anonymous(local_llm_state)
+            if llm_obj is not None:
+                llm = llm_obj
+                llm_type = "local" if "ollama" in provider_name.lower() else "cloud"
+                logger.info("Splunk detection generation using LLM: %s", provider_name)
+        except Exception as exc:
+            logger.warning("Could not resolve LLM provider for detection generation: %s", exc)
+
+        result = run_splunk_detection_generation(
+            llm=llm,
+            llm_type=llm_type,
+            force_refresh=force_refresh,
+            group_filter=group_filter,
+            skip_existing=skip_existing,
+        )
+
+        return JSONResponse({"success": True, **result})
+
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"success": False, "error": str(exc)}, status_code=500)
+
+
+@app.get("/api/detections/splunk")
+def list_splunk_detections():
+    """
+    List all generated Splunk detection files.
+
+    Returns a list of objects with technique_id, technique_name, filename,
+    query_count, and tactic for each saved detection.
+    """
+    detections_dir = _PROJECT_ROOT / "data" / "detections" / "splunk"
+    if not detections_dir.exists():
+        return JSONResponse({"detections": [], "total": 0})
+
+    detections = []
+    for path in sorted(detections_dir.glob("*.json")):
+        try:
+            with open(path, encoding="utf-8") as f:
+                obj = json.load(f)
+            detections.append({
+                "filename": path.name,
+                "technique_id": obj.get("technique_id", ""),
+                "technique_name": obj.get("technique_name", ""),
+                "full_technique_name": obj.get("full_technique_name", ""),
+                "tactic": obj.get("tactic", ""),
+                "query_count": len(obj.get("queries", [])),
+                "indexes": [q.get("source_index") for q in obj.get("queries", [])],
+            })
+        except Exception:
+            continue
+
+    return JSONResponse({"detections": detections, "total": len(detections)})
+
+
+@app.get("/api/detections/splunk/status")
+def splunk_detection_status():
+    """
+    Return cache age and detection coverage summary.
+    """
+    from archer.mitre.procedures import is_cache_stale, _DEFAULT_CSV, CACHE_TTL_SECONDS
+    import time as _time
+
+    csv_path = _DEFAULT_CSV
+    cache_exists = csv_path.exists()
+    cache_age_days = None
+    cache_stale = True
+
+    if cache_exists:
+        age_s = _time.time() - csv_path.stat().st_mtime
+        cache_age_days = round(age_s / 86400, 1)
+        cache_stale = age_s > CACHE_TTL_SECONDS
+
+    detections_dir = _PROJECT_ROOT / "data" / "detections" / "splunk"
+    detection_count = len(list(detections_dir.glob("*.json"))) if detections_dir.exists() else 0
+
+    return JSONResponse({
+        "cache_exists": cache_exists,
+        "cache_age_days": cache_age_days,
+        "cache_stale": cache_stale,
+        "cache_ttl_days": CACHE_TTL_SECONDS // 86400,
+        "splunk_detections_generated": detection_count,
+        "detections_dir": str(detections_dir),
+    })
+
+
 @app.get("/api/detection/{filename}")
 def get_detection_content(filename: str):
     """
@@ -9573,3 +9774,108 @@ async def get_activities(request: Request, archer_session: Optional[str] = Cooki
 
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Browser cache / localStorage reset endpoint
+# ---------------------------------------------------------------------------
+
+@app.get("/clear-browser-cache", response_class=HTMLResponse)
+async def clear_browser_cache():
+    """Serve a page that clears browser localStorage then redirects home."""
+    html = """<!DOCTYPE html>
+<html><head><title>Clearing cache…</title></head>
+<body>
+<p>Clearing browser preferences…</p>
+<script>
+try { localStorage.clear(); } catch(e) {}
+window.location.replace('/');
+</script>
+</body></html>"""
+    return HTMLResponse(content=html)
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
+def main():
+    """
+    Archer CLI entry point.
+
+    Usage:
+      archer                        Start the Archer server (default: port 8000)
+      archer --port 8001            Start on a custom port
+      archer --host 0.0.0.0         Bind to all interfaces
+      archer --reload               Enable auto-reload (development)
+      archer clear-cache            Clear server-side caches and reset browser preferences
+    """
+    import sys
+    import argparse
+    import shutil
+
+    # Peek at first positional arg for subcommands
+    subcommand = None
+    if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
+        subcommand = sys.argv[1]
+
+    if subcommand == "clear-cache":
+        _cli_clear_cache()
+        return
+
+    parser = argparse.ArgumentParser(
+        prog="archer",
+        description="Archer – Threat Detection Engineering Platform",
+    )
+    parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
+    parser.add_argument("--reload", action="store_true", help="Enable auto-reload (dev mode)")
+    parser.add_argument("--workers", type=int, default=1, help="Number of worker processes")
+    args = parser.parse_args()
+
+    import uvicorn
+    print(f"Starting Archer on http://{args.host}:{args.port}")
+    uvicorn.run(
+        "archer.app:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+        workers=args.workers if not args.reload else 1,
+    )
+
+
+def _cli_clear_cache():
+    """Clear server-side caches and print browser reset instructions."""
+    import shutil
+    from archer.config import DATA_DIR
+
+    cleared = []
+
+    # Clear MITRESaw CSV/XLSX cache
+    csv_path = Path(DATA_DIR) / "mitre_procedures.csv"
+    xlsx_path = Path(DATA_DIR) / "mitre_procedures.xlsx"
+    for p in (csv_path, xlsx_path):
+        if p.exists():
+            p.unlink()
+            cleared.append(str(p))
+
+    # Clear generated detections cache
+    detections_dir = Path(DATA_DIR) / "detections"
+    if detections_dir.exists():
+        shutil.rmtree(detections_dir)
+        cleared.append(str(detections_dir))
+
+    if cleared:
+        print("Cleared server-side caches:")
+        for c in cleared:
+            print(f"  ✓ {c}")
+    else:
+        print("No server-side caches found to clear.")
+
+    print()
+    print("To reset browser preferences (LLM choice, etc.), visit:")
+    print("  http://localhost:8000/clear-browser-cache")
+    print()
+    print("Or paste this in your browser console:")
+    print("  localStorage.clear(); location.reload();")
+

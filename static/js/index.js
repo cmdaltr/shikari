@@ -393,6 +393,12 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
 
+      // If the LLM choice modal is open, hold the submission until the user chooses
+      if (window._llmChoicePending) {
+        window._llmPendingSubmit = function() { form.dispatchEvent(new Event('submit', {bubbles: true})); };
+        return false;
+      }
+
       // Check if CVE input, technique input, or group name is provided
       var cveInput = document.getElementById('cve_input');
       var techniqueInput = document.getElementById('technique_input');

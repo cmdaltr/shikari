@@ -362,6 +362,43 @@
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
                 <div class="options-grid" style="grid-template-columns: 0.9fr 0.9fr 1.2fr;">
+
+                  <!-- Row 0: Auto-validate + Threat Briefing (span full width as 2-col) -->
+                  <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
+                    <!-- Auto-validate -->
+                    <label class="option-item" id="auto-validate-label" style="align-items: flex-start;">
+                      <input type="checkbox" name="auto_validate" id="auto_validate_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
+                      <div style="flex: 1; min-width: 0;">
+                        <span class="option-label">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;">
+                            <path d="M9 12l2 2 4-4"/>
+                            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
+                          </svg>
+                          Auto-validate detections after generation
+                          <span id="docker-status-badge" class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
+                        </span>
+                        <span class="option-hint" id="auto-validate-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
+                      </div>
+                    </label>
+                    <!-- Threat Briefing -->
+                    <label class="option-item" id="briefing-checkbox-label" style="align-items: flex-start;">
+                      <input type="checkbox" id="briefing_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
+                      <div style="flex: 1; min-width: 0;">
+                        <span class="option-label">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <path d="M9 12l2 2 4-4"/>
+                          </svg>
+                          Threat Briefing
+                        </span>
+                        <span class="option-hint" style="margin-top: 0.4em; display: block;">Generate an AI threat briefing after detection generation</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <!-- Divider -->
+                  <div style="grid-column: 1 / -1; border-top: 1px solid #e2e8f0; margin: 8px 0 16px;"></div>
+
                   <!-- Row 1 Column 1: OSINT Enhancement -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_enhancement" value="true" id="osint-enhancement-checkbox">
@@ -426,144 +463,105 @@
                     </span>
                   </label>
 
-                  <!-- Divider -->
-                  <div style="grid-column: 1 / -1; border-top: 1px solid #e2e8f0; margin: 16px 0;"></div>
-
-                  <!-- Exclude SIEM Platforms Section -->
-                  <div style="grid-column: 1 / -1; margin-bottom: 8px;">
-                    <span style="font-weight: 600; color: #374151; font-size: 0.95em;">Exclude SIEM Platforms</span>
-                    <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px;">(Save processing time by skipping platforms you don't use)</span>
-                  </div>
-
-                  <!-- Row 3: SIEM Exclusions - Evenly Spaced -->
-                  <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px;">
-                    <label class="option-item exclude-option">
-                      <input type="checkbox" name="exclude_splunk" value="true" class="exclude-checkbox">
-                      <span class="option-label">
-                        <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                          <defs>
-                            <radialGradient id="splunkGradient" cx="30%" cy="30%">
-                              <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
-                              <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
-                            </radialGradient>
-                          </defs>
-                          <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
-                          <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                        </svg>
-                        Splunk
-                      </span>
-                    </label>
-
-                    <label class="option-item exclude-option">
-                      <input type="checkbox" name="exclude_mde" value="true" class="exclude-checkbox">
-                      <span class="option-label">
-                        <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                          <defs>
-                            <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
-                              <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
-                            </linearGradient>
-                          </defs>
-                          <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
-                        </svg>
-                        MDE
-                      </span>
-                    </label>
-
-                    <label class="option-item exclude-option">
-                      <input type="checkbox" name="exclude_chronicle" value="true" class="exclude-checkbox">
-                      <span class="option-label">
-                        <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                          <defs>
-                            <linearGradient id="googleBlue" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="googleRed" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="googleYellow" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="googleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
-                            </linearGradient>
-                          </defs>
-                          <circle cx="30" cy="48" r="16" fill="url(#googleBlue)"/>
-                          <circle cx="50" cy="38" r="20" fill="url(#googleRed)"/>
-                          <circle cx="70" cy="48" r="16" fill="url(#googleYellow)"/>
-                          <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen)"/>
-                        </svg>
-                        Google SecOps
-                      </span>
-                    </label>
-
-                    <label class="option-item exclude-option">
-                      <input type="checkbox" name="exclude_elastic" value="true" class="exclude-checkbox">
-                      <span class="option-label">
-                        <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                          <defs>
-                            <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
-                            </linearGradient>
-                          </defs>
-                          <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
-                          <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
-                          <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
-                        </svg>
-                        Elastic
-                      </span>
-                    </label>
-                  </div>
                 </div>
               </details>
 
-              <!-- Detection Validation + Threat Briefing row -->
-              <div style="padding: 0.25rem 0 0.5rem 0; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <!-- Left: Auto-validate -->
-                <label class="option-item" id="auto-validate-label" style="align-items: flex-start;">
-                  <input type="checkbox" name="auto_validate" id="auto_validate_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
-                  <div style="flex: 1; min-width: 0;">
+              <!-- Exclude SIEM Platforms -->
+              <details class="options-section">
+                <summary class="options-header">Exclude SIEM Platforms
+                  <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px; font-weight: 400;">(Save processing time by skipping platforms you don't use)</span>
+                </summary>
+                <div style="padding: 1em; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px;">
+                  <label class="option-item exclude-option">
+                    <input type="checkbox" name="exclude_splunk" value="true" class="exclude-checkbox">
                     <span class="option-label">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;">
-                        <path d="M9 12l2 2 4-4"/>
-                        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
+                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
+                        <defs>
+                          <radialGradient id="splunkGradient" cx="30%" cy="30%">
+                            <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                          </radialGradient>
+                        </defs>
+                        <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
+                        <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                       </svg>
-                      Auto-validate detections after generation
-                      <span id="docker-status-badge" class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
+                      Splunk
                     </span>
-                    <span class="option-hint" id="auto-validate-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
-                  </div>
-                </label>
-                <!-- Right: Threat Briefing -->
-                <label class="option-item" id="briefing-checkbox-label" style="align-items: flex-start;">
-                  <input type="checkbox" id="briefing_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
-                  <div style="flex: 1; min-width: 0;">
+                  </label>
+                  <label class="option-item exclude-option">
+                    <input type="checkbox" name="exclude_mde" value="true" class="exclude-checkbox">
                     <span class="option-label">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                        <path d="M9 12l2 2 4-4"/>
+                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
+                        <defs>
+                          <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
                       </svg>
-                      Threat Briefing
+                      MDE
                     </span>
-                    <span class="option-hint" style="margin-top: 0.4em; display: block;">Generate an AI threat briefing after detection generation</span>
-                  </div>
-                </label>
-              </div>
+                  </label>
+                  <label class="option-item exclude-option">
+                    <input type="checkbox" name="exclude_chronicle" value="true" class="exclude-checkbox">
+                    <span class="option-label">
+                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
+                        <defs>
+                          <linearGradient id="googleBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="googleRed" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="googleYellow" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="googleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
+                          </linearGradient>
+                        </defs>
+                        <circle cx="30" cy="48" r="16" fill="url(#googleBlue)"/>
+                        <circle cx="50" cy="38" r="20" fill="url(#googleRed)"/>
+                        <circle cx="70" cy="48" r="16" fill="url(#googleYellow)"/>
+                        <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen)"/>
+                      </svg>
+                      Google SecOps
+                    </span>
+                  </label>
+                  <label class="option-item exclude-option">
+                    <input type="checkbox" name="exclude_elastic" value="true" class="exclude-checkbox">
+                    <span class="option-label">
+                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
+                        <defs>
+                          <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
+                          </linearGradient>
+                        </defs>
+                        <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
+                        <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
+                        <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
+                      </svg>
+                      Elastic
+                    </span>
+                  </label>
+                </div>
+              </details>
 
               <!-- VECTR Integration -->
               <details class="options-section" style="opacity: 0.6;">
@@ -2095,6 +2093,40 @@
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
                 <div class="options-grid" style="grid-template-columns: 0.9fr 0.9fr 1.2fr;">
+
+                  <!-- Row 0: Auto-validate + Threat Briefing -->
+                  <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
+                    <label class="option-item" style="align-items: flex-start;">
+                      <input type="checkbox" name="auto_validate" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
+                      <div style="flex: 1; min-width: 0;">
+                        <span class="option-label">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;">
+                            <path d="M9 12l2 2 4-4"/>
+                            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
+                          </svg>
+                          Auto-validate detections after generation
+                        </span>
+                        <span class="option-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
+                      </div>
+                    </label>
+                    <label class="option-item" style="align-items: flex-start;">
+                      <input type="checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
+                      <div style="flex: 1; min-width: 0;">
+                        <span class="option-label">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <path d="M9 12l2 2 4-4"/>
+                          </svg>
+                          Threat Briefing
+                        </span>
+                        <span class="option-hint" style="margin-top: 0.4em; display: block;">Generate an AI threat briefing after detection generation</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <!-- Divider -->
+                  <div style="grid-column: 1 / -1; border-top: 1px solid #e2e8f0; margin: 8px 0 16px;"></div>
+
                   <!-- Row 1 Column 1: OSINT Enhancement -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_enhancement" id="upload_osint_enhancement" value="true">
@@ -2159,109 +2191,103 @@
                     </span>
                   </label>
 
-                  <!-- Divider -->
-                  <div style="grid-column: 1 / -1; border-top: 1px solid #e2e8f0; margin: 16px 0;"></div>
+                </div>
+              </details>
 
-                  <!-- Exclude SIEM Platforms Section -->
-                  <div style="grid-column: 1 / -1; margin-bottom: 8px;">
-                    <span style="font-weight: 600; color: #374151; font-size: 0.95em;">Exclude SIEM Platforms</span>
-                    <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px;">(Save processing time by skipping platforms you don't use)</span>
-                  </div>
-
-                  <!-- Row 3: SIEM Exclusions - Evenly Spaced -->
-                  <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px;">
-                    <label class="option-item exclude-option">
-                      <input type="checkbox" name="exclude_splunk" value="true" class="exclude-checkbox">
-                      <span class="option-label">
-                        <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                          <defs>
-                            <radialGradient id="splunkGradient" cx="30%" cy="30%">
-                              <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
-                              <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
-                            </radialGradient>
-                          </defs>
-                          <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
-                          <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                        </svg>
-                        Splunk
-                      </span>
-                    </label>
-
-                    <label class="option-item exclude-option">
-                      <input type="checkbox" name="exclude_mde" value="true" class="exclude-checkbox">
-                      <span class="option-label">
-                        <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                          <defs>
-                            <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
-                              <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
-                            </linearGradient>
-                          </defs>
-                          <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
-                        </svg>
-                        MDE
-                      </span>
-                    </label>
-
-                    <label class="option-item exclude-option">
-                      <input type="checkbox" name="exclude_chronicle" value="true" class="exclude-checkbox">
-                      <span class="option-label">
-                        <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                          <defs>
-                            <linearGradient id="googleBlue2" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="googleRed2" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="googleYellow2" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="googleGreen2" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
-                            </linearGradient>
-                          </defs>
-                          <circle cx="30" cy="48" r="16" fill="url(#googleBlue2)"/>
-                          <circle cx="50" cy="38" r="20" fill="url(#googleRed2)"/>
-                          <circle cx="70" cy="48" r="16" fill="url(#googleYellow2)"/>
-                          <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen2)"/>
-                        </svg>
-                        Google SecOps
-                      </span>
-                    </label>
-
-                    <label class="option-item exclude-option">
-                      <input type="checkbox" name="exclude_elastic" value="true" class="exclude-checkbox">
-                      <span class="option-label">
-                        <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                          <defs>
-                            <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
-                              <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
-                            </linearGradient>
-                          </defs>
-                          <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
-                          <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
-                          <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
-                        </svg>
-                        Elastic
-                      </span>
-                    </label>
-                  </div>
+              <!-- Exclude SIEM Platforms -->
+              <details class="options-section">
+                <summary class="options-header">Exclude SIEM Platforms
+                  <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px; font-weight: 400;">(Save processing time by skipping platforms you don't use)</span>
+                </summary>
+                <div style="padding: 1em; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px;">
+                  <label class="option-item exclude-option">
+                    <input type="checkbox" name="exclude_splunk" value="true" class="exclude-checkbox">
+                    <span class="option-label">
+                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
+                        <defs>
+                          <radialGradient id="splunkGradient2" cx="30%" cy="30%">
+                            <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
+                          </radialGradient>
+                        </defs>
+                        <circle cx="50" cy="50" r="48" fill="url(#splunkGradient2)"/>
+                        <path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      </svg>
+                      Splunk
+                    </span>
+                  </label>
+                  <label class="option-item exclude-option">
+                    <input type="checkbox" name="exclude_mde" value="true" class="exclude-checkbox">
+                    <span class="option-label">
+                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
+                        <defs>
+                          <linearGradient id="defenderGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient2)"/>
+                      </svg>
+                      MDE
+                    </span>
+                  </label>
+                  <label class="option-item exclude-option">
+                    <input type="checkbox" name="exclude_chronicle" value="true" class="exclude-checkbox">
+                    <span class="option-label">
+                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
+                        <defs>
+                          <linearGradient id="googleBlue3" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="googleRed3" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="googleYellow3" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="googleGreen3" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
+                          </linearGradient>
+                        </defs>
+                        <circle cx="30" cy="48" r="16" fill="url(#googleBlue3)"/>
+                        <circle cx="50" cy="38" r="20" fill="url(#googleRed3)"/>
+                        <circle cx="70" cy="48" r="16" fill="url(#googleYellow3)"/>
+                        <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen3)"/>
+                      </svg>
+                      Google SecOps
+                    </span>
+                  </label>
+                  <label class="option-item exclude-option">
+                    <input type="checkbox" name="exclude_elastic" value="true" class="exclude-checkbox">
+                    <span class="option-label">
+                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
+                        <defs>
+                          <linearGradient id="elasticYellow2" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="elasticTeal2" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
+                          </linearGradient>
+                          <linearGradient id="elasticBlue2" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
+                          </linearGradient>
+                        </defs>
+                        <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow2)"/>
+                        <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal2)"/>
+                        <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue2)"/>
+                      </svg>
+                      Elastic
+                    </span>
+                  </label>
                 </div>
               </details>
 
@@ -2738,5 +2764,123 @@
     </script>
 
     {% endblock %}
+
+    <!-- Local LLM Detection Modal -->
+    <div id="llm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10003; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); max-width: 550px; width: 90%; padding: 0; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 2em;">🤖</div>
+                    <h2 style="margin: 0; font-size: 1.5em; font-weight: 600;">Local LLM Detected</h2>
+                </div>
+            </div>
+            <div style="padding: 24px;">
+                <p style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Archer detected a local LLM running at:</p>
+                <div style="background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 6px; padding: 12px; margin-bottom: 20px;">
+                    <strong id="llm-name" style="color: #1f2937;"></strong><br>
+                    <span id="llm-url" style="color: #6b7280; font-size: 0.9em; font-family: monospace;"></span>
+                </div>
+                <div id="llm-model-selector" style="display: none; margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 0.9em; font-family: 'Inter', sans-serif; letter-spacing: 0.01em;">Select model:</label>
+                    <select id="llm-model-select" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95em; font-family: 'Inter', sans-serif; color: #1f2937; background: white; cursor: pointer; outline: none;"></select>
+                </div>
+                <p style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Would you like to use it for AI-powered detection generation?</p>
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+                    <p style="margin: 0; font-weight: 600; color: #1e40af; font-size: 0.95em; margin-bottom: 6px;">Benefits:</p>
+                    <ul style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 0.9em; line-height: 1.5;">
+                        <li>Enhanced query quality and accuracy</li>
+                        <li>Better indicator extraction from threat intel</li>
+                        <li>Privacy: all data stays local</li>
+                    </ul>
+                </div>
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <button id="llm-yes-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">Yes, Use Local LLM</button>
+                    <button id="llm-no-btn" style="flex: 1; background: #6b7280; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">No, Use Heuristic</button>
+                </div>
+                <label style="display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 0.9em; cursor: pointer;">
+                    <input type="checkbox" id="llm-dont-ask" style="width: 16px; height: 16px;">
+                    Don't ask me again
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        window._llmChoicePending = false;
+
+        function saveLLMPreference(useLocalLLM, dontAskAgain, selectedModel) {
+            if (dontAskAgain) {
+                localStorage.setItem('llm_preference', useLocalLLM ? 'true' : 'false');
+            }
+            if (selectedModel) {
+                localStorage.setItem('llm_model', selectedModel);
+            }
+            if (useLocalLLM && selectedModel) {
+                fetch('/api/llm/model', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({model: selectedModel})
+                }).catch(function(){});
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var llmPreference = localStorage.getItem('llm_preference');
+            if (llmPreference) return; // already chosen
+
+            fetch('/api/llm/detect')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.available) return;
+
+                    var modal = document.getElementById('llm-modal');
+                    var yesBtn = document.getElementById('llm-yes-btn');
+                    var noBtn = document.getElementById('llm-no-btn');
+                    var dontAsk = document.getElementById('llm-dont-ask');
+                    var modelSelector = document.getElementById('llm-model-selector');
+                    var modelSelect = document.getElementById('llm-model-select');
+
+                    document.getElementById('llm-name').textContent = data.name || 'Ollama';
+                    document.getElementById('llm-url').textContent = data.base_url || data.url || '';
+
+                    if (data.models && data.models.length > 0) {
+                        modelSelect.innerHTML = '';
+                        data.models.forEach(function(m) {
+                            var opt = document.createElement('option');
+                            opt.value = m; opt.textContent = m;
+                            if (m === data.model) opt.selected = true;
+                            modelSelect.appendChild(opt);
+                        });
+                        var saved = localStorage.getItem('llm_model');
+                        if (saved && data.models.indexOf(saved) !== -1) modelSelect.value = saved;
+                        modelSelector.style.display = 'block';
+                    }
+
+                    window._llmChoicePending = true;
+                    modal.style.display = 'flex';
+
+                    yesBtn.addEventListener('click', function() {
+                        var sel = modelSelect ? modelSelect.value : null;
+                        saveLLMPreference(true, dontAsk.checked, sel);
+                        window._llmChoicePending = false;
+                        modal.style.display = 'none';
+                        if (window._llmPendingSubmit) { window._llmPendingSubmit(); window._llmPendingSubmit = null; }
+                    });
+                    noBtn.addEventListener('click', function() {
+                        saveLLMPreference(false, dontAsk.checked, null);
+                        window._llmChoicePending = false;
+                        modal.style.display = 'none';
+                        if (window._llmPendingSubmit) { window._llmPendingSubmit(); window._llmPendingSubmit = null; }
+                    });
+                    yesBtn.addEventListener('mouseover', function() { yesBtn.style.background = '#059669'; });
+                    yesBtn.addEventListener('mouseout', function() { yesBtn.style.background = '#10b981'; });
+                    noBtn.addEventListener('mouseover', function() { noBtn.style.background = '#4b5563'; });
+                    noBtn.addEventListener('mouseout', function() { noBtn.style.background = '#6b7280'; });
+                })
+                .catch(function(){});
+        });
+    })();
+    </script>
 </body>
 </html>

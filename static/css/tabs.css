@@ -299,12 +299,13 @@
   margin-top: 1.5em;
   border: 1px solid #e9ecef;
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible; /* must be visible so tooltips inside can escape the box */
 }
 
 .options-header {
   padding: 0.875em 1em;
   background: #f8f9fa;
+  border-radius: 6px 6px 0 0;
   cursor: pointer;
   font-weight: 500;
   color: #495057;

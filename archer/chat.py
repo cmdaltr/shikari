@@ -176,8 +176,9 @@ def _get_llm_provider(user_id: int, db, local_llm_state: Optional[dict] = None):
     )
     if local_available:
         try:
-            base_url = local_llm_state.get("url", "http://localhost:11434")
-            return LLMFactory.create("ollama", base_url=base_url), "Local LLM (Ollama)"
+            base_url = local_llm_state.get("base_url") or local_llm_state.get("url", "http://localhost:11434").split("/api/")[0]
+            model = local_llm_state.get("model") or "llama2"
+            return LLMFactory.create("ollama", base_url=base_url, model=model), f"Local LLM (Ollama/{model})"
         except Exception as e:
             logger.warning("Ollama provider failed: %s", e)
 
@@ -207,8 +208,9 @@ def _get_llm_provider_anonymous(local_llm_state: Optional[dict] = None):
     )
     if local_available:
         try:
-            base_url = local_llm_state.get("url", "http://localhost:11434")
-            return LLMFactory.create("ollama", base_url=base_url), "Local LLM (Ollama)"
+            base_url = local_llm_state.get("base_url") or local_llm_state.get("url", "http://localhost:11434").split("/api/")[0]
+            model = local_llm_state.get("model") or "llama2"
+            return LLMFactory.create("ollama", base_url=base_url, model=model), f"Local LLM (Ollama/{model})"
         except Exception as e:
             logger.warning("Ollama provider failed: %s", e)
 

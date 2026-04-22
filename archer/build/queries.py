@@ -120,10 +120,10 @@ def load_splunk_schema():
     Checks for custom mapping file first (schemaSplunk_custom.json),
     then falls back to default mapping file (schemaSplunk.json).
     """
-    mappings_dir = Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings"
+    schemas_dir = Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "schemas"
 
     # Try custom mapping file first
-    custom_schema_file = mappings_dir / "schemaSplunk_custom.json"
+    custom_schema_file = schemas_dir / "schemaSplunk_custom.json"
     if custom_schema_file.exists():
         try:
             with open(custom_schema_file, "r") as f:
@@ -133,7 +133,7 @@ def load_splunk_schema():
             pass
 
     # Fall back to default mapping file
-    schema_file = mappings_dir / "schemaSplunk.json"
+    schema_file = schemas_dir / "schemaSplunk.json"
     if not schema_file.exists():
         return {}
 
@@ -150,7 +150,7 @@ SPLUNK_SCHEMA = load_splunk_schema()
 def load_log_source_categories():
     """Load log source categorization from logSourceCategories.json"""
     categories_file = (
-        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "logSourceCategories.json"
+        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "sources" / "logSourceCategories.json"
     )
     if not categories_file.exists():
         return {}
@@ -539,14 +539,155 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
     return mde_queries
 
 
+def _is_new_format_pipeline(pipeline: str) -> bool:
+    """Return True if the pipeline uses the Detection Generation format (mde_clean or action_lc)."""
+    return "`mde_clean`" in pipeline or "action_lc" in pipeline
+
+
+def _build_prefilter(indicators: list) -> str:
+    """Build a prefilter keyword group from indicators for the base search line."""
+    if not indicators:
+        return "*"
+    # Use up to 12 indicators as OR-joined keywords
+    keywords = []
+    for ind in indicators[:12]:
+        # Escape and quote multi-word indicators; single words go bare
+        ind = ind.strip().strip('"').strip("'")
+        if not ind:
+            continue
+        if " " in ind:
+            keywords.append(f'"{ind}"')
+        else:
+            keywords.append(ind)
+    if not keywords:
+        return "*"
+    return "(" + " OR ".join(keywords) + ")"
+
+
+def _build_action_lc_filter(indicators: list) -> str:
+    """Build a | where match(action_lc, ...) filter from indicators."""
+    if not indicators:
+        return ""
+    # Escape special regex chars from indicators (but keep * as wildcards become .*)
+    escaped = []
+    for ind in indicators:
+        ind = ind.strip().strip('"').strip("'")
+        if not ind:
+            continue
+        # Escape regex metacharacters except * (treat as wildcard)
+        esc = re.sub(r'([.+?^${}()\[\]\\|])', r'\\\1', ind)
+        esc = esc.replace("\\*", ".*")
+        escaped.append(esc)
+    if not escaped:
+        return ""
+    pattern = "|".join(escaped)
+    return f'| where match(action_lc,"(?i)({pattern})")'
+
+
+def _build_operation_eval(indicators: list, detection_name: str) -> str:
+    """Build a simplified eval operation=case(...) block from indicators."""
+    if not indicators:
+        op_label = detection_name or "Detected Activity"
+        return (
+            f'| eval operation="{op_label}"\n'
+            f'| where isnotnull(operation)'
+        )
+    op_label = detection_name or "Detected Activity"
+    escaped = []
+    for ind in indicators[:8]:  # Limit to 8 buckets
+        ind = ind.strip().strip('"').strip("'")
+        if not ind:
+            continue
+        esc = re.sub(r'([.+?^${}()\[\]\\|])', r'\\\1', ind)
+        esc = esc.replace("\\*", ".*")
+        escaped.append(esc)
+    if not escaped:
+        return f'| eval operation="{op_label}"\n| where isnotnull(operation)'
+    pattern = "|".join(escaped)
+    return (
+        f'| eval operation=case(\n'
+        f'    match(action_lc,"(?i)({pattern})"),'
+        f'"{op_label}",\n'
+        f'    true(),"Other")\n'
+        f'| where operation!="Other"'
+    )
+
+
+def _build_mde_normalization_tail(technique_name: str) -> str:
+    """Build the normalization + output tail for MDE Detection Generation format."""
+    tname = technique_name or "Detection"
+    return (
+        '| eval is_benign_cmd=if(match(action_lc,"(?i)(\n'
+        '    \\\\config\\\\systemprofile\\\\scriptlaunchcache\\\\\n'
+        '    |\\\\bpdq\\\\b|pdq-connect-agent\\.exe\n'
+        '    |\\\\bnexthink\\\\b|\\\\programdata\\\\nexthink\\\\\n'
+        '    |\\\\bqualys\\\\b|qualysagent|\\\\bcrowdstrike\\\\b|csfalcon\n'
+        '    |\\\\bsentinel\\\\b|sentinelagent\n'
+        '    |\\\\bdefender\\\\b|msmpeng|senseir\n'
+        '    )"),1,0)\n'
+        '| where is_benign_cmd=0\n'
+        '| eval object=mvappend(FileName, InitiatingProcessFileName, InitiatingProcessParentFileName)\n'
+        '| search object!="null"\n'
+        '| eval object_lc=mvmap(object, lower(object))\n'
+        '| where NOT match(mvjoin(object_lc," "),"(?i)\\\\b(msmpeng|senseir|csfalconservice|elastic-endpoint|sentinelagent)\\.exe\\\\b")\n'
+        '| eval time=strftime(_time, "%F %H:%M")\n'
+        '| eval resource=coalesce(DeviceName, DeviceId, LocalIP)\n'
+        '| eval identity=mvappend(AccountName, InitiatingProcessAccountName)\n'
+        '| eval identity=mvfilter(isnotnull(identity) AND identity!="")\n'
+        '| eval object=mvfilter(isnotnull(object) AND object!="" AND object!="null")\n'
+        '| eval identity=mvdedup(identity)\n'
+        '| eval object=mvdedup(object)\n'
+        '| stats count values(operation) AS operation values(action) AS action values(object) AS object BY time identity resource\n'
+        f'| eval technique="{tname}"\n'
+        '| table time technique identity resource operation action object count\n'
+        '| sort -time -count'
+    )
+
+
+def _build_windows_normalization_tail(technique_name: str) -> str:
+    """Build the normalization + output tail for Windows Event Log Detection Generation format."""
+    tname = technique_name or "Detection"
+    return (
+        '| eval is_benign_cmd=if(match(action_lc,"(?i)(\n'
+        '    \\\\bpdq\\\\b|pdq-connect-agent\\.exe\n'
+        '    |\\\\bnexthink\\\\b|\\\\programdata\\\\nexthink\\\\\n'
+        '    |\\\\bqualys\\\\b|qualysagent|\\\\bcrowdstrike\\\\b|csfalcon\n'
+        '    |\\\\bsentinel\\\\b|sentinelagent\n'
+        '    |\\\\bdefender\\\\b|msmpeng|senseir\n'
+        '    )"),1,0)\n'
+        '| where is_benign_cmd=0\n'
+        '| eval time=strftime(_time, "%F %H:%M")\n'
+        '| eval resource=coalesce(host, ComputerName)\n'
+        '| eval identity=mvappend(User, AccountName, SubjectUserName)\n'
+        '| eval identity=mvfilter(isnotnull(identity) AND identity!="")\n'
+        '| eval object=mvappend(NewProcessName, ProcessName, ParentProcessName, TargetObject)\n'
+        '| eval object=mvfilter(isnotnull(object) AND object!="" AND object!="null")\n'
+        '| eval identity=mvdedup(identity)\n'
+        '| eval object=mvdedup(object)\n'
+        '| stats count values(operation) AS operation values(action_lc) AS action values(object) AS object BY time identity resource\n'
+        f'| eval technique="{tname}"\n'
+        '| table time technique identity resource operation action object count\n'
+        '| sort -time -count'
+    )
+
+
 def compile_splunk_queries(
     indicator_mapping, indicators, indicator_type, splunk_queries, osint_indicators=None, detection_name="", platform=None, technique_id=None
 ):
     """
-    Builds Splunk queries with proper structure:
-    1. Clean index search: index={index} earliest=-1d
-    2. Transformation pipeline from schemaSplunk.json
-    3. Final | search with compiled indicators
+    Builds Splunk queries with proper structure.
+
+    For MDE/Windows pipelines using the Detection Generation format (mde_clean or action_lc):
+      index={index} earliest=-3d@d ({prefilter})
+      {pipeline}  (includes NOT exclusions, mde_clean, action normalization)
+      | where match(action_lc, ...)
+      | eval operation=case(...)
+      {normalization + stats/table/sort tail}
+
+    For legacy pipelines (rename properties.* format):
+      index={index} earliest=-1d
+      {pipeline}
+      | search {search_clause}
 
     Args:
         indicator_mapping: Mapping of indicator types to data sources
@@ -605,6 +746,43 @@ def compile_splunk_queries(
             # (This is expected for indexes not configured for this indicator type)
             continue
 
+        # ── NEW FORMAT: Detection Generation structure (mde_clean / action_lc pipelines) ──
+        if _is_new_format_pipeline(pipeline):
+            if not indicators_to_use:
+                continue  # Can't build a meaningful filter without indicators
+
+            # Collect all indicators including OSINT
+            all_indicators = list(indicators_to_use)
+            if osint_indicators:
+                for vals in osint_indicators.values():
+                    all_indicators.extend(vals)
+            all_indicators = validate_and_clean_indicators(all_indicators, indicator_type)
+
+            prefilter = _build_prefilter(all_indicators)
+            action_filter = _build_action_lc_filter(all_indicators)
+            operation_eval = _build_operation_eval(all_indicators, detection_name)
+
+            # Choose correct normalization tail based on index
+            if "microsoft_defender" in index:
+                norm_tail = _build_mde_normalization_tail(detection_name)
+            else:
+                norm_tail = _build_windows_normalization_tail(detection_name)
+
+            parts = [f"index={index} earliest=-3d@d {prefilter}", pipeline]
+            if action_filter:
+                parts.append(action_filter)
+            parts.append(operation_eval)
+            parts.append(norm_tail)
+            query = "\n".join(parts)
+
+            if ioc_metadata and ioc_metadata.get("malware_family_names"):
+                malware_names_str = ", ".join(ioc_metadata["malware_family_names"])
+                query += f"\n`/** {malware_names_str} **/`"
+
+            splunk_queries.append(query)
+            continue
+
+        # ── LEGACY FORMAT: rename properties.* pipelines ──
         # Extract field names available in the pipeline
         pipeline_fields = extract_field_names_from_pipeline(pipeline)
 
@@ -613,34 +791,21 @@ def compile_splunk_queries(
 
         # Add MITRE indicators - validate fields exist in pipeline
         for field in fields:
-            # Check if field exists in pipeline fields
             matched_field = find_matching_field(field, pipeline_fields)
-
             if matched_field:
                 if matched_field not in field_value_pairs:
                     field_value_pairs[matched_field] = []
                 field_value_pairs[matched_field].extend(indicators_to_use)
-            else:
-                # Field from indicatorMapping.json not found in pipeline
-                # Skip this field silently (this is expected for some index/field combinations)
-                pass
 
         # Add OSINT indicators if enhancement enabled
         if osint_indicators:
             for osint_field, osint_values in osint_indicators.items():
-                # Map OSINT field names to Splunk field names
-                # OSINT uses generic names like 'operation', but Splunk uses specific names like 'operationName'
-                # We need to check which fields from the transformation pipeline match
-
-                # Find matching field (operationName, Operation, operation_name, etc.)
                 matched_field = find_matching_field(osint_field, pipeline_fields)
-
                 if matched_field:
                     if matched_field not in field_value_pairs:
                         field_value_pairs[matched_field] = []
                     field_value_pairs[matched_field].extend(osint_values)
                 else:
-                    # If no match found, try the osint_field name directly
                     if osint_field not in field_value_pairs:
                         field_value_pairs[osint_field] = []
                     field_value_pairs[osint_field].extend(osint_values)
@@ -650,13 +815,10 @@ def compile_splunk_queries(
 
         # Only generate query if there are actual indicators in the search clause
         if not search_clause or search_clause.strip() == "":
-            # Skip silently - this is expected when no valid field mappings exist
             continue
 
-        # Build final query with proper structure
         query = f"index={index} earliest=-1d\n{pipeline}\n| search {search_clause}"
 
-        # Add malware family name as comment if enrichment occurred
         if ioc_metadata and ioc_metadata.get("malware_family_names"):
             malware_names_str = ", ".join(ioc_metadata["malware_family_names"])
             query += f" ```{malware_names_str}```"
@@ -724,7 +886,7 @@ def find_matching_field(osint_field, pipeline_fields):
 
 def load_platform_mappings():
     platforms_file = (
-        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "platforms.json"
+        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "sources" / "platforms.json"
     )
     if not platforms_file.exists():
         return {}

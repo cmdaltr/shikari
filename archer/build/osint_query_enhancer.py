@@ -48,7 +48,7 @@ class OSINTQueryEnhancer:
         try:
             import json
             import os
-            schema_path = os.path.join(os.path.dirname(__file__), '..', '..', 'bespoke', 'mappings', 'schemaMDE.json')
+            schema_path = os.path.join(os.path.dirname(__file__), '..', '..', 'bespoke', 'mappings', 'schemas', 'schemaMDE.json')
             with open(schema_path, 'r') as f:
                 mde_schema = json.load(f)
 

@@ -53,7 +53,7 @@ def get_team(author):
     members = {}
 
     # Try bespoke location first (org-specific)
-    bespoke_path = os.path.join("bespoke", "mappings", "members.json")
+    bespoke_path = os.path.join("bespoke", "mappings", "sources", "members.json")
     if os.path.exists(bespoke_path):
         try:
             with open(bespoke_path) as membersjson:
@@ -177,7 +177,7 @@ def map_entities(query):
 
     # Process KQL/MDE queries with entity mapping
     fields = query.split("| summarize by Timestamp, ")[1].split(", ")
-    with open(os.path.join("bespoke", "mappings", "entityMappings.json")) as f:
+    with open(os.path.join("bespoke", "mappings", "sources", "entityMappings.json")) as f:
         entity_mappings = json.load(f)
 
     # Find and print nested field/entity matches
@@ -533,7 +533,7 @@ def construct_yaml(
     if osint_enhancement and osint_enhancement_data:
         osint_indicators_to_pass = osint_enhancement_data.get("osint_indicators", {})
 
-    # Check for reference queries from bespoke/references directory
+    # Check for reference queries from bespoke/llm_references directory
     reference_used = False
     reference_sources = []
     try:

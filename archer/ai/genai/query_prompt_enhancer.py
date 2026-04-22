@@ -28,7 +28,7 @@ class QueryPromptEnhancer:
         """
         if schema_dir is None:
             archer_dir = Path(__file__).parent.parent.parent
-            schema_dir = archer_dir / "bespoke" / "mappings"
+            schema_dir = archer_dir / "bespoke" / "mappings" / "schemas"
 
         self.schema_dir = Path(schema_dir)
         self.repository = get_repository()

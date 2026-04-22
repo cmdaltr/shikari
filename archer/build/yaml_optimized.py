@@ -227,13 +227,13 @@ def check_id(existing_ids):
 def get_team(author):
     """
     Get team assignment for an author based on members.json.
-    Looks in bespoke/mappings/members.json (org-specific).
+    Looks in bespoke/mappings/sources/members.json (org-specific).
     Returns default team if file not found or author not in list.
     """
     members = {}
 
     # Try bespoke location (org-specific)
-    bespoke_path = os.path.join("bespoke", "mappings", "members.json")
+    bespoke_path = os.path.join("bespoke", "mappings", "sources", "members.json")
     if os.path.exists(bespoke_path):
         try:
             with open(bespoke_path) as membersjson:
@@ -271,7 +271,7 @@ def find_nested_entity(field, entity_mappings):
 
 def map_entities(query):
     fields = query.split("| summarize by Timestamp, ")[1].split(", ")
-    with open(os.path.join("bespoke", "mappings", "entityMappings.json")) as f:
+    with open(os.path.join("bespoke", "mappings", "sources", "entityMappings.json")) as f:
         entity_mappings = json.load(f)
 
     # Find and print nested field/entity matches

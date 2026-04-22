@@ -185,8 +185,8 @@ which ones are available in your environment.
 Next Steps:
 
 1. REVIEW the generated files:
-   - bespoke/mappings/schemaSplunk_custom.json
-   - bespoke/mappings/schemaMDE_custom.json
+   - bespoke/mappings/schemas/schemaSplunk_custom.json
+   - bespoke/mappings/schemas/schemaMDE_custom.json
 
 2. TEST your configuration:
    python scripts/validate_mappings.py
@@ -306,7 +306,7 @@ Examples:
 
     if not config:
         print("\n⚠️  WARNING: No Splunk sources configured!")
-        print("You can add them later by editing bespoke/mappings/schemaSplunk_custom.json")
+        print("You can add them later by editing bespoke/mappings/schemas/schemaSplunk_custom.json")
 
     return config
 
@@ -361,7 +361,7 @@ are available in your environment:
 
     if not config:
         print("\n⚠️  WARNING: No MDE tables configured!")
-        print("You can add them later by editing bespoke/mappings/schemaMDE_custom.json")
+        print("You can add them later by editing bespoke/mappings/schemas/schemaMDE_custom.json")
 
     return config
 

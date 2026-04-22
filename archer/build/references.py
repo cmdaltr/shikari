@@ -5,7 +5,7 @@ This module loads production-tested reference queries that are used as:
 1. Templates for generating new queries with similar structure
 2. Few-shot examples for LLM-based query generation
 
-Reference queries are stored in bespoke/references/
+Reference queries are stored in bespoke/llm_references/
 """
 
 import os
@@ -44,13 +44,13 @@ class ReferenceQueryLoader:
 
         Args:
             base_dir: Base directory for reference queries.
-                      Defaults to bespoke/references/
+                      Defaults to bespoke/llm_references/
         """
         if base_dir is None:
             # Find the data directory relative to this file
             current_file = Path(__file__)
             archer_root = current_file.parent.parent.parent
-            base_dir = archer_root / "bespoke" / "references"
+            base_dir = archer_root / "bespoke" / "llm_references"
 
         self.base_dir = Path(base_dir)
         self._cache: Dict[str, Any] = {}

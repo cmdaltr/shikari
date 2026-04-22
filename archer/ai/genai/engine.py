@@ -14,8 +14,8 @@ import time
 import re
 import threading
 from typing import List, Dict, Tuple, Optional
-from ..build.progress import write_progress
-from ..config import GENERATE_DIR, CORRELATE_DIR
+from archer.build.progress import write_progress
+from archer.config import GENERATE_DIR, CORRELATE_DIR
 
 # Global generation mode; set in generate_correlations
 _GEN_MODE: str = "heuristic"

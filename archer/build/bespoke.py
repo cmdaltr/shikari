@@ -108,7 +108,7 @@ def get_config() -> Dict[str, Any]:
 
 def get_sample_searches(technique_id: Optional[str] = None, platform: Optional[str] = None) -> List[Dict]:
     """
-    Load custom sample searches from bespoke/searches/.
+    Load custom sample searches from bespoke/output_suggestions/.
 
     Args:
         technique_id: Filter by MITRE technique ID (e.g., "T1003.001")
@@ -117,7 +117,7 @@ def get_sample_searches(technique_id: Optional[str] = None, platform: Optional[s
     Returns list of dicts with keys:
     - technique_id, platform, description, query, notes
     """
-    sample_dir = BESPOKE_DIR / "searches"
+    sample_dir = BESPOKE_DIR / "output_suggestions"
 
     if not sample_dir.exists():
         return []
@@ -353,3 +353,120 @@ def get_bespoke_status() -> Dict[str, Any]:
         "organization_name": config.get("organization", {}).get("name", ""),
         "apply_exclusions": config.get("query_settings", {}).get("apply_exclusions", True)
     }
+
+
+# ── Bespoke Component Validation ────────────────────────────────────────────
+
+# Component definitions: (path_relative_to_bespoke, display_name, required, fallback_description)
+_BESPOKE_COMPONENTS = [
+    # Critical mappings — generation fails without these
+    ("mappings/indicatorMapping.json",       "Indicator Mapping",           True,  "indicator→field mappings for query generation"),
+    ("mappings/schemas/schemaSplunk.json",           "Splunk Pipeline Schema",      True,  "per-index SPL transformation pipelines"),
+    ("mappings/schemas/schemaMDE.json",              "MDE Schema",                  True,  "MDE table/field definitions"),
+    ("mappings/schemas/schemaElastic.json",          "Elastic Schema",              True,  "Elastic field definitions"),
+    ("mappings/schemas/schemaGoogleSecOps.json",     "Google SecOps Schema",        True,  "Chronicle/Google SecOps field definitions"),
+    ("mappings/sources/platforms.json",              "Platform Mappings",           True,  "platform→index compatibility matrix"),
+    ("mappings/sources/dataSources.json",            "Data Sources",                True,  "log source definitions"),
+    ("mappings/sources/entityMappings.json",         "Entity Mappings",             True,  "KQL entity extraction patterns"),
+    ("mappings/sources/logSourceCategories.json",    "Log Source Categories",       True,  "log source→category mapping"),
+    ("mappings/indicatorMapping.json",               "Indicator Mapping",           True,  "indicator→field mappings for query generation"),
+    ("mappings/techniquePlatformIndicators.json",    "Technique-Platform Indicators", True, "platform indicator type routing"),
+    # LLM prompts — needed for AI generation modes
+    ("prompts/DetectionGeneration_Templates.md", "Detection Generation Templates", False, "per-telemetry query templates for LLM generation"),
+    ("prompts/CloudLLM_Master.md",           "Cloud LLM Master Prompt",    False, "master prompt for cloud LLM generation"),
+    ("prompts/LocalLLM_Master.md",           "Local LLM Master Prompt",    False, "master prompt for local LLM generation"),
+    # Query templates
+    ("query_templates/DetectionGeneration_Templates.md", "Query Templates", False, "bespoke query templates directory"),
+    # Reference queries — few-shot LLM examples
+    ("llm_references/Splunk",               "Splunk LLM References",       False, "production Splunk queries used as LLM examples"),
+    ("llm_references/MDE",                 "MDE LLM References",          False, "production MDE queries used as LLM examples"),
+    # Environment-specific searches
+    ("output_suggestions",          "Output Search Suggestions",   False, "org-specific tuned detection queries surfaced to analysts"),
+    # Optional config
+    ("exclusions.yaml",                     "Exclusions Config",           False, "global query exclusions (e.g. Tanium, sb-sim)"),
+    ("config.yaml",                         "Organisation Config",         False, "org name, field overrides, query settings"),
+]
+
+
+def validate_bespoke_components(verbose: bool = False) -> Dict[str, Any]:
+    """
+    Validate all bespoke components and return a status report.
+
+    For each component:
+    - ``present``: file/dir exists
+    - ``missing_critical``: required file is absent (generation will degrade)
+    - ``missing_optional``: optional file is absent (feature disabled, using defaults)
+
+    Args:
+        verbose: If True, print a formatted status table to stdout.
+
+    Returns:
+        Dict with keys:
+        - ``all_critical_present``: bool
+        - ``missing_critical``: list of component names
+        - ``missing_optional``: list of component names
+        - ``components``: list of per-component dicts
+    """
+    results = []
+    missing_critical: List[str] = []
+    missing_optional: List[str] = []
+
+    for rel_path, display_name, required, fallback_desc in _BESPOKE_COMPONENTS:
+        full_path = BESPOKE_DIR / rel_path
+        exists = full_path.exists()
+        status = "present" if exists else ("missing_critical" if required else "missing_optional")
+
+        if not exists:
+            if required:
+                missing_critical.append(display_name)
+            else:
+                missing_optional.append(display_name)
+
+        results.append({
+            "name": display_name,
+            "path": str(full_path),
+            "required": required,
+            "exists": exists,
+            "status": status,
+            "fallback": fallback_desc if not exists else None,
+        })
+
+    all_critical_present = len(missing_critical) == 0
+
+    if verbose:
+        _print_validation_report(results, all_critical_present, missing_critical, missing_optional)
+
+    return {
+        "all_critical_present": all_critical_present,
+        "missing_critical": missing_critical,
+        "missing_optional": missing_optional,
+        "components": results,
+    }
+
+
+def _print_validation_report(
+    results: list,
+    all_critical_present: bool,
+    missing_critical: List[str],
+    missing_optional: List[str],
+) -> None:
+    """Print a startup validation summary table."""
+    print("\n" + "─" * 70)
+    print("  Bespoke Component Validation")
+    print("─" * 70)
+    for c in results:
+        icon = "✓" if c["exists"] else ("✗" if c["required"] else "○")
+        tag = "" if c["exists"] else (" [REQUIRED]" if c["required"] else " [optional — using default]")
+        print(f"  {icon}  {c['name']}{tag}")
+    print("─" * 70)
+    if all_critical_present:
+        if missing_optional:
+            print(f"  All critical components present. {len(missing_optional)} optional component(s) absent.")
+        else:
+            print("  All bespoke components present.")
+    else:
+        print(f"  WARNING: {len(missing_critical)} required component(s) missing:")
+        for name in missing_critical:
+            print(f"    ✗  {name}")
+        print("  Generation may produce degraded or incomplete results.")
+    print("─" * 70 + "\n")

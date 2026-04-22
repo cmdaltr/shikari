@@ -138,13 +138,13 @@ data/external/repos/*
 data/bespoke/*
 !data/bespoke/.gitkeep
 !data/bespoke/*.example
-!data/bespoke/searches/
-data/bespoke/searches/*
-!data/bespoke/searches/.gitkeep
-!data/bespoke/searches/example.yaml
-!data/bespoke/references/
-data/bespoke/references/*
-!data/bespoke/references/.gitkeep
+!data/bespoke/output_suggestions/
+data/bespoke/output_suggestions/*
+!data/bespoke/output_suggestions/.gitkeep
+!data/bespoke/output_suggestions/example.yaml
+!data/bespoke/llm_references/
+data/bespoke/llm_references/*
+!data/bespoke/llm_references/.gitkeep
 # Mappings directory structure tracked, but files are org-specific
 !data/bespoke/mappings/
 data/bespoke/mappings/*

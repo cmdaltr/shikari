@@ -26,6 +26,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
@@ -271,6 +272,136 @@ def fetch_stix(url: str = STIX_URL, timeout: int = 120) -> dict:
     )
     logger.info("Downloaded ATT&CK v%s (%d objects)", version, len(data.get("objects", [])))
     return data
+
+
+# ---------------------------------------------------------------------------
+# Cache staleness helpers
+# ---------------------------------------------------------------------------
+
+CACHE_TTL_SECONDS: int = 7 * 24 * 3600  # 7 days
+
+
+def is_cache_stale(csv_path: Optional[Path] = None) -> bool:
+    """
+    Return True if the MITRESaw CSV cache is missing or older than 7 days.
+
+    The cache is the mitre_procedures.csv in Archer's data directory —
+    the file written by run_mitresaw() / run_mitresaw_detection().
+    """
+    path = Path(csv_path) if csv_path is not None else _DEFAULT_CSV
+    if not path.exists():
+        return True
+    age = time.time() - path.stat().st_mtime
+    return age > CACHE_TTL_SECONDS
+
+
+# ---------------------------------------------------------------------------
+# Public: run MITRESaw with detection flags (used by detection generation)
+# ---------------------------------------------------------------------------
+
+def run_mitresaw_detection(
+    output_csv: Optional[Path] = None,
+    output_xlsx: Optional[Path] = None,
+    force: bool = False,
+) -> Tuple[Path, Optional[Path]]:
+    """
+    Run MITRESaw to produce the detection-enriched CSV and evidence XLSX.
+
+    Normal run  (cache is fresh, ≤7 days):
+        MITRESaw.py -d -E -q
+        Equivalent to the user's shorthand: -DEC
+
+    Force/stale run (cache is >7 days or force=True):
+        MITRESaw.py -d -E -F -q
+        Equivalent to the user's shorthand: -DECF --clear-cache
+        (-F forces a fresh STIX download; --clear-cache is reserved for
+        future MITRESaw versions and is omitted here)
+
+    Flags used:
+        -d   --default          Express CSV with key detection columns
+        -E   --evidence-report  Generate styled XLSX evidence report
+        -F   --fetch            Force fresh ATT&CK STIX download
+        -q   --quiet            Suppress per-identifier console output
+
+    Returns (csv_path, xlsx_path). xlsx_path may be None if XLSX was not produced.
+    """
+    if output_csv is None:
+        output_csv = _DEFAULT_CSV
+    if output_xlsx is None:
+        output_xlsx = _DEFAULT_XLSX
+
+    output_csv = Path(output_csv)
+    output_xlsx = Path(output_xlsx)
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+
+    mitresaw_script = _MITRESAW_DIR / "MITRESaw.py"
+    if not mitresaw_script.exists():
+        raise FileNotFoundError(
+            f"MITRESaw not found at {mitresaw_script}. "
+            "Run: git submodule update --init --recursive"
+        )
+
+    flags = ["-d", "-E", "-q"]
+    if force:
+        flags.append("-F")
+
+    logger.info(
+        "Running MITRESaw detection extraction: %s %s",
+        mitresaw_script,
+        " ".join(flags),
+    )
+
+    result = subprocess.run(
+        [sys.executable, str(mitresaw_script)] + flags,
+        cwd=str(_MITRESAW_DIR),
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+
+    if result.returncode != 0:
+        logger.error(
+            "MITRESaw detection run failed (exit %d):\n%s",
+            result.returncode,
+            result.stderr,
+        )
+        raise RuntimeError(
+            f"MITRESaw exited with code {result.returncode}: {result.stderr}"
+        )
+
+    logger.info(
+        "MITRESaw output:\n%s", result.stdout[-500:] if result.stdout else "(empty)"
+    )
+
+    # Locate output — MITRESaw writes to ./YYYY-MM-DD/ under its own directory
+    today = datetime.now().strftime("%Y-%m-%d")
+    mitresaw_date_dir = _MITRESAW_DIR / today
+
+    src_csv = mitresaw_date_dir / "mitre_procedures.csv"
+    src_xlsx = mitresaw_date_dir / "mitre_procedures.xlsx"
+
+    if not src_csv.exists():
+        candidates = list(_MITRESAW_DIR.glob("*/mitre_procedures.csv"))
+        if candidates:
+            candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            src_csv = candidates[0]
+            src_xlsx = src_csv.parent / "mitre_procedures.xlsx"
+        else:
+            raise FileNotFoundError(
+                f"MITRESaw did not produce mitre_procedures.csv. "
+                f"Looked in {mitresaw_date_dir}. stdout: {result.stdout[-200:]}"
+            )
+
+    shutil.copy2(str(src_csv), str(output_csv))
+    logger.info("Copied MITRESaw detection CSV to %s", output_csv)
+
+    xlsx_result: Optional[Path] = None
+    if src_xlsx.exists():
+        shutil.copy2(str(src_xlsx), str(output_xlsx))
+        logger.info("Copied MITRESaw evidence XLSX to %s", output_xlsx)
+        xlsx_result = output_xlsx
+
+    return output_csv, xlsx_result
 
 
 # ---------------------------------------------------------------------------
