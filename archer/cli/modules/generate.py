@@ -41,6 +41,11 @@ class GenerateModule(BaseModule):
                 description="Enable OSINT comparison (reference only)",
                 default=False,
             ),
+            "DRY_RUN": ModuleOption(
+                name="DRY_RUN",
+                description="Preview queries to stdout without writing any files",
+                default=False,
+            ),
         }
 
     def run(self):
@@ -55,7 +60,9 @@ class GenerateModule(BaseModule):
         elif mode == "fallback":
             use_llm = "fallback"
 
-        print(f"\n[*] Generating detections for {group} (mode: {mode})\n")
+        dry_run = bool(self.options["DRY_RUN"].effective_value)
+        action = "Previewing" if dry_run else "Generating"
+        print(f"\n[*] {action} detections for {group} (mode: {mode})\n")
 
         process_group(
             group_name=group,
@@ -64,4 +71,5 @@ class GenerateModule(BaseModule):
             osint_enhancement=bool(self.options["OSINT"].effective_value),
             osint_comparison=bool(self.options["OSINT_COMPARE"].effective_value),
             use_llm=use_llm,
+            dry_run=dry_run,
         )

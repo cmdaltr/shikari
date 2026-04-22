@@ -12,6 +12,31 @@ import re
 from pathlib import Path
 
 
+def _print_preview_queries(name, tid, tactic, mde_queries, splunk_queries):
+    """Print generated queries to stdout for dry-run / preview mode."""
+    sep = "─" * 60
+    print(f"\n{sep}")
+    print(f"  Technique : {name} ({tid})")
+    print(f"  Tactic    : {tactic}")
+    total = len(mde_queries) + len(splunk_queries)
+    print(f"  Queries   : {total} ({len(mde_queries)} MDE, {len(splunk_queries)} Splunk)")
+    print(sep)
+
+    for i, q in enumerate(mde_queries, 1):
+        print(f"\n  [MDE {i}]\n")
+        for line in q.strip().splitlines():
+            print(f"    {line}")
+
+    for i, q in enumerate(splunk_queries, 1):
+        print(f"\n  [Splunk {i}]\n")
+        for line in q.strip().splitlines():
+            print(f"    {line}")
+
+    if not mde_queries and not splunk_queries:
+        print("  (no queries generated — indicators present but no compatible sources)")
+    print()
+
+
 def filter_generic_indicators(identifiers):
     """
     Filter out overly generic terms from indicators.
@@ -197,7 +222,7 @@ def create_indicatorMappings():
     return indicatorMappings
 
 
-def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None):
+def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False):
     from archer.build.queries import is_query_applicable
     from archer.build.platform_validator_v2 import validate_procedure_for_index
     from archer.build.platform_indicator_validator import (
@@ -248,6 +273,18 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
     # Extract platform information if available
     procedure_platforms = retrieved_data.get("procedure_platforms", [])
     software_platforms = retrieved_data.get("software_platforms", {})
+
+    # Dry-run: print raw queries without file I/O and return early
+    if dry_run:
+        from archer.build.collate import collate_data
+        if identifiers:
+            mde_queries, splunk_queries = collate_data(
+                identifiers, log_sources or [], procedure_platforms, software_platforms, name, technique_id=tid
+            )
+            _print_preview_queries(name, tid, tactic, mde_queries, splunk_queries)
+        else:
+            print(f"  [{tid}] {name} — no indicators extracted, no queries to preview")
+        return
 
     # OSINT comparison data (will be populated if indicators exist or if no indicators)
     osint_enhancement_data = None

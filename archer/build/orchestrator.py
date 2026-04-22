@@ -20,8 +20,13 @@ import os
 from pathlib import Path
 
 
+_dry_run_active = False
+
+
 def safe_progress_update(group_name, status_data):
     """Helper function to safely update progress with error logging"""
+    if _dry_run_active:
+        return
     try:
         write_progress(group_name, status_data)
     except Exception as e:
@@ -30,7 +35,16 @@ def safe_progress_update(group_name, status_data):
         traceback.print_exc()
 
 
-def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None):
+def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False):
+    global _dry_run_active
+    _dry_run_active = dry_run
+
+    if dry_run:
+        print(f"\n{'=' * 60}")
+        print(f"  PREVIEW MODE — no files will be written")
+        print(f"  Group: {group_name}")
+        print(f"{'=' * 60}")
+
     # mitre variables
     url = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
     bundle = get_stix_data(url)
@@ -129,7 +143,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
                 # Build detection queries and YAML
                 try:
-                    compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config)
+                    compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run)
                     created += 1
                     safe_progress_update(
                         group_name,
@@ -193,7 +207,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 retrieved_data["technique_platforms"] = procedure[10]
 
             try:
-                compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config)
+                compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run)
                 created += 1
                 safe_progress_update(
                     group_name,
@@ -210,6 +224,13 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 traceback.print_exc()
                 # Continue to next procedure instead of failing completely
                 continue
+
+    if dry_run:
+        _dry_run_active = False
+        print(f"\n{'=' * 60}")
+        print(f"  Preview complete — {created} technique(s) had queries")
+        print(f"{'=' * 60}\n")
+        return
 
     # After YAMLs are created, run the GenAI correlation generator only if requested and YAMLs exist
     if run_correlation and created > 0:
