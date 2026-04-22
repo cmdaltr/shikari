@@ -172,12 +172,69 @@ def transform_url_to_api_method(url_indicator):
     return url_indicator
 
 
+# Mapping from known cloud API names to their AWS CLI equivalents.
+# Used to generate cmd-type indicators for endpoint telemetry (ProcessCommandLine)
+# alongside the api-type indicator for CloudTrail/ActivityLog.
+# Format: api_name → (cli_prefix, subcommand)
+# e.g. "aws ec2 describe-instances" appears in ProcessCommandLine on MDE endpoints.
+_AWS_API_TO_CLI = {
+    # EC2 / compute
+    "DescribeInstances":          ("aws ec2", "describe-instances"),
+    "DescribeInstanceStatus":     ("aws ec2", "describe-instance-status"),
+    "DescribeImages":             ("aws ec2", "describe-images"),
+    "DescribeVpcs":               ("aws ec2", "describe-vpcs"),
+    "DescribeSubnets":            ("aws ec2", "describe-subnets"),
+    "DescribeSecurityGroups":     ("aws ec2", "describe-security-groups"),
+    "DescribeSnapshots":          ("aws ec2", "describe-snapshots"),
+    "DescribeVolumes":            ("aws ec2", "describe-volumes"),
+    "DescribeKeyPairs":           ("aws ec2", "describe-key-pairs"),
+    "DescribeLoadBalancers":      ("aws elbv2", "describe-load-balancers"),
+    # S3
+    "ListBuckets":                ("aws s3api", "list-buckets"),
+    "HeadBucket":                 ("aws s3api", "head-bucket"),
+    "GetBucketAcl":               ("aws s3api", "get-bucket-acl"),
+    "GetBucketPolicy":            ("aws s3api", "get-bucket-policy"),
+    "GetPublicAccessBlock":       ("aws s3api", "get-public-access-block"),
+    "ListObjectsV2":              ("aws s3api", "list-objects-v2"),
+    # RDS
+    "DescribeDBInstances":        ("aws rds", "describe-db-instances"),
+    "DescribeDBClusters":         ("aws rds", "describe-db-clusters"),
+    "DescribeDBSnapshots":        ("aws rds", "describe-db-snapshots"),
+    # IAM
+    "ListUsers":                  ("aws iam", "list-users"),
+    "ListGroups":                 ("aws iam", "list-groups"),
+    "ListRoles":                  ("aws iam", "list-roles"),
+    "ListPolicies":               ("aws iam", "list-policies"),
+    "GetCallerIdentity":          ("aws sts", "get-caller-identity"),
+    "ListAttachedRolePolicies":   ("aws iam", "list-attached-role-policies"),
+    # Lambda / serverless
+    "ListFunctions":              ("aws lambda", "list-functions"),
+    # CloudFormation / infra
+    "DescribeStacks":             ("aws cloudformation", "describe-stacks"),
+    "ListStackResources":         ("aws cloudformation", "list-stack-resources"),
+}
+
+
+def _api_to_cli(api_name: str) -> str:
+    """Convert a cloud API name to its AWS CLI form for endpoint detection.
+
+    Uses the explicit mapping table for known APIs. Falls back to a heuristic
+    kebab-case conversion prefixed with 'aws' for unknowns.
+    """
+    if api_name in _AWS_API_TO_CLI:
+        prefix, sub = _AWS_API_TO_CLI[api_name]
+        return f"{prefix} {sub}"
+    # Heuristic: PascalCase → kebab-case, prefix 'aws'
+    kebab = re.sub(r'(?<=[a-z0-9])(?=[A-Z])', '-', api_name).lower()
+    return f"aws {kebab}"
+
+
 def extract_commands(combined_desc):
     cleaned_desc = (
-        combined_desc.replace(""", '"')
-        .replace(""", '"')
-        .replace("'", "'")
-        .replace("'", "'")
+        combined_desc.replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
     )
     cmds = re.findall("(?:`|<code>)([^`<]+)(?:`|</code>)", cleaned_desc)
     normalised_cmds = [cmd.strip() for cmd in cmds]
@@ -233,8 +290,16 @@ def extract_commands(combined_desc):
 
         if is_api and not is_cli:
             api_calls.append(cmd)
+            # Also add the AWS CLI equivalent so endpoint telemetry (ProcessCommandLine)
+            # picks up the actual command the adversary ran (e.g. "aws ec2 describe-instances")
+            cli_form = _api_to_cli(cmd)
+            commands.append(cli_form)
         else:
             commands.append(cmd)
+
+    # Deduplicate while preserving order
+    seen: set = set()
+    commands = [c for c in commands if not (c.lower() in seen or seen.add(c.lower()))]
 
     result = {}
     if commands:
