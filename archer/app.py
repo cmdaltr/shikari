@@ -46,6 +46,8 @@ from archer.config import (
     PROGRESS_DIR,
     PROFILE_PICS_DIR,
     SEVERITY_ORDER,
+    VECTR_ENABLED,
+    EMULATION_ENABLED,
 )
 
 # Configure logger
@@ -2450,8 +2452,8 @@ async def generate(
                     excluded_vendors=excluded if excluded else None,
                 )
 
-                # Run emulation if requested
-                if run_emulation == "true":
+                # Run emulation if requested (feature-flagged — see _archive/REINTEGRATION.md)
+                if run_emulation == "true" and EMULATION_ENABLED:
                     try:
                         from archer.config import EmulationConfig
                         from archer.emulation import AtomicRedTeam
@@ -2473,8 +2475,8 @@ async def generate(
                     except Exception as e:
                         print(f"Emulation error: {e}")
 
-                # Export to VECTR if requested
-                if vectr_export == "true":
+                # Export to VECTR if requested (feature-flagged — see _archive/REINTEGRATION.md)
+                if vectr_export == "true" and VECTR_ENABLED:
                     try:
                         from archer.config import VECTRConfig
                         from archer.vectr import export_to_vectr
@@ -4341,6 +4343,8 @@ async def emulate_technique(
     Supports both local simulation and live execution modes.
     Can execute on remote hosts if configured.
     """
+    if not EMULATION_ENABLED:
+        return JSONResponse({"success": False, "message": "Emulation is not enabled. See _archive/REINTEGRATION.md."}, status_code=503)
     try:
         from archer.emulation.atomic import AtomicRedTeam
 

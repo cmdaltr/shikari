@@ -10,7 +10,7 @@
 
 .tabs-header {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
   border-bottom: 3px solid #C53030;
   padding: 0;

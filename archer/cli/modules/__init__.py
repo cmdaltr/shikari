@@ -3,11 +3,14 @@
 from .generate import GenerateModule
 from .correlate import CorrelateModule
 from .hunt import HuntModule
-from .emulate import EmulateModule
+from archer.config import EMULATION_ENABLED
 
 MODULE_REGISTRY = {
     "generate": GenerateModule,
     "correlate": CorrelateModule,
     "hunt": HuntModule,
-    "emulate": EmulateModule,
 }
+
+if EMULATION_ENABLED:
+    from .emulate import EmulateModule
+    MODULE_REGISTRY["emulate"] = EmulateModule

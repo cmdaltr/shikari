@@ -30,6 +30,13 @@ OSINT_REPOS_DIR = os.path.join(DATA_DIR, "repos")
 SEVERITY_ORDER = ["Critical", "High", "Medium", "Low", "Informational"]
 
 
+# ========== Feature Flags ==========
+# These control optional integrations that require additional setup.
+# Both default to False. To re-enable, see _archive/REINTEGRATION.md.
+VECTR_ENABLED: bool = False
+EMULATION_ENABLED: bool = False
+
+
 class EmulationConfig:
     """Configuration for adversary emulation integrations."""
 

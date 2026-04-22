@@ -306,12 +306,6 @@
             </svg>
             <span>Profile</span>
           </button>
-          <button class="tab-button" data-tab="emulate">
-            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
-              <polygon points="5 3 19 12 5 21" stroke="#f59e0b" fill="none"/>
-            </svg>
-            <span>Validate</span>
-          </button>
         </div>
 
         <div class="tabs-content">
@@ -560,23 +554,6 @@
                       Elastic
                     </span>
                   </label>
-                </div>
-              </details>
-
-              <!-- VECTR Integration -->
-              <details class="options-section" style="opacity: 0.6;">
-                <summary class="options-header">VECTR Integration <span style="font-size: 0.8em; color: #999; margin-left: 0.5em;">(Coming Soon)</span></summary>
-                <div class="options-grid">
-                  <label class="option-item">
-                    <input type="checkbox" name="vectr_export" value="true" disabled>
-                    <span class="option-label">Export to VECTR</span>
-                    <span class="option-hint">Hunt tracking and validation - Available in upcoming release</span>
-                  </label>
-                  <div class="form-section" style="margin-top: 0.5em;">
-                    <label for="vectr_campaign_name" class="form-label-small">Campaign Name (Optional)</label>
-                    <input type="text" name="vectr_campaign_name" id="vectr_campaign_name"
-                           class="form-input-small" placeholder="Auto-generated if blank" disabled>
-                  </div>
                 </div>
               </details>
 
@@ -2361,12 +2338,6 @@
             </form>
           </div>
 
-          <!-- VALIDATE TAB (Detection Validation) -->
-          <div class="tab-pane" id="tab-emulate">
-            <div class="emulate-validation-container">
-              {% include 'partials/validation_controls.html' %}
-            </div>
-          </div>
         </div>
       </div>
 
