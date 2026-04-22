@@ -544,19 +544,71 @@ def _is_new_format_pipeline(pipeline: str) -> bool:
     return "`mde_clean`" in pipeline or "action_lc" in pipeline
 
 
+def _escape_indicator_regex(ind: str) -> str:
+    """Escape a raw indicator for use in a regex pattern, replacing spaces with \\s+."""
+    ind = ind.strip().strip('"').strip("'")
+    # Escape regex metacharacters except *
+    esc = re.sub(r'([.+?^${}()\[\]\\|])', r'\\\1', ind)
+    # Wildcards → .*
+    esc = esc.replace("\\*", ".*")
+    # Spaces → \s+ so "az vm list" matches regardless of whitespace variation
+    esc = re.sub(r' +', r'\\s+', esc)
+    return esc
+
+
+# Cloud-provider keyword hints used for generating operation labels
+_CLOUD_HINTS = [
+    (("gcloud", "gsutil"), "GCP"),
+    (("az ", "get-az", "new-az", "set-az", "remove-az"), "Azure"),
+    (("aws ", "describeinstances", "describevpcs", "describesubnets", "listbuckets",
+      "describedbinstances", "describeloadbalancers", "s3 ls", "s3api",
+      "ec2 describe", "iam list", "sts get"), "AWS"),
+    (("get-vm", "get-azvm", "get-azstorageaccount", "get-azresource",
+      "get-azsubscription", "get-azvirtualnetwork"), "Azure"),
+]
+
+
+def _indicator_to_label(ind: str, technique_name: str) -> str:
+    """Derive a human-readable operation label from an indicator and technique name."""
+    ind_l = ind.lower()
+    provider = None
+    for hints, prov in _CLOUD_HINTS:
+        if any(h in ind_l for h in hints):
+            provider = prov
+            break
+
+    # Strip cloud/OS qualifier from technique name to get the base concept
+    base = technique_name or "Detection"
+    for strip_word in ("Cloud ", "Windows ", "Linux ", "macOS ", "Network "):
+        base = base.replace(strip_word, "")
+
+    if provider:
+        return f"{provider} {base}"
+
+    # Fallback: humanize the indicator itself (first 4 significant words)
+    words = re.sub(r'[^a-zA-Z0-9\s]', ' ', ind).split()
+    skip = {'the', 'and', 'or', 'for', 'in', 'on', 'at', 'to', 'of', 'a', 'an'}
+    words = [w for w in words if len(w) > 1 and w.lower() not in skip]
+    return " ".join(w.capitalize() for w in words[:4]) or base
+
+
 def _build_prefilter(indicators: list) -> str:
-    """Build a prefilter keyword group from indicators for the base search line."""
+    """Build a prefilter keyword group for the base search line.
+
+    Multi-word indicators are AND-split so Splunk can use index-time lookups:
+      "gcloud compute instances list" → ("gcloud" AND "compute" AND "instances" AND "list")
+    Single-word indicators remain bare.
+    """
     if not indicators:
         return "*"
-    # Use up to 12 indicators as OR-joined keywords
     keywords = []
     for ind in indicators[:12]:
-        # Escape and quote multi-word indicators; single words go bare
         ind = ind.strip().strip('"').strip("'")
         if not ind:
             continue
-        if " " in ind:
-            keywords.append(f'"{ind}"')
+        words = ind.split()
+        if len(words) > 1:
+            keywords.append("(" + " AND ".join(f'"{w}"' for w in words) + ")")
         else:
             keywords.append(ind)
     if not keywords:
@@ -565,19 +617,15 @@ def _build_prefilter(indicators: list) -> str:
 
 
 def _build_action_lc_filter(indicators: list) -> str:
-    """Build a | where match(action_lc, ...) filter from indicators."""
+    """Build a | where match(action_lc, ...) filter from indicators.
+
+    Spaces in indicators are replaced with \\s+ so the regex handles
+    varying whitespace between command tokens.
+    """
     if not indicators:
         return ""
-    # Escape special regex chars from indicators (but keep * as wildcards become .*)
-    escaped = []
-    for ind in indicators:
-        ind = ind.strip().strip('"').strip("'")
-        if not ind:
-            continue
-        # Escape regex metacharacters except * (treat as wildcard)
-        esc = re.sub(r'([.+?^${}()\[\]\\|])', r'\\\1', ind)
-        esc = esc.replace("\\*", ".*")
-        escaped.append(esc)
+    escaped = [_escape_indicator_regex(ind) for ind in indicators if ind.strip()]
+    escaped = [e for e in escaped if e]
     if not escaped:
         return ""
     pattern = "|".join(escaped)
@@ -585,31 +633,47 @@ def _build_action_lc_filter(indicators: list) -> str:
 
 
 def _build_operation_eval(indicators: list, detection_name: str) -> str:
-    """Build a simplified eval operation=case(...) block from indicators."""
+    """Build an eval operation=case(...) block with one branch per indicator.
+
+    Each indicator gets its own match() branch with a derived label so analysts
+    can distinguish which command fired (e.g. 'GCP Infrastructure Discovery' vs
+    'Azure Infrastructure Discovery' vs 'AWS Infrastructure Discovery').
+    """
     if not indicators:
         op_label = detection_name or "Detected Activity"
         return (
             f'| eval operation="{op_label}"\n'
             f'| where isnotnull(operation)'
         )
-    op_label = detection_name or "Detected Activity"
-    escaped = []
-    for ind in indicators[:8]:  # Limit to 8 buckets
+
+    branches = []
+    seen_labels = {}
+    for ind in indicators[:8]:  # cap at 8 branches
         ind = ind.strip().strip('"').strip("'")
         if not ind:
             continue
-        esc = re.sub(r'([.+?^${}()\[\]\\|])', r'\\\1', ind)
-        esc = esc.replace("\\*", ".*")
-        escaped.append(esc)
-    if not escaped:
-        return f'| eval operation="{op_label}"\n| where isnotnull(operation)'
-    pattern = "|".join(escaped)
+        esc = _escape_indicator_regex(ind)
+        label = _indicator_to_label(ind, detection_name or "Detected Activity")
+        # Deduplicate labels: if two indicators resolve to the same label, append suffix
+        if label in seen_labels:
+            seen_labels[label] += 1
+            label = f"{label} {seen_labels[label]}"
+        else:
+            seen_labels[label] = 1
+        branches.append((esc, label))
+
+    if not branches:
+        return f'| eval operation="{detection_name or "Detected Activity"}"\n| where isnotnull(operation)'
+
+    case_lines = []
+    for esc, label in branches:
+        case_lines.append(f'    match(action_lc,"(?i)({esc})"),' + f'"{label}"')
+    case_lines.append('    true(),"Other"')
+
     return (
-        f'| eval operation=case(\n'
-        f'    match(action_lc,"(?i)({pattern})"),'
-        f'"{op_label}",\n'
-        f'    true(),"Other")\n'
-        f'| where operation!="Other"'
+        '| eval operation=case(\n'
+        + ',\n'.join(case_lines)
+        + ')\n| where operation!="Other"'
     )
 
 

@@ -189,8 +189,11 @@ def extract_commands(combined_desc):
 
     # Patterns that indicate API calls (not CLI commands)
     api_patterns = [
-        # AWS API call patterns (PascalCase without spaces, typical AWS API naming)
-        r'^[A-Z][a-z]+(?:[A-Z][a-z]+)*$',  # DescribeInstances, ListBuckets, GetPublicAccessBlock
+        # Standard PascalCase: DescribeInstances, ListBuckets, GetPublicAccessBlock
+        r'^[A-Z][a-z]+(?:[A-Z][a-z]+)*$',
+        # PascalCase with acronyms (DB, RDS, VPC, ACL, IAM, S3, EC2, KMS, SQS…)
+        # e.g. DescribeDBInstances, GetIAMPolicy, ListS3Buckets, DescribeVPCs
+        r'^[A-Z][A-Za-z0-9]+$',
     ]
 
     # Patterns that indicate URL-based API calls
