@@ -46,6 +46,11 @@ class GenerateModule(BaseModule):
                 description="Preview queries to stdout without writing any files",
                 default=False,
             ),
+            "SIEM": ModuleOption(
+                name="SIEM",
+                description="Comma-separated SIEMs to target: mde,splunk,elastic,secops (default: all)",
+                default="",
+            ),
         }
 
     def run(self):
@@ -62,7 +67,20 @@ class GenerateModule(BaseModule):
 
         dry_run = bool(self.options["DRY_RUN"].effective_value)
         action = "Previewing" if dry_run else "Generating"
-        print(f"\n[*] {action} detections for {group} (mode: {mode})\n")
+
+        # Parse SIEM filter
+        siem_raw = (self.options["SIEM"].effective_value or "").strip()
+        siem_filter = None
+        if siem_raw:
+            from archer.build.detections import ALL_SIEMS
+            siem_filter = {s.strip().lower() for s in siem_raw.split(",") if s.strip()}
+            invalid = siem_filter - ALL_SIEMS
+            if invalid:
+                print(f"  Unknown SIEM(s): {', '.join(sorted(invalid))}. Valid: {', '.join(sorted(ALL_SIEMS))}")
+                return
+            print(f"\n[*] {action} detections for {group} (mode: {mode}, siems: {', '.join(sorted(siem_filter))})\n")
+        else:
+            print(f"\n[*] {action} detections for {group} (mode: {mode})\n")
 
         process_group(
             group_name=group,
@@ -72,4 +90,5 @@ class GenerateModule(BaseModule):
             osint_comparison=bool(self.options["OSINT_COMPARE"].effective_value),
             use_llm=use_llm,
             dry_run=dry_run,
+            siem_filter=siem_filter,
         )

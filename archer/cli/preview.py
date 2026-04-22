@@ -2,12 +2,26 @@
 
 Usage:
     archer-preview APT29
-    archer-preview "Scattered Spider"
-    archer-preview APT29 --limit 5
+    archer-preview "Scattered Spider" --limit 5
+    archer-preview APT29 --siem splunk,mde
+    archer-preview APT29 --siem elastic,secops --limit 3
 """
 
 import argparse
-import sys
+
+VALID_SIEMS = {"mde", "splunk", "elastic", "secops"}
+
+
+def _parse_siem(value: str) -> set:
+    """Parse a comma-separated SIEM list into a normalised set."""
+    items = {s.strip().lower() for s in value.split(",") if s.strip()}
+    unknown = items - VALID_SIEMS
+    if unknown:
+        raise argparse.ArgumentTypeError(
+            f"Unknown SIEM(s): {', '.join(sorted(unknown))}. "
+            f"Valid options: {', '.join(sorted(VALID_SIEMS))}"
+        )
+    return items
 
 
 def main():
@@ -23,17 +37,23 @@ def main():
         metavar="N",
         help="Stop after N techniques (0 = all)",
     )
+    parser.add_argument(
+        "--siem",
+        type=_parse_siem,
+        default=None,
+        metavar="SIEM[,SIEM...]",
+        help=f"SIEMs to include: {', '.join(sorted(VALID_SIEMS))} (default: all)",
+    )
     args = parser.parse_args()
+
+    siem_filter = args.siem  # None means all
 
     # Patch tactic lookups for speed
     from archer.build import yaml_patch  # noqa: F401
-
     from archer.build.orchestrator import process_group
 
     if args.limit > 0:
-        # Monkey-patch process_group to honour --limit by wrapping compile_query
         from archer.build import detections as _det
-
         _original = _det.compile_query
         _count = [0]
 
@@ -41,9 +61,11 @@ def main():
             if _count[0] >= args.limit:
                 return
             kw["dry_run"] = True
+            kw.setdefault("siem_filter", siem_filter)
             _original(*a, **kw)
             _count[0] += 1
 
         _det.compile_query = _limited
-
-    process_group(group_name=args.group, dry_run=True)
+        process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter)
+    else:
+        process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter)

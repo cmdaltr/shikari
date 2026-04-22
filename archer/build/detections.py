@@ -12,14 +12,39 @@ import re
 from pathlib import Path
 
 
-def _print_preview_queries(name, tid, tactic, mde_queries, splunk_queries):
+ALL_SIEMS = frozenset({"mde", "splunk", "elastic", "secops"})
+
+# Display labels for each SIEM key
+_SIEM_LABELS = {
+    "mde": "MDE",
+    "splunk": "Splunk",
+    "elastic": "Elastic",
+    "secops": "Google SecOps",
+}
+
+
+def _print_preview_queries(name, tid, tactic, mde_queries, splunk_queries,
+                           elastic_queries=None, secops_queries=None):
     """Print generated queries to stdout for dry-run / preview mode."""
+    elastic_queries = elastic_queries or []
+    secops_queries = secops_queries or []
+
     sep = "─" * 60
+    total = len(mde_queries) + len(splunk_queries) + len(elastic_queries) + len(secops_queries)
+    parts = []
+    if mde_queries:
+        parts.append(f"{len(mde_queries)} MDE")
+    if splunk_queries:
+        parts.append(f"{len(splunk_queries)} Splunk")
+    if elastic_queries:
+        parts.append(f"{len(elastic_queries)} Elastic")
+    if secops_queries:
+        parts.append(f"{len(secops_queries)} SecOps")
+
     print(f"\n{sep}")
     print(f"  Technique : {name} ({tid})")
     print(f"  Tactic    : {tactic}")
-    total = len(mde_queries) + len(splunk_queries)
-    print(f"  Queries   : {total} ({len(mde_queries)} MDE, {len(splunk_queries)} Splunk)")
+    print(f"  Queries   : {total}" + (f" ({', '.join(parts)})" if parts else ""))
     print(sep)
 
     for i, q in enumerate(mde_queries, 1):
@@ -32,7 +57,17 @@ def _print_preview_queries(name, tid, tactic, mde_queries, splunk_queries):
         for line in q.strip().splitlines():
             print(f"    {line}")
 
-    if not mde_queries and not splunk_queries:
+    for i, q in enumerate(elastic_queries, 1):
+        print(f"\n  [Elastic {i}]\n")
+        for line in q.strip().splitlines():
+            print(f"    {line}")
+
+    for i, q in enumerate(secops_queries, 1):
+        print(f"\n  [Google SecOps {i}]\n")
+        for line in q.strip().splitlines():
+            print(f"    {line}")
+
+    if total == 0:
         print("  (no queries generated — indicators present but no compatible sources)")
     print()
 
@@ -222,7 +257,7 @@ def create_indicatorMappings():
     return indicatorMappings
 
 
-def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False):
+def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None):
     from archer.build.queries import is_query_applicable
     from archer.build.platform_validator_v2 import validate_procedure_for_index
     from archer.build.platform_indicator_validator import (
@@ -274,14 +309,58 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
     procedure_platforms = retrieved_data.get("procedure_platforms", [])
     software_platforms = retrieved_data.get("software_platforms", {})
 
+    # Derive excluded_vendors from siem_filter if provided (include-list → exclude-list)
+    if siem_filter is not None:
+        excluded_vendors = list(ALL_SIEMS - set(siem_filter))
+
     # Dry-run: print raw queries without file I/O and return early
     if dry_run:
         from archer.build.collate import collate_data
+
+        active_siems = siem_filter if siem_filter else ALL_SIEMS
+
         if identifiers:
-            mde_queries, splunk_queries = collate_data(
+            raw_mde, raw_splunk = collate_data(
                 identifiers, log_sources or [], procedure_platforms, software_platforms, name, technique_id=tid
             )
-            _print_preview_queries(name, tid, tactic, mde_queries, splunk_queries)
+
+            mde_queries = raw_mde if "mde" in active_siems else []
+            splunk_queries = raw_splunk if "splunk" in active_siems else []
+
+            # Elastic preview
+            elastic_queries = []
+            if "elastic" in active_siems:
+                try:
+                    from archer.build.elastic import ElasticQueryGenerator
+                    eg = ElasticQueryGenerator()
+                    result = eg.generate_query(
+                        technique_id=tid, technique_name=name, tactic=tactic,
+                        description=tdesc, indicators=identifiers, group_name=tag
+                    )
+                    if result and result.get("query_dsl"):
+                        valid, _ = eg.validate_query(result["query_dsl"])
+                        if valid:
+                            elastic_queries = [eg.format_query_for_display(result["query_dsl"])]
+                except Exception as e:
+                    print(f"  ⚠️  Elastic preview failed: {e}")
+
+            # Google SecOps preview
+            secops_queries = []
+            if "secops" in active_siems:
+                try:
+                    from archer.build.chronicle import ChronicleGenerator
+                    cg = ChronicleGenerator()
+                    result = cg.generate_yaral_rule(
+                        technique_id=tid, technique_name=name, tactic=tactic,
+                        description=tdesc, indicators=identifiers, group_name=tag
+                    )
+                    if result and result.get("yaral_code"):
+                        secops_queries = [result["yaral_code"]]
+                except Exception as e:
+                    print(f"  ⚠️  Google SecOps preview failed: {e}")
+
+            _print_preview_queries(name, tid, tactic, mde_queries, splunk_queries,
+                                   elastic_queries, secops_queries)
         else:
             print(f"  [{tid}] {name} — no indicators extracted, no queries to preview")
         return
