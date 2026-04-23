@@ -674,12 +674,33 @@ def _build_action_lc_filter(indicators: list) -> str:
     return f'| where match(action_lc,"(?i)({pattern})")'
 
 
-def _build_operation_eval(indicators: list, detection_name: str) -> str:
-    """Build an eval operation=case(...) block with one branch per indicator.
+_AWS_SERVICE_LABELS = {
+    "ec2":             "AWS EC2 Discovery",
+    "s3api":           "AWS S3 Discovery",
+    "s3":              "AWS S3 Discovery",
+    "rds":             "AWS RDS Discovery",
+    "iam":             "AWS IAM Discovery",
+    "sts":             "AWS STS Discovery",
+    "lambda":          "AWS Lambda Discovery",
+    "cloudformation":  "AWS CloudFormation Discovery",
+    "elbv2":           "AWS ELB Discovery",
+    "elb":             "AWS ELB Discovery",
+    "eks":             "AWS EKS Discovery",
+    "ecs":             "AWS ECS Discovery",
+    "route53":         "AWS Route53 Discovery",
+    "secretsmanager":  "AWS Secrets Manager Discovery",
+    "ssm":             "AWS SSM Discovery",
+    "cloudtrail":      "AWS CloudTrail Discovery",
+}
 
-    Each indicator gets its own match() branch with a derived label so analysts
-    can distinguish which command fired (e.g. 'GCP Infrastructure Discovery' vs
-    'Azure Infrastructure Discovery' vs 'AWS Infrastructure Discovery').
+
+def _build_operation_eval(indicators: list, detection_name: str) -> str:
+    """Build an eval operation=case(...) block.
+
+    AWS commands are grouped by service into a single branch with a combined
+    OR regex and a service-specific label (e.g. 'AWS EC2 Discovery',
+    'AWS S3 Discovery').  Non-AWS multi-word and single-word indicators each
+    get their own branch as before.
     """
     if not indicators:
         op_label = detection_name or "Detected Activity"
@@ -688,21 +709,37 @@ def _build_operation_eval(indicators: list, detection_name: str) -> str:
             f'| where isnotnull(operation)'
         )
 
-    branches = []
-    seen_labels = {}
-    for ind in indicators[:8]:  # cap at 8 branches
+    # Partition: aws_by_service → {service: [full_indicator, ...]}
+    #            others         → [(escaped_regex, label), ...]
+    aws_by_service: dict = {}
+    others = []
+
+    for ind in indicators:
         ind = ind.strip().strip('"').strip("'")
         if not ind:
             continue
-        esc = _escape_indicator_regex(ind)
-        label = _indicator_to_label(ind, detection_name or "Detected Activity")
-        # Deduplicate labels: if two indicators resolve to the same label, append suffix
-        if label in seen_labels:
-            seen_labels[label] += 1
-            label = f"{label} {seen_labels[label]}"
+        words = ind.split()
+        if len(words) >= 3 and words[0].lower() == "aws":
+            service = words[1].lower()
+            aws_by_service.setdefault(service, []).append(ind)
         else:
-            seen_labels[label] = 1
-        branches.append((esc, label))
+            esc = _escape_indicator_regex(ind)
+            label = _indicator_to_label(ind, detection_name or "Detected Activity")
+            others.append((esc, label))
+
+    branches = []
+
+    # One branch per AWS service, regex groups subcommands with |
+    for service, inds in aws_by_service.items():
+        label = _AWS_SERVICE_LABELS.get(service, f"AWS {service.upper()} Discovery")
+        escaped_cmds = [_escape_indicator_regex(i) for i in inds]
+        # The outer case_lines wrapper already adds (?i)(...), so just join with |
+        combined = "|".join(escaped_cmds)
+        branches.append((combined, label))
+
+    # Cap non-AWS branches so total stays reasonable
+    remaining = max(0, 8 - len(branches))
+    branches.extend(others[:remaining])
 
     if not branches:
         return f'| eval operation="{detection_name or "Detected Activity"}"\n| where isnotnull(operation)'
