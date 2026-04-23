@@ -595,25 +595,67 @@ def _indicator_to_label(ind: str, technique_name: str) -> str:
 def _build_prefilter(indicators: list) -> str:
     """Build a prefilter keyword group for the base search line.
 
-    Multi-word indicators are AND-split so Splunk can use index-time lookups:
+    Multi-word indicators are AND-split so Splunk can use index-time lookups.
+    AWS commands are grouped by service to avoid repeating "aws" for every
+    subcommand:
+
+      aws ec2 describe-instances          ─┐
+      aws s3api list-buckets              ─┤ → ("aws" AND (
+      aws s3api head-bucket               ─┤       ("ec2" AND "describe-instances") OR
+      aws rds describe-db-instances       ─┘       ("s3api" AND ("list-buckets" OR "head-bucket")) OR
+                                                    ("rds" AND "describe-db-instances")))
+
+    Other multi-word commands:
       "gcloud compute instances list" → ("gcloud" AND "compute" AND "instances" AND "list")
-    Single-word indicators remain bare.
     """
     if not indicators:
         return "*"
-    keywords = []
+
+    # Separate AWS commands from everything else
+    aws_by_service: dict = {}  # service → [subcommand, ...]
+    other_keywords = []
+
     for ind in indicators[:12]:
         ind = ind.strip().strip('"').strip("'")
         if not ind:
             continue
         words = ind.split()
-        if len(words) > 1:
-            keywords.append("(" + " AND ".join(f'"{w}"' for w in words) + ")")
+        if len(words) >= 3 and words[0].lower() == "aws":
+            service = words[1].lower()
+            subcommand = " ".join(words[2:])
+            aws_by_service.setdefault(service, []).append(subcommand)
+        elif len(words) > 1:
+            other_keywords.append("(" + " AND ".join(f'"{w}"' for w in words) + ")")
         else:
-            keywords.append(ind)
-    if not keywords:
+            other_keywords.append(f'"{ind}"' if ind.isidentifier() else ind)
+
+    top_level = []
+
+    # Build grouped AWS clause
+    if aws_by_service:
+        service_parts = []
+        for service, subs in aws_by_service.items():
+            if len(subs) == 1:
+                service_parts.append(f'("{service}" AND "{subs[0]}")')
+            else:
+                sub_or = " OR ".join(f'"{s}"' for s in subs)
+                service_parts.append(f'("{service}" AND ({sub_or}))')
+        inner = " OR ".join(service_parts)
+        if len(service_parts) == 1:
+            top_level.append(f'("aws" AND {service_parts[0]})')
+        else:
+            top_level.append(f'("aws" AND ({inner}))')
+
+    top_level.extend(other_keywords)
+
+    if not top_level:
         return "*"
-    return "(" + " OR ".join(keywords) + ")"
+    if len(top_level) == 1:
+        return top_level[0]
+    # Indent multi-branch expressions for readability
+    indent = " " * 5
+    joined = f" OR\n{indent}".join(top_level)
+    return f"({joined})"
 
 
 def _build_action_lc_filter(indicators: list) -> str:
