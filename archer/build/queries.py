@@ -732,9 +732,18 @@ def _build_operation_eval(indicators: list, detection_name: str) -> str:
     # One branch per AWS service, regex groups subcommands with |
     for service, inds in aws_by_service.items():
         label = _AWS_SERVICE_LABELS.get(service, f"AWS {service.upper()} Discovery")
-        escaped_cmds = [_escape_indicator_regex(i) for i in inds]
-        # The outer case_lines wrapper already adds (?i)(...), so just join with |
-        combined = "|".join(escaped_cmds)
+        # Build compressed regex: aws\s+{service}\s+(sub1|sub2|sub3)
+        # Extract just the subcommand portion of each indicator (words after "aws service")
+        subs = []
+        for i in inds:
+            words = i.split()
+            sub = _escape_indicator_regex(" ".join(words[2:])) if len(words) > 2 else _escape_indicator_regex(i)
+            subs.append(sub)
+        esc_service = re.escape(service)
+        if len(subs) == 1:
+            combined = f"aws\\s+{esc_service}\\s+{subs[0]}"
+        else:
+            combined = f"aws\\s+{esc_service}\\s+({'|'.join(subs)})"
         branches.append((combined, label))
 
     # Cap non-AWS branches so total stays reasonable
