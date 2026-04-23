@@ -51,6 +51,12 @@ class GenerateModule(BaseModule):
                 description="Comma-separated SIEMs to target: mde,splunk,elastic,secops (default: all)",
                 default="",
             ),
+            "INDEX": ModuleOption(
+                name="INDEX",
+                description="Only show queries whose index/table contains one of these strings "
+                            "(e.g. edr_events,DeviceProcessEvents)",
+                default="",
+            ),
         }
 
     def run(self):
@@ -82,6 +88,9 @@ class GenerateModule(BaseModule):
         else:
             print(f"\n[*] {action} detections for {group} (mode: {mode})\n")
 
+        index_raw = (self.options["INDEX"].effective_value or "").strip()
+        index_filter = {s.strip() for s in index_raw.split(",") if s.strip()} if index_raw else None
+
         process_group(
             group_name=group,
             hypothesis=self.options["HYPOTHESIS"].effective_value,
@@ -91,4 +100,5 @@ class GenerateModule(BaseModule):
             use_llm=use_llm,
             dry_run=dry_run,
             siem_filter=siem_filter,
+            index_filter=index_filter,
         )

@@ -257,7 +257,7 @@ def create_indicatorMappings():
     return indicatorMappings
 
 
-def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None):
+def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None):
     from archer.build.queries import is_query_applicable
     from archer.build.platform_validator_v2 import validate_procedure_for_index
     from archer.build.platform_indicator_validator import (
@@ -358,6 +358,20 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                         secops_queries = [result["yaral_code"]]
                 except Exception as e:
                     print(f"  ⚠️  Google SecOps preview failed: {e}")
+
+            # Apply index/table filter across all SIEMs.
+            # Splunk: matches "index=<name>" in query body.
+            # MDE:    matches table name on the first line of the query.
+            # Elastic/SecOps: substring match anywhere in the query text.
+            if index_filter:
+                def _matches_index(q: str) -> bool:
+                    ql = q.lower()
+                    return any(p.lower() in ql for p in index_filter)
+
+                mde_queries     = [q for q in mde_queries     if _matches_index(q)]
+                splunk_queries  = [q for q in splunk_queries  if _matches_index(q)]
+                elastic_queries = [q for q in elastic_queries if _matches_index(q)]
+                secops_queries  = [q for q in secops_queries  if _matches_index(q)]
 
             _print_preview_queries(name, tid, tactic, mde_queries, splunk_queries,
                                    elastic_queries, secops_queries)

@@ -45,6 +45,13 @@ def main():
         help=f"SIEMs to include: {', '.join(sorted(VALID_SIEMS))} (default: all)",
     )
     parser.add_argument(
+        "--index", "-i",
+        default=None,
+        metavar="NAME[,NAME...]",
+        help="Only show queries whose index/table name contains one of these strings "
+             "(e.g. edr_events,DeviceProcessEvents)",
+    )
+    parser.add_argument(
         "--output", "-o",
         default=None,
         metavar="FILE",
@@ -53,6 +60,7 @@ def main():
     args = parser.parse_args()
 
     siem_filter = args.siem  # None means all
+    index_filter = {s.strip() for s in args.index.split(",") if s.strip()} if args.index else None
 
     # Patch tactic lookups for speed
     from archer.build import yaml_patch  # noqa: F401
@@ -94,13 +102,14 @@ def main():
                     return
                 kw["dry_run"] = True
                 kw.setdefault("siem_filter", siem_filter)
+                kw.setdefault("index_filter", index_filter)
                 _original(*a, **kw)
                 _count[0] += 1
 
             _det.compile_query = _limited
-            process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter)
+            process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter, index_filter=index_filter)
         else:
-            process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter)
+            process_group(group_name=args.group, dry_run=True, siem_filter=siem_filter, index_filter=index_filter)
     finally:
         if args.output:
             sys.stdout = sys.__stdout__
