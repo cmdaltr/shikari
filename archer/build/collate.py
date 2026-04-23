@@ -213,13 +213,14 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                     else:
                         platform = None
 
+                prev_splunk_count = len(splunk_queries)
                 splunk_queries = compile_splunk_queries(
                     indicator_mapping, indicators, indicator_type, splunk_queries, structured_osint_indicators, detection_name,
                     platform=platform, technique_id=technique_id
                 )
 
-                # Accumulate Splunk queries across all indicator types
-                for query in splunk_queries:
+                # Only process queries newly added in this iteration to avoid duplicates
+                for query in splunk_queries[prev_splunk_count:]:
                     # Extract the index name from the query string
                     index_name = None
                     if query.startswith("index="):
