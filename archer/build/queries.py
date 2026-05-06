@@ -153,7 +153,7 @@ def load_log_source_categories():
         Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "sources" / "logSourceCategories.json"
     )
     if not categories_file.exists():
-        return {}
+        return {}, {}
 
     try:
         with open(categories_file, "r") as f:
