@@ -157,3 +157,4 @@ bespoke/query_templates/*
 !bespoke/query_templates/.gitkeep
 bespoke/mappings/*
 !bespoke/mappings/.gitkeep
+MITRESaw/
