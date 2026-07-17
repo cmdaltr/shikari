@@ -134,14 +134,61 @@ Guidelines:
 # LLM helper – try providers in priority order using stored API keys
 # ---------------------------------------------------------------------------
 
-def _get_llm_provider(user_id: int, db, local_llm_state: Optional[dict] = None):
-    """
-    Return an (LLMProvider, provider_name) tuple using the user's stored API keys.
-    Priority: Anthropic → OpenAI → local Ollama.
-    Returns (None, None) if no provider is available.
-    """
+# Cloud priority order: (provider_id, stored-key name(s), env var name(s), display label).
+# Anthropic/OpenAI stay first (existing behaviour preserved); the newer providers
+# are tried after, in the same order the Hunt-page AI prompt offers them.
+_CLOUD_PROVIDER_CHAIN = [
+    ("anthropic", ["anthropic"], ["ANTHROPIC_API_KEY"], "Claude (Anthropic)"),
+    ("openai", ["openai"], ["OPENAI_API_KEY"], "GPT-4o (OpenAI)"),
+    ("deepseek", ["deepseek"], ["DEEPSEEK_API_KEY"], "DeepSeek"),
+    ("qwen", ["qwen"], ["QWEN_API_KEY", "DASHSCOPE_API_KEY"], "Qwen"),
+    ("grok", ["grok"], ["XAI_API_KEY", "GROK_API_KEY"], "Grok (xAI)"),
+]
+
+
+def _try_cloud_providers(keys: Dict[str, str]):
+    """Try each configured cloud provider in priority order. keys is a
+    stored-key-name -> value map (may be empty for anonymous callers)."""
     from archer.ai.llm.providers import LLMFactory
 
+    for provider_id, key_names, env_names, label in _CLOUD_PROVIDER_CHAIN:
+        api_key = next((keys[k] for k in key_names if keys.get(k)), None)
+        if not api_key:
+            api_key = next((os.getenv(e) for e in env_names if os.getenv(e)), None)
+        if not api_key:
+            continue
+        try:
+            return LLMFactory.create(provider_id, api_key=api_key), label
+        except Exception as e:
+            logger.warning("%s provider failed: %s", label, e)
+    return None, None
+
+
+def _try_local_providers(local_llm_endpoints: List[dict]):
+    """Try each detected local endpoint (Ollama, Osaurus) in detection order."""
+    from archer.ai.llm.providers import LLMFactory
+
+    for endpoint in local_llm_endpoints or []:
+        if not endpoint.get("available"):
+            continue
+        provider_id = endpoint.get("provider")
+        if provider_id not in ("ollama", "osaurus"):
+            continue
+        try:
+            base_url = endpoint.get("base_url") or endpoint.get("url", "").split("/api/")[0]
+            model = endpoint.get("model") or ("llama2" if provider_id == "ollama" else "default")
+            return LLMFactory.create(provider_id, base_url=base_url, model=model), f"Local LLM ({endpoint.get('name')}/{model})"
+        except Exception as e:
+            logger.warning("%s provider failed: %s", provider_id, e)
+    return None, None
+
+
+def _get_llm_provider(user_id: int, db, local_llm_endpoints: Optional[List[dict]] = None):
+    """
+    Return an (LLMProvider, provider_name) tuple using the user's stored API keys.
+    Priority: Anthropic → OpenAI → DeepSeek → Qwen → Grok → local (Ollama/Osaurus).
+    Returns (None, None) if no provider is available.
+    """
     # Build key_name → decrypted_value map for this user
     keys: Dict[str, str] = {}
     try:
@@ -154,67 +201,20 @@ def _get_llm_provider(user_id: int, db, local_llm_state: Optional[dict] = None):
     except Exception as e:
         logger.warning("Could not read API keys from DB: %s", e)
 
-    # Anthropic
-    anthropic_key = keys.get("anthropic") or os.getenv("ANTHROPIC_API_KEY")
-    if anthropic_key:
-        try:
-            return LLMFactory.create("anthropic", api_key=anthropic_key), "Claude (Anthropic)"
-        except Exception as e:
-            logger.warning("Anthropic provider failed: %s", e)
+    llm, label = _try_cloud_providers(keys)
+    if llm:
+        return llm, label
 
-    # OpenAI
-    openai_key = keys.get("openai") or os.getenv("OPENAI_API_KEY")
-    if openai_key:
-        try:
-            return LLMFactory.create("openai", api_key=openai_key), "GPT-4o (OpenAI)"
-        except Exception as e:
-            logger.warning("OpenAI provider failed: %s", e)
-
-    # Local Ollama
-    local_available = (
-        local_llm_state.get("available", False) if local_llm_state else False
-    )
-    if local_available:
-        try:
-            base_url = local_llm_state.get("base_url") or local_llm_state.get("url", "http://localhost:11434").split("/api/")[0]
-            model = local_llm_state.get("model") or "llama2"
-            return LLMFactory.create("ollama", base_url=base_url, model=model), f"Local LLM (Ollama/{model})"
-        except Exception as e:
-            logger.warning("Ollama provider failed: %s", e)
-
-    return None, None
+    return _try_local_providers(local_llm_endpoints)
 
 
-def _get_llm_provider_anonymous(local_llm_state: Optional[dict] = None):
+def _get_llm_provider_anonymous(local_llm_endpoints: Optional[List[dict]] = None):
     """LLM provider lookup using only environment variables — no DB, no user."""
-    from archer.ai.llm.providers import LLMFactory
+    llm, label = _try_cloud_providers({})
+    if llm:
+        return llm, label
 
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    if anthropic_key:
-        try:
-            return LLMFactory.create("anthropic", api_key=anthropic_key), "Claude (Anthropic)"
-        except Exception as e:
-            logger.warning("Anthropic provider failed: %s", e)
-
-    openai_key = os.getenv("OPENAI_API_KEY")
-    if openai_key:
-        try:
-            return LLMFactory.create("openai", api_key=openai_key), "GPT-4o (OpenAI)"
-        except Exception as e:
-            logger.warning("OpenAI provider failed: %s", e)
-
-    local_available = (
-        local_llm_state.get("available", False) if local_llm_state else False
-    )
-    if local_available:
-        try:
-            base_url = local_llm_state.get("base_url") or local_llm_state.get("url", "http://localhost:11434").split("/api/")[0]
-            model = local_llm_state.get("model") or "llama2"
-            return LLMFactory.create("ollama", base_url=base_url, model=model), f"Local LLM (Ollama/{model})"
-        except Exception as e:
-            logger.warning("Ollama provider failed: %s", e)
-
-    return None, None
+    return _try_local_providers(local_llm_endpoints)
 
 
 # ---------------------------------------------------------------------------
@@ -231,7 +231,10 @@ async def ask_archer(
     Works for authenticated users (uses their stored API keys) and
     unauthenticated users (falls back to environment-variable API keys).
     """
-    local_llm_state = getattr(request.app.state, "local_llm_detected", {})
+    local_llm_endpoints = getattr(request.app.state, "local_llm_endpoints", None)
+    if local_llm_endpoints is None:
+        single = getattr(request.app.state, "local_llm_detected", {})
+        local_llm_endpoints = [single] if single.get("available") else []
     db = None
     try:
         # Try to resolve user for their stored API keys; fall back gracefully.
@@ -248,10 +251,10 @@ async def ask_archer(
         if user_id is not None:
             if db is None:
                 db = next(get_db())
-            llm, provider_name = _get_llm_provider(user_id, db, local_llm_state)
+            llm, provider_name = _get_llm_provider(user_id, db, local_llm_endpoints)
         else:
             # Unauthenticated – env-var keys only (no DB lookup)
-            llm, provider_name = _get_llm_provider_anonymous(local_llm_state)
+            llm, provider_name = _get_llm_provider_anonymous(local_llm_endpoints)
 
         if llm is None:
             raise HTTPException(
@@ -346,8 +349,11 @@ async def threat_briefing(
             f"Identify the TOP {payload.top_n} techniques to prioritize for detection."
         )
 
-        local_llm_state = getattr(request.app.state, "local_llm_detected", {})
-        llm, provider_name = _get_llm_provider(user.id, db, local_llm_state)
+        local_llm_endpoints = getattr(request.app.state, "local_llm_endpoints", None)
+        if local_llm_endpoints is None:
+            single = getattr(request.app.state, "local_llm_detected", {})
+            local_llm_endpoints = [single] if single.get("available") else []
+        llm, provider_name = _get_llm_provider(user.id, db, local_llm_endpoints)
 
         if llm is None:
             raise HTTPException(

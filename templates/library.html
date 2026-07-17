@@ -2006,7 +2006,7 @@ async function checkOsintStatus() {
         }
 
         // Build repo status cards
-        const repoOrder = ['splunk', 'azure_sentinel', 'elastic', 'sigma', 'mitre_car'];
+        const repoOrder = ['splunk', 'azure_sentinel', 'elastic', 'mitre_car'];
         const sortedRepos = repoOrder.filter(name => repos[name]);
 
         const getLogoSVG = (repoName) => {
@@ -2014,7 +2014,6 @@ async function checkOsintStatus() {
                 'splunk': `<svg width="24" height="24" viewBox="0 0 100 100" fill="none"><defs><radialGradient id="splunkGradLib" cx="30%" cy="30%"><stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" /><stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" /><stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" /></radialGradient></defs><circle cx="50" cy="50" r="48" fill="url(#splunkGradLib)"/><path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
                 'azure_sentinel': `<svg width="24" height="24" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="sentinelGradLib" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" /><stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" /><stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" /></linearGradient></defs><path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#sentinelGradLib)"/></svg>`,
                 'elastic': `<svg width="24" height="24" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="elasticYellowLib" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" /><stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" /></linearGradient><linearGradient id="elasticTealLib" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" /><stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" /></linearGradient><linearGradient id="elasticBlueLib" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" /><stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" /></linearGradient></defs><rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellowLib)"/><rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTealLib)"/><rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlueLib)"/></svg>`,
-                'sigma': `<svg width="24" height="24" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="sigmaGradLib" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#9333EA;stop-opacity:1" /><stop offset="100%" style="stop-color:#6B21A8;stop-opacity:1" /></linearGradient></defs><circle cx="50" cy="50" r="45" fill="url(#sigmaGradLib)"/><text x="50" y="70" font-size="60" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">Σ</text></svg>`,
                 'mitre_car': `<svg width="24" height="24" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="carGradLib" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#EF4444;stop-opacity:1" /><stop offset="100%" style="stop-color:#B91C1C;stop-opacity:1" /></linearGradient></defs><rect x="10" y="10" width="80" height="80" rx="12" fill="url(#carGradLib)"/><text x="50" y="67" font-size="40" font-weight="bold" fill="white" text-anchor="middle" font-family="monospace">CAR</text></svg>`
             };
             return logos[repoName] || '';
@@ -2026,7 +2025,6 @@ async function checkOsintStatus() {
             const statusIcon = repo.status === 'ready' ? '✓' : '✗';
             const statusTooltip = repo.status === 'ready' ? 'Ready' : 'Failed';
             const displayName = {
-                'sigma': 'Sigma',
                 'elastic': 'Elastic',
                 'mitre_car': 'CAR',
                 'splunk': 'Splunk',

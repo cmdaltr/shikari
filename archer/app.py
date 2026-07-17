@@ -1720,48 +1720,97 @@ async def detect_local_llm():
     import requests
     import asyncio
 
+    # provider_id is what the Hunt-page AI picker and RemoteAPIGenerator use to
+    # select a provider; "models_endpoint" marks endpoints that expose an
+    # OpenAI-compatible /v1/models list (Ollama also supports this at /v1/models,
+    # but its native /api/tags shape is checked below for backward compatibility).
     llm_endpoints = [
-        ("Ollama", "http://localhost:11434/api/tags"),
-        ("LM Studio", "http://localhost:1234/v1/models"),
-        ("Llama.cpp", "http://localhost:8080/health"),
+        ("Ollama", "ollama", "http://localhost:11434/api/tags", "http://localhost:11434", False),
+        ("LM Studio", "lmstudio", "http://localhost:1234/v1/models", "http://localhost:1234", True),
+        ("Llama.cpp", "llamacpp", "http://localhost:8080/health", "http://localhost:8080", False),
+        ("Osaurus", "osaurus", "http://localhost:1337/v1/models", "http://localhost:1337", True),
     ]
 
-    async def check_endpoint(name, url):
+    async def check_endpoint(name, provider_id, url, base_url, is_openai_models_endpoint):
         try:
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(None, lambda: requests.get(url, timeout=2))
             if response.ok:
-                result = {"name": name, "url": url, "available": True, "models": [], "model": None}
-                # For Ollama, extract available model names and store clean base_url
-                if name == "Ollama":
-                    result["base_url"] = "http://localhost:11434"
-                    try:
-                        data = response.json()
+                result = {
+                    "name": name,
+                    "provider": provider_id,
+                    "url": url,
+                    "base_url": base_url,
+                    "available": True,
+                    "models": [],
+                    "model": None,
+                }
+                try:
+                    data = response.json()
+                    if name == "Ollama":
                         models = [m["name"] for m in data.get("models", []) if "name" in m]
-                        result["models"] = models
-                        result["model"] = models[0] if models else None
-                    except Exception:
-                        pass
+                    elif is_openai_models_endpoint:
+                        models = [m["id"] for m in data.get("data", []) if "id" in m]
+                    else:
+                        models = []
+                    result["models"] = models
+                    result["model"] = models[0] if models else None
+                except Exception:
+                    pass
                 return result
         except:
             pass
         return None
 
     # Check all endpoints concurrently
-    tasks = [check_endpoint(name, url) for name, url in llm_endpoints]
+    tasks = [check_endpoint(name, provider_id, url, base_url, is_models_ep)
+             for name, provider_id, url, base_url, is_models_ep in llm_endpoints]
     results = await asyncio.gather(*tasks)
 
-    # Find first available LLM
-    for result in results:
-        if result:
-            app.state.local_llm_detected = result
-            model_info = f" (model: {result['model']})" if result.get("model") else ""
-            models_info = f", {len(result['models'])} model(s) available" if result.get("models") else ""
-            print(f"✓ Local LLM detected: {result['name']} at {result['url']}{model_info}{models_info}")
-            return
+    available = [r for r in results if r]
+    app.state.local_llm_endpoints = available
 
-    app.state.local_llm_detected = {"available": False}
-    print("ℹ️  No local LLM detected")
+    # Preserve the original single-endpoint shape for the existing navbar modal
+    # (base.html) and /api/llm/detect — first detected endpoint wins.
+    if available:
+        result = available[0]
+        app.state.local_llm_detected = result
+        model_info = f" (model: {result['model']})" if result.get("model") else ""
+        models_info = f", {len(result['models'])} model(s) available" if result.get("models") else ""
+        print(f"✓ Local LLM detected: {result['name']} at {result['url']}{model_info}{models_info}")
+        if len(available) > 1:
+            others = ", ".join(r["name"] for r in available[1:])
+            print(f"  (also available: {others})")
+    else:
+        app.state.local_llm_detected = {"available": False}
+        app.state.local_llm_endpoints = []
+        print("ℹ️  No local LLM detected")
+
+
+@app.on_event("startup")
+async def detect_network_connectivity():
+    """
+    Check general internet reachability and per-cloud-provider reachability at
+    startup. Distinguishes "no internet at all" from "internet works but this
+    specific AI vendor's domain is blocked" (common behind corporate proxies/
+    firewalls) — both look identical to a user as "cloud AI doesn't work",
+    but the fix is different (check your network vs. check your API key).
+    """
+    import asyncio
+    from archer.ai.llm.connectivity import get_network_status
+
+    loop = asyncio.get_event_loop()
+    status = await loop.run_in_executor(None, get_network_status)
+    app.state.network_status = status
+
+    if status["internet_available"]:
+        unreachable = [p for p, ok in status["provider_reachable"].items() if not ok]
+        if unreachable:
+            print(f"✓ Internet connectivity available (blocked for: {', '.join(unreachable)})")
+        else:
+            print("✓ Internet connectivity available — all cloud AI provider hosts reachable")
+    else:
+        print("⚠️  No internet connectivity detected — cloud AI providers will be unavailable (local LLMs may still work)")
 
 
 @app.on_event("startup")
@@ -1794,6 +1843,148 @@ async def get_local_llm_status():
         except Exception:
             pass
     return state
+
+
+@app.get("/api/ai/availability")
+async def get_ai_availability():
+    """
+    Combined AI/LLM availability check: local endpoints (detected at startup),
+    cloud provider API keys (checked live, since these are just env reads), and
+    network reachability (checked at startup — see detect_network_connectivity).
+
+    Used by the Hunt-page AI prompt to decide whether "Yes" should be enabled
+    and what to offer in the provider list. A cloud provider with a key set but
+    whose API host is unreachable (firewall/proxy block, no internet) is
+    reported separately rather than offered as a selectable option — selecting
+    it would just fail.
+    """
+    local_endpoints = getattr(app.state, "local_llm_endpoints", None)
+    if local_endpoints is None:
+        # Fall back to the single-endpoint shape if detect_local_llm hasn't
+        # populated the list yet (or an older app.state from before this existed).
+        single = getattr(app.state, "local_llm_detected", {"available": False})
+        local_endpoints = [single] if single.get("available") else []
+
+    network = getattr(app.state, "network_status", None) or {
+        "internet_available": True,  # unknown — don't block on a missing check
+        "provider_reachable": {},
+    }
+
+    cloud_checks = [
+        ("anthropic", "Anthropic Claude", ["ANTHROPIC_API_KEY"]),
+        ("openai", "OpenAI GPT", ["OPENAI_API_KEY"]),
+        ("google", "Google Gemini", ["GOOGLE_API_KEY"]),
+        ("deepseek", "DeepSeek", ["DEEPSEEK_API_KEY"]),
+        ("qwen", "Qwen", ["QWEN_API_KEY", "DASHSCOPE_API_KEY"]),
+        ("grok", "Grok (xAI)", ["XAI_API_KEY", "GROK_API_KEY"]),
+    ]
+
+    cloud_providers = []
+    blocked_but_configured = []
+    for pid, label, env_vars in cloud_checks:
+        if not any(os.environ.get(v) for v in env_vars):
+            continue
+        reachable = network["provider_reachable"].get(pid, True)  # unknown host -> assume reachable
+        if reachable:
+            cloud_providers.append({"id": pid, "label": label})
+        else:
+            blocked_but_configured.append(label)
+
+    return {
+        "any_available": bool(cloud_providers) or bool(local_endpoints),
+        "cloud": cloud_providers,
+        "local": local_endpoints,
+        "network": {
+            "internet_available": network["internet_available"],
+            "blocked_but_configured": blocked_but_configured,
+        },
+    }
+
+
+_KNOWN_AI_PROVIDERS = {"anthropic", "openai", "google", "deepseek", "qwen", "grok", "ollama", "osaurus"}
+_LOCAL_AI_PROVIDERS = {"ollama", "osaurus"}
+
+
+def _verify_local_model_available(base_url: str, provider: str, model: str) -> bool:
+    """
+    Live-check whether `model` is still loaded at the local endpoint. The
+    availability check the AI prompt used could be stale by the time the hunt
+    actually runs (model unloaded, server restarted with a different model,
+    etc.) — this catches that instead of letting generation fail outright.
+    """
+    if not base_url or not model:
+        return False
+    import requests
+    try:
+        if provider == "ollama":
+            # base_url from detection is the bare host (e.g. http://localhost:11434)
+            resp = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=2)
+            if resp.ok:
+                names = [m.get("name") for m in resp.json().get("models", [])]
+                return model in names
+        else:
+            # Osaurus (and any other OpenAI-compatible local server) exposes /v1/models
+            models_url = base_url.rstrip("/")
+            if not models_url.endswith("/v1"):
+                models_url += "/v1"
+            resp = requests.get(f"{models_url}/models", timeout=2)
+            if resp.ok:
+                ids = [m.get("id") for m in resp.json().get("data", [])]
+                return model in ids
+    except Exception:
+        pass
+    return False
+
+
+def _apply_ai_provider_choice(ai_provider: str, ai_model: str = None) -> str:
+    """
+    Given the provider id chosen in the Hunt-page AI prompt, configure the
+    environment for RemoteAPIGenerator (archer/ai/genai/models.py) and return
+    the genai_mode string the rest of the /generate pipeline expects.
+
+    Re-verifies availability at the moment the hunt actually runs (network
+    reachability for cloud, model-still-loaded for local) rather than trusting
+    the earlier /api/ai/availability snapshot, which can go stale between the
+    prompt being shown and the hunt being submitted. On any failure, logs a
+    warning and returns None so the caller falls back to non-AI generation
+    instead of the hunt failing outright.
+
+    Returns None if ai_provider is empty/unrecognized/unavailable (caller
+    should fall back to the legacy ai_generators/local_llm checkbox fields,
+    which will also come up empty, ending in the plain semantic/heuristic mode).
+    """
+    if not ai_provider or ai_provider not in _KNOWN_AI_PROVIDERS:
+        return None
+
+    if ai_provider in _LOCAL_AI_PROVIDERS:
+        matched = None
+        for endpoint in getattr(app.state, "local_llm_endpoints", []) or []:
+            if endpoint.get("provider") == ai_provider:
+                matched = endpoint
+                break
+        if not matched:
+            print(f"⚠️  AI provider '{ai_provider}' was selected but is no longer detected as running — continuing without AI.")
+            return None
+
+        base_url = matched.get("base_url", "")
+        model = ai_model or matched.get("model") or ""
+        if not _verify_local_model_available(base_url, ai_provider, model):
+            print(f"⚠️  Model '{model}' is no longer loaded at {ai_provider} ({base_url}) — continuing without AI.")
+            return None
+
+        os.environ["GENAI_MODEL"] = ai_provider
+        os.environ["AI_LOCAL_BASE_URL"] = base_url
+        os.environ["AI_LOCAL_MODEL"] = model
+        return "local_llm"
+
+    # Cloud provider — re-verify network reachability before trusting it.
+    from archer.ai.llm.connectivity import check_provider_reachable
+    if not check_provider_reachable(ai_provider):
+        print(f"⚠️  '{ai_provider}' API host is unreachable right now (network/firewall) — continuing without AI.")
+        return None
+
+    os.environ["GENAI_MODEL"] = ai_provider
+    return "ai_generators"
 
 
 @app.post("/api/llm/model")
@@ -2392,6 +2583,8 @@ async def generate(
     semantic: str = Form(None),
     ai_generators: str = Form(None),
     local_llm: str = Form(None),
+    ai_provider: str = Form(None),
+    ai_model: str = Form(None),
     run_correlation: str = Form(None),
     cross_vendor_correlation: str = Form(None),
     run_emulation: str = Form(None),
@@ -2411,13 +2604,16 @@ async def generate(
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
 
-    # Determine GENAI_MODE based on checkboxes (priority order)
+    # Determine GENAI_MODE — an explicit ai_provider (from the Hunt-page AI
+    # prompt) takes priority over the legacy ai_generators/local_llm checkboxes.
     # Default to semantic mode for best results (includes advanced parsing + behavioral grouping)
-    genai_mode = "semantic"
-    if local_llm == "true":
-        genai_mode = "local_llm"
-    elif ai_generators == "true":
-        genai_mode = "ai_generators"
+    genai_mode = _apply_ai_provider_choice(ai_provider, ai_model)
+    if genai_mode is None:
+        genai_mode = "semantic"
+        if local_llm == "true":
+            genai_mode = "local_llm"
+        elif ai_generators == "true":
+            genai_mode = "ai_generators"
 
     actor_found = check_group_in_mitre(app.state.bundle, group_name)
     if actor_found == "Y":
@@ -2644,6 +2840,8 @@ async def generate_cve(
     advanced_parsing: str = Form(None),
     ai_generators: str = Form(None),
     local_llm: str = Form(None),
+    ai_provider: str = Form(None),
+    ai_model: str = Form(None),
     archer_session: Optional[str] = Cookie(None),
 ):
     """Generate detection queries for CVE(s)."""
@@ -2683,13 +2881,16 @@ async def generate_cve(
     else:
         group_name = f"{cve_ids[0]}_plus_{len(cve_ids)-1}"  # e.g., "CVE-2021-44228_plus_2"
 
-    # Determine GENAI_MODE
+    # Determine GENAI_MODE — an explicit ai_provider (from the Hunt-page AI
+    # prompt) takes priority over the legacy ai_generators/local_llm checkboxes.
     # Default to semantic mode for best results (includes advanced parsing + behavioral grouping)
-    genai_mode = "semantic"
-    if local_llm == "true":
-        genai_mode = "local_llm"
-    elif ai_generators == "true":
-        genai_mode = "ai_generators"
+    genai_mode = _apply_ai_provider_choice(ai_provider, ai_model)
+    if genai_mode is None:
+        genai_mode = "semantic"
+        if local_llm == "true":
+            genai_mode = "local_llm"
+        elif ai_generators == "true":
+            genai_mode = "ai_generators"
 
     def _bg():
         try:
@@ -2964,6 +3165,8 @@ async def hunt_technique(
     osint_comparison: str = Form(None),
     ai_generators: str = Form(None),
     local_llm: str = Form(None),
+    ai_provider: str = Form(None),
+    ai_model: str = Form(None),
     correlation_min_relevance: str = Form(None),
     archer_session: Optional[str] = Cookie(None),
 ):
@@ -3013,12 +3216,15 @@ async def hunt_technique(
     osint_enh = osint_enhancement == "true"
     osint_comp = osint_comparison == "true"
 
-    # Determine GENAI_MODE
-    genai_mode = "heuristic"
-    if local_llm == "true":
-        genai_mode = "local_llm"
-    elif ai_generators == "true":
-        genai_mode = "ai_generators"
+    # Determine GENAI_MODE — an explicit ai_provider (from the Hunt-page AI
+    # prompt) takes priority over the legacy ai_generators/local_llm checkboxes.
+    genai_mode = _apply_ai_provider_choice(ai_provider, ai_model)
+    if genai_mode is None:
+        genai_mode = "heuristic"
+        if local_llm == "true":
+            genai_mode = "local_llm"
+        elif ai_generators == "true":
+            genai_mode = "ai_generators"
 
     # Parse correlation threshold
     correlation_threshold = None
@@ -8910,6 +9116,9 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
             "elastic": "elastic",
             "openai": "openai",
             "anthropic": "anthropic",
+            "deepseek": "deepseek",
+            "qwen": "qwen",
+            "grok": "grok",
         }
 
         # Process each API key

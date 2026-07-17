@@ -136,9 +136,6 @@ data_sources:
 ## Importing Community Rules
 
 ```bash
-# Import Sigma rules
-python scripts/config/import_community_rules.py --source sigma
-
 # Import Splunk Security Content
 python scripts/config/import_community_rules.py --source splunk
 
@@ -151,8 +148,8 @@ python scripts/config/import_community_rules.py --all
 ### Update Community Repositories
 
 ```bash
-cd data/external/sigma && git pull
-python scripts/config/import_community_rules.py --source sigma --update
+cd data/external/splunk && git pull
+python scripts/config/import_community_rules.py --source splunk --update
 ```
 
 ### Rebuild Embeddings
@@ -520,7 +517,7 @@ def main():
     print("Next steps:")
     print("  1. Clone community detection repositories:")
     print("     cd data/external")
-    print("     git clone https://github.com/SigmaHQ/sigma.git")
+    print("     git clone https://github.com/splunk/security_content.git")
     print()
     print("  2. Import community rules:")
     print("     python scripts/config/import_community_rules.py --all")

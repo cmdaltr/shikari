@@ -258,76 +258,76 @@ class LocalLLMGenerator(QueryGeneratorBase):
         }
 
 
+# Provider ids that RemoteAPIGenerator can route to via LLMFactory. "local" endpoints
+# (ollama/osaurus) accept an optional base_url override -- set at request time from
+# whatever the startup detection actually found, via AI_LOCAL_BASE_URL/AI_LOCAL_MODEL.
+_KNOWN_PROVIDERS = {"anthropic", "openai", "google", "deepseek", "qwen", "grok", "ollama", "osaurus"}
+_LOCAL_PROVIDERS = {"ollama", "osaurus"}
+
+
 class RemoteAPIGenerator(QueryGeneratorBase):
-    """Query generator using remote API calls (e.g., OpenAI)."""
-    
-    def __init__(self, config_file: str = None):
+    """Query generator that delegates to any configured LLM provider (cloud or local-HTTP)."""
+
+    def __init__(self, config_file: str = None, provider: str = "openai"):
         super().__init__(config_file)
-        self.api_key = self.config.get("api_key") or os.environ.get("OPENAI_API_KEY")
-        self.api_base = self.config.get("api_base", "https://api.openai.com/v1")
-        self.model = self.config.get("model", "gpt-3.5-turbo")
-    
+        self.provider = provider if provider in _KNOWN_PROVIDERS else "openai"
+        self.model = self.config.get("model") or None
+
     def combine_queries(self, query_a: str, query_b: str, platform: str, use_cache: bool = True) -> Dict:
-        """Combine queries using a remote API."""
-        if not self.api_key:
-            return {"error": "No API key available"}
-        
+        """Combine queries using the configured LLM provider."""
         # Generate cache key
         cache_data = {
-            "query_a": query_a, 
-            "query_b": query_b, 
+            "query_a": query_a,
+            "query_b": query_b,
             "platform": platform,
-            "model": self.model
+            "provider": self.provider,
+            "model": self.model,
         }
         cache_key = self._cache_key(cache_data)
-        
+
         # Check cache first
         if use_cache:
             cached = self._check_cache(cache_key)
             if cached:
                 return cached
-        
-        # Prepare the messages for API
+
+        # Prepare the messages for the API
         messages = self._create_messages(query_a, query_b, platform)
-        
+        system_prompt = messages[0]["content"] if messages and messages[0]["role"] == "system" else None
+        user_prompt = messages[-1]["content"]
+
         try:
-            # Make API call
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
-            }
-            
-            payload = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": self.config.get("temperature", 0.2),
-                "max_tokens": self.config.get("max_tokens", 1024)
-            }
-            
-            response = requests.post(
-                f"{self.api_base}/chat/completions",
-                headers=headers,
-                json=payload
+            from archer.ai.llm.providers import LLMFactory
+
+            kwargs = {}
+            if self.provider in _LOCAL_PROVIDERS:
+                base_url = os.environ.get("AI_LOCAL_BASE_URL")
+                if base_url:
+                    kwargs["base_url"] = base_url
+                model = self.model or os.environ.get("AI_LOCAL_MODEL")
+            else:
+                model = self.model
+
+            llm = LLMFactory.create(self.provider, model=model, **kwargs)
+            response = llm.generate(
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+                temperature=self.config.get("temperature", 0.2),
+                max_tokens=self.config.get("max_tokens", 1024),
             )
-            
-            if response.status_code != 200:
-                return {"error": f"API error: {response.text}"}
-            
-            data = response.json()
-            generated_text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            
-            # Extract the combined query
-            result = self._extract_query(generated_text, platform)
-            
-            # Cache the result
+
+            result = self._extract_query(response.content, platform)
+            result["provider"] = self.provider
+            result["model"] = response.model
+
             if use_cache:
                 self._save_to_cache(cache_key, result)
-            
+
             return result
-        
+
         except Exception as e:
-            return {"error": f"Error calling API: {str(e)}"}
-    
+            return {"error": f"Error calling {self.provider}: {str(e)}"}
+
     def _create_messages(self, query_a: str, query_b: str, platform: str) -> List[Dict]:
         """Create messages for the chat API."""
         system_prompts = {
@@ -386,14 +386,25 @@ class RemoteAPIGenerator(QueryGeneratorBase):
 def get_generator(model_type: str = None, config_file: str = None):
     """
     Factory function to get an appropriate query generator.
-    
+
     Args:
-        model_type: Type of model to use ('local', 'api', or None for auto-detect)
+        model_type: 'local' (llama_cpp/transformers file-based model), 'api' (legacy
+            alias for OpenAI), an explicit provider id (anthropic, openai, google,
+            deepseek, qwen, grok, ollama, osaurus), or None for auto-detect.
         config_file: Path to configuration file
-        
+
     Returns:
         A QueryGeneratorBase instance
     """
+    if model_type:
+        provider = model_type.lower()
+        if provider in _KNOWN_PROVIDERS:
+            return RemoteAPIGenerator(config_file, provider=provider)
+        if provider == "api":
+            return RemoteAPIGenerator(config_file, provider="openai")
+        # Anything else ("local" or unrecognized) falls through to the
+        # file-based local model loader below.
+
     # If no model_type specified, try to determine from environment
     if not model_type:
         # Check for API keys
@@ -405,8 +416,8 @@ def get_generator(model_type: str = None, config_file: str = None):
         else:
             # Default to local as a fallback
             model_type = "local"
-    
+
     if model_type.lower() == "api":
-        return RemoteAPIGenerator(config_file)
+        return RemoteAPIGenerator(config_file, provider="openai")
     else:
         return LocalLLMGenerator(config_file)

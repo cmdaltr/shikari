@@ -5,7 +5,7 @@ Archer Training Data Collection Script
 Unified script for collecting training data from multiple sources:
 - CVE enrichment (NVD + blog posts + exploits)
 - Threat report conversion (PDF to JSONL)
-- OSINT extraction (Sigma, Elastic, Splunk rules)
+- OSINT extraction (Elastic, Splunk rules)
 
 Usage:
     # Enrich CVEs
@@ -18,7 +18,6 @@ Usage:
     python scripts/train_ai.py reports --dir reports/ --batch
 
     # Extract OSINT samples
-    python scripts/train_ai.py osint --source sigma --repo https://github.com/SigmaHQ/sigma
     python scripts/train_ai.py osint --source elastic --repo https://github.com/elastic/detection-rules
     python scripts/train_ai.py osint --source splunk --repo https://github.com/splunk/security_content
     python scripts/train_ai.py osint --all
@@ -367,112 +366,6 @@ def clone_repo(repo_url: str, target_dir: Path) -> Path:
     return clone_dir
 
 
-def extract_sigma_rules(repo_dir: Path, output_file: Path):
-    """Extract Sigma rules and convert to training format"""
-    import yaml
-
-    print(f"Extracting Sigma rules from {repo_dir}...")
-
-    rule_files = list(repo_dir.rglob("*.yml")) + list(repo_dir.rglob("*.yaml"))
-    print(f"Found {len(rule_files)} Sigma rule files")
-
-    training_examples = []
-
-    for rule_file in rule_files:
-        try:
-            with open(rule_file, "r", encoding="utf-8") as f:
-                rule_data = yaml.safe_load(f)
-
-            if not rule_data or "title" not in rule_data:
-                continue
-
-            # Extract technique IDs
-            techniques = []
-            if "tags" in rule_data:
-                for tag in rule_data["tags"]:
-                    if tag.startswith("attack.t"):
-                        technique_id = tag.replace("attack.", "").upper()
-                        if not technique_id.startswith("T"):
-                            technique_id = "T" + technique_id
-                        techniques.append(technique_id)
-
-            if not techniques:
-                continue  # Skip rules without ATT&CK mapping
-
-            # Build training example
-            example = {
-                "task": "detection_generation",
-                "input": {
-                    "technique_id": techniques[0],
-                    "technique_name": rule_data.get("title", ""),
-                    "description": rule_data.get("description", ""),
-                    "platforms": ["Windows"],  # Most Sigma rules are Windows
-                    "threat_intel": f"Sigma rule: {rule_data.get('title', '')}",
-                },
-                "output": {
-                    "detections": [
-                        {
-                            "platform": "splunk",
-                            "query": f"# Sigma rule: {rule_data.get('title', '')}\n# Convert manually from Sigma YAML",
-                            "confidence": rule_data.get("level", "medium"),
-                            "false_positive_rate": "medium",
-                        }
-                    ],
-                    "indicators": extract_indicators_from_sigma(rule_data),
-                },
-            }
-
-            training_examples.append(example)
-
-        except Exception as e:
-            print(f"Failed to parse {rule_file.name}: {e}")
-            continue
-
-    # Save as JSONL
-    with open(output_file, "w") as f:
-        for example in training_examples:
-            f.write(json.dumps(example) + "\n")
-
-    print(f"✓ Extracted {len(training_examples)} Sigma rules → {output_file}")
-
-
-def extract_indicators_from_sigma(rule_data: Dict) -> Dict[str, List[str]]:
-    """Extract indicators from Sigma rule detection logic"""
-    indicators = {
-        "cmd": [],
-        "file": [],
-        "reg": [],
-        "proc": [],
-    }
-
-    detection = rule_data.get("detection", {})
-
-    # Flatten all detection conditions
-    all_values = []
-    for key, value in detection.items():
-        if isinstance(value, dict):
-            all_values.extend(str(v) for v in value.values() if v)
-        elif isinstance(value, list):
-            all_values.extend(str(v) for v in value)
-        elif isinstance(value, str):
-            all_values.append(value)
-
-    # Categorize indicators
-    for value in all_values:
-        value_lower = value.lower()
-
-        if any(kw in value_lower for kw in ["commandline", "cmd", "powershell", "bash"]):
-            indicators["cmd"].append(value)
-        elif any(kw in value_lower for kw in [".exe", ".dll", ".sys", "\\windows\\", "c:\\"]):
-            indicators["file"].append(value)
-        elif any(kw in value_lower for kw in ["hklm", "hkcu", "registry"]):
-            indicators["reg"].append(value)
-        elif any(kw in value_lower for kw in ["image", "process", "parent"]):
-            indicators["proc"].append(value)
-
-    return {k: list(set(v))[:10] for k, v in indicators.items()}
-
-
 def extract_elastic_rules(repo_dir: Path, output_file: Path):
     """Extract Elastic detection rules"""
     print(f"Extracting Elastic rules from {repo_dir}...")
@@ -625,10 +518,6 @@ def handle_osint_extraction(args):
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     sources = {
-        "sigma": {
-            "url": "https://github.com/SigmaHQ/sigma",
-            "extractor": extract_sigma_rules,
-        },
         "elastic": {
             "url": "https://github.com/elastic/detection-rules",
             "extractor": extract_elastic_rules,
@@ -727,7 +616,7 @@ def main():
     osint_parser = subparsers.add_parser("osint", help="Extract OSINT samples")
 
     osint_parser.add_argument(
-        "--source", choices=["sigma", "elastic", "splunk"], help="OSINT source to extract"
+        "--source", choices=["elastic", "splunk"], help="OSINT source to extract"
     )
     osint_parser.add_argument("--repo", help="Custom repository URL")
     osint_parser.add_argument("--all", action="store_true", help="Extract from all sources")

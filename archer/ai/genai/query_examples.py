@@ -6,7 +6,6 @@ to enhance GenAI query generation through few-shot learning.
 
 Supported repositories:
 - Splunk Security Content
-- SigmaHQ (converted to SIEM formats)
 - Elastic Detection Rules
 - Microsoft Defender Hunting Queries
 """
@@ -47,12 +46,6 @@ class QueryExampleRepository:
                 "type": "git",
                 "parser": self._parse_splunk_security_content,
             },
-            "sigma": {
-                "url": "https://github.com/SigmaHQ/sigma.git",
-                "path": self.base_dir / "sigma",
-                "type": "git",
-                "parser": self._parse_sigma_rules,
-            },
             "defender_hunting": {
                 "url": "https://github.com/francoisfried/Defender-Advanced-Hunting-Queries.git",
                 "path": self.base_dir / "defender_hunting",
@@ -87,7 +80,6 @@ class QueryExampleRepository:
                 "splunk": [],
                 "mde": [],
                 "elastic": [],
-                "sigma": [],
             },
             "statistics": {
                 "total_examples": 0,
@@ -295,73 +287,6 @@ class QueryExampleRepository:
 
         return examples
 
-    def _parse_sigma_rules(self, repo_path: Path) -> List[Dict]:
-        """Parse Sigma rules repository."""
-        examples = []
-
-        # Rules are in rules/ directory
-        rules_dir = repo_path / "rules"
-        if not rules_dir.exists():
-            return examples
-
-        # Recursively find all YAML files
-        yaml_files = list(rules_dir.rglob("*.yml"))
-
-        for yaml_file in yaml_files:
-            try:
-                with open(yaml_file, "r", encoding="utf-8") as f:
-                    data = yaml.safe_load(f)
-
-                if not data or "detection" not in data:
-                    continue
-
-                # Extract MITRE ATT&CK tags
-                techniques = []
-                tactics = []
-
-                tags = data.get("tags", [])
-                for tag in tags:
-                    if tag.startswith("attack.t"):
-                        # Extract technique ID (e.g., attack.t1003 -> T1003)
-                        tech_id = tag.replace("attack.", "").upper()
-                        techniques.append(tech_id)
-                    elif tag.startswith("attack."):
-                        # Extract tactic
-                        tactic = tag.replace("attack.", "").replace("_", " ").title()
-                        tactics.append(tactic)
-
-                # Sigma rules need conversion - store the detection logic
-                # Users would need pySigma to convert to specific SIEM formats
-                example = {
-                    "id": hashlib.md5(str(yaml_file).encode()).hexdigest()[:16],
-                    "source": "sigma",
-                    "file": str(yaml_file.relative_to(repo_path)),
-                    "name": data.get("title", "Unknown"),
-                    "description": data.get("description", ""),
-                    "vendor": "sigma",  # Universal format
-                    "query": json.dumps(
-                        data.get("detection", {})
-                    ),  # Store as JSON for now
-                    "techniques": techniques,
-                    "tactics": tactics,
-                    "platforms": self._detect_platforms_from_sigma(data),
-                    "data_sources": data.get("logsource", {}),
-                    "severity": data.get("level", "medium"),
-                    "metadata": {
-                        "author": data.get("author", "Unknown"),
-                        "date": data.get("date", ""),
-                        "status": data.get("status", ""),
-                    },
-                }
-
-                examples.append(example)
-
-            except Exception as e:
-                # Skip files that fail to parse
-                continue
-
-        return examples
-
     def _parse_defender_hunting(self, repo_path: Path) -> List[Dict]:
         """Parse Defender Advanced Hunting Queries repository."""
         examples = []
@@ -507,36 +432,6 @@ class QueryExampleRepository:
 
         return list(platforms) if platforms else ["Windows"]  # Default to Windows
 
-    def _detect_platforms_from_sigma(self, data: Dict) -> List[str]:
-        """Detect platforms from Sigma rule metadata."""
-        platforms = set()
-
-        logsource = data.get("logsource", {})
-        product = logsource.get("product", "").lower()
-        service = logsource.get("service", "").lower()
-
-        if product in ["windows", "microsoft"]:
-            platforms.add("Windows")
-        elif product == "linux":
-            platforms.add("Linux")
-        elif product == "macos":
-            platforms.add("macOS")
-        elif product in ["aws", "amazon"]:
-            platforms.add("AWS")
-        elif product == "azure":
-            platforms.add("Azure")
-        elif product in ["gcp", "google"]:
-            platforms.add("GCP")
-
-        # Check tags
-        for tag in data.get("tags", []):
-            if "windows" in tag.lower():
-                platforms.add("Windows")
-            elif "linux" in tag.lower():
-                platforms.add("Linux")
-
-        return list(platforms) if platforms else ["Windows"]
-
     def _extract_kql_tables(self, query: str) -> List[str]:
         """Extract table names from KQL query."""
         tables = set()
@@ -556,7 +451,7 @@ class QueryExampleRepository:
 
         Args:
             technique_id: MITRE ATT&CK technique ID (e.g., "T1003", "T1003.001")
-            vendor: Filter by vendor (splunk, mde, elastic, sigma)
+            vendor: Filter by vendor (splunk, mde, elastic)
             limit: Maximum number of examples to return
 
         Returns:

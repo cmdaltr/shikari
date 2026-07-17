@@ -3,14 +3,12 @@
 OSINT Query Enhancement Module
 
 This module enhances detection queries by incorporating battle-tested detection patterns
-from OSINT sources (Elastic, Splunk, Sigma).
+from OSINT sources (Elastic, Splunk).
 
 The enhancement process:
 1. Extract key detection patterns from OSINT query snippets
-2. Translate field names to target schema using pySigma pipelines when available
+2. Translate field names to target schema using fallback field mappings
 3. Merge patterns into generated queries as additional OR conditions
-
-Uses pySigma for industry-standard field mapping where possible.
 """
 
 import re
@@ -18,16 +16,6 @@ import logging
 from typing import Dict, List, Any, Optional
 
 logger = logging.getLogger(__name__)
-
-# Try to import pySigma for advanced field mapping
-try:
-    from sigma.backends.microsoft365defender import KustoBackend
-    from sigma.pipelines.microsoft365defender import microsoft_365_defender_pipeline
-    from sigma.collection import SigmaCollection
-    HAS_PYSIGMA = True
-except ImportError:
-    HAS_PYSIGMA = False
-    logger.warning("pySigma not available - using fallback field mappings")
 
 
 class OSINTQueryEnhancer:
@@ -37,7 +25,6 @@ class OSINTQueryEnhancer:
         self.target_vendor = target_vendor
         self.field_mappings = self._load_field_mappings()
         self.mde_valid_fields = self._load_mde_schema_fields()
-        self.pysigma_field_cache = self._load_pysigma_field_mappings()
 
     def _load_mde_schema_fields(self) -> set:
         """
@@ -67,71 +54,13 @@ class OSINTQueryEnhancer:
             logger.warning(f"Could not load MDE schema: {e}")
             return set()
 
-    def _load_pysigma_field_mappings(self) -> Dict[str, str]:
-        """
-        Pre-load pySigma field mappings for common Sigma fields
-
-        This avoids the performance overhead of converting individual fields on-the-fly.
-        Returns a dictionary of Sigma field → KQL field mappings.
-        """
-        if not HAS_PYSIGMA or self.target_vendor != "MDE":
-            return {}
-
-        # Common Sigma field names to pre-translate
-        common_sigma_fields = [
-            "CommandLine", "Image", "ParentImage", "ParentCommandLine",
-            "TargetFilename", "FileName", "User", "ParentUser",
-            "ProcessId", "ParentProcessId", "DestinationIp", "SourceIp",
-            "DestinationPort", "SourcePort", "RegistryKey", "RegistryValueData",
-            "TargetObject", "Details", "Hashes", "md5", "sha1", "sha256",
-            "IntegrityLevel", "Imphash"
-        ]
-
-        field_cache = {}
-        try:
-            pipeline = microsoft_365_defender_pipeline()
-            backend = KustoBackend(processing_pipeline=pipeline)
-
-            for field in common_sigma_fields:
-                try:
-                    test_rule = f"""
-title: Field Mapping Test
-logsource:
-    product: windows
-    category: process_creation
-detection:
-    selection:
-        {field}: test_value
-    condition: selection
-"""
-                    sigma_collection = SigmaCollection.from_yaml(test_rule)
-                    result = backend.convert(sigma_collection)
-
-                    if result:
-                        kql = result[0]
-                        # Extract KQL field name from output
-                        match = re.search(r'(\w+)\s+(?:==|contains|endswith|startswith|has_any)', kql)
-                        if match:
-                            kql_field = match.group(1)
-                            field_cache[field] = kql_field
-                            logger.debug(f"pySigma: {field} → {kql_field}")
-                except Exception:
-                    # Field not supported by pySigma - skip
-                    field_cache[field] = None
-
-            logger.info(f"Cached {len([v for v in field_cache.values() if v])} pySigma field mappings")
-        except Exception as e:
-            logger.warning(f"Could not load pySigma field mappings: {e}")
-
-        return field_cache
-
     def _load_field_mappings(self) -> Dict[str, Dict[str, str]]:
         """
         Load field name mappings for schema translation
         Maps: source_vendor -> {source_field: target_field}
 
         For OSINT-to-KQL (MDE) mappings:
-        - Maps source field names (Splunk/Elastic/Sigma/CAR) to their KQL equivalents
+        - Maps source field names (Splunk/Elastic/CAR) to their KQL equivalents
         - Uses None for fields that should be skipped (no KQL equivalent)
         """
         return {
@@ -173,47 +102,6 @@ detection:
                 "user.name": "AccountName",
                 "user.domain": "AccountDomain",
                 "user.id": None,  # Generic ID, skip
-            },
-            "Sigma": {
-                # Sigma-to-KQL (MDE) field mappings
-                # Sigma uses Windows/Sysmon-like field names
-
-                # Process fields
-                "CommandLine": "ProcessCommandLine",
-                "Image": "FileName",  # Sigma 'Image' (process path) -> MDE FileName
-                "ParentImage": "InitiatingProcessFolderPath",  # Sigma ParentImage -> MDE InitiatingProcessFolderPath
-                "ParentCommandLine": "InitiatingProcessCommandLine",
-                "ParentProcessId": None,  # Not in standard MDE tables
-                "ProcessId": None,  # Not in standard MDE tables
-
-                # File fields
-                "TargetFilename": "FileName",
-                "TargetObject": "RegistryKey",  # For registry operations
-                "FileName": "FileName",
-
-                # Network fields
-                "DestinationIp": "RemoteIP",
-                "DestinationPort": "RemotePort",
-                "SourceIp": "LocalIP",
-                "SourcePort": "LocalPort",
-
-                # User fields
-                "User": "AccountName",
-                "LogonId": "LogonId",
-
-                # Registry fields
-                "TargetObject": "RegistryKey",
-                "Details": "RegistryValueData",
-
-                # Hash fields
-                "Hashes": None,  # Sigma uses combined hash field, needs parsing
-                "md5": "MD5",
-                "sha1": "SHA1",
-                "sha256": "SHA256",
-
-                # Fields to SKIP
-                "IntegrityLevel": None,  # Sysmon-specific, no MDE equivalent
-                "Imphash": None,  # Import hash, not in MDE standard tables
             },
             "Splunk": {
                 # Splunk-to-KQL (MDE) field mappings
@@ -387,74 +275,18 @@ detection:
 
         return patterns
 
-    def translate_field_with_pysigma(self, field: str, source_vendor: str) -> Optional[str]:
-        """
-        Use pySigma to translate field names (for Sigma rules targeting MDE/KQL)
-
-        Returns:
-            - Translated field name if pySigma can map it
-            - None if field should be skipped or pySigma not available
-        """
-        if not HAS_PYSIGMA or self.target_vendor != "MDE" or source_vendor != "Sigma":
-            return None
-
-        try:
-            # pySigma's microsoft_365_defender pipeline has built-in field mappings
-            # We can construct a minimal Sigma rule to test field translation
-            test_rule = f"""
-title: Field Translation Test
-logsource:
-    product: windows
-    category: process_creation
-detection:
-    selection:
-        {field}: test_value
-    condition: selection
-"""
-            pipeline = microsoft_365_defender_pipeline()
-            backend = KustoBackend(processing_pipeline=pipeline)
-            sigma_collection = SigmaCollection.from_yaml(test_rule)
-
-            # Convert and extract the field name from the KQL output
-            result = backend.convert(sigma_collection)
-            if result:
-                kql = result[0]
-                # Extract field name from pattern like "FieldName == "test_value"" or "FieldName contains "test_value""
-                match = re.search(r'(\w+)\s+(?:==|contains|endswith|startswith)', kql)
-                if match:
-                    return match.group(1)
-        except Exception as e:
-            # Field not supported by pySigma pipeline - will skip
-            logger.debug(f"pySigma field translation failed for {field}: {e}")
-            return None
-
-        return None
-
     def translate_field(self, field: str, source_vendor: str) -> Optional[str]:
         """
         Translate field name from source schema to target schema
 
-        Uses pySigma for Sigma→KQL translation when available, otherwise uses fallback mappings.
-        Validates translated fields against schemaMDE.json for MDE target.
+        Uses fallback field mappings. Validates translated fields against
+        schemaMDE.json for MDE target.
 
         Returns:
             - Translated field name if mapping exists and is valid
             - Original field name if no mapping exists
             - None if field should be skipped (has no equivalent in target schema)
         """
-        # Try pySigma cache first for Sigma rules targeting MDE
-        if source_vendor == "Sigma" and self.target_vendor == "MDE" and self.pysigma_field_cache:
-            if field in self.pysigma_field_cache:
-                cached_result = self.pysigma_field_cache[field]
-                if cached_result:
-                    logger.debug(f"pySigma cache hit: {field} → {cached_result}")
-                    return cached_result
-                else:
-                    # Cached as unsupported
-                    logger.debug(f"pySigma cache: {field} is unsupported")
-                    return None
-
-        # Fallback to manual mappings
         if source_vendor not in self.field_mappings:
             # If targeting MDE and no mapping, check if field already exists in schema
             if self.target_vendor == "MDE" and self.mde_valid_fields:
@@ -785,7 +617,7 @@ detection:
             snippet_with_source = parts[0]
 
             # Extract vendor from "[Vendor] query" format
-            vendor_match = re.match(r'\[(Splunk|Elastic|Sigma)\]\s*(.+)', snippet_with_source)
+            vendor_match = re.match(r'\[(Splunk|Elastic)\]\s*(.+)', snippet_with_source)
             if not vendor_match:
                 continue
 

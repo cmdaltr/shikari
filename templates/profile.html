@@ -663,6 +663,93 @@
                     </button>
                   </div>
                 </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="deepseekGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#4D6BFE;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#2F4CD1;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#deepseekGradient)"/>
+                      <path d="M30 40 C30 30 40 25 50 25 C60 25 70 30 70 40 C70 48 64 52 58 55 L58 65 C58 70 54 74 50 74 C46 74 42 70 42 65 L42 58" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                    DeepSeek API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="sk-..."
+                           id="deepseek-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('deepseek-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">OpenAI-compatible API (get key at <a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com</a>)</div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="qwenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#615CED;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#7B3FE4;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#qwenGradient)"/>
+                      <text x="50" y="65" font-size="42" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">Q</text>
+                    </svg>
+                    Qwen API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="sk-..."
+                           id="qwen-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('qwen-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">DashScope compatible-mode API (get key at <a href="https://dashscope.console.aliyun.com/apiKey" target="_blank">dashscope.console.aliyun.com</a>)</div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <defs>
+                        <linearGradient id="grokGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#1A1A1A;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#3A3A3A;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="48" fill="url(#grokGradient)"/>
+                      <path d="M30 30 L70 70 M30 70 L70 30" stroke="white" stroke-width="7" stroke-linecap="round"/>
+                    </svg>
+                    Grok (xAI) API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="xai-..."
+                           id="grok-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('grok-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">OpenAI-compatible API (get key at <a href="https://console.x.ai" target="_blank">console.x.ai</a>)</div>
+                </div>
               </div>
 
               <!-- Emulation Tools Section (Greyed Out) -->

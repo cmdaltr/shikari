@@ -333,7 +333,10 @@ async function saveApiKeys() {
     mde: document.getElementById('mde-key').value,
     elastic: document.getElementById('elastic-key').value,
     openai: document.getElementById('openai-key').value,
-    anthropic: document.getElementById('anthropic-key').value
+    anthropic: document.getElementById('anthropic-key').value,
+    deepseek: document.getElementById('deepseek-key').value,
+    qwen: document.getElementById('qwen-key').value,
+    grok: document.getElementById('grok-key').value
   };
 
   try {
@@ -369,6 +372,9 @@ async function loadApiKeys() {
       if (data.elastic) document.getElementById('elastic-key').value = data.elastic;
       if (data.openai) document.getElementById('openai-key').value = data.openai;
       if (data.anthropic) document.getElementById('anthropic-key').value = data.anthropic;
+      if (data.deepseek) document.getElementById('deepseek-key').value = data.deepseek;
+      if (data.qwen) document.getElementById('qwen-key').value = data.qwen;
+      if (data.grok) document.getElementById('grok-key').value = data.grok;
     }
   } catch (error) {
     console.error('Error loading API keys:', error);

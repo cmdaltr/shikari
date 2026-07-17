@@ -314,8 +314,19 @@
             <form id="generate-form" action="/generate" method="post" autocomplete="off">
               <div class="form-section">
                 <label for="group_name_input" class="form-label">Generate queries based on Threat Group</label>
-                <input type="text" name="group_name" id="group_name_input" class="form-input"
-                       placeholder="e.g., APT29, Scattered Spider" maxlength="200">
+                <div style="display:flex;gap:12px;align-items:center;">
+                  <input type="text" name="group_name" id="group_name_input" class="form-input" style="flex:1;"
+                         placeholder="e.g., APT29, Scattered Spider" maxlength="200">
+                  <label class="option-item" style="flex-shrink:0;white-space:nowrap;">
+                    <input type="checkbox" name="merge_by_parent" value="true">
+                    <span class="option-label">
+                      Merge by Parent Technique
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
+                      </span>
+                    </span>
+                  </label>
+                </div>
                 <div id="group-name-error" class="error-message" style="display:none;">
                   Name must be 30 characters or fewer.
                 </div>
@@ -355,7 +366,7 @@
               <!-- Additional Options -->
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
-                <div class="options-grid" style="grid-template-columns: 0.9fr 0.9fr 1.2fr;">
+                <div class="options-grid" style="grid-template-columns: 1fr 1fr 1fr;">
 
                   <!-- Row 0: Auto-validate + Threat Briefing (span full width as 2-col) -->
                   <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
@@ -393,67 +404,34 @@
                   <!-- Divider -->
                   <div style="grid-column: 1 / -1; border-top: 1px solid #e2e8f0; margin: 8px 0 16px;"></div>
 
-                  <!-- Row 1 Column 1: OSINT Enhancement -->
+                  <!-- Column 1: OSINT Enhancement -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_enhancement" value="true" id="osint-enhancement-checkbox">
                     <span class="option-label">
                       OSINT Enhancement
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Automatically incorporate battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk) into queries.</span>
+                        <span class="option-info-tooltip">Automatically incorporate battle-tested detection patterns from OSINT sources (Elastic, Splunk) into queries.</span>
                       </span>
                     </span>
                   </label>
 
-                  <!-- Row 1 Column 2: AI Generators -->
-                  <label class="option-item">
-                    <input type="checkbox" name="ai_generators" value="true">
-                    <span class="option-label">
-                      AI Generators
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Use AI (OpenAI GPT, local LLMs) to enhance detection generation quality with smarter query logic. Requires OPENAI_API_KEY for cloud AI or local LLM server.</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Row 1 Column 3: Cross-vendor Correlation -->
-                  <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
-                    <input type="checkbox" name="cross_vendor_correlation" value="true" id="cross-vendor-checkbox" disabled>
-                    <span class="option-label">
-                      Cross-vendor Correlation
-                      <span style="color: #6b7280; font-size: 0.85em; margin-left: 4px;">(Coming Soon)</span>
-                    </span>
-                  </label>
-
-                  <!-- Row 2 Column 1: OSINT Comparison -->
+                  <!-- Column 2: OSINT Comparison -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_comparison" value="true" id="osint-comparison-checkbox">
                     <span class="option-label">
                       OSINT Comparison
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Compare generated detections against OSINT databases (Sigma, Elastic, Splunk, etc.) and add comparison metadata to YAML files showing how well they align with community detection rules.</span>
+                        <span class="option-info-tooltip">Compare generated detections against OSINT databases (Elastic, Splunk, etc.) and add comparison metadata to YAML files showing how well they align with community detection rules.</span>
                       </span>
                     </span>
                   </label>
 
-                  <!-- Row 2 Column 2: AI Correlations -->
-                  <label class="option-item">
-                    <input type="checkbox" name="ai_correlations" value="true">
+                  <!-- Column 3: Cross-vendor Correlation -->
+                  <label class="option-item" style="opacity: 0.5; cursor: not-allowed;">
+                    <input type="checkbox" name="cross_vendor_correlation" value="true" id="cross-vendor-checkbox" disabled>
                     <span class="option-label">
-                      AI Correlations
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip"><strong>What AI does:</strong> Improves correlation JOIN query combination strategies (smarter query logic).<br><br><strong>What AI does NOT do:</strong> Detection pairing and scoring remain rule-based (6-factor, 0-140 points). AI cannot change which detections get paired or their relevance scores.<br><br>Requires AI Generators checkbox + OPENAI_API_KEY.</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Row 2 Column 3: Merge by Parent Technique -->
-                  <label class="option-item">
-                    <input type="checkbox" name="merge_by_parent" value="true">
-                    <span class="option-label">
-                      Merge by Parent Technique
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
-                      </span>
+                      Cross-vendor Correlation
+                      <span style="color: #6b7280; font-size: 0.85em; margin-left: 4px;">(Coming Soon)</span>
                     </span>
                   </label>
 
@@ -556,6 +534,10 @@
                   </label>
                 </div>
               </details>
+
+              <!-- AI/LLM choice, set by the pre-submit prompt (see ai-prompt-modal script) -->
+              <input type="hidden" name="ai_provider" id="hidden_ai_provider" value="">
+              <input type="hidden" name="ai_model" id="hidden_ai_model" value="">
 
               <!-- Action buttons -->
               <div style="border-top:1px solid #dee2e6;margin-top:20px;padding-top:16px;">
@@ -1848,7 +1830,7 @@
 
           <!-- RESEARCH TAB -->
           <div class="tab-pane" id="tab-research">
-            <div id="actor-consolidation-section" style="display:flex;flex-direction:column;min-height:340px;">
+            <div id="actor-consolidation-section" style="display:flex;flex-direction:column;">
               <!-- Box 1: Keyword search + AND/OR toggle -->
               <div class="form-section">
                 <label class="form-label" style="font-size:1.05rem;">Find Shared Techniques across multiple Threat Groups</label>
@@ -1877,7 +1859,7 @@
               </div>
 
               <!-- Action buttons: Consolidate (50%) | Hunt Threat Groups (25%) | Hunt Techniques (25%) -->
-              <div style="border-top:1px solid #dee2e6;margin-top:auto;padding-top:16px;">
+              <div style="border-top:1px solid #dee2e6;margin-top:16px;padding-top:16px;">
                 <div style="display:flex;gap:8px;">
                   <button id="actor-consolidate-btn" type="button" disabled
                           style="flex:2;padding:10px;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#06b6d4 0%,#0891b2 100%);color:#fff;opacity:0.45;box-shadow:0 2px 8px rgba(6,182,212,0.3);transition:opacity .15s;">
@@ -2110,7 +2092,7 @@
                     <span class="option-label">
                       OSINT Enhancement
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Automatically incorporate battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk) into queries.</span>
+                        <span class="option-info-tooltip">Automatically incorporate battle-tested detection patterns from OSINT sources (Elastic, Splunk) into queries.</span>
                       </span>
                     </span>
                   </label>
@@ -2141,7 +2123,7 @@
                     <span class="option-label">
                       OSINT Comparison
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Compare generated detections against OSINT databases (Sigma, Elastic, Splunk, etc.) and add comparison metadata to YAML files showing how well they align with community detection rules.</span>
+                        <span class="option-info-tooltip">Compare generated detections against OSINT databases (Elastic, Splunk, etc.) and add comparison metadata to YAML files showing how well they align with community detection rules.</span>
                       </span>
                     </span>
                   </label>
@@ -2278,11 +2260,32 @@
 
           <!-- PROFILE TAB -->
           <div class="tab-pane" id="tab-profile">
-            <form id="profile-form" action="/profile" method="post" autocomplete="off" style="display:flex;flex-direction:column;min-height:340px;">
+            <form id="profile-form" action="/profile" method="post" autocomplete="off" style="display:flex;flex-direction:column;">
               <div class="form-section">
                 <label for="domain_input" class="form-label">Enter a company's primary domain to analyze their threat profile</label>
                 <input type="text" name="domain" id="domain_input" class="form-input"
                        placeholder="e.g., acme-corp.com, example.org" maxlength="100">
+                <div class="options-grid" style="margin-top: 14px;">
+                  <label class="option-item">
+                    <input type="checkbox" name="include_supply_chain" value="true">
+                    <span class="option-label">
+                      Supply Chain
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Identify vendor dependencies</span>
+                      </span>
+                    </span>
+                  </label>
+
+                  <label class="option-item">
+                    <input type="checkbox" name="use_openai" value="true">
+                    <span class="option-label">
+                      AI Enhancement
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Use AI for deeper analysis (requires API key)</span>
+                      </span>
+                    </span>
+                  </label>
+                </div>
               </div>
 
               <!-- API Key Guidance -->
@@ -2302,35 +2305,7 @@
                 </div>
               </details>
 
-              <!-- Additional Options -->
-              <details class="options-section">
-                <summary class="options-header">Additional Options</summary>
-                <div class="options-grid">
-                  <!-- Left Column -->
-                  <label class="option-item">
-                    <input type="checkbox" name="include_supply_chain" value="true">
-                    <span class="option-label">
-                      Supply Chain
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Identify vendor dependencies</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Right Column -->
-                  <label class="option-item">
-                    <input type="checkbox" name="use_openai" value="true">
-                    <span class="option-label">
-                      AI Enhancement
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Use AI for deeper analysis (requires API key)</span>
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              </details>
-
-              <div style="border-top:1px solid #dee2e6;margin-top:auto;padding-top:16px;">
+              <div style="border-top:1px solid #dee2e6;margin-top:16px;padding-top:16px;">
                 <button type="submit" class="btn-primary" id="profile_btn" disabled style="width:100%;margin:0;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);box-shadow:0 2px 8px rgba(139,92,246,0.3);">
                   Profile Organization
                 </button>
@@ -2736,120 +2711,142 @@
 
     {% endblock %}
 
-    <!-- Local LLM Detection Modal -->
-    <div id="llm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10003; align-items: center; justify-content: center;">
+    <!-- AI/LLM Availability Prompt Modal -->
+    <div id="ai-prompt-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10003; align-items: center; justify-content: center;">
         <div style="background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); max-width: 550px; width: 90%; padding: 0; overflow: hidden;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="font-size: 2em;">🤖</div>
-                    <h2 style="margin: 0; font-size: 1.5em; font-weight: 600;">Local LLM Detected</h2>
+                    <h2 style="margin: 0; font-size: 1.5em; font-weight: 600;">Use AI for this hunt?</h2>
                 </div>
             </div>
             <div style="padding: 24px;">
-                <p style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Archer detected a local LLM running at:</p>
-                <div style="background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 6px; padding: 12px; margin-bottom: 20px;">
-                    <strong id="llm-name" style="color: #1f2937;"></strong><br>
-                    <span id="llm-url" style="color: #6b7280; font-size: 0.9em; font-family: monospace;"></span>
+                <p id="ai-prompt-intro" style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Archer can use AI to enhance detection generation quality with smarter query logic.</p>
+
+                <!-- Shown once "Yes" is enabled and clicked -->
+                <div id="ai-provider-picker" style="display: none; margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 0.9em; font-family: 'Inter', sans-serif; letter-spacing: 0.01em;">Which AI/LLM should Archer use?</label>
+                    <select id="ai-provider-select" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95em; font-family: 'Inter', sans-serif; color: #1f2937; background: white; cursor: pointer; outline: none;"></select>
+                    <button id="ai-provider-confirm-btn" style="width: 100%; margin-top: 12px; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer;">Use this and run hunt</button>
                 </div>
-                <div id="llm-model-selector" style="display: none; margin-bottom: 20px;">
-                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 0.9em; font-family: 'Inter', sans-serif; letter-spacing: 0.01em;">Select model:</label>
-                    <select id="llm-model-select" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95em; font-family: 'Inter', sans-serif; color: #1f2937; background: white; cursor: pointer; outline: none;"></select>
+
+                <div id="ai-prompt-choices">
+                    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                        <button id="ai-prompt-yes-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">Yes</button>
+                        <button id="ai-prompt-no-btn" style="flex: 1; background: #6b7280; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">No</button>
+                    </div>
+                    <button id="ai-prompt-dontask-btn" style="width: 100%; background: none; border: none; color: #6b7280; font-size: 0.9em; text-decoration: underline; cursor: pointer; padding: 4px;">Don't ask again (this session)</button>
                 </div>
-                <p style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Would you like to use it for AI-powered detection generation?</p>
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
-                    <p style="margin: 0; font-weight: 600; color: #1e40af; font-size: 0.95em; margin-bottom: 6px;">Benefits:</p>
-                    <ul style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 0.9em; line-height: 1.5;">
-                        <li>Enhanced query quality and accuracy</li>
-                        <li>Better indicator extraction from threat intel</li>
-                        <li>Privacy: all data stays local</li>
-                    </ul>
-                </div>
-                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                    <button id="llm-yes-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">Yes, Use Local LLM</button>
-                    <button id="llm-no-btn" style="flex: 1; background: #6b7280; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">No, Use Heuristic</button>
-                </div>
-                <label style="display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 0.9em; cursor: pointer;">
-                    <input type="checkbox" id="llm-dont-ask" style="width: 16px; height: 16px;">
-                    Don't ask me again
-                </label>
             </div>
         </div>
     </div>
 
     <script>
     (function() {
-        window._llmChoicePending = false;
+        var STORAGE_KEY = 'archer_ai_prompt_suppressed'; // sessionStorage: don't ask again this session
+        var lastOptions = [];
 
-        function saveLLMPreference(useLocalLLM, dontAskAgain, selectedModel) {
-            if (dontAskAgain) {
-                localStorage.setItem('llm_preference', useLocalLLM ? 'true' : 'false');
-            }
-            if (selectedModel) {
-                localStorage.setItem('llm_model', selectedModel);
-            }
-            if (useLocalLLM && selectedModel) {
-                fetch('/api/llm/model', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({model: selectedModel})
-                }).catch(function(){});
-            }
+        function submitGenerateForm() {
+            var form = document.getElementById('generate-form');
+            if (!form) return;
+            // Dispatch a real 'submit' event so the existing AJAX handler in
+            // static/js/index.js runs (validation, endpoint routing, fetch,
+            // progress UI) — a native form.submit() would bypass all of that
+            // and cause a full page POST instead.
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
+
+        function setChoice(providerId, modelId) {
+            document.getElementById('hidden_ai_provider').value = providerId || '';
+            document.getElementById('hidden_ai_model').value = modelId || '';
+        }
+
+        function closeModalAndSubmit(providerId, modelId) {
+            setChoice(providerId, modelId);
+            document.getElementById('ai-prompt-modal').style.display = 'none';
+            submitGenerateForm();
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            var llmPreference = localStorage.getItem('llm_preference');
-            if (llmPreference) return; // already chosen
+            var genBtn = document.getElementById('generate_btn');
+            if (!genBtn) return;
 
-            fetch('/api/llm/detect')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (!data.available) return;
+            var modal = document.getElementById('ai-prompt-modal');
+            var yesBtn = document.getElementById('ai-prompt-yes-btn');
+            var noBtn = document.getElementById('ai-prompt-no-btn');
+            var dontAskBtn = document.getElementById('ai-prompt-dontask-btn');
+            var picker = document.getElementById('ai-provider-picker');
+            var select = document.getElementById('ai-provider-select');
+            var choices = document.getElementById('ai-prompt-choices');
+            var intro = document.getElementById('ai-prompt-intro');
 
-                    var modal = document.getElementById('llm-modal');
-                    var yesBtn = document.getElementById('llm-yes-btn');
-                    var noBtn = document.getElementById('llm-no-btn');
-                    var dontAsk = document.getElementById('llm-dont-ask');
-                    var modelSelector = document.getElementById('llm-model-selector');
-                    var modelSelect = document.getElementById('llm-model-select');
+            noBtn.addEventListener('click', function() { closeModalAndSubmit(null, null); });
+            dontAskBtn.addEventListener('click', function() {
+                sessionStorage.setItem(STORAGE_KEY, 'true');
+                closeModalAndSubmit(null, null);
+            });
+            document.getElementById('ai-provider-confirm-btn').addEventListener('click', function() {
+                var opt = lastOptions[select.selectedIndex] || {};
+                closeModalAndSubmit(opt.provider, opt.model);
+            });
+            yesBtn.addEventListener('click', function() {
+                if (yesBtn.disabled) return;
+                choices.style.display = 'none';
+                picker.style.display = 'block';
+            });
 
-                    document.getElementById('llm-name').textContent = data.name || 'Ollama';
-                    document.getElementById('llm-url').textContent = data.base_url || data.url || '';
+            // Intercept the button click (before any 'submit' event fires) so we
+            // can hold the hunt until the user has made an AI choice, then
+            // re-dispatch 'submit' ourselves once they have.
+            genBtn.addEventListener('click', function(e) {
+                if (sessionStorage.getItem(STORAGE_KEY) === 'true') return; // already asked/suppressed this session
 
-                    if (data.models && data.models.length > 0) {
-                        modelSelect.innerHTML = '';
-                        data.models.forEach(function(m) {
-                            var opt = document.createElement('option');
-                            opt.value = m; opt.textContent = m;
-                            if (m === data.model) opt.selected = true;
-                            modelSelect.appendChild(opt);
+                e.preventDefault();
+
+                fetch('/api/ai/availability')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        // Reset to the Yes/No/Don't-ask view each time the modal opens
+                        picker.style.display = 'none';
+                        choices.style.display = 'block';
+                        select.innerHTML = '';
+                        lastOptions = [];
+
+                        (data.cloud || []).forEach(function(p) {
+                            lastOptions.push({ provider: p.id, model: null, label: p.label + ' (cloud)' });
                         });
-                        var saved = localStorage.getItem('llm_model');
-                        if (saved && data.models.indexOf(saved) !== -1) modelSelect.value = saved;
-                        modelSelector.style.display = 'block';
-                    }
+                        (data.local || []).forEach(function(ep) {
+                            var models = ep.models && ep.models.length ? ep.models : [ep.model || 'default'];
+                            models.forEach(function(m) {
+                                lastOptions.push({ provider: ep.provider, model: m, label: ep.name + ': ' + m });
+                            });
+                        });
 
-                    window._llmChoicePending = true;
-                    modal.style.display = 'flex';
+                        lastOptions.forEach(function(opt) {
+                            var el = document.createElement('option');
+                            el.textContent = opt.label;
+                            select.appendChild(el);
+                        });
 
-                    yesBtn.addEventListener('click', function() {
-                        var sel = modelSelect ? modelSelect.value : null;
-                        saveLLMPreference(true, dontAsk.checked, sel);
-                        window._llmChoicePending = false;
-                        modal.style.display = 'none';
-                        if (window._llmPendingSubmit) { window._llmPendingSubmit(); window._llmPendingSubmit = null; }
+                        if (lastOptions.length === 0) {
+                            yesBtn.disabled = true;
+                            yesBtn.style.opacity = '0.5';
+                            yesBtn.style.cursor = 'not-allowed';
+                            intro.textContent = 'No AI/LLM is currently configured (no API key set, no local LLM detected) — this hunt will run without AI.';
+                        } else {
+                            yesBtn.disabled = false;
+                            yesBtn.style.opacity = '1';
+                            yesBtn.style.cursor = 'pointer';
+                            intro.textContent = 'Archer can use AI to enhance detection generation quality with smarter query logic.';
+                        }
+
+                        modal.style.display = 'flex';
+                    })
+                    .catch(function() {
+                        // Availability check failed — don't block the hunt, just run without AI.
+                        closeModalAndSubmit(null, null);
                     });
-                    noBtn.addEventListener('click', function() {
-                        saveLLMPreference(false, dontAsk.checked, null);
-                        window._llmChoicePending = false;
-                        modal.style.display = 'none';
-                        if (window._llmPendingSubmit) { window._llmPendingSubmit(); window._llmPendingSubmit = null; }
-                    });
-                    yesBtn.addEventListener('mouseover', function() { yesBtn.style.background = '#059669'; });
-                    yesBtn.addEventListener('mouseout', function() { yesBtn.style.background = '#10b981'; });
-                    noBtn.addEventListener('mouseover', function() { noBtn.style.background = '#4b5563'; });
-                    noBtn.addEventListener('mouseout', function() { noBtn.style.background = '#6b7280'; });
-                })
-                .catch(function(){});
+            });
         });
     })();
     </script>

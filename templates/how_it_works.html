@@ -828,7 +828,7 @@ python archer.py run_vectr_command export "APT29"</code></pre>
                 <ol>
                     <li><strong>Input:</strong> User provides threat group name or technique ID</li>
                     <li><strong>MITRE Lookup:</strong> Fetches techniques from STIX 2.0 bundle</li>
-                    <li><strong>OSINT Enhancement:</strong> Searches local repos (Sigma, Elastic, Splunk, MITRE CAR, Azure Sentinel)</li>
+                    <li><strong>OSINT Enhancement:</strong> Searches local repos (Elastic, Splunk, MITRE CAR, Azure Sentinel)</li>
                     <li><strong>Generation:</strong> Extracts indicators, validates schemas, generates platform queries</li>
                     <li><strong>Correlation:</strong> Analyzes attack paths, scores relationships (0-140 points)</li>
                     <li><strong>Validation:</strong> Calculates detection likelihood (0-100), syntax checking</li>
@@ -924,7 +924,7 @@ python archer.py run_vectr_command export "APT29"</code></pre>
                     <tr>
                         <td><strong>PyYAML / ruamel.yaml</strong></td>
                         <td>YAML processing</td>
-                        <td>MITRE data, Sigma rules, detection outputs, preserves comments and formatting</td>
+                        <td>MITRE data, detection outputs, preserves comments and formatting</td>
                     </tr>
                     <tr>
                         <td><strong>Pandas / NumPy</strong></td>
@@ -1234,7 +1234,7 @@ Extract Techniques → [T1059.001, T1078, T1003.001, ...]</code></pre>
                 <h4>Stage 2: Query Learning</h4>
                 <pre><code>Community Repositories
      ↓
-Parse Queries (Splunk SPL, KQL, Sigma)
+Parse Queries (Splunk SPL, KQL)
      ↓
 Extract Patterns & Variables
      ↓
@@ -1471,7 +1471,7 @@ data/APT29/
                     <ul>
                         <li><strong>100 detections generated:</strong> 15-30 seconds (no AI)</li>
                         <li><strong>500 correlation pairs evaluated:</strong> 2-5 seconds</li>
-                        <li><strong>OSINT comparison (Sigma/Elastic):</strong> 5-10 seconds per technique</li>
+                        <li><strong>OSINT comparison (Elastic/Splunk):</strong> 5-10 seconds per technique</li>
                         <li><strong>Full threat group (30-50 techniques):</strong> 2-5 minutes total</li>
                     </ul>
 
@@ -1521,7 +1521,7 @@ data/APT29/
             <details class="faq-item">
                 <summary class="faq-question">What's the difference between OSINT Enhancement and OSINT Comparison?</summary>
                 <div class="faq-answer">
-                    <p><strong>OSINT Enhancement:</strong> Automatically incorporates battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk community rules) directly into your queries. This is enabled by default on the Generate tab and enriches your detections with proven indicators.</p>
+                    <p><strong>OSINT Enhancement:</strong> Automatically incorporates battle-tested detection patterns from OSINT sources (Elastic, Splunk community rules) directly into your queries. This is enabled by default on the Generate tab and enriches your detections with proven indicators.</p>
                     <p><strong>OSINT Comparison:</strong> Compares techniques against OSINT databases and adds metadata to YAML files (visible in the "Show Details" button). This is reference-only and doesn't modify the queries themselves.</p>
                 </div>
             </details>
@@ -1656,7 +1656,7 @@ data/APT29/
                     <p>Archer pulls from multiple authoritative sources:</p>
                     <ul>
                         <li><strong>MITRE ATT&CK:</strong> Official enterprise-attack.json for technique mappings</li>
-                        <li><strong>Community repositories:</strong> Sigma rules, Elastic detection rules, Splunk security content</li>
+                        <li><strong>Community repositories:</strong> Elastic detection rules, Splunk security content</li>
                         <li><strong>OSINT sources:</strong> 5+ open-source security repositories with 7,500+ detection rules</li>
                         <li><strong>Threat reports:</strong> Uploaded files or analyzed blog posts/reports</li>
                     </ul>
@@ -1955,7 +1955,7 @@ data/APT29/
                     <p>These options modify how the correlation engine processes results:</p>
                     <ul>
                         <li><strong>Merge by Parent Technique:</strong> Groups correlations by parent technique (e.g., T1003.001, T1003.002 → T1003) - Check "Merge by Parent Technique" in UI</li>
-                        <li><strong>OSINT Enhancement:</strong> Incorporate battle-tested detection patterns from OSINT sources (Sigma, Elastic, Splunk) - Check "OSINT Enhancement" in UI</li>
+                        <li><strong>OSINT Enhancement:</strong> Incorporate battle-tested detection patterns from OSINT sources (Elastic, Splunk) - Check "OSINT Enhancement" in UI</li>
                         <li><strong>OSINT Comparison:</strong> Compare generated correlations with open-source repos to show alignment with community detection rules - Check "OSINT Comparison" in UI</li>
                     </ul>
 

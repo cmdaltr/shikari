@@ -12,7 +12,7 @@ REQUIREMENTS:
 
 2. OSINT Sources to Search:
    - Threat intelligence blogs (Mandiant, CrowdStrike, Microsoft, etc.)
-   - GitHub repositories (sigma rules, detection-as-code repos)
+   - GitHub repositories (detection-as-code repos)
    - MITRE CAR (Cyber Analytics Repository)
    - Elastic Detection Rules
    - Splunk Security Content
@@ -44,7 +44,7 @@ import yaml as yaml_lib
 
 
 # Cache directory for OSINT results
-from ..config import OSINT_CACHE_DIR as OSINT_CACHE_DIR_STR
+from ..config import OSINT_CACHE_DIR as OSINT_CACHE_DIR_STR, OSINT_REPOS_DIR
 OSINT_CACHE_DIR = Path(OSINT_CACHE_DIR_STR)
 OSINT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -95,124 +95,6 @@ def save_to_cache(technique_id: str, data: Dict):
         print(f"  ✓ Cached OSINT results")
     except Exception as e:
         print(f"  ⚠ Error saving cache: {e}")
-
-
-def search_sigma_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
-    """
-    Search Sigma rules repository (LOCAL) for detections related to a technique.
-
-    Returns: (sources: List[str], indicators: List[Dict])
-    """
-    from archer.build.osint_repos import search_repo_for_technique
-
-    sources = []
-    indicators = []
-
-    try:
-        # Search local Sigma repository
-        files = search_repo_for_technique("sigma", technique_id)
-
-        if files:
-            print(f"  ✓ Found {len(files)} Sigma rules for {technique_id}")
-
-            # Process more files for comprehensive coverage
-            for file_path in files[:15]:  # Increased from 5 to 15 rules
-                try:
-                    with open(file_path, 'r') as f:
-                        rule_content = f.read()
-                        rule_data = yaml_lib.safe_load(rule_content)
-
-                    # Convert to GitHub URL
-                    relative_path = file_path.replace(str(Path("data/external/repos/sigma")), "")
-                    # Ensure forward slashes for URLs (in case of Windows backslashes)
-                    relative_path = relative_path.replace("\\", "/")
-                    github_url = f"https://github.com/SigmaHQ/sigma/blob/master{relative_path}"
-                    sources.append(github_url)
-
-                    # Extract indicators from Sigma rule
-                    detection = rule_data.get("detection", {})
-                    if detection:
-                        # Extract patterns from all selection blocks
-                        cmd_patterns = []
-                        image_patterns = []
-                        file_patterns = []
-                        registry_patterns = []
-
-                        for key, value in detection.items():
-                            if isinstance(value, dict):
-                                # Check what fields are in this selection block
-                                fields_in_block = set()
-                                for field_key in value.keys():
-                                    # Extract base field name (before pipe modifier)
-                                    base_field = field_key.split('|')[0].lower()
-                                    fields_in_block.add(base_field)
-
-                                # Categorize based on field names
-                                if any(f in fields_in_block for f in ['commandline', 'command', 'processcommandline']):
-                                    cmd_patterns.extend(extract_sigma_patterns(value))
-                                if any(f in fields_in_block for f in ['image', 'process', 'processname', 'newprocessname']):
-                                    image_patterns.extend(extract_sigma_patterns(value))
-                                if any(f in fields_in_block for f in ['targetfilename', 'filename', 'filepath']):
-                                    file_patterns.extend(extract_sigma_patterns(value))
-                                if any(f in fields_in_block for f in ['targetobject', 'registrykey', 'registryvaluename']):
-                                    registry_patterns.extend(extract_sigma_patterns(value))
-
-                        if cmd_patterns or image_patterns or file_patterns or registry_patterns:
-                            indicator_data = {
-                                "source": "Sigma",
-                                "rule_name": rule_data.get("title", file_path.split("/")[-1])
-                            }
-                            if cmd_patterns:
-                                indicator_data["cmd"] = cmd_patterns[:20]  # Increased for comprehensive detection
-                            if image_patterns:
-                                indicator_data["file"] = image_patterns[:20]
-                            if file_patterns:
-                                indicator_data["target_files"] = file_patterns[:20]
-                            if registry_patterns:
-                                indicator_data["registry"] = registry_patterns[:20]
-
-                            indicators.append(indicator_data)
-
-                except Exception as e:
-                    # Silent failure for individual files
-                    continue
-
-    except Exception as e:
-        print(f"  ⚠ Error searching Sigma rules: {e}")
-
-    return sources, indicators
-
-
-def extract_sigma_patterns(detection_dict: dict) -> list:
-    """
-    Extract patterns from Sigma detection dict.
-    Handles Sigma field modifiers like |contains, |endswith, etc.
-    """
-    patterns = []
-
-    for key, value in detection_dict.items():
-        # Skip condition and filter keys
-        if key in ['condition', 'filter', 'timeframe']:
-            continue
-
-        # Handle list values
-        if isinstance(value, list):
-            for item in value:
-                if isinstance(item, str) and item:
-                    # Clean up the value (remove backslashes and special chars)
-                    cleaned = item.strip().replace('\\', '')
-                    if len(cleaned) > 2 and cleaned not in ['*', '?', '-']:
-                        patterns.append(cleaned)
-        # Handle string values
-        elif isinstance(value, str) and value:
-            cleaned = value.strip().replace('\\', '')
-            if len(cleaned) > 2 and cleaned not in ['*', '?', '-']:
-                patterns.append(cleaned)
-        # Handle nested dicts (common in Sigma selection blocks)
-        elif isinstance(value, dict):
-            patterns.extend(extract_sigma_patterns(value))
-
-    return patterns
 
 
 def search_mitre_car(technique_id: str) -> Tuple[List[str], List[Dict]]:
@@ -290,7 +172,7 @@ def search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
                             continue
 
                     # Convert to GitHub URL
-                    relative_path = file_path.replace(str(Path("data/external/repos/elastic")), "")
+                    relative_path = file_path.replace(str(Path(OSINT_REPOS_DIR) / "elastic"), "")
                     # Ensure forward slashes for URLs (in case of Windows backslashes)
                     relative_path = relative_path.replace("\\", "/")
                     github_url = f"https://github.com/elastic/detection-rules/blob/main{relative_path}"
@@ -345,7 +227,7 @@ def search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
                         detection_data = yaml_lib.safe_load(content)
 
                     # Convert to GitHub URL
-                    relative_path = file_path.replace(str(Path("data/external/repos/splunk")), "")
+                    relative_path = file_path.replace(str(Path(OSINT_REPOS_DIR) / "splunk"), "")
                     # Ensure forward slashes for URLs (in case of Windows backslashes)
                     relative_path = relative_path.replace("\\", "/")
                     github_url = f"https://github.com/splunk/security_content/blob/develop{relative_path}"
@@ -404,7 +286,7 @@ def search_azure_sentinel(technique_id: str) -> Tuple[List[str], List[Dict]]:
                         rule_data = json.loads(content)
 
                     # Convert to GitHub URL
-                    relative_path = file_path.replace(str(Path("data/external/repos/azure_sentinel")), "")
+                    relative_path = file_path.replace(str(Path(OSINT_REPOS_DIR) / "azure_sentinel"), "")
                     # Ensure forward slashes for URLs (in case of Windows backslashes)
                     relative_path = relative_path.replace("\\", "/")
                     github_url = f"https://github.com/Azure/Azure-Sentinel/blob/master{relative_path}"
@@ -449,7 +331,7 @@ def extract_indicators_from_sources(indicators_data: List[Dict]) -> Dict[str, Li
     for indicator_info in indicators_data:
         source = indicator_info.get("source", "")
 
-        # Extract from Sigma indicators (strip backslashes from all indicators)
+        # Extract indicators (strip backslashes from all indicators)
         if "cmd" in indicator_info:
             extracted["cmd"].extend([x.replace('\\', '') for x in indicator_info["cmd"]])
         if "file" in indicator_info:
@@ -529,15 +411,7 @@ def search_osint_for_technique(
     all_indicators_data = []
     notes = []
 
-    # 1. Search Sigma Rules
-    print(f"  Searching Sigma rules...")
-    sigma_sources, sigma_indicators = search_sigma_rules(technique_id)
-    if sigma_sources:
-        all_sources.extend(sigma_sources)
-        all_indicators_data.extend(sigma_indicators)
-        notes.append(f"Found {len(sigma_sources)} Sigma rule(s)")
-
-    # 2. Search MITRE CAR
+    # 1. Search MITRE CAR
     print(f"  Searching MITRE CAR...")
     car_sources, car_indicators = search_mitre_car(technique_id)
     if car_sources:
@@ -545,7 +419,7 @@ def search_osint_for_technique(
         all_indicators_data.extend(car_indicators)
         notes.append(f"Found {len(car_sources)} MITRE CAR analytic(s)")
 
-    # 3. Search Elastic Detection Rules
+    # 2. Search Elastic Detection Rules
     print(f"  Searching Elastic Detection Rules...")
     elastic_sources, elastic_indicators = search_elastic_rules(technique_id)
     if elastic_sources:
@@ -553,7 +427,7 @@ def search_osint_for_technique(
         all_indicators_data.extend(elastic_indicators)
         notes.append(f"Found {len(elastic_sources)} Elastic rule(s)")
 
-    # 4. Search Splunk Security Content
+    # 3. Search Splunk Security Content
     print(f"  Searching Splunk Security Content...")
     splunk_sources, splunk_indicators = search_splunk_content(technique_id)
     if splunk_sources:
@@ -561,7 +435,7 @@ def search_osint_for_technique(
         all_indicators_data.extend(splunk_indicators)
         notes.append(f"Found {len(splunk_sources)} Splunk detection(s)")
 
-    # 5. Search Azure Sentinel
+    # 4. Search Azure Sentinel
     print(f"  Searching Azure Sentinel...")
     sentinel_sources, sentinel_indicators = search_azure_sentinel(technique_id)
     if sentinel_sources:
@@ -695,7 +569,7 @@ def score_osint_indicator_relevance(
         indicator_type: Type (cmd, evt, sw, api, operation)
         technique_id: MITRE ATT&CK technique ID
         platform: Target platform
-        osint_source: Source of the indicator (Sigma, Elastic, etc.)
+        osint_source: Source of the indicator (Elastic, MITRE CAR, etc.)
 
     Returns:
         Relevance score (0.0-1.0)
@@ -719,8 +593,6 @@ def score_osint_indicator_relevance(
         score = 0.7
 
         # Boost score for specific sources
-        if "Sigma" in osint_source:
-            score += 0.1  # Sigma rules are high quality
         if "Elastic" in osint_source:
             score += 0.1  # Elastic rules are well-tested
         if "MITRE CAR" in osint_source:

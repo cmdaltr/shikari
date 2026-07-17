@@ -279,6 +279,159 @@ class OllamaProvider(LLMProvider):
         return 0.0  # Local models have no API cost
 
 
+# Rough per-million-token rates (USD, input/output) for cost estimation only —
+# see the disclaimer in OpenAICompatibleProvider.estimate_cost. Last checked
+# against public pricing pages 2026-07-17.
+_CLOUD_RATES = {
+    "deepseek": (0.27, 1.10),
+    "qwen": (0.50, 1.50),
+    "grok": (2.00, 10.00),
+    "ollama": (0.0, 0.0),
+    "osaurus": (0.0, 0.0),
+}
+
+
+class OpenAICompatibleProvider(LLMProvider):
+    """
+    Generic provider for any OpenAI-compatible chat/completions API.
+
+    Covers cloud providers that mirror the OpenAI wire format (DeepSeek, Qwen's
+    DashScope compatible-mode endpoint, xAI/Grok) as well as local OpenAI-compatible
+    servers (Ollama's /v1 endpoint, Osaurus) -- the only differences are base_url,
+    whether an API key is required, and the model name.
+    """
+
+    def __init__(
+        self,
+        provider_name: str,
+        base_url: str,
+        api_key: Optional[str] = None,
+        model: str = "default",
+        requires_key: bool = True,
+    ):
+        try:
+            from openai import OpenAI
+        except ImportError:
+            raise ImportError("OpenAI package not installed. Install with: pip install openai")
+
+        if requires_key and not api_key:
+            raise ValueError(f"{provider_name} requires an API key but none was provided")
+
+        self.provider_name = provider_name
+        self.model = model
+        # Local OpenAI-compatible servers (Ollama, Osaurus) ignore the key but the
+        # client still requires a non-empty string.
+        self.client = OpenAI(api_key=api_key or "not-required", base_url=base_url.rstrip("/"))
+
+    def generate(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096
+    ) -> LLMResponse:
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+
+        usage = getattr(response, "usage", None)
+        tokens_used = usage.total_tokens if usage else 0
+
+        return LLMResponse(
+            content=response.choices[0].message.content,
+            model=self.model,
+            provider=self.provider_name,
+            tokens_used=tokens_used,
+            cost_estimate=self.estimate_cost(tokens_used),
+            metadata={
+                "input_tokens": getattr(usage, "prompt_tokens", None) if usage else None,
+                "output_tokens": getattr(usage, "completion_tokens", None) if usage else None,
+                "finish_reason": response.choices[0].finish_reason,
+            }
+        )
+
+    def get_provider_name(self) -> str:
+        return self.provider_name
+
+    def estimate_cost(self, tokens: int) -> float:
+        """
+        Rough, non-authoritative cost estimate. None of these vendors expose a
+        machine-readable pricing API — their rates live on human-facing pricing
+        pages only — so this cannot be a live lookup. _CLOUD_RATES below is a
+        static table, last checked against public pricing pages 2026-07-17;
+        treat it as a ballpark for relative cost comparison, not a billing figure,
+        and re-check vendor pricing pages before relying on it for cost control.
+        """
+        input_rate, output_rate = _CLOUD_RATES.get(self.provider_name, (0.0, 0.0))
+        input_tokens = tokens * 0.7
+        output_tokens = tokens * 0.3
+        cost = (input_tokens * input_rate / 1_000_000) + (output_tokens * output_rate / 1_000_000)
+        return round(cost, 6)
+
+
+class DeepSeekProvider(OpenAICompatibleProvider):
+    """DeepSeek cloud provider (OpenAI-compatible API)."""
+
+    def __init__(self, api_key: Optional[str] = None, model: str = "deepseek-chat", base_url: Optional[str] = None):
+        super().__init__(
+            provider_name="deepseek",
+            base_url=base_url or os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
+            api_key=api_key or os.getenv("DEEPSEEK_API_KEY"),
+            model=model,
+            requires_key=True,
+        )
+
+
+class QwenProvider(OpenAICompatibleProvider):
+    """Alibaba Qwen cloud provider via DashScope's OpenAI-compatible mode."""
+
+    def __init__(self, api_key: Optional[str] = None, model: str = "qwen-plus", base_url: Optional[str] = None):
+        super().__init__(
+            provider_name="qwen",
+            base_url=base_url or os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+            api_key=api_key or os.getenv("QWEN_API_KEY") or os.getenv("DASHSCOPE_API_KEY"),
+            model=model,
+            requires_key=True,
+        )
+
+
+class GrokProvider(OpenAICompatibleProvider):
+    """xAI Grok cloud provider (OpenAI-compatible API)."""
+
+    def __init__(self, api_key: Optional[str] = None, model: str = "grok-2-latest", base_url: Optional[str] = None):
+        super().__init__(
+            provider_name="grok",
+            base_url=base_url or os.getenv("XAI_BASE_URL", "https://api.x.ai/v1"),
+            api_key=api_key or os.getenv("XAI_API_KEY") or os.getenv("GROK_API_KEY"),
+            model=model,
+            requires_key=True,
+        )
+
+
+class OsaurusProvider(OpenAICompatibleProvider):
+    """
+    Local Osaurus provider -- a native macOS local LLM server with an
+    OpenAI-compatible API, defaulting to port 1337.
+    """
+
+    def __init__(self, base_url: Optional[str] = None, model: str = "default"):
+        super().__init__(
+            provider_name="osaurus",
+            base_url=base_url or os.getenv("OSAURUS_BASE_URL", "http://localhost:1337/v1"),
+            api_key=None,
+            model=model,
+            requires_key=False,
+        )
+
+
 class LLMFactory:
     """Factory for creating LLM provider instances"""
 
@@ -310,10 +463,18 @@ class LLMFactory:
         elif provider == "ollama":
             base_url = kwargs.get("base_url", "http://localhost:11434")
             return OllamaProvider(base_url=base_url, model=model or "llama2")
+        elif provider == "deepseek":
+            return DeepSeekProvider(api_key=api_key, model=model or "deepseek-chat", base_url=kwargs.get("base_url"))
+        elif provider == "qwen":
+            return QwenProvider(api_key=api_key, model=model or "qwen-plus", base_url=kwargs.get("base_url"))
+        elif provider == "grok":
+            return GrokProvider(api_key=api_key, model=model or "grok-2-latest", base_url=kwargs.get("base_url"))
+        elif provider == "osaurus":
+            return OsaurusProvider(base_url=kwargs.get("base_url"), model=model or "default")
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
     @staticmethod
     def get_available_providers() -> List[str]:
         """Get list of available providers"""
-        return ["anthropic", "openai", "google", "ollama"]
+        return ["anthropic", "openai", "google", "deepseek", "qwen", "grok", "ollama", "osaurus"]

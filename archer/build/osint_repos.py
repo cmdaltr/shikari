@@ -5,7 +5,6 @@ This module manages local clones of OSINT detection repositories for fast,
 offline searching without API rate limits.
 
 Repositories:
-- SigmaHQ/sigma: Detection rules in Sigma format
 - elastic/detection-rules: Elastic Security detection rules
 
 Strategy:
@@ -16,6 +15,7 @@ Strategy:
 """
 
 import os
+import shutil
 import subprocess
 import json
 from pathlib import Path
@@ -25,31 +25,36 @@ import time
 # Repository configurations
 from ..config import OSINT_REPOS_DIR
 
+# Per-repo clone/pull timeout in seconds. Azure-Sentinel is far larger than the
+# other repos (solutions, workbooks, notebooks) and routinely needs several
+# minutes even with --depth 1 — a shared 30s timeout killed the clone mid-fetch
+# every time, leaving a corrupted .git dir that then failed every retry too.
+DEFAULT_TIMEOUT = 60
+
 REPOS = {
-    "sigma": {
-        "url": "https://github.com/SigmaHQ/sigma.git",
-        "path": os.path.join(OSINT_REPOS_DIR, "sigma"),
-        "search_dir": "rules",
-    },
     "elastic": {
         "url": "https://github.com/elastic/detection-rules.git",
         "path": os.path.join(OSINT_REPOS_DIR, "elastic"),
         "search_dir": "rules",
+        "timeout": DEFAULT_TIMEOUT,
     },
     "mitre_car": {
         "url": "https://github.com/mitre-attack/car.git",
         "path": os.path.join(OSINT_REPOS_DIR, "mitre_car"),
         "search_dir": "analytics",
+        "timeout": DEFAULT_TIMEOUT,
     },
     "splunk": {
         "url": "https://github.com/splunk/security_content.git",
         "path": os.path.join(OSINT_REPOS_DIR, "splunk"),
         "search_dir": "detections",
+        "timeout": DEFAULT_TIMEOUT,
     },
     "azure_sentinel": {
         "url": "https://github.com/Azure/Azure-Sentinel.git",
         "path": os.path.join(OSINT_REPOS_DIR, "azure_sentinel"),
         "search_dir": "Detections",
+        "timeout": 1200,
     }
 }
 
@@ -117,6 +122,8 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
     # Ensure parent directory exists
     REPOS_BASE_DIR.mkdir(parents=True, exist_ok=True)
 
+    timeout = repo_config.get("timeout", DEFAULT_TIMEOUT)
+
     try:
         if repo_path.exists():
             # Update existing repo
@@ -125,24 +132,24 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
                 ["git", "-C", str(repo_path), "pull", "--depth", "1"],
                 capture_output=True,
                 text=True,
-                timeout=30  # 30 second timeout
+                timeout=timeout
             )
 
             if result.returncode != 0:
                 print(f"⚠️  Git pull failed for {repo_name}, attempting fresh clone...")
                 # Remove and re-clone
-                subprocess.run(["rm", "-rf", str(repo_path)])
+                shutil.rmtree(repo_path, ignore_errors=True)
                 return clone_or_update_repo(repo_name, force=True)
         else:
             # Clone new repo
-            print(f"📥 Cloning {repo_name} repository (this may take 10-30 seconds)...")
+            print(f"📥 Cloning {repo_name} repository (timeout {timeout}s)...")
             start_time = time.time()
 
             result = subprocess.run(
                 ["git", "clone", "--depth", "1", repo_config["url"], str(repo_path)],
                 capture_output=True,
                 text=True,
-                timeout=30  # 30 second timeout
+                timeout=timeout
             )
 
             elapsed = time.time() - start_time
@@ -150,6 +157,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
 
             if result.returncode != 0:
                 print(f"❌ Failed to clone {repo_name}: {result.stderr}")
+                shutil.rmtree(repo_path, ignore_errors=True)
                 return False
 
         # Update timestamp
@@ -158,7 +166,11 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
         return True
 
     except subprocess.TimeoutExpired:
-        print(f"❌ Timeout while updating {repo_name} (exceeded 30 seconds)")
+        print(f"❌ Timeout while updating {repo_name} (exceeded {timeout}s)")
+        # A killed clone/pull leaves a corrupted, half-written .git dir behind
+        # (broken HEAD, stale shallow.lock) that fails every subsequent retry
+        # too — clear it so the next attempt starts from a clean state.
+        shutil.rmtree(repo_path, ignore_errors=True)
         return False
     except Exception as e:
         print(f"❌ Error updating {repo_name}: {e}")

@@ -3,13 +3,11 @@
 Community Detection Rules Importer
 
 Imports detection rules from community repositories:
-- Sigma Project (https://github.com/SigmaHQ/sigma)
 - Splunk Security Content (https://github.com/splunk/security_content)
 - Elastic Detection Rules (https://github.com/elastic/detection-rules)
 - Microsoft Sentinel (https://github.com/Azure/Azure-Sentinel)
 
 Usage:
-    python scripts/config/import_community_rules.py --source sigma
     python scripts/config/import_community_rules.py --source splunk
     python scripts/config/import_community_rules.py --all
 """
@@ -21,28 +19,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from archer.importers import SigmaImporter, SplunkImporter, ElasticImporter
-
-
-def import_sigma(input_dir: Path, output_dir: Path, min_level: str = 'medium'):
-    """Import Sigma rules."""
-    print("=" * 70)
-    print("Importing Sigma Rules")
-    print("=" * 70)
-    print()
-
-    sigma_rules_path = input_dir / "rules"
-    if not sigma_rules_path.exists():
-        print(f"Error: Sigma rules directory not found: {sigma_rules_path}")
-        print("Please clone the Sigma repository first:")
-        print("  cd data/external/repos")
-        print("  git clone https://github.com/SigmaHQ/sigma.git")
-        return None
-
-    importer = SigmaImporter(str(sigma_rules_path), str(output_dir))
-    stats = importer.import_all(min_level=min_level)
-
-    return stats
+from archer.importers import SplunkImporter, ElasticImporter
 
 
 def import_splunk(input_dir: Path, output_dir: Path, min_risk_score: int = 40):
@@ -103,12 +80,6 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Import Sigma rules (medium and above)
-  python scripts/config/import_community_rules.py --source sigma
-
-  # Import Sigma rules (high and critical only)
-  python scripts/config/import_community_rules.py --source sigma --min-level high
-
   # Import Splunk Security Content
   python scripts/config/import_community_rules.py --source splunk
 
@@ -118,7 +89,6 @@ Examples:
 Prerequisites:
   Clone community repositories first:
     cd data/external/repos
-    git clone https://github.com/SigmaHQ/sigma.git
     git clone https://github.com/splunk/security_content.git
     git clone https://github.com/elastic/detection-rules.git
     git clone https://github.com/Azure/Azure-Sentinel.git
@@ -127,7 +97,7 @@ Prerequisites:
 
     parser.add_argument(
         '--source',
-        choices=['sigma', 'splunk', 'elastic', 'sentinel'],
+        choices=['splunk', 'elastic', 'sentinel'],
         help='Source repository to import from'
     )
 
@@ -173,23 +143,12 @@ Prerequisites:
     args.output.mkdir(parents=True, exist_ok=True)
 
     total_stats = {
-        'sigma': None,
         'splunk': None,
         'elastic': None,
         'sentinel': None
     }
 
     # Import from specified source(s)
-    if args.all or args.source == 'sigma':
-        sigma_path = args.input / 'sigma'
-        if sigma_path.exists():
-            total_stats['sigma'] = import_sigma(sigma_path, args.output, args.min_level)
-            print()
-        else:
-            print(f"Warning: Sigma repository not found at {sigma_path}")
-            print("Run: cd data/external/repos && git clone https://github.com/SigmaHQ/sigma.git")
-            print()
-
     if args.all or args.source == 'splunk':
         splunk_path = args.input / 'splunk'
         if splunk_path.exists():

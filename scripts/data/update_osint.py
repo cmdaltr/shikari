@@ -8,12 +8,11 @@ to air-gapped environments.
 
 Usage:
     python3 update_osint_repos.py [--force]
-    python3 update_osint_repos.py --sigma --elastic
+    python3 update_osint_repos.py --elastic --splunk
     python3 update_osint_repos.py --azure-sentinel --force
 
 Options:
     --force             Force update even if repos were recently updated
-    --sigma             Update only Sigma repository
     --elastic           Update only Elastic repository
     --mitre-car         Update only MITRE CAR repository
     --splunk            Update only Splunk repository
@@ -33,38 +32,39 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import time
 import argparse
+import shutil
 
 # Repository configurations (must match archer/build/osint_repos.py)
+# Azure-Sentinel is far larger than the others (solutions, workbooks, notebooks)
+# and needs a much longer clone timeout than the default.
 REPOS = {
-    "sigma": {
-        "url": "https://github.com/SigmaHQ/sigma.git",
-        "path": "data/osint_repos/sigma",
-        "search_dir": "rules",
-        "description": "SigmaHQ Detection Rules"
-    },
     "elastic": {
         "url": "https://github.com/elastic/detection-rules.git",
         "path": "data/osint_repos/elastic",
         "search_dir": "rules",
-        "description": "Elastic Security Detection Rules"
+        "description": "Elastic Security Detection Rules",
+        "timeout": 60,
     },
     "mitre_car": {
         "url": "https://github.com/mitre-attack/car.git",
         "path": "data/osint_repos/mitre_car",
         "search_dir": "analytics",
-        "description": "MITRE Cyber Analytics Repository"
+        "description": "MITRE Cyber Analytics Repository",
+        "timeout": 60,
     },
     "splunk": {
         "url": "https://github.com/splunk/security_content.git",
         "path": "data/osint_repos/splunk",
         "search_dir": "detections",
-        "description": "Splunk Security Content"
+        "description": "Splunk Security Content",
+        "timeout": 60,
     },
     "azure_sentinel": {
         "url": "https://github.com/Azure/Azure-Sentinel.git",
         "path": "data/osint_repos/azure_sentinel",
         "search_dir": "Detections",
-        "description": "Azure Sentinel Detection Rules"
+        "description": "Azure Sentinel Detection Rules",
+        "timeout": 1200,
     }
 }
 
@@ -135,7 +135,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
     Clone or update a repository.
 
     Args:
-        repo_name: Name of the repo (sigma, elastic, etc.)
+        repo_name: Name of the repo (elastic, splunk, etc.)
         force: Force update even if not needed
 
     Returns:
@@ -164,6 +164,8 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
     # Ensure parent directory exists
     REPOS_BASE_DIR.mkdir(parents=True, exist_ok=True)
 
+    timeout = repo_config.get("timeout", 60)
+
     try:
         if repo_path.exists():
             # Update existing repo
@@ -174,7 +176,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
                 ["git", "-C", str(repo_path), "pull", "--depth", "1"],
                 capture_output=True,
                 text=True,
-                timeout=30  # 30 second timeout
+                timeout=timeout
             )
 
             elapsed = time.time() - start_time
@@ -182,26 +184,27 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
             if result.returncode != 0:
                 print(f"⚠️  Git pull failed, attempting fresh clone...")
                 # Remove and re-clone
-                subprocess.run(["rm", "-rf", str(repo_path)])
+                shutil.rmtree(repo_path, ignore_errors=True)
                 return clone_or_update_repo(repo_name, force=True)
 
             print(f"✓ Updated in {elapsed:.1f} seconds")
         else:
             # Clone new repo
-            print(f"📥 Cloning repository (maximum 30 seconds)...")
+            print(f"📥 Cloning repository (timeout {timeout}s)...")
             start_time = time.time()
 
             result = subprocess.run(
                 ["git", "clone", "--depth", "1", repo_config["url"], str(repo_path)],
                 capture_output=True,
                 text=True,
-                timeout=30  # 30 second timeout
+                timeout=timeout
             )
 
             elapsed = time.time() - start_time
 
             if result.returncode != 0:
                 print(f"❌ Failed to clone: {result.stderr}")
+                shutil.rmtree(repo_path, ignore_errors=True)
                 return False
 
             print(f"✓ Cloned in {elapsed:.1f} seconds")
@@ -216,7 +219,10 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
         return True
 
     except subprocess.TimeoutExpired:
-        print(f"❌ Failed: Repository download exceeded 30 second timeout")
+        print(f"❌ Failed: Repository download exceeded {timeout} second timeout")
+        # A killed clone/pull leaves a corrupted, half-written .git dir behind
+        # that fails every subsequent retry too — clear it before returning.
+        shutil.rmtree(repo_path, ignore_errors=True)
         return False
     except Exception as e:
         print(f"❌ Error updating {repo_name}: {e}")
@@ -299,7 +305,7 @@ def main():
 Examples:
   python3 update_osint.py                    # Update all repositories
   python3 update_osint.py --force            # Force update all repositories
-  python3 update_osint.py --sigma --elastic  # Update only Sigma and Elastic
+  python3 update_osint.py --elastic --splunk # Update only Elastic and Splunk
   python3 update_osint.py --azure-sentinel   # Update only Azure Sentinel
         """
     )
@@ -307,11 +313,6 @@ Examples:
         "--force",
         action="store_true",
         help="Force update even if repos were recently updated"
-    )
-    parser.add_argument(
-        "--sigma",
-        action="store_true",
-        help="Update only Sigma repository"
     )
     parser.add_argument(
         "--elastic",
@@ -343,9 +344,7 @@ Examples:
     repos_to_update = []
 
     # Check if any specific repo flags were set
-    if args.sigma or args.elastic or args.mitre_car or args.splunk or args.azure_sentinel:
-        if args.sigma:
-            repos_to_update.append("sigma")
+    if args.elastic or args.mitre_car or args.splunk or args.azure_sentinel:
         if args.elastic:
             repos_to_update.append("elastic")
         if args.mitre_car:

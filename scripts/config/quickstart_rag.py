@@ -169,14 +169,9 @@ def step3_clone_repositories():
 
     repositories = [
         {
-            "name": "sigma",
-            "url": "https://github.com/SigmaHQ/sigma.git",
-            "enabled": True
-        },
-        {
             "name": "splunk",
             "url": "https://github.com/splunk/security_content.git",
-            "enabled": False  # Optional, set to True to enable
+            "enabled": True
         },
         {
             "name": "elastic",
@@ -215,11 +210,11 @@ def step4_import_rules():
     root = get_project_root()
     script = root / "scripts" / "config" / "import_community_rules.py"
 
-    print("Importing Sigma rules...")
+    print("Importing Splunk Security Content rules...")
     try:
         run_python_script(
             script,
-            args=["--source", "sigma", "--min-level", "medium"],
+            args=["--source", "splunk"],
             cwd=root
         )
         print_success("Community rules imported")
@@ -329,7 +324,7 @@ Examples:
 Steps:
   1. Check and install dependencies
   2. Setup knowledge base structure
-  3. Clone community repositories (Sigma)
+  3. Clone community repositories (Splunk)
   4. Import community detection rules
   5. Build vector embeddings
   6. Test the system
