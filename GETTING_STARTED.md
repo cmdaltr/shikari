@@ -58,10 +58,10 @@ docker-compose up --build
 **Option B: Local Python**
 ``` bash
 # Start locally
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv          # add --copies if this checkout is inside a synced (OneDrive/Dropbox) folder
+source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn archer.app:app --reload
+python3 scripts/deployment/start-archer.py
 ```
 
 ### 3. Access
@@ -123,10 +123,10 @@ docker-compose down
 
 ``` bash
 # Start locally
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv          # add --copies if this checkout is inside a synced (OneDrive/Dropbox) folder
+source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn archer.app:app --reload
+python3 scripts/deployment/start-archer.py
 ```
 
 
