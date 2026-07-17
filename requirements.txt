@@ -161,6 +161,7 @@ reportlab==4.2.5  # For PDF export
 # RAG-based Fidelity Enhancement System Requirements
 
 # Vector embeddings and similarity search
+torch==2.2.2  # last release with macOS x86_64 (Intel) wheels; pin so sentence-transformers doesn't pull a newer torch with no Intel Mac build
 sentence-transformers>=2.2.2
 faiss-cpu>=1.8.0  # Use faiss-gpu if you have CUDA
 
