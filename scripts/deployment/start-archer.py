@@ -48,7 +48,7 @@ def check_port_in_use(port):
 
 def main():
     port = 8000
-    host = "127.0.0.1"
+    host = "0.0.0.0"
 
     # Parse arguments
     args = sys.argv[1:]
