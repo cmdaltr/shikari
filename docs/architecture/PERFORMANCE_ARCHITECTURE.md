@@ -29,7 +29,7 @@ Archer follows a **"Smart Defaults, Optional AI"** architecture:
 │                                                              │
 │  ┌──────────────┐      ┌──────────────┐                    │
 │  │ MITRE ATT&CK │      │ OSINT Repos  │                    │
-│  │ STIX Bundle  │      │ (Sigma, etc) │                    │
+│  │ STIX Bundle  │      │ (Elastic, etc)│                    │
 │  └──────┬───────┘      └──────┬───────┘                    │
 │         │                     │                             │
 │         └─────────┬───────────┘                             │
@@ -304,9 +304,9 @@ app.state.groups = obtain_all_groups()       # 140+ threat actors
 
 | Repos | Detections | Time |
 |-------|------------|------|
-| Sigma | 10 | 20-30s |
-| Sigma + Elastic | 10 | 40-60s |
-| Sigma + Elastic + Splunk | 10 | 60-90s |
+| Elastic | 10 | 20-30s |
+| Elastic + Splunk | 10 | 40-60s |
+| Elastic + Splunk + MITRE CAR | 10 | 60-90s |
 
 **Note:** OSINT comparison clones GitHub repos (one-time network overhead)
 
@@ -487,7 +487,7 @@ Time = min(Pairs, 10000) × 0.001s
 | MITRE STIX Bundle | 50 MB | ✅ Yes (startup) |
 | Technique Dictionary | 2 MB | ✅ Yes (startup) |
 | Group Dictionary | 1 MB | ✅ Yes (startup) |
-| OSINT Repos (Sigma) | 100 MB | ✅ Yes (on clone) |
+| OSINT Repos (Elastic, etc.) | 100 MB | ✅ Yes (on clone) |
 | Generated YAML Files | ~5 KB each | ❌ No (disk) |
 | Correlation JSON | ~50 KB | ❌ No (disk) |
 

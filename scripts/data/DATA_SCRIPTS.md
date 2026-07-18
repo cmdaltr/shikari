@@ -13,7 +13,6 @@ python scripts/data/update_osint.py
 ```
 
 **What it updates**:
-- **Sigma rules** - Universal detection format
 - **Elastic Detection Rules** - Elastic Security rules
 - **Splunk Security Content** - Splunk detection library
 - **Microsoft Defender** - Advanced hunting queries (if configured)
@@ -32,10 +31,9 @@ python scripts/data/update_osint.py
 ```bash
 $ python scripts/data/update_osint.py
 Updating OSINT repositories...
-✓ Sigma rules: 2,847 rules updated
 ✓ Elastic: 1,234 rules updated
 ✓ Splunk: 987 rules updated
-Done. Total: 5,068 rules indexed
+Done. Total: 2,221 rules indexed
 ```
 
 ---
@@ -75,7 +73,6 @@ python scripts/data/import_yaml_to_library.py <file_or_directory>
 ```
 
 **Supported formats**:
-- Sigma YAML
 - Custom Archer YAML format
 - Splunk savedsearches format
 - Elastic detection rule format
@@ -89,7 +86,7 @@ python scripts/data/import_yaml_to_library.py <file_or_directory>
 python scripts/data/import_yaml_to_library.py detections/my_detection.yml
 
 # Import directory
-python scripts/data/import_yaml_to_library.py detections/sigma_rules/
+python scripts/data/import_yaml_to_library.py detections/splunk_rules/
 
 # Import with specific platform
 python scripts/data/import_yaml_to_library.py --platform splunk detections/
@@ -147,8 +144,8 @@ python scripts/data/extract_mitre_procedures.py
 # Import your team's custom detections
 python scripts/data/import_yaml_to_library.py custom_detections/
 
-# Import Sigma rules from another source
-python scripts/data/import_yaml_to_library.py external_sigma_rules/
+# Import detections from another source
+python scripts/data/import_yaml_to_library.py external_detections/
 ```
 
 ### After Major MITRE ATT&CK Updates
@@ -169,7 +166,6 @@ python scripts/data/update_osint.py
 **OSINT Repositories**:
 ```
 data/external/repos/
-├── sigma/                    # SigmaHQ/sigma
 ├── elastic/detection_rules/  # elastic/detection-rules
 └── splunk/security_content/  # splunk/security_content
 ```
@@ -186,7 +182,6 @@ data/
 **Imported Detections**:
 ```
 data/library/
-├── sigma/
 ├── custom/
 └── imported/
 ```

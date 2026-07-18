@@ -40,7 +40,7 @@ This comprehensive approach ensures all detections benefit from the latest commu
 ### Key Features
 
 - ✅ **Automatic Enhancement** - Runs during detection generation
-- ✅ **5 OSINT Sources** - Sigma, Elastic, MITRE CAR, Splunk, Azure Sentinel
+- ✅ **4 OSINT Sources** - Elastic, MITRE CAR, Splunk, Azure Sentinel
 - ✅ **Local Repositories** - No API rate limits, fast searches (<1s)
 - ✅ **Platform-Aware** - Extracts Azure operations and AWS API calls
 - ✅ **Query Snippets** - Provides actionable detection patterns for cloud platforms
@@ -88,7 +88,6 @@ Has Real IOCs            No Real IOCs
         ▼                        ▼
 ┌──────────────────┐    ┌──────────────────┐
 │ Search Sources:  │    │ Search Sources:  │
-│ • Sigma Rules    │    │ • Sigma Rules    │
 │ • MITRE CAR      │    │ • MITRE CAR      │
 │ • Elastic Rules  │    │ • Elastic Rules  │
 │ • Splunk Content │    │ • Splunk Content │
@@ -226,7 +225,6 @@ comparison_date: 2024-11-13
 osint_sources:
   - Elastic
   - Splunk
-  - Sigma
 osint_indicators:
   cmd:
     - mimikatz.exe
@@ -264,7 +262,6 @@ Correlation files automatically include aggregated OSINT metadata from all const
   "osint_enriched": true,
   "osint_sources": [
     "Elastic",
-    "Sigma",
     "Splunk"
   ],
   "osint_indicators": {
@@ -286,7 +283,7 @@ Correlation files automatically include aggregated OSINT metadata from all const
     {
       "name": "Use Alternate Authentication Material: Pass the Hash",
       "osint_enhanced": true,
-      "osint_sources": ["Sigma"],
+      "osint_sources": ["Splunk"],
       "osint_indicators": {
         "cmd": ["sekurlsa::pth"]
       }
@@ -335,12 +332,11 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 
 | Repository | Size | Rules | Clone Time | Search Time | Update Frequency |
 |-----------|------|-------|------------|-------------|------------------|
-| **SigmaHQ/sigma** | 30MB | 3,065 | ~3s | <1s | Hourly |
 | **elastic/detection-rules** | 106MB | 1,504 | ~10s | <1s | Hourly |
 | **mitre-attack/car** | 5MB | 200+ | ~1s | <1s | Hourly |
 | **splunk/security_content** | 58MB | 1,800+ | ~5s | ~1s | Hourly |
 | **Azure/Azure-Sentinel** | 256MB | 1,000+ | ~60s | ~2s | Hourly |
-| **Total** | **~455MB** | **7,569+** | **~80s** | **<5s** | **Hourly** |
+| **Total** | **~425MB** | **4,504+** | **~76s** | **<5s** | **Hourly** |
 
 ### Benefits Over API Method
 
@@ -352,27 +348,22 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 
 ### What Each Source Provides
 
-#### 1. Sigma Rules (SigmaHQ/sigma)
-- **Focus:** Generic detection rules in vendor-neutral YAML format
-- **Extracts:** CommandLine patterns, Image/Process names, Registry keys, Network indicators
-- **Best For:** Endpoint detections (Windows, Linux, macOS)
-
-#### 2. Elastic Detection Rules
+#### 1. Elastic Detection Rules
 - **Focus:** Elasticsearch/Kibana detection rules
 - **Extracts:** EQL queries, KQL queries, field names, specific values
 - **Best For:** Cloud detections (Azure, AWS, GCP), SIEM queries
 
-#### 3. MITRE CAR (Cyber Analytics Repository)
+#### 2. MITRE CAR (Cyber Analytics Repository)
 - **Focus:** Behavioral analytics and pseudocode implementations
 - **Extracts:** Analytics descriptions, data requirements, implementations
 - **Best For:** Detection analytics, correlation rules
 
-#### 4. Splunk Security Content
+#### 3. Splunk Security Content
 - **Focus:** Splunk SPL detection searches
 - **Extracts:** SPL queries, field names, lookup tables, detection logic
 - **Best For:** Splunk-specific detections, SPL query patterns
 
-#### 5. Azure Sentinel
+#### 4. Azure Sentinel
 - **Focus:** Azure Sentinel KQL detection rules
 - **Extracts:** KQL queries, Azure-specific field names, hunting queries
 - **Best For:** Azure AD, Office 365, Azure Security Center detections
@@ -385,12 +376,11 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 
 ```
 data/osint_repos/
-├── sigma/           # 30MB, 3,065 rules
 ├── elastic/         # 106MB, 1,504 rules
 ├── mitre_car/       # 5MB, 200+ analytics
 ├── splunk/          # 58MB, 1,800+ detections
 └── azure_sentinel/  # 256MB, 1,000+ rules
-Total: ~455MB
+Total: ~425MB
 ```
 
 ### Automatic Updates
@@ -567,7 +557,7 @@ Generated reports (Word, PDF, HTML) now display OSINT enrichment information:
 
 #### Detection-Level OSINT Information
 - **Enrichment Status**: Visual indicator showing if query was enhanced with OSINT
-- **OSINT Sources**: List of OSINT repositories used (Elastic, Splunk, Sigma, etc.)
+- **OSINT Sources**: List of OSINT repositories used (Elastic, Splunk, MITRE CAR, etc.)
 - **Color Coding**:
   - Green ✓ for queries enriched with OSINT indicators
   - Blue ℹ for queries compared but not enhanced
@@ -620,9 +610,6 @@ Initializing OSINT Repositories
 This may take 15-20 minutes on first run. Subsequent starts will be much faster.
 
 ┌─────────────────────────────────────────────────────────┐
-│ 🔄 SigmaHQ Detection Rules                              │
-│    Cloning...                                            │
-├─────────────────────────────────────────────────────────┤
 │ 🔄 Elastic Security Rules                               │
 │    Cloning...                                            │
 ├─────────────────────────────────────────────────────────┤
@@ -648,9 +635,6 @@ If repositories fail to clone, failed repos show a red cross with error message 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ ✅ SigmaHQ Detection Rules                              │
-│    Ready                                                 │
-├─────────────────────────────────────────────────────────┤
 │ ✅ Elastic Security Rules                               │
 │    Ready                                                 │
 ├─────────────────────────────────────────────────────────┤
@@ -675,9 +659,9 @@ If repositories fail to clone, failed repos show a red cross with error message 
 
 ```python
 app.state.osint_ready = "partial"  # Can be True, False, or "partial"
-app.state.osint_status = "⚠️ 4/5 repos ready. Failed: azure_sentinel"
+app.state.osint_status = "⚠️ 3/4 repos ready. Failed: azure_sentinel"
 app.state.osint_repos = {
-    "sigma": {"status": "ready", "error": None},
+    "elastic": {"status": "ready", "error": None},
     "azure_sentinel": {"status": "failed", "error": "Timeout while cloning..."}
 }
 app.state.osint_failed_repos = ["azure_sentinel"]
@@ -690,9 +674,9 @@ app.state.osint_user_accepted_failures = False
 ```json
 {
   "ready": "partial",
-  "status": "⚠️ 4/5 repos ready. Failed: azure_sentinel",
+  "status": "⚠️ 3/4 repos ready. Failed: azure_sentinel",
   "repos": {
-    "sigma": {"status": "ready", "error": null},
+    "elastic": {"status": "ready", "error": null},
     "azure_sentinel": {"status": "failed", "error": "Timeout while cloning..."}
   },
   "failed_repos": ["azure_sentinel"],
@@ -781,12 +765,11 @@ The local repository approach **does not require a GitHub token** or any environ
 ```bash
 # OSINT repository clones (updated hourly)
 data/osint_repos/
-  ├── sigma/           # 30MB, 3,065 rules
   ├── elastic/         # 106MB, 1,504 rules
   ├── mitre_car/       # 5MB, 200+ analytics
   ├── splunk/          # 58MB, 1,800+ detections
   └── azure_sentinel/  # 256MB, 1,000+ rules
-  Total: ~455MB
+  Total: ~425MB
 
 # OSINT search result cache (24 hours)
 data/osint_cache/
@@ -979,8 +962,8 @@ The OSINT Enhancement System transforms generic MITRE ATT&CK descriptions into a
 It is especially critical for cloud detections where traditional endpoint IOCs don't exist, making query snippets the primary "indicators" for Azure, AWS, GCP, and SaaS platform detections.
 
 **Key Metrics:**
-- ✅ 7,569+ detection rules from 5 sources
-- ✅ ~455MB total repository size
+- ✅ 4,504+ detection rules from 4 sources
+- ✅ ~425MB total repository size
 - ✅ <5 seconds total search time
 - ✅ No API rate limits (local repositories)
 - ✅ Offline capable after initial clone

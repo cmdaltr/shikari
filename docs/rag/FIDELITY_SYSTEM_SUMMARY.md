@@ -19,8 +19,8 @@ A complete **RAG (Retrieval-Augmented Generation)** system that improves detecti
 - Location: `data/external/detections/`
 
 ✅ **Community Rule Importers**
-- Sigma rule importer (3000+ rules)
-- Splunk Security Content importer (stub)
+- Splunk Security Content importer
+- Elastic Detection Rules importer
 - Unified import script
 - Location: `archer/importers/`
 
@@ -38,7 +38,7 @@ A complete **RAG (Retrieval-Augmented Generation)** system that improves detecti
 
 ✅ **Helper Scripts**
 - `setup_knowledge_base.py` - Initialize KB structure
-- `import_community_rules.py` - Import from Sigma/Splunk/etc
+- `import_community_rules.py` - Import from Splunk/Elastic/etc
 - `build_embeddings.py` - Generate vector embeddings
 - `search_similar_detections.py` - Test similarity search
 - Location: `scripts/config/`
@@ -63,7 +63,6 @@ archer/
 ├── data/
 │   ├── external/                        # All external/community content
 │   │   ├── repos/                       # Cloned git repositories
-│   │   │   ├── sigma/
 │   │   │   ├── splunk/
 │   │   │   └── elastic/
 │   │   └── detections/                  # Processed detection examples
@@ -87,7 +86,8 @@ archer/
 │   │   ├── embeddings.py                # Embedding generation
 │   │   └── enhancer.py                  # LLM-based enhancement
 │   └── importers/                       # Community importers
-│       └── sigma_importer.py
+│       ├── splunk_importer.py
+│       └── elastic_importer.py
 │
 └── scripts/
     ├── setup_knowledge_base.py          # Initialize structure
@@ -108,10 +108,10 @@ python scripts/config/setup_knowledge_base.py
 
 # Step 2: Clone community repos
 cd data/external/repos
-git clone https://github.com/SigmaHQ/sigma.git
+git clone https://github.com/splunk/security_content.git splunk
 
 # Step 3: Import rules
-python scripts/config/import_community_rules.py --source sigma
+python scripts/config/import_community_rules.py --source splunk
 ```
 
 Result: 1000+ high-quality detection examples imported
@@ -170,13 +170,13 @@ pip install sentence-transformers==2.2.2 faiss-cpu==1.7.4 pyyaml==6.0.1 openai>=
 # 1. Initialize knowledge base
 python scripts/config/setup_knowledge_base.py
 
-# 2. Clone Sigma rules
+# 2. Clone Splunk Security Content
 cd data/external/repos
-git clone https://github.com/SigmaHQ/sigma.git
+git clone https://github.com/splunk/security_content.git splunk
 cd ../../..
 
-# 3. Import Sigma rules (takes ~5 minutes)
-python scripts/config/import_community_rules.py --source sigma
+# 3. Import Splunk rules (takes ~5 minutes)
+python scripts/config/import_community_rules.py --source splunk
 
 # 4. Build embeddings (takes ~7 minutes for 2000+ rules)
 python scripts/config/build_embeddings.py
@@ -334,8 +334,8 @@ These were documented but not yet coded:
    - For automated testing
 
 4. **Splunk/Elastic/Sentinel Importers**
-   - Currently only Sigma importer is complete
-   - Stubs exist for others
+   - Splunk and Elastic importers are complete
+   - Sentinel importer is a stub
 
 5. **Configuration Files**
    - `config/knowledge_base.yaml`
@@ -347,7 +347,7 @@ These were documented but not yet coded:
 The core RAG system is **fully functional** without these components:
 - Field validation is nice-to-have (queries still work)
 - Test data validation can come after initial deployment
-- Sigma rules alone provide 2000+ examples
+- Splunk and Elastic rules alone provide thousands of examples
 - Configuration can use defaults
 
 ---
@@ -366,9 +366,9 @@ The core RAG system is **fully functional** without these components:
 2. **Import Community Rules**
    ```bash
    cd data/external/repos
-   git clone https://github.com/SigmaHQ/sigma.git
+   git clone https://github.com/splunk/security_content.git splunk
    cd ../../..
-   python scripts/config/import_community_rules.py --source sigma
+   python scripts/config/import_community_rules.py --source splunk
    ```
 
 3. **Build Embeddings**
@@ -452,8 +452,8 @@ pip install faiss-gpu==1.7.4
 ### Issue: "No detection examples found"
 
 ```bash
-# Import Sigma rules first
-python scripts/config/import_community_rules.py --source sigma
+# Import Splunk rules first
+python scripts/config/import_community_rules.py --source splunk
 ```
 
 ### Issue: "Knowledge base not available"
@@ -521,7 +521,8 @@ Track these to measure improvement:
 
 ## Credits
 
-- **Sigma Project:** https://github.com/SigmaHQ/sigma
+- **Splunk Security Content:** https://github.com/splunk/security_content
+- **Elastic Detection Rules:** https://github.com/elastic/detection-rules
 - **Sentence Transformers:** https://www.sbert.net/
 - **FAISS:** https://github.com/facebookresearch/faiss
 

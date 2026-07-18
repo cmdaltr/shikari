@@ -134,7 +134,7 @@ archer/ai/training/
 │   ├── threat_reports/           # Vendor threat reports
 │   ├── blog_posts/               # Security research
 │   ├── cve_data/                 # CVE data and exploits
-│   └── osint_samples/            # Sigma, Elastic, Splunk rules
+│   └── osint_samples/            # Elastic, Splunk rules
 │
 ├── models/                        # Trained models
 │   ├── checkpoints/              # Training checkpoints
@@ -405,9 +405,6 @@ python scripts/train_ai.py reports --dir reports/ --output custom_output/
 ### Extract OSINT Samples
 
 ```bash
-# Extract Sigma rules
-python scripts/train_ai.py osint --source sigma
-
 # Extract Elastic detection rules
 python scripts/train_ai.py osint --source elastic
 
@@ -418,7 +415,7 @@ python scripts/train_ai.py osint --source splunk
 python scripts/train_ai.py osint --all
 
 # Use custom repository
-python scripts/train_ai.py osint --source sigma --repo https://github.com/custom/sigma-fork
+python scripts/train_ai.py osint --source elastic --repo https://github.com/custom/detection-rules-fork
 ```
 
 **Requirements**: `pip install pyyaml toml`
@@ -474,7 +471,7 @@ trainer.load_model()
 # Specify exact training files
 train_files = [
     Path("archer/ai/training/datasets/hunting_queries/internal_soc.jsonl"),
-    Path("archer/ai/training/datasets/osint_samples/sigma_rules.jsonl"),
+    Path("archer/ai/training/datasets/osint_samples/elastic_rules.jsonl"),
 ]
 
 trainer.load_datasets(train_files=train_files)

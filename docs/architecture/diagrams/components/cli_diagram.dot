@@ -32,7 +32,7 @@ digraph ArcherCLI {
 
         detections [label="Detection Builder\ndetections.py\n\nGenerates queries for all platforms\nYAML output"];
         correlations [label="Correlation Engine\nengine.py\n\nScores pairs (0-140)\nFilters (threshold=40%)\nMerges correlations\nGenerates JOIN queries"];
-        osint [label="OSINT Integration\nosint_repos.py\n\nSigma, Splunk rules\nComparison & enrichment"];
+        osint [label="OSINT Integration\nosint_repos.py\n\nElastic, Splunk rules\nComparison & enrichment"];
         validator [label="Query Validator\nplatform_validator_v2.py\n\nSyntax validation\nPlatform checking\nField validation"];
     }
 
@@ -65,7 +65,7 @@ digraph ArcherCLI {
         fontname="Arial Bold";
 
         attack_data [label="MITRE ATT&CK\nenterprise-attack.json\n\n15,000+ techniques\n600+ groups"];
-        repos [label="OSINT Repos\nSigma, Splunk, etc.\n(GitHub)\n\n10,000+ detections"];
+        repos [label="OSINT Repos\nElastic, Splunk, etc.\n(GitHub)\n\n10,000+ detections"];
         cache [label="CVE Cache\ndata/cve_cache/\n\nVulnerability data"];
     }
 

@@ -1309,7 +1309,6 @@ The auto-generated documentation provides:
 
 ### Related Resources
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)
-- [Sigma Rules](https://github.com/SigmaHQ/sigma)
 - [Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)
 
 ---

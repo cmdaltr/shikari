@@ -62,7 +62,7 @@ digraph ArcherWeb {
 
         gen_engine [label="Detection Builder\ndetections.py\n\nGenerate queries\nYAML output"];
         corr_engine [label="Correlation Engine\nengine.py\n\nScore pairs (0-140)\nFilter (threshold=40%)\nMerge correlations"];
-        osint_engine [label="OSINT Integration\nosint_repos.py\n\nSigma, Splunk rules\nComparison"];
+        osint_engine [label="OSINT Integration\nosint_repos.py\n\nElastic, Splunk rules\nComparison"];
         validation_engine [label="Validation Service\nplatform_validator_v2.py\n\nSyntax checking\nField validation"];
     }
 

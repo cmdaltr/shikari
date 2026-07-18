@@ -88,7 +88,7 @@ digraph ArcherFlow {
 
     detection_builder [label="Detection Builder\n(archer.build.detections)\nGenerate YAML detections", fillcolor="#ff9999"];
 
-    osint_service [label="OSINT Integration\n(archer.build.osint_repos)\nSigma, Splunk, etc.", fillcolor="#ff9999"];
+    osint_service [label="OSINT Integration\n(archer.build.osint_repos)\nElastic, Splunk, etc.", fillcolor="#ff9999"];
 
     validation_service [label="Validation Service\n(archer.build.platform_*)\nValidate queries", fillcolor="#ff9999"];
 
@@ -130,7 +130,7 @@ digraph ArcherFlow {
     fontsize=12;
 
     mitre_attack [label="MITRE ATT&CK\n(STIX Bundle)", shape=cylinder, fillcolor="#c8c8ff"];
-    osint_repos [label="OSINT Repos\n(GitHub)\nSigma, Splunk, etc.", shape=cylinder, fillcolor="#c8c8ff"];
+    osint_repos [label="OSINT Repos\n(GitHub)\nElastic, Splunk, etc.", shape=cylinder, fillcolor="#c8c8ff"];
     cve_nvd [label="CVE/NVD\nVulnerability Data", shape=cylinder, fillcolor="#c8c8ff"];
     vectr [label="VECTR\n(Hunt Tracking)", shape=cylinder, fillcolor="#c8c8ff", style="dashed,filled"];
     siem_apis [label="SIEM APIs\n(MDE, Splunk)", shape=cylinder, fillcolor="#c8c8ff", style="dashed,filled"];

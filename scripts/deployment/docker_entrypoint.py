@@ -21,10 +21,10 @@ def print_banner():
 
 def check_osint_repos():
     """Check if OSINT repositories are initialized."""
-    sigma_path = Path("data/osint_repos/sigma")
     elastic_path = Path("data/osint_repos/elastic")
+    splunk_path = Path("data/osint_repos/splunk")
 
-    return sigma_path.exists() and elastic_path.exists()
+    return elastic_path.exists() and splunk_path.exists()
 
 
 def initialize_osint_repos():
@@ -37,7 +37,7 @@ def initialize_osint_repos():
     try:
         # Run the update script with --force flag
         result = subprocess.run(
-            [sys.executable, "scripts/update_osint_repos.py", "--force"],
+            [sys.executable, "scripts/data/update_osint.py", "--force"],
             check=True
         )
 

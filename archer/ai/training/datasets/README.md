@@ -12,7 +12,7 @@ datasets/
 ├── threat_reports/        # Threat actor reports, TTPs, and campaign analysis
 ├── blog_posts/           # Security blog posts and research articles
 ├── cve_data/             # CVE data, exploits, and vulnerability information
-└── osint_samples/        # Samples from OSINT repositories (Sigma, Elastic, etc.)
+└── osint_samples/        # Samples from OSINT repositories (Elastic, Splunk, etc.)
 ```
 
 ## Data Format
@@ -138,7 +138,6 @@ Include vulnerability data:
 
 ### 7. OSINT Samples
 Extract from existing OSINT repos:
-- Sigma rules with context
 - Elastic detection rules
 - Splunk Security Content
 - Azure Sentinel detections

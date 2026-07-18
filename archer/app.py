@@ -1638,8 +1638,9 @@ async def initialize_osint_repos():
     """
     Initialize OSINT detection repositories on startup.
 
-    Clones or updates Sigma and Elastic detection rule repositories locally
-    for fast, offline searching without API rate limits. Repos are updated
+    Clones or updates Elastic, MITRE CAR, Splunk, and Azure Sentinel detection
+    rule repositories locally for fast, offline searching without API rate
+    limits. Repos are updated
     every hour automatically when searches are performed.
 
     This runs in the background to avoid blocking app startup.

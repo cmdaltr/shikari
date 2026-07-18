@@ -304,7 +304,6 @@ Password: £missary_0f_the_G0rg0nite$
 **Purpose**: Update OSINT detection repositories.
 
 **Updates**:
-- Sigma rules
 - Elastic Detection Rules
 - Splunk Security Content
 - Microsoft Defender queries
@@ -338,7 +337,6 @@ Also runnable as: `python -m archer.mitre.procedures [--output]`
 **Purpose**: Import YAML detection files to Archer's library.
 
 **Supported formats**:
-- Sigma YAML
 - Archer custom YAML
 - Splunk savedsearches
 - Elastic detection rules
@@ -349,7 +347,7 @@ Also runnable as: `python -m archer.mitre.procedures [--output]`
 python scripts/data/import_yaml_to_library.py detections/my_rule.yml
 
 # Import directory
-python scripts/data/import_yaml_to_library.py detections/sigma/
+python scripts/data/import_yaml_to_library.py detections/splunk/
 ```
 
 ---

@@ -101,7 +101,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
     Clone or update a repository.
 
     Args:
-        repo_name: Name of the repo (sigma, elastic, etc.)
+        repo_name: Name of the repo (elastic, mitre_car, splunk, azure_sentinel)
         force: Force update even if not needed
 
     Returns:

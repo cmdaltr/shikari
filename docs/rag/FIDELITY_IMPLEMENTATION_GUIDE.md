@@ -48,7 +48,7 @@ This system improves detection quality through:
 ✅ **Easy to update** - Add new examples as YAML/JSON files
 ✅ **Explainable** - See which examples influenced each query
 ✅ **Measurable** - Track fidelity scores over time
-✅ **Community-powered** - Leverage 3000+ Sigma rules and other sources
+✅ **Community-powered** - Leverage thousands of Splunk and Elastic community rules
 
 ---
 
@@ -99,7 +99,6 @@ archer/
 ├── data/
 │   ├── external/                     # All external/community content
 │   │   ├── repos/                    # Cloned community repositories
-│   │   │   ├── sigma/
 │   │   │   ├── splunk/
 │   │   │   └── elastic/
 │   │   └── detections/               # Processed detection examples
@@ -136,7 +135,6 @@ archer/
 │   │   ├── test_runner.py            # Automated testing
 │   │   └── scoring.py                # Fidelity scoring
 │   └── importers/                    # Community rule importers
-│       ├── sigma_importer.py
 │       ├── splunk_importer.py
 │       └── elastic_importer.py
 └── scripts/
@@ -166,11 +164,8 @@ mkdir -p data/external
 ### Step 1.2: Clone Community Detection Repositories
 
 ```bash
-# Clone Sigma (3000+ rules)
-cd data/external/repos
-git clone https://github.com/SigmaHQ/sigma.git
-
 # Clone Splunk Security Content (900+ detections)
+cd data/external/repos
 git clone https://github.com/splunk/security_content.git splunk
 
 # Clone Elastic Detection Rules (800+ rules)
@@ -185,12 +180,6 @@ cd ../../..
 ### Step 1.3: Import Community Rules
 
 ```bash
-# Import Sigma rules
-python scripts/config/import_community_rules.py \
-  --source sigma \
-  --input data/external/repos/sigma/rules \
-  --output data/external/detections/detection_examples/
-
 # Import Splunk rules
 python scripts/config/import_community_rules.py \
   --source splunk \
@@ -203,17 +192,17 @@ python scripts/config/import_community_rules.py --all
 
 **Expected Output:**
 ```
-Importing Sigma rules...
-  ✓ Processed 3247 Sigma rules
-  ✓ Mapped 1843 rules to MITRE ATT&CK
-  ✓ Imported 1843 high-quality examples
-
 Importing Splunk Security Content...
   ✓ Processed 923 Splunk detections
   ✓ Mapped 876 detections to MITRE ATT&CK
   ✓ Imported 876 high-quality examples
 
-Total Knowledge Base: 2719 detection examples
+Importing Elastic Detection Rules...
+  ✓ Processed 812 Elastic rules
+  ✓ Mapped 650 rules to MITRE ATT&CK
+  ✓ Imported 650 high-quality examples
+
+Total Knowledge Base: 1526 detection examples
 ```
 
 ### Step 1.4: Create Field Mapping Catalogs
@@ -294,15 +283,15 @@ python scripts/config/build_embeddings.py \
 **Output:**
 ```
 Loading detection examples from knowledge base...
-  ✓ Loaded 2719 detection examples
+  ✓ Loaded 1526 detection examples
 
 Generating embeddings...
   Model: sentence-transformers/all-MiniLM-L6-v2
-  Progress: 100% |████████████████| 2719/2719
-  ✓ Generated 2719 embeddings
+  Progress: 100% |████████████████| 1526/1526
+  ✓ Generated 1526 embeddings
 
 Building FAISS index...
-  ✓ Built index with 2719 vectors
+  ✓ Built index with 1526 vectors
   ✓ Index dimension: 384
 
 Saving index...
@@ -327,13 +316,13 @@ python scripts/config/search_similar_detections.py \
 Querying: T1003.001 (LSASS Memory) on platform Splunk
 
 Top 5 Similar Detections:
-1. Score: 0.92 | T1003.001_lsass_access_splunk_sigma.yaml
-   Source: Sigma Project
-   Fidelity: 0.88
-
-2. Score: 0.89 | T1003.001_credential_dump_splunk_sc.yaml
+1. Score: 0.89 | T1003.001_credential_dump_splunk_sc.yaml
    Source: Splunk Security Content
    Fidelity: 0.91
+
+2. Score: 0.87 | T1003.001_lsass_access_elastic.yaml
+   Source: Elastic Detection Rules
+   Fidelity: 0.88
 
 3. Score: 0.86 | T1003_credential_access_splunk_custom.yaml
    Source: Community Contribution
@@ -841,8 +830,7 @@ rag:
 
 ```bash
 # Update community rule repositories (monthly)
-cd data/external/repos/sigma && git pull
-cd ../splunk && git pull
+cd data/external/repos/splunk && git pull
 cd ../elastic && git pull
 
 # Re-import updated rules

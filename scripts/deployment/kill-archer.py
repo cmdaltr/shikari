@@ -140,7 +140,7 @@ def main():
         found_any = True
 
     # 6. Kill git clone processes for OSINT repos
-    for repo in ['Azure-Sentinel', 'sigma', 'elastic', 'splunk', 'mitre']:
+    for repo in ['Azure-Sentinel', 'elastic', 'splunk', 'mitre']:
         pids = find_processes_by_pattern(f"git clone.*{repo}")
         if pids:
             killed, failed = kill_processes(pids, f"Git clone processes for {repo}")

@@ -2,7 +2,7 @@
 
 This directory contains **community-sourced** detection examples for RAG-based query enhancement.
 
-These are external/public detections imported from community repositories (Sigma, Splunk, Elastic, etc.).
+These are external/public detections imported from community repositories (Splunk, Elastic, etc.).
 
 ## Structure
 
@@ -74,11 +74,11 @@ data_sources:
 ## Importing Community Rules
 
 ```bash
-# Import Sigma rules
-python scripts/config/import_community_rules.py --source sigma
-
 # Import Splunk Security Content
 python scripts/config/import_community_rules.py --source splunk
+
+# Import Elastic Detection Rules
+python scripts/config/import_community_rules.py --source elastic
 
 # Import all sources
 python scripts/config/import_community_rules.py --all
@@ -89,8 +89,8 @@ python scripts/config/import_community_rules.py --all
 ### Update Community Repositories
 
 ```bash
-cd data/external/sigma && git pull
-python scripts/config/import_community_rules.py --source sigma --update
+cd data/external/splunk && git pull
+python scripts/config/import_community_rules.py --source splunk --update
 ```
 
 ### Rebuild Embeddings

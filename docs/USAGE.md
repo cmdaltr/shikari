@@ -31,7 +31,7 @@ Access Archer's web interface at `http://localhost:8000` after starting the serv
 1. Navigate to **Generate** tab
 2. Enter threat group name (e.g., "APT29", "Lazarus Group", "Scattered Spider")
 3. Configure options:
-   - **OSINT Enhancement**: Merge community detection patterns (Sigma, Elastic, etc.)
+   - **OSINT Enhancement**: Merge community detection patterns (Elastic, Splunk, etc.)
    - **OSINT Comparison**: Add metadata showing how your detections compare to OSINT
    - **Run Correlation**: Generate multi-stage attack correlations
    - **Correlation Min Relevance**: Threshold for correlation quality (0.5-1.0)

@@ -27,7 +27,7 @@ python3 scripts/config/search_similar_detections.py --technique T1003.001 --plat
 ```
 data/
 ├── external/
-│   ├── repos/           # Cloned community repos (Sigma, Splunk, Elastic)
+│   ├── repos/           # Cloned community repos (Splunk, Elastic)
 │   └── detections/      # Processed detection examples + embeddings
 ├── bespoke/             # Organization-specific content (gitignored)
 │   ├── sample_searches/ # Custom search examples

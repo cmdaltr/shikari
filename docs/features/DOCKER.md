@@ -22,9 +22,8 @@ docker-compose down
 
 ### OSINT Repository Initialization
 
-On **first run**, Archer will clone 5 OSINT detection repositories (~455MB total):
+On **first run**, Archer will clone 4 OSINT detection repositories (~425MB total):
 
-- SigmaHQ (30MB)
 - Elastic Security (106MB)
 - MITRE CAR (5MB)
 - Splunk Security Content (58MB)
@@ -50,10 +49,6 @@ docker-compose logs -f archer
 # You'll see:
 🔍 OSINT repositories not found. Initializing...
 This will take 15-20 minutes on first run.
-
-📦 SigmaHQ Detection Rules
-📥 Cloning repository...
-✓ Cloned in 3.2 seconds
 
 📦 Elastic Security Detection Rules
 📥 Cloning repository...

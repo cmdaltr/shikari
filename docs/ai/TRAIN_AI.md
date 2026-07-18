@@ -110,9 +110,6 @@ python scripts/ai/train_ai.py reports --dir reports/ --output custom_output/
 Extract detection rules from OSINT repositories.
 
 ```bash
-# Extract Sigma rules
-python scripts/ai/train_ai.py osint --source sigma
-
 # Extract Elastic detection rules
 python scripts/ai/train_ai.py osint --source elastic
 
@@ -123,7 +120,7 @@ python scripts/ai/train_ai.py osint --source splunk
 python scripts/ai/train_ai.py osint --all
 
 # Use custom repository
-python scripts/ai/train_ai.py osint --source sigma --repo https://github.com/custom/sigma-fork
+python scripts/ai/train_ai.py osint --source elastic --repo https://github.com/custom/detection-rules-fork
 
 # Specify output directory
 python scripts/ai/train_ai.py osint --all --output custom_output/
@@ -132,7 +129,7 @@ python scripts/ai/train_ai.py osint --all --output custom_output/
 **Requirements**: `pip install pyyaml toml`
 
 **Options**:
-- `--source`: OSINT source (sigma, elastic, splunk)
+- `--source`: OSINT source (elastic, splunk)
 - `--repo`: Custom repository URL
 - `--all`: Extract from all sources
 - `--output`: Output directory
@@ -347,7 +344,6 @@ archer/ai/training/datasets/
 │   ├── *.pdf              # Original PDFs
 │   └── *.json             # Converted JSON
 ├── osint_samples/
-│   ├── sigma_rules.jsonl
 │   ├── elastic_rules.jsonl
 │   └── splunk_rules.jsonl
 ├── hunting_queries/        # Custom high-fidelity queries

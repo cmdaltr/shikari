@@ -7,7 +7,6 @@ This directory contains downloaded query examples from open source security repo
 When populated, this directory contains:
 
 - **splunk_security_content/** - Splunk Security Content repository
-- **sigma/** - SigmaHQ Sigma rules repository
 - **defender_hunting/** - Microsoft Defender hunting queries repository
 - **index.json** - Search index mapping techniques to examples
 
@@ -29,7 +28,6 @@ python scripts/manage_query_examples.py stats
 ## Why These Repositories?
 
 - **Splunk Security Content**: Production-ready queries from Splunk's Enterprise Security team
-- **SigmaHQ Sigma**: Vendor-agnostic rules used by security teams worldwide
 - **Defender Hunting**: Real-world threat hunting patterns from Microsoft security researchers
 
 ## Storage Requirements

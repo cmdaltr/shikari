@@ -9,7 +9,6 @@
 The RAG fidelity enhancement system improves your detection queries by learning from **4,800+ real-world, production-quality detection examples** from:
 - Splunk Security Content
 - Elastic Detection Rules
-- Sigma Project
 
 Instead of relying only on templates, your queries now benefit from proven, validated detections used in real security operations.
 
@@ -50,7 +49,7 @@ You should see:
 ```
 Knowledge Base Statistics:
   Total detections: 4,768
-  Platforms: Splunk, Elastic, Sigma
+  Platforms: Splunk, Elastic
 
 Similar detections found: 5
   1. LSASS Memory Dump (fidelity: 0.92)
