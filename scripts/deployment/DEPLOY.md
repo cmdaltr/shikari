@@ -16,7 +16,7 @@ python3 scripts/deployment/status-archer.py
 ```
 
 **What they do**:
-- `start-archer.py` uses `.venv/bin/python3` if present, otherwise falls back to the interpreter running the script. Binds to `0.0.0.0:8000` by default so the app is reachable from other machines and from reverse proxies (e.g. Caddy via `host.docker.internal`) — not just `127.0.0.1`.
+- `start-archer.py` uses `.venv/bin/python3` if present, otherwise falls back to the interpreter running the script. Binds to `0.0.0.0:8000` by default so the app is reachable from other machines and from reverse proxies (e.g. Caddy via `host.docker.internal`) — not just `127.0.0.1`. Before starting uvicorn, it also rebuilds the OSINT technique index (`scripts/data/build_osint_index.py --skip-clone`) if `data/cache/osint_technique_index.json` is missing or more than 24 hours old — pass `--skip-index` to skip this (e.g. for fast dev-loop restarts). This never clones/updates the OSINT repos themselves, only re-indexes whatever's already on disk, so it adds a few seconds at most; a failure here is non-fatal and just falls back to live OSINT search. `restart-archer.py` passes `--skip-index` through if given.
 - `stop-archer.py` finds and terminates running Archer/Uvicorn processes by matching the process command line. If Archer is run alongside other tools (Docker Desktop/OrbStack helpers, other Python services), double-check its output before trusting a "stopped" process was actually Archer.
 - `restart-archer.py` is `stop` then `start`.
 - `status-archer.py` reports whether a matching process is running and whether the port responds.

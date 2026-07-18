@@ -44,6 +44,9 @@ def main():
             reload_enabled = False
             pass_through_args.append(arg)
             i += 1
+        elif arg in ["--skip-index"]:
+            pass_through_args.append(arg)
+            i += 1
         elif arg in ["-h", "--help"]:
             print("Usage: restart-archer.py [options]")
             print()
@@ -51,6 +54,7 @@ def main():
             print("  -b, --background    Run in background (detached)")
             print("  -p, --port PORT     Specify port (default: 8000)")
             print("  --no-reload         Disable auto-reload")
+            print("  --skip-index        Don't build/refresh the OSINT technique index")
             print("  -h, --help          Show this help message")
             return 0
         else:

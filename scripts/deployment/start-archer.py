@@ -7,6 +7,8 @@ Uses only standard library - no external dependencies
 import subprocess
 import sys
 import os
+import json
+from datetime import datetime
 from pathlib import Path
 
 
@@ -46,6 +48,59 @@ def check_port_in_use(port):
     return bool(result.stdout.strip())
 
 
+def check_and_build_osint_index(root: Path, python_cmd: str, max_age_hours: float = 24):
+    """
+    Rebuild the OSINT technique index (data/cache/osint_technique_index.json)
+    if it's missing or older than max_age_hours. Uses --skip-clone so this
+    never triggers a fresh repo clone (that's update_osint.py's job) -- it
+    only re-indexes whatever's already on disk, which takes seconds.
+
+    Non-fatal: archer/build/osint_comparison.py falls back to live OSINT
+    searches automatically if the index isn't there, so a failure here
+    should never block startup.
+    """
+    index_path = root / "data" / "cache" / "osint_technique_index.json"
+    build_script = root / "scripts" / "data" / "build_osint_index.py"
+
+    if not build_script.exists():
+        return
+
+    needs_build = True
+    if index_path.exists():
+        try:
+            with open(index_path) as f:
+                data = json.load(f)
+            generated_at = datetime.fromisoformat(data["generated_at"].rstrip("Z"))
+            age_hours = (datetime.utcnow() - generated_at).total_seconds() / 3600
+            needs_build = age_hours > max_age_hours
+        except Exception:
+            needs_build = True
+
+    if not needs_build:
+        return
+
+    print("Building OSINT technique index (missing or stale)...")
+    try:
+        result = subprocess.run(
+            [python_cmd, str(build_script), "--skip-clone"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0:
+            print("✓ OSINT technique index ready")
+        else:
+            print("⚠️  OSINT technique index build failed, continuing without it")
+            if result.stderr:
+                print(result.stderr[-500:])
+    except subprocess.TimeoutExpired:
+        print("⚠️  OSINT technique index build timed out, continuing without it")
+    except Exception as e:
+        print(f"⚠️  Could not build OSINT technique index: {e}")
+    print()
+
+
 def main():
     port = 8000
     host = "0.0.0.0"
@@ -54,6 +109,7 @@ def main():
     args = sys.argv[1:]
     background = False
     reload_enabled = True
+    skip_index = False
 
     for i, arg in enumerate(args):
         if arg in ["-b", "--background"]:
@@ -62,6 +118,8 @@ def main():
             port = int(args[i + 1])
         elif arg in ["--no-reload"]:
             reload_enabled = False
+        elif arg in ["--skip-index"]:
+            skip_index = True
         elif arg in ["-h", "--help"]:
             print("Usage: start-archer.py [options]")
             print()
@@ -69,6 +127,7 @@ def main():
             print("  -b, --background    Run in background (detached)")
             print("  -p, --port PORT     Specify port (default: 8000)")
             print("  --no-reload         Disable auto-reload")
+            print("  --skip-index        Don't build/refresh the OSINT technique index")
             print("  -h, --help          Show this help message")
             return 0
 
@@ -86,6 +145,9 @@ def main():
 
     root = get_project_root()
     python_cmd = find_python()
+
+    if not skip_index:
+        check_and_build_osint_index(root, python_cmd)
 
     print(f"Project root: {root}")
     print(f"Python: {python_cmd}")
