@@ -97,7 +97,44 @@ def save_to_cache(technique_id: str, data: Dict):
         print(f"  ⚠ Error saving cache: {e}")
 
 
+def _entries_to_sources_and_indicators(entries: List[Dict], source_label: str) -> Tuple[List[str], List[Dict]]:
+    """Convert prebuilt index entries into the (sources, indicators) shape the live searches return."""
+    sources = [e["source_url"] for e in entries]
+    indicators = [
+        {
+            "source": source_label,
+            "source_url": e["source_url"],
+            "rule_name": e["name"],
+            "query_snippet": e["query_snippet"],
+        }
+        for e in entries
+    ]
+    return sources, indicators
+
+
 def search_mitre_car(technique_id: str) -> Tuple[List[str], List[Dict]]:
+    """
+    Look up MITRE CAR analytics for a technique.
+
+    Uses the prebuilt OSINT technique index (archer.build.osint_index) when
+    available -- an O(1) lookup instead of a live network fetch of
+    analytics.json on every call. Falls back to the live fetch only if the
+    index hasn't been built yet (run scripts/data/build_osint_index.py).
+
+    Returns: (sources: List[str], indicators: List[Dict])
+    """
+    from .osint_index import load_index, lookup as index_lookup
+
+    if load_index() is not None:
+        entries = index_lookup(technique_id, "mitre_car")
+        if entries:
+            print(f"  \u2713 Found {len(entries)} MITRE CAR analytic(s) for {technique_id} (from index)")
+        return _entries_to_sources_and_indicators(entries, "MITRE CAR")
+
+    return _live_search_mitre_car(technique_id)
+
+
+def _live_search_mitre_car(technique_id: str) -> Tuple[List[str], List[Dict]]:
     """
     Search MITRE CAR (Cyber Analytics Repository) for analytics.
 
@@ -143,6 +180,27 @@ def search_mitre_car(technique_id: str) -> Tuple[List[str], List[Dict]]:
 
 
 def search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
+    """
+    Look up Elastic Detection Rules for a technique.
+
+    Uses the prebuilt OSINT technique index when available (see
+    search_mitre_car's docstring). Falls back to a live grep across the
+    cloned repo if the index hasn't been built yet.
+
+    Returns: (sources: List[str], indicators: List[Dict])
+    """
+    from .osint_index import load_index, lookup as index_lookup
+
+    if load_index() is not None:
+        entries = index_lookup(technique_id, "elastic")
+        if entries:
+            print(f"  \u2713 Found {len(entries)} Elastic rules for {technique_id} (from index)")
+        return _entries_to_sources_and_indicators(entries, "Elastic")
+
+    return _live_search_elastic_rules(technique_id)
+
+
+def _live_search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
     """
     Search Elastic Detection Rules repository (LOCAL).
 
@@ -203,6 +261,27 @@ def search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
 
 def search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
     """
+    Look up Splunk Security Content detections for a technique.
+
+    Uses the prebuilt OSINT technique index when available (see
+    search_mitre_car's docstring). Falls back to a live grep across the
+    cloned repo if the index hasn't been built yet.
+
+    Returns: (sources: List[str], indicators: List[Dict])
+    """
+    from .osint_index import load_index, lookup as index_lookup
+
+    if load_index() is not None:
+        entries = index_lookup(technique_id, "splunk")
+        if entries:
+            print(f"  \u2713 Found {len(entries)} Splunk detections for {technique_id} (from index)")
+        return _entries_to_sources_and_indicators(entries, "Splunk")
+
+    return _live_search_splunk_content(technique_id)
+
+
+def _live_search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
+    """
     Search Splunk Security Content repository (LOCAL).
 
     Returns: (sources: List[str], indicators: List[Dict])
@@ -254,6 +333,27 @@ def search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
 
 
 def search_azure_sentinel(technique_id: str) -> Tuple[List[str], List[Dict]]:
+    """
+    Look up Azure Sentinel rules for a technique.
+
+    Uses the prebuilt OSINT technique index when available (see
+    search_mitre_car's docstring). Falls back to a live grep across the
+    cloned repo if the index hasn't been built yet.
+
+    Returns: (sources: List[str], indicators: List[Dict])
+    """
+    from .osint_index import load_index, lookup as index_lookup
+
+    if load_index() is not None:
+        entries = index_lookup(technique_id, "azure_sentinel")
+        if entries:
+            print(f"  \u2713 Found {len(entries)} Azure Sentinel rules for {technique_id} (from index)")
+        return _entries_to_sources_and_indicators(entries, "Azure Sentinel")
+
+    return _live_search_azure_sentinel(technique_id)
+
+
+def _live_search_azure_sentinel(technique_id: str) -> Tuple[List[str], List[Dict]]:
     """
     Search Azure Sentinel repository (LOCAL).
 

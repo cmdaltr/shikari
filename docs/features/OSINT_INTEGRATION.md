@@ -401,22 +401,43 @@ Repositories are automatically cloned/updated when:
 
 ```bash
 # Update all OSINT repositories
-python scripts/update_osint_repos.py
+python scripts/data/update_osint.py
 
 # Force update even if recently updated
-python scripts/update_osint_repos.py --force
+python scripts/data/update_osint.py --force
 ```
+
+### Technique Index
+
+Repos updating doesn't, by itself, make comparisons any faster — without a
+prebuilt index, every OSINT comparison call still does a live `grep -r`
+subprocess per technique per repo (and, for MITRE CAR, a live network fetch
+of `analytics.json`). `build_osint_index.py` walks each repo once and writes
+a technique → rule index that turns those into a single dict lookup:
+
+```bash
+# Update repos and rebuild the index in one go
+python scripts/data/build_osint_index.py
+
+# Rebuild from whatever's already cloned, without re-fetching repos
+python scripts/data/build_osint_index.py --skip-clone
+```
+
+Output: `data/cache/osint_technique_index.json`. If this file doesn't exist,
+comparisons transparently fall back to the old live search — nothing breaks,
+it's just slower. See `scripts/data/DATA_SCRIPTS.md` for details.
 
 ### Air-Gapped Deployment
 
 **On internet-connected machine:**
 ```bash
-# 1. Update all repositories
-python scripts/update_osint_repos.py --force
+# 1. Update all repositories and build the index
+python scripts/data/update_osint.py --force
+python scripts/data/build_osint_index.py --skip-clone
 
 # 2. Create archive
 cd /path/to/archer
-tar -czf osint_repos.tar.gz data/osint_repos/
+tar -czf osint_repos.tar.gz data/repos/ data/cache/osint_technique_index.json
 
 # 3. Transfer osint_repos.tar.gz to air-gapped machine
 ```
@@ -428,7 +449,8 @@ cd /path/to/archer
 tar -xzf osint_repos.tar.gz
 
 # 5. Verify
-ls -lh data/osint_repos/
+ls -lh data/repos/
+ls -lh data/cache/osint_technique_index.json
 ```
 
 The app will detect existing repos and skip cloning.

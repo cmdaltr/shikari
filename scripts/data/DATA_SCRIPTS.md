@@ -5,7 +5,7 @@ Data import, OSINT repository management, and MITRE ATT&CK data extraction utili
 ## Scripts
 
 ### update_osint.py
-Update OSINT detection rule repositories.
+Clone/update the OSINT detection rule repositories.
 
 **Usage**:
 ```bash
@@ -13,15 +13,18 @@ python scripts/data/update_osint.py
 ```
 
 **What it updates**:
-- **Elastic Detection Rules** - Elastic Security rules
-- **Splunk Security Content** - Splunk detection library
-- **Microsoft Defender** - Advanced hunting queries (if configured)
+- **Elastic Detection Rules**
+- **MITRE CAR** (Cyber Analytics Repository)
+- **Splunk Security Content**
+- **Azure Sentinel** detection rules
 
 **Process**:
-1. Clones/updates git repositories
-2. Parses detection rules
-3. Extracts MITRE ATT&CK mappings
-4. Indexes rules for query generation
+1. Clones each repo (shallow, `--depth 1`) or pulls if already cloned
+2. Writes a `.last_update` timestamp per repo
+
+This script only fetches the repos — it doesn't build the technique index (see
+`build_osint_index.py` below). Standalone/stdlib-only by design so it can run
+in air-gapped environments (see the script's own docstring).
 
 **Frequency**:
 - Initial setup: Automatic (via Docker entrypoint)
@@ -31,10 +34,35 @@ python scripts/data/update_osint.py
 ```bash
 $ python scripts/data/update_osint.py
 Updating OSINT repositories...
-✓ Elastic: 1,234 rules updated
-✓ Splunk: 987 rules updated
-Done. Total: 2,221 rules indexed
+✓ elastic repository ready
+✓ splunk repository ready
 ```
+
+---
+
+### build_osint_index.py
+Build the prebuilt MITRE ATT&CK technique → OSINT rule index.
+
+**Usage**:
+```bash
+python scripts/data/build_osint_index.py               # update repos, then build
+python scripts/data/build_osint_index.py --skip-clone   # build from what's already on disk
+```
+
+**What it does**:
+- Walks every cloned OSINT repo (Elastic, Splunk, Azure Sentinel, MITRE CAR)
+  once, extracting every technique ID mentioned in every rule file
+- Writes `data/cache/osint_technique_index.json`: `{technique_id: {source: [{name, source_url, query_snippet}, ...]}}`
+
+Without this index, `archer/build/osint_comparison.py` searches live on every
+OSINT comparison call — a `grep -r` subprocess per technique per repo, plus a
+network fetch of `analytics.json` for MITRE CAR every single time. With the
+index built, those same lookups become a single dict access. The comparison
+functions fall back to the old live search automatically if the index hasn't
+been built yet, so this is optional but strongly recommended.
+
+**Frequency**: Run after `update_osint.py`, or on the same schedule — the
+index doesn't regenerate itself when the repos change.
 
 ---
 
