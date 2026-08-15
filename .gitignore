@@ -160,3 +160,4 @@ bespoke/query_templates/*
 bespoke/mappings/*
 !bespoke/mappings/.gitkeep
 MITRESaw/
+restore-elastic-splunk.patch
