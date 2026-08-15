@@ -139,6 +139,10 @@ docker-compose up --build
 
 **Option 2: Local Python**
 ```bash
+# Requires Python 3.11 (requirements.txt pins torch==2.2.2, incompatible with 3.12+)
+pyenv install 3.11.15
+pyenv local 3.11.15
+
 # Install dependencies
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate

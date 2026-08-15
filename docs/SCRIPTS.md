@@ -354,8 +354,10 @@ python scripts/data/import_yaml_to_library.py detections/splunk/
 
 ## Requirements
 
-Most scripts require:
+Most scripts require Python 3.11 (requirements.txt pins torch==2.2.2, incompatible with 3.12+):
 ```bash
+pyenv install 3.11.15
+pyenv local 3.11.15
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt

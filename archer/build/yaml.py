@@ -568,6 +568,7 @@ def construct_yaml(
     appended_mde_queries, appended_splunk_queries = collate_data(
         identifiers, log_sources, procedure_platforms, software_platforms, name, technique_id=tid, osint_indicators=osint_indicators_to_pass
     )
+    appended_splunk_queries = []  # Splunk disabled -- Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md
 
     # Apply OSINT enhancement if requested (merge OSINT patterns into queries)
     # Track which queries were actually enhanced (not just attempted)
@@ -817,10 +818,9 @@ def construct_yaml(
         # Google SecOps generation is optional - don't fail if it errors
         print(f"  ⚠️  Google SecOps generation failed for {name}: {e}")
 
-    # Writing Elastic YAML file (if Elastic support is enabled)
+    # Writing Elastic YAML file — DISABLED (Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md)
     # Elastic uses template-based Query DSL with ECS field mappings
-    # Skip if Elastic is excluded
-    if not excluded_vendors or "elastic" not in excluded_vendors:
+    if False:  # was: if not excluded_vendors or "elastic" not in excluded_vendors:
       try:
         from archer.build.elastic import ElasticQueryGenerator
 

@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 
-ALL_SIEMS = frozenset({"mde", "splunk", "elastic", "secops"})
+ALL_SIEMS = frozenset({"mde", "secops"})  # splunk disabled -- Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md  # elastic disabled — Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md
 
 # Display labels for each SIEM key
 _SIEM_LABELS = {

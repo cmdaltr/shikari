@@ -34,7 +34,7 @@ The Archer API provides programmatic access to automated threat detection genera
 
 - Archer instance running (default: `http://localhost:8000`)
 - User account created
-- Python 3.7+ or Node.js 14+ (for examples)
+- Python 3.11 required (torch==2.2.2 in requirements.txt caps compatibility at 3.11) or Node.js 14+ (for examples)
 
 ### Your First API Call
 

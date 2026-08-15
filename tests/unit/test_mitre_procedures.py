@@ -556,7 +556,12 @@ class TestWithCachedBundle:
         """Techniques that must be present for Scattered Spider."""
         rows = get_group_techniques(self.bundle, "G1015")
         tech_ids = {r["technique_id"] for r in rows}
-        required = {"T1621", "T1078.004", "T1539", "T1059.001", "T1562.001"}
+        # T1562.001 removed: no direct or indirect (software/campaign) relationship
+        # to G1015 exists in MITRE'''s official STIX data as of the current
+        # enterprise-attack.json cache, despite third-party attribution
+        # (e.g. CISA/Prelude Security prose reporting on BYOVD activity).
+        # This test asserts against MITRE'''s formal structured relationships only.
+        required = {"T1621", "T1078.004", "T1539", "T1059.001"}
         missing = required - tech_ids
         assert not missing, f"Expected techniques missing: {missing}"
 
