@@ -61,6 +61,29 @@ REPOS = {
 REPOS_BASE_DIR = Path(OSINT_REPOS_DIR)
 UPDATE_INTERVAL = timedelta(hours=1)  # Update every hour
 
+# Files renamed after clone/pull, keyed by repo name. Azure-Sentinel ships
+# Visa_VTI_Logo.svg under its workbook assets; renamed to VTI-Logo.svg here.
+POST_CLONE_RENAMES = {
+    "azure_sentinel": {
+        "Visa_VTI_Logo.svg": "VTI-Logo.svg",
+    },
+}
+
+
+def _apply_post_clone_renames(repo_name: str, repo_path: Path):
+    """Rename known files within a freshly cloned/updated repo."""
+    renames = POST_CLONE_RENAMES.get(repo_name)
+    if not renames:
+        return
+
+    for old_name, new_name in renames.items():
+        for match in repo_path.rglob(old_name):
+            target = match.with_name(new_name)
+            if target.exists():
+                continue
+            match.rename(target)
+            print(f"✓ Renamed {match.relative_to(repo_path)} -> {new_name}")
+
 
 def get_last_update_time(repo_name: str) -> datetime | None:
     """Get the last update timestamp for a repo."""
@@ -159,6 +182,9 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
                 print(f"❌ Failed to clone {repo_name}: {result.stderr}")
                 shutil.rmtree(repo_path, ignore_errors=True)
                 return False
+
+        # Apply any post-clone renames before touching the timestamp
+        _apply_post_clone_renames(repo_name, repo_path)
 
         # Update timestamp
         set_last_update_time(repo_name)
