@@ -324,7 +324,7 @@ def retrieve_procedures(bundle, retrieved_techniques):
         for obj in bundle.objects:
             if obj.get("type") == "attack-pattern" and obj.get("id") == procedure_ref:
                 red_info, blue_info = find_procedure_evidence(
-                    group_procedure_desc, obj["description"], obj["x_mitre_detection"]
+                    group_procedure_desc, obj["description"], obj.get("x_mitre_detection", "")
                 )
                 tactics = consolidate_tactics(obj["kill_chain_phases"])
                 op_guidance, red_tools = red_info
