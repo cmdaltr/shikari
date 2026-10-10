@@ -33,19 +33,23 @@ def find_python():
         return sys.executable
 
 
-def check_port_in_use(port):
-    """Check if a port is already in use."""
-    if sys.platform == "win32":
-        result = subprocess.run(
-            f"netstat -ano | findstr :{port}",
-            shell=True, capture_output=True, text=True
-        )
-    else:
-        result = subprocess.run(
-            f"lsof -ti:{port}",
-            shell=True, capture_output=True, text=True
-        )
-    return bool(result.stdout.strip())
+def check_port_in_use(port, host="0.0.0.0"):
+    """
+    Check whether the server could bind the port.
+
+    lsof -ti:<port> also lists clients (e.g. a browser tab still connected to
+    the old server), which blocked restarts when nothing was listening.
+    """
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        # Match uvicorn, so TIME_WAIT leftovers from a just-stopped server don't count
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind((host, port))
+        except OSError:
+            return True
+    return False
 
 
 def check_and_build_osint_index(root: Path, python_cmd: str, max_age_hours: float = 24):
@@ -137,7 +141,7 @@ def main():
     print()
 
     # Check if already running
-    if check_port_in_use(port):
+    if check_port_in_use(port, host):
         print(f"Port {port} is already in use.")
         print("Archer may already be running. Use status-archer.py to check.")
         print("Use stop-archer.py to stop the existing instance first.")

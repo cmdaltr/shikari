@@ -399,10 +399,17 @@ async function refresh(){
         lastEl.appendChild(errorText);
 
         const msgSpan = document.createElement('span');
-        msgSpan.textContent = 'Processing failed. Please check the logs or try again.';
+        msgSpan.textContent = p.error || 'Processing failed. Please check the logs or try again.';
         msgSpan.style.color = '#495057';
         lastEl.appendChild(msgSpan);
       }
+
+      // The loading overlay only clears when a progress bar moves, which never happens
+      // on an early failure, so it would sit over the error for its 30s fallback
+      const indicator = document.getElementById('loading-indicator');
+      if (indicator) indicator.classList.add('fade-out', 'hidden');
+      const state = document.getElementById('progress-state');
+      if (state) state.textContent = 'Failed';
 
       // Stop further polling
       return;

@@ -670,11 +670,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // Failed uploads return JSON {success:false, message}; surface it inline rather than alert(),
+  // which blocks the page and previously never fired for HTTP error responses at all
+  function showUploadError(msg) {
+    var el = document.getElementById('upload-error');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function uploadFailed(data) {
+    if (typeof data !== 'object' || data === null || data.success !== false) return false;
+    showUploadError(data.message || data.error || 'Processing failed. Please try again.');
+    return true;
+  }
+
   // Attach click handler to button instead of form submit
   if (uploadBtn && uploadForm) {
     uploadBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
+      showUploadError('');
 
       var urlInput = document.getElementById('blog_url_input');
       var url = (urlInput && urlInput.value) || '';
@@ -706,6 +722,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(function (data) {
           hideLoading();
+          if (uploadFailed(data)) return;
           if (typeof data === 'object' && data.show_extraction) { showExtractionResults(data); return; }
           if (typeof data === 'object' && data.redirect_url) { window.location = data.redirect_url; return; }
           if (typeof data === 'object' && data.redirect) { window.location = data.redirect; return; }
@@ -715,7 +732,7 @@ document.addEventListener('DOMContentLoaded', function () {
           var oldContent = document.getElementById('main-content');
           if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
         })
-        .catch(function (err) { hideLoading(); alert('Error: ' + err.message); });
+        .catch(function (err) { hideLoading(); showUploadError('Request failed: ' + err.message); });
         return;
       }
 
@@ -735,6 +752,7 @@ document.addEventListener('DOMContentLoaded', function () {
       })
       .then(function (data) {
         hideLoading();
+        if (uploadFailed(data)) return;
         if (typeof data === 'object' && data.show_extraction) {
           showExtractionResults(data);
           return;
@@ -755,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function () {
       })
       .catch(function (err) {
         hideLoading();
-        alert('Error: ' + err.message);
+        showUploadError('Request failed: ' + err.message);
       });
     });
   }
@@ -874,7 +892,8 @@ function showExtractionResults(data) {
   html += '<div style="display:flex;gap:1em;justify-content:flex-end;margin-top:2em;border-top:1px solid #dee2e6;padding-top:1.5em;">';
   html += '<button id="cancel-extraction" style="padding:0.75em 1.5em;border:1px solid #ced4da;background:white;color:#495057;border-radius:4px;cursor:pointer;font-size:1em;">Cancel</button>';
 
-  if (data.auto_generate_requested && (data.ttps_count > 0 || data.iocs_count > 0)) {
+  // No form control ever sent auto_generate, so gating on it left users with only Close
+  if (data.ttps_count > 0 || data.iocs_count > 0) {
     html += '<button id="proceed-generation" style="padding:0.75em 1.5em;border:none;background:#007bff;color:white;border-radius:4px;cursor:pointer;font-size:1em;font-weight:500;">Proceed with Selected Items</button>';
   } else {
     html += '<button id="close-extraction" style="padding:0.75em 1.5em;border:none;background:#28a745;color:white;border-radius:4px;cursor:pointer;font-size:1em;font-weight:500;">Close</button>';
@@ -1140,17 +1159,34 @@ function showThreatGroupSelection(domain, recommendedGroups, profile) {
 
   // Modal content
   var html = '<h2 style="margin-top: 0;">🎯 Select Threat Groups for Detection Generation</h2>';
-  html += '<p style="color: #666; margin-bottom: 1.5em;">Profile complete for <strong>' + domain + '</strong>. Select which threat groups you want to generate detections for:</p>';
+  html += '<p style="color: #666; margin-bottom: 1.5em;">Profile complete for <strong>' + escapeHtml(domain) + '</strong>. Select which threat groups you want to generate detections for:</p>';
 
   // Profile summary
   html += '<div style="background: #f8f9fa; padding: 1em; border-radius: 4px; margin-bottom: 1.5em;">';
   html += '<h3 style="margin: 0 0 0.5em 0; font-size: 1em;">Profile Summary</h3>';
 
+  // Values come from Wikidata and the target's own site, so escape everything
+  var info = profile.company_info || {};
+  if (info.company_name) {
+    html += '<p style="margin: 0.3em 0;"><strong>Company:</strong> ' + escapeHtml(info.company_name) + '</p>';
+  }
   if (profile.threat_profile && profile.threat_profile.industry) {
-    html += '<p style="margin: 0.3em 0;"><strong>Industry:</strong> ' + (profile.threat_profile.industry.sector || 'Unknown') + '</p>';
+    var ind = profile.threat_profile.industry;
+    html += '<p style="margin: 0.3em 0;"><strong>Industry:</strong> ' + escapeHtml(ind.sector || 'Unknown') +
+      (ind.subsector ? ' <span style="color:#666;">(' + escapeHtml(ind.subsector) + ')</span>' : '') + '</p>';
   }
   if (profile.threat_profile && profile.threat_profile.geography) {
-    html += '<p style="margin: 0.3em 0;"><strong>Location:</strong> ' + (profile.threat_profile.geography.country || 'Unknown') + '</p>';
+    var geo = profile.threat_profile.geography;
+    var where = [geo.region, geo.country].filter(Boolean).join(', ') || 'Unknown';
+    html += '<p style="margin: 0.3em 0;"><strong>Location:</strong> ' + escapeHtml(where) + '</p>';
+    if (geo.hosting_country && geo.hosting_country !== geo.country) {
+      html += '<p style="margin: 0.3em 0;color:#666;"><strong>Hosted from:</strong> ' +
+        escapeHtml([geo.hosting_region, geo.hosting_country].filter(Boolean).join(', ')) + '</p>';
+    }
+  }
+  var evidence = (info.identity && info.identity.evidence) || [];
+  if (evidence.length) {
+    html += '<p style="margin: 0.3em 0;color:#666;font-size:0.9em;"><strong>Source:</strong> ' + escapeHtml(evidence.join('; ')) + '</p>';
   }
   html += '<p style="margin: 0.3em 0;"><strong>Risk Score:</strong> ' + (profile.risk_score || 0) + '/100</p>';
   html += '<p style="margin: 0.3em 0;"><strong>Recommended Groups:</strong> ' + recommendedGroups.length + '</p>';

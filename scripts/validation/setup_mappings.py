@@ -2,20 +2,31 @@
 """
 Interactive Mapping Files Setup Script
 
-This script helps users configure Archer for their specific environment by
-creating custom mapping files that match their log sources and index names.
+Adds your Splunk indexes and Defender tables to the schema overrides that the
+query builder reads first:
+
+    bespoke/mappings/schemas/schemaSplunk_custom.json
+    bespoke/mappings/schemas/schemaMDE_custom.json
+
+An override replaces the base schema (schemaSplunk.json / schemaMDE.json)
+wholesale, so the wizard starts from the existing override, or the base schema
+if there is none, and merges your entries in. Existing pipelines survive.
+
+It does not create the other required mapping files (indicatorMapping.json,
+sources/*.json, ...); see bespoke/README.md.
 
 Usage:
-    python scripts/setup_mappings.py
+    python scripts/validation/setup_mappings.py
 """
 
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+SCHEMAS_DIR = REPO_ROOT / "bespoke" / "mappings" / "schemas"
 
 
 def print_header(text):
@@ -71,16 +82,9 @@ def main():
     print_header("Archer Mapping Files Setup Wizard")
 
     print("""
-Welcome to Archer! This wizard will help you configure mapping files
-for your specific environment.
-
-Archer ships with GENERIC, EXAMPLE mapping files that likely won't work
-in your environment. You need to customize them to match:
-  1. Your actual index/source names
-  2. Your log field names
-  3. Your data sources
-
-This wizard will guide you through the process.
+This wizard adds your Splunk indexes and Microsoft Defender tables to
+Archer's schema overrides in bespoke/mappings/schemas/. Anything already
+configured there is kept; entries you enter here are added or replaced.
 """)
 
     if not get_yes_no("Ready to begin?", default=True):
@@ -116,8 +120,14 @@ Example:
   Index: windows_events
   Sourcetype: WinEventLog:Security
 
-Archer will generate queries like:
-  index=windows_events sourcetype=WinEventLog:Security
+Archer adds the index clause itself and generates queries like:
+  index=windows_events earliest=-1d
+  | fields _time device user process_command_line
+  | search process_command_line="*whoami*"
+
+Each index gets a starter pipeline with Archer's standard field names. If your
+fields are named differently, add `| rename yourfield AS standardfield` lines
+to the saved pipeline afterwards.
 """)
 
         splunk_config = configure_splunk()
@@ -161,51 +171,62 @@ which ones are available in your environment.
         print("\n❌ Configuration not saved.")
         return
 
-    # Save configuration
-    mappings_dir = Path(__file__).parent.parent / "archer" / "mappings"
+    # Save configuration: merge into the existing override (or the base schema)
+    SCHEMAS_DIR.mkdir(parents=True, exist_ok=True)
 
     if splunk_config:
-        splunk_file = mappings_dir / "schemaSplunk_custom.json"
-        with open(splunk_file, 'w') as f:
-            json.dump(splunk_config, f, indent=2)
-        print(f"\n✓ Saved Splunk configuration to: {splunk_file}")
+        splunk_file = save_merged(splunk_config, "schemaSplunk", nested=True)
+        print(f"\n✓ Saved Splunk configuration to: {splunk_file.relative_to(REPO_ROOT)}")
 
     if mde_config:
-        mde_file = mappings_dir / "schemaMDE_custom.json"
-        with open(mde_file, 'w') as f:
-            json.dump(mde_config, f, indent=2)
-        print(f"✓ Saved MDE configuration to: {mde_file}")
+        mde_file = save_merged(mde_config, "schemaMDE", nested=False)
+        print(f"✓ Saved MDE configuration to: {mde_file.relative_to(REPO_ROOT)}")
 
     # Step 5: Next Steps
     print_header("Setup Complete!")
 
     print("""
-✅ Mapping files have been created!
+✅ Schema overrides saved.
 
 Next Steps:
 
-1. REVIEW the generated files:
-   - bespoke/mappings/schemas/schemaSplunk_custom.json
-   - bespoke/mappings/schemas/schemaMDE_custom.json
+1. REVIEW bespoke/mappings/schemas/schemaSplunk_custom.json and
+   schemaMDE_custom.json, and add `| rename` lines where your field names
+   differ from Archer's standard ones.
 
-2. TEST your configuration:
-   python scripts/validate_mappings.py
+2. CHECK all required mapping files are present (see bespoke/README.md):
+   python -c "from archer.build.bespoke import validate_bespoke_components as v; print(v(verbose=False)['missing_critical'])"
 
-3. GENERATE test detections:
-   python -c "from archer.build.detections import compile_query; \\
-              compile_query('T1003.001', 'Test Group', vendor='splunk')"
-
-4. VERIFY the generated query works in your SIEM
-
-5. UPDATE the configuration as needed:
-   - Run this script again, OR
-   - Manually edit the JSON files
-
-For detailed documentation, see:
-   docs/MAPPING_SETUP_GUIDE.md
+3. RESTART Archer and generate a test hunt; verify the queries run in your SIEM.
 
 Happy hunting! 🎯
 """)
+
+
+def save_merged(new_entries, schema_name, nested):
+    """
+    Merge wizard entries into bespoke/mappings/schemas/<schema_name>_custom.json.
+
+    The override replaces the base schema wholesale when it exists, so start from
+    the current override, else the base schema, else empty. nested=True for
+    Splunk ({indicator_type: {index: pipeline}}), False for MDE ({table: clause}).
+    Any previous override is kept as <name>_custom.json.bak.
+    """
+    custom_file = SCHEMAS_DIR / f"{schema_name}_custom.json"
+    base_file = SCHEMAS_DIR / f"{schema_name}.json"
+    source = custom_file if custom_file.exists() else base_file
+    merged = json.loads(source.read_text()) if source.exists() else {}
+
+    for key, value in new_entries.items():
+        if nested:
+            merged.setdefault(key, {}).update(value)
+        else:
+            merged[key] = value
+
+    if custom_file.exists():
+        shutil.copy2(custom_file, custom_file.with_suffix(".json.bak"))
+    custom_file.write_text(json.dumps(merged, indent=2))
+    return custom_file
 
 
 def configure_splunk():
@@ -231,8 +252,6 @@ Examples:
             source_clean = source.replace("index=", "").replace(" ", "_")
             # Create basic template
             config["cmd"][source_clean] = (
-                f"index={source}\n"
-                "| rename YOURFIELD AS process_command_line\n"
                 "| fields _time device user process_command_line"
             )
 
@@ -253,8 +272,6 @@ Examples:
         for source in file_sources:
             source_clean = source.replace("index=", "").replace(" ", "_")
             config["file"][source_clean] = (
-                f"index={source}\n"
-                "| rename YOURFIELD AS file_path\n"
                 "| fields _time device file_name file_path file_hash"
             )
 
@@ -275,8 +292,6 @@ Examples:
             for source in reg_sources:
                 source_clean = source.replace("index=", "").replace(" ", "_")
                 config["reg"][source_clean] = (
-                    f"index={source}\n"
-                    "| rename YOURFIELD AS registry_key\n"
                     "| fields _time device registry_key registry_value"
                 )
 
@@ -299,8 +314,6 @@ Examples:
             for source in network_sources:
                 source_clean = source.replace("index=", "").replace(" ", "_")
                 config["network"][source_clean] = (
-                    f"index={source}\n"
-                    "| rename YOURFIELD AS dest_ip\n"
                     "| fields _time src_ip dest_ip dest_port url"
                 )
 

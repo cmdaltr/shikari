@@ -64,7 +64,7 @@ def find_processes_on_port(port):
                     pass
         return list(pids)
     else:
-        output = run_command(f"lsof -ti:{port}")
+        output = run_command(f"lsof -nP -iTCP:{port} -sTCP:LISTEN -t")
         if output:
             return [int(pid) for pid in output.split('\n') if pid.strip()]
         return []

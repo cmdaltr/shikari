@@ -30,7 +30,7 @@ def find_processes_by_pattern(pattern):
 
 def find_processes_on_port(port):
     """Find PIDs using a specific port using lsof."""
-    output = run_command(f"lsof -ti:{port}")
+    output = run_command(f"lsof -nP -iTCP:{port} -sTCP:LISTEN -t")
     if output:
         return [int(pid) for pid in output.split('\n') if pid.strip()]
     return []

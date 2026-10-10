@@ -12,7 +12,7 @@ from archer.mitre import (
 # Apply performance patch for fast tactic lookups
 from archer.build import yaml_patch  # This patches yaml.additional_tactics()
 
-from archer.build.detections import compile_query
+from archer.build.detections import compile_query, load_indicator_mappings, MappingsError
 from archer.build.progress import write_progress
 from archer.ai.genai import generate_correlations
 from archer.config import GENERATE_DIR, CORRELATE_DIR
@@ -61,6 +61,14 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
     safe_progress_update(
         group_name, {"status": "started", "stage": "init", "created_yaml": 0}
     )
+
+    # Fail the whole run up front: compile_query loads mappings per technique and
+    # the per-technique handlers would otherwise swallow this N times and report success
+    try:
+        load_indicator_mappings()
+    except MappingsError as e:
+        safe_progress_update(group_name, {"status": "failed", "stage": "init", "error": str(e)})
+        raise
 
     if group_in_mitre == "N":
         # manual_data must be provided

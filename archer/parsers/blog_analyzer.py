@@ -19,6 +19,17 @@ import requests
 from typing import Dict, List, Optional
 from bs4 import BeautifulSoup
 
+# CDN bot filters (e.g. cisa.gov) 403 a browser User-Agent that arrives without the
+# Accept headers a real browser sends, so keep the set consistent
+FETCH_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
+}
+
 
 def _check_public_url(url: str) -> None:
     """Raise ValueError unless url is http(s) and every address its host resolves to is globally routable."""
@@ -46,7 +57,7 @@ def _fetch_public_url(url: str, max_redirects: int = 3) -> requests.Response:
     """GET url following redirects manually so each hop is re-validated (requests would skip the check)."""
     from urllib.parse import urljoin
 
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    headers = FETCH_HEADERS
     for _ in range(max_redirects + 1):
         _check_public_url(url)
         response = requests.get(url, headers=headers, timeout=30, allow_redirects=False)
@@ -92,6 +103,13 @@ def analyze_blog_post(url: str) -> Dict:
         # Parse HTML
         soup = BeautifulSoup(response.content, "html.parser")
 
+        # Kept before any stripping so contact addresses in the footer can be
+        # recognised as the publisher's and excluded from IOCs
+        full_text = soup.get_text(" ")
+        # Untouched parse for publisher metadata (og: tags, JSON-LD scripts), all of
+        # which the stripping below removes
+        page_meta = BeautifulSoup(response.content, "html.parser")
+
         # Extract text content - remove ALL non-content elements
         # This ensures we only analyze the blog post content, not HTML/CSS/JS/navigation
         for element in soup([
@@ -117,12 +135,19 @@ def analyze_blog_post(url: str) -> Dict:
         ]):
             element.decompose()
 
-        # Also remove common non-content class/id patterns
-        for element in soup.find_all(class_=re.compile(r'(nav|menu|sidebar|footer|header|banner|ad|advertisement|social|share|comment|related)', re.I)):
-            element.decompose()
-
-        for element in soup.find_all(id=re.compile(r'(nav|menu|sidebar|footer|header|banner|ad|advertisement|social|share|comment|related)', re.I)):
-            element.decompose()
+        # Also remove common non-content class/id patterns. Match whole -/_ delimited
+        # tokens: a bare substring match let "ad" hit "node-type-advisory" on CISA's
+        # <body> and strip the entire page. Never strip the document or article roots.
+        boilerplate = re.compile(
+            r'(?:^|[-_])(nav|menu|sidebar|footer|header|banner|ads?|advert|advertisement'
+            r'|social|share|comments?|related)(?:$|[-_])',
+            re.I,
+        )
+        content_roots = {"html", "body", "main", "article"}
+        for attr in ("class_", "id"):
+            for element in soup.find_all(**{attr: boilerplate}):
+                if element.name not in content_roots and not element.decomposed:
+                    element.decompose()
 
         text = soup.get_text()
 
@@ -139,7 +164,14 @@ def analyze_blog_post(url: str) -> Dict:
             "techniques": _extract_techniques(text),
             "tactics": _extract_tactics(text),
             "procedures": _extract_procedures(text),
-            "iocs": _extract_iocs(text),
+            "iocs": _drop_publisher_domains(
+                _extract_iocs(text),
+                # Judge the publisher by where we landed, not the link we were given
+                response.url if isinstance(response.url, str) else url,
+                # Full page text: contact addresses usually sit in the stripped footer
+                full_text,
+                page_meta,
+            ),
         }
 
         return result
@@ -150,6 +182,9 @@ def analyze_blog_post(url: str) -> Dict:
             "error": f"Failed to fetch URL: {str(e)}"
         }
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         return {
             "success": False,
             "error": f"Analysis failed: {str(e)}"
@@ -299,18 +334,133 @@ def _extract_procedures(text: str) -> List[str]:
     return procedures
 
 
+def _registrable_domain(host: str) -> str:
+    """cisa.gov for www.cisa.gov, blog.co.uk for x.blog.co.uk; '' if not resolvable."""
+    import tldextract
+
+    # Bundled public suffix snapshot only: no network fetch from inside a request
+    extract = tldextract.TLDExtract(suffix_list_urls=())
+    return extract(host.lower().strip(".")).top_domain_under_public_suffix or ""
+
+
+_EMAIL = re.compile(
+    r"[\w.+-]+\s*(?:@|\[@\]|\(@\)|\[at\]|\(at\))\s*([\w-]+(?:(?:\.|\[\.\]|\(\.\)|\[dot\])[\w-]+)+)",
+    re.IGNORECASE,
+)
+
+
+def _refang(d: str) -> str:
+    return re.sub(r"\s*(?:\[\.\]|\(\.\)|\[dot\])\s*", ".", d).strip(" .").lower()
+
+
+_NAME_SUFFIXES = re.compile(
+    r"\b(?:blog|news|newsroom|research|labs?|security|threat\s+intelligence|intelligence|insights|"
+    r"advisories|advisory|official\s+site|website)\b",
+    re.IGNORECASE,
+)
+
+
+def _name_key(name: str) -> str:
+    """'Palo Alto Networks' -> 'paloaltonetworks', 'Mandiant Blog' -> 'mandiant'."""
+    return re.sub(r"[^a-z0-9]", "", _NAME_SUFFIXES.sub("", name.lower()))
+
+
+def publisher_identity(page_url: str, soup=None) -> Dict[str, set]:
+    """
+    Domains and names that identify the report's publisher, from the page itself.
+
+    Nothing is vendor-specific: the publisher is whoever served the page. The
+    final URL, og:url and rel=canonical give its domains; og:site_name and the
+    schema.org publisher/author organisation give its names, so a Mandiant post
+    hosted on cloud.google.com still recognises @mandiant.com contacts.
+    """
+    import json
+    from urllib.parse import urlparse
+
+    urls = [page_url]
+    names = []
+    if soup is not None:
+        for tag, attrs, key in (("meta", {"property": "og:url"}, "content"),
+                                ("link", {"rel": "canonical"}, "href")):
+            el = soup.find(tag, attrs=attrs)
+            if el and el.get(key):
+                urls.append(el[key])
+        site = soup.find("meta", attrs={"property": "og:site_name"})
+        if site and site.get("content"):
+            names.append(site["content"])
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                data = json.loads(script.string or "")
+            except (ValueError, TypeError):
+                continue
+            nodes = data if isinstance(data, list) else data.get("@graph", [data]) if isinstance(data, dict) else []
+            for node in nodes:
+                for field in ("publisher", "author"):
+                    who = node.get(field) if isinstance(node, dict) else None
+                    for org in who if isinstance(who, list) else [who]:
+                        if isinstance(org, dict) and "Organization" in str(org.get("@type", "")) and org.get("name"):
+                            names.append(org["name"])
+
+    domains = {d for d in (_registrable_domain(urlparse(u).hostname or "") for u in urls) if d}
+    keys = {d.split(".", 1)[0] for d in domains} | {k for k in (_name_key(n) for n in names) if len(k) >= 3}
+    return {"domains": domains, "names": keys}
+
+
+def _vendor_email_domains(text: str, publisher: Dict[str, set]) -> List[str]:
+    """
+    Domains of email addresses in the report that belong to the publisher.
+
+    Contact addresses often sit on a parent organisation's or brand's domain: a
+    cisa.gov advisory lists SOC@mail.cisa.dhs.gov. An email domain is the
+    vendor's if it is on one of the publisher's registrable domains or carries
+    one of its names as a whole label ("cisa" in mail.cisa.dhs.gov). The name
+    match is limited to email domains; applied to every IOC it would drop
+    lookalikes like cisa.evil.com.
+    """
+    vendor = set()
+    for m in _EMAIL.finditer(text or ""):
+        domain = _refang(m.group(1))
+        labels = set(domain.split("."))
+        if _registrable_domain(domain) in publisher["domains"] or labels & publisher["names"]:
+            vendor.add(domain)
+    return sorted(vendor)
+
+
+def _drop_publisher_domains(iocs: Dict[str, List[str]], page_url: str, text: str = "", soup=None) -> Dict[str, List[str]]:
+    """
+    Remove the publisher's own domains from extracted domain IOCs.
+
+    Reports routinely mention their own site and contact addresses, which are
+    never indicators for the activity being reported. Removed: anything on the
+    publisher's registrable domains, plus vendor email domains (see
+    _vendor_email_domains) and their subdomains.
+    """
+    publisher = publisher_identity(page_url, soup)
+    if not publisher["domains"] or not iocs.get("domain"):
+        return iocs
+
+    vendor_email = _vendor_email_domains(text, publisher)
+
+    def is_vendor(d: str) -> bool:
+        d = _refang(d)
+        return (_registrable_domain(d) in publisher["domains"]
+                or any(d == v or d.endswith("." + v) for v in vendor_email))
+
+    iocs["domain"] = [d for d in iocs["domain"] if not is_vendor(d)]
+    return iocs
+
+
 def _extract_iocs(text: str) -> Dict[str, List[str]]:
     """
-    Extract Indicators of Compromise (IOCs) from text using the improved FileIntelligenceExtractor.
+    Extract Indicators of Compromise (IOCs) from text using the file intelligence parser.
 
     Returns:
         Dict with IOC types as keys (ip, domain, hash, cmd, reg, evt, sw, file)
     """
-    from archer.parsers.file_intelligence import FileIntelligenceExtractor
+    from archer.parsers.file_intelligence import FileIntelligenceParser
 
-    # Use the improved extractor with all the enhancements
-    extractor = FileIntelligenceExtractor(use_openai=False, use_local_llm=False)
-    iocs = extractor.extract_iocs(text)
+    extractor = FileIntelligenceParser(use_openai=False, use_local_llm=False)
+    iocs = extractor._extract_iocs(text)
 
     return iocs
 
@@ -327,9 +477,7 @@ def search_crowdstrike_blog(group_name: str) -> Optional[str]:
     """
     try:
         search_url = f"https://www.crowdstrike.com/blog/?s={group_name}"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
+        headers = FETCH_HEADERS
 
         response = requests.get(search_url, headers=headers, timeout=30)
         response.raise_for_status()
@@ -365,9 +513,7 @@ def search_dfir_report(group_name: str) -> Optional[str]:
     try:
         # The DFIR Report uses a simpler structure
         search_url = f"https://thedfirreport.com/?s={group_name}"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
+        headers = FETCH_HEADERS
 
         response = requests.get(search_url, headers=headers, timeout=30)
         response.raise_for_status()

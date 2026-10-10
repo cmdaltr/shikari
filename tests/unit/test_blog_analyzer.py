@@ -289,11 +289,8 @@ class TestDescriptionExtraction:
 class TestIOCExtraction:
     """Test IOC extraction from text."""
 
-    @pytest.mark.skip(reason="Production code has import bug: FileIntelligenceExtractor doesn't exist (should be FileIntelligenceParser)")
     def test_extract_iocs_returns_dict(self):
         """Test that IOC extraction returns a dictionary structure."""
-        # Note: The _extract_iocs function tries to import FileIntelligenceExtractor
-        # but the actual class is FileIntelligenceParser. This is a production code bug.
         from archer.parsers.blog_analyzer import _extract_iocs
 
         text = "IOCs: evil.com, 192.168.1.100"
@@ -307,14 +304,8 @@ class TestIOCExtraction:
 class TestAnalyzeBlogPost:
     """Test the main analyze_blog_post function."""
 
-    @pytest.mark.skip(reason="Production code has import bug: FileIntelligenceExtractor doesn't exist (should be FileIntelligenceParser)")
     def test_analyze_blog_post_success(self, sample_blog_html):
-        """Test successful blog analysis.
-
-        Note: This test is skipped because the production code has an import bug.
-        The _extract_iocs function tries to import FileIntelligenceExtractor
-        but the actual class is FileIntelligenceParser.
-        """
+        """Test successful blog analysis."""
         from archer.parsers.blog_analyzer import analyze_blog_post
         import socket as socket_module
 
@@ -349,6 +340,123 @@ class TestAnalyzeBlogPost:
         finally:
             # Restore original
             socket_module.getaddrinfo = original_getaddrinfo
+
+    def test_boilerplate_filter_keeps_body_with_lookalike_classes(self):
+        """CISA's <body> carries node-type-advisory; a substring 'ad' match stripped the whole page."""
+        from archer.parsers.blog_analyzer import analyze_blog_post
+
+        html = """
+        <html><body class="path-node node-page--node-type-advisory">
+          <nav class="usa-nav">T1190 in the menu</nav>
+          <div class="l-page-section--with-heading">
+            <p>Actors used T1566.004 voice phishing and T1621 MFA request generation.</p>
+          </div>
+          <div class="l-full__footer">T1105 in the footer</div>
+        </body></html>
+        """
+        mock_response = MagicMock()
+        mock_response.is_redirect = False
+        mock_response.content = html.encode()
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")), \
+             patch("archer.parsers.blog_analyzer.requests.get", return_value=mock_response):
+            result = analyze_blog_post("https://www.cisa.gov/advisory")
+
+        assert result["success"] is True
+        assert "T1566.004" in result["techniques"]
+        assert "T1621" in result["techniques"]
+        # Real navigation and footer chrome is still stripped
+        assert "T1190" not in result["techniques"]
+        assert "T1105" not in result["techniques"]
+
+    def test_publisher_domain_excluded_from_iocs(self):
+        """A report's own domain (any subdomain) is not an indicator; others are kept."""
+        from archer.parsers.blog_analyzer import _drop_publisher_domains
+
+        iocs = {"domain": ["www[.]vendor.co.uk", "intel.vendor.co.uk", "c2-vendor[.]co.uk", "evil[.]com"], "ip": ["1.2.3.4"]}
+
+        result = _drop_publisher_domains(iocs, "https://blog.vendor.co.uk/2026/report")
+
+        assert result["domain"] == ["c2-vendor[.]co.uk", "evil[.]com"]
+        assert result["ip"] == ["1.2.3.4"]
+
+    def test_vendor_email_domains_excluded(self):
+        """cisa.gov reports list SOC@mail.cisa.dhs.gov: a parent-org domain carrying the vendor's name."""
+        from archer.parsers.blog_analyzer import _drop_publisher_domains
+
+        text = (
+            "Report to SOC@mail.cisa.dhs.gov or contact[at]cisa[.]dhs[.]gov. "
+            "Phishing came from helpdesk@cisa-alerts.com and ops@evil-dhs.net."
+        )
+        iocs = {"domain": ["mail[.]cisa[.]dhs[.]gov", "cisa[.]dhs[.]gov", "www[.]dhs[.]gov",
+                           "cisa-alerts[.]com", "evil-dhs[.]net"]}
+
+        result = _drop_publisher_domains(iocs, "https://www.cisa.gov/advisory", text)
+
+        # Vendor contact domains go; the wider parent domain and attacker senders stay
+        assert result["domain"] == ["www[.]dhs[.]gov", "cisa-alerts[.]com", "evil-dhs[.]net"]
+
+    def test_vendor_identified_from_page_metadata(self):
+        """Publisher isn't always the hosting domain: Mandiant posts live on cloud.google.com."""
+        from bs4 import BeautifulSoup
+        from archer.parsers.blog_analyzer import _drop_publisher_domains
+
+        soup = BeautifulSoup(
+            '<html><head><meta property="og:site_name" content="Mandiant Blog"></head><body>'
+            '<script type="application/ld+json">{"@type": "BlogPosting", '
+            '"publisher": {"@type": "Organization", "name": "Google Threat Intelligence"}}</script>'
+            "</body></html>",
+            "html.parser",
+        )
+        text = "Contact ir@mandiant.com or report@google.com. Lure sent from hr@mandiant-careers.net."
+        iocs = {"domain": ["mandiant[.]com", "www[.]mandiant[.]com", "google[.]com",
+                           "mandiant-careers[.]net", "c2[.]example[.]org"]}
+
+        result = _drop_publisher_domains(iocs, "https://cloud.google.com/blog/topics/threat-intelligence/x", text, soup)
+
+        assert result["domain"] == ["mandiant-careers[.]net", "c2[.]example[.]org"]
+
+    def test_publisher_identity_names(self):
+        from bs4 import BeautifulSoup
+        from archer.parsers.blog_analyzer import publisher_identity
+
+        soup = BeautifulSoup(
+            '<html><head><link rel="canonical" href="https://unit42.paloaltonetworks.com/post">'
+            '<meta property="og:site_name" content="Unit 42"></head><body>'
+            '<script type="application/ld+json">{"@graph": [{"@type": "WebPage", '
+            '"publisher": {"@type": "Organization", "name": "Palo Alto Networks"}}]}</script></body></html>',
+            "html.parser",
+        )
+
+        identity = publisher_identity("https://unit42.paloaltonetworks.com/post", soup)
+
+        assert identity["domains"] == {"paloaltonetworks.com"}
+        assert {"paloaltonetworks", "unit42"} <= identity["names"]
+
+    def test_footer_contact_address_recognised(self):
+        """Contact addresses usually live in the footer, which content extraction strips."""
+        from archer.parsers.blog_analyzer import analyze_blog_post
+
+        html = """
+        <html><body>
+          <article><p>Actors used T1566 and staged on mail.vendorcorp-support.com and cdn.vendorcorp.example.</p></article>
+          <footer>Questions? intel@cdn.vendorcorp.example</footer>
+        </body></html>
+        """
+        mock_response = MagicMock()
+        mock_response.is_redirect = False
+        mock_response.url = "https://blog.vendorcorp.com/post"
+        mock_response.content = html.encode()
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")), \
+             patch("archer.parsers.blog_analyzer._extract_iocs",
+                   return_value={"domain": ["mail.vendorcorp-support.com", "cdn.vendorcorp.example"]}), \
+             patch("archer.parsers.blog_analyzer.requests.get", return_value=mock_response):
+            result = analyze_blog_post("https://blog.vendorcorp.com/post")
+
+        assert result["iocs"]["domain"] == ["mail.vendorcorp-support.com"]
 
     def test_analyze_blog_post_invalid_scheme(self):
         """Test that invalid URL schemes are rejected."""

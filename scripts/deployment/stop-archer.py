@@ -42,7 +42,7 @@ def find_processes_by_pattern(pattern):
 def find_processes_on_port(port):
     """Find PIDs using a specific port."""
     if sys.platform == "win32":
-        output = run_command(f"netstat -ano | findstr :{port}")
+        output = run_command(f"netstat -ano | findstr :{port} | findstr LISTENING")
         pids = set()
         for line in output.split('\n'):
             parts = line.split()
@@ -53,7 +53,7 @@ def find_processes_on_port(port):
                     pass
         return list(pids)
     else:
-        output = run_command(f"lsof -ti:{port}")
+        output = run_command(f"lsof -nP -iTCP:{port} -sTCP:LISTEN -t")
         if output:
             return [int(pid) for pid in output.split('\n') if pid.strip()]
         return []
