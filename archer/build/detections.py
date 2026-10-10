@@ -143,7 +143,7 @@ def load_indicator_mappings():
         print(f"Mappings directory does not exist: {mappings_dir.resolve()}")
         raise MappingsError(
             "Indicator mappings directory bespoke/mappings/ does not exist. "
-            "Run scripts/validation/setup_mappings.py to create it."
+            "Restore your organisation's mapping set into bespoke/mappings/ (see bespoke/README.md)."
         )
 
     # Load JSON files in order of preference
@@ -175,7 +175,7 @@ def load_indicator_mappings():
             print(f"No indicator mapping files found in {mappings_dir.resolve()}")
             raise MappingsError(
                 "No indicator mapping files found in bespoke/mappings/. "
-                "Run scripts/validation/setup_mappings.py to generate them."
+                "Restore your organisation's mapping set there (see bespoke/README.md)."
             )
 
         # Load each JSON file in the mappings directory
@@ -193,7 +193,7 @@ def load_indicator_mappings():
     if missing_types:
         raise MappingsError(
             f"Indicator mappings are missing required types: {', '.join(missing_types)}. "
-            "Re-run scripts/validation/setup_mappings.py."
+            "Add them to bespoke/mappings/indicatorMapping.json."
         )
 
     return mappings

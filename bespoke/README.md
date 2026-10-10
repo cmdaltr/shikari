@@ -1,27 +1,31 @@
 # Bespoke Organization-Specific Configuration
 
-This directory contains **organization-specific** content. The `mappings/` subdirectory contains core schema files that ARE tracked in git. Other files (exclusions, config, custom searches) are gitignored.
+This directory contains **organisation-specific** content. Everything in it except the `.example` files, this README and `.gitkeep` placeholders is gitignored, including the mapping files: keep your own copy somewhere safe, because the repository cannot regenerate them.
 
 ## Directory Structure
 
 ```
 bespoke/
-  mappings/                 # Schema and indicator mapping files (tracked in git)
-    members.json            # Team member assignments (LAN ID to team mapping)
-    schemaSplunk.json       # Splunk field schema mappings
-    schemaMDE.json          # Microsoft Defender field mappings
-    schemaElastic.json      # Elastic field mappings
-    schemaGoogleSecOps.json # Google SecOps field mappings
-    indicatorMapping.json   # Indicator type to field mappings
-    entityMappings.json     # Entity type mappings for KQL
-    dataSources.json        # MITRE data source mappings
-    platforms.json          # Platform definitions
-    logSourceCategories.json # Log source categories
-    techniquePlatformIndicators.json # Technique validation matrix
-  exclusions.yaml           # Global exclusions (gitignored)
-  config.yaml               # Organization settings (gitignored)
-  searches/                 # Custom detection examples (gitignored)
+  mappings/                                  # gitignored; all files below are required for query generation
+    indicatorMapping.json                    # Indicator types (cmd, reg, evt, sw, port, protocol, service, api, network) to fields
+    techniquePlatformIndicators.json         # Technique validation matrix
+    schemas/
+      schemaSplunk.json                      # Splunk index/sourcetype field schemas
+      schemaMDE.json                         # Microsoft Defender table/field definitions
+      schemaElastic.json                     # Elastic field definitions
+      schemaGoogleSecOps.json                # Google SecOps (Chronicle) UDM field definitions
+    sources/
+      platforms.json                         # Platform to index compatibility matrix
+      dataSources.json                       # Log source definitions
+      entityMappings.json                    # KQL entity extraction patterns
+      logSourceCategories.json               # Log source to category mapping
+      members.json                           # Team member LAN ID to team assignments (optional)
+  exclusions.yaml                            # Global exclusions
+  config.yaml                                # Organisation settings
+  searches/                                  # Custom detection examples
 ```
+
+The server lists any missing required files at startup ("N required bespoke mapping file(s) absent"), and detection generation fails with a message naming the missing piece.
 
 ## Quick Start
 
@@ -37,23 +41,6 @@ bespoke/
    ```bash
    curl -X POST http://localhost:8000/api/bespoke/reload
    ```
-
-## Mapping Files
-
-The `mappings/` directory contains core schema and configuration files:
-
-| File | Purpose |
-|------|---------|
-| `schemaSplunk.json` | Splunk index/sourcetype to field mappings |
-| `schemaMDE.json` | Microsoft Defender table mappings |
-| `schemaElastic.json` | Elastic index mappings |
-| `schemaGoogleSecOps.json` | Google SecOps UDM mappings |
-| `indicatorMapping.json` | Maps indicator types (cmd, file, reg) to platform fields |
-| `entityMappings.json` | KQL entity type mappings |
-| `dataSources.json` | MITRE ATT&CK data source definitions |
-| `platforms.json` | Platform configuration |
-| `members.json` | Team member LAN ID to team assignments |
-| `techniquePlatformIndicators.json` | Technique validation matrix |
 
 ## API Endpoints
 

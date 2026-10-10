@@ -30,7 +30,7 @@ def test_missing_directory_raises_mappings_error(tmp_path):
 def test_empty_directory_raises_mappings_error(tmp_path):
     patcher, mappings_dir = _point_mappings_at(tmp_path)
     mappings_dir.mkdir(parents=True)
-    with patcher, pytest.raises(MappingsError, match="setup_mappings.py"):
+    with patcher, pytest.raises(MappingsError, match="bespoke/README.md"):
         load_indicator_mappings()
 
 
