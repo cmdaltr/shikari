@@ -3416,13 +3416,24 @@ async def progress(
 
 
 @app.get("/manual", response_class=HTMLResponse)
-def manual(request: Request, group_name: str = ""):
+def manual(request: Request, group_name: str = "", archer_session: Optional[str] = Cookie(None)):
     tactics, techniques = get_mitre_lists()
     render_time = datetime.utcnow().isoformat() + "Z"
+
+    # Guests may use this page; resolve a session if present so the header reflects it
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+
     return templates.TemplateResponse(
         "manual.html",
         {
             "request": request,
+            "user": user,
             "group_name": group_name,
             "tactics": tactics,
             "techniques": techniques,
