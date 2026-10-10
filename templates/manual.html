@@ -2,7 +2,6 @@
 {% block title %}Archer - Manual{% endblock %}
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/manual.css') }}?v={{ request.app.state.asset_version }}">
 <style>
 /* Ensure consistent positioning across all browsers */
@@ -10,56 +9,11 @@ html, body {
   margin: 0 !important;
   padding: 0 !important;
   overflow-y: scroll !important; /* Always show scrollbar gutter for consistent positioning */
-  zoom: 1.0;
-}
-
-/* Small centered logo at top */
-.header-logo-container {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-}
-
-.header-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  text-decoration: none;
-  transition: opacity 0.2s;
-}
-
-.header-logo:hover {
-  opacity: 0.8;
-}
-
-.header-logo img {
-  width: auto;
-  height: 60px;
-  filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.2));
-}
-
-.header-logo h1 {
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  font-size: 33.6px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: #1a1a1a;
-  margin: 0;
-  text-shadow: 0px 1px 3px rgba(0,0,0,0.15);
 }
 </style>
 {% endblock %}
 {% block content %}
 <div id="main-content" class="page-shell">
-  <!-- Small centered logo at top -->
-  <div class="header-logo-container">
-    <a href="/" class="header-logo">
-      <img src="{{ url_for('static', path='images/archer_banner.png') }}" alt="Archer" style="height: 52px; width: auto;">
-    </a>
-  </div>
-
   <div class="manual-group-container page-container">
     <div class="content-wrap">  <!-- single shared wrapper -->
       <div class="nav-row">
