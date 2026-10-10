@@ -574,6 +574,9 @@
               const loading     = document.getElementById('briefing-loading');
               const results     = document.getElementById('briefing-results');
               const errorEl     = document.getElementById('briefing-error');
+              // Threat Briefing is now an option on the Hunt form (briefing_checkbox); the
+              // standalone button is gone, so there is nothing to wire up without it
+              if (!briefingBtn) return;
 
               // Enable briefing button only when group name is filled
               if (groupInput) {
