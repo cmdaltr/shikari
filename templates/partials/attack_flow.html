@@ -48,8 +48,19 @@
       </button>
       {% endfor %}
       <span class="af-toolbar-sep" aria-hidden="true"></span>
-      <button type="button" class="af-chip is-on" id="af-toggle-gaps" aria-pressed="true" title="Show ATT&amp;CK-attributed techniques with no detection">Gaps</button>
+      <button type="button" class="af-chip" id="af-toggle-gaps" aria-pressed="false" title="Hide techniques with no detection on the selected SIEMs">Hide Undetected</button>
       <button type="button" class="af-chip is-on" id="af-toggle-edges" aria-pressed="true" title="Show correlations between techniques">Links</button>
+      <span class="af-toolbar-sep" aria-hidden="true"></span>
+      <button type="button" class="af-chip" id="af-pick-mode" aria-pressed="false"
+              title="Click cards to select several (or ⌘/Ctrl-click without this on)">Select</button>
+      <button type="button" class="af-chip" id="af-hide-picked" disabled title="Hide the selected techniques">Hide Selected</button>
+      <button type="button" class="af-chip" id="af-hide-others" disabled title="Hide every technique except the selected ones">Hide Others</button>
+      <button type="button" class="af-chip" id="af-show-all" hidden title="Show the techniques you hid">Show All</button>
+      <span class="af-toolbar-sep" aria-hidden="true"></span>
+      <button type="button" class="af-chip" id="af-orient" title="Lay tactics out as columns or rows">Horizontal</button>
+      <button type="button" class="af-chip" id="af-order" title="Tactic order: kill chain forwards or backwards">Forward</button>
+      <button type="button" class="af-chip" id="af-undo" disabled title="Undo (⌘/Ctrl-Z)">Undo</button>
+      <button type="button" class="af-chip" id="af-reset" title="Restore the default view">Reset</button>
       <input type="search" id="af-search" class="af-search" placeholder="Find technique…" aria-label="Find technique">
       {% if attack_flow.stix_file %}
       <a class="af-chip" href="/api/download/flow/{{ attack_flow.stix_file|urlencode }}" download
@@ -65,7 +76,7 @@
     <strong>{{ attack_flow.stats.techniques }}</strong> techniques across {{ attack_flow.stats.tactics }} tactics ·
     <strong>{{ attack_flow.stats.detected }}</strong> detected ·
     <strong class="af-stats-gap">{{ attack_flow.stats.gaps }}</strong> gaps ·
-    <strong>{{ attack_flow.stats.edges }}</strong> correlation links
+    <strong id="af-stat-edges">{{ attack_flow.stats.edges }}</strong> correlation links
   </p>
 
   <div class="af-body">
@@ -114,7 +125,7 @@
     <span><span class="af-legend-gap"></span> attributed to the group, no detection</span>
     <span><span class="af-legend-edge"></span> correlation: first technique seen before the second on the same host</span>
     <span><span class="af-legend-edge is-back"></span> the second technique sits in an earlier tactic</span>
-    <span class="af-legend-hint">Hover or select a technique to trace its links</span>
+    <span class="af-legend-hint">Hover or select a technique to trace its links · drag to move · ⌘/Ctrl-click to select several · click a link to remove it</span>
   </div>
 
   <script type="application/json" id="af-data">{{ attack_flow|tojson }}</script>

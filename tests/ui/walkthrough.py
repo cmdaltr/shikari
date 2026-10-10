@@ -158,6 +158,89 @@ def tour_results(page, label):
     return f"{queries} query blocks rendered; {tour_attack_flow(page)}"
 
 
+def tour_flow_hiding(page):
+    """Select several techniques, then Hide Others / Hide Selected / Show All."""
+    visible = lambda: page.locator(".af-node:not([hidden])").count()
+    total = visible()
+    if total < 3:
+        return
+    ids = page.locator(".af-node:not([hidden])").evaluate_all("els => els.slice(0, 2).map(e => e.dataset.id)")
+    page.click("#af-pick-mode")
+    for tid in ids:
+        page.locator(f'.af-node[data-id="{tid}"]').click()
+    if page.locator(".af-node.is-picked").count() != 2 or page.locator("#af-detail:not([hidden])").count():
+        raise AssertionError("Select mode should pick cards without opening the detail panel")
+    page.click("#af-hide-others")
+    if visible() != 2:
+        raise AssertionError(f"Hide Others left {visible()} techniques, expected 2")
+    caption(page, f"Hide Others: only {', '.join(ids)} remain")
+    shot(page, "attack_flow_hide_others")
+    page.click("#af-show-all")
+    page.click("#af-pick-mode")
+    page.locator(f'.af-node[data-id="{ids[0]}"]').click(modifiers=["ControlOrMeta"])
+    page.click("#af-hide-picked")
+    if visible() != total - 1:
+        raise AssertionError(f"Hide Selected left {visible()} of {total}, expected {total - 1}")
+    page.click("#af-show-all")
+    if visible() != total or not page.locator("#af-show-all").is_hidden():
+        raise AssertionError("Show All did not restore every technique")
+    tour_flow_layout(page, total)
+
+
+def tour_flow_layout(page, total):
+    """Hide Undetected, drag, unlink, orientation, order, Undo and Reset."""
+    visible = lambda: page.locator(".af-node:not([hidden])").count()
+    gaps = page.locator(".af-node.is-gap").count()
+    page.click("#af-toggle-gaps")
+    if gaps and visible() != total - gaps:
+        raise AssertionError(f"Hide Undetected left {visible()}, expected {total - gaps}")
+    page.click("#af-undo")
+    if visible() != total:
+        raise AssertionError("Undo did not bring the undetected techniques back")
+
+    card = page.locator(".af-node:not([hidden])").first
+    box = card.bounding_box()
+    page.mouse.move(box["x"] + 20, box["y"] + 10)
+    page.mouse.down()
+    page.mouse.move(box["x"] + 80, box["y"] + 70, steps=6)
+    page.mouse.up()
+    moved = card.bounding_box()
+    # Page zoom scales the 60px drag, so only check it moved and didn't select
+    if moved["x"] - box["x"] < 40 or page.locator("#af-detail:not([hidden])").count():
+        raise AssertionError("dragging a card should move it without selecting it")
+
+    links = lambda: page.locator("path.af-edge").count()
+    if links():
+        before = links()
+        page.locator("path.af-edge-hit").first.dispatch_event("click")
+        if links() != before - 1:
+            raise AssertionError("clicking a link should remove it")
+        caption(page, "Card dragged, one link removed")
+        shot(page, "attack_flow_edited")
+
+    page.click("#af-orient")
+    if "af-vertical" not in (page.get_attribute("#attack-flow", "class") or ""):
+        raise AssertionError("orientation toggle did not switch to vertical")
+    page.click("#af-order")
+    heads = page.locator(".af-lane:not([hidden]) .af-lane-head").evaluate_all(
+        "els => els.map(e => [e.getBoundingClientRect().top, e.firstChild.textContent.trim()])")
+    if len(heads) > 1 and not heads[0][0] > heads[-1][0]:
+        raise AssertionError("reverse order should put the first tactic last")
+    caption(page, "Vertical, reverse kill-chain order")
+    shot(page, "attack_flow_vertical_reverse")
+    page.click("#af-undo")
+    page.click("#af-undo")
+    if "af-vertical" in (page.get_attribute("#attack-flow", "class") or ""):
+        raise AssertionError("Undo did not restore the horizontal layout")
+    if card.bounding_box()["x"] - box["x"] < 40:
+        raise AssertionError("Undo past a layout change should restore dragged positions")
+    page.click("#af-reset")
+    if abs(card.bounding_box()["x"] - box["x"]) > 3 or visible() != total:
+        raise AssertionError("Reset did not restore the default view")
+    if not page.locator("#af-undo").is_enabled():
+        raise AssertionError("Reset should be undoable")
+
+
 def tour_attack_flow(page):
     """ATT&CK Flow: lanes render, a linked technique traces its correlations, SecOps correlations lead."""
     flow = page.locator("#attack-flow")
@@ -174,6 +257,7 @@ def tour_attack_flow(page):
         caption(page, f"Tracing {start}: its correlations stay lit, the detail panel lists them")
         shot(page, "attack_flow_selected")
         page.locator("#af-detail-close").click()
+    tour_flow_hiding(page)
     # Correlation vendors are listed SecOps first when SecOps has any
     order = [t.strip() for t in page.locator("#correlations-section-content .vendor-title > span:not([class])").all_inner_texts()]
     if "Google SecOps" in order and order[0] != "Google SecOps":
