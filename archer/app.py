@@ -5235,33 +5235,12 @@ async def export_research_xlsx(request: Request):
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
 
 
-import re as _re
-
-# Country keywords that need attribution-context matching (not just any mention)
+# Country keywords whose mentions are classified as attribution or targeting
+# (archer.intelligence.country_context) rather than matched as plain substrings
 _COUNTRY_KEYWORDS: set = {
     "china", "russia", "iran", "north korea", "pakistan",
     "vietnam", "india", "ukraine", "israel", "united states", "turkey", "lebanon",
 }
-
-# Words that indicate the country is the ORIGIN/SPONSOR of the group, not a target
-_ATTRIBUTION_CTX_RE = _re.compile(
-    r'(?:attributed|sponsored|nexus|likely|believed|assessed|operating|based in|'
-    r'on behalf|nation.state|state.sponsored|threat actor|threat group|'
-    r'cyber espionage|intelligence service|military intelligence)',
-    _re.IGNORECASE,
-)
-
-def _country_in_attribution_context(description: str, terms: list) -> bool:
-    """Return True only if a country term appears near attribution language."""
-    for term in terms:
-        for m in _re.finditer(_re.escape(term), description, _re.IGNORECASE):
-            start = max(0, m.start() - 200)
-            end   = min(len(description), m.end() + 200)
-            window = description[start:end]
-            if _ATTRIBUTION_CTX_RE.search(window):
-                return True
-    return False
-
 
 # Industry / country keyword → description search terms
 _ACTOR_KEYWORD_VARIANTS: dict = {
@@ -5296,15 +5275,23 @@ _ACTOR_KEYWORD_VARIANTS: dict = {
 
 
 @app.get("/api/actors/by-keyword")
-async def get_actors_by_keyword(keyword: str = "", keywords: str = "", mode: str = "AND"):
+async def get_actors_by_keyword(keyword: str = "", keywords: str = "", mode: str = "AND", scope: str = "attributed"):
     """
     Return actor names whose MITRE descriptions match given keyword(s).
 
     Single:   ?keyword=Iran
     Multiple: ?keywords=Iran,Finance&mode=AND  (actors matching ALL keywords)
               ?keywords=Iran,Finance&mode=OR   (actors matching ANY keyword)
+    Country keywords honour scope: attributed (default) = the actor is from/sponsored
+    by the country; targeted = the actor has targeted it. Industry keywords describe
+    targeting already and match the same way in both scopes.
     Returns: {"ok": true, "actors": [...], "count": N}
     """
+    from archer.intelligence.country_context import country_matches
+
+    scope = scope.lower()
+    if scope not in ("attributed", "targeted"):
+        return JSONResponse({"ok": False, "error": "scope must be 'attributed' or 'targeted'"}, status_code=400)
     raw = keywords if keywords else keyword
     kw_list = [k.strip() for k in raw.split(",") if k.strip()]
     if not kw_list:
@@ -5327,7 +5314,7 @@ async def get_actors_by_keyword(keyword: str = "", keywords: str = "", mode: str
 
             def kw_hit(kw: str, terms: list) -> bool:
                 if kw.lower() in _COUNTRY_KEYWORDS:
-                    return _country_in_attribution_context(description, terms)
+                    return country_matches(description, terms, scope)
                 return any(t in description.lower() for t in terms)
 
             if use_and:
@@ -5338,7 +5325,7 @@ async def get_actors_by_keyword(keyword: str = "", keywords: str = "", mode: str
                 matched.append(obj.get("name", ""))
 
     matched = sorted(filter(None, matched))
-    return JSONResponse({"ok": True, "actors": matched, "count": len(matched), "keywords": kw_list, "mode": mode.upper()})
+    return JSONResponse({"ok": True, "actors": matched, "count": len(matched), "keywords": kw_list, "mode": mode.upper(), "scope": scope})
 
 
 @app.post("/profile/generate-detections")

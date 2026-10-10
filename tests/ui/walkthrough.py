@@ -192,10 +192,29 @@ def hunt_cve(page):
 @step("Research — keyword + actor consolidation")
 def research(page):
     open_tab(page, "research")
-    caption(page, "Research tab: filter actors by keyword (Iran)")
-    page.fill("#keyword-text-input", "Iran")
-    page.press("#keyword-text-input", "Enter")
-    page.wait_for_timeout(1500)
+    caption(page, "Research tab: groups attributed to Iran")
+    with page.expect_response(lambda r: "/api/actors/by-keyword" in r.url) as attributed:
+        page.fill("#keyword-text-input", "Iran")
+        page.press("#keyword-text-input", "Enter")
+    attributed = set(attributed.value.json().get("actors", []))
+    page.wait_for_timeout(1200)
+    shot(page, "research_attributed")
+    if "Strider" in attributed or "VOID MANTICORE" not in attributed:
+        raise RuntimeError(f"attributed scope wrong: Strider in={'Strider' in attributed}, VOID MANTICORE in={'VOID MANTICORE' in attributed}")
+
+    caption(page, "Switching to groups that have targeted Iran")
+    with page.expect_response(lambda r: "scope=targeted" in r.url) as targeted:
+        page.click("#kw-scope-btn")
+    targeted = set(targeted.value.json().get("actors", []))
+    page.wait_for_timeout(1200)
+    shot(page, "research_targeted")
+    if "Strider" not in targeted:
+        raise RuntimeError("targeted scope missing Strider")
+
+    caption(page, "Back to attributed")
+    with page.expect_response(lambda r: "scope=attributed" in r.url):
+        page.click("#kw-scope-btn")
+    page.wait_for_timeout(1200)
     caption(page, "Adding actor APT33")
     page.fill("#actor-text-input", "APT33")
     page.press("#actor-text-input", "Enter")
@@ -215,7 +234,7 @@ def research(page):
         pass
     shot(page, "research_flat")
     rows = page.locator("table tbody tr").count()
-    return f"{rows} table rows"
+    return f"Iran attributed={len(attributed)} targeted={len(targeted)}; {rows} table rows"
 
 
 @step("Upload — threat intel blog URL (CISA AA23-320A, Scattered Spider)")

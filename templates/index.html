@@ -711,6 +711,7 @@
               var sortAsc   = true;
               var viewMode  = 'grouped'; // 'grouped' | 'flat'
               var kwMode    = 'AND';     // 'AND' | 'OR' keyword filter mode
+              var kwScope   = 'attributed';  // 'attributed' | 'targeted' for country keywords
               var actorMetadata = {};    // actor_metadata from last API call
 
               /* ---- DOM refs ---- */
@@ -722,6 +723,7 @@
               var kwFiltersRow     = document.getElementById('keyword-filters-row');
               var kwTextInput      = document.getElementById('keyword-text-input');
               var kwModeBtn        = document.getElementById('kw-mode-btn');
+              var kwScopeBtn       = document.getElementById('kw-scope-btn');
               var kwInputWrap      = document.getElementById('keyword-input-wrap');
 
               /* Match form-input focus style */
@@ -739,6 +741,18 @@
                 kwModeBtn.style.background  = kwMode === 'AND' ? '#374151' : '#fff';
                 kwModeBtn.style.color       = kwMode === 'AND' ? '#fff'    : '#374151';
                 kwModeBtn.style.borderColor = kwMode === 'AND' ? '#d1d5db' : '#374151';
+                if (activeKeywords.length) runKeywordIntersection();
+              });
+
+              /* Attributed / Targeted single toggle */
+              kwScopeBtn.addEventListener('click', function () {
+                kwScope = kwScope === 'attributed' ? 'targeted' : 'attributed';
+                var attributed = kwScope === 'attributed';
+                kwScopeBtn.textContent = attributed ? 'Attributed' : 'Targeted';
+                kwScopeBtn.setAttribute('aria-pressed', attributed ? 'false' : 'true');
+                kwScopeBtn.style.background  = attributed ? '#374151' : '#fff';
+                kwScopeBtn.style.color       = attributed ? '#fff'    : '#374151';
+                kwScopeBtn.style.borderColor = attributed ? '#d1d5db' : '#374151';
                 if (activeKeywords.length) runKeywordIntersection();
               });
 
@@ -1167,7 +1181,7 @@
                 var joined = activeKeywords.join(',');
                 var prev = kwTextInput.placeholder;
                 kwTextInput.placeholder = 'Finding actors matching ' + activeKeywords.join(' ' + kwMode + ' ') + '…';
-                fetch('/api/actors/by-keyword?keywords=' + encodeURIComponent(joined) + '&mode=' + encodeURIComponent(kwMode))
+                fetch('/api/actors/by-keyword?keywords=' + encodeURIComponent(joined) + '&mode=' + encodeURIComponent(kwMode) + '&scope=' + encodeURIComponent(kwScope))
                   .then(function (r) { return r.json(); })
                   .then(function (data) {
                     kwTextInput.placeholder = prev;
@@ -1802,6 +1816,12 @@
                   <button id="kw-mode-btn" type="button"
                     style="width:70px;border:2px solid #d1d5db;border-radius:6px;background:#374151;color:#fff;cursor:pointer;font-size:16px;font-weight:600;font-family:inherit;white-space:nowrap;flex-shrink:0;">
                     AND
+                  </button>
+                  <!-- Country keywords: groups attributed to the country, or groups that have targeted it -->
+                  <button id="kw-scope-btn" type="button" aria-pressed="false"
+                    title="Country keywords: match groups attributed to the country, or groups that have targeted it"
+                    style="width:110px;border:2px solid #d1d5db;border-radius:6px;background:#374151;color:#fff;cursor:pointer;font-size:16px;font-weight:600;font-family:inherit;white-space:nowrap;flex-shrink:0;">
+                    Attributed
                   </button>
                 </div>
               </div>
