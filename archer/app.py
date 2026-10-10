@@ -6288,6 +6288,34 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             if tactics:
                 tactic_set.update(tactics)
 
+    # Kill-chain attack flow: detected techniques, ATT&CK-attributed gaps, correlation edges
+    attack_flow = None
+    try:
+        from archer.visualization.flow_view import attributed_techniques, build_flow_view, current_tactics
+
+        flow_paths = {v: [os.path.join(generate_dir, d["file"]) for d in entries]
+                      for v, entries in detection_files.items()}
+        raw_correlations = []
+        if os.path.exists(correlation_file):
+            with open(correlation_file, encoding="utf-8") as fh:
+                raw_correlations = json.load(fh).get("vendor_correlations", [])
+        bundle = getattr(request.app.state, "bundle", None)
+        attack_flow = build_flow_view(
+            flow_paths,
+            raw_correlations,
+            attributed_techniques(group_name),
+            current_tactics(bundle) if bundle is not None else None,
+        )
+        # Downloadable Attack Flow 2.x bundle; replaces the flat chain the generator writes
+        from archer.visualization.flow_view import to_attack_flow_bundle
+
+        attack_flow["stix_file"] = f"{safe_group}_complete_flow.json"
+        os.makedirs(ATTACK_FLOWS_DIR, exist_ok=True)
+        with open(os.path.join(ATTACK_FLOWS_DIR, attack_flow["stix_file"]), "w", encoding="utf-8") as fh:
+            json.dump(to_attack_flow_bundle(attack_flow, group_name), fh, indent=2)
+    except Exception as e:
+        print(f"Attack flow view unavailable: {e}")
+
     # Calculate duration (if progress file exists)
     # Progress files are saved with the original group name (with spaces), not sanitized
     duration = 0
@@ -6351,6 +6379,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             "detections": detections,
             "correlations": grouped_correlations,
             "attack_flow_exists": attack_flow_exists,
+            "attack_flow": attack_flow,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "validation_results": validation_results,
             "validation_summary": validation_summary,

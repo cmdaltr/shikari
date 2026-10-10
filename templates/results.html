@@ -4,6 +4,7 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/attack_flow.css') }}?v={{ request.app.state.asset_version }}">
 <style>
 @keyframes spin {
   from { transform: rotate(0deg); }
@@ -1285,27 +1286,8 @@
       </div>
     </div>
 
-    <!-- ATT&CK Flow Section - Coming Soon -->
-    <div class="detection-section" style="opacity: 0.5; pointer-events: none;">
-      <div class="detection-header">
-        <h2>
-          <div class="card-icon attack-flow" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-            </svg>
-          </div>
-          ATT&CK Flow
-        </h2>
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
-          <span class="expand-btn" style="opacity: 0.5; cursor: not-allowed;">Expand</span>
-        </div>
-      </div>
-
-      <div class="attack-flow-content">
-        <p style="text-align: center; color: #999; padding: 40px 0; font-style: italic;">Coming Soon</p>
-      </div>
-    </div>
+    <!-- ATT&CK Flow: kill-chain lanes, coverage and correlation links -->
+    {% include "partials/attack_flow.html" %}
 
     <!-- Divider -->
     <div style="border-top: 2px solid #e5e7eb; margin: 40px 0;"></div>
@@ -3033,4 +3015,5 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
+<script src="{{ url_for('static', path='js/attack_flow.js') }}?v={{ request.app.state.asset_version }}"></script>
 {% endblock %}

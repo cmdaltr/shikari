@@ -144,7 +144,31 @@ def tour_results(page, label):
     shot(page, "results_scrolled")
     page.mouse.wheel(0, -5000)
     queries = page.locator("pre, code").count()
-    return f"{queries} query blocks rendered"
+    return f"{queries} query blocks rendered; {tour_attack_flow(page)}"
+
+
+def tour_attack_flow(page):
+    """ATT&CK Flow: lanes render, a linked technique traces its correlations, SecOps correlations lead."""
+    flow = page.locator("#attack-flow")
+    flow.scroll_into_view_if_needed()
+    nodes, links = page.locator(".af-node").count(), page.locator("path.af-edge").count()
+    if not nodes:
+        raise AssertionError("attack flow rendered no techniques")
+    caption(page, f"ATT&CK Flow: {nodes} techniques, {links} correlation links")
+    shot(page, "attack_flow")
+    if links:
+        start = page.locator("path.af-edge").first.get_attribute("data-from")
+        page.locator(f'.af-node[data-id="{start}"]').click()
+        page.wait_for_selector("#af-detail:not([hidden])", timeout=5000)
+        caption(page, f"Tracing {start}: its correlations stay lit, the detail panel lists them")
+        shot(page, "attack_flow_selected")
+        page.locator("#af-detail-close").click()
+    # Correlation vendors are listed SecOps first when SecOps has any
+    order = [t.strip() for t in page.locator("#correlations-section-content .vendor-title > span:not([class])").all_inner_texts()]
+    if "Google SecOps" in order and order[0] != "Google SecOps":
+        raise AssertionError(f"correlation vendors out of order: {order}")
+    secops = order.count("Google SecOps") and "SecOps correlations first" or "no SecOps correlations"
+    return f"flow {nodes} techniques / {links} links; {secops}"
 
 
 @step("Login with default admin")
