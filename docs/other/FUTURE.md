@@ -208,12 +208,7 @@ python3 archer.py macat test-suite --category persistence
 
 ### Multi-SIEM Support Expansion
 
-**Current**: Splunk (SPL), Microsoft Defender (KQL)
-**Planned**:
-- Elastic Security (EQL, Lucene)
-- Google SecOps (YARA-L)
-- QRadar (AQL)
-- Sentinel One (PowerQuery)
+**Supported**: Google SecOps (YARA-L), Microsoft Defender (KQL), Splunk (SPL), Elastic Security (Query DSL). No other SIEMs are planned.
 
 ### AI/ML Enhancements
 

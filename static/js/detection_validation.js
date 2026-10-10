@@ -16,7 +16,7 @@ let validationState = {
     currentQuery: '',
     techniqueId: '',
     techniqueName: '',
-    vendor: 'splunk',
+    vendor: 'secops',
     dockerAvailable: false,
     suggestions: [],
     iteration: 0,
@@ -157,7 +157,7 @@ async function startValidation() {
 
     validationState.currentQuery = query;
     const vendorSelect = document.getElementById('vendor-select');
-    validationState.vendor = vendorSelect ? vendorSelect.value : 'splunk';
+    validationState.vendor = vendorSelect ? vendorSelect.value : 'secops';
 
     updateValidationStatus('running', 'Starting validation...');
     showValidationProgress(true);

@@ -5508,8 +5508,6 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         "microsoft": "🛡️",
         "elastic": "🔎",
         "googlesecops": "🔎",
-        "qradar": "🎯",
-        "sumo": "☁️",
     }
 
     vendor_display_names = {
@@ -5518,8 +5516,6 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         "microsoft": "MDE",
         "elastic": "Elastic",
         "googlesecops": "Google SecOps",
-        "qradar": "IBM QRadar",
-        "sumo": "Sumo Logic",
     }
 
     # Find all YAML files for this group
@@ -5853,8 +5849,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
     # Google SecOps and Elastic are now fully supported - no longer "Coming Soon"
     # They will appear automatically when YAML files are generated for them
 
-    # Sort vendors: Splunk, MDE, Google SecOps, Elastic, then others
-    vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "googlesecops": 2, "elastic": 3}
+    # Sort vendors: Google SecOps, MDE, Splunk, Elastic, then others
+    vendor_order = {"googlesecops": 0, "mde": 1, "microsoft": 1, "splunk": 2, "elastic": 3}
     detections.sort(key=lambda x: (vendor_order.get(x["name"], 99), x["name"]))
 
     # Load correlations
@@ -7341,8 +7337,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             "mde": "MDE",
             "microsoft": "MDE",
             "elastic": "Elastic",
-            "google_secops": "Google SecOps",
-            "sentinel": "Azure Sentinel",
+            "googlesecops": "Google SecOps",
         }
 
         # Helper function to safely parse JSON fields
@@ -7688,6 +7683,11 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             # If query starts with "index=", it's a Splunk detection
             if query_content and query_content.strip().lower().startswith("index="):
                 normalized_vendor = "splunk"
+            # YARA-L rule, or a SecOps data source under any of its spellings
+            elif (query_content and query_content.lstrip().startswith("rule ")) or any(
+                k in normalized_vendor.lower().replace(" ", "").replace("_", "") for k in ("secops", "yaral")
+            ):
+                normalized_vendor = "googlesecops"
             # If MDE tables present, it's an MDE detection
             elif mde_tables and len(mde_tables) > 0:
                 normalized_vendor = "mde"
@@ -7961,8 +7961,8 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 }
             )
 
-        # Sort vendors: Splunk, MDE, Google SecOps, Elastic, then others
-        vendor_order = {"splunk": 0, "mde": 1, "microsoft": 1, "googlesecops": 2, "elastic": 3}
+        # Sort vendors: Google SecOps, MDE, Splunk, Elastic, then others
+        vendor_order = {"googlesecops": 0, "mde": 1, "microsoft": 1, "splunk": 2, "elastic": 3}
         vendors.sort(key=lambda v: (vendor_order.get(v["name"], 99), v["name"]))
 
         # Calculate summary statistics
@@ -8081,16 +8081,16 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 }
             )
 
-        # Sort correlations: Splunk, MDE, Google SecOps, Elastic, then others
+        # Sort correlations: Google SecOps, MDE, Splunk, Elastic, then others
         # Priority: empty_state and coming_soon go after actual data
         def sort_correlations(v):
             vendor_order = {
-                "Splunk": 0,
-                "splunk": 0,
+                "googlesecops": 0,
+                "Google SecOps": 0,
                 "MDE": 1,
                 "mde": 1,
-                "googlesecops": 2,
-                "Google SecOps": 2,
+                "Splunk": 2,
+                "splunk": 2,
                 "elastic": 3,
                 "Elastic": 3,
             }

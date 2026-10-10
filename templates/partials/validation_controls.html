@@ -42,24 +42,24 @@
       <div id="vendor-select-wrap" style="position:relative;">
         <button id="vendor-select-btn" type="button"
           style="font-size:15px;border:1px solid #d1d5db;border-radius:4px;padding:0 12px;background:#fff;height:35px;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;min-width:160px;">
-          <span id="vendor-select-label">Splunk (SPL)</span>
+          <span id="vendor-select-label">Google SecOps (YARA-L)</span>
           <svg style="width:12px;height:12px;flex-shrink:0;margin-left:auto;" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
           </svg>
         </button>
         <div id="vendor-select-dropdown"
           style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:500;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:200px;">
-          <div class="vendor-opt" data-value="splunk" data-label="Splunk (SPL)"
+          <div class="vendor-opt" data-value="secops" data-label="Google SecOps (YARA-L)"
             style="display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:pointer;font-size:15px;">
-            <span class="vendor-check" style="width:16px;color:#2563eb;font-weight:700;">✓</span>Splunk (SPL)
+            <span class="vendor-check" style="width:16px;color:#2563eb;font-weight:700;">✓</span>Google SecOps (YARA-L)
           </div>
           <div class="vendor-opt" data-value="elastic" data-label="Elastic (Query DSL)"
             style="display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:pointer;font-size:15px;">
             <span class="vendor-check" style="width:16px;color:#2563eb;font-weight:700;visibility:hidden;">✓</span>Elastic (Query DSL)
           </div>
-          <div class="vendor-opt" data-value="secops" data-label="Google SecOps (YARA-L)"
+          <div class="vendor-opt" data-value="splunk" data-label="Splunk (SPL)"
             style="display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:pointer;font-size:15px;">
-            <span class="vendor-check" style="width:16px;color:#2563eb;font-weight:700;visibility:hidden;">✓</span>Google SecOps (YARA-L)
+            <span class="vendor-check" style="width:16px;color:#2563eb;font-weight:700;visibility:hidden;">✓</span>Splunk (SPL)
           </div>
           <div class="vendor-opt" data-value="mde" data-label="MDE (KQL)"
             style="display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:pointer;font-size:15px;">
@@ -70,9 +70,9 @@
 
       <!-- Hidden native select kept for detection_validation.js compatibility -->
       <select id="vendor-select" style="display:none;">
-        <option value="splunk" selected>Splunk (SPL)</option>
+        <option value="secops" selected>Google SecOps (YARA-L)</option>
         <option value="elastic">Elastic (Query DSL)</option>
-        <option value="secops">Google SecOps (YARA-L)</option>
+        <option value="splunk">Splunk (SPL)</option>
         <option value="mde">MDE (KQL)</option>
       </select>
     </div>
