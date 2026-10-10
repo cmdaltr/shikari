@@ -1132,7 +1132,7 @@
               <!-- Tables/Indexes Display (if available) -->
               {% if correlation.tables_indexes %}
               <div style="margin-top: 8px; margin-bottom: 12px; font-size: 0.85em;">
-                <strong style="color: #555;">{% if vendor.name == 'MDE' %}Tables:{% else %}Indexes:{% endif %}</strong>
+                <strong style="color: #555;">{% if vendor.name == 'MDE' %}Tables:{% elif vendor.name == 'Google SecOps' %}Event types:{% else %}Indexes:{% endif %}</strong>
                 {% for table_idx in correlation.tables_indexes %}
                 <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
                 {% endfor %}

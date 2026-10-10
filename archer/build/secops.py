@@ -6,6 +6,7 @@ Uses template-based generation with UDM (Unified Data Model) field mappings
 
 import os
 import json
+import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -169,41 +170,117 @@ class SecOpsGenerator:
 
         return yaral_query
 
-    def generate_correlation_rule(
-        self,
-        techniques: List[Dict],
-        group_name: str,
-        time_window: str = "5m"
-    ) -> Dict[str, any]:
-        """Generate multi-event correlation YARA-L rule"""
 
-        rule_name = f"{group_name.replace(' ', '_')}_correlation"
 
-        # Build multi-event correlation
-        events_section = []
-        for i, tech in enumerate(techniques[:3]):  # Limit to 3 techniques
-            tech_id = tech.get('id', f'T{i}')
-            events_section.append(f'    $e{i+1}.metadata.event_type = "PROCESS_LAUNCH"')
+# ── Multi-event correlation ────────────────────────────────────────────────
 
-        yaral_query = f"""rule {rule_name} {{
+_SECTION = re.compile(r"^\s*(meta|events|match|outcome|condition|options)\s*:\s*$", re.M)
+
+
+def _rule_sections(rule: str) -> Dict[str, str]:
+    """Split a YARA-L rule body into its sections (meta, events, condition, ...)."""
+    body = rule.strip()
+    body = body[body.find("{") + 1: body.rfind("}")] if "{" in body else body
+    marks = list(_SECTION.finditer(body))
+    return {m.group(1): body[m.end(): marks[i + 1].start() if i + 1 < len(marks) else len(body)].strip("\n")
+            for i, m in enumerate(marks)}
+
+
+def _meta_value(meta: str, key: str) -> Optional[str]:
+    m = re.search(rf'^\s*{key}\s*=\s*"([^"]*)"', meta, re.M)
+    return m.group(1) if m else None
+
+
+def _event_block(events: str, var: str, grouped: bool) -> str:
+    """
+    Rebind a single-event rule's $e to `var`. Lines in an events section are ANDed;
+    `grouped` folds them into one parenthesised expression so blocks can be ORed.
+    """
+    lines = [re.sub(r"\$e\b", var, line.strip()) for line in events.splitlines()
+             if line.strip() and not line.strip().startswith("//")]
+    if not grouped:
+        return "\n".join(f"    {line}" for line in lines)
+    return "    (" + " and ".join(lines) + ")"
+
+
+def _event_types(events: str) -> List[str]:
+    return re.findall(r'metadata\.event_type\s*=\s*"([A-Z_]+)"', events)
+
+
+def _side(rules, var: str):
+    """events text, technique IDs and event types for one side ($e1 or $e2) of a correlation."""
+    rules = [r for r in ([rules] if isinstance(rules, str) else rules) if r and r.strip()]
+    parsed = [_rule_sections(r) for r in rules]
+    if not parsed or any(not p.get("events") or re.search(r"\$e\d", p["events"]) for p in parsed):
+        return None
+    tids = [_meta_value(p.get("meta", ""), "mitre_attack_technique") or "?" for p in parsed]
+    names = [_technique_name(p.get("meta", "")) for p in parsed]
+    blocks = [_event_block(p["events"], var, grouped=len(parsed) > 1) for p in parsed]
+    # Alternatives stay on one line: separate statements in events are ANDed
+    events = blocks[0] if len(blocks) == 1 else "    (" + " or ".join(b.strip() for b in blocks) + ")"
+    types = [t for p in parsed for t in _event_types(p["events"])]
+    return events, list(dict.fromkeys(tids)), types, [n for n in dict.fromkeys(names) if n]
+
+
+def _technique_name(meta: str) -> Optional[str]:
+    """'Detects Access Token Manipulation (T1134)' -> 'Access Token Manipulation'."""
+    m = re.match(r"Detects (.+?) \(T\d", _meta_value(meta, "description") or "")
+    return m.group(1) if m else None
+
+
+def build_correlation_rule(rules_a, rules_b, label_a: str = "", label_b: str = "",
+                           window: str = "1h") -> Optional[str]:
+    """
+    Combine single-event YARA-L rules into one multi-event correlation rule.
+
+    Mirrors the MDE correlation (same device within an hour): both events must come
+    from the same host (principal.hostname, bound to the $host match variable) within
+    `window`, and the A event must not be later than the B event. Each side takes one
+    rule or a list; a list becomes alternatives (A1 or A2 ...) for that event.
+    Returns None when an input isn't a single-event rule this can rebind.
+    """
+    a, b = _side(rules_a, "$e1"), _side(rules_b, "$e2")
+    if not (a and b):
+        return None
+    events_a, tids_a, types_a, names_a = a
+    events_b, tids_b, types_b, names_b = b
+    clean = lambda s: s.replace('"', "'")
+    # Technique names from each rule's own meta; the caller's label (from the filename) is the fallback
+    label_a = clean(" / ".join(names_a) or label_a or " / ".join(tids_a))
+    label_b = clean(" / ".join(names_b) or label_b or " / ".join(tids_b))
+    extra = len(tids_a) + len(tids_b) - 2
+    name = re.sub(r"\W", "_", f"archer_corr_{tids_a[0]}_then_{tids_b[0]}" + (f"_plus{extra}" if extra else ""))
+
+    return f"""rule {name} {{
   meta:
     author = "Archer Detection Engineering"
-    description = "Multi-technique correlation for {group_name}"
+    description = "{label_a} followed by {label_b} on the same host within {window}"
+    mitre_attack_technique = "{', '.join(tids_a + tids_b)}"
+    event_types = "{', '.join(sorted(set(types_a + types_b)))}"
     severity = "HIGH"
 
   events:
-{chr(10).join(events_section)}
+    // {label_a}
+{events_a}
+    $e1.principal.hostname = $host
+
+    // {label_b}
+{events_b}
+    $e2.principal.hostname = $host
+
+    $host != ""
+    $e1.metadata.event_timestamp.seconds <= $e2.metadata.event_timestamp.seconds
 
   match:
-    $e1, $e2 over 5m
+    $host over {window}
+
+  outcome:
+    $first_seen = min($e1.metadata.event_timestamp.seconds)
+    $last_seen = max($e2.metadata.event_timestamp.seconds)
+    $users = array_distinct($e1.principal.user.userid)
+    $commands_a = array_distinct($e1.target.process.command_line)
+    $commands_b = array_distinct($e2.target.process.command_line)
 
   condition:
     $e1 and $e2
 }}"""
-
-        return {
-            "rule_name": rule_name,
-            "yaral_code": yaral_query,
-            "description": f"Correlation rule for {group_name}",
-            "severity": "HIGH"
-        }

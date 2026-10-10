@@ -108,6 +108,7 @@ DATA_SOURCE_DISPLAY_NAMES = {
     "microsoft_defender": "MDE",
     "edr_events": "MDE",
     "mde": "MDE",
+    "googlesecops": "Google SecOps",
     "microsoft windows": "Windows Event Logs",
     "microsoft_cloudappsecurity": "MCAS",
     "microsoft_o365": "M365",
@@ -342,6 +343,10 @@ def extract_tables_indexes(query: str, vendor: str) -> list:
         pattern = r'index\s*=\s*["\']?([a-zA-Z0-9_\-]+)["\']?'
         matches = re.findall(pattern, query, re.IGNORECASE)
         tables_indexes = sorted(set(matches))
+
+    elif vendor.lower() == "googlesecops":
+        # UDM event types the YARA-L rule matches on
+        tables_indexes = sorted(set(re.findall(r'metadata\.event_type\s*=\s*"([A-Z_]+)"', query)))
 
     return tables_indexes
 
@@ -5973,10 +5978,10 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
                                         primary_tactic = tactics[0] if tactics else "Unknown"
 
                                     # Extract time window from combined query if available
-                                    if "maxspan" in combined_query:
-                                        match = re.search(r"maxspan=(\d+[hmd])", combined_query)
-                                        if match:
-                                            time_window = match.group(1)
+                                    # (Splunk transaction maxspan, YARA-L match window)
+                                    match = re.search(r"maxspan=(\d+[hmd])|\$\w+ over (\d+[smhd])", combined_query)
+                                    if match:
+                                        time_window = match.group(1) or match.group(2)
 
                                 techniques.append(
                                     {
@@ -6264,8 +6269,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             {"name": vendor, "count": len(sorted_corrs), "correlations": sorted_corrs}
         )
 
-    # Sort by count descending
-    grouped_correlations.sort(key=lambda x: -x["count"])
+    # Vendor priority (SecOps first), not volume
+    correlation_order = {"Google SecOps": 0, "MDE": 1, "Splunk": 2, "Elastic": 3}
+    grouped_correlations.sort(key=lambda x: (correlation_order.get(x["name"], 99), -x["count"]))
 
     # Check if attack flow exists
     attack_flow_file = os.path.join(ATTACK_FLOWS_DIR, f"{safe_group}_complete_flow.html")

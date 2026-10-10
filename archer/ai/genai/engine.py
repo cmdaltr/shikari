@@ -274,6 +274,30 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
     return {"path": path, "vendor": vendor, "query": query, "tactics": tactics, "name": name}
 
 
+# Vendors that get correlations, in priority order. SecOps is the primary platform:
+# processed first and allowed more correlations through scoring.
+CORRELATION_VENDORS = ["googlesecops", "mde", "splunk"]
+CORRELATION_CAP = {"googlesecops": 100}
+
+
+def _vendor_priority(vendor: str) -> int:
+    v = (vendor or "").lower()
+    return CORRELATION_VENDORS.index(v) if v in CORRELATION_VENDORS else len(CORRELATION_VENDORS)
+
+
+def _is_yaral(query: str) -> bool:
+    return isinstance(query, str) and query.lstrip().startswith("rule ")
+
+
+def _source_label(path: Optional[str]) -> str:
+    """Technique name from a detection filename: AccessTokenManipulation_GoogleSecOps.yaml -> Access Token Manipulation."""
+    if not path or not isinstance(path, str):
+        return ""
+    stem = os.path.basename(path).rsplit(".", 1)[0]
+    stem = re.sub(r"_(GoogleSecOps|microsoft_defender.*|Device\w+|\w+_prod)$", "", stem)
+    return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", stem).replace("_", " ").strip()
+
+
 def _combine_queries(vendor: str, query_a: str, query_b: str, a: str = None, b: str = None) -> str:
     """
     Combine two queries based on the vendor's query language using all available methods.
@@ -306,10 +330,16 @@ def _combine_queries(vendor: str, query_a: str, query_b: str, a: str = None, b: 
 
     # Override vendor detection based on query content
     detected_vendor = vendor.lower()
-    if is_splunk_a or is_splunk_b:
+    if _is_yaral(query_a) and _is_yaral(query_b):
+        detected_vendor = "googlesecops"
+    elif is_splunk_a or is_splunk_b:
         detected_vendor = "splunk"
     elif is_mde_a and is_mde_b:
         detected_vendor = "mde"
+
+    # YARA-L has a native multi-event form; no AI/parser path to choose between
+    if detected_vendor == "googlesecops":
+        return _basic_combine_queries(detected_vendor, query_a, query_b, _source_label(a), _source_label(b))
 
     # Heuristic mode: skip AI and advanced parsers entirely
     if _GEN_MODE == "heuristic":
@@ -1196,6 +1226,14 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
     query_b = corr_data.get("query_b", "")
     vendor = corr_data.get("vendor", "").lower()
 
+    if vendor == "googlesecops":
+        from archer.build.secops import build_correlation_rule
+
+        split = lambda q: [r for r in (q or "").split("\nUNION\n") if r.strip()]
+        rule = build_correlation_rule(split(query_a), split(query_b),
+                                      _source_label(corr_data.get("a")), _source_label(corr_data.get("b")))
+        return rule or corr_data.get("combined_query", "")
+
     # Detect if this is a Splunk or non-MDE query
     is_splunk = (
         vendor == "splunk"
@@ -1437,6 +1475,20 @@ def _get_account_field_for_table(table_name: str) -> str:
 
 
 def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> List[Dict]:
+    """
+    Group each vendor's correlations separately. Merging is by technique pair, so
+    grouping across vendors would splice YARA-L, KQL and SPL into one query.
+    """
+    by_vendor: Dict[str, List[Dict]] = {}
+    for corr in correlations:
+        by_vendor.setdefault(corr.get("vendor", "unknown"), []).append(corr)
+    grouped: List[Dict] = []
+    for vendor in sorted(by_vendor, key=_vendor_priority):
+        grouped.extend(_group_vendor_correlations(by_vendor[vendor], file_info))
+    return grouped
+
+
+def _group_vendor_correlations(correlations: List[Dict], file_info: Dict) -> List[Dict]:
     """
     Group similar correlations and keep only the top-scored ones from each group.
     Correlations are grouped by full technique pair + data source to allow variety.
@@ -1870,7 +1922,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
     MAX_PAIRS_PER_VENDOR = 10000
 
     for v, paths in by_vendor.items():
-        if v.lower() not in ["mde", "splunk"] or len(paths) < 2:
+        if v.lower() not in CORRELATION_VENDORS or len(paths) < 2:
             continue
 
         potential_pairs = len(paths) * (len(paths) - 1) // 2
@@ -1898,10 +1950,9 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
     vendor_corr = []
     cumulative_count = 0  # Track progress across all vendors
 
-    for v, groups in by_vendor_merged.items():
-        # Only process MDE and Splunk vendors
-        if v.lower() not in ["mde", "splunk"]:
-            # print(f"GenAI: Skipping vendor '{v}' as it's not MDE or Splunk")
+    # SecOps first: it is the primary correlation platform
+    for v, groups in sorted(by_vendor_merged.items(), key=lambda kv: _vendor_priority(kv[0])):
+        if v.lower() not in CORRELATION_VENDORS:
             continue
 
         if len(groups) < 2:
@@ -1978,9 +2029,11 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                 if query_b and query_b.startswith("|\n"):
                     query_b = query_b[2:].lstrip()
 
-                # Detect if these are Splunk queries by checking for index=
+                # Detect the query language from content
                 detected_vendor = v.lower()
-                if query_a.lstrip().startswith("index=") or query_b.lstrip().startswith("index="):
+                if _is_yaral(query_a) and _is_yaral(query_b):
+                    detected_vendor = "googlesecops"
+                elif query_a.lstrip().startswith("index=") or query_b.lstrip().startswith("index="):
                     detected_vendor = "splunk"
                 elif query_a.lstrip().startswith("Device") or query_b.lstrip().startswith("Device"):
                     detected_vendor = "mde"
@@ -2136,7 +2189,8 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             min_relevance = CoreConfig.correlation_min_relevance
 
             top_vendor_corrs = _score_and_filter_correlations(
-                corrs, file_info, min_relevance=min_relevance
+                corrs, file_info, min_relevance=min_relevance,
+                max_per_vendor=CORRELATION_CAP.get(vendor, 60),
             )
             print(
                 f"   Kept {len(top_vendor_corrs)}/{len(corrs)} after relevance filtering (>= {min_relevance:.0%})"
@@ -2368,6 +2422,14 @@ def _basic_combine_queries(
         return _collapse_double_newlines(combined)
 
     # Handle MDE/KQL queries
+    elif vendor == "googlesecops":
+        from archer.build.secops import build_correlation_rule
+
+        rule = build_correlation_rule(query_a, query_b, source_a or "", source_b or "")
+        if rule:
+            return rule
+        return f"// Could not build a SecOps correlation from {source_a or 'Query A'} and {source_b or 'Query B'}"
+
     elif vendor in ["mde", "microsoft", "sentinel", "kql"]:
         # Normalize labels
         label_a = (source_a or "Query A").strip()
