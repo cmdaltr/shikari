@@ -6820,7 +6820,7 @@ async def login(
     """
     from archer.security.rate_limit import check_rate_limit, record_attempt, reset_rate_limit
     from archer.database.audit import log_audit_event, EVENT_LOGIN_SUCCESS, EVENT_LOGIN_FAILURE
-    from archer.security.csrf import validate_csrf_token, consume_csrf_token
+    from archer.security.csrf import validate_csrf_token, consume_csrf_token, generate_csrf_token
     from datetime import datetime, timezone
 
     db = next(get_db())
@@ -6840,18 +6840,32 @@ async def login(
                 success=False,
                 details="Invalid CSRF token",
             )
-            return templates.TemplateResponse(
+            # Rebind to a fresh CSRF session so a resubmit works without a manual reload
+            import secrets
+
+            retry_session = secrets.token_urlsafe(16)
+            error_response = templates.TemplateResponse(
                 "login.html",
                 {
                     "request": request,
-                    "error": "Security validation failed. Please refresh the page and try again.",
-                    "csrf_token": "",  # Force page reload
+                    "error": "Security validation failed. Please try again.",
+                    "csrf_token": generate_csrf_token(retry_session),
                 },
                 status_code=403,
             )
+            error_response.set_cookie(
+                key="archer_csrf_session",
+                value=retry_session,
+                max_age=3600,
+                httponly=True,
+                samesite="lax",
+            )
+            return error_response
 
         # Consume CSRF token to prevent reuse
         consume_csrf_token(csrf_token)
+        # Re-rendered forms need a live token; the submitted one is now spent
+        next_csrf = generate_csrf_token(archer_csrf_session)
 
         # Check rate limit by IP address
         rate_limit_key = f"login:{client_ip}"
@@ -6871,6 +6885,7 @@ async def login(
                 "login.html",
                 {
                     "request": request,
+                    "csrf_token": next_csrf,
                     "error": "Too many login attempts. Please try again in 5 minutes.",
                 },
                 status_code=429,
@@ -6892,7 +6907,7 @@ async def login(
             )
             return templates.TemplateResponse(
                 "login.html",
-                {"request": request, "error": "Invalid email or password"},
+                {"request": request, "csrf_token": next_csrf, "error": "Invalid email or password"},
                 status_code=401,
             )
 
@@ -6914,6 +6929,7 @@ async def login(
                 "login.html",
                 {
                     "request": request,
+                    "csrf_token": next_csrf,
                     "error": "Account is temporarily locked due to multiple failed login attempts. Please try again later.",
                 },
                 status_code=403,
@@ -6948,6 +6964,7 @@ async def login(
                     "login.html",
                     {
                         "request": request,
+                        "csrf_token": next_csrf,
                         "error": "Account locked due to multiple failed login attempts. Please try again in 15 minutes.",
                     },
                     status_code=403,
@@ -6969,7 +6986,7 @@ async def login(
 
             return templates.TemplateResponse(
                 "login.html",
-                {"request": request, "error": "Invalid email or password"},
+                {"request": request, "csrf_token": next_csrf, "error": "Invalid email or password"},
                 status_code=401,
             )
 
@@ -6989,6 +7006,7 @@ async def login(
                 "login.html",
                 {
                     "request": request,
+                    "csrf_token": next_csrf,
                     "error": "Account is disabled. Please contact an administrator.",
                 },
                 status_code=403,
@@ -7133,7 +7151,7 @@ async def register(
     """
     from archer.security.rate_limit import check_rate_limit, record_attempt
     from archer.database.audit import log_audit_event, EVENT_USER_CREATED
-    from archer.security.csrf import validate_csrf_token, consume_csrf_token
+    from archer.security.csrf import validate_csrf_token, consume_csrf_token, generate_csrf_token
     from archer.auth.password import validate_password, hash_password
     import re
 
@@ -7145,18 +7163,32 @@ async def register(
 
         # Validate CSRF token
         if not archer_csrf_session or not validate_csrf_token(csrf_token, archer_csrf_session):
-            return templates.TemplateResponse(
+            # Rebind to a fresh CSRF session so a resubmit works without a manual reload
+            import secrets
+
+            retry_session = secrets.token_urlsafe(16)
+            error_response = templates.TemplateResponse(
                 "register.html",
                 {
                     "request": request,
-                    "error": "Security validation failed. Please refresh the page and try again.",
-                    "csrf_token": "",  # Force page reload
+                    "error": "Security validation failed. Please try again.",
+                    "csrf_token": generate_csrf_token(retry_session),
                 },
                 status_code=403,
             )
+            error_response.set_cookie(
+                key="archer_csrf_session",
+                value=retry_session,
+                max_age=3600,
+                httponly=True,
+                samesite="lax",
+            )
+            return error_response
 
         # Consume CSRF token to prevent reuse
         consume_csrf_token(csrf_token)
+        # Re-rendered forms need a live token; the submitted one is now spent
+        next_csrf = generate_csrf_token(archer_csrf_session)
 
         # Check rate limit by IP address
         rate_limit_key = f"register:{client_ip}"
@@ -7168,7 +7200,7 @@ async def register(
                 {
                     "request": request,
                     "error": "Too many registration attempts. Please try again in 5 minutes.",
-                    "csrf_token": csrf_token,
+                    "csrf_token": next_csrf,
                 },
                 status_code=429,
             )
@@ -7180,7 +7212,7 @@ async def register(
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
                 "register.html",
-                {"request": request, "error": "Invalid email address", "csrf_token": csrf_token},
+                {"request": request, "error": "Invalid email address", "csrf_token": next_csrf},
                 status_code=400,
             )
 
@@ -7193,7 +7225,7 @@ async def register(
                 {
                     "request": request,
                     "error": "An account with this email address already exists",
-                    "csrf_token": csrf_token,
+                    "csrf_token": next_csrf,
                 },
                 status_code=400,
             )
@@ -7207,7 +7239,7 @@ async def register(
                 {
                     "request": request,
                     "error": "Full name must be between 2 and 64 characters",
-                    "csrf_token": csrf_token,
+                    "csrf_token": next_csrf,
                 },
                 status_code=400,
             )
@@ -7217,7 +7249,7 @@ async def register(
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
                 "register.html",
-                {"request": request, "error": "Passwords do not match", "csrf_token": csrf_token},
+                {"request": request, "error": "Passwords do not match", "csrf_token": next_csrf},
                 status_code=400,
             )
 
@@ -7227,7 +7259,7 @@ async def register(
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
                 "register.html",
-                {"request": request, "error": error_msg, "csrf_token": csrf_token},
+                {"request": request, "error": error_msg, "csrf_token": next_csrf},
                 status_code=400,
             )
 
