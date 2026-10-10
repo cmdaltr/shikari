@@ -440,6 +440,17 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
     if "()" in query or "( OR )" in query or "\n  | where \n  | " in query:
         pass
     else:
+        # Contract gate (archer.contract): query-level lint on every legacy write.
+        # Warn-only by default; ARCHER_CONTRACT_STRICT=1 refuses to write a query with findings.
+        try:
+            from archer.contract import gate_query
+            allowed, _ = gate_query(query, label=os.path.basename(query_file))
+        except Exception as gate_err:  # the gate must never take the pipeline down
+            print(f"  [contract] gate error for {query_file}: {gate_err}")
+            allowed = True
+        if not allowed:
+            print(f"  [contract BLOCKED] not written: {query_file}")
+            return
         with open(query_file, "w") as new_yaml:
             new_yaml.write(yaml_content)
 

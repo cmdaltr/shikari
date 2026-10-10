@@ -1,0 +1,243 @@
+archer_output:
+  contract_version: "1.0"
+  kind: rule
+  request_ref: REQ-2026-10-10-005
+  rule:
+    rule_id: a543bec8-322f-4388-8db4-d53aa66f5e0a
+    name: persistence_t1098_003_udm_cloud_audit_azure_role_assignment_write_hunt
+    author: Archer Detection Engineering
+    created: "2026-10-10"
+    modified: "2026-10-10"
+    version: "1.0.0"
+    status: draft
+    detection_type: hunt
+    siem: yara_l
+    target_os:
+      - cloud
+    log_sources:
+      - id: LS1
+        siem_source: AZURE_ACTIVITY (metadata.log_type), control-plane write operations
+        product: Microsoft Azure Activity Log
+        udm_log_type: AZURE_ACTIVITY
+        ingestion:
+          status: unverified
+          profile_ref: ENVPROFILE-A-secops-full-mde
+        fields:
+          - path: metadata.log_type
+            population: known_populated
+            os:
+              - cloud
+          - path: metadata.product_event_type
+            population: unknown
+            os:
+              - cloud
+            note: Expected to carry operationName (MICROSOFT.AUTHORIZATION/ROLEASSIGNMENTS/WRITE); must be confirmed from an ingested sample before promotion.
+          - path: security_result.action
+            population: unknown
+            os:
+              - cloud
+            note: Expected ALLOW for succeeded operations; confirm from sample.
+          - path: principal.user.userid
+            population: unknown
+            os:
+              - cloud
+          - path: principal.user.email_addresses
+            population: unknown
+            os:
+              - cloud
+          - path: principal.ip
+            population: unknown
+            os:
+              - cloud
+          - path: target.resource.name
+            population: unknown
+            os:
+              - cloud
+            note: Expected to carry the assignment scope (subscription, resource group or resource ID); confirm from sample.
+          - path: metadata.event_timestamp.seconds
+            population: known_populated
+            os:
+              - cloud
+          - path: metadata.id
+            population: known_populated
+            os:
+              - cloud
+        coverage_gaps:
+          - Azure Activity Log must be forwarded to SecOps (diagnostic setting to Event Hub or the Azure feed); no ground-truth row covers this source, so field population is unverified.
+          - Entra ID directory role changes (T1098.003 in the identity plane) are a separate source (AZURE_AD_AUDIT) and are not covered here.
+    attack:
+      attack_version: "19.2"
+      bundle_ref: null
+      tactics:
+        - persistence
+        - privilege_escalation
+      technique_ids:
+        - T1098.003
+      mapping_rationale: A successful Microsoft.Authorization/roleAssignments/write or elevateAccess/action grants an additional Azure RBAC role to a principal; that is the observed control-plane operation, which is Account Manipulation, Additional Cloud Roles. T1098 has sub-techniques and the sub-technique is stated. The source is the cloud audit log, not endpoint telemetry (contrast workbook Q038 and Q047).
+    lookback: 30d
+    schedule: null
+    confidence:
+      rating: Medium
+      rationale: Single-stage logic on an exact operation name; every role assignment matches, so precision depends on the allow-list of automation principals and on analyst review of the scope and role. No campaign-specific anchor.
+    severity:
+      rating: High
+      rationale: A role assignment at subscription or management-group scope is persistent privileged access to the cloud estate; elevateAccess/action is root-scope takeover. Impact is high even before the role is used.
+    false_positives:
+      - id: FP1
+        scenario: Infrastructure-as-code pipelines (Terraform, Bicep, Azure DevOps service connections) assign roles as part of deployments.
+        population: Deployment service principals
+        distinguishing_fields:
+          - field: principal.user.userid
+            benign_pattern: a service principal listed in the azure_iac_service_principals reference list
+        handled_by: suppression
+        suppression_id: S1
+      - id: FP2
+        scenario: A privileged administrator activates a PIM-eligible role or delegates access during a change window.
+        population: Cloud platform administrators
+        distinguishing_fields:
+          - field: principal.user.email_addresses
+            benign_pattern: a member of the cloud platform administrator group, with a change record covering the time window
+        handled_by: triage
+        suppression_id: null
+    tuning_notes:
+      baseline:
+        window_days: 30
+        before_tuning: null
+        after_tuning: null
+        alerts_per_day_after_aggregation: null
+        measured_on: null
+        measurement_procedure: Run the rule as a retrohunt over 30 days once the source is ingested; record distinct actors per day before and after populating azure_iac_service_principals.
+      suppressions:
+        - id: S1
+          logic_ref: "// S1:"
+          reason: Deployment service principals assign roles continuously; they are enumerable and owned by the platform team.
+          depends_on_enrichment: false
+          fails_closed_how: Reference list; a missing list is a compile error and an empty list suppresses nothing.
+      dependencies:
+        - type: reference_list
+          name: azure_iac_service_principals
+          declared_in: reference_lists
+          definition_ref: Maintained by the cloud platform team from the Entra ID application registry; populate before first run
+      first_parameter_to_adjust: The azure_iac_service_principals allow-list. Add deployment principals as they are confirmed; never add human accounts.
+      known_limitations:
+        - Role definition ID and assigned principal are expected in the request body, which the UDM mapping for this source has not been confirmed to expose; the hunt therefore aggregates by actor and scope only.
+        - No device or process context exists for control-plane events; entity output uses actor, source IP and scope.
+      split_from: []
+    references:
+      - id: REF1
+        title: Microsoft Azure resource provider operations, Microsoft.Authorization (roleAssignments/write, elevateAccess/action)
+        locator: https://learn.microsoft.com/azure/role-based-access-control/resource-provider-operations#microsoftauthorization
+        accessed: "2026-10-10"
+        used_for:
+          - operation names in RX1
+      - id: REF2
+        title: Archer fidelity workbook rows Q038 and Q047 (Azure operations matched in endpoint command lines)
+        locator: archer fable fidelity workbook (populated).xlsx, Queries tab, Q038 and Q047
+        accessed: "2026-10-10"
+        used_for:
+          - source selection rationale
+    indicators: []
+    reference_lists:
+      - name: azure_iac_service_principals
+        type: string
+        purpose: allow
+        indicator_ids: []
+    entity_output:
+      timestamp_first: $first_seen
+      timestamp_last: $last_seen
+      device: $source_ips (no device for control-plane events)
+      account: $actor, $actor_emails
+      process: n/a (cloud audit) - $operations
+      parent_command_line: null
+      evidence_value: $operations, $scopes
+      source_table: AZURE_ACTIVITY
+    correlation:
+      events:
+        - var: a
+          source_id: LS1
+          role: single
+      join_keys: []
+      ordering: null
+      window: 24h
+    regexes:
+      - id: RX1
+        field: metadata.product_event_type
+        pattern: |-
+          ^microsoft\.authorization/(roleassignments/write|elevateaccess/action)$
+        engine: re2
+        literal_encoding: yara_l_backtick
+        must_match:
+          - 'MICROSOFT.AUTHORIZATION/ROLEASSIGNMENTS/WRITE'
+          - 'Microsoft.Authorization/elevateAccess/action'
+        must_not_match:
+          - 'MICROSOFT.AUTHORIZATION/ROLEASSIGNMENTS/DELETE'
+          - 'MICROSOFT.AUTHORIZATION/ROLEASSIGNMENTS/READ'
+    complexity:
+      lines: 36
+      event_variables_or_joins: 1
+      union_branches: 0
+      nesting_depth: 0
+    validation:
+      fidelity_basis: logic_review
+      compile:
+        status: not_run
+      field_existence:
+        schema_ref: Google SecOps UDM field list, 2026-10
+        status: checked
+      field_population:
+        status: unknown
+        evidence: No Azure Activity sample in the workbook. Confirm with a UDM search on metadata.log_type = "AZURE_ACTIVITY" over 7 days that metadata.product_event_type, principal.user.userid, principal.ip, target.resource.name and security_result.action are populated for roleAssignments/write events before promotion.
+      ingestion:
+        status: unverified
+        profile_ref: ENVPROFILE-A-secops-full-mde
+      join_portability:
+        status: not_applicable
+        notes: Single event variable; match on actor.
+      regex_checks:
+        status: not_run
+      positive_control:
+        status: not_run
+        procedure: In a test subscription assign the Reader role to a test principal with az role assignment create and confirm one hunt result for the acting account with the operation and scope in the outcome; then perform the same assignment with a principal in azure_iac_service_principals and confirm no result.
+        evidence_ref: null
+        date: null
+    query: |
+      rule persistence_t1098_003_udm_cloud_audit_azure_role_assignment_write_hunt {
+        meta:
+          author = "Archer Detection Engineering"
+          description = "Successful Azure RBAC role assignment write or elevateAccess by a non-automation principal, aggregated per actor over 24 hours. Hunt over Azure Activity Log; derived from the UDM schema, no ground-truth anchor."
+          rule_id = "a543bec8-322f-4388-8db4-d53aa66f5e0a"
+          version = "1.0.0"
+          status = "draft"
+          detection_type = "hunt"
+          attack_version = "19.2"
+          tactic = "persistence"
+          technique_ids = "T1098.003"
+          severity = "HIGH"
+          priority = "MEDIUM"
+          confidence = "Medium"
+          reference = "REF1"
+
+        events:
+          $a.metadata.log_type = "AZURE_ACTIVITY"
+          re.regex($a.metadata.product_event_type, `^microsoft\.authorization/(roleassignments/write|elevateaccess/action)$`) nocase
+          $a.security_result.action = "ALLOW"
+          // S1: deployment service principals assign roles as part of pipelines
+          not $a.principal.user.userid in %azure_iac_service_principals
+          $a.principal.user.userid = $actor
+          $actor != ""
+
+        match:
+          $actor over 24h
+
+        outcome:
+          $first_seen = min($a.metadata.event_timestamp.seconds)
+          $last_seen = max($a.metadata.event_timestamp.seconds)
+          $assignment_count = count_distinct($a.metadata.id)
+          $operations = array_distinct($a.metadata.product_event_type)
+          $scopes = array_distinct($a.target.resource.name)
+          $source_ips = array_distinct($a.principal.ip)
+          $actor_emails = array_distinct($a.principal.user.email_addresses)
+
+        condition:
+          $a
+      }

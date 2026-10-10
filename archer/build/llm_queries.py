@@ -137,6 +137,17 @@ def build_llm_prompt(
         detection_templates,
     ])
 
+    # Contract mode (ARCHER_CONTRACT_MODE=1): append the output contract, checklist and
+    # few-shot exemplars so the model emits an archer_output document instead of raw JSON.
+    try:
+        from archer.contract import contract_mode, contract_prompt_block
+        if contract_mode():
+            siem = os.getenv("ARCHER_CONTRACT_SIEM", "yara_l")
+            dtype = os.getenv("ARCHER_CONTRACT_TYPE", "scheduled_detection")
+            full_prompt = full_prompt + "\n\n" + contract_prompt_block(siem, dtype)
+    except Exception as e:
+        print(f"  [contract] prompt block unavailable: {e}")
+
     return full_prompt
 
 
@@ -482,7 +493,20 @@ def generate_llm_queries(
         print(f"  LLM call failed for {technique_id}: {e}")
         return []
 
-    # Parse the response
+    # Contract documents (root key archer_output) are validated and persisted by the
+    # contract pipeline; a failing or rejected document returns nothing (fail closed).
+    try:
+        from archer.contract import is_contract_document, handle_contract_response
+        if is_contract_document(response):
+            queries = handle_contract_response(response, technique_id=technique_id, group_name=group_name)
+            for q in queries:
+                q["tactic"] = tactic
+            return queries
+    except Exception as e:
+        print(f"  [contract] response handling failed for {technique_id}: {e}")
+        return []
+
+    # Parse the response (legacy JSON shape)
     queries = parse_llm_response(response)
 
     # Add tactic to each query

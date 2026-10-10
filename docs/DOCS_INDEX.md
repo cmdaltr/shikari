@@ -117,3 +117,7 @@ Single-page index of all project documentation.
 |----------|-------------|
 | [UNTESTED.md](other/UNTESTED.md) | Implemented but not validated features |
 | [FUTURE.md](other/FUTURE.md) | Planned features and roadmap |
+
+## Output contract
+
+- [archer/contract/README.md](../archer/contract/README.md) — strict output contract v1.0: validator, legacy lint gate, LLM pipeline hook, exemplars and rationale (`archer/contract/docs/`).

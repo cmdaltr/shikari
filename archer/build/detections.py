@@ -824,6 +824,17 @@ def _write_bespoke_yamls(queries, group_name, technique_id, technique_name, tact
         filename = f"{safe_name}_{safe_source}_bespoke.yaml"
         filepath = output_dir / filename
 
+        # Contract gate (archer.contract): warn-only unless ARCHER_CONTRACT_STRICT=1
+        try:
+            from archer.contract import gate_query
+            allowed, _ = gate_query(query_text, label=filename)
+        except Exception as gate_err:
+            print(f"  [contract] gate error for {filename}: {gate_err}")
+            allowed = True
+        if not allowed:
+            print(f"  [contract BLOCKED] not written: {filepath}")
+            continue
+
         with open(filepath, "w") as f:
             yaml.dump(detection, f, default_flow_style=False, sort_keys=False)
 

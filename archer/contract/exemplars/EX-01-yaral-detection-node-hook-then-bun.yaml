@@ -1,0 +1,327 @@
+archer_output:
+  contract_version: "1.0"
+  kind: rule
+  request_ref: REQ-2026-10-10-001
+  rule:
+    rule_id: c15d1404-5d1f-40d2-bb43-249ceccdc19c
+    name: execution_t1059_007_udm_process_node_hook_setup_then_bun_payload
+    author: Archer Detection Engineering
+    created: "2026-10-10"
+    modified: "2026-10-10"
+    version: "1.0.0"
+    status: draft
+    detection_type: scheduled_detection
+    siem: yara_l
+    target_os:
+      - macos
+      - linux
+      - windows
+    log_sources:
+      - id: LS1
+        siem_source: PROCESS_LAUNCH
+        product: Microsoft Defender for Endpoint
+        udm_log_type: WINDOWS_DEFENDER_ATP
+        ingestion:
+          status: unverified
+          profile_ref: ENVPROFILE-A-secops-full-mde
+        fields:
+          - path: metadata.event_type
+            population: known_populated
+            os:
+              - macos
+              - linux
+              - windows
+          - path: target.process.file.full_path
+            population: known_populated
+            os:
+              - macos
+              - linux
+              - windows
+          - path: target.process.command_line
+            population: known_populated
+            os:
+              - macos
+              - linux
+              - windows
+          - path: principal.process.command_line
+            population: known_populated
+            os:
+              - macos
+              - linux
+              - windows
+            note: On macOS fork+exec children this is the pre-exec fork copy's command line, which equals the parent's. Usable for evidence, not for PID joins.
+          - path: principal.asset_id
+            population: known_populated
+            os:
+              - macos
+              - linux
+              - windows
+          - path: principal.hostname
+            population: known_populated
+            os:
+              - macos
+              - linux
+              - windows
+          - path: principal.user.userid
+            population: known_populated
+            os:
+              - macos
+              - linux
+              - windows
+          - path: metadata.event_timestamp.seconds
+            population: known_populated
+            os:
+              - macos
+              - linux
+              - windows
+          - path: metadata.id
+            population: known_populated
+            os:
+              - macos
+              - linux
+              - windows
+        coverage_gaps:
+          - In the tenant observed on 2026-10-09 (ENVPROFILE-B) MDE DeviceProcessEvents are not exported to SecOps; PROCESS_LAUNCH arrives only from DeviceEvents on 59 hosts. This rule is valid only under a profile that streams DeviceProcessEvents.
+          - node setup.mjs executed from inside the .vscode directory carries no hook path in the command line and is not matched.
+    attack:
+      attack_version: "19.2"
+      bundle_ref: null
+      tactics:
+        - execution
+      technique_ids:
+        - T1059.007
+      mapping_rationale: Both stages are JavaScript executed by a runtime (node, bun) from a repository-local hook path; the observed behaviour is script execution, not the campaign's supply-chain delivery, so T1059.007 is the primary and only technique. T1059 has sub-techniques, so the sub-technique is mandatory.
+    lookback: 30m
+    schedule:
+      mode: live
+    confidence:
+      rating: High
+      rationale: Two ordered stages on one device within 30 minutes, each with a campaign-specific filename and path regex (setup.mjs under .claude or .vscode; math_init.js or math_symbol.js run by bun). Estate-wide two-day baseline (82k devices) returned only the positive-control host.
+    severity:
+      rating: High
+      rationale: Stage two is the credential-harvesting payload of the Mini Shai-Hulud campaign; successful execution exposes developer tokens (npm, GitHub, cloud CLI) on the device. Credential exposure at execution stage, before exfiltration is confirmed, is High rather than Critical.
+    false_positives:
+      - id: FP1
+        scenario: A developer or CI job syntax-checks or inspects the hook script without executing it (node --check, git show, shasum, xcodebuild bundling).
+        population: Developers on repositories that contain .vscode/setup.mjs; build agents
+        distinguishing_fields:
+          - field: target.process.command_line
+            benign_pattern: contains --check, git log|show|diff|grep|status|ls-tree|cat-file, gh search code, or a checksum tool name
+        handled_by: suppression
+        suppression_id: S1
+      - id: FP2
+        scenario: A legitimate repository ships its own .vscode/setup.mjs and a bun task named math_init.js; both run on the same host within 30 minutes.
+        population: Any developer host; no such repository was observed in the two-day estate baseline
+        distinguishing_fields:
+          - field: principal.process.command_line
+            benign_pattern: parent is an IDE task runner or npm script, not npm install; analyst confirms the repository origin
+        handled_by: triage
+        suppression_id: null
+    tuning_notes:
+      baseline:
+        window_days: 2
+        before_tuning: 1
+        after_tuning: 1
+        alerts_per_day_after_aggregation: null
+        measured_on: "2026-10-09"
+        measurement_procedure: Run the KQL port of stage one and stage two over the full estate for 7 days in Defender Advanced Hunting, pair on DeviceId within 30 minutes, count distinct DeviceId per day. The 2026-10-09 measurement covered 2 days and returned the test host only; it does not satisfy the 7-day requirement for production.
+      suppressions:
+        - id: S1
+          logic_ref: "// S1:"
+          reason: Syntax checks, git object reads, checksum tools and xcodebuild reference the script path on the command line without executing it; these were the false positives in the KQL baselines.
+          depends_on_enrichment: false
+          fails_closed_how: Literal regex on the detecting event's own command line; no external data, so it cannot be empty.
+      dependencies: []
+      first_parameter_to_adjust: The match window (30m). Widen to 60m if stage two is delayed by slow npm installs; narrow to 10m if unrelated bun tasks pair with a hook run.
+      known_limitations:
+        - Device-level join, so repeated setup-then-payload sequences on one host inside 30 minutes collapse into one detection.
+        - Requires the hook path in the command line; node setup.mjs run from inside .vscode is missed (see coverage_gaps).
+        - libuv fork copies of node on macOS appear as extra PROCESS_LAUNCH events and inflate setup_event_count; they are not false positives.
+      split_from: []
+    references:
+      - id: REF1
+        title: Mini Shai-Hulud analyst notes and Google SecOps YARA-L searches, revision 2 and 3 (workbook rows Q050-Q055, Q052-Q053 positive control)
+        locator: archer fable fidelity workbook (populated).xlsx, Queries tab, Q052 and Q053, Notes column
+        accessed: "2026-10-10"
+        used_for:
+          - stage one and stage two logic
+          - exclusion list S1
+          - baseline and positive-control results
+    indicators: []
+    reference_lists: []
+    entity_output:
+      timestamp_first: $first_seen
+      timestamp_last: $last_seen
+      device: $hostnames
+      account: $accounts
+      process: $payload_processes, $payload_commands
+      parent_command_line: $payload_parent_commands, $setup_parent_commands
+      evidence_value: $setup_commands, $payload_commands
+      source_table: null
+    correlation:
+      events:
+        - var: setup
+          source_id: LS1
+          role: anchor
+        - var: payload
+          source_id: LS1
+          role: evidence
+      join_keys:
+        - key: principal.asset_id
+          holds_on:
+            - macos
+            - linux
+            - windows
+          mitigation: null
+      ordering: setup.metadata.event_timestamp.seconds <= payload.metadata.event_timestamp.seconds
+      window: 30m
+    regexes:
+      - id: RX1
+        field: target.process.file.full_path
+        pattern: |-
+          (^|[\\/])node(\.exe)?$
+        engine: re2
+        literal_encoding: yara_l_backtick
+        must_match:
+          - '/usr/local/bin/node'
+          - 'C:\Program Files\nodejs\node.exe'
+        must_not_match:
+          - '/usr/local/bin/nodemon'
+          - '/usr/bin/node-gyp'
+      - id: RX2
+        field: target.process.command_line
+        pattern: |-
+          (^|[\s"'])([^"'\s]*[\\/])?(\.claude|\.vscode)[\\/]setup\.mjs([\s"']|$)
+        engine: re2
+        literal_encoding: yara_l_backtick
+        must_match:
+          - 'node .vscode/setup.mjs'
+          - '/usr/local/bin/node /Users/dev/repo/.claude/setup.mjs --silent'
+        must_not_match:
+          - 'node setup.mjs'
+          - 'node .vscode/setup.mjs.bak'
+      - id: RX3
+        field: target.process.command_line
+        pattern: |-
+          (--check|\bgit\s+(log|show|diff|grep|status|ls-tree|cat-file)\b|\bgh\s+search\s+code\b|\b(shasum|sha1sum|sha256sum|md5|md5sum|xcodebuild)\b)
+        engine: re2
+        literal_encoding: yara_l_backtick
+        must_match:
+          - 'node --check .vscode/setup.mjs'
+          - 'git show HEAD:.vscode/setup.mjs'
+        must_not_match:
+          - 'node .vscode/setup.mjs'
+          - 'bun run .vscode/math_init.js'
+      - id: RX4
+        field: target.process.file.full_path
+        pattern: |-
+          (^|[\\/])bun(\.exe)?$
+        engine: re2
+        literal_encoding: yara_l_backtick
+        must_match:
+          - '/opt/homebrew/bin/bun'
+        must_not_match:
+          - '/usr/bin/bundle'
+      - id: RX5
+        field: target.process.command_line
+        pattern: |-
+          (^|[\s"'])(run\s+)?([^"'\s]*[\\/])?(math_init|math_symbol)\.js([\s"']|$)
+        engine: re2
+        literal_encoding: yara_l_backtick
+        must_match:
+          - 'bun run .vscode/math_init.js'
+          - 'bun /tmp/x/Math_Symbol.js'
+        must_not_match:
+          - 'bun run math_init.json'
+          - 'bun test'
+    complexity:
+      lines: 55
+      event_variables_or_joins: 2
+      union_branches: 0
+      nesting_depth: 0
+    validation:
+      fidelity_basis: logic_review
+      compile:
+        status: not_run
+      field_existence:
+        schema_ref: Google SecOps UDM field list, 2026-10
+        status: checked
+      field_population:
+        status: known_populated
+        evidence: MDE PROCESS_LAUNCH in SecOps populates target.process and principal.process fields on 2,619 of 2,619 sampled events (workbook Q054 Notes, UDM check 2026-10-09).
+      ingestion:
+        status: unverified
+        profile_ref: ENVPROFILE-A-secops-full-mde
+      join_portability:
+        status: pass
+        notes: Device-level join only. PID joins rejected because macOS MDE records the fork copy as initiator and principal.process.parent_process.pid is empty in UDM for this source.
+      regex_checks:
+        status: not_run
+      positive_control:
+        status: not_run
+        procedure: On a macOS test host, run node .vscode/setup.mjs followed within 30 minutes by bun run .vscode/math_init.js; confirm one detection on that device with both stage command lines in the outcome. The equivalent KQL port passed on 2026-10-09 (REF1); the YARA-L form has not been executed in a tenant that ingests PROCESS_LAUNCH.
+        evidence_ref: REF1
+        date: null
+    query: |
+      rule execution_t1059_007_udm_process_node_hook_setup_then_bun_payload {
+        meta:
+          author = "Archer Detection Engineering"
+          description = "node executes a repository-hook setup.mjs under .claude or .vscode, then bun executes math_init.js or math_symbol.js on the same device within 30 minutes (Mini Shai-Hulud two-stage payload)."
+          rule_id = "c15d1404-5d1f-40d2-bb43-249ceccdc19c"
+          version = "1.0.0"
+          status = "draft"
+          detection_type = "scheduled_detection"
+          attack_version = "19.2"
+          tactic = "execution"
+          technique_ids = "T1059.007"
+          severity = "HIGH"
+          priority = "HIGH"
+          confidence = "High"
+          reference = "REF1"
+
+        events:
+          // Stage one: node launches the hook setup script
+          $setup.metadata.event_type = "PROCESS_LAUNCH"
+          $setup.target.process.command_line != ""
+          re.regex($setup.target.process.file.full_path, `(^|[\\/])node(\.exe)?$`) nocase
+          re.regex($setup.target.process.command_line, `(^|[\s"'])([^"'\s]*[\\/])?(\.claude|\.vscode)[\\/]setup\.mjs([\s"']|$)`) nocase
+          // S1: syntax checks, git object reads and checksum tools reference the path without executing it
+          not re.regex($setup.target.process.command_line, `(--check|\bgit\s+(log|show|diff|grep|status|ls-tree|cat-file)\b|\bgh\s+search\s+code\b|\b(shasum|sha1sum|sha256sum|md5|md5sum|xcodebuild)\b)`) nocase
+
+          // Stage two: bun launches the second-stage payload
+          $payload.metadata.event_type = "PROCESS_LAUNCH"
+          $payload.target.process.command_line != ""
+          re.regex($payload.target.process.file.full_path, `(^|[\\/])bun(\.exe)?$`) nocase
+          re.regex($payload.target.process.command_line, `(^|[\s"'])(run\s+)?([^"'\s]*[\\/])?(math_init|math_symbol)\.js([\s"']|$)`) nocase
+          not re.regex($payload.target.process.command_line, `(--check|\bgit\s+(log|show|diff|grep|status|ls-tree|cat-file)\b|\bgh\s+search\s+code\b|\b(shasum|sha1sum|sha256sum|md5|md5sum|xcodebuild)\b)`) nocase
+
+          // Same device. Device-level join only: on macOS MDE the initiating process of a
+          // fork+exec child is the pre-exec fork copy, so a PID join does not hold, and
+          // principal.process.parent_process.pid is empty in UDM for this source.
+          $setup.principal.asset_id = $device
+          $payload.principal.asset_id = $device
+          $device != ""
+
+          // Ordering: setup before payload
+          $setup.metadata.event_timestamp.seconds <= $payload.metadata.event_timestamp.seconds
+
+        match:
+          $device over 30m
+
+        outcome:
+          $risk_score = max(if($payload.target.process.command_line != "", 85, 0))
+          $first_seen = min($setup.metadata.event_timestamp.seconds)
+          $last_seen = max($payload.metadata.event_timestamp.seconds)
+          $hostnames = array_distinct($setup.principal.hostname)
+          $accounts = array_distinct($payload.principal.user.userid)
+          $setup_commands = array_distinct($setup.target.process.command_line)
+          $setup_parent_commands = array_distinct($setup.principal.process.command_line)
+          $payload_processes = array_distinct($payload.target.process.file.full_path)
+          $payload_commands = array_distinct($payload.target.process.command_line)
+          $payload_parent_commands = array_distinct($payload.principal.process.command_line)
+          $setup_event_count = count_distinct($setup.metadata.id)
+          $payload_event_count = count_distinct($payload.metadata.id)
+
+        condition:
+          $setup and $payload
+      }
