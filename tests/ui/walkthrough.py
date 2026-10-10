@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+from playwright.sync_api import sync_playwright, Error as PWError, TimeoutError as PWTimeout
 
 BASE = os.getenv("ARCHER_BASE_URL", "http://localhost:8000").rstrip("/")
 # Defaults are the documented first-run admin from GETTING_STARTED.md
@@ -82,7 +82,14 @@ def step(name):
 
 
 def open_tab(page, tab):
-    page.goto(f"{BASE}/")
+    try:
+        page.goto(f"{BASE}/")
+    except PWError as e:
+        # The previous results page can still be navigating (attack-flow build), aborting this one
+        if "ERR_ABORTED" not in str(e):
+            raise
+        page.wait_for_timeout(1000)
+        page.goto(f"{BASE}/")
     page.click(f'button.tab-button[data-tab="{tab}"]')
     page.wait_for_timeout(600)
 

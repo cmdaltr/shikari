@@ -691,6 +691,9 @@ def construct_yaml(
         print(f"  ⚠️  Bespoke exclusions skipped: {e}")
 
     all_tactics = additional_tactics(tid, tactic)
+    # Filename-safe name for every vendor's file; YAML metadata keeps the original.
+    # Set before the MDE loop: techniques with no MDE query still write Splunk/SecOps files.
+    name_safe = name.replace(" ", "").replace("/", "")
 
     # Writing MDE YAML file
     for query in appended_mde_queries:
@@ -722,9 +725,6 @@ def construct_yaml(
                 f"  {name} ({table_name}) breaches the MDE entityMapping limit of 10.\n   Please review before commiting to production.\n"
             )
             time.sleep(0.5)"""
-        # Create filename-safe version of the name (remove spaces and slashes)
-        # But keep the original name for writing to the YAML metadata
-        name_safe = name.replace(" ", "").replace("/", "")
         # Use the actual MDE table name from the query for the filename
         # NOT the index_name parameter which might be a Splunk index
         filename = f"{name_safe}_{table_name}.yaml"
