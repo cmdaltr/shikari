@@ -505,6 +505,32 @@
   $('af-order').addEventListener('click', () => {
     record(); state.reversed = !state.reversed; state.offsets = {}; render();
   });
+  // Export what's shown: the server applies the edits to the flow and builds the bundle
+  const stix = $('af-stix');
+  if (stix) stix.addEventListener('click', async e => {
+    const edited = state.vendors.size !== DEFAULTS.vendors.length || !state.gaps
+      || state.removed.size || state.unlinked.size;
+    if (!edited) return;  // the unedited flow: the file written with the results
+    e.preventDefault();
+    try {
+      const r = await fetch('/api/attack-flow/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group_name: stix.dataset.group, state: snapshot() }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${stix.dataset.group}_edited_flow.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      status(`Couldn't export the edited flow (${err.message})`, 'error');
+    }
+  });
   $('af-undo').addEventListener('click', undo);
   $('af-reset').addEventListener('click', () => {
     record();

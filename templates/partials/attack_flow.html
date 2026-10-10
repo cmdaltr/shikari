@@ -63,8 +63,9 @@
       <button type="button" class="af-chip" id="af-reset" title="Restore the default view">Reset</button>
       <input type="search" id="af-search" class="af-search" placeholder="Find technique…" aria-label="Find technique">
       {% if attack_flow.stix_file %}
-      <a class="af-chip" href="/api/download/flow/{{ attack_flow.stix_file|urlencode }}" download
-         title="Attack Flow 2.x STIX bundle, opens in the CTID Attack Flow Builder">STIX</a>
+      <a class="af-chip" id="af-stix" href="/api/download/flow/{{ attack_flow.stix_file|urlencode }}" download
+         data-group="{{ group_name }}"
+         title="Attack Flow 2.x STIX bundle of the flow as shown (opens in the CTID Attack Flow Builder)">STIX</a>
       {% endif %}
       <button type="button" class="af-chip" id="af-expand" aria-pressed="false" title="Full screen">Expand</button>
     </div>
@@ -140,7 +141,9 @@
           saving the group again starts from the default view.</li>
       <li>Dragged positions are offsets from each card's default place. After regenerating a group,
           techniques that change tactic, or lanes that gain or lose techniques, can shift dragged cards.</li>
-      <li>The STIX download is the full flow, not the edited view: hidden techniques and removed links are still in it.</li>
+      <li>The STIX download follows the SIEM filters, Hide Undetected, hidden techniques and removed links.
+          Attack Flow has no layout, so positions, orientation and order aren't exported, and the Links toggle
+          only affects the display.</li>
     </ul>
   </details>
 

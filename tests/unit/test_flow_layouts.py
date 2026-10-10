@@ -134,3 +134,25 @@ def test_layout_goes_when_the_group_tag_is_removed(db):
     item.tags = json.dumps(["Hunt-1"]); db.flush()
     assert fl.prune_layouts(db, 1, old) == 1
     assert fl.load_layout(db, 1, "CVE-2024-3400") is None
+
+
+def test_export_applies_edits_to_the_saved_view(tmp_path):
+    view = {"lanes": [{"tactic": "Execution", "nodes": [
+                {"id": "T1059", "name": "Cmd", "tactics": ["Execution"], "vendors": {"mde": 1}, "detected": True, "degree": 1},
+                {"id": "T1105", "name": "Tool", "tactics": ["Execution"], "vendors": {"mde": 1}, "detected": True, "degree": 1}]}],
+            "edges": [{"from": "T1059", "to": "T1105", "vendors": ["mde"], "relevance": 0.8}],
+            "vendors": [{"key": "mde", "name": "MDE"}], "stats": {}}
+    (tmp_path / "Scattered_Spider_flow_view.json").write_text(json.dumps({"group_name": "Scattered Spider", "view": view}))
+    app = FastAPI()
+    app.include_router(fl.router)
+    client = TestClient(app)
+    with patch("archer.config.ATTACK_FLOWS_DIR", str(tmp_path)):
+        r = client.post("/api/attack-flow/export", json={"group_name": "Scattered Spider", "state": {}})
+        assert r.status_code == 200
+        assert "Scattered_Spider_edited_flow.json" in r.headers["content-disposition"]
+        assert {o.get("technique_id") for o in r.json()["objects"]} >= {"T1059", "T1105"}
+        r = client.post("/api/attack-flow/export",
+                        json={"group_name": "Scattered Spider", "state": {"unlinked": ["T1059>T1105"]}})
+        assert not [o for o in r.json()["objects"] if o["type"] == "attack-action"]
+        assert client.post("/api/attack-flow/export", json={"group_name": "APT1", "state": {}}).status_code == 404
+        assert client.post("/api/attack-flow/export", json={"group_name": "../etc", "state": {}}).status_code in (400, 404)

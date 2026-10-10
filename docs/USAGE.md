@@ -312,7 +312,7 @@ Hover or select a card to trace its links; the detail panel lists them and jumps
 | Horizontal / Vertical | Tactics as columns or rows |
 | Forward / Reverse | Kill-chain order |
 | Undo (⌘/Ctrl-Z) / Reset | Step back through edits, or return to the default view (Reset can be undone) |
-| STIX | Download the flow as an Attack Flow 2.x bundle |
+| STIX | Download the flow as shown, as an Attack Flow 2.x bundle |
 
 #### Saved edits
 
@@ -322,7 +322,7 @@ Things to be aware of:
 
 - Removing a group's last item from your library, or the `Group:`/`CVE:` tag from it, deletes the saved layout too. Saving the group again starts from the default view.
 - Dragged positions are offsets from each card's default place. After regenerating a group, techniques that change tactic, or lanes that gain or lose techniques, can shift dragged cards.
-- The STIX download is the full flow, not the edited view: hidden techniques and removed links are still in it.
+- The STIX download follows the SIEM filters, Hide Undetected, hidden techniques and removed links. Attack Flow has no layout, so positions, orientation and order aren't exported, and the Links toggle only affects the display.
 
 ### Reading Correlation Results
 

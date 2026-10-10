@@ -6311,6 +6311,9 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         os.makedirs(ATTACK_FLOWS_DIR, exist_ok=True)
         with open(os.path.join(ATTACK_FLOWS_DIR, attack_flow["stix_file"]), "w", encoding="utf-8") as fh:
             json.dump(to_attack_flow_bundle(attack_flow, group_name), fh, indent=2)
+        # The view itself, so an edited flow can be exported (/api/attack-flow/export)
+        with open(os.path.join(ATTACK_FLOWS_DIR, f"{safe_group}_flow_view.json"), "w", encoding="utf-8") as fh:
+            json.dump({"group_name": group_name, "view": attack_flow}, fh)
     except Exception as e:
         print(f"Attack flow view unavailable: {e}")
 

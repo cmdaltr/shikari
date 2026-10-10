@@ -11,7 +11,10 @@ import math
 import re
 from typing import Dict, Iterable, Optional
 
+import os
+
 from fastapi import APIRouter, Cookie, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from archer.database.db import get_db
 from archer.database.models import FlowLayout, LibraryCorrelation, LibraryDetection
@@ -156,3 +159,32 @@ async def put_flow_layout(request: Request, archer_session: Optional[str] = Cook
         return {"saved": True}
     finally:
         db.close()
+
+
+@router.post("/attack-flow/export")
+async def export_edited_flow(request: Request):
+    """The results page's flow, with the viewer's edits applied, as an Attack Flow 2.x bundle."""
+    from archer.config import ATTACK_FLOWS_DIR
+    from archer.security import sanitize_group_name
+    from archer.visualization.flow_view import apply_edits, to_attack_flow_bundle
+
+    body = await request.body()
+    if len(body) > MAX_BODY:
+        raise HTTPException(status_code=413, detail="Edits too large")
+    try:
+        payload = json.loads(body)
+        group_name = sanitize_group_name(str(payload["group_name"]))
+        state = clean_state(payload.get("state") or {})
+    except (ValueError, KeyError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid request: {e}")
+    path = os.path.join(ATTACK_FLOWS_DIR, f"{group_name}_flow_view.json")
+    if not group_name or os.path.dirname(os.path.abspath(path)) != os.path.abspath(ATTACK_FLOWS_DIR):
+        raise HTTPException(status_code=400, detail="Invalid group name")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            saved = json.load(fh)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="No flow for this group: open its results page first")
+    bundle = to_attack_flow_bundle(apply_edits(saved["view"], state), saved.get("group_name") or group_name)
+    return JSONResponse(bundle, headers={
+        "Content-Disposition": f'attachment; filename="{group_name}_edited_flow.json"'})

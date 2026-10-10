@@ -217,6 +217,41 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
     }
 
 
+def apply_edits(view: Dict, state: Dict) -> Dict:
+    """
+    The view as the results page shows it after the user's edits (state as
+    flow_layouts.clean_state returns it): SIEM filters, Hide Undetected, hidden
+    techniques and removed links. Positions, orientation and order are layout only.
+    The Links toggle is display only too, so links are kept.
+    """
+    present = [v["key"] for v in view["vendors"]]
+    vendors = set(state["vendors"]) if "vendors" in state else set(present)
+    removed = set(state.get("removed", []))
+    unlinked = set(state.get("unlinked", []))
+    show_gaps = state.get("gaps", True)
+
+    lanes, kept = [], {}
+    for lane in view["lanes"]:
+        members = []
+        for n in lane["nodes"]:
+            cov = {v: c for v, c in n["vendors"].items() if v in vendors}
+            if n["id"] in removed or (not cov and not show_gaps):
+                continue
+            kept[n["id"]] = dict(n, vendors=cov, detected=bool(cov))
+            members.append(kept[n["id"]])
+        if members:
+            lanes.append(dict(lane, nodes=members))
+    edges = []
+    for e in view["edges"]:
+        evs = [v for v in e["vendors"] if v in vendors]
+        if evs and e["from"] in kept and e["to"] in kept and f"{e['from']}>{e['to']}" not in unlinked:
+            edges.append(dict(e, vendors=evs))
+    for n in kept.values():
+        n["degree"] = sum(1 for e in edges if n["id"] in (e["from"], e["to"]))
+    return dict(view, lanes=lanes, edges=edges,
+                vendors=[v for v in view["vendors"] if v["key"] in vendors], edited=True)
+
+
 # ── Attack Flow 2.x export (CTID Attack Flow Builder) ───────────────────────
 
 AF_EXTENSION = "extension-definition--fb9c968a-745b-4ade-9b25-c324172197f4"
@@ -261,7 +296,7 @@ def to_attack_flow_bundle(view: Dict, group_name: str) -> Dict:
     flow = {
         "type": "attack-flow", "spec_version": "2.1", "id": _stix_id("attack-flow", group_name),
         "created": now, "modified": now, "created_by_ref": author, "extensions": ext,
-        "name": f"{group_name}: correlated techniques",
+        "name": f"{group_name}: correlated techniques" + (" (edited)" if view.get("edited") else ""),
         "description": (f"Techniques Archer correlated for {group_name}: each arrow is a detection "
                         "correlation (first technique seen before the second on the same host)."),
         "scope": "threat-actor", "start_refs": starts,

@@ -62,3 +62,52 @@ def test_attack_flow_bundle_follows_correlations(tmp_path):
     again = {o["technique_id"]: o["id"] for o in to_attack_flow_bundle(view, "Scattered Spider")["objects"]
              if o["type"] == "attack-action"}
     assert again == {t: o["id"] for t, o in actions.items()}
+
+
+def _three_step_view(tmp_path):
+    phish = _det(tmp_path, "Phishing", "T1566", ["Initial Access"], "GoogleSecOps")
+    pwsh_s = _det(tmp_path, "PowerShell", "T1059.001", ["Execution"], "GoogleSecOps")
+    pwsh_m = _det(tmp_path, "PowerShell", "T1059.001", ["Execution"], "MicrosoftThreatProtection")
+    c2 = _det(tmp_path, "Web Protocols", "T1071.001", ["Command And Control"], "MicrosoftThreatProtection")
+    return build_flow_view(
+        {"googlesecops": [phish, pwsh_s], "mde": [pwsh_m, c2]},
+        [{"vendor": "googlesecops", "a": phish, "b": pwsh_s, "relevance_score": 0.9},
+         {"vendor": "mde", "a": pwsh_m, "b": c2, "relevance_score": 0.7}],
+        attributed=[{"id": "T1486", "name": "Data Encrypted for Impact", "tactics": ["Impact"]}])
+
+
+def _ids(view):
+    return sorted(n["id"] for lane in view["lanes"] for n in lane["nodes"])
+
+
+def _links(view):
+    return sorted((e["from"], e["to"]) for e in view["edges"])
+
+
+def test_apply_edits_matches_what_the_page_shows(tmp_path):
+    from archer.visualization.flow_view import apply_edits
+
+    view = _three_step_view(tmp_path)
+    assert apply_edits(view, {}) == dict(view, edited=True)
+
+    unlinked = apply_edits(view, {"unlinked": ["T1566>T1059.001"]})
+    assert _links(unlinked) == [("T1059.001", "T1071.001")]
+
+    hidden = apply_edits(view, {"removed": ["T1071.001"], "gaps": False})
+    assert _ids(hidden) == ["T1059.001", "T1566"]  # T1486 is a gap, T1071.001 hidden
+    assert _links(hidden) == [("T1566", "T1059.001")]
+
+    secops = apply_edits(view, {"vendors": ["googlesecops"], "gaps": False})
+    assert _ids(secops) == ["T1059.001", "T1566"]  # T1071.001 is MDE-only
+    assert [n["vendors"] for lane in secops["lanes"] for n in lane["nodes"] if n["id"] == "T1059.001"] == [{"googlesecops": 1}]
+    assert _links(secops) == [("T1566", "T1059.001")]
+
+
+def test_edited_bundle_drops_unlinked_techniques(tmp_path):
+    from archer.visualization.flow_view import apply_edits
+
+    bundle = to_attack_flow_bundle(apply_edits(_three_step_view(tmp_path), {"unlinked": ["T1059.001>T1071.001"]}), "G")
+    actions = {o["technique_id"] for o in bundle["objects"] if o["type"] == "attack-action"}
+    assert actions == {"T1566", "T1059.001"}
+    flow = next(o for o in bundle["objects"] if o["type"] == "attack-flow")
+    assert flow["name"] == "G: correlated techniques (edited)"
