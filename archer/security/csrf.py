@@ -9,11 +9,6 @@ from datetime import datetime, timedelta
 from typing import Dict
 import threading
 
-# Secret key for signing CSRF tokens
-# In production, this should be loaded from environment variable
-import os
-CSRF_SECRET_KEY = os.getenv("CSRF_SECRET_KEY", secrets.token_hex(32))
-
 # In-memory store for CSRF tokens
 # Format: {token: {"session_id": str, "created_at": datetime}}
 csrf_tokens: Dict[str, dict] = {}

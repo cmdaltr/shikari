@@ -76,6 +76,10 @@ def validate_password(password: str) -> Tuple[bool, str]:
     if len(password) > 40:
         return False, "Password must be 40 characters or less"
 
+    # bcrypt 4.x raises on input over 72 bytes; multi-byte characters can get there within 40 characters
+    if len(password.encode("utf-8")) > 72:
+        return False, "Password is too long once encoded (72 bytes maximum); use fewer non-ASCII characters"
+
     # Check for at least one letter
     if not re.search(r'[a-zA-Z]', password):
         return False, "Password must contain at least one letter"
@@ -92,13 +96,3 @@ def validate_password(password: str) -> Tuple[bool, str]:
 
     return True, ""
 
-
-def generate_reset_token() -> str:
-    """
-    Generate a secure random token for password reset.
-
-    Returns:
-        64-character hexadecimal token
-    """
-    import secrets
-    return secrets.token_hex(32)

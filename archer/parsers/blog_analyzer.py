@@ -20,6 +20,42 @@ from typing import Dict, List, Optional
 from bs4 import BeautifulSoup
 
 
+def _check_public_url(url: str) -> None:
+    """Raise ValueError unless url is http(s) and every address its host resolves to is globally routable."""
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("Invalid URL scheme. Only HTTP and HTTPS are allowed.")
+    if not parsed.hostname:
+        raise ValueError("Invalid URL: no hostname found.")
+    try:
+        infos = socket.getaddrinfo(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+    except socket.gaierror:
+        raise ValueError("Unable to resolve hostname.")
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        # is_global excludes RFC1918, loopback, link-local, CGNAT/Tailscale (100.64/10), 0/8, multicast, reserved
+        if not ip.is_global:
+            raise ValueError("Access to private, internal or reserved addresses is not allowed.")
+
+
+def _fetch_public_url(url: str, max_redirects: int = 3) -> requests.Response:
+    """GET url following redirects manually so each hop is re-validated (requests would skip the check)."""
+    from urllib.parse import urljoin
+
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    for _ in range(max_redirects + 1):
+        _check_public_url(url)
+        response = requests.get(url, headers=headers, timeout=30, allow_redirects=False)
+        if not response.is_redirect:
+            return response
+        url = urljoin(url, response.headers.get("Location", ""))
+    raise ValueError(f"Too many redirects (max {max_redirects}).")
+
+
 def analyze_blog_post(url: str) -> Dict:
     """
     Analyze a blog post URL and extract threat intelligence.
@@ -38,60 +74,11 @@ def analyze_blog_post(url: str) -> Dict:
         - error: str (if failed)
     """
     try:
-        # SECURITY: Validate URL to prevent SSRF attacks
-        from urllib.parse import urlparse
-
-        parsed_url = urlparse(url)
-
-        # Only allow HTTP/HTTPS schemes
-        if parsed_url.scheme not in ['http', 'https']:
-            return {
-                "success": False,
-                "error": "Invalid URL scheme. Only HTTP and HTTPS are allowed."
-            }
-
-        # Block internal/private IP addresses to prevent SSRF
-        hostname = parsed_url.hostname
-        if not hostname:
-            return {
-                "success": False,
-                "error": "Invalid URL: no hostname found."
-            }
-
-        # Block localhost, private IPs, and link-local addresses
-        import socket
+        # SECURITY: every hop (the URL and each redirect) must resolve only to public addresses
         try:
-            ip_addr = socket.gethostbyname(hostname)
-            # Check if IP is private/internal
-            octets = ip_addr.split('.')
-            if len(octets) == 4:
-                first_octet = int(octets[0])
-                second_octet = int(octets[1])
-
-                # Block private ranges
-                if first_octet == 10:  # 10.0.0.0/8
-                    return {"success": False, "error": "Access to private IP ranges is not allowed."}
-                if first_octet == 172 and 16 <= second_octet <= 31:  # 172.16.0.0/12
-                    return {"success": False, "error": "Access to private IP ranges is not allowed."}
-                if first_octet == 192 and second_octet == 168:  # 192.168.0.0/16
-                    return {"success": False, "error": "Access to private IP ranges is not allowed."}
-                if first_octet == 127:  # 127.0.0.0/8 (localhost)
-                    return {"success": False, "error": "Access to localhost is not allowed."}
-                if first_octet == 169 and second_octet == 254:  # 169.254.0.0/16 (link-local)
-                    return {"success": False, "error": "Access to link-local addresses is not allowed."}
-                if first_octet >= 224:  # Multicast and reserved
-                    return {"success": False, "error": "Access to multicast/reserved IP ranges is not allowed."}
-        except socket.gaierror:
-            return {
-                "success": False,
-                "error": "Unable to resolve hostname."
-            }
-
-        # Fetch the blog post
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=30, allow_redirects=True, max_redirects=3)
+            response = _fetch_public_url(url, max_redirects=3)
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
 
         # SECURITY: Limit response size to prevent DoS
         if len(response.content) > 10 * 1024 * 1024:  # 10MB limit

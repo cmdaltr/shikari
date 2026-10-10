@@ -22,6 +22,7 @@ SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@archer.local")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Archer Security Platform")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
 EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
+SMTP_TIMEOUT = float(os.getenv("SMTP_TIMEOUT", "10"))
 
 # Base URL for reset links
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
@@ -211,7 +212,7 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str) -> b
         msg.attach(part2)
 
         # Send email
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=SMTP_TIMEOUT) as server:
             if SMTP_USE_TLS:
                 server.starttls()
 

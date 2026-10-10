@@ -156,11 +156,7 @@ Cross-Site Request Forgery (CSRF) protection prevents unauthorized commands from
 - **Token Expiry**: 1 hour
 - **Storage**: In-memory dictionary (thread-safe)
 
-### Configuration
-```bash
-# Set via environment variable
-export CSRF_SECRET_KEY="your-secret-key-here"
-```
+Tokens are random and stored per process, not signed, so run a single worker (the default) or put sticky sessions in front of multiple workers.
 
 ### Usage in Forms
 ```html

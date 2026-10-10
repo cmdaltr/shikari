@@ -53,13 +53,13 @@ def create_password_reset_request(email: str, db: SQLAlchemySession) -> Optional
     # Invalidate any existing reset tokens for this user
     db.query(PasswordReset).filter(
         PasswordReset.user_id == user.id,
-        PasswordReset.is_used == False
-    ).update({"is_used": True})
+        PasswordReset.used == False
+    ).update({"used": True})
 
     # Create new reset request
     reset_request = PasswordReset(
         user_id=user.id,
-        token=token,
+        reset_token=token,
         expires_at=expires_at
     )
 
@@ -82,8 +82,8 @@ def validate_reset_token(token: str, db: SQLAlchemySession) -> Optional[User]:
     """
     # Find reset request
     reset_request = db.query(PasswordReset).filter(
-        PasswordReset.token == token,
-        PasswordReset.is_used == False
+        PasswordReset.reset_token == token,
+        PasswordReset.used == False
     ).first()
 
     if not reset_request:
@@ -124,12 +124,12 @@ def reset_password_with_token(token: str, new_password: str, db: SQLAlchemySessi
     hashed_password = hash_password(new_password)
 
     # Update user's password
-    user.hashed_password = hashed_password
+    user.password_hash = hashed_password
 
     # Mark token as used
     db.query(PasswordReset).filter(
-        PasswordReset.token == token
-    ).update({"is_used": True, "used_at": datetime.utcnow()})
+        PasswordReset.reset_token == token
+    ).update({"used": True})
 
     db.commit()
 

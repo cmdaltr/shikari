@@ -59,29 +59,15 @@ def get_stix_data(url, cache_days=7):
         return stix2.parse(response.text, allow_custom=True)
 
     except requests.exceptions.SSLError as ssl_err:
-        # Fallback: retry without SSL verification
-        import warnings
-        warnings.warn(f"SSL verification failed: {ssl_err}. Retrying without SSL verification...")
-        print("⚠️  SSL verification failed, retrying without verification")
-        try:
-            response = requests.get(url, verify=False, timeout=30)
-            response.raise_for_status()
-            print("✓ MITRE ATT&CK data fetched (SSL verification disabled)")
-
-            # Save to cache
-            try:
-                with open(cache_path, "w", encoding="utf-8") as f:
-                    f.write(response.text)
-                print(f"Cached MITRE ATT&CK data to {cache_path}")
-            except Exception as e:
-                print(f"Warning: Could not cache data: {e}")
-
-            # Load the STIX bundle
-            return stix2.parse(response.text, allow_custom=True)
-
-        except Exception as e2:
-            print(f"❌ Failed to fetch MITRE ATT&CK data even without SSL: {e2}")
-            raise
+        # No silent downgrade: an unverified bundle would be cached and trusted for cache_days.
+        # Behind a TLS-inspecting proxy, point REQUESTS_CA_BUNDLE at the proxy CA instead.
+        print(f"❌ SSL verification failed fetching MITRE ATT&CK data: {ssl_err}")
+        print("   Set REQUESTS_CA_BUNDLE to your proxy's CA bundle if you are behind TLS inspection.")
+        if cache_path.exists():
+            print(f"Using stale cache from {cache_path}")
+            with open(cache_path, "r", encoding="utf-8") as f:
+                return stix2.parse(f.read(), allow_custom=True)
+        raise
 
     except (requests.RequestException, requests.exceptions.ConnectionError) as e:
         # Network error - try to use stale cache if available

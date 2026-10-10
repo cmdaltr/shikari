@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from archer.security import sanitize_filename, validate_safe_path, sanitize_group_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -34,6 +35,8 @@ import json
 import logging
 import threading
 import re
+import html
+from urllib.parse import quote
 import yaml
 from archer.build.progress import read_progress, write_progress
 from archer.config import (
@@ -971,8 +974,22 @@ def markdown_links_to_html(text):
     Convert markdown links to HTML anchor tags.
     Example: [C0027](https://attack.mitre.org/campaigns/C0027) -> <a href="https://attack.mitre.org/campaigns/C0027" target="_blank">C0027</a>
     """
-    pattern = r"\[([^\]]+)\]\(([^)]+)\)"
-    return re.sub(pattern, r'<a href="\2" target="_blank">\1</a>', text)
+    # Output is rendered with |safe: escape everything, then allow http(s) links only
+    text = html.escape(text or "", quote=True)
+    pattern = r"\[([^\]]+)\]\((https?://[^)\s]+)\)"
+    return re.sub(pattern, r'<a href="\2" target="_blank" rel="noopener noreferrer">\1</a>', text)
+
+
+def library_description_html(content_data):
+    """Rebuild a library item's description from client-supplied content; never trust its HTML."""
+    text = content_data.get("description")
+    if not text:
+        # Older saves only carry description_html: turn anchors back into markdown, drop other tags
+        text = re.sub(
+            r'<a\s[^>]*href="([^"]*)"[^>]*>(.*?)</a>', r"[\2](\1)", content_data.get("description_html", ""), flags=re.S
+        )
+        text = html.unescape(re.sub(r"<[^>]+>", "", text))
+    return markdown_links_to_html(text)
 
 
 def markdown_links_to_plain(text):
@@ -1469,6 +1486,30 @@ async def favicon():
             },
         )
     return HTMLResponse(status_code=404)
+
+
+async def _sweep_expired_state():
+    """Bound the in-memory CSRF and rate-limit stores and prune expired DB sessions."""
+    import asyncio
+    from archer.security.csrf import cleanup_expired_tokens
+    from archer.security.rate_limit import cleanup_old_entries
+    from archer.auth.session import cleanup_expired_sessions
+
+    while True:
+        await asyncio.sleep(600)
+        try:
+            cleanup_expired_tokens()
+            cleanup_old_entries()
+            await run_in_threadpool(cleanup_expired_sessions)
+        except Exception as e:
+            logger.warning(f"Expired-state sweep failed: {e}")
+
+
+@app.on_event("startup")
+async def start_expired_state_sweep():
+    import asyncio
+
+    app.state.expired_state_sweep = asyncio.create_task(_sweep_expired_state())
 
 
 # Cache-busting token for static assets
@@ -2360,7 +2401,7 @@ async def get_correlation_params():
         threshold = float(threshold_match.group(1)) if threshold_match else 0.40
 
         # Read engine.py for per_vendor and tech_freq
-        engine_path = os.path.join(os.path.dirname(__file__), "genai", "engine.py")
+        engine_path = os.path.join(os.path.dirname(__file__), "ai", "genai", "engine.py")
         with open(engine_path, "r") as f:
             engine_content = f.read()
 
@@ -2392,9 +2433,17 @@ async def get_correlation_params():
 
 
 @app.post("/api/correlation/params")
-async def save_correlation_params(request: Request):
-    """Save correlation parameters to config files."""
+async def save_correlation_params(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Save correlation parameters to config files. Admin only: this rewrites source files."""
     import re
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"success": False, "message": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"success": False, "message": "Admin access required"}, status_code=403)
 
     try:
         data = await request.json()
@@ -2427,7 +2476,7 @@ async def save_correlation_params(request: Request):
             f.writelines(lines)
 
         # Update engine.py
-        engine_path = os.path.join(os.path.dirname(__file__), "genai", "engine.py")
+        engine_path = os.path.join(os.path.dirname(__file__), "ai", "genai", "engine.py")
         with open(engine_path, "r") as f:
             content = f.read()
 
@@ -2802,7 +2851,7 @@ async def generate(
             )
         except Exception:
             pass
-        return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
+        return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}"})
     else:
         # Group not in ATT&CK - search blogs automatically
         print(f"Group '{group_name}' not found in ATT&CK, searching security blogs...")
@@ -2822,14 +2871,14 @@ async def generate(
                 # For now, redirect to manual with a message
                 return JSONResponse(
                     {
-                        "redirect_url": f"/manual?group_name={group_name}&blog_found=true&source={blog_result.get('source', '')}"
+                        "redirect_url": f"/manual?group_name={quote(group_name)}&blog_found=true&source={quote(blog_result.get('source', ''))}"
                     }
                 )
         except Exception as e:
             print(f"Blog search failed: {e}")
 
         # Fallback to manual entry
-        return JSONResponse({"redirect_url": f"/manual?group_name={group_name}"})
+        return JSONResponse({"redirect_url": f"/manual?group_name={quote(group_name)}"})
 
 
 @app.post("/generate/cve")
@@ -3153,7 +3202,7 @@ async def generate_cve(
     except Exception:
         pass
 
-    return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
+    return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}"})
 
 
 @app.post("/hunt/technique")
@@ -3337,7 +3386,7 @@ async def hunt_technique(
     except Exception:
         pass
 
-    return JSONResponse({"redirect_url": f"/progress?group_name={group_name}"})
+    return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}"})
 
 
 # Progress page endpoint
@@ -3387,56 +3436,54 @@ def health():
     return {"status": "ok"}
 
 
+_DRAFT_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
+
+
+def _draft_user(request: Request, archer_session: Optional[str], requested_user_id: str = ""):
+    """Return (user_id or None, error response or None). A requested user_id must be the session user."""
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return None, JSONResponse({"ok": False, "error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    if requested_user_id and str(requested_user_id) != str(user.id):
+        return None, JSONResponse({"ok": False, "error": "user_id mismatch"}, status_code=403)
+    return (str(user.id) if requested_user_id else None), None
+
+
+def _draft_dir(user_id: Optional[str]) -> str:
+    return os.path.join(DRAFTS_DIR, "users", user_id) if user_id else DRAFTS_DIR
+
+
 @app.post("/save_draft")
-async def save_draft(request: Request):
+async def save_draft(request: Request, archer_session: Optional[str] = Cookie(None)):
     try:
         payload = await request.json()
     except Exception:
         return JSONResponse({"ok": False}, status_code=400)
-    # Expect payload to include a `draft_id` and optional `user_id`.
-    # The payload is stored to disk for later retrieval by /load_draft.
-    draft_id = payload.get("draft_id")
-    user_id = payload.get("user_id")
-    if not draft_id:
-        return JSONResponse({"ok": False}, status_code=400)
-    # If user_id present in payload, require X-USER-ID header to match.
-    if user_id:
-        header_uid = request.headers.get("X-USER-ID")
-        if not header_uid or header_uid != str(user_id):
-            return JSONResponse({"ok": False, "error": "user_id header mismatch"}, status_code=403)
-    drafts_dir = DRAFTS_DIR
-    if user_id:
-        user_dir = os.path.join(drafts_dir, "users", user_id)
-        os.makedirs(user_dir, exist_ok=True)
-        path = os.path.join(user_dir, f"{draft_id}.json")
-    else:
-        os.makedirs(drafts_dir, exist_ok=True)
-        path = os.path.join(drafts_dir, f"{draft_id}.json")
-    with open(path, "w", encoding="utf-8") as fh:
+    draft_id = str(payload.get("draft_id") or "")
+    if not _DRAFT_ID_RE.fullmatch(draft_id):
+        return JSONResponse({"ok": False, "error": "invalid draft_id"}, status_code=400)
+    user_id, err = _draft_user(request, archer_session, str(payload.get("user_id") or ""))
+    if err:
+        return err
+    drafts_dir = _draft_dir(user_id)
+    os.makedirs(drafts_dir, exist_ok=True)
+    with open(os.path.join(drafts_dir, f"{draft_id}.json"), "w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2)
     return JSONResponse({"ok": True})
 
 
 @app.get("/load_draft")
-async def load_draft(draft_id: str = "", user_id: str = ""):
-    if not draft_id:
+async def load_draft(
+    request: Request, draft_id: str = "", user_id: str = "", archer_session: Optional[str] = Cookie(None)
+):
+    if not _DRAFT_ID_RE.fullmatch(draft_id):
         return JSONResponse({"ok": False}, status_code=400)
-
-    # If user_id provided, only look under that user's drafts
-    if user_id:
-        user_path = os.path.join(DRAFTS_DIR, "users", user_id, f"{draft_id}.json")
-        if not os.path.exists(user_path):
-            # not found or access denied
-            return JSONResponse({"ok": False, "entries": []}, status_code=403)
-        try:
-            with open(user_path, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-            return JSONResponse({"ok": True, "entries": data.get("entries", [])})
-        except Exception:
-            return JSONResponse({"ok": False}, status_code=500)
-
-    # No user_id: only allow top-level drafts
-    path = os.path.join(DRAFTS_DIR, f"{draft_id}.json")
+    user_id, err = _draft_user(request, archer_session, user_id)
+    if err:
+        return err
+    path = os.path.join(_draft_dir(user_id), f"{draft_id}.json")
     if not os.path.exists(path):
         return JSONResponse({"ok": True, "entries": []})
     try:
@@ -3541,7 +3588,7 @@ async def manual_submit(
     try:
         drafts_dir = DRAFTS_DIR
         os.makedirs(drafts_dir, exist_ok=True)
-        draft_path = os.path.join(drafts_dir, f"{group_name}.json")
+        draft_path = os.path.join(drafts_dir, f"{sanitize_group_name(group_name)}.json")
         with open(draft_path, "w", encoding="utf-8") as fh:
             json.dump(
                 {
@@ -3581,7 +3628,7 @@ async def manual_submit(
         pass
 
     # Redirect user to progress page
-    return RedirectResponse(url=f"/progress?group_name={group_name}", status_code=303)
+    return RedirectResponse(url=f"/progress?group_name={quote(group_name)}", status_code=303)
 
 
 @app.get("/progress_status")
@@ -3609,31 +3656,12 @@ async def correlations_json(group_name: str):
 
 
 @app.get("/list_drafts")
-async def list_drafts(user_id: str = ""):
-    drafts_dir = DRAFTS_DIR
+async def list_drafts(request: Request, user_id: str = "", archer_session: Optional[str] = Cookie(None)):
+    user_id, err = _draft_user(request, archer_session, user_id)
+    if err:
+        return err
+    drafts_dir = _draft_dir(user_id)
     results = []
-    if user_id:
-        user_dir = os.path.join(drafts_dir, "users", user_id)
-        if not os.path.exists(user_dir):
-            return JSONResponse({"ok": True, "drafts": []})
-        for fname in os.listdir(user_dir):
-            if fname.endswith(".json"):
-                path = os.path.join(user_dir, fname)
-                try:
-                    with open(path, "r", encoding="utf-8") as fh:
-                        j = json.load(fh)
-                    results.append(
-                        {
-                            "draft_id": fname[:-5],
-                            "group_name": j.get("group_name", ""),
-                            "mtime": os.path.getmtime(path),
-                        }
-                    )
-                except Exception:
-                    pass
-        return JSONResponse({"ok": True, "drafts": results})
-
-    # list top-level drafts
     if not os.path.exists(drafts_dir):
         return JSONResponse({"ok": True, "drafts": []})
     for fname in os.listdir(drafts_dir):
@@ -7425,11 +7453,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         # Fallback to technique ID if lookup fails (don't use detection title)
                         technique_name = technique_id or content_data.get("name", "Unknown")
 
-                    description = content_data.get("description_html") or content_data.get(
-                        "description", ""
-                    )
-                    # Convert markdown links to HTML anchor tags
-                    description = markdown_links_to_html(description)
+                    description = library_description_html(content_data)
 
                     # Get query from queries array or query field
                     queries = content_data.get("queries", [])
@@ -7526,9 +7550,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         if content_data.get("technique", "").startswith("T")
                         else ""
                     )
-                    description = content_data.get(
-                        "description_html", content_data.get("description", "")
-                    )
+                    description = library_description_html(content_data)
                     # Results page has "query" (singular), not "queries" (plural)
                     query_content = content_data.get("query", "")
                     # Use platform for vendor, title contains table/index names
@@ -9480,32 +9502,25 @@ async def request_password_reset(request: Request):
             # Create reset request
             token = create_password_reset_request(email, db)
 
-            if not token:
-                # For security, don't reveal if email exists or not
-                return {
-                    "success": True,
-                    "message": "If an account exists with this email, a password reset link has been sent.",
-                }
-
-            # Send password reset email
-            from archer.auth.email import send_password_reset_email, EMAIL_ENABLED
-
-            email_sent = send_password_reset_email(
-                email=email, token=token, full_name=user.full_name if user else None
-            )
-
-            # In development mode (EMAIL_ENABLED=false), also return the token for testing
+            # Same response whether or not the account exists (no enumeration)
             response = {
                 "success": True,
-                "message": "Password reset link has been sent to your email.",
+                "message": "If an account exists with this email, a password reset link has been sent.",
             }
+            if not token:
+                return response
 
-            if not EMAIL_ENABLED:
-                # Development mode - include token in response for testing
-                reset_url = f"http://localhost:8000/reset-password?token={token}"
-                response["reset_url"] = reset_url
-                response["token"] = token
-                response["dev_mode"] = True
+            from archer.auth.email import send_password_reset_email, EMAIL_ENABLED
+
+            if EMAIL_ENABLED:
+                # SMTP is blocking; keep it off the event loop
+                await run_in_threadpool(
+                    send_password_reset_email, email=email, token=token, full_name=user.full_name if user else None
+                )
+            else:
+                # Never return the token to the requester: anyone could reset any account.
+                # With email disabled the link goes to the server log for the operator.
+                logger.warning("EMAIL_ENABLED=false; password reset link for %s: /reset-password?token=%s", email, token)
 
             return response
 
@@ -9761,7 +9776,7 @@ async def create_user(request: Request, archer_session: Optional[str] = Cookie(N
         new_user = User(
             email=email,
             full_name=full_name,
-            hashed_password=hashed_password,
+            password_hash=hashed_password,
             role=user_role,
             is_active=True,
         )

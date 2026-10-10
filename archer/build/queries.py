@@ -280,6 +280,11 @@ def get_valid_indices_for_platform(indicator_mapping_section, vendor, detected_p
     return valid_indices
 
 
+def _q(value) -> str:
+    """Escape a value for a double-quoted SPL or KQL string literal."""
+    return str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
 def compile_search_clause(field_value_pairs):
     """
     Compiles field-value pairs into proper | search syntax
@@ -317,7 +322,7 @@ def compile_search_clause(field_value_pairs):
         if field_name is None:
             # Bare string values (no field name)
             for v in unique_values:
-                search_parts.append(f'"{v}"')
+                search_parts.append(f'"{_q(v)}"')
         else:
             # Separate single-word and multi-word values
             single_word_values = []
@@ -331,10 +336,10 @@ def compile_search_clause(field_value_pairs):
 
             # Handle single-word values with IN operator
             if len(single_word_values) > 1:
-                values_str = ', '.join([f'"{v}"' for v in single_word_values])
+                values_str = ', '.join([f'"{_q(v)}"' for v in single_word_values])
                 search_parts.append(f'{field_name} IN ({values_str})')
             elif len(single_word_values) == 1:
-                search_parts.append(f'{field_name}="{single_word_values[0]}"')
+                search_parts.append(f'{field_name}="{_q(single_word_values[0])}"')
 
             # Handle multi-word values with wildcards and implicit AND
             # Each multi-word indicator becomes a separate OR group
@@ -345,13 +350,13 @@ def compile_search_clause(field_value_pairs):
                     # Strategic spacing: first word "*word *", middle "* word *", last "* word*"
                     if i == 0:
                         # First word: space after
-                        word_conditions.append(f'{field_name}="*{word} *"')
+                        word_conditions.append(f'{field_name}="*{_q(word)} *"')
                     elif i == len(words) - 1:
                         # Last word: space before
-                        word_conditions.append(f'{field_name}="* {word}*"')
+                        word_conditions.append(f'{field_name}="* {_q(word)}*"')
                     else:
                         # Middle words: spaces before and after
-                        word_conditions.append(f'{field_name}="* {word} *"')
+                        word_conditions.append(f'{field_name}="* {_q(word)} *"')
                 # Join with spaces (implicit AND)
                 word_clause = ' '.join(word_conditions)
                 search_parts.append(f'OR ({word_clause})')
@@ -400,8 +405,7 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
         azure_operation_indicators = []  # For Azure operations with has_all + boolean logic
 
         for indicator in indicators_to_use:
-            # Escape backslashes for KQL
-            escaped_indicator = indicator.replace('\\', '\\\\')
+            escaped_indicator = _q(indicator)
 
             # Detect Azure operations (e.g., Microsoft.Authorization/elevateAccess/action)
             # Pattern: Contains dots or slashes (but not backslashes) indicating hierarchical operations
@@ -479,9 +483,9 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
 
         # Handle regular has_any/contains indicators
         if has_any_indicators:
-            # Use 'contains' for single value, 'has_any' for multiple
+            # Term match like has_any; 'contains' is a substring scan the contract lint rejects (KQL-7)
             if len(has_any_indicators) == 1:
-                indicator_clauses.append(f'contains "{has_any_indicators[0]}"')
+                indicator_clauses.append(f'has "{has_any_indicators[0]}"')
             else:
                 any_str = '", "'.join(has_any_indicators)
                 indicator_clauses.append(f'has_any("{any_str}")')
@@ -625,7 +629,7 @@ def _build_prefilter(indicators: list) -> str:
             subcommand = " ".join(words[2:])
             aws_by_service.setdefault(service, []).append(subcommand)
         elif len(words) > 1:
-            other_keywords.append("(" + " AND ".join(f'"{w}"' for w in words) + ")")
+            other_keywords.append("(" + " AND ".join(f'"{_q(w)}"' for w in words) + ")")
         else:
             other_keywords.append(f'"{ind}"' if ind.isidentifier() else ind)
 
@@ -636,10 +640,10 @@ def _build_prefilter(indicators: list) -> str:
         service_parts = []
         for service, subs in aws_by_service.items():
             if len(subs) == 1:
-                service_parts.append(f'("{service}" AND "{subs[0]}")')
+                service_parts.append(f'("{_q(service)}" AND "{_q(subs[0])}")')
             else:
-                sub_or = " OR ".join(f'"{s}"' for s in subs)
-                service_parts.append(f'("{service}" AND ({sub_or}))')
+                sub_or = " OR ".join(f'"{_q(s)}"' for s in subs)
+                service_parts.append(f'("{_q(service)}" AND ({sub_or}))')
         inner = " OR ".join(service_parts)
         if len(service_parts) == 1:
             top_level.append(f'("aws" AND {service_parts[0]})')

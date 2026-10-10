@@ -1042,7 +1042,7 @@
                         {% if tactic == 'Command and Control' or tactic == 'Command And Control' %}
                           Command<br>and Control
                         {% elif ' ' in tactic %}
-                          {{ tactic.replace(' ', '<br>', 1)|safe }}
+                          {% for part in tactic.split(' ', 1) %}{{ part }}{% if not loop.last %}<br>{% endif %}{% endfor %}
                         {% else %}
                           {{ tactic }}<br><span style="color: white;">_</span>
                         {% endif %}

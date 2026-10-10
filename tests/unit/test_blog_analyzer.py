@@ -9,6 +9,11 @@ from unittest.mock import patch, MagicMock
 from bs4 import BeautifulSoup
 
 
+def _addrinfo(ip):
+    import socket
+    return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+
 class TestTechniqueExtraction:
     """Test ATT&CK technique ID extraction from text."""
 
@@ -314,13 +319,14 @@ class TestAnalyzeBlogPost:
         import socket as socket_module
 
         # Mock socket.gethostbyname at module level since it's imported dynamically
-        original_gethostbyname = socket_module.gethostbyname
-        socket_module.gethostbyname = MagicMock(return_value="93.184.216.34")
+        original_getaddrinfo = socket_module.getaddrinfo
+        socket_module.getaddrinfo = MagicMock(return_value=_addrinfo("93.184.216.34"))
 
         try:
             with patch("archer.parsers.blog_analyzer.requests.get") as mock_get:
                 # Setup mocks
                 mock_response = MagicMock()
+                mock_response.is_redirect = False
                 mock_response.content = sample_blog_html.encode()
                 mock_response.raise_for_status = MagicMock()
                 mock_get.return_value = mock_response
@@ -342,7 +348,7 @@ class TestAnalyzeBlogPost:
                 assert len(result["tactics"]) > 0
         finally:
             # Restore original
-            socket_module.gethostbyname = original_gethostbyname
+            socket_module.getaddrinfo = original_getaddrinfo
 
     def test_analyze_blog_post_invalid_scheme(self):
         """Test that invalid URL schemes are rejected."""
@@ -357,8 +363,8 @@ class TestAnalyzeBlogPost:
         """Test that localhost URLs are blocked (SSRF prevention)."""
         from archer.parsers.blog_analyzer import analyze_blog_post
 
-        with patch("socket.gethostbyname") as mock_dns:
-            mock_dns.return_value = "127.0.0.1"
+        with patch("socket.getaddrinfo") as mock_dns:
+            mock_dns.return_value = _addrinfo("127.0.0.1")
 
             result = analyze_blog_post("http://localhost/admin")
 
@@ -369,8 +375,8 @@ class TestAnalyzeBlogPost:
         """Test that private IPs are blocked (SSRF prevention)."""
         from archer.parsers.blog_analyzer import analyze_blog_post
 
-        with patch("socket.gethostbyname") as mock_dns:
-            mock_dns.return_value = "192.168.1.1"
+        with patch("socket.getaddrinfo") as mock_dns:
+            mock_dns.return_value = _addrinfo("192.168.1.1")
 
             result = analyze_blog_post("http://internal.company.com/blog")
 
@@ -382,7 +388,7 @@ class TestAnalyzeBlogPost:
         from archer.parsers.blog_analyzer import analyze_blog_post
         import socket
 
-        with patch("socket.gethostbyname") as mock_dns:
+        with patch("socket.getaddrinfo") as mock_dns:
             mock_dns.side_effect = socket.gaierror("DNS lookup failed")
 
             result = analyze_blog_post("https://nonexistent.example.com/blog")
@@ -395,10 +401,10 @@ class TestAnalyzeBlogPost:
         from archer.parsers.blog_analyzer import analyze_blog_post
         import requests
 
-        with patch("socket.gethostbyname") as mock_dns, \
+        with patch("socket.getaddrinfo") as mock_dns, \
              patch("archer.parsers.blog_analyzer.requests.get") as mock_get:
 
-            mock_dns.return_value = "93.184.216.34"
+            mock_dns.return_value = _addrinfo("93.184.216.34")
             mock_get.side_effect = requests.exceptions.Timeout("Connection timed out")
 
             result = analyze_blog_post("https://example.com/slow-blog")
@@ -410,13 +416,14 @@ class TestAnalyzeBlogPost:
         """Test that oversized responses are rejected."""
         from archer.parsers.blog_analyzer import analyze_blog_post
 
-        with patch("socket.gethostbyname") as mock_dns, \
+        with patch("socket.getaddrinfo") as mock_dns, \
              patch("archer.parsers.blog_analyzer.requests.get") as mock_get:
 
-            mock_dns.return_value = "93.184.216.34"
+            mock_dns.return_value = _addrinfo("93.184.216.34")
 
             # Create a response larger than 10MB
             mock_response = MagicMock()
+            mock_response.is_redirect = False
             mock_response.content = b"x" * (11 * 1024 * 1024)  # 11MB
             mock_response.raise_for_status = MagicMock()
             mock_get.return_value = mock_response
