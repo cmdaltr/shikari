@@ -8890,9 +8890,15 @@ async def update_library_tags(request: Request, archer_session: Optional[str] = 
 
         # Update tags for all selected detections
         tags_json = json.dumps(tags) if tags else None
+        old_tags = [d.tags for d in detections]
         for detection in detections:
             detection.tags = tags_json
 
+        # A group whose last library item lost its Group/CVE tag loses its saved flow layout
+        from archer.visualization.flow_layouts import prune_layouts
+
+        db.flush()
+        prune_layouts(db, user.id, old_tags)
         db.commit()
 
         return {
@@ -8989,6 +8995,7 @@ async def delete_library_detections(request: Request, archer_session: Optional[s
             raise HTTPException(status_code=400, detail="No detection or correlation IDs provided")
 
         deleted_count = 0
+        deleted_tags = []
 
         # Delete detections
         if detection_ids:
@@ -9004,6 +9011,7 @@ async def delete_library_detections(request: Request, archer_session: Optional[s
                 )
 
             for detection in detections:
+                deleted_tags.append(detection.tags)
                 db.delete(detection)
             deleted_count += len(detections)
 
@@ -9053,11 +9061,18 @@ async def delete_library_detections(request: Request, archer_session: Optional[s
 
             # Delete from both tables
             for correlation in correlations_from_corr_table:
+                deleted_tags.append(correlation.tags)
                 db.delete(correlation)
             for correlation in correlations_from_det_table:
+                deleted_tags.append(correlation.tags)
                 db.delete(correlation)
             deleted_count += total_found
 
+        # A group with nothing left in the library loses its saved flow layout
+        from archer.visualization.flow_layouts import prune_layouts
+
+        db.flush()
+        prune_layouts(db, user.id, deleted_tags)
         db.commit()
 
         return {

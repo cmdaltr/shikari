@@ -144,6 +144,10 @@
 .af-legend-edge { width: 22px; height: 0; border-top: 2px solid #4285F4; }
 .af-legend-edge.is-back { border-top-style: dashed; }
 .af-legend-hint { font-style: italic; }
+.af-notes { margin-top: 8px; font-size: 0.8em; color: var(--af-muted); }
+.af-notes summary { cursor: pointer; width: max-content; }
+.af-notes p { margin: 6px 0 4px; }
+.af-notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
 .af-empty { color: var(--af-muted); font-style: italic; text-align: center; padding: 30px 0; }
 
 /* Detection card picked from the detail panel */

@@ -9,7 +9,7 @@ in their library. Saving to the library tags each item "Group:<name>" or
 import json
 import math
 import re
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional
 
 from fastapi import APIRouter, Cookie, HTTPException, Request
 
@@ -42,6 +42,42 @@ def results_in_library(db, user_id: int, group_name: str) -> bool:
         if hit:
             return True
     return False
+
+
+def group_from_tag(tag: str) -> Optional[str]:
+    """The results-page group name a library tag belongs to, or None for other tags."""
+    from archer.security import sanitize_group_name
+
+    if not isinstance(tag, str):
+        return None
+    if tag.startswith("CVE:"):
+        return tag[4:] or None
+    if tag.startswith("Group:"):
+        return sanitize_group_name(tag[6:]) or None
+    return None
+
+
+def prune_layouts(db, user_id: int, tag_lists: Iterable[Optional[str]]) -> int:
+    """
+    Delete the saved layouts of groups no longer in the user's library.
+
+    tag_lists: the JSON tag arrays of library items just deleted or retagged.
+    Call after those changes are flushed and before the commit.
+    """
+    groups = set()
+    for raw in tag_lists:
+        try:
+            tags = json.loads(raw) if raw else []
+        except (ValueError, TypeError):
+            continue
+        groups.update(g for g in map(group_from_tag, tags if isinstance(tags, list) else []) if g)
+    removed = 0
+    for group in groups:
+        if not results_in_library(db, user_id, group):
+            removed += (db.query(FlowLayout)
+                        .filter(FlowLayout.user_id == user_id, FlowLayout.group_name == group)
+                        .delete(synchronize_session=False))
+    return removed
 
 
 def clean_state(raw) -> Dict:

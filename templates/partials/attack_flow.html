@@ -129,6 +129,21 @@
     <span class="af-legend-hint">Hover or select a technique to trace its links · drag to move · ⌘/Ctrl-click to select several · click a link to remove it</span>
   </div>
 
+  <details class="af-notes">
+    <summary>About saved edits</summary>
+    <p>
+      Edits are kept when you are logged in and this group's results are in your library;
+      otherwise they last until you leave the page.
+    </p>
+    <ul>
+      <li>Removing the group's last item from your library (or its Group/CVE tag) deletes the saved layout too;
+          saving the group again starts from the default view.</li>
+      <li>Dragged positions are offsets from each card's default place. After regenerating a group,
+          techniques that change tactic, or lanes that gain or lose techniques, can shift dragged cards.</li>
+      <li>The STIX download is the full flow, not the edited view: hidden techniques and removed links are still in it.</li>
+    </ul>
+  </details>
+
   <script type="application/json" id="af-data">{{ attack_flow|tojson }}</script>
   <script type="application/json" id="af-layout">{{ (flow_layout or {})|tojson }}</script>
   {% else %}

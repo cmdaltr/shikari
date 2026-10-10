@@ -15,6 +15,7 @@ Complete guide to using Archer for threat detection generation through Web UI, C
    - [Threat Briefing](#threat-briefing)
    - [Company Profiling](#company-profiling)
    - [Validate Detections](#validate-detections) (Docker)
+   - [ATT&CK Flow](#attck-flow) (editing, saved edits)
 2. [Command Line Interface (CLI)](#command-line-interface-cli)
 3. [API Integration](#api-integration)
 
@@ -292,6 +293,36 @@ Tune correlation quality and coverage:
 - **Password Policy**: Enforce password complexity
 
 **Note**: For untested features (Query Execution, Adversary Emulation), see [docs/UNTESTED.md](UNTESTED.md)
+
+### ATT&CK Flow
+
+The results page has an **ATT&CK Flow** section: one lane per tactic, a card per technique, and a link wherever a correlation pairs two techniques. Cards show which SIEMs detect the technique; grey dashed cards are techniques ATT&CK attributes to the group that have no detection. A dashed link points back to an earlier tactic.
+
+Hover or select a card to trace its links; the detail panel lists them and jumps to the technique's detection cards. The toolbar controls:
+
+| Control | What it does |
+|---|---|
+| SIEM logos | Show or hide each SIEM's coverage and correlations |
+| Hide Undetected | Hide techniques with no detection on the selected SIEMs |
+| Links | Show or hide correlation links |
+| Select, ⌘/Ctrl/Shift-click | Select several cards |
+| Hide Selected / Hide Others | Hide the selection, or everything but it; **Show All** brings them back |
+| Drag | Move a card (a selected card moves the whole selection) |
+| Click a link, or × in the detail panel | Remove that link |
+| Horizontal / Vertical | Tactics as columns or rows |
+| Forward / Reverse | Kill-chain order |
+| Undo (⌘/Ctrl-Z) / Reset | Step back through edits, or return to the default view (Reset can be undone) |
+| STIX | Download the flow as an Attack Flow 2.x bundle |
+
+#### Saved edits
+
+Edits are saved per user and group when you are logged in and the group's results are in your library (Save to Library tags them `Group:<name>` or `CVE:<id>`). Saving to the library from the results page starts saving edits straight away; the stats line shows whether edits are being kept. Logged out, or before the results are in your library, edits last until you leave the page. Selections, the search box and Undo history aren't saved.
+
+Things to be aware of:
+
+- Removing a group's last item from your library, or the `Group:`/`CVE:` tag from it, deletes the saved layout too. Saving the group again starts from the default view.
+- Dragged positions are offsets from each card's default place. After regenerating a group, techniques that change tactic, or lanes that gain or lose techniques, can shift dragged cards.
+- The STIX download is the full flow, not the edited view: hidden techniques and removed links are still in it.
 
 ### Reading Correlation Results
 

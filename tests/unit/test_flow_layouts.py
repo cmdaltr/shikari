@@ -95,3 +95,42 @@ def test_put_rejects_anonymous_and_oversized(db):
     client.cookies.set("archer_session", "s")
     big = {"group_name": "x", "state": {"removed": ["T1105"] * 60000}}
     assert client.put("/api/flow-layout", json=big).status_code == 413
+
+
+def test_group_from_tag_reverses_library_tag():
+    assert fl.group_from_tag("Group:Scattered Spider") == "Scattered_Spider"
+    assert fl.group_from_tag("CVE:CVE-2024-3400") == "CVE-2024-3400"
+    assert fl.group_from_tag("Hunt-1") is None
+    for g in ("Scattered_Spider", "CVE-2024-3400", "APT29"):
+        assert fl.group_from_tag(fl.library_tag(g)) == g
+
+
+def test_layout_goes_when_the_groups_last_library_item_does(db):
+    from archer.database.models import FlowLayout
+    db.add(User(id=2, email="b@b.c", full_name="B", password_hash="x"))
+    _save_to_library(db, ["Group:Scattered Spider"])
+    _save_to_library(db, ["Group:Scattered Spider", "Hunt-1"])
+    fl.save_layout(db, 1, "Scattered_Spider", {"vertical": True})
+    fl.save_layout(db, 2, "Scattered_Spider", {"vertical": True})  # another user's layout stays
+    first, second = db.query(LibraryDetection).order_by(LibraryDetection.id).all()
+
+    tags = [first.tags]
+    db.delete(first); db.flush()
+    assert fl.prune_layouts(db, 1, tags) == 0  # one item still in the library
+    assert fl.load_layout(db, 1, "Scattered_Spider") == {"vertical": True}
+
+    tags = [second.tags]
+    db.delete(second); db.flush()
+    assert fl.prune_layouts(db, 1, tags) == 1
+    assert fl.load_layout(db, 1, "Scattered_Spider") is None
+    assert db.query(FlowLayout).filter(FlowLayout.user_id == 2).count() == 1
+
+
+def test_layout_goes_when_the_group_tag_is_removed(db):
+    _save_to_library(db, ["CVE:CVE-2024-3400"])
+    fl.save_layout(db, 1, "CVE-2024-3400", {"reversed": True})
+    item = db.query(LibraryDetection).one()
+    old = [item.tags]
+    item.tags = json.dumps(["Hunt-1"]); db.flush()
+    assert fl.prune_layouts(db, 1, old) == 1
+    assert fl.load_layout(db, 1, "CVE-2024-3400") is None
