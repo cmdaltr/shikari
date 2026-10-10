@@ -289,11 +289,8 @@ class TestDescriptionExtraction:
 class TestIOCExtraction:
     """Test IOC extraction from text."""
 
-    @pytest.mark.skip(reason="Production code has import bug: FileIntelligenceExtractor doesn't exist (should be FileIntelligenceParser)")
     def test_extract_iocs_returns_dict(self):
         """Test that IOC extraction returns a dictionary structure."""
-        # Note: The _extract_iocs function tries to import FileIntelligenceExtractor
-        # but the actual class is FileIntelligenceParser. This is a production code bug.
         from archer.parsers.blog_analyzer import _extract_iocs
 
         text = "IOCs: evil.com, 192.168.1.100"
@@ -307,14 +304,8 @@ class TestIOCExtraction:
 class TestAnalyzeBlogPost:
     """Test the main analyze_blog_post function."""
 
-    @pytest.mark.skip(reason="Production code has import bug: FileIntelligenceExtractor doesn't exist (should be FileIntelligenceParser)")
     def test_analyze_blog_post_success(self, sample_blog_html):
-        """Test successful blog analysis.
-
-        Note: This test is skipped because the production code has an import bug.
-        The _extract_iocs function tries to import FileIntelligenceExtractor
-        but the actual class is FileIntelligenceParser.
-        """
+        """Test successful blog analysis."""
         from archer.parsers.blog_analyzer import analyze_blog_post
         import socket as socket_module
 
@@ -349,6 +340,35 @@ class TestAnalyzeBlogPost:
         finally:
             # Restore original
             socket_module.getaddrinfo = original_getaddrinfo
+
+    def test_boilerplate_filter_keeps_body_with_lookalike_classes(self):
+        """CISA's <body> carries node-type-advisory; a substring 'ad' match stripped the whole page."""
+        from archer.parsers.blog_analyzer import analyze_blog_post
+
+        html = """
+        <html><body class="path-node node-page--node-type-advisory">
+          <nav class="usa-nav">T1190 in the menu</nav>
+          <div class="l-page-section--with-heading">
+            <p>Actors used T1566.004 voice phishing and T1621 MFA request generation.</p>
+          </div>
+          <div class="l-full__footer">T1105 in the footer</div>
+        </body></html>
+        """
+        mock_response = MagicMock()
+        mock_response.is_redirect = False
+        mock_response.content = html.encode()
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")), \
+             patch("archer.parsers.blog_analyzer.requests.get", return_value=mock_response):
+            result = analyze_blog_post("https://www.cisa.gov/advisory")
+
+        assert result["success"] is True
+        assert "T1566.004" in result["techniques"]
+        assert "T1621" in result["techniques"]
+        # Real navigation and footer chrome is still stripped
+        assert "T1190" not in result["techniques"]
+        assert "T1105" not in result["techniques"]
 
     def test_analyze_blog_post_invalid_scheme(self):
         """Test that invalid URL schemes are rejected."""

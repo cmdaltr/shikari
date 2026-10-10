@@ -19,6 +19,17 @@ import requests
 from typing import Dict, List, Optional
 from bs4 import BeautifulSoup
 
+# CDN bot filters (e.g. cisa.gov) 403 a browser User-Agent that arrives without the
+# Accept headers a real browser sends, so keep the set consistent
+FETCH_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
+}
+
 
 def _check_public_url(url: str) -> None:
     """Raise ValueError unless url is http(s) and every address its host resolves to is globally routable."""
@@ -46,7 +57,7 @@ def _fetch_public_url(url: str, max_redirects: int = 3) -> requests.Response:
     """GET url following redirects manually so each hop is re-validated (requests would skip the check)."""
     from urllib.parse import urljoin
 
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    headers = FETCH_HEADERS
     for _ in range(max_redirects + 1):
         _check_public_url(url)
         response = requests.get(url, headers=headers, timeout=30, allow_redirects=False)
@@ -117,12 +128,19 @@ def analyze_blog_post(url: str) -> Dict:
         ]):
             element.decompose()
 
-        # Also remove common non-content class/id patterns
-        for element in soup.find_all(class_=re.compile(r'(nav|menu|sidebar|footer|header|banner|ad|advertisement|social|share|comment|related)', re.I)):
-            element.decompose()
-
-        for element in soup.find_all(id=re.compile(r'(nav|menu|sidebar|footer|header|banner|ad|advertisement|social|share|comment|related)', re.I)):
-            element.decompose()
+        # Also remove common non-content class/id patterns. Match whole -/_ delimited
+        # tokens: a bare substring match let "ad" hit "node-type-advisory" on CISA's
+        # <body> and strip the entire page. Never strip the document or article roots.
+        boilerplate = re.compile(
+            r'(?:^|[-_])(nav|menu|sidebar|footer|header|banner|ads?|advert|advertisement'
+            r'|social|share|comments?|related)(?:$|[-_])',
+            re.I,
+        )
+        content_roots = {"html", "body", "main", "article"}
+        for attr in ("class_", "id"):
+            for element in soup.find_all(**{attr: boilerplate}):
+                if element.name not in content_roots and not element.decomposed:
+                    element.decompose()
 
         text = soup.get_text()
 
@@ -150,6 +168,9 @@ def analyze_blog_post(url: str) -> Dict:
             "error": f"Failed to fetch URL: {str(e)}"
         }
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         return {
             "success": False,
             "error": f"Analysis failed: {str(e)}"
@@ -301,16 +322,15 @@ def _extract_procedures(text: str) -> List[str]:
 
 def _extract_iocs(text: str) -> Dict[str, List[str]]:
     """
-    Extract Indicators of Compromise (IOCs) from text using the improved FileIntelligenceExtractor.
+    Extract Indicators of Compromise (IOCs) from text using the file intelligence parser.
 
     Returns:
         Dict with IOC types as keys (ip, domain, hash, cmd, reg, evt, sw, file)
     """
-    from archer.parsers.file_intelligence import FileIntelligenceExtractor
+    from archer.parsers.file_intelligence import FileIntelligenceParser
 
-    # Use the improved extractor with all the enhancements
-    extractor = FileIntelligenceExtractor(use_openai=False, use_local_llm=False)
-    iocs = extractor.extract_iocs(text)
+    extractor = FileIntelligenceParser(use_openai=False, use_local_llm=False)
+    iocs = extractor._extract_iocs(text)
 
     return iocs
 
@@ -327,9 +347,7 @@ def search_crowdstrike_blog(group_name: str) -> Optional[str]:
     """
     try:
         search_url = f"https://www.crowdstrike.com/blog/?s={group_name}"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
+        headers = FETCH_HEADERS
 
         response = requests.get(search_url, headers=headers, timeout=30)
         response.raise_for_status()
@@ -365,9 +383,7 @@ def search_dfir_report(group_name: str) -> Optional[str]:
     try:
         # The DFIR Report uses a simpler structure
         search_url = f"https://thedfirreport.com/?s={group_name}"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
+        headers = FETCH_HEADERS
 
         response = requests.get(search_url, headers=headers, timeout=30)
         response.raise_for_status()

@@ -120,11 +120,14 @@ def filter_generic_indicators(identifiers):
     return filtered_identifiers, has_real_indicators
 
 
+class MappingsError(RuntimeError):
+    """Indicator mappings are missing or incomplete; generation cannot proceed."""
+
+
 def load_indicator_mappings():
     """Load indicator mappings from JSON files in the mappings directory"""
     import os
     import json
-    import sys
 
     # Use bespoke mappings directory (org-specific)
     mappings_dir = (
@@ -137,11 +140,10 @@ def load_indicator_mappings():
 
     # Check if directory exists
     if not mappings_dir.exists():
-        print(
-            f"CRITICAL ERROR: Mappings directory does not exist: {mappings_dir.resolve()}"
+        raise MappingsError(
+            f"Mappings directory does not exist: {mappings_dir.resolve()}. "
+            "Run scripts/validation/setup_mappings.py to create it."
         )
-        print("Please create the mappings directory and add your JSON mapping files.")
-        sys.exit(1)
 
     # Load JSON files in order of preference
     mappings = {}
@@ -169,9 +171,10 @@ def load_indicator_mappings():
     if not mappings:
         json_files = list(mappings_dir.glob("*.json"))
         if not json_files:
-            print(f"CRITICAL ERROR: No JSON files found in: {mappings_dir.resolve()}")
-            print("Please add JSON mapping files to the mappings directory.")
-            sys.exit(1)
+            raise MappingsError(
+                f"No indicator mapping files found in {mappings_dir.resolve()}. "
+                "Run scripts/validation/setup_mappings.py to generate them."
+            )
 
         # Load each JSON file in the mappings directory
         for mapping_file in json_files:
@@ -186,11 +189,10 @@ def load_indicator_mappings():
     required_types = ["cmd", "reg", "evt", "sw", "port", "protocol", "service", "api", "network"]
     missing_types = [t for t in required_types if t not in mappings]
     if missing_types:
-        print(
-            f"CRITICAL ERROR: Missing required indicator types in mappings: {', '.join(missing_types)}"
+        raise MappingsError(
+            f"Indicator mappings are missing required types: {', '.join(missing_types)}. "
+            "Re-run scripts/validation/setup_mappings.py."
         )
-        print(f"Please ensure your mapping files include all required indicator types.")
-        sys.exit(1)
 
     return mappings
 

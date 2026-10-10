@@ -20,11 +20,17 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
+def _addrinfo(ip):
+    """blog_analyzer resolves hosts with getaddrinfo so every resolved address is checked."""
+    import socket
+    return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+
 def test_blog_analysis_ssrf_localhost():
     """Test that SSRF to localhost is blocked."""
     from archer.parsers.blog_analyzer import analyze_blog_post
 
-    with patch("socket.gethostbyname", return_value="127.0.0.1"):
+    with patch("socket.getaddrinfo", return_value=_addrinfo("127.0.0.1")):
         result = analyze_blog_post("http://localhost/admin")
 
     assert result["success"] is False
@@ -37,7 +43,7 @@ def test_blog_analysis_ssrf_private_ip():
     """Test that SSRF to private IPs is blocked."""
     from archer.parsers.blog_analyzer import analyze_blog_post
 
-    with patch("socket.gethostbyname", return_value="192.168.1.1"):
+    with patch("socket.getaddrinfo", return_value=_addrinfo("192.168.1.1")):
         result = analyze_blog_post("http://internal.corp/data")
 
     assert result["success"] is False
@@ -84,23 +90,20 @@ def test_blog_analysis_extracts_techniques():
     """
 
     mock_response = MagicMock()
+    mock_response.is_redirect = False
     mock_response.content = mock_html.encode()
     mock_response.raise_for_status = MagicMock()
     mock_response.headers = {"content-type": "text/html"}
 
     with patch("archer.parsers.blog_analyzer.requests.get", return_value=mock_response), \
-         patch("socket.gethostbyname", return_value="93.184.216.34"):
+         patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
         result = analyze_blog_post("https://example.com/threat-report")
 
     if not result["success"]:
-        # Known issue: FileIntelligenceExtractor import bug
-        if "FileIntelligenceExtractor" in result.get("error", ""):
-            print("  [SKIP] Known production bug: FileIntelligenceExtractor import error")
-            return None  # Skip
         raise AssertionError(f"Analysis failed: {result.get('error')}")
 
-    assert "ttps" in result
-    ttps = result.get("ttps", [])
+    assert "techniques" in result
+    ttps = result.get("techniques", [])
     assert any("T1566" in t or "T1059" in t or "T1003" in t for t in ttps)
     return True
 

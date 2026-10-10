@@ -225,7 +225,7 @@ def mock_mitre_bundle():
 
 @pytest.fixture
 def mock_file_intelligence_extractor():
-    """Mock FileIntelligenceExtractor."""
+    """Mock FileIntelligenceParser."""
     extractor = MagicMock()
     extractor.extract_iocs.return_value = {
         "domain": ["example.com"],

@@ -96,6 +96,17 @@ def answer_ai_prompt(page):
         pass
 
 
+def _progress_status(page):
+    """Read the server's progress record for the run the progress page is showing."""
+    from urllib.parse import parse_qs, urlparse
+
+    group = parse_qs(urlparse(page.url).query).get("group_name", [None])[0]
+    if not group or "/progress" not in page.url:
+        return None
+    resp = page.request.get(f"{BASE}/progress_status", params={"group_name": group})
+    return (resp.json() or {}).get("progress") if resp.ok else None
+
+
 def wait_for_results(page, label):
     deadline = time.time() + GEN_TIMEOUT
     last = ""
@@ -107,6 +118,10 @@ def wait_for_results(page, label):
         if url != last:
             last = url
             caption(page, f"{label} — generating… ({url.replace(BASE, '')})")
+        status = _progress_status(page)
+        if status and status.get("status") == "failed":
+            shot(page, "progress_failed")
+            raise RuntimeError(f"run failed at stage {status.get('stage')}: {status.get('error', 'no error recorded')}")
         page.wait_for_timeout(3000)
     raise TimeoutError(f"no /results after {GEN_TIMEOUT}s (stuck on {page.url})")
 
@@ -201,10 +216,18 @@ def upload_blog(page):
     page.fill("#blog_url_input", "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-320a")
     shot(page, "upload_form")
     page.wait_for_function("!document.getElementById('upload_btn').disabled", timeout=10000)
-    page.click("#upload_btn")
-    answer_ai_prompt(page)
-    wait_for_results(page, "CISA AA23-320A")
-    return tour_results(page, "CISA AA23-320A")
+    with page.expect_response(lambda r: "/analyze_blog" in r.url, timeout=120000) as resp_info:
+        page.click("#upload_btn")
+        answer_ai_prompt(page)
+    resp = resp_info.value
+    if not resp.ok:
+        raise RuntimeError(f"/analyze_blog returned {resp.status}: {resp.json().get('message', '')[:150]}")
+    page.wait_for_selector("#ttps-container", timeout=30000)
+    caption(page, "Review extracted TTPs and IOCs")
+    page.locator("#ttps-container").scroll_into_view_if_needed()
+    shot(page, "upload_extraction")
+    body = resp.json()
+    return f"{body.get('ttps_count', 0)} TTPs, {body.get('iocs_count', 0)} IOCs extracted"
 
 
 @step("Profile — company OSINT (tesco.com)")
@@ -227,14 +250,14 @@ def ask_archer(page):
     page.click("#ask-archer-btn")
     page.fill("#aap-input", "Give me a Splunk query for T1003.001 LSASS memory dumping")
     shot(page, "ask_question")
-    page.click("#aap-send")
-    caption(page, "Waiting for Ask Archer to answer…")
-    page.wait_for_timeout(2000)
-    page.wait_for_function(
-        "() => !document.getElementById('aap-send').disabled", timeout=180000
-    )
+    with page.expect_response(lambda r: "/api/ask" in r.url, timeout=180000) as resp_info:
+        page.click("#aap-send")
+        caption(page, "Waiting for Ask Archer to answer…")
+    resp = resp_info.value
     page.wait_for_timeout(2000)
     shot(page, "ask_answer")
+    if not resp.ok:
+        raise RuntimeError(f"/api/ask returned {resp.status}: {str(resp.json().get('detail', ''))[:150]}")
 
 
 @step("Library — saved detections")
@@ -249,7 +272,8 @@ def library(page):
 def coverage(page):
     page.goto(f"{BASE}/coverage")
     caption(page, "Coverage: ATT&CK coverage across generated detections")
-    page.wait_for_timeout(2500)
+    page.locator("text=Loading coverage data").wait_for(state="hidden", timeout=30000)
+    page.wait_for_timeout(1000)
     shot(page, "coverage")
     page.mouse.wheel(0, 900)
     page.wait_for_timeout(1000)

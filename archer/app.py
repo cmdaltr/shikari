@@ -2830,9 +2830,9 @@ async def generate(
                     except Exception as e:
                         print(f"Auto-validation error: {e}")
 
-            except Exception:
+            except Exception as e:
                 try:
-                    write_progress(group_name, {"status": "failed"})
+                    write_progress(group_name, {"status": "failed", "error": str(e)})
                 except Exception:
                     pass
 
@@ -3955,7 +3955,7 @@ def modified_process_group_wrapper(
         print("Full traceback:")
         traceback.print_exc()
         try:
-            write_progress(group_name, {"status": "failed"})
+            write_progress(group_name, {"status": "failed", "error": str(e)})
         except:
             pass
 
