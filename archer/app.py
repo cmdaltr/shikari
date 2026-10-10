@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSON
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 from archer.security import sanitize_filename, validate_safe_path, sanitize_group_name
+from archer.build.group_files import group_yaml_files
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from typing import Optional
@@ -5541,33 +5542,8 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         "googlesecops": "Google SecOps",
     }
 
-    # Find all YAML files for this group
-    # For CVE groups, files are named by technique (T1059, T1190) not group name
-    # For threat actor groups, files are named by tactic but tagged with group name
     if os.path.exists(generate_dir):
-        # Try both group name pattern and wildcard pattern for CVEs
-        pattern1 = os.path.join(generate_dir, f"{safe_group}_*.yaml")
-        pattern2 = (
-            os.path.join(generate_dir, "T*_*.yaml")
-            if safe_group.upper().startswith("CVE")
-            else os.path.join(generate_dir, "*.yaml")
-        )
-
-        yaml_files = glob.glob(pattern1)
-        if not yaml_files and pattern2 != pattern1:
-            yaml_files = glob.glob(pattern2)
-            # Filter by checking tags inside YAML for threat actor groups
-            filtered_files = []
-            for yaml_file in yaml_files:
-                try:
-                    with open(yaml_file, "r") as f:
-                        content = f.read()
-                        # Check if group name is in tags (e.g., "Scattered Spider (Group)")
-                        if f"{group_name} (Group)" in content or f"{safe_group} (Group)" in content:
-                            filtered_files.append(yaml_file)
-                except:
-                    pass
-            yaml_files = filtered_files if filtered_files else yaml_files
+        yaml_files = group_yaml_files(group_name, generate_dir)
 
         for yaml_file in yaml_files:
             filename = os.path.basename(yaml_file)

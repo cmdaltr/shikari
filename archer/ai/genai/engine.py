@@ -94,13 +94,11 @@ if importlib.util.find_spec("transformers"):
 
 
 def _list_yaml_files(group_name: str, yaml_dir: str) -> List[str]:
-    if not os.path.isdir(yaml_dir):
-        return []
-    return [
-        os.path.join(yaml_dir, f)
-        for f in os.listdir(yaml_dir)
-        if f.endswith(".yaml") or f.endswith(".yml")
-    ]
+    # Only the group's own detections: pairing against every group's files let
+    # other groups' rules crowd the group's correlations out of the cap
+    from archer.build.group_files import group_yaml_files
+
+    return group_yaml_files(group_name, yaml_dir)
 
 
 def _parse_yaml_for_vendor(path: str) -> Dict:
