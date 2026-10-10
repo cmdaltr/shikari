@@ -251,7 +251,8 @@ class CVEHunter:
                     "type": "github",
                     "source": repo.get("full_name"),
                     "url": repo.get("html_url"),
-                    "description": repo.get("description", ""),
+                    # GitHub returns "description": null for repos without one
+                    "description": repo.get("description") or "",
                     "stars": repo.get("stargazers_count", 0),
                     "language": repo.get("language")
                 })
@@ -388,7 +389,7 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
 
         # Extract from NVD description and references
         nvd_data = research_data.get("nvd_data", {})
-        description = nvd_data.get("description", "").lower()
+        description = (nvd_data.get("description") or "").lower()
         cve_id = research_data.get("cve_id", "")
 
         # Extract CVE-specific patterns from description
@@ -396,8 +397,8 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
 
         # Extract from PoC descriptions/URLs
         for poc in research_data.get("pocs", []):
-            poc_desc = (poc.get("description", "") + " " + poc.get("source", "")).lower()
-            poc_url = poc.get("url", "")
+            poc_desc = ((poc.get("description") or "") + " " + (poc.get("source") or "")).lower()
+            poc_url = poc.get("url") or ""
 
             # Extract patterns from PoC metadata
             iocs = self._extract_from_text(poc_desc, iocs)
@@ -439,7 +440,8 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
         }
 
         # Extract patterns from description
-        full_text = description + " " + nvd_data.get("product", "") + " " + nvd_data.get("vendor", "")
+        # vendor/product are None when NVD has no CPE configuration yet (common for new CVEs)
+        full_text = " ".join([description, nvd_data.get("product") or "", nvd_data.get("vendor") or ""])
 
         for ioc_type, patterns in exploit_patterns.items():
             for pattern in patterns:
