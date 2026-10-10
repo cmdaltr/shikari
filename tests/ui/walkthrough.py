@@ -120,8 +120,17 @@ def wait_for_results(page, label):
             caption(page, f"{label} — generating… ({url.replace(BASE, '')})")
         status = _progress_status(page)
         if status and status.get("status") == "failed":
+            caption(page, f"{label} — run failed; checking the page reports it")
+            try:
+                page.wait_for_function(
+                    "() => (document.getElementById('progress-state') || {}).textContent === 'Failed'",
+                    timeout=15000,
+                )
+                shown = "page shows failure"
+            except PWTimeout:
+                shown = "PAGE DID NOT SHOW FAILURE"
             shot(page, "progress_failed")
-            raise RuntimeError(f"run failed at stage {status.get('stage')}: {status.get('error', 'no error recorded')}")
+            raise RuntimeError(f"run failed at stage {status.get('stage')} ({shown}): {status.get('error', 'no error recorded')}")
         page.wait_for_timeout(3000)
     raise TimeoutError(f"no /results after {GEN_TIMEOUT}s (stuck on {page.url})")
 

@@ -140,8 +140,9 @@ def load_indicator_mappings():
 
     # Check if directory exists
     if not mappings_dir.exists():
+        print(f"Mappings directory does not exist: {mappings_dir.resolve()}")
         raise MappingsError(
-            f"Mappings directory does not exist: {mappings_dir.resolve()}. "
+            "Indicator mappings directory bespoke/mappings/ does not exist. "
             "Run scripts/validation/setup_mappings.py to create it."
         )
 
@@ -171,8 +172,9 @@ def load_indicator_mappings():
     if not mappings:
         json_files = list(mappings_dir.glob("*.json"))
         if not json_files:
+            print(f"No indicator mapping files found in {mappings_dir.resolve()}")
             raise MappingsError(
-                f"No indicator mapping files found in {mappings_dir.resolve()}. "
+                "No indicator mapping files found in bespoke/mappings/. "
                 "Run scripts/validation/setup_mappings.py to generate them."
             )
 
