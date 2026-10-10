@@ -46,6 +46,7 @@ def contract_prompt_block(siem: str = "yara_l", detection_type: str = "scheduled
         f"Requested syntax: {siem}. Requested detection_type: {detection_type}. status is always `draft`. "
         "`query` is the last key of `rule` and is a literal block scalar (`query: |`). Keys appear in the fixed order of the schema. "
         "No flow-style collections except `[]`, no anchors, no tags, no tabs. "
+        "Output the raw YAML only: no ``` fences, no `---` markers and no prose before or after it. "
         "If any rejection condition holds, emit the rejection shape with a reason code and no query.",
         "",
     ]

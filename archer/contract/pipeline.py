@@ -33,8 +33,20 @@ def _legacy_platform(siem: str, source: str) -> str:
     return "MDE"
 
 
+def unwrap_response(text: str) -> str:
+    """Strip chat framing models add despite instructions: ```yaml fences, prose around them, --- / ... markers."""
+    for m in re.finditer(r"```[A-Za-z]*\n(.*?)```", text, re.S):
+        if re.search(r"^\s*archer_output:\s*$", m.group(1), re.M):
+            text = m.group(1); break
+    lines = text.strip("\n").splitlines()
+    if lines and lines[0].strip() == "---": lines = lines[1:]
+    if lines and lines[-1].strip() in ("---", "..."): lines = lines[:-1]
+    return "\n".join(lines) + "\n"
+
+
 def handle_contract_response(response_text: str, technique_id: str = "", group_name: str = "") -> List[Dict]:
     """Validate a contract document and persist it. Returns legacy query dicts (possibly empty)."""
+    response_text = unwrap_response(response_text)
     rep: Report = validate_text(response_text, f"llm:{technique_id}")
     if not rep.ok():
         tag = _safe(f"{technique_id or 'unknown'}_{group_name or 'nogroup'}")

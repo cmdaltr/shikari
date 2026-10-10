@@ -216,3 +216,58 @@ def test_prompt_block_contains_contract_and_exemplars(contract):
     assert "archer_output" in block and "EX-01" in block and "PRE-OUTPUT CHECKLIST" in block
     kql = contract.contract_prompt_block("kql", "ioc_sweep")
     assert "EX-06" in kql and "EX-07" in kql
+
+
+# ---------------------------------------------------------------------------
+# Regressions: valid input the validator rejected or crashed on
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+def test_kql_negation_operators_are_not_yaml_tags(contract):
+    text = _mutate(EX["EX-06"], "      | where ActionType ==",
+                   '      | where InitiatingProcessFileName !in~ ("svchost.exe") and FileName !has "x"\n      | where ActionType ==')
+    assert "LEX-5" not in contract.validate_text(text).gates()
+
+
+@pytest.mark.unit
+def test_yaml_tag_outside_query_still_caught(contract):
+    text = _mutate(EX["EX-06"], "    lookback: 2h", "    lookback: !!str 2h")
+    assert "LEX-5" in contract.validate_text(text).gates()
+
+
+@pytest.mark.unit
+def test_short_kql_name_reports_instead_of_crashing(contract):
+    text = _mutate(EX["EX-06"], "name: PrivilegeEscalation_T1055.004_DeviceEvents_RemoteApcQueued", "name: Execution_T1055")
+    assert "NAME-1" in contract.validate_text(text).gates()
+
+
+@pytest.mark.unit
+def test_kql_live_schedule_reports_instead_of_crashing(contract):
+    text = _mutate(EX["EX-06"], '      frequency: "1h"\n      grouping: DeviceId and InjectingProcess', "      mode: live")
+    gates = contract.validate_text(text).gates()
+    assert "KQL-12" not in gates and ("TYPE-2" in gates or "SCHEMA" in gates)
+
+
+@pytest.mark.unit
+def test_numeric_list_items_are_valid(contract):
+    rep = contract.lint_query("DeviceNetworkEvents\n| where Timestamp > ago(1d)\n| where RemotePort in (445, 139) and ActionType !in~ (\"a\")\n")
+    assert "KQL-16" not in rep.gates(), rep.fails
+
+
+@pytest.mark.unit
+def test_backslash_after_verbatim_string_is_caught(contract):
+    rep = contract.lint_query('DeviceProcessEvents\n| where FolderPath startswith @"C:\\Users" and FileName == "a\\b.exe"\n')
+    assert "KQL-5" in rep.gates(), rep.fails
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("wrap", [
+    lambda t: f"```yaml\n{t}```\n",
+    lambda t: f"Here is the rule:\n\n```yaml\n{t}```\n\nLet me know if you need changes.",
+    lambda t: f"---\n{t}",
+    lambda t: f"---\n{t}...\n",
+], ids=["fenced", "fenced_with_prose", "leading_marker", "markers_both_ends"])
+def test_pipeline_unwraps_chat_framing(contract, tmp_path, monkeypatch, wrap):
+    monkeypatch.setattr(contract.pipeline, "CONTRACT_DIR", tmp_path / "contract")
+    out = contract.handle_contract_response(wrap(EX["EX-06"].read_text()), technique_id="T1055.004", group_name="test")
+    assert len(out) == 1, list((tmp_path / "contract" / "failed").glob("*.txt"))

@@ -268,6 +268,14 @@ def call_llm(prompt: str, config: Optional[Dict] = None) -> str:
     file_config = _load_llm_config()
     merged = {**file_config, **(config or {})}
 
+    # Contract documents run to 3-5k tokens (exemplars are 11-20KB); 4096 truncates them.
+    try:
+        from archer.contract import contract_mode
+        if contract_mode() and "max_tokens" not in merged:
+            merged["max_tokens"] = int(os.getenv("ARCHER_CONTRACT_MAX_TOKENS", "16000"))
+    except ImportError:
+        pass
+
     provider = merged.get("provider", "").lower()
 
     # Explicit provider selection from config

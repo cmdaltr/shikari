@@ -72,12 +72,26 @@ class Report:
 
 
 # ---------- lexical ----------
+def without_query_block(text: str) -> str:
+    """Drop the body of the `query: |` block scalar; its content is opaque to YAML (KQL uses !in~, !has)."""
+    out, block_indent = [], None
+    for line in text.splitlines():
+        if block_indent is not None:
+            if not line.strip() or len(line) - len(line.lstrip()) > block_indent: continue
+            block_indent = None
+        m = re.match(r"^(\s*)query:\s*\|", line)
+        if m: block_indent = len(m.group(1))
+        out.append(line)
+    return "\n".join(out)
+
+
 def lexical(text: str, rep: Report):
     if "\t" in text: rep.fail("LEX-1", "tab character present")
     if re.search(r"^\s*query:(?!\s*\|\s*$)", text, re.M): rep.fail("LEX-2", "query must be a literal block scalar (query: |)")
-    if re.search(r"^\s*[a-z_]+:\s*[\[{](?![\]}])", text, re.M): rep.fail("LEX-3", "flow-style collection used; block style only")
-    if re.search(r"(^|\s)[&*][A-Za-z]", text, re.M): rep.fail("LEX-4", "YAML anchor/alias used")
-    if re.search(r"(^|\s)!!?[a-z]", text, re.M): rep.fail("LEX-5", "YAML tag used")
+    yaml_only = without_query_block(text)
+    if re.search(r"^\s*[a-z_]+:\s*[\[{](?![\]}])", yaml_only, re.M): rep.fail("LEX-3", "flow-style collection used; block style only")
+    if re.search(r"(^|\s)[&*][A-Za-z]", yaml_only, re.M): rep.fail("LEX-4", "YAML anchor/alias used")
+    if re.search(r"(^|\s)!!?[a-z]", yaml_only, re.M): rep.fail("LEX-5", "YAML tag used")
     if text.count("\n---") or text.startswith("---"): rep.fail("LEX-6", "document marker present")
 
 
@@ -238,7 +252,8 @@ def lint_kql(q: str, rep: Report, rule: Optional[dict] = None) -> List[str]:
         if len(branches) != len(set(branches)): rep.fail("KQL-2", "duplicate branch in union")
         missing = [b for b in table_lets if b not in branches]
         if missing: rep.fail("KQL-3", f"table-valued let(s) {missing} not in union")
-    for m in re.finditer(r'(?<!@)"((?:[^"\\]|\\.)*)"', body):
+    # Verbatim strings removed first so quotes pair correctly; a string ending in \" runs to end of line
+    for m in re.finditer(r'"((?:[^"\\\n]|\\.)*)(?:"|$)', re.sub(r'@"(?:[^"]|"")*"', '@V', body), re.M):
         if "\\" in m.group(1): rep.fail("KQL-5", f"ordinary literal contains backslash: {m.group(0)[:40]} (use @\"...\")")
     if re.search(r"\bdatetime\s*\(", body): rep.fail("KQL-6", "absolute datetime literal")
     if re.search(r"\bcontains\b", body): rep.fail("KQL-7", "substring 'contains' used; use has/=~/in~ or an anchored regex")
@@ -256,7 +271,7 @@ def lint_kql(q: str, rep: Report, rule: Optional[dict] = None) -> List[str]:
     scrubbed = scrub(q, "kql")
     for m in re.finditer(r"\b(?:has_any|has_all|in~?|!in~?)\s*\(([^()]*)\)", scrubbed):
         for item in m.group(1).split(","):
-            if not re.fullmatch(r"\s*(?:\"S\"|'S'|[A-Za-z_][A-Za-z0-9_]*)\s*", item):
+            if not re.fullmatch(r"\s*(?:\"S\"|'S'|[A-Za-z_][A-Za-z0-9_]*|-?\d+(?:\.\d+)?)\s*", item):
                 rep.fail("KQL-16", f"malformed string list item: {item.strip()[:50]!r}"); break
     for stmt in re.split(r"\n\s*\|", strip_comments(q, "kql")):
         s = re.sub(r'@"(?:[^"]|"")*"', "", stmt)
@@ -274,8 +289,8 @@ def lint_kql(q: str, rep: Report, rule: Optional[dict] = None) -> List[str]:
             lb = re.search(r"let\s+lookback\s*=\s*(\d+[mhd])\s*;", body)
             if not lb or lb.group(1) != rule["lookback"]: rep.fail("KQL-10", "let lookback must equal contract lookback")
             if "ago(lookback)" not in body: rep.fail("KQL-11", "Timestamp not bounded by ago(lookback)")
-            f = rule["schedule"]["frequency"]
-            if not (hours(f) <= hours(rule["lookback"]) <= KQL_WINDOW[f]): rep.fail("KQL-12", "lookback outside [frequency, platform window]")
+            f = rule["schedule"].get("frequency")
+            if f and not (hours(f) <= hours(rule["lookback"]) <= KQL_WINDOW[f]): rep.fail("KQL-12", "lookback outside [frequency, platform window]")
     return [m.group(1).replace('""', '"') for m in re.finditer(r'matches\s+regex\s+@"((?:[^"]|"")*)"', body)]
 
 
@@ -306,13 +321,14 @@ def check_rule(rule: dict, rep: Report):
     if rule["validation"]["compile"]["status"] != "not_run": rep.fail("VAL-compile", "compile status must be not_run on emission")
     tactic, tech = rule["attack"]["tactics"][0], rule["attack"]["technique_ids"][0]
     if rule["siem"] == "kql":
-        if not re.match(r"^[A-Z][A-Za-z]+_T\d{4}(\.\d{3})?_[A-Za-z]+_[A-Z][A-Za-z0-9]+$", rule["name"]): rep.fail("NAME-1", "KQL name pattern")
+        name_ok = re.match(r"^[A-Z][A-Za-z]+_T\d{4}(\.\d{3})?_[A-Za-z]+_[A-Z][A-Za-z0-9]+$", rule["name"])
+        if not name_ok: rep.fail("NAME-1", "KQL name pattern")
         exp_prefix = f"{TACTIC_PASCAL[tactic]}_{tech}_"
         if not rule["name"].startswith(exp_prefix): rep.fail("NAME-2", f"name must start with {exp_prefix}")
         suffix = {"hunt": "Hunt", "ioc_sweep": "Sweep"}.get(rule["detection_type"])
         if suffix and not rule["name"].endswith(suffix): rep.fail("NAME-3", f"descriptor must end with {suffix}")
-        src = rule["name"].split("_")[2]
-        if src not in {ls["siem_source"] for ls in rule["log_sources"]}: rep.fail("NAME-4", f"log-source token {src} not a declared source")
+        src = rule["name"].split("_")[2] if name_ok else None
+        if src and src not in {ls["siem_source"] for ls in rule["log_sources"]}: rep.fail("NAME-4", f"log-source token {src} not a declared source")
     else:
         if not re.match(r"^[a-z][a-z_]+_t\d{4}(_\d{3})?_udm_[a-z_]+_[a-z0-9_]+$", rule["name"]): rep.fail("NAME-1", "YARA-L name pattern")
         exp_prefix = f"{tactic}_{tech.lower().replace('.', '_')}_udm_"
