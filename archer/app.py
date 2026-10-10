@@ -4247,35 +4247,23 @@ async def generate_from_upload(
         use_ai = extraction_data.get("use_openai", False)
         run_correlation = extraction_data.get("run_correlation", False)
 
-        # Build manual data structure for process_group
-        manual_data = {
-            "techniques": [],
-            "identifiers": iocs,  # Use extracted IOCs
-            "metadata": {"source": "file_upload", "filename": filename, "ttps_found": ttps},
-        }
-
-        # Add technique data for each TTP
-        for ttp_id in ttps:
-            # Try to get technique info from MITRE
-            try:
-                technique_info = _get_technique_info(ttp_id)
-                if technique_info:
-                    manual_data["techniques"].append(technique_info)
-            except Exception:
-                # If we can't find the technique, add minimal data
-                manual_data["techniques"].append(
-                    {
-                        "tid": ttp_id,
-                        "name": f"Technique {ttp_id}",
-                        "tactic": "Unknown",
-                        "description": f"Extracted from {filename}",
-                        "software_used": [],
-                        "platforms": ["windows", "linux", "macos"],
-                    }
-                )
+        bundle = getattr(request.app.state, "bundle", None)
+        report_actor = extraction_data.get("group_name") or synthetic_group_name
 
         # Process in background thread
         def _bg():
+            try:
+                # The report's atomic IOCs aren't tied to a technique: one sweep per SIEM
+                from archer.build.ioc_sweep import write_ioc_sweeps
+
+                sweeps = write_ioc_sweeps(synthetic_group_name, iocs, filename, GENERATE_DIR)
+                if sweeps:
+                    print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
+                manual_data = _report_manual_data(ttps, bundle, report_actor, filename)
+            except Exception as e:
+                print(f"Error preparing upload generation: {e}")
+                write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
+                return
             try:
                 modified_process_group_wrapper(
                     synthetic_group_name,
@@ -4493,44 +4481,26 @@ async def generate_from_blog(
         else:
             iocs = extraction_data.get("iocs", {})
         url = extraction_data.get("url", "unknown")
-        procedures = extraction_data.get("procedures", [])
         use_ai = extraction_data.get("use_openai", False)
         run_correlation = extraction_data.get("run_correlation", False)
 
-        # Build manual data structure for process_group
-        manual_data = {
-            "techniques": [],
-            "identifiers": iocs,  # Use extracted IOCs
-            "metadata": {
-                "source": "blog_analysis",
-                "url": url,
-                "ttps_found": ttps,
-                "procedures": procedures,
-            },
-        }
-
-        # Add technique data for each TTP
-        for ttp_id in ttps:
-            # Try to get technique info from MITRE
-            try:
-                technique_info = _get_technique_info(ttp_id)
-                if technique_info:
-                    manual_data["techniques"].append(technique_info)
-            except Exception:
-                # If we can't find the technique, add minimal data
-                manual_data["techniques"].append(
-                    {
-                        "tid": ttp_id,
-                        "name": f"Technique {ttp_id}",
-                        "tactic": "Unknown",
-                        "description": f"Extracted from {url}",
-                        "software_used": [],
-                        "platforms": ["windows", "linux", "macos"],
-                    }
-                )
+        bundle = getattr(request.app.state, "bundle", None)
+        report_actor = extraction_data.get("group_name") or synthetic_group_name
 
         # Process in background thread
         def _bg():
+            try:
+                # The report's atomic IOCs aren't tied to a technique: one sweep per SIEM
+                from archer.build.ioc_sweep import write_ioc_sweeps
+
+                sweeps = write_ioc_sweeps(synthetic_group_name, iocs, url, GENERATE_DIR)
+                if sweeps:
+                    print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
+                manual_data = _report_manual_data(ttps, bundle, report_actor, url)
+            except Exception as e:
+                print(f"Error preparing blog generation: {e}")
+                write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
+                return
             try:
                 modified_process_group_wrapper(
                     synthetic_group_name,
@@ -5402,6 +5372,51 @@ async def generate_detections_from_profile(
 
         traceback.print_exc()
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+def _report_manual_data(ttps, bundle, actor: str, source: str) -> list:
+    """
+    process_group's manual_data for a report's techniques, grouped by tactic.
+
+    When the report's actor is an ATT&CK group (by name or alias, e.g. UNC3944 ->
+    Scattered Spider), each technique uses that group's ATT&CK procedures, which carry
+    per-technique indicators. Techniques without one fall back to the technique's own
+    description, as a technique hunt does.
+    """
+    from archer.mitre.retrieve import retrieve_group, retrieve_procedures, retrieve_techniques
+
+    group_procs = {}
+    group_id = retrieve_group(bundle, actor) if bundle is not None and actor else None
+    if group_id:
+        for proc in retrieve_procedures(bundle, retrieve_techniques(bundle, group_id)):
+            group_procs.setdefault(proc[0], []).append(proc)
+        print(f"Blog actor '{actor}' resolved to an ATT&CK group: {len(group_procs)} techniques with procedures")
+
+    by_tactic = {}
+    for tid in dict.fromkeys(ttps):
+        info = _get_technique_info(tid) or {}
+        tactic = info.get("tactic", "Unknown Tactic")
+        name = info.get("name", tid)
+        procs = group_procs.get(tid)
+        if procs:
+            for proc in procs:
+                by_tactic.setdefault((proc[2] or [tactic])[0], []).append({
+                    "technique": tid, "name": proc[1] or name,
+                    "activity_desc": proc[3],
+                    "op_guidance": proc[4], "red_tool": proc[5],
+                    "detect_guidance": (proc[6] or [""])[0],
+                    "procedure_platforms": proc[7] if len(proc) > 7 else [],
+                    "software_platforms": proc[8] if len(proc) > 8 else {},
+                })
+        else:
+            description = info.get("description") or f"Detect usage of {tid}"
+            by_tactic.setdefault(tactic, []).append({
+                "technique": tid, "name": name,
+                "activity_desc": f"Reported in {source}. {description}",
+                "op_guidance": description, "red_tool": {}, "detect_guidance": description,
+                "procedure_platforms": info.get("platforms", []),
+            })
+    return [{"tactic": tactic, "techniques": techs} for tactic, techs in by_tactic.items()]
 
 
 def _get_technique_info(ttp_id: str) -> dict:

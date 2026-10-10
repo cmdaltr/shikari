@@ -131,6 +131,17 @@ def wait_for_results(page, label):
                 shown = "PAGE DID NOT SHOW FAILURE"
             shot(page, "progress_failed")
             raise RuntimeError(f"run failed at stage {status.get('stage')} ({shown}): {status.get('error', 'no error recorded')}")
+        if status and status.get("status") in ("complete", "genai_complete") and not status.get("created_yaml"):
+            try:
+                page.wait_for_function(
+                    "() => (document.getElementById('progress-state') || {}).textContent === 'Nothing generated'",
+                    timeout=15000,
+                )
+                shown = "page says nothing was generated"
+            except PWTimeout:
+                shown = "PAGE STILL WAITING"
+            shot(page, "progress_empty")
+            raise RuntimeError(f"run completed with no detections ({shown})")
         page.wait_for_timeout(3000)
     raise TimeoutError(f"no /results after {GEN_TIMEOUT}s (stuck on {page.url})")
 

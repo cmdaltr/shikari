@@ -57,9 +57,11 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
     group_in_mitre = check_group_in_mitre(bundle, group_name)
 
-    # initialize a progress file for the group
+    # initialize a progress file for the group. Progress updates merge into the
+    # existing record, so clear fields a previous run may have left behind.
     safe_progress_update(
-        group_name, {"status": "started", "stage": "init", "created_yaml": 0}
+        group_name,
+        {"status": "started", "stage": "init", "created_yaml": 0, "total_yaml": None, "error": None},
     )
 
     # Fail the whole run up front: compile_query loads mappings per technique and
@@ -70,7 +72,9 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
         safe_progress_update(group_name, {"status": "failed", "stage": "init", "error": str(e)})
         raise
 
-    if group_in_mitre == "N":
+    # Supplied techniques (blog upload, CVE, technique hunt) take precedence: a report
+    # attributed to an ATT&CK alias such as UNC3944 must still use the report's TTPs
+    if manual_data or group_in_mitre == "N":
         # manual_data must be provided
         if not manual_data:
             raise ValueError(
@@ -95,7 +99,8 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             retrieved_data["tactic"] = tactic
             for tech_info in techniques:
                 technique = tech_info.get("technique")
-                retrieved_data["technique"] = technique
+                # Entries may carry the ATT&CK name; otherwise the ID doubles as the name
+                retrieved_data["technique"] = tech_info.get("name") or technique
                 retrieved_data["technique_id"] = technique  # Add technique ID
 
                 # Handle op_guidance - can be dict (IOCs) or string (description)
@@ -147,7 +152,8 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
                 # Add activity_desc - use detect_guidance (string) not op_guidance (dict)
                 # For CVEs, op_guidance is the IOC dict, detect_guidance is the description string
-                retrieved_data["activity_desc"] = tech_info.get("detect_guidance", "") or f"Detection for {technique}"
+                retrieved_data["activity_desc"] = (tech_info.get("activity_desc") or tech_info.get("detect_guidance", "")
+                                                   or f"Detection for {technique}")
 
                 # Build detection queries and YAML
                 try:

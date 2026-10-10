@@ -415,6 +415,21 @@ async function refresh(){
       return;
     }
 
+    // Finished with nothing to show: say so instead of waiting for detections that won't come
+    if ((p.status === 'complete' || p.status === 'genai_complete') && !(p.created_yaml > 0)) {
+      const yamlFill = document.getElementById('yaml-progress') || document.querySelector('.progress-fill.yaml');
+      const lastEl = getOrCreateLastFileEl(yamlFill);
+      if (lastEl) {
+        lastEl.style.display = 'block';
+        lastEl.textContent = p.error || 'No detections were generated: none of the selected techniques produced a query.';
+      }
+      const indicator = document.getElementById('loading-indicator');
+      if (indicator) indicator.classList.add('fade-out', 'hidden');
+      const state = document.getElementById('progress-state');
+      if (state) state.textContent = 'Nothing generated';
+      return;
+    }
+
     // Detection generation progress (monotonic + lock at 100% once complete)
     const created = p.created_yaml || p.yaml_created || 0;
     const total = p.total_yaml || p.yaml_total || 10;

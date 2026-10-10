@@ -163,12 +163,17 @@ def extract_indicators_from_guidance(op_guidance):
 
 
 def retrieve_group(bundle, group):
+    """Intrusion-set ID by name, or by exact alias (UNC3944 -> Scattered Spider)."""
+    wanted = group.lower()
+    by_alias = None
     for obj in bundle.objects:
-        if (
-            obj.get("type") == "intrusion-set"
-            and obj.get("name").lower() == group.lower()
-        ):
+        if obj.get("type") != "intrusion-set" or obj.get("revoked"):
+            continue
+        if obj.get("name", "").lower() == wanted:
             return obj["id"]
+        if by_alias is None and wanted in (a.lower() for a in obj.get("aliases", []) or []):
+            by_alias = obj["id"]
+    return by_alias
 
 
 def retrieve_techniques(bundle, group_id):

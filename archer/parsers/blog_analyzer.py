@@ -164,13 +164,17 @@ def analyze_blog_post(url: str) -> Dict:
             "techniques": _extract_techniques(text),
             "tactics": _extract_tactics(text),
             "procedures": _extract_procedures(text),
-            "iocs": _drop_publisher_domains(
-                _extract_iocs(text),
-                # Judge the publisher by where we landed, not the link we were given
-                response.url if isinstance(response.url, str) else url,
-                # Full page text: contact addresses usually sit in the stripped footer
+            "iocs": _drop_citation_links(
+                _drop_publisher_domains(
+                    _extract_iocs(text),
+                    # Judge the publisher by where we landed, not the link we were given
+                    response.url if isinstance(response.url, str) else url,
+                    # Full page text: contact addresses usually sit in the stripped footer
+                    full_text,
+                    page_meta,
+                ),
+                # Full page text: reference lists often sit in stripped sections too
                 full_text,
-                page_meta,
             ),
         }
 
@@ -447,6 +451,44 @@ def _drop_publisher_domains(iocs: Dict[str, List[str]], page_url: str, text: str
                 or any(d == v or d.endswith("." + v) for v in vendor_email))
 
     iocs["domain"] = [d for d in iocs["domain"] if not is_vendor(d)]
+    return iocs
+
+
+_URL_HOST_PREFIX = re.compile(r"https?://(?:[\w-]+\.)*$", re.I)
+
+
+def _drop_citation_links(iocs: Dict[str, List[str]], text: str) -> Dict[str, List[str]]:
+    """
+    Remove domains that the report only cites, URL fragments taken as files, and
+    prose taken as commands (indicator_hygiene).
+
+    The extractor defangs every domain, so a report's references
+    ("https://www.trellix.com/...") come out looking like its IOCs ("fleetdeck[.]io").
+    In the source text they differ: indicators are written defanged, citations are
+    plain links. A domain is kept if the text defangs it anywhere, or mentions it
+    outside a URL; it's dropped when every mention is the host of an http(s) link.
+    """
+    if not text:
+        return iocs
+
+    def is_citation(domain: str) -> bool:
+        d = _refang(domain)
+        defanged = r"\s*(?:\[\.\]|\(\.\)|\[dot\])\s*".join(re.escape(p) for p in d.split("."))
+        if re.search(defanged, text, re.I):
+            return False
+        mentions = list(re.finditer(re.escape(d), text, re.I))
+        return bool(mentions) and all(_URL_HOST_PREFIX.search(text[max(0, m.start() - 80):m.start()]) for m in mentions)
+
+    if iocs.get("domain"):
+        iocs["domain"] = [d for d in iocs["domain"] if not is_citation(d)]
+    if iocs.get("file"):
+        iocs["file"] = [f for f in iocs["file"] if not (f.startswith("//") or "://" in f)]
+    # Prose and markup captured as commands, paths or registry keys
+    from archer.build.indicator_hygiene import clean_indicators
+
+    for kind in ("cmd", "reg", "evt", "sw", "file"):
+        if iocs.get(kind):
+            iocs[kind] = clean_indicators(iocs[kind])
     return iocs
 
 
