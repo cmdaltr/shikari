@@ -210,6 +210,13 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
     uid = check_id([])
     desc = tdesc.replace("\n  \n", "\n  ").replace("\n* ", "\n  * ")
     desc = re.sub(r"</?code>", r"`", desc)
+    # Every continuation line must sit inside the "description: |" block. Procedure text
+    # can wrap mid-path ("/lib/systemd/\nsystem/teleport.service"), and an unindented
+    # line ends the block and makes the whole file invalid YAML.
+    desc = "\n".join(
+        line if i == 0 or not line.strip() or line.startswith("  ") else "  " + line
+        for i, line in enumerate(desc.split("\n"))
+    )
 
     # Extract datatype from first non-comment, non-let line (if not provided)
     if not datatype:

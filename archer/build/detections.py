@@ -1,5 +1,6 @@
 from .yaml import construct_yaml
 from .queries import get_platforms_for_index
+from .indicator_hygiene import clean_identifier_map
 from archer.mitre.enterprise import (
     get_stix_data,
     obtain_all_techniques,
@@ -97,13 +98,16 @@ def filter_generic_indicators(identifiers):
     filtered_identifiers = {}
     has_real_indicators = False
 
+    # Prose and markup captured by extraction (citations, sentences, HTML entities)
+    identifiers = clean_identifier_map(identifiers)
+
     for indicator_type, indicator_list in identifiers.items():
         filtered_list = []
         for indicator in indicator_list:
             indicator_str = str(indicator).strip().lower()
 
-            # Skip if too short
-            if len(indicator_str) < 3:
+            # Skip if too short (ports such as 22 are short but real)
+            if len(indicator_str) < 3 and not indicator_str.isdigit():
                 continue
 
             # Skip if it's a generic term

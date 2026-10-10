@@ -10,6 +10,8 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from archer.build.indicator_hygiene import clean_identifier_map
+
 
 class SecOpsGenerator:
     def __init__(self):
@@ -44,132 +46,149 @@ class SecOpsGenerator:
             Dict with keys: rule_name, yaral_code, description, severity,
                            data_sources, event_types
         """
-
-        # Generate rule name
         rule_name = f"{technique_id.replace('.', '_')}_{technique_name.replace(' ', '_')}"
 
-        # Determine event type based on technique and indicators
-        event_type = self._determine_event_type(indicators or {})
-
-        # Build YARA-L query
-        yaral_code = self._build_yaral_query(
-            technique_id=technique_id,
-            technique_name=technique_name,
-            indicators=indicators or {},
-            event_type=event_type
-        )
-
-        # Determine severity
         severity = "MEDIUM"
         if any(keyword in technique_name.lower() for keyword in ['credential', 'privilege', 'persistence', 'lateral']):
             severity = "HIGH"
+
+        yaral_code, event_types = self._build_yaral_query(
+            technique_id=technique_id,
+            technique_name=technique_name,
+            indicators=clean_identifier_map(indicators or {}),
+            severity=severity,
+        )
 
         return {
             "rule_name": rule_name,
             "yaral_code": yaral_code,
             "description": f"Detects {technique_name} ({technique_id})",
             "severity": severity,
-            "data_sources": [event_type],
-            "event_types": [event_type]
+            "data_sources": event_types,
+            "event_types": event_types,
         }
-
-    def _determine_event_type(self, indicators: Dict) -> str:
-        """Determine appropriate UDM event type based on indicators"""
-        if "cmd" in indicators or "sw" in indicators:
-            return "PROCESS_LAUNCH"
-        elif "reg" in indicators:
-            return "REGISTRY_MODIFICATION"
-        elif "network" in indicators or "url" in indicators:
-            return "NETWORK_CONNECTION"
-        elif "file" in indicators:
-            return "FILE_CREATION"
-        else:
-            return "PROCESS_LAUNCH"  # Default
 
     def _build_yaral_query(
         self,
         technique_id: str,
         technique_name: str,
         indicators: Dict,
-        event_type: str
-    ) -> str:
-        """Build YARA-L query using templates"""
+        severity: str = "MEDIUM",
+    ):
+        """
+        Build a single-event YARA-L rule from indicators. Returns (rule, event_types).
 
-        # Basic template structure
-        rule_name = technique_id.replace('.', '_')
+        Each indicator family matches only the UDM event type that carries its fields:
+        command lines and binaries on PROCESS_LAUNCH, registry keys on registry events,
+        ports/protocols/services on NETWORK_CONNECTION. Families become alternatives
+        (one branch each) rather than being ANDed onto one event, which could never
+        match (a process launch has no network.application_protocol).
 
-        # Build condition based on indicators
-        conditions = []
+        Network context only narrows a network event, so it gets its own branch only
+        when there are no process or registry indicators; otherwise a lone protocol
+        such as SSH would match every SSH connection. It is kept in meta as context.
+        """
+        branches, context = _indicator_branches(indicators)
+        if not branches:
+            branches = [(["PROCESS_LAUNCH"], [])]
 
-        # Process command line indicators
-        if "cmd" in indicators:
-            cmd_conditions = []
-            for cmd in indicators["cmd"][:5]:  # Limit to 5 indicators
-                # Escape special characters
-                cmd_escaped = cmd.replace('"', '\\"')
-                cmd_conditions.append(f're.regex($e.target.process.command_line, `{cmd_escaped}`) nocase')
-            if cmd_conditions:
-                conditions.append("(" + " or ".join(cmd_conditions) + ")")
+        event_types = list(dict.fromkeys(t for types, _ in branches for t in types))
+        events = [_branch_expr(types, conds) for types, conds in branches]
+        if len(events) == 1:
+            types, conds = branches[0]
+            event_lines = [_type_expr(types)] + conds
+        else:
+            # Lines in events are ANDed, so alternatives share one line
+            event_lines = [" or ".join(events)]
+        context_meta = "".join(f'\n    context_{k} = "{_meta_text(", ".join(v))}"' for k, v in context.items())
 
-        # Process software/file indicators
-        if "sw" in indicators:
-            sw_conditions = []
-            for sw in indicators["sw"][:5]:
-                sw_escaped = sw.replace('"', '\\"')
-                sw_conditions.append(f're.regex($e.target.process.file.full_path, `{sw_escaped}`) nocase')
-            if sw_conditions:
-                conditions.append("(" + " or ".join(sw_conditions) + ")")
-
-        # Process port indicators
-        if "port" in indicators:
-            port_conditions = []
-            for port in indicators["port"][:5]:
-                port_conditions.append(f'($e.target.port = {port} or $e.principal.port = {port})')
-            if port_conditions:
-                conditions.append("(" + " or ".join(port_conditions) + ")")
-
-        # Process protocol indicators
-        if "protocol" in indicators:
-            proto_conditions = []
-            for proto in indicators["protocol"][:5]:
-                proto_upper = proto.upper()
-                proto_conditions.append(f're.regex($e.network.application_protocol, `{proto_upper}`) nocase')
-            if proto_conditions:
-                conditions.append("(" + " or ".join(proto_conditions) + ")")
-
-        # Process service indicators
-        if "service" in indicators:
-            svc_conditions = []
-            for svc in indicators["service"][:5]:
-                svc_escaped = svc.replace('"', '\\"')
-                svc_conditions.append(f're.regex($e.target.application, `{svc_escaped}`) nocase')
-            if svc_conditions:
-                conditions.append("(" + " or ".join(svc_conditions) + ")")
-
-        # If no specific conditions, create a generic one
-        if not conditions:
-            conditions.append('$e.metadata.event_type = "PROCESS_LAUNCH"')
-
-        condition_str = " and ".join(conditions)
-
-        # Build complete YARA-L rule
-        yaral_query = f"""rule {rule_name} {{
+        rule = f"""rule {technique_id.replace('.', '_')} {{
   meta:
     author = "Archer Detection Engineering"
-    description = "Detects {technique_name} ({technique_id})"
+    description = "Detects {_meta_text(technique_name)} ({technique_id})"
     mitre_attack_technique = "{technique_id}"
-    severity = "MEDIUM"
+    severity = "{severity}"{context_meta}
 
   events:
-    $e.metadata.event_type = "{event_type}"
-    {condition_str}
+{chr(10).join("    " + line for line in event_lines)}
 
   condition:
     $e
 }}"""
+        return rule, event_types
 
-        return yaral_query
 
+# ── Indicator → UDM ────────────────────────────────────────────────────────
+
+# RE2 metacharacters; everything else in an indicator is literal text
+_RE2_META = re.compile(r"([\\.^$|?*+()\[\]{}])")
+_REGISTRY_PATH = re.compile(r"^(HKLM|HKCU|HKU|HKCR|HKCC|HKEY_[A-Z_]+)\\", re.I)
+_PER_TYPE_LIMIT = 5
+# UDM ApplicationProtocol enum values that indicators commonly name
+_UDM_PROTOCOLS = {"DNS", "HTTP", "HTTPS", "SSH", "RDP", "SMB", "LDAP", "SMTP", "SNMP", "NTP", "DHCP",
+                  "KRB5", "QUIC", "TOR", "NFS", "SIP", "MQTT", "GRPC", "RPC", "DCERPC"}
+_PROTOCOL_ALIASES = {"KERBEROS": "KRB5"}
+
+
+def _re_literal(value: str) -> Optional[str]:
+    """An indicator as an RE2 pattern matching it literally; runs of spaces match any whitespace."""
+    if "`" in value:  # cannot appear inside a YARA-L regex literal
+        return None
+    return r"\s+".join(_RE2_META.sub(r"\\\1", part) for part in value.split())
+
+
+def _regex_any(field: str, values: List[str]) -> List[str]:
+    pats = [p for p in (_re_literal(v) for v in values[:_PER_TYPE_LIMIT]) if p]
+    return [f"re.regex($e.{field}, `{p}`) nocase" for p in pats]
+
+
+def _type_expr(types: List[str]) -> str:
+    exprs = [f'$e.metadata.event_type = "{t}"' for t in types]
+    return exprs[0] if len(exprs) == 1 else "(" + " or ".join(exprs) + ")"
+
+
+def _branch_expr(types: List[str], conds: List[str]) -> str:
+    return "(" + " and ".join([_type_expr(types)] + conds) + ")"
+
+
+def _meta_text(value: str) -> str:
+    return str(value).replace("\\", "/").replace('"', "'")
+
+
+def _indicator_branches(indicators: Dict):
+    """[(event_types, [conditions])] per indicator family, plus unused network context."""
+    cmds = list(indicators.get("cmd", []))
+    reg_keys = list(indicators.get("reg", [])) + [c for c in cmds if _REGISTRY_PATH.match(c)]
+    binaries = list(indicators.get("sw", []))
+
+    branches = []
+    process = _regex_any("target.process.command_line", cmds) + _regex_any("target.process.file.full_path", binaries)
+    if process:
+        branches.append((["PROCESS_LAUNCH"], ["(" + " or ".join(process) + ")"]))
+    registry = _regex_any("target.registry.registry_key", reg_keys)
+    if registry:
+        branches.append((["REGISTRY_CREATION", "REGISTRY_MODIFICATION"], ["(" + " or ".join(registry) + ")"]))
+
+    ports = [p for p in (str(x).strip() for x in indicators.get("port", [])) if p.isdigit() and 0 < int(p) < 65536]
+    protocols, unknown = [], []
+    for proto in indicators.get("protocol", []):
+        name = _PROTOCOL_ALIASES.get(str(proto).upper(), str(proto).upper())
+        (protocols if name in _UDM_PROTOCOLS else unknown).append(name)
+    services = list(indicators.get("service", []))
+    context = {k: v for k, v in (("ports", ports), ("protocols", protocols + unknown), ("services", services)) if v}
+
+    if not branches and (ports or protocols or services):
+        network = []
+        if ports:
+            network.append("(" + " or ".join(f"$e.target.port = {p}" for p in ports[:_PER_TYPE_LIMIT]) + ")")
+        if protocols:
+            network.append("(" + " or ".join(f'$e.network.application_protocol = "{p}"' for p in protocols[:_PER_TYPE_LIMIT]) + ")")
+        svc = _regex_any("target.application", services)
+        if svc:
+            network.append("(" + " or ".join(svc) + ")")
+        branches.append((["NETWORK_CONNECTION"], network))
+        context = {}
+    return branches, context
 
 
 # ── Multi-event correlation ────────────────────────────────────────────────
