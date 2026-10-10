@@ -2,7 +2,7 @@
 Headed Playwright walkthrough of the Archer UI, one captioned step per feature.
 
 Run:  .venv/bin/python tests/ui/walkthrough.py [step ...] [--headless]
-Steps: login group cve research upload profile ask library coverage manual how user
+Steps: login group cve research upload upload-error profile ask library coverage manual how user
 Env:  ARCHER_BASE_URL, ARCHER_EMAIL, ARCHER_PASSWORD, ARCHER_GEN_TIMEOUT (seconds)
 """
 
@@ -230,6 +230,24 @@ def upload_blog(page):
     return f"{body.get('ttps_count', 0)} TTPs, {body.get('iocs_count', 0)} IOCs extracted"
 
 
+@step("Upload — rejected URL shows an inline error")
+def upload_error(page):
+    open_tab(page, "upload")
+    caption(page, "Upload tab: a private-IP URL should be refused with a visible error")
+    page.fill("#blog_url_input", "http://192.168.1.10/report.html")
+    page.wait_for_function("!document.getElementById('upload_btn').disabled", timeout=10000)
+    page.click("#upload_btn")
+    answer_ai_prompt(page)
+    err = page.locator("#upload-error")
+    err.wait_for(state="visible", timeout=30000)
+    err.scroll_into_view_if_needed()
+    shot(page, "upload_error")
+    text = err.inner_text().strip()
+    if not text:
+        raise RuntimeError("error element shown but empty")
+    return text[:120]
+
+
 @step("Profile — company OSINT (tesco.com)")
 def profile(page):
     open_tab(page, "profile")
@@ -305,7 +323,7 @@ def user_profile(page):
 
 STEPS = {
     "login": login, "group": hunt_group, "cve": hunt_cve, "research": research,
-    "upload": upload_blog, "profile": profile, "ask": ask_archer, "library": library,
+    "upload": upload_blog, "upload-error": upload_error, "profile": profile, "ask": ask_archer, "library": library,
     "coverage": coverage, "manual": manual, "how": how, "user": user_profile,
 }
 

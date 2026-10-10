@@ -670,11 +670,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // Failed uploads return JSON {success:false, message}; surface it inline rather than alert(),
+  // which blocks the page and previously never fired for HTTP error responses at all
+  function showUploadError(msg) {
+    var el = document.getElementById('upload-error');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function uploadFailed(data) {
+    if (typeof data !== 'object' || data === null || data.success !== false) return false;
+    showUploadError(data.message || data.error || 'Processing failed. Please try again.');
+    return true;
+  }
+
   // Attach click handler to button instead of form submit
   if (uploadBtn && uploadForm) {
     uploadBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
+      showUploadError('');
 
       var urlInput = document.getElementById('blog_url_input');
       var url = (urlInput && urlInput.value) || '';
@@ -706,6 +722,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(function (data) {
           hideLoading();
+          if (uploadFailed(data)) return;
           if (typeof data === 'object' && data.show_extraction) { showExtractionResults(data); return; }
           if (typeof data === 'object' && data.redirect_url) { window.location = data.redirect_url; return; }
           if (typeof data === 'object' && data.redirect) { window.location = data.redirect; return; }
@@ -715,7 +732,7 @@ document.addEventListener('DOMContentLoaded', function () {
           var oldContent = document.getElementById('main-content');
           if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
         })
-        .catch(function (err) { hideLoading(); alert('Error: ' + err.message); });
+        .catch(function (err) { hideLoading(); showUploadError('Request failed: ' + err.message); });
         return;
       }
 
@@ -735,6 +752,7 @@ document.addEventListener('DOMContentLoaded', function () {
       })
       .then(function (data) {
         hideLoading();
+        if (uploadFailed(data)) return;
         if (typeof data === 'object' && data.show_extraction) {
           showExtractionResults(data);
           return;
@@ -755,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function () {
       })
       .catch(function (err) {
         hideLoading();
-        alert('Error: ' + err.message);
+        showUploadError('Request failed: ' + err.message);
       });
     });
   }
