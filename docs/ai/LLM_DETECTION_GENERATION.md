@@ -10,7 +10,7 @@ Archer's LLM-based detection generation infrastructure enables training and depl
 - **Correlation Rules**: Generate multi-stage attack correlations and behavioral analytics
 - **Threat Reports**: Produce comprehensive threat intelligence reports with executive summaries
 - **Continuous Learning**: Improve detection quality through fine-tuning on curated datasets
-- **Multi-Platform Support**: Generate detections for Splunk, Microsoft Defender, Elastic, Google Chronicle
+- **Multi-Platform Support**: Generate detections for Splunk, Microsoft Defender, Elastic, Google SecOps
 
 ### Architecture
 

@@ -105,19 +105,19 @@ def test_integration_with_generators():
     print("Testing Integration with Detection Generators...")
     print("=" * 60)
 
-    # Test Chronicle generator
-    print("\n1. Testing Chronicle Generator:")
+    # Test SecOps generator
+    print("\n1. Testing SecOps Generator:")
     try:
-        from archer.build.chronicle import ChronicleGenerator
+        from archer.build.secops import SecOpsGenerator
 
         # Create with default provider
-        gen = ChronicleGenerator()
-        print(f"   ✓ Chronicle generator created with LLM provider")
+        gen = SecOpsGenerator()
+        print(f"   ✓ SecOps generator created with LLM provider")
 
         # Create with specific provider
         provider = LLMFactory.create("anthropic")
-        gen_with_provider = ChronicleGenerator(llm_provider=provider)
-        print(f"   ✓ Chronicle generator accepts custom LLM provider")
+        gen_with_provider = SecOpsGenerator(llm_provider=provider)
+        print(f"   ✓ SecOps generator accepts custom LLM provider")
     except Exception as e:
         print(f"   ✗ Failed: {e}")
         return False

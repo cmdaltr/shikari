@@ -55,7 +55,7 @@ class TestGenerateByGroup:
         r = api.post("/generate", data={
             "group_name": "FIN7",
             "exclude_splunk": "true",
-            "exclude_chronicle": "true",
+            "exclude_secops": "true",
         }, allow_redirects=False)
         assert r.status_code in [200, 302, 303, 401]
 
@@ -64,7 +64,7 @@ class TestGenerateByGroup:
             "group_name": "APT28",
             "exclude_splunk": "true",
             "exclude_mde": "true",
-            "exclude_chronicle": "true",
+            "exclude_secops": "true",
             "exclude_elastic": "true",
         }, allow_redirects=False)
         assert r.status_code in [200, 302, 303, 400, 401, 422]

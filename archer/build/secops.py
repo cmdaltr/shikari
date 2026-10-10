@@ -1,6 +1,6 @@
 """
 Google SecOps YARA-L Detection Generator
-Converts MITRE ATT&CK techniques into YARA-L detection rules for Google SecOps (formerly Chronicle)
+Converts MITRE ATT&CK techniques into YARA-L detection rules for Google SecOps
 Uses template-based generation with UDM (Unified Data Model) field mappings
 """
 
@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
-class ChronicleGenerator:
+class SecOpsGenerator:
     def __init__(self):
         """
         Initialize Google SecOps generator with schema mappings

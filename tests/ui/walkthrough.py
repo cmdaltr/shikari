@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright, Error as PWError, TimeoutError as PWTimeout
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 BASE = os.getenv("ARCHER_BASE_URL", "http://localhost:8000").rstrip("/")
 # Defaults are the documented first-run admin from GETTING_STARTED.md
@@ -82,14 +82,7 @@ def step(name):
 
 
 def open_tab(page, tab):
-    try:
-        page.goto(f"{BASE}/")
-    except PWError as e:
-        # The previous results page can still be navigating (attack-flow build), aborting this one
-        if "ERR_ABORTED" not in str(e):
-            raise
-        page.wait_for_timeout(1000)
-        page.goto(f"{BASE}/")
+    page.goto(f"{BASE}/")
     page.click(f'button.tab-button[data-tab="{tab}"]')
     page.wait_for_timeout(600)
 
@@ -391,7 +384,9 @@ if __name__ == "__main__":
         browser = p.chromium.launch(headless=headless, slow_mo=0 if headless else 250)
         ctx = browser.new_context(no_viewport=True)  # page tracks the real window size
         page = ctx.new_page()
-        page.on("dialog", lambda d: d.dismiss())
+        # Leave-page prompts (results page guards unsaved output) must be accepted or every
+        # later goto aborts; anything else (confirm/alert) is dismissed
+        page.on("dialog", lambda d: d.accept() if d.type == "beforeunload" else d.dismiss())
         for key in wanted:
             STEPS[key](page)
         caption(page, "Walkthrough complete")

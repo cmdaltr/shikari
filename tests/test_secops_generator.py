@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for Google SecOps (Chronicle) YARA-L query generator.
+Test script for Google SecOps YARA-L query generator.
 Mirrors test_elastic_generator.py structure for consistency.
 """
 
@@ -12,29 +12,29 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
-class TestChronicleGenerator:
-    """Tests for Google SecOps Chronicle YARA-L generator."""
+class TestSecOpsGenerator:
+    """Tests for Google SecOps YARA-L generator."""
 
     def test_generator_initialization(self):
-        """Test that ChronicleGenerator initializes successfully."""
-        from archer.build.chronicle import ChronicleGenerator
+        """Test that SecOpsGenerator initializes successfully."""
+        from archer.build.secops import SecOpsGenerator
 
-        generator = ChronicleGenerator()
+        generator = SecOpsGenerator()
         assert generator is not None
 
     def test_generator_has_schema(self):
         """Test that generator loads UDM schema."""
-        from archer.build.chronicle import ChronicleGenerator
+        from archer.build.secops import SecOpsGenerator
 
-        generator = ChronicleGenerator()
+        generator = SecOpsGenerator()
         # Schema may or may not be loaded depending on file existence
         assert hasattr(generator, "schema")
 
     def test_generate_yaral_rule_basic(self):
         """Test generating a basic YARA-L rule."""
-        from archer.build.chronicle import ChronicleGenerator
+        from archer.build.secops import SecOpsGenerator
 
-        generator = ChronicleGenerator()
+        generator = SecOpsGenerator()
 
         result = generator.generate_yaral_rule(
             technique_id="T1003.001",
@@ -52,9 +52,9 @@ class TestChronicleGenerator:
 
     def test_generate_yaral_rule_with_indicators(self):
         """Test generating YARA-L rule with IOC indicators."""
-        from archer.build.chronicle import ChronicleGenerator
+        from archer.build.secops import SecOpsGenerator
 
-        generator = ChronicleGenerator()
+        generator = SecOpsGenerator()
 
         indicators = {
             "cmd": ["mimikatz.exe", "procdump.exe"],
@@ -76,9 +76,9 @@ class TestChronicleGenerator:
 
     def test_generate_yaral_execution_technique(self):
         """Test generating YARA-L rule for execution technique."""
-        from archer.build.chronicle import ChronicleGenerator
+        from archer.build.secops import SecOpsGenerator
 
-        generator = ChronicleGenerator()
+        generator = SecOpsGenerator()
 
         result = generator.generate_yaral_rule(
             technique_id="T1059.001",
@@ -94,9 +94,9 @@ class TestChronicleGenerator:
 
     def test_generate_yaral_initial_access_technique(self):
         """Test generating YARA-L rule for initial access technique."""
-        from archer.build.chronicle import ChronicleGenerator
+        from archer.build.secops import SecOpsGenerator
 
-        generator = ChronicleGenerator()
+        generator = SecOpsGenerator()
 
         result = generator.generate_yaral_rule(
             technique_id="T1566.001",
@@ -111,16 +111,16 @@ class TestChronicleGenerator:
         assert isinstance(result, dict)
 
 
-def test_chronicle_generator():
+def test_secops_generator():
     """Standalone test function for CLI execution."""
-    print("Testing Google SecOps (Chronicle) YARA-L Generator...")
+    print("Testing Google SecOps YARA-L Generator...")
     print("=" * 60)
 
-    from archer.build.chronicle import ChronicleGenerator
+    from archer.build.secops import SecOpsGenerator
 
     # Create generator
     try:
-        generator = ChronicleGenerator()
+        generator = SecOpsGenerator()
         print("✓ Generator initialized successfully")
     except Exception as e:
         print(f"✗ Failed to initialize generator: {e}")
@@ -163,5 +163,5 @@ def test_chronicle_generator():
 
 
 if __name__ == "__main__":
-    success = test_chronicle_generator()
+    success = test_secops_generator()
     sys.exit(0 if success else 1)

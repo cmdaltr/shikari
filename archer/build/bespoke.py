@@ -364,7 +364,7 @@ _BESPOKE_COMPONENTS = [
     ("mappings/schemas/schemaSplunk.json",           "Splunk Pipeline Schema",      True,  "per-index SPL transformation pipelines"),
     ("mappings/schemas/schemaMDE.json",              "MDE Schema",                  True,  "MDE table/field definitions"),
     ("mappings/schemas/schemaElastic.json",          "Elastic Schema",              True,  "Elastic field definitions"),
-    ("mappings/schemas/schemaGoogleSecOps.json",     "Google SecOps Schema",        True,  "Chronicle/Google SecOps field definitions"),
+    ("mappings/schemas/schemaGoogleSecOps.json",     "Google SecOps Schema",        True,  "Google SecOps UDM field definitions"),
     ("mappings/sources/platforms.json",              "Platform Mappings",           True,  "platform→index compatibility matrix"),
     ("mappings/sources/dataSources.json",            "Data Sources",                True,  "log source definitions"),
     ("mappings/sources/entityMappings.json",         "Entity Mappings",             True,  "KQL entity extraction patterns"),

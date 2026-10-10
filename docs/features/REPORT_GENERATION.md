@@ -379,7 +379,7 @@ Reports group detections by platform:
 - Splunk queries
 - MDE/KQL queries
 - Elastic Query DSL
-- Chronicle YARA-L
+- Google SecOps YARA-L
 
 ### Metadata Preservation
 Reports include full context:

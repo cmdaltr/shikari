@@ -324,7 +324,7 @@ Schema requirements:
 Additional context:
 - For Splunk: Use Unix timestamps for _time, include sourcetype
 - For Elastic: Use ISO timestamps for @timestamp, use ECS field naming (dot notation)
-- For Chronicle: Use UDM format with nested objects (metadata.event_type, target.process.command_line)
+- For Google SecOps: Use UDM format with nested objects (metadata.event_type, target.process.command_line)
 - For MDE: Use ISO timestamps, include DeviceId as UUID
 
 Generate varied events that would realistically trigger a detection for this technique.

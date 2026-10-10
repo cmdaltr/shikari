@@ -281,7 +281,7 @@ Technique Name: {input_data['technique_name']}
 Description: {input_data['description']}
 Platforms: {', '.join(input_data['platforms'])}
 
-Generate detection queries for: Splunk, Microsoft Defender, Elastic, Google Chronicle
+Generate detection queries for: Splunk, Microsoft Defender, Elastic, Google SecOps
 
 Include:
 - High-fidelity detection logic

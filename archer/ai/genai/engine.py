@@ -222,7 +222,7 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
             vendor = "splunk"
         elif "kql" in name or "mde" in name or "microsoft" in name or "sentinel" in name:
             vendor = "mde"
-        elif "googlesecops" in name or "chronicle" in name or "yaral" in name or "google" in name:
+        elif "googlesecops" in name or "yaral" in name or "google" in name:
             vendor = "googlesecops"
         elif "elastic" in name:
             vendor = "elastic"
@@ -240,8 +240,6 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
         vendor = "mde"
     elif vendor and vendor.lower() in [
         "googlesecops",
-        "chronicle",
-        "googlechronicle",
         "google",
         "yaral",
     ]:
@@ -2624,7 +2622,7 @@ def _detect_platform(yaml_data: Dict) -> str:
         return "mde"
     elif connector_id == "Splunk":
         return "splunk"
-    elif connector_id in ["GoogleSecOps", "GoogleChronicle"]:
+    elif connector_id in ["GoogleSecOps"]:
         return "googlesecops"
     elif connector_id in ["Elastic", "ElasticSecurity"]:
         return "elastic"

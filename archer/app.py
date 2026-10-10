@@ -2647,7 +2647,7 @@ async def generate(
     merge_by_parent: str = Form(None),
     exclude_splunk: str = Form(None),
     exclude_mde: str = Form(None),
-    exclude_chronicle: str = Form(None),
+    exclude_secops: str = Form(None),
     exclude_elastic: str = Form(None),
     auto_validate: str = Form(None),
 ):
@@ -2679,7 +2679,7 @@ async def generate(
                     excluded.append("splunk")
                 if exclude_mde == "true":
                     excluded.append("mde")
-                if exclude_chronicle == "true":
+                if exclude_secops == "true":
                     excluded.append("googlesecops")
                 if exclude_elastic == "true":
                     excluded.append("elastic")
@@ -2766,7 +2766,7 @@ async def generate(
                                             vendor = "splunk"
                                         elif "elastic" in filename or "eql" in filename:
                                             vendor = "elastic"
-                                        elif "secops" in filename or "yaral" in filename or "chronicle" in filename:
+                                        elif "secops" in filename or "yaral" in filename:
                                             vendor = "secops"
                                         elif "mde" in filename or "kql" in filename:
                                             vendor = "mde"
@@ -5510,7 +5510,6 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         "googlesecops": "🔎",
         "qradar": "🎯",
         "sumo": "☁️",
-        "chronicle": "📊",
     }
 
     vendor_display_names = {
@@ -5521,7 +5520,6 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         "googlesecops": "Google SecOps",
         "qradar": "IBM QRadar",
         "sumo": "Sumo Logic",
-        "chronicle": "Google Chronicle",
     }
 
     # Find all YAML files for this group
@@ -5852,7 +5850,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             }
         )
 
-    # Chronicle and Elastic are now fully supported - no longer "Coming Soon"
+    # Google SecOps and Elastic are now fully supported - no longer "Coming Soon"
     # They will appear automatically when YAML files are generated for them
 
     # Sort vendors: Splunk, MDE, Google SecOps, Elastic, then others

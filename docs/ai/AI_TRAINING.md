@@ -108,7 +108,7 @@ class QueryPlatform(enum.Enum):
     SPLUNK = "splunk"
     MDE = "mde"
     SENTINEL = "sentinel"
-    CHRONICLE = "chronicle"
+    SECOPS = "secops"
 
 
 class QueryFeedback(Base):

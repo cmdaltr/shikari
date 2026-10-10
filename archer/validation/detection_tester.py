@@ -259,7 +259,7 @@ class DetectionTester:
             ("_time", "CommandLine", "NewProcessName"),
             # Elastic
             ("@timestamp", "process.command_line", "process.executable"),
-            # Chronicle
+            # Google SecOps
             ("metadata.event_timestamp", "target.process.command_line"),
             # MDE
             ("Timestamp", "ProcessCommandLine", "FileName"),

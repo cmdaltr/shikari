@@ -352,8 +352,8 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
             secops_queries = []
             if "secops" in active_siems:
                 try:
-                    from archer.build.chronicle import ChronicleGenerator
-                    cg = ChronicleGenerator()
+                    from archer.build.secops import SecOpsGenerator
+                    cg = SecOpsGenerator()
                     result = cg.generate_yaral_rule(
                         technique_id=tid, technique_name=name, tactic=tactic,
                         description=tdesc, indicators=identifiers, group_name=tag

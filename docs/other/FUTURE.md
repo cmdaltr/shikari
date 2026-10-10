@@ -211,7 +211,7 @@ python3 archer.py macat test-suite --category persistence
 **Current**: Splunk (SPL), Microsoft Defender (KQL)
 **Planned**:
 - Elastic Security (EQL, Lucene)
-- Chronicle Security (YARA-L)
+- Google SecOps (YARA-L)
 - QRadar (AQL)
 - Sentinel One (PowerQuery)
 

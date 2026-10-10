@@ -107,7 +107,7 @@ function detectVendorFromQuery(query) {
         return 'mde';
     }
 
-    // YARA-L patterns (Chronicle)
+    // YARA-L patterns (Google SecOps)
     if ((lowerQuery.includes('rule ') && lowerQuery.includes('events:')) ||
         lowerQuery.includes('$e.metadata') ||
         lowerQuery.includes('re.regex(')) {

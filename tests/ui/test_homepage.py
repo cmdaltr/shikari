@@ -103,7 +103,7 @@ class TestGenerateTab:
 
         # Verify platform exclusion options
         platforms = page.locator(".exclude-checkbox")
-        assert platforms.count() >= 4  # Splunk, MDE, Chronicle, Elastic
+        assert platforms.count() >= 4  # Splunk, MDE, Google SecOps, Elastic
 
         page.screenshot(path=os.path.join(screenshot_dir, "08_platform_exclusions.png"))
 

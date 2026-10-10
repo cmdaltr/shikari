@@ -18,7 +18,7 @@ reference_queries/
 │   ├── RemoteDesktopProtocol_MDE_DeviceRegistryEvents.yaml
 │   ├── SSH_DeviceFileEvents.yaml
 │   └── SSH_DeviceProcessEvents.yaml
-├── GoogleSecOps/                # Future: Google SecOps/Chronicle queries
+├── GoogleSecOps/                # Future: Google SecOps queries
 └── Elastic/                     # Future: Elastic Security queries
 ```
 
@@ -134,7 +134,7 @@ indicators:
 |----------|--------|---------|
 | Splunk | `[technique_name]_[platform].yaml` | `account_access_removal_aws.yaml` |
 | MDE | `[TechniqueName]_MDE_[DataSource].yaml` | `SSH_DeviceProcessEvents.yaml` |
-| GoogleSecOps | `[TechniqueName]_Chronicle.yaml` | `SSH_Chronicle.yaml` |
+| GoogleSecOps | `[TechniqueName]_GoogleSecOps.yaml` | `SSH_GoogleSecOps.yaml` |
 | Elastic | `[TechniqueName]_Elastic.yaml` | `SSH_Elastic.yaml` |
 
 ## Required Fields

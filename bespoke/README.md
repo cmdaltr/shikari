@@ -13,7 +13,7 @@ bespoke/
       schemaSplunk.json                      # Splunk index/sourcetype field schemas
       schemaMDE.json                         # Microsoft Defender table/field definitions
       schemaElastic.json                     # Elastic field definitions
-      schemaGoogleSecOps.json                # Google SecOps (Chronicle) UDM field definitions
+      schemaGoogleSecOps.json                # Google SecOps UDM field definitions
     sources/
       platforms.json                         # Platform to index compatibility matrix
       dataSources.json                       # Log source definitions

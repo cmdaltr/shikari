@@ -546,7 +546,7 @@ For multi-stage detections:
 - `input.technique_name`: Human-readable technique name
 - `input.platforms`: Target platforms (Windows, Linux, macOS, Azure AD, AWS, etc.)
 - `output.detections[].name`: Detection rule name
-- `output.detections[].platform`: SIEM/EDR platform (MDE, Splunk, Sentinel, Elastic, Chronicle, etc.)
+- `output.detections[].platform`: SIEM/EDR platform (MDE, Splunk, Sentinel, Elastic, Google SecOps, etc.)
 - `output.detections[].query`: The actual detection query
 
 **Recommended Fields**:

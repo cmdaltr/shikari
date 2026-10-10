@@ -36,7 +36,7 @@ class TestResultsPageLayout:
         page.wait_for_load_state("networkidle")
 
         # Check for platform filter tabs
-        for platform in ["splunk", "mde", "elastic", "chronicle"]:
+        for platform in ["splunk", "mde", "elastic", "googlesecops"]:
             loc = page.locator(f'[data-platform="{platform}"], text="{platform}"')
             # Platform tabs may or may not exist depending on results
 

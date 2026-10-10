@@ -785,9 +785,9 @@ def construct_yaml(
     # Skip if Google SecOps is excluded
     if not excluded_vendors or "googlesecops" not in excluded_vendors:
       try:
-        from archer.build.chronicle import ChronicleGenerator
+        from archer.build.secops import SecOpsGenerator
 
-        googlesecops_gen = ChronicleGenerator()
+        googlesecops_gen = SecOpsGenerator()
         googlesecops_rule = googlesecops_gen.generate_yaral_rule(
             technique_id=tid,
             technique_name=name,

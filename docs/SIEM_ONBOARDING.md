@@ -7,7 +7,7 @@ but each should be a deliberate decision, not an oversight.
 
 ## 1. Query Generator (required)
 Create `archer/build/<vendor>.py` with a `<Vendor>QueryGenerator` class.
-Reference: `archer/build/elastic.py`, `archer/build/chronicle.py`.
+Reference: `archer/build/elastic.py`, `archer/build/secops.py`.
 Must implement: `generate_query()`, `validate_query()`, `format_query_for_display()`.
 
 ## 2. Schema mapping (required)
@@ -73,11 +73,11 @@ Check `requirements.txt` for any vendor-specific client libraries needed
 
 ## 12. Tests (required)
 `tests/test_<vendor>_generator.py` — mirror the structure of
-`tests/test_chronicle_generator.py` or `tests/test_splunk_client.py`.
+`tests/test_secops_generator.py` or `tests/test_splunk_client.py`.
 
 ## 13. Documentation
 Update any docs referencing the list of supported SIEMs (search
-`docs/ -ri "splunk\|elastic\|chronicle\|mde"` to find them).
+`docs/ -ri "splunk\|elastic\|secops\|mde"` to find them).
 
 ---
 

@@ -199,13 +199,13 @@ class WordReportGenerator(ReportGenerator):
         if len(detections) > 0 and len(correlations or []) > 0:
             summary_text = f"""This report contains {len(detections)} detection rules generated for the {group_name} threat group.
 The detections are based on MITRE ATT&CK techniques and are compatible with multiple SIEM platforms including Splunk,
-Microsoft Defender for Endpoint (MDE), Google Chronicle, and Elastic Security."""
+Microsoft Defender for Endpoint (MDE), Google SecOps, and Elastic Security."""
             summary_text += f"\n\nAdditionally, {len(correlations)} correlation rules have been generated to detect "
             summary_text += "multi-technique attack patterns commonly used by this threat actor."
         elif len(detections) > 0:
             summary_text = f"""This report contains {len(detections)} detection rules generated for the {group_name} threat group.
 The detections are based on MITRE ATT&CK techniques and are compatible with multiple SIEM platforms including Splunk,
-Microsoft Defender for Endpoint (MDE), Google Chronicle, and Elastic Security."""
+Microsoft Defender for Endpoint (MDE), Google SecOps, and Elastic Security."""
         elif len(correlations or []) > 0:
             summary_text = f"""This report contains {len(correlations)} correlation rules for detecting multi-technique attack patterns.
 These correlation rules analyze event sequences across time windows to identify sophisticated attack chains commonly used

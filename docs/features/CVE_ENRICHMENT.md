@@ -277,7 +277,7 @@ Edit `archer/ai/training/datasets/cve_data/training_examples/CVE-2021-44228_trai
       "false_positive_rate": "low"
     },
     {
-      "platform": "chronicle",
+      "platform": "secops",
       "query": "rule log4shell_exploitation {\n  meta:\n    description = \"Detects Log4Shell exploitation attempts via JNDI injection\"\n    severity = \"CRITICAL\"\n\n  events:\n    $e.metadata.event_type = \"NETWORK_HTTP\"\n    (\n      re.regex($e.network.http.user_agent, `.*\\$\\{jndi:(ldap|rmi|dns)://.*`) or\n      re.regex($e.target.url, `.*\\$\\{jndi:(ldap|rmi|dns)://.*`) or\n      re.regex($e.network.http.referrer, `.*\\$\\{jndi:(ldap|rmi|dns)://.*`)\n    )\n\n  condition:\n    $e\n}",
       "confidence": "high",
       "false_positive_rate": "very_low"
