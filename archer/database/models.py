@@ -8,7 +8,7 @@ This module defines SQLAlchemy models for:
 - SecurityQuestions: For password reset fallback
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -233,6 +233,25 @@ class LibraryCorrelation(Base):
 
     def __repr__(self):
         return f"<LibraryCorrelation(id={self.id}, title='{self.title}', user_id={self.user_id})>"
+
+
+class FlowLayout(Base):
+    """
+    A user's edits to a group's ATT&CK Flow: hidden techniques, removed links,
+    dragged positions, orientation and filters. Kept once the group's results
+    are in that user's library.
+    """
+    __tablename__ = "flow_layouts"
+    __table_args__ = (UniqueConstraint("user_id", "group_name", name="uq_flow_layout_user_group"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    group_name = Column(String(255), nullable=False)
+    state = Column(Text, nullable=False)  # JSON, see archer/visualization/flow_layouts.py
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<FlowLayout(user_id={self.user_id}, group_name='{self.group_name}')>"
 
 
 class ActivityType(str, enum.Enum):

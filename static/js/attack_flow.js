@@ -38,6 +38,9 @@
     picking: false,
   };
   const history = [];
+  let layout = {};
+  try { layout = JSON.parse(($('af-layout') || {}).textContent || '{}') || {}; } catch (e) { layout = {}; }
+  let persist = !!layout.persist;
 
   // Everything Undo and Reset restore; filters ride along so Undo can reverse a Reset
   function snapshot() {
@@ -64,6 +67,7 @@
     history.push(snapshot());
     if (history.length > 100) history.shift();
     $('af-undo').disabled = false;
+    scheduleSave();
   }
 
   function undo() {
@@ -71,7 +75,53 @@
     restore(history.pop());
     $('af-undo').disabled = !history.length;
     render();
+    scheduleSave();
   }
+
+  // Saved per user and group once the group's results are in the library;
+  // otherwise edits last until the page is left
+  let saveTimer = null;
+  function status(text, kind) {
+    const el = $('af-save-status');
+    el.hidden = !text;
+    el.textContent = text || '';
+    el.dataset.kind = kind || '';
+  }
+
+  function scheduleSave() {
+    if (!persist) {
+      status(layout.logged_in ? 'Edits not kept: save the results to your library to keep them'
+                              : 'Edits not kept: log in and save to your library to keep them', 'muted');
+      return;
+    }
+    clearTimeout(saveTimer);
+    status('Saving…', 'muted');
+    // Runs after the change that called it, so it captures the new state
+    saveTimer = setTimeout(saveNow, 600);
+  }
+
+  async function saveNow() {
+    if (drag && drag.moved) { saveTimer = setTimeout(saveNow, 600); return; }
+    try {
+      const r = await fetch('/api/flow-layout', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group_name: layout.group_name, state: snapshot() }),
+      });
+      if (r.ok) status('Edits saved to your library', 'ok');
+      else if (r.status === 409) { persist = false; status('Edits not kept: save the results to your library to keep them', 'muted'); }
+      else status(`Couldn't save edits (HTTP ${r.status})`, 'error');
+    } catch (e) {
+      status("Couldn't save edits: network error", 'error');
+    }
+  }
+
+  document.addEventListener('archer:library-saved', () => {
+    if (!layout.logged_in) return;
+    persist = true;
+    clearTimeout(saveTimer);
+    saveNow();
+  });
 
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const logo = v => `<svg class="af-logo" aria-hidden="true"><use href="#af-logo-${v}"/></svg>`;
@@ -370,7 +420,7 @@
     });
     const endDrag = () => {
       if (!drag) return;
-      if (drag.moved) swallowClick = true;
+      if (drag.moved) { swallowClick = true; drag.moved = false; scheduleSave(); }
       drag = null;
       section.classList.remove('af-dragging');
     };
@@ -482,6 +532,7 @@
   if ('ResizeObserver' in window) new ResizeObserver(redraw).observe(canvas);
   // Fonts and the collapsible sections above can shift layout after load
   window.addEventListener('load', redraw);
-  restore(DEFAULTS);
+  restore(layout.state ? Object.assign({}, DEFAULTS, layout.state) : DEFAULTS);
   render();
+  if (persist && layout.state) status('Edits saved to your library', 'ok');
 })();

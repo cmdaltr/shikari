@@ -73,6 +73,7 @@
 
   {% if attack_flow and attack_flow.lanes %}
   <p class="af-stats">
+    <span class="af-save-status" id="af-save-status" hidden></span>
     <strong>{{ attack_flow.stats.techniques }}</strong> techniques across {{ attack_flow.stats.tactics }} tactics ·
     <strong>{{ attack_flow.stats.detected }}</strong> detected ·
     <strong class="af-stats-gap">{{ attack_flow.stats.gaps }}</strong> gaps ·
@@ -129,6 +130,7 @@
   </div>
 
   <script type="application/json" id="af-data">{{ attack_flow|tojson }}</script>
+  <script type="application/json" id="af-layout">{{ (flow_layout or {})|tojson }}</script>
   {% else %}
   <p class="af-empty">No attack flow for this run: there are no detections with ATT&amp;CK technique IDs.</p>
   {% endif %}

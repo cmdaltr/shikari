@@ -2334,6 +2334,8 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
     // Show success message
     console.log(`Save complete: ${savedCount} saved, ${errorCount} errors`);
     if (savedCount > 0) {
+      // The ATT&CK Flow starts keeping its edits once the results are in the library
+      document.dispatchEvent(new CustomEvent('archer:library-saved'));
       let errorMsg = '';
       if (errorCount > 0 && failedDetections.length > 0) {
         const failedList = failedDetections.map(f =>

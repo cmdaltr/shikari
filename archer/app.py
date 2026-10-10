@@ -1476,6 +1476,10 @@ app.include_router(get_validation_router())
 # Include Ask Archer chat router
 app.include_router(chat_router)
 
+from archer.visualization.flow_layouts import router as flow_layout_router
+
+app.include_router(flow_layout_router)
+
 
 # Favicon route - ensure favicon is served from root with no-cache headers
 @app.get("/favicon.ico", include_in_schema=False)
@@ -6357,12 +6361,28 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
         except Exception as e:
             print(f"Error loading validation results: {e}")
 
+    # Flow edits persist for a logged-in user once the group's results are in their library
+    flow_layout = {"logged_in": bool(user), "persist": False, "state": None, "group_name": safe_group}
+    if user and attack_flow:
+        from archer.visualization.flow_layouts import load_layout, results_in_library
+
+        db = next(get_db())
+        try:
+            flow_layout["persist"] = results_in_library(db, user.id, safe_group)
+            if flow_layout["persist"]:
+                flow_layout["state"] = load_layout(db, user.id, safe_group)
+        except Exception as e:
+            print(f"Flow layout unavailable: {e}")
+        finally:
+            db.close()
+
     return templates.TemplateResponse(
         "results.html",
         {
             "request": request,
             "user": user,
             "group_name": safe_group,
+            "flow_layout": flow_layout,
             "mitre_id": mitre_id,
             "total_detections": total_detections,
             "vendor_count": len(detections),
