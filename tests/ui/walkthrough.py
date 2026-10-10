@@ -289,6 +289,17 @@ def profile(page):
     page.wait_for_function("!document.getElementById('profile_btn').disabled", timeout=10000)
     page.click("#profile_btn")
     answer_ai_prompt(page)
+    caption(page, "Profiling tesco.com (Wikidata, homepage, OSINT)…")
+    modal = page.locator("#threat-group-selection-overlay")
+    modal.wait_for(state="visible", timeout=300000)
+    summary = modal.inner_text()
+    caption(page, "Profile summary: company, sector, location and recommended groups")
+    shot(page, "profile_summary")
+    expected = {"Tesco": "Tesco", "United Kingdom": "United Kingdom", "retail": "retail", "Scattered Spider": "Scattered Spider"}
+    missing = [label for label, text in expected.items() if text not in summary]
+    if missing:
+        raise RuntimeError(f"profile summary missing: {', '.join(missing)}")
+    page.click("#confirm-generation")
     wait_for_results(page, "tesco.com")
     return tour_results(page, "tesco.com")
 

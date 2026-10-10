@@ -52,7 +52,10 @@ def test_gather_domain_info():
     profiler.progress_group = None
 
     with patch("archer.intelligence.company_profiler.socket.getaddrinfo") as mock_getaddr, \
-         patch("archer.intelligence.company_profiler.dns.resolver.resolve") as mock_dns:
+         patch("archer.intelligence.company_profiler.dns.resolver.resolve") as mock_dns, \
+         patch("archer.intelligence.company_identity.lookup_wikidata", return_value=None), \
+         patch("archer.intelligence.company_identity.homepage_signals",
+               return_value={"name": None, "country": None, "country_basis": None, "text": ""}):
         mock_getaddr.return_value = [
             (2, 1, 6, '', ('93.184.216.34', 0))
         ]
@@ -75,7 +78,10 @@ def test_gather_domain_info_extracts_company_name():
     profiler.progress_group = None
 
     with patch("archer.intelligence.company_profiler.socket.getaddrinfo") as mock_getaddr, \
-         patch("archer.intelligence.company_profiler.dns.resolver.resolve") as mock_dns:
+         patch("archer.intelligence.company_profiler.dns.resolver.resolve") as mock_dns, \
+         patch("archer.intelligence.company_identity.lookup_wikidata", return_value=None), \
+         patch("archer.intelligence.company_identity.homepage_signals",
+               return_value={"name": None, "country": None, "country_basis": None, "text": ""}):
         mock_getaddr.return_value = []
         mock_dns.side_effect = Exception("DNS error")
 
@@ -200,15 +206,17 @@ def test_analyze_tech_stack_from_headers():
     osint = {"tls_config": {"grade": "A"}, "subdomains": []}
 
     mock_response = MagicMock()
+    mock_response.ok = True
     mock_response.headers = {"Server": "nginx/1.18.0"}
     mock_response.text = "<html>Powered by WordPress</html>"
 
-    with patch("archer.intelligence.company_profiler.requests.get") as mock_get:
-        mock_get.return_value = mock_response
-
+    # The fetch goes through the SSRF-checked helper (domain is user input)
+    with patch("archer.parsers.blog_analyzer._fetch_public_url", return_value=mock_response) as mock_fetch:
         result = profiler._analyze_tech_stack("example.com", osint)
 
+        mock_fetch.assert_called_once_with("https://example.com")
         assert result["web_server"] == "nginx/1.18.0"
+        assert result["web_server_custom_banner"] is False
         assert "nginx" in result["technologies"]
     return True
 

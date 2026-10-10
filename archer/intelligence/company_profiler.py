@@ -737,11 +737,17 @@ class CompanyProfiler:
         except Exception as e:
             print(f"  ⚠ Could not get nameservers: {e}")
 
-        # Try to extract company name from domain
-        # Remove TLD and common patterns
-        domain_parts = domain.replace('.com', '').replace('.org', '').replace('.net', '')
-        domain_parts = domain_parts.replace('-', ' ').replace('_', ' ')
-        info['company_name'] = domain_parts.title()
+        # Identify the organisation itself (Wikidata, homepage, ccTLD) rather than
+        # inferring from the domain string or where its IPs happen to be hosted
+        from archer.intelligence.company_identity import resolve_identity
+
+        identity = resolve_identity(domain)
+        info['identity'] = identity
+        info['company_name'] = identity['company_name']
+        info['country'] = identity['country']
+        info['headquarters'] = identity['headquarters']
+        for line in identity['evidence']:
+            print(f"  ✓ {line}")
 
         return info
 
@@ -764,9 +770,21 @@ class CompanyProfiler:
             'confidence': 'low'
         }
 
-        # Industry keyword detection (heuristic)
+        identity = company_info.get('identity') or {}
+        if identity.get('sector'):
+            industry_data['sector'] = identity['sector']
+            industry_data['subsector'] = ", ".join(identity.get('organisation_types', [])[:3]) or None
+            industry_data['confidence'] = identity.get('confidence', 'medium')
+            industry_data['evidence'] = identity.get('evidence', [])
+            print(f"  ✓ Detected sector: {industry_data['sector']} (confidence: {industry_data['confidence']})")
+            sector_threats = self._map_sector_to_threats(industry_data['sector'])
+            industry_data['threat_groups'] = sector_threats['groups']
+            industry_data['threats'] = sector_threats['threats']
+            return industry_data
+
+        # Fallback: keyword detection on the domain name (heuristic)
         domain_lower = domain.lower()
-        company_name = company_info.get('company_name', '').lower()
+        company_name = (company_info.get('company_name') or '').lower()
 
         industry_keywords = {
             'finance': ['bank', 'financial', 'fintech', 'capital', 'investment', 'trading'],
@@ -835,19 +853,23 @@ class CompanyProfiler:
 
             industry_keywords = sector_to_industry_map.get(sector, [sector])
 
-            # Find threat groups targeting this sector
-            matching_groups = []
+            # Find threat groups targeting this sector. Bundle objects are plain dicts
+            # (obj.type raised AttributeError, so this always fell back to the static map).
+            import re
+            from archer.intelligence.country_context import clean_description
 
+            patterns = [re.compile(rf"\b{re.escape(k.lower())}", re.IGNORECASE) for k in industry_keywords]
+            scored = []
             for obj in bundle.objects:
-                if obj.type == 'intrusion-set':  # Threat group
-                    group_name = obj.name
-                    description = obj.get('description', '').lower()
+                if obj.get('type') != 'intrusion-set' or obj.get('revoked') or obj.get('x_mitre_deprecated'):
+                    continue
+                description = clean_description(obj.get('description', ''))
+                hits = sum(len(p.findall(description)) for p in patterns)
+                if hits:
+                    scored.append((hits, obj.get('name')))
 
-                    # Check if any industry keyword appears in the group's description
-                    for keyword in industry_keywords:
-                        if keyword.lower() in description:
-                            matching_groups.append(group_name)
-                            break
+            # Most-discussed sector ties first, name as a stable tiebreak
+            matching_groups = [name for _, name in sorted(scored, key=lambda x: (-x[0], x[1]))]
 
             if matching_groups:
                 print(f"      ✓ Found {len(matching_groups)} threat groups from MITRE ATT&CK")
@@ -975,50 +997,36 @@ class CompanyProfiler:
         geo_data = {
             'country': None,
             'region': None,
+            'country_evidence': [],
+            # Where the site is served from (often a CDN edge); never used as the company's location
+            'hosting_country': None,
+            'hosting_region': None,
             'threat_actors': [],
             'geopolitical_risks': []
         }
 
-        # Try to get country from IP geolocation using free GeoIP service
+        if company_info.get('country'):
+            geo_data['country'] = company_info['country']
+            geo_data['region'] = company_info.get('headquarters')
+            geo_data['country_evidence'] = (company_info.get('identity') or {}).get('evidence', [])
+            print(f"  ✓ Company location: {', '.join(filter(None, [geo_data['region'], geo_data['country']]))}")
+            geo_data['threat_actors'] = self._map_country_to_threats(geo_data['country'])
+            geo_data['geopolitical_risks'] = self._assess_geopolitical_risks(geo_data['country'])
+        else:
+            print("  ⚠ Could not determine company location")
+
+        # Hosting location, for context only
         if company_info['ip_addresses']:
             try:
-                # Use ip-api.com for geolocation (free, no key required)
                 ip = company_info['ip_addresses'][0]
-                geoip_url = f"http://ip-api.com/json/{ip}"
-                response = requests.get(geoip_url, timeout=5)
-
-                if response.status_code == 200:
-                    geoip_data = response.json()
-                    if geoip_data.get('status') == 'success':
-                        geo_data['country'] = geoip_data.get('country', 'Unknown')
-                        geo_data['region'] = geoip_data.get('regionName', 'Unknown')
-                        print(f"  ✓ Detected location: {geo_data['region']}, {geo_data['country']}")
-
-                        # Map countries to relevant threat actors
-                        geo_threats = self._map_country_to_threats(geo_data['country'])
-                        geo_data['threat_actors'] = geo_threats
-                        geo_data['geopolitical_risks'] = self._assess_geopolitical_risks(geo_data['country'])
-                else:
-                    # Fallback to TLD-based detection
-                    tld = domain.split('.')[-1]
-                    tld_country_map = {
-                        'us': 'United States',
-                        'uk': 'United Kingdom',
-                        'de': 'Germany',
-                        'fr': 'France',
-                        'cn': 'China',
-                        'ru': 'Russia',
-                        'jp': 'Japan',
-                        'au': 'Australia'
-                    }
-                    geo_data['country'] = tld_country_map.get(tld, 'Unknown')
-
-                    if geo_data['country'] != 'Unknown':
-                        print(f"  ✓ Detected country (from TLD): {geo_data['country']}")
-                        geo_threats = self._map_country_to_threats(geo_data['country'])
-                        geo_data['threat_actors'] = geo_threats
+                response = requests.get(f"http://ip-api.com/json/{ip}", timeout=5)
+                geoip_data = response.json() if response.status_code == 200 else {}
+                if geoip_data.get('status') == 'success':
+                    geo_data['hosting_country'] = geoip_data.get('country')
+                    geo_data['hosting_region'] = geoip_data.get('regionName')
+                    print(f"  ℹ Hosting location (may be a CDN edge): {geo_data['hosting_region']}, {geo_data['hosting_country']}")
             except Exception as e:
-                print(f"  ⚠ GeoIP lookup failed: {e}")
+                print(f"  ⚠ Hosting GeoIP lookup failed: {e}")
 
         return geo_data
 
@@ -1113,6 +1121,8 @@ class CompanyProfiler:
 
         tech_data = {
             'web_server': None,
+            'web_server_custom_banner': False,
+            'cdn': None,
             'technologies': [],
             'cloud_provider': None,
             'cves': [],
@@ -1152,15 +1162,42 @@ class CompanyProfiler:
 
         # Make HTTP request to detect technologies
         try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Archer Threat Intelligence Scanner)'
-            }
-            response = requests.get(f'https://{domain}', headers=headers, timeout=10, allow_redirects=True)
+            # domain is user input: refuse private/internal targets and re-check every redirect
+            import html
+            import re
+            from archer.parsers.blog_analyzer import _fetch_public_url
 
-            # Detect web server
+            response = _fetch_public_url(f'https://{domain}')
+
+            # Detect web server. Many sites send a custom banner ("Tesco Web Server")
+            # that names no real product, so say so rather than reporting it as one.
             if 'Server' in response.headers:
-                tech_data['web_server'] = response.headers['Server']
-                print(f"  ✓ Web server: {tech_data['web_server']}")
+                banner = response.headers['Server']
+                known = ('nginx', 'apache', 'iis', 'cloudflare', 'akamaighost', 'envoy', 'openresty', 'gws',
+                         'litespeed', 'caddy', 'varnish', 'cloudfront', 'amazons3', 'awselb', 'gunicorn',
+                         'uvicorn', 'kestrel', 'jetty', 'tomcat', 'lighttpd', 'tengine', 'istio')
+                tech_data['web_server'] = banner
+                tech_data['web_server_custom_banner'] = not any(k in banner.lower() for k in known)
+                note = " (custom banner, real software hidden)" if tech_data['web_server_custom_banner'] else ""
+                print(f"  ✓ Server header: {banner}{note}")
+
+            # CDN / edge in front of the site: explains why hosting GeoIP isn't the company's location
+            h = {k.lower(): v for k, v in response.headers.items()}
+            cdn_markers = {
+                # Akamai-GRN / Akamai-Cache-Status headers, AKA_A2 / bm_* Bot Manager cookies,
+                # or its entity-encoded errors.edgesuite.net block page
+                'Akamai': ('akamai' in h.get('server', '').lower()
+                           or any(k.startswith(('akamai', 'x-akamai')) for k in h)
+                           or re.search(r'\b(?:AKA_A2|ak_bmsc|bm_sz?|bm_so)=', h.get('set-cookie', '')) is not None
+                           or 'edgesuite' in html.unescape(response.text[:2000])),
+                'Cloudflare': 'cf-ray' in h or 'cloudflare' in h.get('server', '').lower(),
+                'Amazon CloudFront': 'x-amz-cf-id' in h or 'cloudfront' in h.get('via', '').lower(),
+                'Fastly': 'x-served-by' in h and 'cache-' in h.get('x-served-by', '') or 'fastly' in h.get('via', '').lower(),
+                'Azure Front Door': 'x-azure-ref' in h,
+            }
+            tech_data['cdn'] = next((name for name, hit in cdn_markers.items() if hit), None)
+            if tech_data['cdn']:
+                print(f"  ✓ CDN: {tech_data['cdn']}")
 
             # Detect technologies from headers and content
             tech_indicators = {
@@ -1183,15 +1220,20 @@ class CompanyProfiler:
                             print(f"  ✓ Detected technology: {tech}")
                         break
 
-            # Check security headers
-            security_headers = ['Strict-Transport-Security', 'Content-Security-Policy',
-                              'X-Frame-Options', 'X-Content-Type-Options']
-            for header in security_headers:
-                tech_data['security_headers'][header] = header in response.headers
+            # Check security headers, but only on a real page: a bot-protection 403
+            # from the CDN says nothing about the site's own header policy
+            if response.ok:
+                security_headers = ['Strict-Transport-Security', 'Content-Security-Policy',
+                                  'X-Frame-Options', 'X-Content-Type-Options']
+                for header in security_headers:
+                    tech_data['security_headers'][header] = header in response.headers
 
-            missing_headers = [h for h, present in tech_data['security_headers'].items() if not present]
-            if missing_headers:
-                print(f"  ⚠ Missing security headers: {', '.join(missing_headers)}")
+                missing_headers = [h for h, present in tech_data['security_headers'].items() if not present]
+                if missing_headers:
+                    print(f"  ⚠ Missing security headers: {', '.join(missing_headers)}")
+            else:
+                tech_data['blocked_status'] = response.status_code
+                print(f"  ℹ Site returned HTTP {response.status_code} (likely bot protection); security headers not assessed")
 
         except Exception as e:
             print(f"  ⚠ Could not analyze website: {e}")
@@ -1248,7 +1290,8 @@ class CompanyProfiler:
             })
         print(f"[7/7] Generating threat recommendations...")
 
-        recommended_groups = set()
+        # Ordered, de-duplicated: sector-specific groups first, then country-based ones
+        recommended_groups = {}
         recommended_techniques = set()
         risk_score = 0
 
@@ -1258,13 +1301,13 @@ class CompanyProfiler:
         # From industry analysis
         industry = threat_profile.get('industry', {})
         if industry.get('threat_groups'):
-            recommended_groups.update(industry['threat_groups'])
+            recommended_groups.update(dict.fromkeys(industry['threat_groups']))
             risk_score += 30
 
         # From geography analysis
         geography = threat_profile.get('geography', {})
         if geography.get('threat_actors'):
-            recommended_groups.update(geography['threat_actors'])
+            recommended_groups.update(dict.fromkeys(geography['threat_actors']))
             risk_score += 20
 
         # Add technique recommendations based on common patterns
@@ -1289,7 +1332,9 @@ class CompanyProfiler:
             if 'WordPress' in tech_stack['technologies']:
                 recommended_techniques.add('T1190')  # Exploit Public-Facing Application
                 risk_score += 15
-            if not tech_stack.get('security_headers', {}).get('Strict-Transport-Security'):
+            headers_seen = tech_stack.get('security_headers') or {}
+            # Empty means not assessed (e.g. blocked by bot protection), not absent
+            if headers_seen and not headers_seen.get('Strict-Transport-Security'):
                 recommended_techniques.add('T1557')  # Man-in-the-Middle
                 risk_score += 10
 

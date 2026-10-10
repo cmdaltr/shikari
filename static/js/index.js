@@ -1159,17 +1159,34 @@ function showThreatGroupSelection(domain, recommendedGroups, profile) {
 
   // Modal content
   var html = '<h2 style="margin-top: 0;">🎯 Select Threat Groups for Detection Generation</h2>';
-  html += '<p style="color: #666; margin-bottom: 1.5em;">Profile complete for <strong>' + domain + '</strong>. Select which threat groups you want to generate detections for:</p>';
+  html += '<p style="color: #666; margin-bottom: 1.5em;">Profile complete for <strong>' + escapeHtml(domain) + '</strong>. Select which threat groups you want to generate detections for:</p>';
 
   // Profile summary
   html += '<div style="background: #f8f9fa; padding: 1em; border-radius: 4px; margin-bottom: 1.5em;">';
   html += '<h3 style="margin: 0 0 0.5em 0; font-size: 1em;">Profile Summary</h3>';
 
+  // Values come from Wikidata and the target's own site, so escape everything
+  var info = profile.company_info || {};
+  if (info.company_name) {
+    html += '<p style="margin: 0.3em 0;"><strong>Company:</strong> ' + escapeHtml(info.company_name) + '</p>';
+  }
   if (profile.threat_profile && profile.threat_profile.industry) {
-    html += '<p style="margin: 0.3em 0;"><strong>Industry:</strong> ' + (profile.threat_profile.industry.sector || 'Unknown') + '</p>';
+    var ind = profile.threat_profile.industry;
+    html += '<p style="margin: 0.3em 0;"><strong>Industry:</strong> ' + escapeHtml(ind.sector || 'Unknown') +
+      (ind.subsector ? ' <span style="color:#666;">(' + escapeHtml(ind.subsector) + ')</span>' : '') + '</p>';
   }
   if (profile.threat_profile && profile.threat_profile.geography) {
-    html += '<p style="margin: 0.3em 0;"><strong>Location:</strong> ' + (profile.threat_profile.geography.country || 'Unknown') + '</p>';
+    var geo = profile.threat_profile.geography;
+    var where = [geo.region, geo.country].filter(Boolean).join(', ') || 'Unknown';
+    html += '<p style="margin: 0.3em 0;"><strong>Location:</strong> ' + escapeHtml(where) + '</p>';
+    if (geo.hosting_country && geo.hosting_country !== geo.country) {
+      html += '<p style="margin: 0.3em 0;color:#666;"><strong>Hosted from:</strong> ' +
+        escapeHtml([geo.hosting_region, geo.hosting_country].filter(Boolean).join(', ')) + '</p>';
+    }
+  }
+  var evidence = (info.identity && info.identity.evidence) || [];
+  if (evidence.length) {
+    html += '<p style="margin: 0.3em 0;color:#666;font-size:0.9em;"><strong>Source:</strong> ' + escapeHtml(evidence.join('; ')) + '</p>';
   }
   html += '<p style="margin: 0.3em 0;"><strong>Risk Score:</strong> ' + (profile.risk_score || 0) + '/100</p>';
   html += '<p style="margin: 0.3em 0;"><strong>Recommended Groups:</strong> ' + recommendedGroups.length + '</p>';
