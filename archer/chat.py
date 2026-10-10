@@ -248,13 +248,22 @@ async def ask_archer(
             except Exception:
                 pass
 
-        if user_id is not None:
-            if db is None:
-                db = next(get_db())
-            llm, provider_name = _get_llm_provider(user_id, db, local_llm_endpoints)
-        else:
+        if user_id is not None and db is None:
+            db = next(get_db())
+
+        def resolve(endpoints):
+            if user_id is not None:
+                return _get_llm_provider(user_id, db, endpoints)
             # Unauthenticated – env-var keys only (no DB lookup)
-            llm, provider_name = _get_llm_provider_anonymous(local_llm_endpoints)
+            return _get_llm_provider_anonymous(endpoints)
+
+        llm, provider_name = resolve(local_llm_endpoints)
+        redetect = getattr(request.app.state, "redetect_local_llm", None)
+        if llm is None and not local_llm_endpoints and redetect:
+            # Local LLMs are probed at startup; one started since would otherwise
+            # stay invisible until Archer restarts
+            await redetect()
+            llm, provider_name = resolve(getattr(request.app.state, "local_llm_endpoints", []))
 
         if llm is None:
             raise HTTPException(

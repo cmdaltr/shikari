@@ -1834,6 +1834,9 @@ async def detect_local_llm():
         print("ℹ️  No local LLM detected")
 
 
+app.state.redetect_local_llm = detect_local_llm
+
+
 @app.on_event("startup")
 async def detect_network_connectivity():
     """
