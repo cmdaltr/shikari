@@ -236,7 +236,11 @@ def upload_blog(page):
     page.locator("#ttps-container").scroll_into_view_if_needed()
     shot(page, "upload_extraction")
     body = resp.json()
-    return f"{body.get('ttps_count', 0)} TTPs, {body.get('iocs_count', 0)} IOCs extracted"
+    extracted = f"{body.get('ttps_count', 0)} TTPs, {body.get('iocs_count', 0)} IOCs extracted"
+    caption(page, f"{extracted} — proceeding to generation")
+    page.click("#proceed-generation", timeout=5000)
+    wait_for_results(page, "CISA AA23-320A")
+    return f"{extracted}; {tour_results(page, 'CISA AA23-320A')}"
 
 
 @step("Upload — rejected URL shows an inline error")

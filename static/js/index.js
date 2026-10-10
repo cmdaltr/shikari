@@ -892,7 +892,8 @@ function showExtractionResults(data) {
   html += '<div style="display:flex;gap:1em;justify-content:flex-end;margin-top:2em;border-top:1px solid #dee2e6;padding-top:1.5em;">';
   html += '<button id="cancel-extraction" style="padding:0.75em 1.5em;border:1px solid #ced4da;background:white;color:#495057;border-radius:4px;cursor:pointer;font-size:1em;">Cancel</button>';
 
-  if (data.auto_generate_requested && (data.ttps_count > 0 || data.iocs_count > 0)) {
+  // No form control ever sent auto_generate, so gating on it left users with only Close
+  if (data.ttps_count > 0 || data.iocs_count > 0) {
     html += '<button id="proceed-generation" style="padding:0.75em 1.5em;border:none;background:#007bff;color:white;border-radius:4px;cursor:pointer;font-size:1em;font-weight:500;">Proceed with Selected Items</button>';
   } else {
     html += '<button id="close-extraction" style="padding:0.75em 1.5em;border:none;background:#28a745;color:white;border-radius:4px;cursor:pointer;font-size:1em;font-weight:500;">Close</button>';
