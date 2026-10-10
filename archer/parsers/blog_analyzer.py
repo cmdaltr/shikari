@@ -157,7 +157,11 @@ def analyze_blog_post(url: str) -> Dict:
             "techniques": _extract_techniques(text),
             "tactics": _extract_tactics(text),
             "procedures": _extract_procedures(text),
-            "iocs": _extract_iocs(text),
+            "iocs": _drop_publisher_domains(
+                _extract_iocs(text),
+                # Judge the publisher by where we landed, not the link we were given
+                response.url if isinstance(response.url, str) else url,
+            ),
         }
 
         return result
@@ -318,6 +322,35 @@ def _extract_procedures(text: str) -> List[str]:
                 break
 
     return procedures
+
+
+def _registrable_domain(host: str) -> str:
+    """cisa.gov for www.cisa.gov, blog.co.uk for x.blog.co.uk; '' if not resolvable."""
+    import tldextract
+
+    # Bundled public suffix snapshot only: no network fetch from inside a request
+    extract = tldextract.TLDExtract(suffix_list_urls=())
+    return extract(host.lower().strip(".")).top_domain_under_public_suffix or ""
+
+
+def _drop_publisher_domains(iocs: Dict[str, List[str]], page_url: str) -> Dict[str, List[str]]:
+    """
+    Remove the publisher's own domain from extracted domain IOCs.
+
+    Reports routinely mention their own site (contact links, related advisories),
+    which is never an indicator for the activity being reported.
+    """
+    from urllib.parse import urlparse
+
+    publisher = _registrable_domain(urlparse(page_url).hostname or "")
+    if not publisher or not iocs.get("domain"):
+        return iocs
+
+    def refang(d: str) -> str:
+        return d.replace("[.]", ".").replace("(.)", ".").replace("[dot]", ".")
+
+    iocs["domain"] = [d for d in iocs["domain"] if _registrable_domain(refang(d)) != publisher]
+    return iocs
 
 
 def _extract_iocs(text: str) -> Dict[str, List[str]]:

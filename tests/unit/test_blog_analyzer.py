@@ -370,6 +370,17 @@ class TestAnalyzeBlogPost:
         assert "T1190" not in result["techniques"]
         assert "T1105" not in result["techniques"]
 
+    def test_publisher_domain_excluded_from_iocs(self):
+        """A report's own domain (any subdomain) is not an indicator; others are kept."""
+        from archer.parsers.blog_analyzer import _drop_publisher_domains
+
+        iocs = {"domain": ["www[.]vendor.co.uk", "intel.vendor.co.uk", "c2-vendor[.]co.uk", "evil[.]com"], "ip": ["1.2.3.4"]}
+
+        result = _drop_publisher_domains(iocs, "https://blog.vendor.co.uk/2026/report")
+
+        assert result["domain"] == ["c2-vendor[.]co.uk", "evil[.]com"]
+        assert result["ip"] == ["1.2.3.4"]
+
     def test_analyze_blog_post_invalid_scheme(self):
         """Test that invalid URL schemes are rejected."""
         from archer.parsers.blog_analyzer import analyze_blog_post
