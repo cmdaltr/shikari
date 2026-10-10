@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-Generate technique_platform_indicators.json validation matrix for ALL MITRE ATT&CK techniques.
+Generate bespoke/mappings/techniquePlatformIndicators.json, the validation matrix for ALL MITRE ATT&CK techniques.
+
+Usage: python scripts/validation/generate_validation_matrix.py [--output PATH] [--force]
 
 This script creates validation rules based on:
 1. MITRE ATT&CK Enterprise data (technique platforms)
@@ -8,12 +10,18 @@ This script creates validation rules based on:
 3. Known invalid indicators (cross-platform contamination)
 """
 
+import argparse
 import json
 import sys
+from datetime import date
 from pathlib import Path
 
-# Add archer to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# Where archer/build/platform_indicator_validator.py loads it from
+DEFAULT_OUTPUT = REPO_ROOT / "bespoke" / "mappings" / "techniquePlatformIndicators.json"
+
+# Repo root, so `import archer` works from any working directory
+sys.path.insert(0, str(REPO_ROOT))
 
 from archer.mitre.enterprise import get_stix_data, obtain_all_techniques
 
@@ -128,11 +136,15 @@ def generate_validation_matrix():
     """Generate validation matrix for all MITRE ATT&CK techniques"""
 
     print("📥 Loading MITRE ATT&CK Enterprise data...")
-    mitre_url = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
+    # Same source as the app, so the cached bundle is reused
+    mitre_url = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
     stix_data = get_stix_data(mitre_url)
 
     # Get technique objects from STIX data
-    technique_objects = [obj for obj in stix_data.get("objects", []) if obj.get("type") == "attack-pattern"]
+    technique_objects = [
+        obj for obj in stix_data.get("objects", [])
+        if obj.get("type") == "attack-pattern" and not obj.get("revoked") and not obj.get("x_mitre_deprecated")
+    ]
 
     validation_matrix = {}
 
@@ -204,7 +216,7 @@ def generate_validation_matrix():
     # Add metadata
     validation_matrix["_metadata"] = {
         "version": "2.0",
-        "generated": "2025-10-29",
+        "generated": date.today().isoformat(),
         "description": "Auto-generated platform-specific indicator validation for all MITRE ATT&CK Enterprise techniques",
         "usage": "Use this matrix to validate that indicators are appropriate for the technique and platform before generating detections",
         "total_techniques": len(validation_matrix) - 1,  # -1 for _metadata
@@ -216,14 +228,24 @@ def generate_validation_matrix():
 
 def main():
     """Main function"""
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT,
+                        help=f"where to write the matrix (default: {DEFAULT_OUTPUT.relative_to(REPO_ROOT)})")
+    parser.add_argument("--force", action="store_true", help="overwrite an existing matrix")
+    args = parser.parse_args()
+    output_file = args.output
+
+    # The matrix is often hand-tuned after generation; don't clobber it silently
+    if output_file.exists() and not args.force:
+        sys.exit(f"{output_file} already exists; pass --force to overwrite it")
+
     print("🚀 Generating validation matrix for all MITRE ATT&CK techniques...")
 
     matrix = generate_validation_matrix()
 
-    output_file = Path(__file__).parent.parent / "archer" / "mappings" / "technique_platform_indicators.json"
-
     print(f"\n💾 Writing validation matrix to {output_file}...")
 
+    output_file.parent.mkdir(parents=True, exist_ok=True)
     with open(output_file, "w") as f:
         json.dump(matrix, f, indent=2)
 

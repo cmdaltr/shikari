@@ -60,7 +60,7 @@ def get_available_indexes(bespoke_dir: Optional[Path] = None) -> List[str]:
     """
     if bespoke_dir is None:
         bespoke_dir = _BESPOKE_DIR
-    schema_path = Path(bespoke_dir) / "mappings" / "schemaSplunk.json"
+    schema_path = Path(bespoke_dir) / "mappings" / "schemas" / "schemaSplunk.json"
     if not schema_path.exists():
         logger.warning("schemaSplunk.json not found at %s — no index filtering", schema_path)
         return []
