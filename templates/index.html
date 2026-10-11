@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/home_tabs.css') }}?v={{ request.app.state.asset_version }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/dark-mode.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/detection_validation.css') }}">
     {% block head %}
@@ -263,7 +264,7 @@
       </div>
 
       <!-- Tabbed interface inspired by VirusTotal -->
-      <div class="tabs-container">
+      <div class="tabs-container home-tabs">
         <div class="tabs-header">
           <button class="tab-button active" data-tab="generate">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
@@ -311,13 +312,14 @@
         <div class="tabs-content">
           <!-- GENERATE TAB -->
           <div class="tab-pane active" id="tab-generate">
-            <form id="generate-form" action="/generate" method="post" autocomplete="off">
-              <div class="form-section">
+            <form id="generate-form" class="hp-form" action="/generate" method="post" autocomplete="off">
+              <div class="hp-primary">
                 <label for="group_name_input" class="form-label">Generate queries based on Threat Group</label>
-                <div style="display:flex;gap:12px;align-items:center;">
-                  <input type="text" name="group_name" id="group_name_input" class="form-input" style="flex:1;"
+                <div class="hp-row">
+                  <input type="text" name="group_name" id="group_name_input" class="form-input"
                          placeholder="e.g., APT29, Scattered Spider" maxlength="200">
-                  <label class="option-item" style="flex-shrink:0;white-space:nowrap;">
+                  <div class="hp-slot">
+                  <label class="option-item">
                     <input type="checkbox" name="merge_by_parent" value="true">
                     <span class="option-label">
                       Merge by Parent Technique
@@ -326,13 +328,14 @@
                       </span>
                     </span>
                   </label>
+                  </div>
                 </div>
                 <div id="group-name-error" class="error-message" style="display:none;">
                   Name must be 30 characters or fewer.
                 </div>
               </div>
 
-              <!-- OR Separator -->
+              <div class="hp-secondary">
               <div class="form-separator">
                 <span class="separator-line"></span>
                 <span class="separator-text">OR</span>
@@ -340,7 +343,7 @@
               </div>
 
               <!-- CVE + ATT&CK Technique IDs (50/50) -->
-              <div class="form-section" style="padding-bottom:4px;">
+              <div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:start;">
                   <!-- Left: CVE(s) -->
                   <div style="padding-right:20px;border-right:1px solid #e5e7eb;">
@@ -362,11 +365,13 @@
                   </div>
                 </div>
               </div>
+              </div>
 
+              <div class="hp-options">
               <!-- Additional Options -->
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
-                <div class="options-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="options-grid">
 
                   <!-- Row 0: Auto-validate + Threat Briefing (span full width as 2-col) -->
                   <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
@@ -485,16 +490,14 @@
                 </div>
               </details>
 
+              </div>
+
               <!-- AI/LLM choice, set by the pre-submit prompt (see ai-prompt-modal script) -->
               <input type="hidden" name="ai_provider" id="hidden_ai_provider" value="">
               <input type="hidden" name="ai_model" id="hidden_ai_model" value="">
 
-              <!-- Action buttons -->
-              <div style="border-top:1px solid #dee2e6;margin-top:20px;padding-top:16px;">
-                <button type="submit" class="btn-primary" id="generate_btn" disabled
-                        style="margin:0;font-size:1rem;background:linear-gradient(135deg,#10b981 0%,#059669 100%);box-shadow:0 2px 8px rgba(16,185,129,0.3);">
-                  Generate
-                </button>
+              <div class="hp-actions">
+                <button type="submit" class="hp-btn" id="generate_btn" disabled>Generate</button>
               </div>
             </form>
 
@@ -564,9 +567,8 @@
               kwModeBtn.addEventListener('click', function () {
                 kwMode = kwMode === 'AND' ? 'OR' : 'AND';
                 kwModeBtn.textContent = kwMode;
-                kwModeBtn.style.background  = kwMode === 'AND' ? '#374151' : '#fff';
-                kwModeBtn.style.color       = kwMode === 'AND' ? '#fff'    : '#374151';
-                kwModeBtn.style.borderColor = kwMode === 'AND' ? '#d1d5db' : '#374151';
+                kwModeBtn.classList.toggle('is-alt', kwMode !== 'AND');
+                kwModeBtn.setAttribute('aria-pressed', kwMode === 'AND' ? 'false' : 'true');
                 if (activeKeywords.length) runKeywordIntersection();
               });
 
@@ -576,9 +578,7 @@
                 var attributed = kwScope === 'attributed';
                 kwScopeBtn.textContent = attributed ? 'Attributed' : 'Targeted';
                 kwScopeBtn.setAttribute('aria-pressed', attributed ? 'false' : 'true');
-                kwScopeBtn.style.background  = attributed ? '#374151' : '#fff';
-                kwScopeBtn.style.color       = attributed ? '#fff'    : '#374151';
-                kwScopeBtn.style.borderColor = attributed ? '#d1d5db' : '#374151';
+                kwScopeBtn.classList.toggle('is-alt', !attributed);
                 if (activeKeywords.length) runKeywordIntersection();
               });
 
@@ -1628,32 +1628,38 @@
 
           <!-- RESEARCH TAB -->
           <div class="tab-pane" id="tab-research">
-            <div id="actor-consolidation-section" style="display:flex;flex-direction:column;">
-              <!-- Box 1: Keyword search + AND/OR toggle -->
-              <div class="form-section">
-                <label class="form-label" style="font-size:1.05rem;">Find Shared Techniques across multiple Threat Groups</label>
-                <div style="display:flex;align-items:stretch;gap:10px;">
-                  <div id="keyword-input-wrap" class="form-input" style="flex:1;position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text;height:auto;min-height:44px;" onclick="document.getElementById('keyword-text-input').focus()">
+            <div id="actor-consolidation-section">
+            <div class="hp-form">
+              <!-- Keyword search + AND/OR and Attributed/Targeted toggles -->
+              <div class="hp-primary">
+                <label for="keyword-text-input" class="form-label">Find techniques shared across Threat Groups</label>
+                <div class="hp-row">
+                  <div id="keyword-input-wrap" class="form-input hp-input" style="position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text;height:auto;min-height:44px;" onclick="document.getElementById('keyword-text-input').focus()">
                     <div id="keyword-filters-row" style="display:contents;"></div>
                     <input type="text" id="keyword-text-input" autocomplete="off" placeholder="Filter by keyword e.g. Iran, Finance etc."
                       style="flex:1;min-width:140px;border:none;outline:none;font-size:16px;background:transparent;padding:0;margin:0;">
                   </div>
+                  <div class="hp-slot">
                   <!-- AND / OR single toggle button -->
-                  <button id="kw-mode-btn" type="button"
-                    style="width:70px;border:2px solid #d1d5db;border-radius:6px;background:#374151;color:#fff;cursor:pointer;font-size:16px;font-weight:600;font-family:inherit;white-space:nowrap;flex-shrink:0;">
-                    AND
-                  </button>
+                  <button id="kw-mode-btn" type="button" class="hp-toggle mode" aria-pressed="false"
+                    title="Keywords: groups must match all of them (AND) or any of them (OR)">AND</button>
                   <!-- Country keywords: groups attributed to the country, or groups that have targeted it -->
                   <button id="kw-scope-btn" type="button" aria-pressed="false"
                     title="Country keywords: match groups attributed to the country, or groups that have targeted it"
-                    style="width:110px;border:2px solid #d1d5db;border-radius:6px;background:#374151;color:#fff;cursor:pointer;font-size:16px;font-weight:600;font-family:inherit;white-space:nowrap;flex-shrink:0;">
-                    Attributed
-                  </button>
+                    class="hp-toggle scope">Attributed</button>
+                  </div>
                 </div>
               </div>
 
-              <!-- Box 2: Actor name tags -->
-              <div class="form-section">
+              <!-- Actor name tags -->
+              <div class="hp-secondary">
+              <div class="form-separator">
+                <span class="separator-line"></span>
+                <span class="separator-text">PLUS</span>
+                <span class="separator-line"></span>
+              </div>
+              <label for="actor-text-input" class="form-label">Add Threat Groups by name</label>
+              <div>
                 <div id="actor-tag-input-wrap" class="form-input" style="position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text;height:auto;min-height:44px;" onclick="document.getElementById('actor-text-input').focus()">
                   <div id="actor-tags-list" style="display:contents;"></div>
                   <input type="text" id="actor-text-input" autocomplete="off" placeholder="Filter by Group e.g. APT33, Lazarus Group etc."
@@ -1661,25 +1667,9 @@
                   <div id="actor-autocomplete" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:200;max-height:260px;overflow-y:auto;"></div>
                 </div>
               </div>
-
-              <!-- Action buttons: Consolidate (50%) | Hunt Threat Groups (25%) | Hunt Techniques (25%) -->
-              <div style="border-top:1px solid #dee2e6;margin-top:16px;padding-top:16px;">
-                <div style="display:flex;gap:8px;">
-                  <button id="actor-consolidate-btn" type="button" disabled
-                          style="flex:2;padding:10px;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#06b6d4 0%,#0891b2 100%);color:#fff;opacity:0.45;box-shadow:0 2px 8px rgba(6,182,212,0.3);transition:opacity .15s;">
-                    Consolidate Techniques
-                  </button>
-                  <button id="actor-hunt-groups-btn" type="button" disabled
-                          style="flex:1;padding:10px;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);color:#fff;opacity:0.45;box-shadow:0 2px 8px rgba(99,102,241,0.3);transition:opacity .15s;">
-                    Hunt Threat Groups
-                  </button>
-                  <button id="actor-hunt-techniques-btn" type="button" disabled
-                          style="flex:1;padding:10px;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);color:#fff;opacity:0.45;box-shadow:0 2px 8px rgba(139,92,246,0.3);transition:opacity .15s;">
-                    Hunt Techniques
-                  </button>
-                </div>
               </div>
 
+              <div class="hp-options">
               <!-- Over-limit banner (shown when >20 actors are tagged) -->
               <div id="actor-overlimit-banner" style="display:none;margin-top:14px;padding:12px 16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -1693,6 +1683,15 @@
                   </button>
                 </div>
               </div>
+
+              </div>
+
+              <div class="hp-actions">
+                <button id="actor-consolidate-btn" type="button" class="hp-btn is-wide" disabled>Consolidate Techniques</button>
+                <button id="actor-hunt-groups-btn" type="button" class="hp-btn" disabled>Hunt Threat Groups</button>
+                <button id="actor-hunt-techniques-btn" type="button" class="hp-btn" disabled>Hunt Techniques</button>
+              </div>
+            </div>
 
               <!-- Results panel -->
               <div id="actor-results-panel" style="display:none;margin-top:16px;">
@@ -1797,65 +1796,59 @@
 
           <!-- UPLOAD TAB -->
           <div class="tab-pane" id="tab-upload">
-            <form id="upload-form" method="post" enctype="multipart/form-data" onsubmit="return false;">
-              <!-- URL Input Section -->
-              <div class="form-section">
-                <label for="blog_url_input" class="form-label">
-                  <svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                  </svg>
-                  Analyze a blog post
-                </label>
-                <input type="text" id="blog_url_input" class="form-input"
-                       placeholder="e.g., https://thedfirreport.com/2024/..." maxlength="500">
+            <form id="upload-form" class="hp-form" method="post" enctype="multipart/form-data" onsubmit="return false;">
+              <div class="hp-primary">
+                <label for="blog_url_input" class="form-label">Analyse a threat report or blog post</label>
+                <div class="hp-row">
+                  <input type="text" id="blog_url_input" class="form-input"
+                         placeholder="e.g., https://thedfirreport.com/2024/..." maxlength="500">
+                  <div class="hp-slot">
+                    <label class="option-item">
+                      <input type="checkbox" name="merge_by_parent" value="true">
+                      <span class="option-label">
+                        Merge by Parent Technique
+                        <span class="option-info-icon">i
+                          <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
               </div>
 
-              <!-- OR Separator -->
+              <div class="hp-secondary">
               <div class="form-separator">
                 <span class="separator-line"></span>
                 <span class="separator-text">OR</span>
                 <span class="separator-line"></span>
               </div>
-              <div class="form-label" style="margin-bottom:0.5em;">
-                <svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"/>
-                  <polyline points="9 15 12 12 15 15"/>
-                  <path d="M12 12v9"/>
-                </svg>
-                Upload a file
-              </div>
-              <div class="upload-area" id="upload-dropzone">
+              <label for="file-input" class="form-label">Upload a file</label>
+              <div class="hp-drop" id="upload-dropzone">
                 <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"/>
                   <polyline points="9 15 12 12 15 15"/>
                   <path d="M12 12v9"/>
                 </svg>
                 <div class="upload-text">
-                  <strong>Choose file or drag it here</strong>
-                  <p>Supported formats: PDF, TXT, MD, JSON, CSV, XLSX, DOCX, YARA</p>
+                  <strong>Choose a file or drag it here</strong>
+                  <p>PDF, TXT, MD, JSON, CSV, XLSX, DOCX, YARA</p>
+                </div>
+                <div id="file-selected" class="hp-file" style="display: none;">
+                  <span id="file-name-text"></span>
+                  <button type="button" class="btn-remove" onclick="clearFileSelection()" aria-label="Remove file">✕</button>
                 </div>
                 <input type="file" id="file-input" name="file" accept=".pdf,.txt,.md,.json,.csv,.xlsx,.xls,.docx,.doc,.yar,.yara" style="display: none;">
                 <button type="button" class="btn-secondary" onclick="document.getElementById('file-input').click();">
                   Select File
                 </button>
               </div>
-
-              <div id="file-selected" class="file-info" style="display: none;">
-                <div class="file-name-display">
-                  <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                  </svg>
-                  <span id="file-name-text"></span>
-                  <button type="button" class="btn-remove" onclick="clearFileSelection()">✕</button>
-                </div>
               </div>
 
+              <div class="hp-options">
               <!-- Additional Options -->
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
-                <div class="options-grid" style="grid-template-columns: 0.9fr 0.9fr 1.2fr;">
+                <div class="options-grid">
 
                   <!-- Row 0: Auto-validate + Threat Briefing -->
                   <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
@@ -1901,19 +1894,10 @@
                     </span>
                   </label>
 
-                  <!-- Row 1 Column 2: AI Generators -->
-                  <label class="option-item">
-                    <input type="checkbox" name="use_openai" id="upload_use_openai" value="true">
-                    <span class="option-label">
-                      AI Generators
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Use AI (OpenAI GPT, local LLMs) to enhance detection generation quality with smarter query logic. Requires OPENAI_API_KEY for cloud AI or local LLM server.</span>
-                      </span>
-                    </span>
-                  </label>
 
 
-                  <!-- Row 2 Column 1: OSINT Comparison -->
+
+                  <!-- Row 1 Column 2: OSINT Comparison -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_comparison" id="upload_osint_comparison" value="true">
                     <span class="option-label">
@@ -1924,7 +1908,18 @@
                     </span>
                   </label>
 
-                  <!-- Row 2 Column 2: AI Correlations -->
+                  <!-- Row 1 Column 3: AI Generators -->
+                  <label class="option-item">
+                    <input type="checkbox" name="use_openai" id="upload_use_openai" value="true">
+                    <span class="option-label">
+                      AI Generators
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Use AI (OpenAI GPT, local LLMs) to enhance detection generation quality with smarter query logic. Requires OPENAI_API_KEY for cloud AI or local LLM server.</span>
+                      </span>
+                    </span>
+                  </label>
+
+                  <!-- Row 2 Column 1: AI Correlations -->
                   <label class="option-item">
                     <input type="checkbox" name="ai_correlations" value="true">
                     <span class="option-label">
@@ -1935,16 +1930,6 @@
                     </span>
                   </label>
 
-                  <!-- Row 2 Column 3: Merge by Parent Technique -->
-                  <label class="option-item">
-                    <input type="checkbox" name="merge_by_parent" value="true">
-                    <span class="option-label">
-                      Merge by Parent Technique
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
-                      </span>
-                    </span>
-                  </label>
 
                 </div>
               </details>
@@ -2004,33 +1989,45 @@
                 </div>
               </details>
 
-              <div style="border-top:1px solid #dee2e6;margin-top:20px;padding-top:16px;">
-                <button type="button" class="btn-primary" id="upload_btn" disabled style="width:100%;margin:0;background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);box-shadow:0 2px 8px rgba(59,130,246,0.3);">
-                  Upload & Process
-                </button>
-                <div id="upload-error" class="error-message" role="alert" style="display:none;"></div>
               </div>
+
+              <div class="hp-actions">
+                <button type="button" class="hp-btn" id="upload_btn" disabled>Upload &amp; Process</button>
+              </div>
+              <div id="upload-error" class="error-message" role="alert" style="display:none;"></div>
             </form>
           </div>
 
           <!-- PROFILE TAB -->
           <div class="tab-pane" id="tab-profile">
-            <form id="profile-form" action="/profile" method="post" autocomplete="off" style="display:flex;flex-direction:column;">
-              <div class="form-section">
-                <label for="domain_input" class="form-label">Enter a company's primary domain to analyze their threat profile</label>
-                <input type="text" name="domain" id="domain_input" class="form-input"
-                       placeholder="e.g., acme-corp.com, example.org" maxlength="100">
-                <div class="options-grid" style="margin-top: 14px;">
-                  <label class="option-item">
-                    <input type="checkbox" name="include_supply_chain" value="true">
-                    <span class="option-label">
-                      Supply Chain
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Identify vendor dependencies</span>
+            <form id="profile-form" class="hp-form" action="/profile" method="post" autocomplete="off">
+              <div class="hp-primary">
+                <label for="domain_input" class="form-label">Enter a company's primary domain to analyse its threat profile</label>
+                <div class="hp-row">
+                  <input type="text" name="domain" id="domain_input" class="form-input"
+                         placeholder="e.g., acme-corp.com, example.org" maxlength="100">
+                  <div class="hp-slot">
+                    <label class="option-item">
+                      <input type="checkbox" name="include_supply_chain" value="true">
+                      <span class="option-label">
+                        Supply Chain
+                        <span class="option-info-icon">i
+                          <span class="option-info-tooltip">Identify vendor dependencies</span>
+                        </span>
                       </span>
-                    </span>
-                  </label>
+                    </label>
+                  </div>
+                </div>
+              </div>
 
+              <div class="hp-secondary">
+                <p class="hp-hint">Archer looks the company up (Wikidata, its homepage and OSINT sources), works out its sector and where it operates, and recommends the threat groups that target organisations like it. You then choose which groups to generate detections for.</p>
+              </div>
+
+              <div class="hp-options">
+              <details class="options-section">
+                <summary class="options-header">Additional Options</summary>
+                <div class="options-grid">
                   <label class="option-item">
                     <input type="checkbox" name="use_openai" value="true">
                     <span class="option-label">
@@ -2041,11 +2038,13 @@
                     </span>
                   </label>
                 </div>
-              </div>
+              </details>
 
               <!-- API Key Guidance -->
-              <details class="options-section" style="margin-bottom: 1em;">
-                <summary class="options-header">⚙️ OSINT API Keys (Optional)</summary>
+              <details class="options-section">
+                <summary class="options-header">OSINT API Keys
+                  <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px; font-weight: 400;">(Optional: more sources for a fuller profile)</span>
+                </summary>
                 <div style="padding: 1em; background: #f8f9fa; border-radius: 4px; font-size: 0.9em;">
                   <p style="margin: 0 0 0.5em 0; font-weight: 500;">Enhanced profiling uses multiple OSINT sources. Most work without API keys, but for full coverage set these environment variables:</p>
                   <ul style="margin: 0.5em 0; padding-left: 1.5em; line-height: 1.6;">
@@ -2060,10 +2059,10 @@
                 </div>
               </details>
 
-              <div style="border-top:1px solid #dee2e6;margin-top:16px;padding-top:16px;">
-                <button type="submit" class="btn-primary" id="profile_btn" disabled style="width:100%;margin:0;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);box-shadow:0 2px 8px rgba(139,92,246,0.3);">
-                  Profile Organization
-                </button>
+              </div>
+
+              <div class="hp-actions">
+                <button type="submit" class="hp-btn" id="profile_btn" disabled>Profile Organisation</button>
               </div>
             </form>
           </div>

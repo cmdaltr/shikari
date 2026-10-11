@@ -1,0 +1,141 @@
+/* Home page tabs (templates/index.html): one layout for Hunt, Research, Upload and Profile.
+ *
+ * Hunt is the reference. Every pane has the same zones in the same order and size, so
+ * the primary input, its side control, the options and the action buttons sit in the
+ * same place whichever tab is open:
+ *   .hp-primary    label + primary input + .hp-slot (fixed-width side control)
+ *   .hp-secondary  the alternative input (fixed height)
+ *   .hp-options    collapsible option panels (fixed height while collapsed)
+ *   .hp-actions    action buttons, pinned to the bottom of the pane
+ * Each pane takes its colours from --tab-accent, set per tab below.
+ */
+
+.home-tabs [data-tab="generate"], .home-tabs #tab-generate { --tab-accent: #10b981; --tab-accent-dark: #059669; --tab-accent-rgb: 16, 185, 129; }
+.home-tabs [data-tab="research"], .home-tabs #tab-research { --tab-accent: #06b6d4; --tab-accent-dark: #0891b2; --tab-accent-rgb: 6, 182, 212; }
+.home-tabs [data-tab="upload"],   .home-tabs #tab-upload   { --tab-accent: #3b82f6; --tab-accent-dark: #2563eb; --tab-accent-rgb: 59, 130, 246; }
+.home-tabs [data-tab="profile"],  .home-tabs #tab-profile  { --tab-accent: #8b5cf6; --tab-accent-dark: #7c3aed; --tab-accent-rgb: 139, 92, 246; }
+
+/* Tab strip: the open tab and the rule under the strip take the tab's colour */
+.home-tabs .tab-button.active { color: var(--tab-accent); border-bottom-color: var(--tab-accent); }
+.home-tabs .tabs-header:has([data-tab="generate"].active) { border-bottom-color: #10b981; }
+.home-tabs .tabs-header:has([data-tab="research"].active) { border-bottom-color: #06b6d4; }
+.home-tabs .tabs-header:has([data-tab="upload"].active)   { border-bottom-color: #3b82f6; }
+.home-tabs .tabs-header:has([data-tab="profile"].active)  { border-bottom-color: #8b5cf6; }
+
+/* Pane: same height for every tab; the action bar sits at the bottom */
+.home-tabs .tabs-content { min-height: 0; }
+.home-tabs .tab-pane.active { display: block; }
+.home-tabs .hp-form { display: flex; flex-direction: column; min-height: 470px; margin: 0; }
+
+.home-tabs .hp-primary { margin: 0; }
+.home-tabs .hp-primary .form-label { font-size: 1rem; }
+.home-tabs .hp-row { display: flex; gap: 12px; align-items: stretch; }
+.home-tabs .hp-row > .form-input, .home-tabs .hp-row > .hp-input { flex: 1; min-width: 0; }
+.home-tabs .hp-slot {
+  flex: 0 0 316px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
+.home-tabs .hp-slot .option-item { padding: 0.5em 0.75em; white-space: nowrap; }
+
+.home-tabs .hp-secondary { min-height: 132px; box-sizing: border-box; }
+.home-tabs .hp-secondary .form-separator { margin: 1.1em 0 0.9em; }
+.home-tabs .hp-secondary .form-label { margin-bottom: 6px; }
+.home-tabs .hp-hint { margin: 1.6em 0 0; color: #6b7280; font-size: 0.95rem; line-height: 1.55; }
+
+.home-tabs .hp-options { min-height: 136px; padding-top: 4px; }
+.home-tabs .hp-options .options-section { margin-top: 12px; }
+.home-tabs .hp-options .options-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.home-tabs .hp-actions {
+  margin-top: auto; padding-top: 16px; border-top: 1px solid #dee2e6; display: flex; gap: 8px;
+}
+.home-tabs .hp-btn {
+  flex: 1; height: 48px; margin: 0; padding: 0 1em; border: none; border-radius: 6px; cursor: pointer;
+  font: inherit; font-size: 1rem; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg, var(--tab-accent) 0%, var(--tab-accent-dark) 100%);
+  box-shadow: 0 2px 8px rgba(var(--tab-accent-rgb), 0.3);
+  transition: transform .15s, box-shadow .15s, opacity .15s;
+}
+.home-tabs .hp-btn.is-wide { flex: 2; }
+.home-tabs .hp-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(var(--tab-accent-rgb), 0.4); }
+.home-tabs .hp-btn:disabled { background: rgba(var(--tab-accent-rgb), 0.4); box-shadow: none; cursor: not-allowed; transform: none; opacity: 1 !important; }
+.home-tabs .hp-after { margin-top: 0; }
+
+/* One input height everywhere; the chip inputs on Research grow only when chips wrap */
+.home-tabs .tab-pane .form-input { height: 48px; box-sizing: border-box; }
+.home-tabs .tab-pane .hp-input,
+.home-tabs #actor-tag-input-wrap { height: auto !important; min-height: 48px !important; padding-top: 6px; padding-bottom: 6px; }
+
+/* Accent everywhere inside a pane */
+.home-tabs .tab-pane .form-input:focus,
+.home-tabs .tab-pane .hp-input:focus-within {
+  border-color: var(--tab-accent); box-shadow: 0 0 0 3px rgba(var(--tab-accent-rgb), 0.15); outline: none;
+}
+.home-tabs .tab-pane .options-header::marker { color: var(--tab-accent); }
+.home-tabs .tab-pane .option-item:hover { background: rgba(var(--tab-accent-rgb), 0.06); }
+.home-tabs .tab-pane input[type="checkbox"] { accent-color: var(--tab-accent); }
+.home-tabs .tab-pane .btn-secondary { color: var(--tab-accent-dark); border-color: var(--tab-accent); background: #fff; }
+.home-tabs .tab-pane .btn-secondary:hover { background: var(--tab-accent); color: #fff; }
+
+/* Research: AND/OR and Attributed/Targeted toggles */
+.home-tabs .hp-toggle {
+  height: 100%; min-height: 46px; padding: 0 14px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+  font: inherit; font-size: 1rem; font-weight: 600;
+  border: 2px solid var(--tab-accent); background: var(--tab-accent); color: #fff;
+}
+.home-tabs .hp-toggle.is-alt { background: #fff; color: var(--tab-accent-dark); }
+.home-tabs .hp-toggle.mode { width: 72px; }
+.home-tabs .hp-toggle.scope { width: 124px; }
+
+/* Upload: a one-row drop zone the height of an input */
+.home-tabs .hp-drop {
+  display: flex; align-items: center; gap: 14px; height: 50px; box-sizing: border-box; padding: 0 8px 0 14px;
+  border: 2px dashed #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; text-align: left;
+  transition: border-color .2s, background .2s;
+}
+.home-tabs .hp-drop:hover, .home-tabs .hp-drop.dragover { border-color: var(--tab-accent); background: rgba(var(--tab-accent-rgb), 0.05); }
+.home-tabs .hp-drop .upload-icon { width: 24px; height: 24px; margin: 0; color: var(--tab-accent); flex-shrink: 0; }
+.home-tabs .hp-drop .upload-text { flex: 1; min-width: 0; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.home-tabs .hp-drop .upload-text strong { display: inline; font-size: 0.98rem; color: #374151; white-space: nowrap; }
+.home-tabs .hp-drop .upload-text p { margin: 0; font-size: 0.85rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-tabs .hp-drop .btn-secondary { flex: 0 0 auto; width: auto; margin: 0; padding: 0 16px; height: 34px; font-size: 0.92rem; }
+.home-tabs #file-selected { margin-top: 6px; }
+
+[data-theme="dark"] .home-tabs .hp-actions { border-top-color: var(--border-color); }
+[data-theme="dark"] .home-tabs .hp-drop { background: var(--bg-secondary); border-color: var(--border-color); }
+[data-theme="dark"] .home-tabs .hp-drop .upload-text strong { color: var(--text-primary); }
+[data-theme="dark"] .home-tabs .hp-toggle.is-alt { background: transparent; color: var(--tab-accent); }
+[data-theme="dark"] .home-tabs .tab-pane .btn-secondary { background: transparent; }
+[data-theme="dark"] .home-tabs .hp-hint { color: var(--text-secondary); }
+
+@media (max-width: 768px) {
+  .home-tabs .hp-row { flex-wrap: wrap; }
+  .home-tabs .hp-slot { flex: 1 1 100%; justify-content: flex-start; }
+  .home-tabs .hp-secondary { height: auto; }
+  .home-tabs .hp-form { min-height: 0; }
+  .home-tabs .hp-drop .upload-text p { display: none; }
+}
+
+/* Chosen file, shown in the drop zone row in place of its instructions */
+.home-tabs .hp-file { flex: 1; min-width: 0; }
+.home-tabs .hp-file span { font-weight: 600; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.home-tabs .hp-file .btn-remove { margin-left: 10px; vertical-align: middle; }
+[data-theme="dark"] .home-tabs .hp-file span { color: var(--text-primary); }
+
+/* Dark theme: a dark pane to match the dark inputs (it used to stay light) */
+[data-theme="dark"] .home-tabs .tabs-content { background: var(--bg-secondary); }
+[data-theme="dark"] .home-tabs .tab-button.active { background: var(--bg-secondary); color: var(--tab-accent); border-color: var(--tab-accent); }
+[data-theme="dark"] .home-tabs .tab-pane label,
+[data-theme="dark"] .home-tabs .tab-pane .form-label,
+[data-theme="dark"] .home-tabs .tab-pane .option-label { color: var(--text-primary) !important; }
+[data-theme="dark"] .home-tabs .options-section { border-color: var(--border-color); }
+[data-theme="dark"] .home-tabs .options-header { background: var(--bg-primary); color: var(--text-primary); }
+[data-theme="dark"] .home-tabs .options-header:hover { background: #252525; }
+[data-theme="dark"] .home-tabs .options-section[open] .options-header { border-bottom-color: var(--border-color); }
+[data-theme="dark"] .home-tabs .separator-line { background: linear-gradient(to right, transparent, var(--border-color), transparent); }
+[data-theme="dark"] .home-tabs .tab-pane .form-input { background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary); }
+[data-theme="dark"] .home-tabs .tab-pane .form-input:disabled { opacity: .5; }
+[data-theme="dark"] .home-tabs .hp-btn:disabled { background: rgba(var(--tab-accent-rgb), 0.3); color: rgba(255,255,255,.75); }
+[data-theme="dark"] .home-tabs .hp-secondary [style*="border-right"] { border-right-color: var(--border-color) !important; }
+
+/* Upload review modal: Proceed waits for the technique list */
+#proceed-generation:disabled { opacity: .5; cursor: wait; }

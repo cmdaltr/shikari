@@ -144,8 +144,8 @@ function clearFileSelection() {
     // Show drop zone instructions
     const uploadText = dropzone.querySelector('.upload-text');
     const selectButton = dropzone.querySelector('.btn-secondary');
-    if (uploadText) uploadText.style.display = 'block';
-    if (selectButton) selectButton.style.display = 'inline-block';
+    if (uploadText) uploadText.style.display = '';
+    if (selectButton) selectButton.style.display = '';
 }
 
 /**
