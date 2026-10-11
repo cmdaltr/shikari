@@ -270,13 +270,11 @@ def call_llm(prompt: str, config: Optional[Dict] = None) -> str:
     file_config = _load_llm_config()
     merged = {**file_config, **(config or {})}
 
-    # Contract documents run to 3-5k tokens (exemplars are 11-20KB); 4096 truncates them.
-    try:
-        from archer.contract import contract_mode
-        if contract_mode() and "max_tokens" not in merged:
-            merged["max_tokens"] = int(os.getenv("ARCHER_CONTRACT_MAX_TOKENS", "16000"))
-    except ImportError:
-        pass
+    # Answers run to 3-5k tokens (contract exemplars are 11-20KB, a T1190 query set ~11KB);
+    # 4096 cuts the JSON mid-string and the parser finds nothing
+    if "max_tokens" not in merged:
+        merged["max_tokens"] = int(os.getenv("ARCHER_LLM_MAX_TOKENS")
+                                   or os.getenv("ARCHER_CONTRACT_MAX_TOKENS", "16000"))
 
     provider = merged.get("provider", "").lower()
 
@@ -512,6 +510,22 @@ def _call_local(prompt: str, endpoint: str, config: dict) -> str:
 # Main Mode 1 entry point
 # ---------------------------------------------------------------------------
 
+def _keep_unusable_response(technique_id: str, response: str) -> None:
+    """An answer that produced no queries is kept (data/llm_responses/) and named in the log,
+    instead of only "No bespoke queries generated"."""
+    from datetime import datetime
+
+    out_dir = Path("data/llm_responses")
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"{technique_id}_{datetime.now():%Y%m%d-%H%M%S}.txt"
+        path.write_text(response or "")
+        head = " ".join((response or "").split())[:160]
+        print(f"  ⚠️  LLM answer for {technique_id} gave no usable queries ({len(response or '')} chars, saved to {path}): {head}")
+    except OSError as e:
+        print(f"  ⚠️  LLM answer for {technique_id} gave no usable queries (not saved: {e})")
+
+
 def generate_llm_queries(
     technique_id: str,
     technique_name: str,
@@ -570,6 +584,8 @@ def generate_llm_queries(
         from archer.contract import is_contract_document, handle_contract_response
         if is_contract_document(response):
             queries = handle_contract_response(response, technique_id=technique_id, group_name=group_name)
+            if not queries:
+                _keep_unusable_response(technique_id, response)
             for q in queries:
                 q["tactic"] = tactic
             return queries
@@ -579,6 +595,8 @@ def generate_llm_queries(
 
     # Parse the response (legacy JSON shape)
     queries = parse_llm_response(response)
+    if not queries:
+        _keep_unusable_response(technique_id, response)
 
     # Add tactic to each query
     for q in queries:

@@ -80,6 +80,7 @@ data/progress/*
 # Each group's latest run: which detection files it produced
 data/runs/*
 data/ioc_flows/*
+data/llm_responses/*
 
 # Uploads (user-uploaded files)
 data/uploads/*

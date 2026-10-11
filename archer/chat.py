@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Cookie, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -147,87 +147,111 @@ _CLOUD_PROVIDER_CHAIN = [
 ]
 
 
-def _try_cloud_providers(keys: Dict[str, str]):
-    """Try each configured cloud provider in priority order. keys is a
-    stored-key-name -> value map (may be empty for anonymous callers)."""
+def _cloud_candidates(keys: Dict[str, str]) -> List[Tuple[str, Callable]]:
+    """(label, make_llm) for each cloud provider with a key: the user's, else the server's."""
     from archer.ai.llm.providers import LLMFactory
 
+    out = []
     for provider_id, key_names, env_names, label in _CLOUD_PROVIDER_CHAIN:
         api_key = next((keys[k] for k in key_names if keys.get(k)), None)
         if not api_key:
             api_key = next((os.getenv(e) for e in env_names if os.getenv(e)), None)
-        if not api_key:
-            continue
-        try:
-            return LLMFactory.create(provider_id, api_key=api_key), label
-        except Exception as e:
-            logger.warning("%s provider failed: %s", label, e)
-    return None, None
+        if api_key:
+            out.append((label, lambda p=provider_id, k=api_key: LLMFactory.create(p, api_key=k)))
+    return out
 
 
-def _try_local_providers(local_llm_endpoints: List[dict]):
-    """Try each detected local endpoint (Ollama, Osaurus) in detection order."""
+def _local_candidates(local_llm_endpoints: List[dict]) -> List[Tuple[str, Callable]]:
+    """(label, make_llm) for each detected local endpoint (Ollama, Osaurus)."""
     from archer.ai.llm.providers import LLMFactory
 
+    out = []
     for endpoint in local_llm_endpoints or []:
-        if not endpoint.get("available"):
-            continue
         provider_id = endpoint.get("provider")
-        if provider_id not in ("ollama", "osaurus"):
+        if not endpoint.get("available") or provider_id not in ("ollama", "osaurus"):
             continue
+        base_url = endpoint.get("base_url") or endpoint.get("url", "").split("/api/")[0]
+        model = endpoint.get("model") or ("llama2" if provider_id == "ollama" else "default")
+        out.append((f"Local LLM ({endpoint.get('name')}/{model})",
+                    lambda p=provider_id, b=base_url, m=model: LLMFactory.create(p, base_url=b, model=m)))
+    return out
+
+
+def _provider_candidates(user_id: Optional[int], db, local_llm_endpoints: Optional[List[dict]] = None):
+    """
+    The providers to try for Ask Archer (and the threat briefing), in order, and
+    whether they come from an assignment.
+
+    The provider assigned to Ask Archer in the profile is the only candidate (GitHub
+    #10): if it fails, the error is shown rather than an answer from another provider.
+    With nothing assigned: the user's keys (then the server's) in priority order
+    Anthropic → OpenAI → Gemini → DeepSeek → Qwen → Grok, then the profile's local
+    model, then local LLMs detected on this machine.
+    """
+    from archer.ai.assignment import LOCAL, create_llm, resolve
+
+    keys: Dict[str, str] = {}
+    if user_id is not None:
+        assigned = resolve(db, user_id, "ask")
+        if assigned:
+            model = assigned["model"] or "default model"
+            return [(f"{assigned['label']} / {model}", lambda: create_llm(assigned))], True
         try:
-            base_url = endpoint.get("base_url") or endpoint.get("url", "").split("/api/")[0]
-            model = endpoint.get("model") or ("llama2" if provider_id == "ollama" else "default")
-            return LLMFactory.create(provider_id, base_url=base_url, model=model), f"Local LLM ({endpoint.get('name')}/{model})"
+            for row in db.query(APIKey).filter(APIKey.user_id == user_id).all():
+                try:
+                    keys[row.platform] = decrypt_api_key(row.encrypted_key)
+                except Exception:
+                    pass
         except Exception as e:
-            logger.warning("%s provider failed: %s", provider_id, e)
-    return None, None
+            logger.warning("Could not read API keys from DB: %s", e)
+
+    candidates = _cloud_candidates(keys)
+    if user_id is not None:
+        profile_local = resolve(db, user_id, "ask", LOCAL)
+        if profile_local:
+            model = profile_local["model"] or "default model"
+            candidates.append((f"{profile_local['label']} / {model}", lambda: create_llm(profile_local)))
+    return candidates + _local_candidates(local_llm_endpoints), False
+
+
+def _generate(candidates, assigned: bool, purpose: str, **kwargs):
+    """
+    Generate with the first provider that answers; returns (LLMResponse, label).
+
+    Unassigned, a provider that errors (no credit, bad key, unreachable) is skipped
+    for the next one, so Ask Archer still answers from Ollama when the first cloud key
+    is out of credit. Assigned, its error is the answer. Raises HTTPException(502)
+    listing each failure when none answers.
+    """
+    failures = []
+    for label, make in candidates:
+        try:
+            response = make().generate(**kwargs)
+        except Exception as e:
+            reason = str(e).split(" - {")[0][:200] if " - {" in str(e) else str(e)[:200]
+            if "credit balance is too low" in str(e):
+                reason = "credit balance too low"
+            print(f"⚠️  {purpose}: {label} failed ({reason})"
+                  f"{'' if assigned else '; trying the next provider'}", flush=True)
+            failures.append(f"{label}: {reason}")
+            if assigned:
+                break
+            continue
+        print(f"🤖 {purpose}: {label}{' (assigned in profile)' if assigned else ''}"
+              f"{' after ' + str(len(failures)) + ' failed' if failures else ''}", flush=True)
+        return response, label
+    raise HTTPException(status_code=502, detail="; ".join(failures) or "No LLM provider answered")
 
 
 def _get_llm_provider(user_id: int, db, local_llm_endpoints: Optional[List[dict]] = None):
-    """
-    Return an (LLMProvider, provider_name) tuple for Ask Archer.
-
-    The provider assigned to Ask Archer in the profile wins (GitHub #10); an assigned
-    provider that fails raises rather than quietly answering with a different one.
-    With nothing assigned: the user's stored keys, then server keys, in priority
-    order Anthropic → OpenAI → DeepSeek → Qwen → Grok → local (Ollama/Osaurus).
-    Returns (None, None) if no provider is available.
-    """
-    from archer.ai.assignment import create_llm, resolve
-
-    assigned = resolve(db, user_id, "ask")
-    if assigned:
-        model = assigned["model"] or "default model"
-        print(f"🤖 Ask Archer: {assigned['label']} / {model} (assigned in profile)", flush=True)
-        return create_llm(assigned), f"{assigned['label']} / {model}"
-
-    # Build platform → decrypted_value map for this user
-    keys: Dict[str, str] = {}
-    try:
-        rows = db.query(APIKey).filter(APIKey.user_id == user_id).all()
-        for row in rows:
-            try:
-                keys[row.platform] = decrypt_api_key(row.encrypted_key)
-            except Exception:
-                pass
-    except Exception as e:
-        logger.warning("Could not read API keys from DB: %s", e)
-
-    llm, label = _try_cloud_providers(keys)
-    if llm:
-        return llm, label
-
-    return _try_local_providers(local_llm_endpoints)
-
-
-def _get_llm_provider_anonymous(local_llm_endpoints: Optional[List[dict]] = None):
-    """LLM provider lookup using only environment variables — no DB, no user."""
-    llm, label = _try_cloud_providers({})
-    if llm:
-        return llm, label
-
-    return _try_local_providers(local_llm_endpoints)
+    """The first provider that can be created, as (LLMProvider, label); (None, None) if none."""
+    candidates, _ = _provider_candidates(user_id, db, local_llm_endpoints)
+    for label, make in candidates:
+        try:
+            return make(), label
+        except Exception as e:
+            logger.warning("%s provider failed: %s", label, e)
+    return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -264,21 +288,16 @@ async def ask_archer(
         if user_id is not None and db is None:
             db = next(get_db())
 
-        def resolve(endpoints):
-            if user_id is not None:
-                return _get_llm_provider(user_id, db, endpoints)
-            # Unauthenticated – env-var keys only (no DB lookup)
-            return _get_llm_provider_anonymous(endpoints)
-
-        llm, provider_name = resolve(local_llm_endpoints)
+        candidates, assigned = _provider_candidates(user_id, db, local_llm_endpoints)
         redetect = getattr(request.app.state, "redetect_local_llm", None)
-        if llm is None and not local_llm_endpoints and redetect:
+        if not candidates and not local_llm_endpoints and redetect:
             # Local LLMs are probed at startup; one started since would otherwise
             # stay invisible until Archer restarts
             await redetect()
-            llm, provider_name = resolve(getattr(request.app.state, "local_llm_endpoints", []))
+            candidates, assigned = _provider_candidates(
+                user_id, db, getattr(request.app.state, "local_llm_endpoints", []))
 
-        if llm is None:
+        if not candidates:
             raise HTTPException(
                 status_code=503,
                 detail=(
@@ -293,7 +312,8 @@ async def ask_archer(
         if context.get("group"):
             question = f"[Threat group context: {context['group']}]\n\n{question}"
 
-        response = llm.generate(
+        response, provider_name = _generate(
+            candidates, assigned, "Ask Archer",
             prompt=question,
             system_prompt=_SYSTEM_PROMPT,
             temperature=0.4,
@@ -375,9 +395,9 @@ async def threat_briefing(
         if local_llm_endpoints is None:
             single = getattr(request.app.state, "local_llm_detected", {})
             local_llm_endpoints = [single] if single.get("available") else []
-        llm, provider_name = _get_llm_provider(user.id, db, local_llm_endpoints)
+        candidates, assigned = _provider_candidates(user.id, db, local_llm_endpoints)
 
-        if llm is None:
+        if not candidates:
             raise HTTPException(
                 status_code=503,
                 detail=(
@@ -387,7 +407,8 @@ async def threat_briefing(
             )
 
         system = _BRIEFING_SYSTEM_PROMPT.format(n=payload.top_n)
-        raw = llm.generate(
+        raw, provider_name = _generate(
+            candidates, assigned, "Threat briefing",
             prompt=prompt,
             system_prompt=system,
             temperature=0.3,
