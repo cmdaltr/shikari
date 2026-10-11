@@ -398,6 +398,8 @@ def upload_blog(page):
     if not resp.ok:
         raise RuntimeError(f"/analyze_blog returned {resp.status}: {resp.json().get('message', '')[:150]}")
     page.wait_for_selector("#ttps-container", timeout=30000)
+    # Technique names load after the modal opens; Proceed stays disabled until they do
+    page.wait_for_selector("#ttps-container .ttp-checkbox", timeout=30000)
     caption(page, "Review extracted TTPs and IOCs")
     page.locator("#ttps-container").scroll_into_view_if_needed()
     shot(page, "upload_extraction")

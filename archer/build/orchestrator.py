@@ -92,9 +92,11 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
     # Supplied techniques (blog upload, CVE, technique hunt) take precedence: a report
     # attributed to an ATT&CK alias such as UNC3944 must still use the report's TTPs
-    if manual_data or group_in_mitre == "N":
+    # An empty list is a choice (every technique deselected), not "no manual data": it
+    # must not fall through to the whole ATT&CK group a report's actor resolves to
+    if manual_data is not None or group_in_mitre == "N":
         # manual_data must be provided
-        if not manual_data:
+        if manual_data is None:
             raise ValueError(
                 f"Group '{group_name}' not found in MITRE ATT&CK and no manual data provided. Cannot proceed."
             )

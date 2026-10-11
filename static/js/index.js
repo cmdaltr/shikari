@@ -643,22 +643,16 @@ document.addEventListener('DOMContentLoaded', function () {
     dropzone.addEventListener('dragover', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      this.style.borderColor = '#0066cc';
-      this.style.backgroundColor = '#f0f8ff';
     });
 
     dropzone.addEventListener('dragleave', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      this.style.borderColor = '#ddd';
-      this.style.backgroundColor = '#f9f9f9';
     });
 
     dropzone.addEventListener('drop', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      this.style.borderColor = '#ddd';
-      this.style.backgroundColor = '#f9f9f9';
 
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         if (fileInput) {
@@ -795,7 +789,7 @@ function escapeHtml(text) {
 function showExtractionResults(data) {
   var modal = document.createElement('div');
   modal.id = 'extraction-results-modal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9500;display:flex;align-items:center;justify-content:center;';
 
   var modalContent = document.createElement('div');
   modalContent.style.cssText = 'background:white;border-radius:8px;max-width:900px;max-height:85vh;overflow-y:auto;padding:2em;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
@@ -894,7 +888,8 @@ function showExtractionResults(data) {
 
   // No form control ever sent auto_generate, so gating on it left users with only Close
   if (data.ttps_count > 0 || data.iocs_count > 0) {
-    html += '<button id="proceed-generation" style="padding:0.75em 1.5em;border:none;background:#007bff;color:white;border-radius:4px;cursor:pointer;font-size:1em;font-weight:500;">Proceed with Selected Items</button>';
+    var ttpsPending = data.ttps && data.ttps.length > 0;
+    html += '<button id="proceed-generation"' + (ttpsPending ? ' disabled title="Loading techniques…"' : '') + ' style="padding:0.75em 1.5em;border:none;background:#007bff;color:white;border-radius:4px;cursor:pointer;font-size:1em;font-weight:500;">Proceed with Selected Items</button>';
   } else {
     html += '<button id="close-extraction" style="padding:0.75em 1.5em;border:none;background:#28a745;color:white;border-radius:4px;cursor:pointer;font-size:1em;font-weight:500;">Close</button>';
   }
@@ -903,6 +898,12 @@ function showExtractionResults(data) {
   modalContent.innerHTML = html;
   modal.appendChild(modalContent);
   document.body.appendChild(modal);
+
+  // Proceed waits for the TTP checkboxes: clicking while they load would send none
+  function enableProceed() {
+    var btn = document.getElementById('proceed-generation');
+    if (btn) { btn.disabled = false; btn.removeAttribute('title'); }
+  }
 
   // Fetch technique names and populate TTPs
   if (data.ttps && data.ttps.length > 0) {
@@ -934,6 +935,7 @@ function showExtractionResults(data) {
         });
         ttpsHtml += '</div>';
         ttpsContainer.innerHTML = ttpsHtml;
+        enableProceed();
       }
     })
     .catch(function(err) {
@@ -955,6 +957,7 @@ function showExtractionResults(data) {
         });
         ttpsHtml += '</div>';
         ttpsContainer.innerHTML = ttpsHtml;
+        enableProceed();
       }
     });
   }
