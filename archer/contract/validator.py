@@ -277,6 +277,14 @@ def lint_kql(q: str, rep: Report, rule: Optional[dict] = None) -> List[str]:
         s = re.sub(r'@"(?:[^"]|"")*"', "", stmt)
         if s.count('"') % 2: rep.fail("KQL-16", f"unbalanced double quotes in statement: {stmt.strip()[:60]}")
     if re.search(r"\bhas_(?:any|all)\s*\(\s*\"[^\"]*\n", q): rep.fail("KQL-16", "string literal inside has_any/has_all spans a line break")
+    # Bracket structure, strings scrubbed: an empty group (not a call like count()) or an
+    # unbalanced bracket is a query that won't parse, e.g. "where ())))) or (...)"
+    depth = 0
+    for ch in scrubbed:
+        depth += (ch == "(") - (ch == ")")
+        if depth < 0: break
+    if depth: rep.fail("KQL-17", "unbalanced round brackets")
+    if re.search(r"(?<![A-Za-z0-9_])\(\s*\)", scrubbed): rep.fail("KQL-17", "empty bracket group ()")
     joins = len(re.findall(r"\|\s*join\b", body))
     if rule:
         if um and len(branches) != rule["complexity"]["union_branches"]: rep.fail("KQL-4", "union branch count != complexity.union_branches")

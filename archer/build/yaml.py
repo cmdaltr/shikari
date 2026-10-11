@@ -204,6 +204,28 @@ def map_entities(query):
     return (query, entities)
 
 
+def _without_strings(query: str) -> str:
+    return re.sub(r'@?"(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'', '""', query)
+
+
+def _empty_group(query: str) -> bool:
+    """An empty "()" outside string literals that isn't a call such as count()."""
+    return bool(re.search(r"(?<![A-Za-z0-9_])\(\s*\)", _without_strings(query)))
+
+
+def _brackets_balanced(query: str) -> bool:
+    """KQL's round brackets pair up, ignoring any inside string literals."""
+    depth = 0
+    for ch in _without_strings(query):
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth < 0:
+                return False
+    return depth == 0
+
+
 def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None):
     run_files.note(query_file, tag)
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
@@ -403,10 +425,11 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
                     source_match = re.match(r'\[([^\]]+)\]\s*(.*)', snippet_text)
                     if source_match:
                         source = source_match.group(1)
-                        query = source_match.group(2).strip()
+                        # Not "query": that is the detection's query, checked before writing below
+                        snippet_query = source_match.group(2).strip()
 
                         osint_section += f"  - source: {source}\n"
-                        yaml_str = yaml_module.dump([query], default_flow_style=False, width=1000000)
+                        yaml_str = yaml_module.dump([snippet_query], default_flow_style=False, width=1000000)
                         yaml_value = yaml_str.strip().replace('- ', '', 1).strip()
                         osint_section += f"    query: {yaml_value}\n"
                         if snippet_url:
@@ -446,8 +469,11 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
 
         yaml_content += reference_section
 
-    if "()" in query or "( OR )" in query or "\n  | where \n  | " in query:
-        pass
+    # "()" inside a string is an indicator (has "DSEnumerateDomainTrusts()"), not an empty group
+    if _empty_group(query) or "( OR )" in query or "\n  | where \n  | " in query or (
+        connector_id == "MicrosoftThreatProtection" and not _brackets_balanced(query)
+    ):
+        print(f"  ⚠️  Not written (empty condition or unbalanced brackets): {os.path.basename(query_file)}")
     else:
         # Contract gate (archer.contract): query-level lint on every legacy write.
         # Warn-only by default; ARCHER_CONTRACT_STRICT=1 refuses to write a query with findings.
@@ -729,6 +755,9 @@ def construct_yaml(
 
         # Format MDE query: strip excluded fields, remove duplicates, add line breaks
         query_only = format_mde_query(query_only)
+        if not query_only.strip():
+            print(f"  ⚠️  {name} ({table_name}): every condition was on an excluded field; not written")
+            continue
 
         """if len(query_with_entities) > 10:
             print(

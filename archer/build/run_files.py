@@ -20,6 +20,7 @@ RUNS_DIR = os.path.join(DATA_DIR, "runs")
 
 _lock = threading.Lock()
 _active: Dict[str, Set[str]] = {}
+_touches: Dict[str, int] = {}
 
 
 def _manifest_path(group: str) -> str:
@@ -29,6 +30,7 @@ def _manifest_path(group: str) -> str:
 def begin(group: str) -> None:
     with _lock:
         _active[group] = set()
+        _touches[group] = 0
 
 
 def note(path: str, group: Optional[str]) -> None:
@@ -39,12 +41,20 @@ def note(path: str, group: Optional[str]) -> None:
         files = _active.get(group)
         if files is not None:
             files.add(os.path.basename(path))
+            _touches[group] += 1
+
+
+def touches(group: str) -> Optional[int]:
+    """Files written or tagged so far in the group's run; None when no run is tracked."""
+    with _lock:
+        return _touches.get(group) if group in _active else None
 
 
 def finish(group: str, started_at: Optional[float] = None) -> None:
     """Save the run's files; a group with no run in progress keeps its last manifest."""
     with _lock:
         files = _active.pop(group, None)
+        _touches.pop(group, None)
     if files is None:
         return
     os.makedirs(RUNS_DIR, exist_ok=True)

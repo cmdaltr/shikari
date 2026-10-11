@@ -100,3 +100,38 @@ def test_latest_run_keeps_only_correlations_between_its_files():
     ]
     assert _run_correlations(corrs, None) == corrs
     assert _run_correlations(corrs, {"A_GoogleSecOps.yaml", "B_GoogleSecOps.yaml"}) == corrs[:1]
+
+
+def test_osint_snippets_do_not_hide_a_broken_detection_query(tmp_path):
+    # The OSINT snippet loop used to reuse the name "query", so the write guard checked
+    # the last snippet instead of the detection
+    from archer.build.yaml import write_yaml
+
+    path = tmp_path / "X_DeviceEvents.yaml"
+    osint = {"osint_compared": True, "comparison_date": "2026-10-11",
+             "osint_indicators": {"query_snippets": ["[Sigma] ProcessCommandLine has 'x'|||https://example.org"]}}
+    write_yaml(str(path), "X", "T1098.001", "desc", "MicrosoftThreatProtection", ["Persistence"], "FIN13",
+               'DeviceEvents\n| where ())))) or (ActionType has "a")', datatype="DeviceEvents", osint_data=osint)
+    assert not path.exists()
+
+
+def test_a_technique_counts_only_if_it_wrote_or_tagged_a_file():
+    from archer.build import run_files
+    from archer.build.orchestrator import _produced
+
+    assert _produced("CVE-2024-3400", None)  # untracked (CLI): trust compile_query
+    progress.start_progress("CVE-2024-3400", {})
+    before = run_files.touches("CVE-2024-3400")
+    assert not _produced("CVE-2024-3400", before)  # "No identifiers found": nothing written
+    run_files.note("ExploitPublic-FacingApplication_GoogleSecOps.yaml", "CVE-2024-3400")
+    assert _produced("CVE-2024-3400", before)
+
+
+def test_brackets_inside_an_indicator_string_are_not_an_empty_group(tmp_path):
+    # "()" in query used to refuse every query hunting for an API call by name
+    from archer.build.yaml import write_yaml
+
+    path = tmp_path / "DomainTrustDiscovery_DeviceProcessEvents.yaml"
+    write_yaml(str(path), "Domain Trust Discovery", "T1482", "desc", "MicrosoftThreatProtection", ["Discovery"], "FIN13",
+               'DeviceProcessEvents\n| where (ProcessCommandLine has "DSEnumerateDomainTrusts()")', datatype="DeviceProcessEvents")
+    assert path.exists()

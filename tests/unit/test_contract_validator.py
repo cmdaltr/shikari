@@ -271,3 +271,11 @@ def test_pipeline_unwraps_chat_framing(contract, tmp_path, monkeypatch, wrap):
     monkeypatch.setattr(contract.pipeline, "CONTRACT_DIR", tmp_path / "contract")
     out = contract.handle_contract_response(wrap(EX["EX-06"].read_text()), technique_id="T1055.004", group_name="test")
     assert len(out) == 1, list((tmp_path / "contract" / "failed").glob("*.txt"))
+
+
+@pytest.mark.unit
+def test_empty_and_unbalanced_brackets_are_caught(contract):
+    broken = 'DeviceEvents\n| where Timestamp > ago(1d)\n| where ())))))) or (ActionType has_any("CreateKeyPair"))\n'
+    assert "KQL-17" in contract.lint_query(broken).gates()
+    ok = 'DeviceEvents\n| where Timestamp > ago(1d) and FileName has ")("\n| summarize count() by DeviceName\n'
+    assert "KQL-17" not in contract.lint_query(ok).gates(), contract.lint_query(ok).fails

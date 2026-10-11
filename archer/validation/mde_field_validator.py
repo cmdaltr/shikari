@@ -462,6 +462,45 @@ def _should_include_field(field: str, query: str) -> bool:
     return False
 
 
+_EXCLUDED_CONDITION = re.compile(
+    r"^(?:" + "|".join(EXCLUDED_MDE_FIELDS) + r")\s*(?:==|=~|!=|!has|has_any|has_all|has|contains|startswith|endswith|in~?|matches)(?![A-Za-z0-9_])",
+    re.IGNORECASE,
+)
+
+
+def _outer_parens(expr: str) -> bool:
+    """True when expr is one bracketed group, e.g. "(a or b)" but not "(a) or (b)"."""
+    if not (expr.startswith("(") and expr.endswith(")")):
+        return False
+    depth = 0
+    for i, ch in enumerate(expr):
+        depth += ch == "("
+        depth -= ch == ")"
+        if depth == 0 and i < len(expr) - 1:
+            return False
+    return True
+
+
+def _drop_excluded_conditions(expr: str) -> str:
+    """A where expression without its conditions on EXCLUDED_MDE_FIELDS ("" if none remain)."""
+    expr = expr.strip()
+    if not expr:
+        return ""
+    if _outer_parens(expr):
+        inner = _drop_excluded_conditions(expr[1:-1])
+        return f"({inner})" if inner else ""
+    parts = _split_conditions(expr, " or ")
+    if len(parts) > 1:
+        return " or ".join(k for k in map(_drop_excluded_conditions, parts) if k)
+    # An "and" loses the whole group: dropping one of its conditions would widen it
+    # (RemoteIPType == "Public" and RemoteIP in~ (...) is not RemoteIPType == "Public")
+    parts = _split_conditions(expr, " and ")
+    if len(parts) > 1:
+        kept = [_drop_excluded_conditions(p) for p in parts]
+        return " and ".join(kept) if all(k == p.strip() for k, p in zip(kept, parts)) else ""
+    return "" if _EXCLUDED_CONDITION.match(expr) else expr
+
+
 def strip_excluded_fields(query: str) -> str:
     """
     Remove excluded fields from MDE query projection clauses.
@@ -495,22 +534,20 @@ def strip_excluded_fields(query: str) -> str:
     result = re.sub(r",\s*(\|)", r" \1", result)
     result = re.sub(r"(\|\s*project)\s*,", r"\1 ", result)
 
-    # Remove these fields from where clauses too
-    for field in EXCLUDED_MDE_FIELDS:
-        # Remove conditions like: SHA256 == "value" or SHA256 has "value"
-        result = re.sub(
-            rf"\s*(?:and|or)?\s*{field}\s*(?:==|=~|!=|has|has_any|contains|startswith|endswith)[^|)\n]+",
-            "",
-            result,
-            flags=re.IGNORECASE,
-        )
-        # Remove conditions at start of where: | where SHA256 == "value" and ...
-        result = re.sub(
-            rf"(\|\s*where\s+){field}\s*(?:==|=~|!=|has|has_any|contains|startswith|endswith)[^|)\n]*\s*(?:and|or)?\s*",
-            r"\1",
-            result,
-            flags=re.IGNORECASE,
-        )
+    # Remove conditions on these fields from where clauses too, a whole condition at a
+    # time: regex edits here used to stop at the first ")" of has_all(...), leaving
+    # "where ())))) or ..." behind. A where clause with nothing left drops the query,
+    # since the clause would otherwise match every event.
+    lines = []
+    for line in result.split("\n"):
+        m = re.match(r"^(\s*\|\s*where\s+)(.*?)(\s*//[^\"]*)?$", line)
+        if m:
+            kept = _drop_excluded_conditions(m.group(2))
+            if not kept:
+                return ""
+            line = m.group(1) + kept + (m.group(3) or "")
+        lines.append(line)
+    result = "\n".join(lines)
 
     # Clean up empty where clauses
     result = re.sub(r"\|\s*where\s+\|", "|", result)

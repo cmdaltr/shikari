@@ -13,6 +13,7 @@ from archer.mitre import (
 from archer.build import yaml_patch  # This patches yaml.additional_tactics()
 
 from archer.build.detections import compile_query, load_indicator_mappings, MappingsError
+from archer.build import run_files
 from archer.build.progress import write_progress
 from archer.ai.genai import generate_correlations
 from archer.config import GENERATE_DIR, CORRELATE_DIR
@@ -50,6 +51,12 @@ def _report_detections(group_name, processed, created, total):
         "created_yaml": created,
         "total_yaml": total,
     })
+
+
+def _produced(group_name, before):
+    """Whether compile_query wrote or tagged a file for the group; True when untracked."""
+    after = run_files.touches(group_name)
+    return before is None or after is None or after > before
 
 
 def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None):
@@ -181,8 +188,10 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 # Build detection queries and YAML
                 _report_technique(group_name, technique, retrieved_data["technique"])
                 try:
+                    before = run_files.touches(group_name)
                     compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
-                    created += 1
+                    if dry_run or _produced(group_name, before):
+                        created += 1
                 except Exception as e:
                     import traceback
                     print(f"❌ Error processing technique {technique}: {e}")
@@ -242,8 +251,10 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
             _report_technique(group_name, procedure[0], procedure[1])
             try:
+                before = run_files.touches(group_name)
                 compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
-                created += 1
+                if dry_run or _produced(group_name, before):
+                    created += 1
             except Exception as e:
                 import traceback
                 print(f"❌ Error processing procedure {procedure[0]} ({procedure[1]}): {e}")
