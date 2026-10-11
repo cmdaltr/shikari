@@ -327,58 +327,191 @@ function toggleApiKeyVisibility(inputId) {
   }
 }
 
+const API_KEY_FIELDS = ['splunk', 'mde', 'elastic', 'shodan', 'securitytrails', 'github',
+  'openai', 'anthropic', 'google', 'deepseek', 'qwen', 'grok', 'local'];
+let apiKeysLoaded = false;   // a cleared field only removes a key once the saved ones were shown
+let aiState = null;          // GET /api/profile/ai-settings
+
 async function saveApiKeys() {
-  const apiKeys = {
-    splunk: document.getElementById('splunk-key').value,
-    mde: document.getElementById('mde-key').value,
-    elastic: document.getElementById('elastic-key').value,
-    openai: document.getElementById('openai-key').value,
-    anthropic: document.getElementById('anthropic-key').value,
-    deepseek: document.getElementById('deepseek-key').value,
-    qwen: document.getElementById('qwen-key').value,
-    grok: document.getElementById('grok-key').value
-  };
+  const apiKeys = { _loaded: apiKeysLoaded };
+  API_KEY_FIELDS.forEach(name => {
+    const el = document.getElementById(`${name}-key`);
+    if (el) apiKeys[name] = el.value;
+  });
 
   try {
     const response = await fetch('/api/profile/apikeys', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(apiKeys)
     });
-
-    if (response.ok) {
-      showNotification('API keys saved successfully', 'success');
-    } else {
-      showNotification('Failed to save API keys', 'error');
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.success === false) {
+      showNotification(`Failed to save API keys${result.error ? ': ' + result.error : ''}`, 'error');
+      return;
     }
+    // The local endpoint and model belong to the AI settings, not the key store
+    const saved = await postAiSettings({ local: {
+      endpoint: document.getElementById('local-endpoint').value,
+      model: document.getElementById('local-model').value,
+    } });
+    if (saved) showNotification('API keys saved', 'success');
   } catch (error) {
     console.error('Error saving API keys:', error);
     showNotification('An error occurred while saving', 'error');
   }
 }
 
-// Load API keys on page load
 async function loadApiKeys() {
   try {
     const response = await fetch('/api/profile/apikeys');
-
     if (response.ok) {
       const data = await response.json();
-
-      if (data.splunk) document.getElementById('splunk-key').value = data.splunk;
-      if (data.mde) document.getElementById('mde-key').value = data.mde;
-      if (data.elastic) document.getElementById('elastic-key').value = data.elastic;
-      if (data.openai) document.getElementById('openai-key').value = data.openai;
-      if (data.anthropic) document.getElementById('anthropic-key').value = data.anthropic;
-      if (data.deepseek) document.getElementById('deepseek-key').value = data.deepseek;
-      if (data.qwen) document.getElementById('qwen-key').value = data.qwen;
-      if (data.grok) document.getElementById('grok-key').value = data.grok;
+      if (!data.error) {
+        API_KEY_FIELDS.forEach(name => {
+          const el = document.getElementById(`${name}-key`);
+          if (el && data[name]) el.value = data[name];
+        });
+        apiKeysLoaded = true;
+      }
     }
   } catch (error) {
     console.error('Error loading API keys:', error);
   }
+  await loadAiSettings();
+}
+
+// --- AI settings: local model, assignment, remembered Hunt choice (GitHub #10) ---
+
+async function loadAiSettings() {
+  try {
+    const response = await fetch('/api/profile/ai-settings');
+    if (!response.ok) return;
+    aiState = await response.json();
+    const local = aiState.settings.local || {};
+    document.getElementById('local-endpoint').value = local.endpoint || '';
+    setLocalModels(local.model ? [local.model] : [], local.model);
+    renderAssignment();
+  } catch (error) {
+    console.error('Error loading AI settings:', error);
+  }
+}
+
+async function postAiSettings(update) {
+  const response = await fetch('/api/profile/ai-settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update)
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.success) {
+    showNotification(result.error || 'Failed to save AI settings', 'error');
+    return false;
+  }
+  aiState.settings = result.settings;
+  aiState.providers = result.providers;
+  renderAssignment();
+  return true;
+}
+
+function setLocalModels(models, selected) {
+  const select = document.getElementById('local-model');
+  select.innerHTML = '';
+  if (!models.length) {
+    select.add(new Option('Test the endpoint to list its models', ''));
+    return;
+  }
+  models.forEach(m => select.add(new Option(m, m, false, m === selected)));
+}
+
+async function probeLocalModel() {
+  const status = document.getElementById('local-status');
+  const endpoint = document.getElementById('local-endpoint').value.trim();
+  if (!endpoint) { status.textContent = 'Enter the server URL first, e.g. http://localhost:11434'; return; }
+  status.textContent = 'Testing…';
+  status.className = 'apikey-hint';
+  try {
+    const response = await fetch('/api/profile/ai-settings/probe-local', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint, api_key: document.getElementById('local-key').value })
+    });
+    const result = await response.json();
+    if (!result.ok) {
+      status.textContent = result.error || 'Not reachable';
+      status.className = 'apikey-hint ai-status-error';
+      return;
+    }
+    const current = document.getElementById('local-model').value || (aiState && aiState.settings.local.model);
+    setLocalModels(result.models, current);
+    status.textContent = `Reachable (${result.kind === 'ollama' ? 'Ollama' : 'OpenAI API'}): ${result.models.length} model${result.models.length === 1 ? '' : 's'}. Save API Keys to keep it.`;
+    status.className = 'apikey-hint ai-status-ok';
+  } catch (error) {
+    status.textContent = 'Test failed';
+    status.className = 'apikey-hint ai-status-error';
+  }
+}
+
+function renderAssignment() {
+  if (!aiState) return;
+  const { settings, providers } = aiState;
+  ['ask', 'detection'].forEach(job => {
+    const select = document.getElementById(`assign-${job}-provider`);
+    const modelInput = document.getElementById(`assign-${job}-model`);
+    const assigned = settings[job] || {};
+    select.innerHTML = '';
+    select.add(new Option(job === 'ask' ? 'Not assigned (first available)' : 'None (no AI)', ''));
+    providers.forEach(p => {
+      const opt = new Option(p.label, p.id, false, p.id === assigned.provider);
+      if (job === 'detection' && !p.detection) {
+        opt.disabled = true;
+        opt.textContent = `${p.label} (Ask only, #9)`;
+      }
+      select.add(opt);
+    });
+    modelInput.value = assigned.model || '';
+    syncModelHints(job);
+    select.onchange = () => { modelInput.value = ''; syncModelHints(job); };
+  });
+  document.getElementById('assign-max-calls').value = settings.max_detection_calls || 25;
+  const remember = settings.remember;
+  const label = document.getElementById('assign-remember');
+  const forget = document.getElementById('assign-forget');
+  if (!remember) {
+    label.textContent = 'Asks on every hunt';
+    forget.hidden = true;
+  } else {
+    const p = providers.find(x => x.id === remember.provider);
+    label.textContent = remember.provider ? `Always uses ${p ? p.label : remember.provider}${remember.model ? ' / ' + remember.model : ''}` : 'Always runs without AI';
+    forget.hidden = false;
+  }
+}
+
+function syncModelHints(job) {
+  const pid = document.getElementById(`assign-${job}-provider`).value;
+  const p = (aiState.providers || []).find(x => x.id === pid);
+  const input = document.getElementById(`assign-${job}-model`);
+  const list = document.getElementById(`assign-${job}-models`);
+  input.disabled = !pid;
+  input.placeholder = p && p.model ? `Default: ${p.model}` : 'Model (blank = provider default)';
+  list.innerHTML = '';
+  if (pid === 'local') {
+    Array.from(document.getElementById('local-model').options).filter(o => o.value)
+      .forEach(o => list.appendChild(new Option(o.value)));
+  }
+}
+
+async function saveAiAssignment() {
+  const update = { max_detection_calls: Number(document.getElementById('assign-max-calls').value) };
+  ['ask', 'detection'].forEach(job => {
+    const provider = document.getElementById(`assign-${job}-provider`).value;
+    update[job] = provider ? { provider, model: document.getElementById(`assign-${job}-model`).value } : null;
+  });
+  if (await postAiSettings(update)) showNotification('AI assignment saved', 'success');
+}
+
+async function forgetHuntChoice() {
+  if (await postAiSettings({ remember: null })) showNotification('The Hunt page will ask again', 'success');
 }
 
 // Notification System

@@ -2475,30 +2475,33 @@
                 </div>
             </div>
             <div style="padding: 24px;">
-                <p id="ai-prompt-intro" style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Archer can use AI to enhance detection generation quality with smarter query logic.</p>
+                <p id="ai-prompt-intro" style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Archer can use AI to generate detections alongside the standard pipeline.</p>
 
-                <!-- Shown once "Yes" is enabled and clicked -->
-                <div id="ai-provider-picker" style="display: none; margin-bottom: 20px;">
-                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 0.9em; font-family: 'Inter', sans-serif; letter-spacing: 0.01em;">Which AI/LLM should Archer use?</label>
+                <!-- Several providers in the profile: pick one (the assigned one is preselected) -->
+                <div id="ai-provider-picker" style="display: none; margin-bottom: 16px;">
+                    <label for="ai-provider-select" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 0.9em; font-family: 'Inter', sans-serif; letter-spacing: 0.01em;">Which AI should generate detections?</label>
                     <select id="ai-provider-select" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95em; font-family: 'Inter', sans-serif; color: #1f2937; background: white; cursor: pointer; outline: none;"></select>
-                    <button id="ai-provider-confirm-btn" style="width: 100%; margin-top: 12px; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer;">Use this and run hunt</button>
                 </div>
 
-                <div id="ai-prompt-choices">
-                    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                        <button id="ai-prompt-yes-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">Yes</button>
-                        <button id="ai-prompt-no-btn" style="flex: 1; background: #6b7280; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">No</button>
-                    </div>
-                    <button id="ai-prompt-dontask-btn" style="width: 100%; background: none; border: none; color: #6b7280; font-size: 0.9em; text-decoration: underline; cursor: pointer; padding: 4px;">Don't ask again (this session)</button>
+                <p id="ai-prompt-note" style="margin: 0 0 16px 0; color: #6b7280; font-size: 0.85em; line-height: 1.5;"></p>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                    <button id="ai-prompt-yes-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">Yes</button>
+                    <button id="ai-prompt-no-btn" style="flex: 1; background: #6b7280; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">No</button>
                 </div>
+                <label style="display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 0.9em; cursor: pointer;">
+                    <input type="checkbox" id="ai-prompt-remember"> Remember this choice (change it under Profile → API Keys)
+                </label>
             </div>
         </div>
     </div>
 
     <script>
+    // Hunt AI prompt (GitHub #10): offered only when the user's profile has a provider
+    // that can generate detections; the provider assigned to detection generation is
+    // preselected, and a remembered choice skips the prompt.
     (function() {
-        var STORAGE_KEY = 'archer_ai_prompt_suppressed'; // sessionStorage: don't ask again this session
-        var lastOptions = [];
+        var options = [];
 
         function submitGenerateForm() {
             var form = document.getElementById('generate-form');
@@ -2515,10 +2518,24 @@
             document.getElementById('hidden_ai_model').value = modelId || '';
         }
 
+        function rememberChoice(providerId, modelId) {
+            return fetch('/api/profile/ai-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ remember: { provider: providerId || null, model: modelId || '' } })
+            }).catch(function() {});
+        }
+
         function closeModalAndSubmit(providerId, modelId) {
             setChoice(providerId, modelId);
             document.getElementById('ai-prompt-modal').style.display = 'none';
-            submitGenerateForm();
+            var remember = document.getElementById('ai-prompt-remember');
+            if (remember.checked) {
+                remember.checked = false;
+                rememberChoice(providerId, modelId).then(submitGenerateForm);
+            } else {
+                submitGenerateForm();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -2528,72 +2545,56 @@
             var modal = document.getElementById('ai-prompt-modal');
             var yesBtn = document.getElementById('ai-prompt-yes-btn');
             var noBtn = document.getElementById('ai-prompt-no-btn');
-            var dontAskBtn = document.getElementById('ai-prompt-dontask-btn');
             var picker = document.getElementById('ai-provider-picker');
             var select = document.getElementById('ai-provider-select');
-            var choices = document.getElementById('ai-prompt-choices');
             var intro = document.getElementById('ai-prompt-intro');
+            var note = document.getElementById('ai-prompt-note');
 
             noBtn.addEventListener('click', function() { closeModalAndSubmit(null, null); });
-            dontAskBtn.addEventListener('click', function() {
-                sessionStorage.setItem(STORAGE_KEY, 'true');
-                closeModalAndSubmit(null, null);
-            });
-            document.getElementById('ai-provider-confirm-btn').addEventListener('click', function() {
-                var opt = lastOptions[select.selectedIndex] || {};
-                closeModalAndSubmit(opt.provider, opt.model);
-            });
             yesBtn.addEventListener('click', function() {
-                if (yesBtn.disabled) return;
-                choices.style.display = 'none';
-                picker.style.display = 'block';
+                var opt = options[options.length > 1 ? select.selectedIndex : 0] || {};
+                closeModalAndSubmit(opt.id, opt.model);
             });
 
             // Intercept the button click (before any 'submit' event fires) so we
             // can hold the hunt until the user has made an AI choice, then
             // re-dispatch 'submit' ourselves once they have.
             genBtn.addEventListener('click', function(e) {
-                if (sessionStorage.getItem(STORAGE_KEY) === 'true') return; // already asked/suppressed this session
-
                 e.preventDefault();
 
                 fetch('/api/ai/availability')
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
-                        // Reset to the Yes/No/Don't-ask view each time the modal opens
-                        picker.style.display = 'none';
-                        choices.style.display = 'block';
-                        select.innerHTML = '';
-                        lastOptions = [];
-
-                        (data.cloud || []).forEach(function(p) {
-                            lastOptions.push({ provider: p.id, model: null, label: p.label + ' (cloud)' });
-                        });
-                        (data.local || []).forEach(function(ep) {
-                            var models = ep.models && ep.models.length ? ep.models : [ep.model || 'default'];
-                            models.forEach(function(m) {
-                                lastOptions.push({ provider: ep.provider, model: m, label: ep.name + ': ' + m });
-                            });
-                        });
-
-                        lastOptions.forEach(function(opt) {
-                            var el = document.createElement('option');
-                            el.textContent = opt.label;
-                            select.appendChild(el);
-                        });
-
-                        if (lastOptions.length === 0) {
-                            yesBtn.disabled = true;
-                            yesBtn.style.opacity = '0.5';
-                            yesBtn.style.cursor = 'not-allowed';
-                            intro.textContent = 'No AI/LLM is currently configured (no API key set, no local LLM detected) — this hunt will run without AI.';
-                        } else {
-                            yesBtn.disabled = false;
-                            yesBtn.style.opacity = '1';
-                            yesBtn.style.cursor = 'pointer';
-                            intro.textContent = 'Archer can use AI to enhance detection generation quality with smarter query logic.';
+                        options = data.providers || [];
+                        // Nothing in the profile that can generate detections: don't ask
+                        if (!data.any_available) return closeModalAndSubmit(null, null);
+                        // A remembered choice that's still configured (or "no AI")
+                        var remembered = data.remember;
+                        if (remembered && (!remembered.provider || options.some(function(o) { return o.id === remembered.provider; }))) {
+                            return closeModalAndSubmit(remembered.provider, remembered.model);
                         }
 
+                        var assigned = data.assigned || {};
+                        select.innerHTML = '';
+                        options.forEach(function(o) {
+                            if (o.id === assigned.provider && assigned.model) o.model = assigned.model;
+                            var el = new Option(o.label + (o.model ? ' / ' + o.model : ''), o.id, false, o.id === assigned.provider);
+                            select.appendChild(el);
+                        });
+                        if (options.length === 1) {
+                            picker.style.display = 'none';
+                            intro.textContent = 'Use ' + options[0].label + (options[0].model ? ' / ' + options[0].model : '') +
+                                ' to generate detections alongside the standard pipeline?';
+                            yesBtn.textContent = 'Yes';
+                        } else {
+                            picker.style.display = 'block';
+                            intro.textContent = 'Archer can use AI to generate detections alongside the standard pipeline.';
+                            yesBtn.textContent = 'Use this and run hunt';
+                        }
+                        noBtn.textContent = 'Run without AI';
+                        var notes = ['Up to ' + (data.max_calls || 25) + ' LLM calls this run (set under Profile → API Keys).'];
+                        (data.ask_only || []).forEach(function(a) { notes.push(a.label + ': ' + a.note + '.'); });
+                        note.textContent = notes.join(' ');
                         modal.style.display = 'flex';
                     })
                     .catch(function() {

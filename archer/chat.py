@@ -140,6 +140,7 @@ Guidelines:
 _CLOUD_PROVIDER_CHAIN = [
     ("anthropic", ["anthropic"], ["ANTHROPIC_API_KEY"], "Claude (Anthropic)"),
     ("openai", ["openai"], ["OPENAI_API_KEY"], "GPT-4o (OpenAI)"),
+    ("google", ["google"], ["GOOGLE_API_KEY"], "Gemini (Google)"),
     ("deepseek", ["deepseek"], ["DEEPSEEK_API_KEY"], "DeepSeek"),
     ("qwen", ["qwen"], ["QWEN_API_KEY", "DASHSCOPE_API_KEY"], "Qwen"),
     ("grok", ["grok"], ["XAI_API_KEY", "GROK_API_KEY"], "Grok (xAI)"),
@@ -185,17 +186,29 @@ def _try_local_providers(local_llm_endpoints: List[dict]):
 
 def _get_llm_provider(user_id: int, db, local_llm_endpoints: Optional[List[dict]] = None):
     """
-    Return an (LLMProvider, provider_name) tuple using the user's stored API keys.
-    Priority: Anthropic → OpenAI → DeepSeek → Qwen → Grok → local (Ollama/Osaurus).
+    Return an (LLMProvider, provider_name) tuple for Ask Archer.
+
+    The provider assigned to Ask Archer in the profile wins (GitHub #10); an assigned
+    provider that fails raises rather than quietly answering with a different one.
+    With nothing assigned: the user's stored keys, then server keys, in priority
+    order Anthropic → OpenAI → DeepSeek → Qwen → Grok → local (Ollama/Osaurus).
     Returns (None, None) if no provider is available.
     """
-    # Build key_name → decrypted_value map for this user
+    from archer.ai.assignment import create_llm, resolve
+
+    assigned = resolve(db, user_id, "ask")
+    if assigned:
+        model = assigned["model"] or "default model"
+        print(f"🤖 Ask Archer: {assigned['label']} / {model} (assigned in profile)", flush=True)
+        return create_llm(assigned), f"{assigned['label']} / {model}"
+
+    # Build platform → decrypted_value map for this user
     keys: Dict[str, str] = {}
     try:
         rows = db.query(APIKey).filter(APIKey.user_id == user_id).all()
         for row in rows:
             try:
-                keys[row.key_name] = decrypt_api_key(row.encrypted_key)
+                keys[row.platform] = decrypt_api_key(row.encrypted_key)
             except Exception:
                 pass
     except Exception as e:

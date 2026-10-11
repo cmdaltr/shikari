@@ -748,10 +748,21 @@ def _run_bespoke_generation(retrieved_data, identifiers, use_llm, llm_config):
 
     detectable_via = retrieved_data.get("detectable_via", "")
 
+    if use_llm == "llm" and llm_config and llm_config.get("max_calls"):
+        # A run's LLM spend is capped (profile setting): a group can have hundreds of
+        # procedures and every one is a ~29k-token prompt
+        llm_config["_calls"] = llm_config.get("_calls", 0) + 1
+        if llm_config["_calls"] > llm_config["max_calls"]:
+            if llm_config["_calls"] == llm_config["max_calls"] + 1:
+                print(f"  ⏹️  LLM call limit for this run reached ({llm_config['max_calls']}); "
+                      f"remaining techniques use the standard pipeline only")
+            return
+
     if use_llm == "llm":
         # Mode 1: LLM-powered generation
         from archer.build.llm_queries import generate_llm_queries
-        print(f"  🤖 Generating LLM-powered queries for {tid}...")
+        print(f"  🤖 Generating LLM-powered queries for {tid}"
+              f"{' with ' + llm_config['label'] if llm_config and llm_config.get('label') else ''}...")
         queries = generate_llm_queries(
             technique_id=tid,
             technique_name=name,

@@ -1901,64 +1901,36 @@ async def get_local_llm_status():
 
 
 @app.get("/api/ai/availability")
-async def get_ai_availability():
+async def get_ai_availability(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
-    Combined AI/LLM availability check: local endpoints (detected on each call),
-    cloud provider API keys (checked live, since these are just env reads), and
-    network reachability (checked at startup — see detect_network_connectivity).
+    What the Hunt page's AI prompt offers this user (GitHub #10): the providers in their
+    profile that can generate detections, the one assigned to detection generation
+    (preselected), and a remembered choice if they ticked "Remember". With none
+    configured the page runs the hunt without asking.
+    """
+    from archer.ai.assignment import configured_providers, load_settings
 
-    Used by the Hunt-page AI prompt to decide whether "Yes" should be enabled
-    and what to offer in the provider list. A cloud provider with a key set but
-    whose API host is unreachable (firewall/proxy block, no internet) is
-    reported separately rather than offered as a selectable option — selecting
-    it would just fail.
-    """
-    # Detected again on each ask (concurrent, 2s timeouts): an Ollama started after
-    # Archer was otherwise never offered, while Ask Archer (chat.py) already saw it
+    empty = {"any_available": False, "providers": [], "assigned": None, "remember": None, "ask_only": []}
+    if not archer_session:
+        return empty
+    db = next(get_db())
     try:
-        await detect_local_llm()
-    except Exception as e:
-        print(f"Local LLM re-detection failed: {e}")
-    local_endpoints = getattr(app.state, "local_llm_endpoints", None)
-    if local_endpoints is None:
-        # Fall back to the single-endpoint shape if detect_local_llm hasn't
-        # populated the list yet (or an older app.state from before this existed).
-        single = getattr(app.state, "local_llm_detected", {"available": False})
-        local_endpoints = [single] if single.get("available") else []
-
-    network = getattr(app.state, "network_status", None) or {
-        "internet_available": True,  # unknown — don't block on a missing check
-        "provider_reachable": {},
-    }
-
-    cloud_checks = [
-        ("anthropic", "Anthropic Claude", ["ANTHROPIC_API_KEY"]),
-        ("openai", "OpenAI GPT", ["OPENAI_API_KEY"]),
-        ("google", "Google Gemini", ["GOOGLE_API_KEY"]),
-        ("deepseek", "DeepSeek", ["DEEPSEEK_API_KEY"]),
-        ("qwen", "Qwen", ["QWEN_API_KEY", "DASHSCOPE_API_KEY"]),
-        ("grok", "Grok (xAI)", ["XAI_API_KEY", "GROK_API_KEY"]),
-    ]
-
-    cloud_providers = []
-    blocked_but_configured = []
-    for pid, label, env_vars in cloud_checks:
-        if not any(os.environ.get(v) for v in env_vars):
-            continue
-        reachable = network["provider_reachable"].get(pid, True)  # unknown host -> assume reachable
-        if reachable:
-            cloud_providers.append({"id": pid, "label": label})
-        else:
-            blocked_but_configured.append(label)
-
+        user = get_user_from_session_id(archer_session, db)
+        if not user:
+            return empty
+        settings = load_settings(db, user.id)
+        providers = configured_providers(db, user.id, settings)
+    finally:
+        db.close()
+    usable = [{"id": p["id"], "label": p["label"], "model": p["model"]} for p in providers if p["detection"]]
     return {
-        "any_available": bool(cloud_providers) or bool(local_endpoints),
-        "cloud": cloud_providers,
-        "local": local_endpoints,
-        "network": {
-            "internet_available": network["internet_available"],
-            "blocked_but_configured": blocked_but_configured,
-        },
+        "any_available": bool(usable),
+        "providers": usable,
+        "assigned": settings.get("detection"),
+        "remember": settings.get("remember"),
+        "max_calls": settings.get("max_detection_calls"),
+        # Configured but not offered, and why (shown as a note)
+        "ask_only": [{"label": p["label"], "note": p.get("detection_note", "")} for p in providers if not p["detection"]],
     }
 
 
@@ -1995,6 +1967,30 @@ def _verify_local_model_available(base_url: str, provider: str, model: str) -> b
     except Exception:
         pass
     return False
+
+
+def _hunt_llm_args(archer_session: Optional[str], ai_provider: Optional[str], ai_model: Optional[str]) -> dict:
+    """
+    process_group's use_llm/llm_config for the provider picked in the Hunt prompt
+    (GitHub #10): resolved against the user's own profile keys and settings, so a
+    choice the user hasn't configured, or a local model (Ask only, #9), runs without AI.
+    """
+    if not ai_provider or not archer_session:
+        return {}
+    from archer.ai.assignment import detection_llm_config, resolve
+
+    db = next(get_db())
+    try:
+        user = get_user_from_session_id(archer_session, db)
+        resolved = resolve(db, user.id, "detection", ai_provider, ai_model) if user else None
+    finally:
+        db.close()
+    if not resolved:
+        print(f"⚠️  AI provider '{ai_provider}' isn't available for detection generation — continuing without AI.")
+        return {}
+    print(f"🤖 Detection generation: {resolved['label']} / {resolved['model'] or 'default model'} "
+          f"(up to {resolved['max_calls']} LLM calls this run)")
+    return {"use_llm": "llm", "llm_config": detection_llm_config(resolved)}
 
 
 def _apply_ai_provider_choice(ai_provider: str, ai_model: str = None) -> str:
@@ -2668,6 +2664,7 @@ async def generate(
     exclude_secops: str = Form(None),
     exclude_elastic: str = Form(None),
     auto_validate: str = Form(None),
+    archer_session: Optional[str] = Cookie(None),
 ):
     # Called when the user clicks Generate on the index page. We first
     # check whether the provided group name maps to a known MITRE actor.
@@ -2682,6 +2679,7 @@ async def generate(
             genai_mode = "local_llm"
         elif ai_generators == "true":
             genai_mode = "ai_generators"
+    llm_args = _hunt_llm_args(archer_session, ai_provider, ai_model)
 
     actor_found = check_group_in_mitre(app.state.bundle, group_name)
     if actor_found == "Y":
@@ -2714,6 +2712,7 @@ async def generate(
                     merge_by_tactic=(merge_by_tactic == "true"),
                     merge_by_parent=(merge_by_parent == "true"),
                     excluded_vendors=excluded if excluded else None,
+                    **llm_args,
                 )
 
                 # Run emulation if requested (feature-flagged — see _archive/REINTEGRATION.md)
@@ -2958,6 +2957,7 @@ async def generate_cve(
             genai_mode = "local_llm"
         elif ai_generators == "true":
             genai_mode = "ai_generators"
+    llm_args = _hunt_llm_args(archer_session, ai_provider, ai_model)
 
     def _bg():
         try:
@@ -3208,6 +3208,7 @@ async def generate_cve(
                 run_correlation=True,  # Always enabled by default
                 osint_enhancement=True,  # Always enabled by default
                 osint_comparison=False,  # Default to false for CVE hunting
+                **llm_args,
             )
 
         except Exception as e:
@@ -3314,6 +3315,7 @@ async def hunt_technique(
             genai_mode = "local_llm"
         elif ai_generators == "true":
             genai_mode = "ai_generators"
+    llm_args = _hunt_llm_args(archer_session, ai_provider, ai_model)
 
     # Parse correlation threshold
     correlation_threshold = None
@@ -3396,6 +3398,7 @@ async def hunt_technique(
                 merge_by_tactic=merge_tactic,
                 merge_by_parent=merge_parent,
                 correlation_min_relevance=correlation_threshold,
+                **llm_args,
             )
 
         except Exception as e:
@@ -3791,6 +3794,8 @@ def modified_process_group_wrapper(
     merge_by_parent=False,
     excluded_vendors=None,
     correlation_min_relevance=None,
+    use_llm=False,
+    llm_config=None,
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
@@ -3841,6 +3846,8 @@ def modified_process_group_wrapper(
             osint_enhancement=osint_enhancement,
             osint_comparison=osint_comparison,
             excluded_vendors=excluded_vendors,
+            use_llm=use_llm,
+            llm_config=llm_config,
         )
 
         # print(f"DEBUG: process_group completed successfully")
@@ -9192,10 +9199,10 @@ async def get_api_keys(request: Request, archer_session: Optional[str] = Cookie(
         for key in api_keys:
             try:
                 decrypted_value = decrypt_api_key(key.encrypted_key)
-                result[key.key_name] = decrypted_value
+                result[key.platform] = decrypted_value
             except Exception as e:
-                logger.error(f"Failed to decrypt API key {key.key_name}: {e}")
-                result[key.key_name] = ""
+                logger.error(f"Failed to decrypt API key {key.platform}: {e}")
+                result[key.platform] = ""
 
         return result
 
@@ -9224,32 +9231,32 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
     try:
         data = await request.json()
 
-        # Map of frontend field names to database key names
-        key_mapping = {
-            "splunk": "splunk",
-            "mde": "mde",
-            "elastic": "elastic",
-            "openai": "openai",
-            "anthropic": "anthropic",
-            "deepseek": "deepseek",
-            "qwen": "qwen",
-            "grok": "grok",
-        }
+        # Every key the profile page has a field for. The model's column is "platform";
+        # these routes used "key_name", so no key was ever saved (each save raised and
+        # the page still said "saved"). Shodan/SecurityTrails/GitHub had fields but
+        # weren't in the list; "local" is the optional key of a local model endpoint.
+        platforms = ("splunk", "mde", "elastic", "shodan", "securitytrails", "github",
+                     "openai", "anthropic", "google", "deepseek", "qwen", "grok", "local")
+        # A cleared field removes its key, but only when the page had loaded the saved
+        # keys first: a page that failed to load must not wipe them
+        clear_empty = bool(data.get("_loaded"))
 
-        # Process each API key
-        for frontend_name, db_name in key_mapping.items():
-            key_value = data.get(frontend_name, "").strip()
-
-            # Skip empty keys
-            if not key_value:
+        for db_name in platforms:
+            if db_name not in data:
                 continue
+            key_value = str(data.get(db_name) or "").strip()
 
             # Check if key already exists for this user
             existing_key = (
                 db.query(APIKey)
-                .filter(APIKey.user_id == user.id, APIKey.key_name == db_name)
+                .filter(APIKey.user_id == user.id, APIKey.platform == db_name)
                 .first()
             )
+
+            if not key_value:
+                if existing_key and clear_empty:
+                    db.delete(existing_key)
+                continue
 
             # Encrypt the API key
             encrypted_value = encrypt_api_key(key_value)
@@ -9260,19 +9267,91 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
                 existing_key.updated_at = datetime.utcnow()
             else:
                 # Create new key
-                new_key = APIKey(user_id=user.id, key_name=db_name, encrypted_key=encrypted_value)
+                new_key = APIKey(user_id=user.id, platform=db_name, encrypted_key=encrypted_value)
                 db.add(new_key)
 
         db.commit()
+        # Assignments whose provider's key was just removed are dropped. Best effort:
+        # the keys are saved, and resolve() ignores an assignment to an unconfigured
+        # provider anyway
+        try:
+            from archer.ai.assignment import apply_update, configured_providers, load_settings, save_settings
+
+            settings = load_settings(db, user.id)
+            save_settings(db, user.id, apply_update(settings, {}, configured_providers(db, user.id, settings)))
+        except Exception as e:
+            db.rollback()
+            logger.warning(f"API keys saved; tidying AI assignments failed: {e}")
         return {"success": True, "message": "API keys saved successfully"}
 
     except Exception as e:
         db.rollback()
         logger.error(f"Error saving API keys: {e}")
-        return {"success": False, "error": str(e)}
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
     finally:
         db.close()
+
+
+@app.get("/api/profile/ai-settings")
+async def get_ai_settings(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """The user's AI providers, models and job assignments (no keys)."""
+    from archer.ai.assignment import CLOUD_PROVIDERS, configured_providers, load_settings
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        settings = load_settings(db, user.id)
+        return {
+            "settings": settings,
+            "providers": configured_providers(db, user.id, settings),
+            "catalogue": [{"id": k, "label": v[0], "default_model": v[1]} for k, v in CLOUD_PROVIDERS.items()],
+        }
+    finally:
+        db.close()
+
+
+@app.post("/api/profile/ai-settings")
+async def save_ai_settings(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Update models, the local endpoint, assignments, the call cap or the remembered choice."""
+    from archer.ai.assignment import apply_update, configured_providers, load_settings, save_settings
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        update = await request.json()
+        settings = load_settings(db, user.id)
+        try:
+            settings = apply_update(settings, update, configured_providers(db, user.id, settings))
+        except (ValueError, TypeError) as e:
+            return JSONResponse({"success": False, "error": str(e)}, status_code=400)
+        save_settings(db, user.id, settings)
+        return {"success": True, "settings": settings, "providers": configured_providers(db, user.id, settings)}
+    finally:
+        db.close()
+
+
+@app.post("/api/profile/ai-settings/probe-local")
+async def probe_local_model(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Is the local endpoint reachable, and which models does it serve?"""
+    import asyncio
+
+    from archer.ai.assignment import probe_local, stored_keys
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        body = await request.json()
+        key = body.get("api_key") or stored_keys(db, user.id).get("local", "")
+    finally:
+        db.close()
+    return await asyncio.get_event_loop().run_in_executor(None, probe_local, body.get("endpoint", ""), key)
 
 
 # ==========================================

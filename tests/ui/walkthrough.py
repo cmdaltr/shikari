@@ -90,10 +90,17 @@ def open_tab(page, tab):
 
 def answer_ai_prompt(page):
     """The 'Use AI for this hunt?' modal appears on submit; decline for a deterministic run."""
-    # Only the Hunt button asks. The modal follows an availability check that probes
-    # local LLMs, which can take seconds (Ollama's models on a sleeping SD card)
-    page.locator("#ai-prompt-no-btn").click(timeout=30000)
-    caption(page, "Declined AI for this run (heuristic generation)")
+    # Only the Hunt button asks, and only when the profile has a provider that can
+    # generate detections (GitHub #10): otherwise the hunt goes straight to progress
+    page.wait_for_function(
+        "() => location.pathname === '/progress' ||"
+        " getComputedStyle(document.getElementById('ai-prompt-modal')).display !== 'none'",
+        timeout=30000)
+    if "/progress" not in page.url:
+        page.locator("#ai-prompt-no-btn").click()
+        caption(page, "Declined AI for this run (heuristic generation)")
+    else:
+        caption(page, "No AI provider in the profile: the hunt runs without asking")
 
 
 def _progress_status(page):
@@ -562,7 +569,8 @@ def profile(page):
 def ask_archer(page):
     page.goto(f"{BASE}/")
     caption(page, "Opening Ask Archer")
-    page.click("#ask-archer-btn")
+    if not page.locator("#ask-archer-panel.open").count():  # the panel remembers being open
+        page.click("#ask-archer-btn")
     page.fill("#aap-input", "Give me a Splunk query for T1003.001 LSASS memory dumping")
     shot(page, "ask_question")
     with page.expect_response(lambda r: "/api/ask" in r.url, timeout=180000) as resp_info:
@@ -571,8 +579,63 @@ def ask_archer(page):
     resp = resp_info.value
     page.wait_for_timeout(2000)
     shot(page, "ask_answer")
+    page.click("#aap-close")  # left open, it covers later steps' controls
     if not resp.ok:
         raise RuntimeError(f"/api/ask returned {resp.status}: {str(resp.json().get('detail', ''))[:150]}")
+
+
+@step("AI assignment — local model for Ask Archer (profile)")
+def ai_assignment(page):
+    """Profile → API Keys: a local endpoint, Ask Archer assigned to it, detection generation not (#9)."""
+    model = "llama3.2:3b"
+    page.goto(f"{BASE}/profile")
+    page.click('[data-tab="apikeys"]')
+    page.wait_for_timeout(800)
+    caption(page, "Profile → API Keys: a local OpenAI-compatible model")
+    page.fill("#local-endpoint", "http://localhost:11434")
+    page.click("#local-test-btn")
+    page.wait_for_selector("#local-status.ai-status-ok", timeout=15000)
+    if not page.locator(f'#local-model option[value="{model}"]').count():
+        raise RuntimeError(f"{model} not listed by the local endpoint: {page.inner_text('#local-status')}")
+    page.select_option("#local-model", model)
+    shot(page, "ai_local_model")
+    with page.expect_response(lambda r: r.url.endswith("/api/profile/ai-settings") and r.request.method == "POST"):
+        page.click("button[onclick='saveApiKeys()']")
+    page.locator("#ai-assignment").scroll_into_view_if_needed()
+    page.wait_for_function("document.querySelector('#assign-ask-provider option[value=\"local\"]')")
+    if not page.locator('#assign-detection-provider option[value="local"]').is_disabled():
+        raise AssertionError("a local model should not be assignable to detection generation yet (#9)")
+    page.select_option("#assign-ask-provider", "local")
+    page.fill("#assign-ask-model", model)
+    caption(page, f"Ask Archer → local {model}; detection generation stays without AI")
+    with page.expect_response(lambda r: r.url.endswith("/api/profile/ai-settings") and r.request.method == "POST") as saved:
+        page.click("button[onclick='saveAiAssignment()']")
+    if not saved.value.json().get("success"):
+        raise AssertionError(f"assignment not saved: {saved.value.json()}")
+    shot(page, "ai_assignment")
+
+    try:
+        page.goto(f"{BASE}/")
+        if not page.locator("#ask-archer-panel.open").count():  # the panel remembers being open
+            page.click("#ask-archer-btn")
+        page.fill("#aap-input", "In one sentence, what is LSASS?")
+        with page.expect_response(lambda r: "/api/ask" in r.url, timeout=300000) as resp_info:
+            page.click("#aap-send")
+            caption(page, f"Asking Archer: answered by the assigned {model}")
+        resp = resp_info.value
+        if not resp.ok:
+            raise RuntimeError(f"/api/ask returned {resp.status}: {str(resp.json().get('detail', ''))[:150]}")
+        provider = resp.json().get("provider", "")
+        if not provider.startswith("Local (") or model not in provider:
+            raise AssertionError(f"Ask Archer answered with {provider!r}, not the assigned local {model}")
+        page.wait_for_timeout(1500)
+        shot(page, "ai_ask_answer")
+        page.click("#aap-close")  # the panel stays open across pages and would cover the next step
+    finally:
+        # Leave the profile as it was: no local endpoint, nothing assigned
+        page.request.post(f"{BASE}/api/profile/ai-settings",
+                          data={"ask": None, "local": {"endpoint": "", "model": ""}})
+    return f"Ask Archer answered by {provider}"
 
 
 @step("Library — saved detections")
@@ -620,7 +683,7 @@ def user_profile(page):
 
 STEPS = {
     "login": login, "group": hunt_group, "cve": hunt_cve, "research": research,
-    "upload": upload_blog, "upload-iocs": upload_iocs, "upload-error": upload_error, "profile": profile, "ask": ask_archer, "library": library,
+    "upload": upload_blog, "upload-iocs": upload_iocs, "upload-error": upload_error, "profile": profile, "ask": ask_archer, "ai": ai_assignment, "library": library,
     "coverage": coverage, "manual": manual, "how": how, "user": user_profile,
 }
 

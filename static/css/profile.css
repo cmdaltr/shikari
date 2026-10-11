@@ -557,3 +557,20 @@
     width: 100%;
   }
 }
+
+/* AI models and assignment (GitHub #10) */
+.ai-test-btn { flex: 0 0 auto; margin-left: 8px; padding: 0 16px; }
+.ai-local-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.ai-assign-row {
+  display: grid; grid-template-columns: 220px 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 12px;
+}
+.ai-assign-row .apikey-label { margin: 0; }
+.ai-assign-row .apikey-hint { grid-column: 2 / -1; margin: 0; }
+.ai-assign-row #assign-max-calls { max-width: 120px; }
+.ai-status-ok { color: #059669; }
+.ai-status-error { color: #dc2626; }
+@media (max-width: 768px) {
+  .ai-local-row, .ai-assign-row { grid-template-columns: 1fr; }
+  .ai-assign-row .apikey-hint { grid-column: auto; }
+}
+#assign-forget[hidden] { display: none; }

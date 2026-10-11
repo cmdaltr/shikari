@@ -750,6 +750,93 @@
                   </div>
                   <div class="apikey-hint">OpenAI-compatible API (get key at <a href="https://console.x.ai" target="_blank">console.x.ai</a>)</div>
                 </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label" for="google-key">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <circle cx="50" cy="50" r="48" fill="#4285F4"/>
+                      <path d="M50 22 C54 40, 60 46, 78 50 C60 54, 54 60, 50 78 C46 60, 40 54, 22 50 C40 46, 46 40, 50 22 Z" fill="white"/>
+                    </svg>
+                    Google Gemini API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password" class="form-input apikey-input" placeholder="AIza..." id="google-key">
+                    <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('google-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="apikey-hint">Gemini API (get key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a>)</div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label" for="local-endpoint">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+                    </svg>
+                    Local model (OpenAI-compatible)
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="url" class="form-input apikey-input" placeholder="http://localhost:11434" id="local-endpoint">
+                    <button type="button" class="btn-secondary ai-test-btn" id="local-test-btn" onclick="probeLocalModel()">Test</button>
+                  </div>
+                  <div class="ai-local-row">
+                    <select class="form-input" id="local-model" aria-label="Local model"><option value="">Test the endpoint to list its models</option></select>
+                    <div class="apikey-input-group">
+                      <input type="password" class="form-input apikey-input" placeholder="API key (optional)" id="local-key">
+                      <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility('local-key')">
+                      <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                    </div>
+                  </div>
+                  <div class="apikey-hint" id="local-status">Ollama, LM Studio, llama.cpp or any server with the OpenAI API. Ask Archer only for now: local detection generation is <a href="https://github.com/cmdaltr/archer/issues/9" target="_blank">#9</a>.</div>
+                </div>
+              </div>
+
+              <!-- AI Assignment: which provider each job uses (GitHub #10) -->
+              <div class="apikey-section" id="ai-assignment">
+                <h3 class="section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>
+                  </svg>
+                  AI Assignment
+                </h3>
+                <p class="apikey-hint" style="margin-top: 0;">Choose the provider and model for each job: the same for both, or different. Only providers with a saved key (or a local endpoint) are listed; save keys first.</p>
+
+                <div class="ai-assign-row">
+                  <label class="apikey-label" for="assign-ask-provider">Ask Archer</label>
+                  <select class="form-input" id="assign-ask-provider" data-job="ask"></select>
+                  <input type="text" class="form-input" id="assign-ask-model" list="assign-ask-models" placeholder="Model (blank = provider default)">
+                  <datalist id="assign-ask-models"></datalist>
+                </div>
+
+                <div class="ai-assign-row">
+                  <label class="apikey-label" for="assign-detection-provider">Detection generation</label>
+                  <select class="form-input" id="assign-detection-provider" data-job="detection"></select>
+                  <input type="text" class="form-input" id="assign-detection-model" list="assign-detection-models" placeholder="Model (blank = provider default)">
+                  <datalist id="assign-detection-models"></datalist>
+                </div>
+
+                <div class="ai-assign-row">
+                  <label class="apikey-label" for="assign-max-calls">Max LLM calls per detection run</label>
+                  <input type="number" class="form-input" id="assign-max-calls" min="1" max="500" value="25">
+                  <div class="apikey-hint">One call per procedure, each a ~29k-token prompt. A threat group can have hundreds of procedures; calls past the limit use the standard pipeline only.</div>
+                </div>
+
+                <div class="ai-assign-row">
+                  <span class="apikey-label">Hunt prompt</span>
+                  <span id="assign-remember">Asks on every hunt</span>
+                  <button type="button" class="btn-secondary" id="assign-forget" onclick="forgetHuntChoice()" hidden>Ask again</button>
+                </div>
+
+                <div class="form-actions" style="margin-top: 8px;">
+                  <button type="button" class="btn-primary" onclick="saveAiAssignment()">Save assignment</button>
+                </div>
               </div>
 
               <!-- Emulation Tools Section (Greyed Out) -->

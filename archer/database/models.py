@@ -5,6 +5,7 @@ This module defines SQLAlchemy models for:
 - Users: Email, password hash, role (admin/standard)
 - Sessions: Session management with expiration
 - APIKeys: User-specific encrypted API keys for SIEM/AI platforms
+- AISettings: Per-user AI provider models and job assignments
 - SecurityQuestions: For password reset fallback
 """
 
@@ -111,6 +112,21 @@ class APIKey(Base):
 
     def __repr__(self):
         return f"<APIKey(id={self.id}, user_id={self.user_id}, platform='{self.platform}')>"
+
+
+class AISettings(Base):
+    """
+    A user's AI configuration apart from the keys themselves (those stay encrypted in
+    api_keys): model per provider, the local endpoint, which provider Ask Archer and
+    detection generation each use, and the Hunt prompt's remembered choice.
+    JSON, shaped by archer.ai.assignment.
+    """
+    __tablename__ = "ai_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    settings = Column(Text, nullable=False, default="{}")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class SecurityQuestion(Base):

@@ -280,6 +280,11 @@ def call_llm(prompt: str, config: Optional[Dict] = None) -> str:
 
     provider = merged.get("provider", "").lower()
 
+    # A provider chosen in the profile (archer.ai.assignment): the same factory Ask
+    # Archer uses, so every cloud provider and local endpoint works the same way
+    if merged.get("via_factory"):
+        return _call_via_factory(prompt, merged)
+
     # Explicit provider selection from config
     if provider == "anthropic":
         key = merged.get("api_key") or os.environ.get("ANTHROPIC_API_KEY")
@@ -467,6 +472,16 @@ def _call_ollama(prompt: str, endpoint: str, config: dict) -> str:
     if data.get("prompt_eval_count") and data["prompt_eval_count"] < estimated // 2:
         print(f"  ⚠️  Ollama read {data['prompt_eval_count']} of ~{estimated} prompt tokens: the prompt was cut")
     return data.get("message", {}).get("content", "")
+
+
+def _call_via_factory(prompt: str, config: dict) -> str:
+    from archer.ai.assignment import LOCAL, create_llm
+
+    if config["provider"] == LOCAL and config.get("endpoint"):
+        # Ollama's OpenAI endpoint cuts long prompts to 4096 tokens; size the context
+        return _call_local(prompt, config["endpoint"], config)
+    llm = create_llm(config)
+    return llm.generate(prompt, temperature=0.2, max_tokens=config.get("max_tokens", 4096)).content
 
 
 def _call_local(prompt: str, endpoint: str, config: dict) -> str:

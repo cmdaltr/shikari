@@ -39,6 +39,8 @@ profile_pictures/
 # DATA DIRECTORY - Exclude dynamically generated files, keep structure
 # Database files (runtime generated)
 data/*.db
+# Fernet key that decrypts every stored API key (archer/auth/encryption.py)
+data/.encryption_key
 data/*.sqlite
 data/*.sqlite3
 
