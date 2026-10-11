@@ -6,6 +6,7 @@ Database stored at: data/archer.db
 """
 
 from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker, Session as SQLAlchemySession
 from pathlib import Path
 from archer.database.models import Base
@@ -22,6 +23,10 @@ DATABASE_URL = f"sqlite:///{DB_PATH}"
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False},  # Needed for SQLite
+    # OneDrive syncs data/ by swapping archer.db for a new file. A pooled connection
+    # still points at the old one, and SQLite then refuses its writes ("attempt to
+    # write a readonly database"). A fresh connection per session opens the current file.
+    poolclass=NullPool,
     echo=False  # Set to True for SQL debug logging
 )
 
