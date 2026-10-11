@@ -31,6 +31,7 @@ from archer.mitre.enterprise import check_group_in_mitre
 from archer.build.orchestrator import process_group
 from datetime import datetime
 import os
+import functools
 import json
 import logging
 import threading
@@ -2634,6 +2635,123 @@ def how_it_works(request: Request, archer_session: Optional[str] = Cookie(None))
     )
 
 
+# ==========================================
+# AGENTS (archer/agents): a model in a loop with Archer's tools
+# ==========================================
+
+@app.get("/agents", response_class=HTMLResponse)
+def agents_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    from archer.agents import AGENTS, agent_llm
+    from archer.agents.tools import ToolContext
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+    user, db = auth_result
+    try:
+        llm = agent_llm(db, user.id)
+    finally:
+        db.close()
+    agents = [{"agent": a, "tools": a.tools(ToolContext(client=None))} for a in AGENTS.values()]
+    return templates.TemplateResponse("agents.html", {"request": request, "user": user, "agents": agents,
+                                                      "model": llm["model"] if llm else None})
+
+
+@app.get("/api/agents")
+def list_agents(request: Request, archer_session: Optional[str] = Cookie(None)):
+    from archer.agents import AGENTS, agent_llm
+    from archer.agents.tools import ToolContext
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        llm = agent_llm(db, user.id)
+    finally:
+        db.close()
+    return {
+        "model": llm["model"] if llm else None,
+        "agents": [{"name": a.name, "title": a.title, "summary": a.summary, "inputs": a.inputs,
+                    "tools": [{"name": t.name, "changes": t.changes} for t in a.tools(ToolContext(client=None))],
+                    "max_turns": a.max_turns}
+                   for a in AGENTS.values()],
+    }
+
+
+@app.post("/api/agents/{name}/start")
+async def start_agent(name: str, request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Body: {"input": {...}, "auto_approve": false}. The agent acts as the signed-in user."""
+    from archer.agents import AGENTS, NO_KEY, agent_llm, start
+    from archer.agents.tools import ToolContext
+    from archer.client import ArcherClient
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        llm = agent_llm(db, user.id)
+    finally:
+        db.close()
+    agent = AGENTS.get(name)
+    if not agent:
+        return JSONResponse({"error": f"No agent named {name}"}, status_code=404)
+    if not llm:
+        return JSONResponse({"error": NO_KEY}, status_code=400)
+    body = await request.json()
+    # Tools call this server's own routes as the user, so an agent does what the web app does
+    internal = os.getenv("ARCHER_INTERNAL_URL") or str(request.base_url)
+    context = ToolContext(client=ArcherClient(url=internal, session_cookie=archer_session, timeout=300))
+    try:
+        session = start(agent, body.get("input") or {}, user_id=user.id, llm=llm, context=context,
+                        auto_approve=bool(body.get("auto_approve")))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    print(f"🤖 Agent {agent.name} started for {user.email} on {llm['model']} ({session.id[:8]})")
+    return {"session_id": session.id, "model": llm["model"]}
+
+
+def _agent_session(request: Request, archer_session: Optional[str], session_id: str):
+    from archer.agents import get_session
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return None, JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    session = get_session(session_id, user.id)
+    if not session:
+        return None, JSONResponse({"error": "No such agent session"}, status_code=404)
+    return session, None
+
+
+@app.get("/api/agents/sessions/{session_id}")
+def agent_session_view(session_id: str, request: Request, since: int = 0, archer_session: Optional[str] = Cookie(None)):
+    session, error = _agent_session(request, archer_session, session_id)
+    return error or session.view(max(0, since))
+
+
+@app.post("/api/agents/sessions/{session_id}/decision")
+async def agent_decision(session_id: str, request: Request, archer_session: Optional[str] = Cookie(None)):
+    session, error = _agent_session(request, archer_session, session_id)
+    if error:
+        return error
+    if session.status != "needs_approval":
+        return JSONResponse({"error": "Nothing is waiting for approval"}, status_code=409)
+    session.decide(bool((await request.json()).get("approve")))
+    return {"ok": True}
+
+
+@app.post("/api/agents/sessions/{session_id}/stop")
+def agent_stop(session_id: str, request: Request, archer_session: Optional[str] = Cookie(None)):
+    session, error = _agent_session(request, archer_session, session_id)
+    if error:
+        return error
+    session.stop()
+    return {"ok": True}
+
+
 # POST handler for Generate button
 from fastapi.responses import RedirectResponse, JSONResponse
 import json
@@ -3774,6 +3892,150 @@ def results_json(group_name: str, run: str = ""):
                          for c in correlations],
         "ioc_flow": load_ioc_flow(group_name) or None,
     })
+
+
+@app.get("/api/coverage")
+def coverage_json(request: Request, group: str = "", techniques: str = "",
+                  archer_session: Optional[str] = Cookie(None)):
+    """
+    Detection coverage: for a group (its techniques, covered or not) or for technique
+    IDs (comma-separated). Covered = a file in the detection library names the technique.
+    """
+    from archer.mitre.procedures import _detected_technique_ids, get_group_coverage
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    auth_result[1].close()
+    if group:
+        result = get_group_coverage(group, GENERATE_DIR)
+        if not result:
+            return JSONResponse({"error": f"Group '{group}' not found in ATT&CK data"}, status_code=404)
+        return result
+    wanted = [t.strip().upper() for t in techniques.split(",") if t.strip()]
+    covered = _detected_technique_ids(Path(GENERATE_DIR))
+    attack = _attack_techniques()
+
+    def describe(tid):
+        obj = attack.get(tid) or {}
+        return {"technique_id": tid, "name": obj.get("name"), "covered": tid in covered,
+                "tactics": [p["phase_name"] for p in obj.get("kill_chain_phases", []) if p.get("kill_chain_name") == "mitre-attack"],
+                **({} if obj else {"note": "not in the Enterprise matrix (mobile/ICS aren't loaded)"})}
+
+    return {"techniques": [describe(t) for t in wanted],
+            "covered_count": sum(t in covered for t in wanted), "gap_count": sum(t not in covered for t in wanted)}
+
+
+@functools.lru_cache(maxsize=1)
+def _attack_techniques() -> dict:
+    """{technique ID: attack-pattern} from the cached ATT&CK bundle."""
+    path = Path(__file__).parent / "data" / "cache" / "enterprise-attack.json"
+    with open(path, encoding="utf-8") as fh:
+        bundle = json.load(fh)
+    index = {}
+    for obj in bundle.get("objects", []):
+        if obj.get("type") != "attack-pattern" or obj.get("revoked") or obj.get("x_mitre_deprecated"):
+            continue
+        for ref in obj.get("external_references", []):
+            if ref.get("source_name") == "mitre-attack" and ref.get("external_id"):
+                index[ref["external_id"].upper()] = obj
+    return index
+
+
+@app.get("/api/techniques/{technique_id}")
+def technique_json(technique_id: str):
+    """An ATT&CK technique: name, tactics, platforms, description."""
+    obj = _attack_techniques().get(technique_id.strip().upper())
+    if not obj:
+        return JSONResponse({"error": f"{technique_id} isn't in the ATT&CK Enterprise matrix "
+                                      f"(Archer doesn't load the Mobile or ICS matrices)"}, status_code=404)
+    description = re.sub(r"\(Citation:[^)]*\)", "", obj.get("description", "")).strip()
+    return {
+        "technique_id": technique_id.upper(),
+        "name": obj.get("name"),
+        "tactics": [p["phase_name"] for p in obj.get("kill_chain_phases", []) if p.get("kill_chain_name") == "mitre-attack"],
+        "platforms": obj.get("x_mitre_platforms", []),
+        "description": description[:1500],
+    }
+
+
+class _BlockStrDumper(yaml.SafeDumper):
+    """Multi-line strings as | block scalars, as the detection files have them."""
+
+
+_BlockStrDumper.add_representer(
+    str, lambda d, v: d.represent_scalar("tag:yaml.org,2002:str", v, style="|" if "\n" in v else None))
+
+
+@app.post("/api/detections/{filename}/query")
+async def save_detection_query(filename: str, request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Replace one query in a detection file (the repair agent's write). The query must pass
+    the static checks; the previous query is kept in the file's repair_history.
+    Body: {"index": 0, "query": "...", "reason": "..."}
+    """
+    from archer.validation.static_check import check_query
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    body = await request.json()
+    path = os.path.join(GENERATE_DIR, sanitize_filename(filename))
+    if not os.path.isfile(path):
+        return JSONResponse({"error": "File not found"}, status_code=404)
+    with open(path, encoding="utf-8") as fh:
+        doc = yaml.safe_load(fh) or {}
+    index, query = int(body.get("index") or 0), str(body.get("query") or "").strip("\n") + "\n"
+    if doc.get("queries"):
+        if not 0 <= index < len(doc["queries"]):
+            return JSONResponse({"error": f"No query {index} in {filename}"}, status_code=400)
+        target, platform = doc["queries"][index], doc["queries"][index].get("platform")
+    else:
+        target = doc
+        platform = ", ".join(c.get("connectorId", "") for c in doc.get("requiredDataConnectors") or [] if isinstance(c, dict))
+    check = check_query(query, platform)
+    if check["ok"] is False:
+        return JSONResponse({"error": "The query still has errors; not saved", "check": check}, status_code=422)
+    entry = {
+        "at": datetime.utcnow().isoformat(timespec="seconds") + "Z", "by": user.email, "index": index,
+        "reason": str(body.get("reason") or "")[:500], "previous_query": target.get("query", ""),
+    }
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    edited = None if doc.get("queries") else _replace_query_block(text, query)
+    if edited is not None and (not doc.get("repair_history") or text.rstrip().endswith(
+            yaml.dump(doc["repair_history"], Dumper=_BlockStrDumper, sort_keys=False, allow_unicode=True,
+                      width=10000).rstrip())):
+        # Legacy file: only the query block changes, so comments and layout survive
+        history = yaml.dump([entry], Dumper=_BlockStrDumper, sort_keys=False, allow_unicode=True, width=10000)
+        edited = edited.rstrip("\n") + "\n" + ("" if doc.get("repair_history") else "repair_history:\n") + history
+    else:
+        doc.setdefault("repair_history", []).append(entry)
+        target["query"] = query
+        edited = yaml.dump(doc, Dumper=_BlockStrDumper, sort_keys=False, allow_unicode=True, width=10000)
+    if (yaml.safe_load(edited) or {}).get("query", query) != query and not doc.get("queries"):
+        return JSONResponse({"error": "Couldn't rewrite the query block safely; not saved"}, status_code=500)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(edited)
+    return {"success": True, "file": os.path.basename(path), "check": check}
+
+
+def _replace_query_block(text: str, query: str) -> Optional[str]:
+    """Swap the body of a top-level `query: |` block; None when the file has no such block."""
+    lines = text.split("\n")
+    start = next((i for i, line in enumerate(lines) if re.match(r"^query:\s*\|[-+]?\s*$", line)), None)
+    if start is None:
+        return None
+    end = start + 1
+    while end < len(lines) and (not lines[end].strip() or lines[end].startswith((" ", "\t"))):
+        end += 1
+    # Blank lines just before the next key belong to the layout, not the query
+    while end - 1 > start and not lines[end - 1].strip():
+        end -= 1
+    body = ["  " + line if line else "" for line in query.rstrip("\n").split("\n")]
+    return "\n".join(lines[:start + 1] + body + lines[end:])
 
 
 @app.get("/list_drafts")

@@ -352,20 +352,24 @@ class MDEFieldValidator:
     def _find_similar_fields(
         self, field: str, valid_fields: Set[str], max_suggestions: int = 3
     ) -> List[str]:
-        """Find similar field names for suggestions."""
-        field_lower = field.lower()
-        similar = []
+        """
+        Similar field names, closest first. valid_fields is a set, so without ranking the
+        first three were arbitrary and a typo's real column (ProcessCommandLne →
+        ProcessCommandLine) could be left out.
+        """
+        from difflib import SequenceMatcher
 
+        field_lower = field.lower()
+        scored = []
         for valid_field in valid_fields:
             valid_lower = valid_field.lower()
-            # Check for partial matches
-            if field_lower in valid_lower or valid_lower in field_lower:
-                similar.append(valid_field)
-            # Check for common prefixes
-            elif field_lower[:4] == valid_lower[:4]:
-                similar.append(valid_field)
-
-        return similar[:max_suggestions]
+            score = SequenceMatcher(None, field_lower, valid_lower).ratio()
+            # Partial matches and shared prefixes stay candidates however the ratio scores
+            if field_lower in valid_lower or valid_lower in field_lower or field_lower[:4] == valid_lower[:4]:
+                score += 0.25
+            if score >= 0.6:
+                scored.append((-score, valid_field))
+        return [name for _, name in sorted(scored)[:max_suggestions]]
 
     def fix_query(self, query: str, table: str = None) -> Tuple[str, List[str]]:
         """

@@ -32,13 +32,17 @@ class ArcherError(RuntimeError):
 
 class ArcherClient:
     def __init__(self, url: Optional[str] = None, email: Optional[str] = None,
-                 password: Optional[str] = None, timeout: int = 120):
+                 password: Optional[str] = None, timeout: int = 120, session_cookie: Optional[str] = None):
+        """session_cookie: an existing archer_session (agents running inside the server act as their user)."""
         self.url = (url or os.getenv("ARCHER_URL") or DEFAULT_URL).rstrip("/")
         self.email = email or os.getenv("ARCHER_EMAIL")
         self._password = password or os.getenv("ARCHER_PASSWORD")
         self.timeout = timeout
         self.session = requests.Session()
         self._signed_in = False
+        if session_cookie:
+            self.session.cookies.set("archer_session", session_cookie)
+            self._signed_in = True
 
     # ------------------------------------------------------------------
     # Session
@@ -271,6 +275,60 @@ class ArcherClient:
 
     def results_url(self, run: str) -> str:
         return f"{self.url}/results?group_name={requests.utils.quote(run)}&run=latest"
+
+    # ------------------------------------------------------------------
+    # Coverage, techniques, detections
+    # ------------------------------------------------------------------
+
+    def group_coverage(self, group: str) -> Dict:
+        return self._json("GET", "/api/coverage", params={"group": group})
+
+    def technique_coverage(self, technique_ids: List[str]) -> Dict:
+        return self._json("GET", "/api/coverage", params={"techniques": ",".join(technique_ids)})
+
+    def technique(self, technique_id: str) -> Dict:
+        return self._json("GET", f"/api/techniques/{requests.utils.quote(technique_id)}")
+
+    def detection_text(self, filename: str) -> str:
+        r = self._request("GET", f"/api/detection/{requests.utils.quote(filename)}")
+        if r.status_code >= 400:
+            raise ArcherError(f"{filename}: HTTP {r.status_code}")
+        try:
+            data = r.json()
+        except ValueError:
+            return r.text
+        if isinstance(data, list) and data and isinstance(data[0], dict) and data[0].get("error"):
+            raise ArcherError(f"{filename}: {data[0]['error']}")
+        return data if isinstance(data, str) else json.dumps(data)
+
+    def save_query(self, filename: str, query: str, index: int = 0, reason: str = "") -> Dict:
+        """Replace a query in a detection file; refused (422) while it still has errors."""
+        r = self._request("POST", f"/api/detections/{requests.utils.quote(filename)}/query",
+                          json={"index": index, "query": query, "reason": reason})
+        data = r.json()
+        if r.status_code >= 400:
+            raise ArcherError(json.dumps(data))
+        return data
+
+    # ------------------------------------------------------------------
+    # Agents (run on the server; see archer/agents)
+    # ------------------------------------------------------------------
+
+    def agents(self) -> List[Dict]:
+        return self._json("GET", "/api/agents").get("agents", [])
+
+    def start_agent(self, name: str, inputs: Dict, auto_approve: bool = False) -> str:
+        return self._json("POST", f"/api/agents/{name}/start",
+                          json={"input": inputs, "auto_approve": auto_approve})["session_id"]
+
+    def agent_session(self, session_id: str, since: int = 0) -> Dict:
+        return self._json("GET", f"/api/agents/sessions/{session_id}", params={"since": since})
+
+    def agent_decision(self, session_id: str, approve: bool) -> Dict:
+        return self._json("POST", f"/api/agents/sessions/{session_id}/decision", json={"approve": approve})
+
+    def stop_agent(self, session_id: str) -> Dict:
+        return self._json("POST", f"/api/agents/sessions/{session_id}/stop")
 
     # ------------------------------------------------------------------
     # Library

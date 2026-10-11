@@ -30,6 +30,8 @@ Archer is a modular Python service for automated threat hunting with optional ad
 - 💬 **Ask Archer** - Conversational Q&A panel for ATT&CK questions and SIEM query generation
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
 - 🖥️ **Interactive Console (`adfconsole`)** - Metasploit-style interactive shell with module selection, options, tab-completion
+- 🤖 **Agents** - Detection repair, Ask Archer with tools, and intel triage: a model in a loop with Archer's tools, with approval for anything that changes something ([docs](docs/agents/README.md))
+- 🔌 **MCP Server (`archer-mcp`)** - Archer's tools and agent prompts for Claude Code, Claude Desktop or any MCP client
 - 🎯 **RAG Fidelity Enhancement** - Improve query quality using 4,800+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
 
@@ -68,6 +70,7 @@ Archer is a modular Python service for automated threat hunting with optional ad
 - **Research Tab:** [Actor Consolidation & XLSX Export](docs/USAGE.md#research-tab)
 - **Threat Briefing:** [Usage Guide](docs/USAGE.md#threat-briefing) | [API Reference](docs/features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
 - **Ask Archer:** [Conversational Q&A](docs/USAGE.md#ask-archer)
+- **Agents & MCP:** [Agents guide](docs/agents/README.md) | [Minimal agent example](examples/agents/minimal_agent.py)
 - **API Integration:** [API Integration Guide](docs/features/API_INTEGRATION_GUIDE.md)
 - **Correlation Tuning:** [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) | [Quick Reference](docs/architecture/CORRELATION_QUICK_REFERENCE.md)
 - **Features:** [Security](docs/features/SECURITY_FEATURES.md) | [AI Training](docs/ai/AI_TRAINING.md) | [OSINT](docs/features/OSINT_INTEGRATION.md)
@@ -114,6 +117,9 @@ Local modules run in the console's own process. Server modules drive a running A
 | `ai/briefing` | server | Threat briefing: prioritised techniques and coverage gaps |
 | `ai/settings` | server | Show or change the AI provider and model for Ask and detection generation |
 | `results` | server | A run's detections, correlations and IOC flow; zip download |
+| `agent/repair` | server | Agent: fix a run's queries that won't parse or can't match, re-checking each fix |
+| `agent/ask` | server | Agent: Ask Archer with tools (library, coverage, ATT&CK, hunts) |
+| `agent/triage` | server | Agent: triage a threat report into coverage gaps, hunts and a briefing |
 
 Server modules sign in with `ARCHER_EMAIL` and `ARCHER_PASSWORD` (the console prompts for anything unset) against `ARCHER_URL` (default `http://127.0.0.1:8000`). `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.
 

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Archer - Agents{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/agents.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container ag-page">
+  <p class="lead"><span style="color:#666666; font-size: 28px;">Agents</span></p>
+
+  <section class="ag-intro">
+    <p>An agent is a model in a loop with tools. You give it a task; it decides which tool to call, reads the result,
+      and decides again, until it has an answer. Each agent here is the same loop with different instructions and a
+      different set of Archer's tools. The trace shows every step. Anything that changes something, such as a hunt or
+      a saved query, waits for you to allow it unless you turn approval off.</p>
+    <p class="ag-meta">
+      {% if model %}Running on <code>{{ model }}</code> with your Anthropic key.{% else %}
+      <strong>Agents need an Anthropic API key</strong>: add one in <a href="/profile">Profile → API Keys</a>.{% endif %}
+      The same tools are available to any MCP client (<code>archer-mcp</code>) and in the console (<code>agent/*</code>).
+      <a href="https://github.com/cmdaltr/archer/blob/main/docs/agents/README.md" target="_blank" rel="noopener">How these are built</a>
+    </p>
+  </section>
+
+  <div class="ag-picker" role="tablist">
+    {% for item in agents %}{% set a = item.agent %}
+    <button class="ag-pick{% if loop.first %} is-active{% endif %}" role="tab" data-agent="{{ a.name }}"
+            aria-selected="{{ 'true' if loop.first else 'false' }}">
+      <span class="ag-pick-title">{{ a.title }}</span>
+      <span class="ag-pick-summary">{{ a.summary }}</span>
+    </button>
+    {% endfor %}
+  </div>
+
+  {% for item in agents %}{% set a = item.agent %}
+  <form class="ag-form" data-agent="{{ a.name }}" {% if not loop.first %}hidden{% endif %} autocomplete="off">
+    <div class="ag-fields">
+      {% for key, spec in a.inputs.items() %}
+      <label class="ag-field{% if key in ('question', 'url', 'run') %} ag-field-wide{% endif %}">
+        <span>{{ spec.label }}{% if spec.required %} *{% endif %}</span>
+        {% if key == 'question' %}
+        <textarea name="{{ key }}" rows="3" placeholder="{{ spec.placeholder }}" {% if spec.required %}required{% endif %}></textarea>
+        {% else %}
+        <input name="{{ key }}" placeholder="{{ spec.placeholder }}" {% if spec.required %}required{% endif %}>
+        {% endif %}
+      </label>
+      {% endfor %}
+    </div>
+    <div class="ag-actions">
+      <label class="ag-approve"><input type="checkbox" name="approve" checked> Ask before actions that change something</label>
+      <button type="submit" class="ag-start" {% if not model %}disabled{% endif %}>Start</button>
+    </div>
+    <details class="ag-built">
+      <summary>How this agent is built</summary>
+      <p>Up to {{ a.max_turns }} turns. Tools ({{ item.tools|length }}); <span class="ag-changes">changes</span> = needs approval:</p>
+      <ul class="ag-tools">
+        {% for t in item.tools %}<li title="{{ t.description }}"><code>{{ t.name }}</code>{% if t.changes %} <span class="ag-changes">changes</span>{% endif %}</li>{% endfor %}
+      </ul>
+      <p>Instructions (system prompt):</p>
+      <pre class="ag-system">{{ a.system }}</pre>
+    </details>
+  </form>
+  {% endfor %}
+
+  <section class="ag-run" id="ag-run" hidden>
+    <div class="ag-run-head">
+      <span class="ag-status" id="ag-status">Running</span>
+      <span class="ag-usage" id="ag-usage"></span>
+      <button type="button" class="ag-stop" id="ag-stop">Stop</button>
+    </div>
+    <ol class="ag-trace" id="ag-trace" aria-live="polite"></ol>
+    <div class="ag-answer" id="ag-answer" hidden></div>
+  </section>
+</div>
+<script src="{{ url_for('static', path='js/agents.js') }}?v={{ request.app.state.asset_version }}"></script>
+{% endblock %}

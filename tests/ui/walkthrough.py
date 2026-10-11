@@ -584,6 +584,26 @@ def ask_archer(page):
         raise RuntimeError(f"/api/ask returned {resp.status}: {str(resp.json().get('detail', ''))[:150]}")
 
 
+@step("Agents — detection repair (trace, MCP-shared tools)")
+def agents(page):
+    page.goto(f"{BASE}/agents")
+    caption(page, "Agents: a model in a loop with Archer's tools")
+    page.wait_for_selector(".ag-pick")
+    if page.locator(".ag-start[disabled]").count():
+        return "skipped: no Anthropic key in the profile"
+    # A run whose queries all pass the checks: one or two turns, no changes to approve
+    page.click('.ag-pick[data-agent="repair"]')
+    page.fill('form[data-agent="repair"] input[name=run]', "CVE-2024-3400")
+    page.click('form[data-agent="repair"] .ag-start')
+    page.wait_for_selector(".ag-status.is-done, .ag-status.is-error, .ag-status.is-stopped", timeout=240000)
+    shot(page, "agents")
+    status = page.inner_text("#ag-status")
+    assert status == "Done", f"agent ended: {status}"
+    tools = page.locator(".ag-tool").all_inner_texts()
+    assert "find_query_errors" in tools, f"tools called: {tools}"
+    return f"repair agent: {', '.join(tools)}; {page.inner_text('#ag-usage')}"
+
+
 @step("AI assignment — local model for Ask Archer (profile)")
 def ai_assignment(page):
     """Profile → API Keys → AI Models: add a local endpoint row, assign Ask Archer to it (#10);
@@ -689,7 +709,7 @@ def user_profile(page):
 
 STEPS = {
     "login": login, "group": hunt_group, "cve": hunt_cve, "research": research,
-    "upload": upload_blog, "upload-iocs": upload_iocs, "upload-error": upload_error, "profile": profile, "ask": ask_archer, "ai": ai_assignment, "library": library,
+    "upload": upload_blog, "upload-iocs": upload_iocs, "upload-error": upload_error, "profile": profile, "ask": ask_archer, "ai": ai_assignment, "agents": agents, "library": library,
     "coverage": coverage, "manual": manual, "how": how, "user": user_profile,
 }
 

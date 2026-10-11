@@ -1206,6 +1206,31 @@ AI recognizes this as:
                     </tr>
                 </tbody>
             </table>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Agents</h3>
+            <p style="line-height: 1.6;">
+                An agent is a model in a loop with tools: it picks a tool, reads the result, and picks again until it can
+                answer. The model never runs anything itself; Archer runs the tool it asks for and sends the result back.
+                Tools that change something (hunts, saving a query) wait for your approval.
+            </p>
+            <table class="library-table">
+                <thead><tr><th>Agent</th><th>Pattern</th><th>What it does</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Detection repair</strong></td><td>Check, fix, check again</td>
+                        <td>Static checks over a run's queries (MDE schema, YARA-L and SPL structure); fixes what fails, re-checks, saves with a reason. A query that still has errors can't be saved.</td></tr>
+                    <tr><td><strong>Ask Archer (agent)</strong></td><td>Look it up</td>
+                        <td>Answers from coverage, results, ATT&amp;CK and the library instead of memory; checks any query it writes; can start hunts.</td></tr>
+                    <tr><td><strong>Intel triage</strong></td><td>Plan across steps</td>
+                        <td>Report → techniques and IOCs → coverage gaps → hunt → briefing.</td></tr>
+                </tbody>
+            </table>
+            <p style="line-height: 1.6;">
+                Run them from the <a href="/agents" style="color: #C53030;">Agents</a> page, the console
+                (<code>use agent/repair</code>) or any MCP client: <code>archer-mcp</code> exposes the same tools and the
+                agents' prompts to Claude Code, Claude Desktop or your own agent. <code>examples/agents/minimal_agent.py</code>
+                is a complete agent in about 100 lines. Full guide: <code>docs/agents/README.md</code>.
+            </p>
             </div>
             <!-- End AI Tab -->
 

@@ -99,8 +99,15 @@ def mde_sweep(iocs: Dict[str, List[str]]) -> Optional[str]:
     if not parts:
         return None
     union = parts[0] if len(parts) == 1 else "union\n    " + ",\n    ".join(parts)
-    return "\n".join(lets + [union,
-        "| project Timestamp, DeviceName, ActionType, RemoteUrl, RemoteIP, FileName, FolderPath, SHA256, InitiatingProcessAccountName"])
+    # Project only columns the queried tables have: a network-only sweep has no
+    # FileName/FolderPath/SHA256 and MDE refuses the query ("Failed to resolve column")
+    columns = ["Timestamp", "DeviceName", "ActionType"]
+    if network:
+        columns += ["RemoteUrl", "RemoteIP"]
+    if hashes:
+        columns += ["FileName", "FolderPath", "SHA256"]
+    columns.append("InitiatingProcessAccountName")
+    return "\n".join(lets + [union, "| project " + ", ".join(columns)])
 
 
 def secops_sweep(iocs: Dict[str, List[str]], label: str) -> Optional[str]:

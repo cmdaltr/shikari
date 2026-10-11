@@ -62,6 +62,8 @@ dependencies = [
     "et_xmlfile==2.0.0",
     "executing==2.2.1",
     "fastapi==0.117.1",
+    "mcp==1.30.0",
+    "sse-starlette==2.4.1",
     "fastjsonschema==2.21.2",
     "filelock==3.19.1",
     "frozenlist==1.7.0",
@@ -237,6 +239,7 @@ Issues = "https://github.com/yourusername/archer/issues"
 archer = "archer.app:main"
 adfconsole = "archer.cli.console:main"
 archer-preview = "archer.cli.preview:main"
+archer-mcp = "archer.mcp_server:main"
 
 [tool.setuptools]
 packages = ["archer"]
