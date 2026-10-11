@@ -1152,12 +1152,12 @@ window.clearFileSelection = function () {
 // Profile: how many recommended groups start ticked
 var PROFILE_PRESELECT = 3;
 
-// Measured per group: 45-60s preparing (ATT&CK data; longer just after a server
-// restart), ~0.04s per procedure, ~10s to correlate. Groups run one after another.
-// Unknown sizes count as a typical 250.
+// Measured per group: ~15s preparing and loading, ~0.03s per procedure, ~20s to
+// correlate and build the flow. Groups run one after another. Unknown sizes count as
+// a typical 250.
 function estimateProfileTime(sizes, correlate) {
   var secs = sizes.reduce(function(sum, n) {
-    return sum + 60 + 0.04 * (n || 250) + (correlate ? 10 : 0);
+    return sum + 15 + 0.03 * (n || 250) + (correlate ? 20 : 0);
   }, 0);
   var low = Math.max(1, Math.round(secs * 0.8 / 60));
   var high = Math.max(low + 1, Math.ceil(secs * 1.5 / 60));

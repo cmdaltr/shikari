@@ -5408,6 +5408,15 @@ import io
 from datetime import timedelta
 
 
+def _run_correlations(correlations, run_only):
+    """Correlations between files the run produced; all of them when run_only is None."""
+    if run_only is None:
+        return correlations
+    return [c for c in correlations
+            if os.path.basename(c.get("a") or "") in run_only
+            and os.path.basename(c.get("b") or "") in run_only]
+
+
 @app.get("/results", response_class=HTMLResponse)
 def results_page(request: Request, group_name: str, run: str = "", archer_session: Optional[str] = Cookie(None)):
     """
@@ -5427,6 +5436,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
 
     safe_group = sanitize_group_name(group_name)
     run_view = None
+    run_only = None  # basenames of the latest run's files, when showing only that run
+    all_yaml_files = []
 
     # Collect detection files by vendor
     generate_dir = GENERATE_DIR
@@ -5448,7 +5459,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
     }
 
     if os.path.exists(generate_dir):
-        yaml_files = group_yaml_files(group_name, generate_dir)
+        yaml_files = all_yaml_files = group_yaml_files(group_name, generate_dir)
 
         # Group YAMLs accumulate across runs: offer the latest run on its own
         from archer.build.run_files import latest_run
@@ -5466,6 +5477,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             }
             if run == "latest":
                 yaml_files = run_files_now
+                run_only = {os.path.basename(f) for f in run_files_now}
 
         for yaml_file in yaml_files:
             filename = os.path.basename(yaml_file)
@@ -5789,7 +5801,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             with open(correlation_file, "r") as f:
                 corr_data = json.load(f)
                 # The file uses "vendor_correlations" not "correlations"
-                vendor_corrs = corr_data.get("vendor_correlations", [])
+                vendor_corrs = _run_correlations(corr_data.get("vendor_correlations", []), run_only)
 
                 # Merge correlations with same first technique and related second techniques
                 print(f"[MERGE] Before merging: {len(vendor_corrs)} correlations", flush=True)
@@ -6214,12 +6226,22 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
         raw_correlations = []
         if os.path.exists(correlation_file):
             with open(correlation_file, encoding="utf-8") as fh:
-                raw_correlations = json.load(fh).get("vendor_correlations", [])
+                raw_correlations = _run_correlations(json.load(fh).get("vendor_correlations", []), run_only)
+        attributed = attributed_techniques(group_name)
+        if run_only is not None:
+            # Detected by an earlier run, just not this one: not a gap
+            from archer.visualization.flow_view import read_detection
+
+            def _ids(paths):
+                return {d["id"] for d in map(read_detection, paths) if d}
+
+            earlier = _ids(all_yaml_files) - _ids(p for ps in flow_paths.values() for p in ps)
+            attributed = [t for t in attributed if t["id"] not in earlier]
         bundle = getattr(request.app.state, "bundle", None)
         attack_flow = build_flow_view(
             flow_paths,
             raw_correlations,
-            attributed_techniques(group_name),
+            attributed,
             current_tactics(bundle) if bundle is not None else None,
         )
         # Downloadable Attack Flow 2.x bundle; replaces the flat chain the generator writes

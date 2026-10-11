@@ -7,6 +7,45 @@ from .enterprise import (
 import re
 
 
+class _BundleIndex:
+    """
+    Lookups over a STIX bundle, built in one pass.
+
+    retrieve_procedures used to scan all ~26,000 bundle objects several times per
+    procedure (and nested scans inside those): 150s+ for a group like APT41, almost
+    all of it in stix2 attribute access. The first match wins, as the scans did.
+    """
+
+    def __init__(self, bundle):
+        self.by_id = {}
+        self.uses_by_target = {}
+        self.software_by_name = {}
+        for obj in bundle.objects:
+            self.by_id.setdefault(obj.get("id"), obj)
+            otype = obj.get("type")
+            if otype == "relationship" and obj.get("relationship_type") == "uses":
+                self.uses_by_target.setdefault(obj.get("target_ref"), []).append(obj)
+            elif otype in ("tool", "malware"):
+                self.software_by_name.setdefault(obj.get("name", "").lower(), obj.get("id"))
+
+    def objects_of(self, ref, *types):
+        """The object with this id, as a 0/1-item list, if it is one of these types."""
+        obj = self.by_id.get(ref)
+        return [obj] if obj is not None and obj.get("type") in types else []
+
+
+_index_cache = (None, None)
+
+
+def _bundle_index(bundle):
+    global _index_cache
+    cached_bundle, index = _index_cache
+    if cached_bundle is not bundle:
+        index = _BundleIndex(bundle)
+        _index_cache = (bundle, index)
+    return index
+
+
 def get_technique_id(bundle, technique_ref):
     """
     Get the MITRE ATT&CK technique ID (e.g., T1036) from a technique reference.
@@ -273,28 +312,19 @@ def retrieve_additional_techniques(bundle, procedure_ref):
         List of tuples with (group_id, description, target_ref) for the procedure
     """
     additional_techniques = []
+    index = _bundle_index(bundle)
 
     # Find all relationships that use this procedure
-    for obj in bundle.objects:
-        if (
-            obj.get("type") == "relationship"
-            and obj.get("relationship_type") == "uses"
-            and obj.get("target_ref") == procedure_ref
-            and obj.get("source_ref") != procedure_ref  # Avoid self-references
-        ):
+    for obj in index.uses_by_target.get(procedure_ref, []):
+        if obj.get("source_ref") != procedure_ref:  # Avoid self-references
             source_ref = obj.get("source_ref")
 
             # Check if source is a group (intrusion-set), not software (tool/malware)
             # We only want additional evidence from other groups, not from software
-            for source_obj in bundle.objects:
-                if source_obj.get("id") == source_ref:
-                    if source_obj.get("type") == "intrusion-set":
-                        # This is a group - add it
-                        additional_techniques.append(
-                            (source_ref, obj.get("description"), obj.get("target_ref"))
-                        )
-                    # Silently skip tool/malware types - we don't want software procedures here
-                    break
+            if index.objects_of(source_ref, "intrusion-set"):
+                additional_techniques.append(
+                    (source_ref, obj.get("description"), obj.get("target_ref"))
+                )
 
     return additional_techniques
 
@@ -318,7 +348,7 @@ def get_all_groups(bundle):
 
 def retrieve_procedures(bundle, retrieved_techniques):
     procedures = []
-    group_ids = get_all_groups(bundle)
+    index = _bundle_index(bundle)
 
     # Track parent techniques for expansion
     parent_techniques = {}  # {parent_tech_id: (procedure_ref, indicators, parent_proc)}
@@ -326,285 +356,277 @@ def retrieve_procedures(bundle, retrieved_techniques):
     # Process each technique once (not for every object in bundle)
     for group_procedure_desc, procedure_ref in retrieved_techniques:
         # Find the matching attack-pattern object
-        for obj in bundle.objects:
-            if obj.get("type") == "attack-pattern" and obj.get("id") == procedure_ref:
-                red_info, blue_info = find_procedure_evidence(
-                    group_procedure_desc, obj["description"], obj.get("x_mitre_detection", "")
-                )
-                tactics = consolidate_tactics(obj["kill_chain_phases"])
-                op_guidance, red_tools = red_info
+        for obj in index.objects_of(procedure_ref, "attack-pattern"):
+            red_info, blue_info = find_procedure_evidence(
+                group_procedure_desc, obj["description"], obj.get("x_mitre_detection", "")
+            )
+            tactics = consolidate_tactics(obj["kill_chain_phases"])
+            op_guidance, red_tools = red_info
 
-                # Make sure op_guidance is a dictionary
-                if isinstance(op_guidance, str):
-                    # If op_guidance is a string, convert it to a dictionary with a default key
-                    op_guidance = {"description": op_guidance} if op_guidance else {}
-                elif op_guidance == "":
-                    # Empty string should become empty dict
-                    op_guidance = {}
+            # Make sure op_guidance is a dictionary
+            if isinstance(op_guidance, str):
+                # If op_guidance is a string, convert it to a dictionary with a default key
+                op_guidance = {"description": op_guidance} if op_guidance else {}
+            elif op_guidance == "":
+                # Empty string should become empty dict
+                op_guidance = {}
 
-                # Filter out short values
-                op_guidance = filter_short_values(op_guidance)
+            # Filter out short values
+            op_guidance = filter_short_values(op_guidance)
 
-                additional_procedures = []
+            additional_procedures = []
 
-                # Check if we need to gather additional evidence
-                evidence_needed = False
+            # Check if we need to gather additional evidence
+            evidence_needed = False
 
-                # Only try to access dictionary keys if op_guidance is actually a dictionary
-                if isinstance(op_guidance, dict):
-                    if not op_guidance.get("cmd"):
-                        evidence_needed = True
-                    if not op_guidance.get("reg"):
-                        evidence_needed = True
-                    if not op_guidance.get("evt"):
-                        evidence_needed = True
-                    if not op_guidance.get("sw"):
-                        evidence_needed = True
-                    # Network indicators are optional - don't require them for evidence
-                else:
-                    # If op_guidance is not a dictionary, we definitely need more evidence
+            # Only try to access dictionary keys if op_guidance is actually a dictionary
+            if isinstance(op_guidance, dict):
+                if not op_guidance.get("cmd"):
                     evidence_needed = True
+                if not op_guidance.get("reg"):
+                    evidence_needed = True
+                if not op_guidance.get("evt"):
+                    evidence_needed = True
+                if not op_guidance.get("sw"):
+                    evidence_needed = True
+                # Network indicators are optional - don't require them for evidence
+            else:
+                # If op_guidance is not a dictionary, we definitely need more evidence
+                evidence_needed = True
 
-                # Get additional techniques from other groups if needed
-                if evidence_needed:
-                    additional_data = retrieve_additional_techniques(
-                        bundle, procedure_ref
-                    )
+            # Get additional techniques from other groups if needed
+            if evidence_needed:
+                additional_data = retrieve_additional_techniques(
+                    bundle, procedure_ref
+                )
 
-                    for group_id, add_desc, add_ref in additional_data:
-                        # Skip if it's from the same group we're already processing
-                        if group_id in [t[1] for t in retrieved_techniques]:
-                            continue
+                for group_id, add_desc, add_ref in additional_data:
+                    # Skip if it's from the same group we're already processing
+                    if group_id in [t[1] for t in retrieved_techniques]:
+                        continue
 
-                        # Get additional evidence
-                        for add_obj in bundle.objects:
-                            if (
-                                add_obj.get("type") == "attack-pattern"
-                                and add_obj.get("id") == add_ref
-                            ):
-                                add_red_info, _ = find_procedure_evidence(
-                                    add_desc,
-                                    add_obj["description"],
-                                    add_obj.get("x_mitre_detection", ""),
-                                )
-                                add_op_guidance, add_red_tools = add_red_info
+                    # Get additional evidence
+                    for add_obj in index.objects_of(add_ref, "attack-pattern"):
+                        add_red_info, _ = find_procedure_evidence(
+                            add_desc,
+                            add_obj["description"],
+                            add_obj.get("x_mitre_detection", ""),
+                        )
+                        add_op_guidance, add_red_tools = add_red_info
 
-                                # Make sure add_op_guidance is a dictionary
-                                if isinstance(add_op_guidance, str):
-                                    add_op_guidance = (
-                                        {"description": add_op_guidance}
-                                        if add_op_guidance
-                                        else {}
-                                    )
-                                elif add_op_guidance == "":
-                                    add_op_guidance = {}
+                        # Make sure add_op_guidance is a dictionary
+                        if isinstance(add_op_guidance, str):
+                            add_op_guidance = (
+                                {"description": add_op_guidance}
+                                if add_op_guidance
+                                else {}
+                            )
+                        elif add_op_guidance == "":
+                            add_op_guidance = {}
 
-                                # Filter short values
-                                add_op_guidance = filter_short_values(add_op_guidance)
+                        # Filter short values
+                        add_op_guidance = filter_short_values(add_op_guidance)
 
-                                # Merge evidence - ensure both are dictionaries
-                                if isinstance(op_guidance, dict) and isinstance(
-                                    add_op_guidance, dict
+                        # Merge evidence - ensure both are dictionaries
+                        if isinstance(op_guidance, dict) and isinstance(
+                            add_op_guidance, dict
+                        ):
+                            for key in ["cmd", "reg", "evt", "sw", "port", "protocol", "service"]:
+                                if add_op_guidance.get(
+                                    key
+                                ) and not op_guidance.get(key):
+                                    op_guidance[key] = add_op_guidance[key]
+                        elif isinstance(add_op_guidance, dict):
+                            # If op_guidance is not a dict but add_op_guidance is, use add_op_guidance
+                            op_guidance = add_op_guidance
+
+                        # Merge tools - Handle cases where tools may be a dict or list
+                        if add_red_tools:
+                            if not red_tools:
+                                red_tools = add_red_tools
+                            else:
+                                # Convert to list if needed
+                                if isinstance(red_tools, dict) and isinstance(
+                                    add_red_tools, dict
                                 ):
-                                    for key in ["cmd", "reg", "evt", "sw", "port", "protocol", "service"]:
-                                        if add_op_guidance.get(
-                                            key
-                                        ) and not op_guidance.get(key):
-                                            op_guidance[key] = add_op_guidance[key]
-                                elif isinstance(add_op_guidance, dict):
-                                    # If op_guidance is not a dict but add_op_guidance is, use add_op_guidance
-                                    op_guidance = add_op_guidance
-
-                                # Merge tools - Handle cases where tools may be a dict or list
-                                if add_red_tools:
-                                    if not red_tools:
-                                        red_tools = add_red_tools
-                                    else:
-                                        # Convert to list if needed
-                                        if isinstance(red_tools, dict) and isinstance(
-                                            add_red_tools, dict
-                                        ):
-                                            # Merge dictionaries
-                                            for key, value in add_red_tools.items():
-                                                if key in red_tools:
-                                                    if isinstance(red_tools[key], list):
-                                                        if isinstance(value, list):
-                                                            red_tools[key].extend(value)
-                                                        else:
-                                                            red_tools[key].append(value)
-                                                    else:
-                                                        if isinstance(value, list):
-                                                            red_tools[key] = [
-                                                                red_tools[key]
-                                                            ] + value
-                                                        else:
-                                                            red_tools[key] = [
-                                                                red_tools[key],
-                                                                value,
-                                                            ]
+                                    # Merge dictionaries
+                                    for key, value in add_red_tools.items():
+                                        if key in red_tools:
+                                            if isinstance(red_tools[key], list):
+                                                if isinstance(value, list):
+                                                    red_tools[key].extend(value)
                                                 else:
-                                                    red_tools[key] = value
-                                        elif isinstance(red_tools, list) and isinstance(
-                                            add_red_tools, list
-                                        ):
-                                            # Both are lists, simply extend
-                                            red_tools.extend(add_red_tools)
-                                        elif isinstance(red_tools, list):
-                                            # red_tools is a list but add_red_tools is not
-                                            if (
-                                                isinstance(add_red_tools, dict)
-                                                and "sw" in add_red_tools
-                                            ):
-                                                red_tools.extend(add_red_tools["sw"])
+                                                    red_tools[key].append(value)
                                             else:
-                                                # Convert add_red_tools to a list and extend
-                                                red_tools.append(add_red_tools)
+                                                if isinstance(value, list):
+                                                    red_tools[key] = [
+                                                        red_tools[key]
+                                                    ] + value
+                                                else:
+                                                    red_tools[key] = [
+                                                        red_tools[key],
+                                                        value,
+                                                    ]
                                         else:
-                                            # red_tools is not a list but add_red_tools might be
-                                            if isinstance(add_red_tools, list):
-                                                if (
-                                                    isinstance(red_tools, dict)
-                                                    and "sw" in red_tools
-                                                ):
-                                                    red_tools["sw"].extend(
-                                                        add_red_tools
-                                                    )
-                                                else:
-                                                    # Convert red_tools to a list and extend
-                                                    red_tools = [
-                                                        red_tools
-                                                    ] + add_red_tools
+                                            red_tools[key] = value
+                                elif isinstance(red_tools, list) and isinstance(
+                                    add_red_tools, list
+                                ):
+                                    # Both are lists, simply extend
+                                    red_tools.extend(add_red_tools)
+                                elif isinstance(red_tools, list):
+                                    # red_tools is a list but add_red_tools is not
+                                    if (
+                                        isinstance(add_red_tools, dict)
+                                        and "sw" in add_red_tools
+                                    ):
+                                        red_tools.extend(add_red_tools["sw"])
+                                    else:
+                                        # Convert add_red_tools to a list and extend
+                                        red_tools.append(add_red_tools)
+                                else:
+                                    # red_tools is not a list but add_red_tools might be
+                                    if isinstance(add_red_tools, list):
+                                        if (
+                                            isinstance(red_tools, dict)
+                                            and "sw" in red_tools
+                                        ):
+                                            red_tools["sw"].extend(
+                                                add_red_tools
+                                            )
+                                        else:
+                                            # Convert red_tools to a list and extend
+                                            red_tools = [
+                                                red_tools
+                                            ] + add_red_tools
 
-                # Retrieve platform metadata
+            # Retrieve platform metadata
+            software_refs = []
+            if isinstance(red_tools, list):
+                software_refs = [
+                    tool.get("id")
+                    for tool in red_tools
+                    if isinstance(tool, dict) and "id" in tool
+                ]
+            elif isinstance(red_tools, dict) and "sw" in red_tools:
+                # red_tools["sw"] contains software NAMES, not IDs
+                # Convert names to STIX IDs
+                software_names = red_tools["sw"] if isinstance(red_tools["sw"], list) else [red_tools["sw"]]
                 software_refs = []
-                if isinstance(red_tools, list):
-                    software_refs = [
-                        tool.get("id")
-                        for tool in red_tools
-                        if isinstance(tool, dict) and "id" in tool
-                    ]
-                elif isinstance(red_tools, dict) and "sw" in red_tools:
-                    # red_tools["sw"] contains software NAMES, not IDs
-                    # Convert names to STIX IDs
-                    software_names = red_tools["sw"] if isinstance(red_tools["sw"], list) else [red_tools["sw"]]
-                    software_refs = []
-                    for sw_name in software_names:
-                        # Find the STIX ID for this software name
-                        # IMPORTANT: Use sw_obj instead of obj to avoid shadowing the outer loop variable
-                        for sw_obj in bundle.objects:
-                            if (sw_obj.get("type") in ["tool", "malware"]
-                                and sw_obj.get("name", "").lower() == sw_name.lower()):
-                                software_refs.append(sw_obj.get("id"))
-                                break
+                for sw_name in software_names:
+                    # Find the STIX ID for this software name
+                    sw_id = index.software_by_name.get(sw_name.lower())
+                    if sw_id is not None:
+                        software_refs.append(sw_id)
 
-                # NOTE: Software expansion is now handled in retrieve_techniques()
-                # We no longer need to traverse software here since we already expanded
-                # software to their techniques at the retrieval stage.
-                # This prevents duplicate processing and software IDs appearing in final output.
+            # NOTE: Software expansion is now handled in retrieve_techniques()
+            # We no longer need to traverse software here since we already expanded
+            # software to their techniques at the retrieval stage.
+            # This prevents duplicate processing and software IDs appearing in final output.
 
-                # DISABLED: Expand software to techniques and extract their indicators
-                # This implements: Group -> Software -> Techniques -> Indicators
-                if False and software_refs:
-                    software_techniques = get_software_techniques(bundle, software_refs)
+            # DISABLED: Expand software to techniques and extract their indicators
+            # This implements: Group -> Software -> Techniques -> Indicators
+            if False and software_refs:
+                software_techniques = get_software_techniques(bundle, software_refs)
 
-                    # For each technique used by the software, extract indicators
-                    for sw_tech_id, sw_tech_name, sw_tech_desc in software_techniques:
+                # For each technique used by the software, extract indicators
+                for sw_tech_id, sw_tech_name, sw_tech_desc in software_techniques:
 
-                        # Find the technique object
-                        for sw_tech_obj in bundle.objects:
-                            if (sw_tech_obj.get("type") == "attack-pattern"
-                                and sw_tech_obj.get("external_references", [{}])[0].get("external_id") == sw_tech_id):
+                    # Find the technique object
+                    for sw_tech_obj in bundle.objects:
+                        if (sw_tech_obj.get("type") == "attack-pattern"
+                            and sw_tech_obj.get("external_references", [{}])[0].get("external_id") == sw_tech_id):
 
-                                # Extract indicators from this software technique
-                                sw_red_info, sw_blue_info = find_procedure_evidence(
-                                    sw_tech_desc,  # How the software uses this technique
-                                    sw_tech_obj["description"],  # Technique description
-                                    sw_tech_obj.get("x_mitre_detection", "")
-                                )
-                                sw_op_guidance, _ = sw_red_info
+                            # Extract indicators from this software technique
+                            sw_red_info, sw_blue_info = find_procedure_evidence(
+                                sw_tech_desc,  # How the software uses this technique
+                                sw_tech_obj["description"],  # Technique description
+                                sw_tech_obj.get("x_mitre_detection", "")
+                            )
+                            sw_op_guidance, _ = sw_red_info
 
-                                # Make sure sw_op_guidance is a dictionary
-                                if isinstance(sw_op_guidance, str):
-                                    sw_op_guidance = {"description": sw_op_guidance} if sw_op_guidance else {}
-                                elif sw_op_guidance == "":
-                                    sw_op_guidance = {}
+                            # Make sure sw_op_guidance is a dictionary
+                            if isinstance(sw_op_guidance, str):
+                                sw_op_guidance = {"description": sw_op_guidance} if sw_op_guidance else {}
+                            elif sw_op_guidance == "":
+                                sw_op_guidance = {}
 
-                                # Filter short values
-                                sw_op_guidance = filter_short_values(sw_op_guidance)
+                            # Filter short values
+                            sw_op_guidance = filter_short_values(sw_op_guidance)
 
-                                # Merge software technique indicators into main op_guidance
-                                # This ensures we get indicators like "net use", "fsutil" from BlackCat
-                                if isinstance(op_guidance, dict) and isinstance(sw_op_guidance, dict):
-                                    for key in ["cmd", "reg", "evt", "sw", "api", "network"]:
-                                        if sw_op_guidance.get(key):
-                                            if not op_guidance.get(key):
-                                                # No existing indicators for this type, add software's
-                                                op_guidance[key] = sw_op_guidance[key]
-                                            else:
-                                                # Merge and deduplicate
-                                                existing = op_guidance[key] if isinstance(op_guidance[key], list) else [op_guidance[key]]
-                                                new_indicators = sw_op_guidance[key] if isinstance(sw_op_guidance[key], list) else [sw_op_guidance[key]]
-                                                # Combine and remove duplicates (case-insensitive)
-                                                combined = existing + [ind for ind in new_indicators if ind.lower() not in [e.lower() for e in existing]]
-                                                op_guidance[key] = combined
-                                break
+                            # Merge software technique indicators into main op_guidance
+                            # This ensures we get indicators like "net use", "fsutil" from BlackCat
+                            if isinstance(op_guidance, dict) and isinstance(sw_op_guidance, dict):
+                                for key in ["cmd", "reg", "evt", "sw", "api", "network"]:
+                                    if sw_op_guidance.get(key):
+                                        if not op_guidance.get(key):
+                                            # No existing indicators for this type, add software's
+                                            op_guidance[key] = sw_op_guidance[key]
+                                        else:
+                                            # Merge and deduplicate
+                                            existing = op_guidance[key] if isinstance(op_guidance[key], list) else [op_guidance[key]]
+                                            new_indicators = sw_op_guidance[key] if isinstance(sw_op_guidance[key], list) else [sw_op_guidance[key]]
+                                            # Combine and remove duplicates (case-insensitive)
+                                            combined = existing + [ind for ind in new_indicators if ind.lower() not in [e.lower() for e in existing]]
+                                            op_guidance[key] = combined
+                            break
 
-                    # IMPORTANT: After software traversal, remove software names from red_tools
-                    # Software indicators have been extracted and merged into op_guidance
-                    # We don't want software NAMES (like "BoomBox", "BlackCat") as detection indicators
-                    # Only the actual technique indicators (commands, APIs, etc.) should be used
-                    if isinstance(red_tools, dict) and "sw" in red_tools:
-                        del red_tools["sw"]
-                    elif isinstance(red_tools, list):
-                        # If red_tools is a list of software names/objects, clear it in place
-                        red_tools.clear()
-
-                # ALSO: Remove software names from red_tools even if no software_refs were traversed
-                # This handles cases where software names appear as indicators but shouldn't be used
+                # IMPORTANT: After software traversal, remove software names from red_tools
+                # Software indicators have been extracted and merged into op_guidance
+                # We don't want software NAMES (like "BoomBox", "BlackCat") as detection indicators
+                # Only the actual technique indicators (commands, APIs, etc.) should be used
                 if isinstance(red_tools, dict) and "sw" in red_tools:
                     del red_tools["sw"]
+                elif isinstance(red_tools, list):
+                    # If red_tools is a list of software names/objects, clear it in place
+                    red_tools.clear()
 
-                procedure_platforms, software_platforms = retrieve_platform_metadata(
-                    bundle, procedure_ref, software_refs
+            # ALSO: Remove software names from red_tools even if no software_refs were traversed
+            # This handles cases where software names appear as indicators but shouldn't be used
+            if isinstance(red_tools, dict) and "sw" in red_tools:
+                del red_tools["sw"]
+
+            procedure_platforms, software_platforms = retrieve_platform_metadata(
+                bundle, procedure_ref, software_refs
+            )
+
+            try:
+                detect_guidance = merge_detect_guidance(
+                    obj["x_mitre_data_sources"], blue_info
                 )
+            except Exception:
+                detect_guidance = [[""]]
 
-                try:
-                    detect_guidance = merge_detect_guidance(
-                        obj["x_mitre_data_sources"], blue_info
-                    )
-                except Exception:
-                    detect_guidance = [[""]]
+            # Extract technique description and platforms for enhanced validation
+            technique_description = obj.get("description", "")
+            technique_platforms = obj.get("x_mitre_platforms", [])
 
-                # Extract technique description and platforms for enhanced validation
-                technique_description = obj.get("description", "")
-                technique_platforms = obj.get("x_mitre_platforms", [])
+            tech_id = obj["external_references"][0]["external_id"]
+            tech_name = obj["name"]
 
-                tech_id = obj["external_references"][0]["external_id"]
-                tech_name = obj["name"]
-
-                procedures.append(
-                    (
-                        tech_id,
-                        tech_name,
-                        tactics,
-                        group_procedure_desc,
-                        op_guidance,
-                        red_tools,
-                        detect_guidance,
-                        procedure_platforms,
-                        software_platforms,
-                        technique_description,
-                        technique_platforms,
-                    )
+            procedures.append(
+                (
+                    tech_id,
+                    tech_name,
+                    tactics,
+                    group_procedure_desc,
+                    op_guidance,
+                    red_tools,
+                    detect_guidance,
+                    procedure_platforms,
+                    software_platforms,
+                    technique_description,
+                    technique_platforms,
                 )
+            )
 
-                # Track if this is a parent technique for later expansion
-                if is_parent_technique(tech_id):
-                    parent_indicators = extract_indicators_from_guidance(op_guidance)
-                    parent_techniques[tech_id] = (procedure_ref, parent_indicators, procedures[-1])
+            # Track if this is a parent technique for later expansion
+            if is_parent_technique(tech_id):
+                parent_indicators = extract_indicators_from_guidance(op_guidance)
+                parent_techniques[tech_id] = (procedure_ref, parent_indicators, procedures[-1])
 
-                # Break after finding and processing this technique
-                break
+            # Break after finding and processing this technique
+            break
 
     # EXPANSION LOGIC: Process parent techniques to add subtechniques
     for parent_tech_id, (parent_ref, parent_indicators, parent_proc) in parent_techniques.items():
@@ -640,21 +662,17 @@ def retrieve_procedures(bundle, retrieved_techniques):
                 # Get technique description and platforms
                 sub_technique_description = sub_desc
                 sub_technique_platforms = []
-                for sub_obj in bundle.objects:
-                    if sub_obj.get("id") == sub_ref and sub_obj.get("type") == "attack-pattern":
-                        sub_technique_platforms = sub_obj.get("x_mitre_platforms", [])
-                        break
+                for sub_obj in index.objects_of(sub_ref, "attack-pattern"):
+                    sub_technique_platforms = sub_obj.get("x_mitre_platforms", [])
 
                 # Create detect_guidance for subtechnique
                 try:
                     sub_detect_guidance = [[""]]
-                    for sub_obj in bundle.objects:
-                        if sub_obj.get("id") == sub_ref and sub_obj.get("type") == "attack-pattern":
-                            if "x_mitre_data_sources" in sub_obj:
-                                sub_detect_guidance = merge_detect_guidance(
-                                    sub_obj["x_mitre_data_sources"], []
-                                )
-                            break
+                    for sub_obj in index.objects_of(sub_ref, "attack-pattern"):
+                        if "x_mitre_data_sources" in sub_obj:
+                            sub_detect_guidance = merge_detect_guidance(
+                                sub_obj["x_mitre_data_sources"], []
+                            )
                 except Exception:
                     sub_detect_guidance = [[""]]
 
@@ -693,19 +711,18 @@ def retrieve_platform_metadata(bundle, procedure_ref, software_refs):
     """
     procedure_platforms = []
     software_platforms = {}
+    index = _bundle_index(bundle)
 
     # Get platforms for the procedure
-    for obj in bundle.objects:
-        if obj.get("type") == "attack-pattern" and obj.get("id") == procedure_ref:
-            if "x_mitre_platforms" in obj:
-                procedure_platforms = obj["x_mitre_platforms"]
+    for obj in index.objects_of(procedure_ref, "attack-pattern"):
+        if "x_mitre_platforms" in obj:
+            procedure_platforms = obj["x_mitre_platforms"]
 
     # Get platforms for each software
     for software_ref in software_refs:
-        for obj in bundle.objects:
-            if obj.get("type") in ["tool", "malware"] and obj.get("id") == software_ref:
-                if "x_mitre_platforms" in obj:
-                    software_platforms[software_ref] = obj["x_mitre_platforms"]
+        for obj in index.objects_of(software_ref, "tool", "malware"):
+            if "x_mitre_platforms" in obj:
+                software_platforms[software_ref] = obj["x_mitre_platforms"]
 
     return procedure_platforms, software_platforms
 

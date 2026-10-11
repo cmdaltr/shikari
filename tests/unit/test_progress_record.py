@@ -88,3 +88,15 @@ def test_writes_outside_a_run_keep_the_last_manifest():
     run_files.note("T1003_DeviceEvents.yaml", "UNC3944")  # no run in progress: ignored
     progress.write_progress("UNC3944", {"phase": "complete", "status": "complete"})
     assert run_files.latest_run("UNC3944")["files"] == ["IOCSweepUNC3944_GoogleSecOps.yaml"]
+
+
+def test_latest_run_keeps_only_correlations_between_its_files():
+    from archer.app import _run_correlations
+
+    corrs = [
+        {"a": "data/groups/A_GoogleSecOps.yaml", "b": "data/groups/B_GoogleSecOps.yaml"},
+        {"a": "data/groups/A_GoogleSecOps.yaml", "b": "data/groups/Old_GoogleSecOps.yaml"},
+        {"a": "data/groups/Old_GoogleSecOps.yaml", "b": None},
+    ]
+    assert _run_correlations(corrs, None) == corrs
+    assert _run_correlations(corrs, {"A_GoogleSecOps.yaml", "B_GoogleSecOps.yaml"}) == corrs[:1]

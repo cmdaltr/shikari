@@ -53,7 +53,7 @@
       <a href="?group_name={{ group_name|urlencode }}" class="run-view-opt{% if not run_view.active %} is-active{% endif %}"{% if not run_view.active %} aria-current="page"{% endif %}>
         All runs <span class="run-view-n">{{ run_view.all_count }} files</span>
       </a>
-      <span class="run-view-when">{% if run_view.completed %}Latest run finished {{ run_view.completed }}.{% endif %}{% if run_view.active %} Correlations and the ATT&amp;CK Flow cover all runs.{% endif %}</span>
+      <span class="run-view-when">{% if run_view.completed %}Latest run finished {{ run_view.completed }}.{% endif %}</span>
     </nav>
     {% endif %}
 
