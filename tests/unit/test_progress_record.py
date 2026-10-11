@@ -36,3 +36,29 @@ def test_updates_without_phase_keep_it():
     progress.write_progress("APT29", {"processed": 10, "total_pairs": 100})
     rec = progress.read_progress("APT29")
     assert rec["phase"] == "correlations" and set(rec["phase_started"]) == {"preparing", "correlations"}
+
+
+def test_ioc_only_report_completes_with_its_sweeps(monkeypatch):
+    from archer import app as app_module
+    from archer.build import ioc_sweep
+
+    monkeypatch.setattr(app_module, "write_progress", progress.write_progress)
+    monkeypatch.setattr(ioc_sweep, "write_ioc_sweeps", lambda *a, **k: ["IOCSweepX_GoogleSecOps.yaml", "IOCSweepX_MicrosoftThreatProtection.yaml"])
+    monkeypatch.setattr(app_module, "modified_process_group_wrapper",
+                        lambda *a, **k: pytest.fail("no techniques: nothing to generate"))
+    progress.start_progress("UNC3944", {})
+    app_module._run_report_generation("UNC3944", [], {"domain": ["evil[.]com"]}, "report", None, "UNC3944", "desc")
+    rec = progress.read_progress("UNC3944")
+    assert rec["phase"] == "complete" and rec["ioc_sweeps"] == 2 and "error" not in rec
+
+
+def test_report_with_nothing_to_sweep_or_build_says_why(monkeypatch):
+    from archer import app as app_module
+    from archer.build import ioc_sweep
+
+    monkeypatch.setattr(app_module, "write_progress", progress.write_progress)
+    monkeypatch.setattr(ioc_sweep, "write_ioc_sweeps", lambda *a, **k: [])
+    progress.start_progress("UNC3944", {})
+    app_module._run_report_generation("UNC3944", [], {}, "report", None, "UNC3944", "desc")
+    rec = progress.read_progress("UNC3944")
+    assert rec["phase"] == "complete" and rec["ioc_sweeps"] == 0 and rec["error"]

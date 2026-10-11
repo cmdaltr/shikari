@@ -3,8 +3,14 @@
 // The server owns the phase (preparing -> detections -> correlations -> finalising ->
 // complete); this page never advances it. Correlations show nothing until the server
 // has finished every detection and moved the run on.
+//
+// A Profile run generates several groups one after another: ?queue=A,B,C lists them and
+// the page follows each in turn, then opens the first one's results.
 const params = new URLSearchParams(window.location.search);
-const group = params.get('group_name') || '';
+let group = params.get('group_name') || '';
+const queue = (params.get('queue') || '').split(',').map(g => g.trim()).filter(Boolean);
+if (queue.length && !queue.includes(group)) group = queue[0];
+const queueState = {};     // group -> waiting | active | done | failed
 
 const PHASES = ['preparing', 'detections', 'correlations', 'finalising', 'complete'];
 const POLL_MS = 1000;
@@ -24,6 +30,56 @@ const phaseStarted = {};   // phase -> ms timestamp, for the elapsed-time readou
 const phaseEnded = {};
 let detPctShown = 0;       // never let a bar go backwards between polls
 let corrPctShown = 0;
+
+function resetRun() {
+  for (const k of Object.keys(phaseStarted)) delete phaseStarted[k];
+  for (const k of Object.keys(phaseEnded)) delete phaseEnded[k];
+  detPctShown = 0;
+  corrPctShown = 0;
+}
+
+function resultsUrl(g) { return `/results?group_name=${encodeURIComponent(g)}`; }
+
+function renderQueue() {
+  const box = document.getElementById('pg-queue');
+  if (!box || queue.length < 2) return;
+  box.hidden = false;
+  const idx = queue.indexOf(group);
+  box.querySelector('.pg-queue-pos').textContent = `Group ${idx + 1} of ${queue.length}`;
+  const list = box.querySelector('.pg-queue-list');
+  list.replaceChildren(...queue.map(g => {
+    const state = queueState[g] || (g === group ? 'active' : 'waiting');
+    const el = document.createElement(state === 'done' ? 'a' : 'span');
+    el.className = 'pg-chip';
+    el.dataset.state = state;
+    el.textContent = g;
+    if (state === 'done') { el.href = resultsUrl(g); el.target = '_blank'; el.rel = 'noopener'; }
+    return el;
+  }));
+  const name = document.getElementById('progress-group');
+  if (name) name.textContent = group;
+}
+
+// Queue the next group once this one ends; false when this was the last one.
+// The switch happens with the next group's first render, so the address bar and the
+// bars never disagree about which group is on screen.
+let pendingNext = null;
+function advanceQueue(outcome) {
+  queueState[group] = outcome;
+  pendingNext = queue[queue.indexOf(group) + 1] || null;
+  renderQueue();
+  return !!pendingNext;
+}
+
+function switchToPending() {
+  group = pendingNext;
+  pendingNext = null;
+  resetRun();
+  const url = new URL(window.location.href);
+  url.searchParams.set('group_name', group);
+  history.replaceState(null, '', url);
+  renderQueue();
+}
 
 function fmt(n) { return Number(n || 0).toLocaleString('en-GB'); }
 
@@ -112,6 +168,8 @@ function render(p) {
   const total = Number(p.total_yaml) || 0;
   const processed = Number(p.processed_yaml ?? p.created_yaml) || 0;
   const created = Number(p.created_yaml) || 0;
+  const sweeps = Number(p.ioc_sweeps) || 0;   // report IOC sweeps, one per SIEM
+  const sweepNote = sweeps ? `IOC sweeps for ${sweeps} SIEM${sweeps === 1 ? '' : 's'}` : '';
 
   if (p.status === 'failed') {
     const err = document.createElement('span');
@@ -127,7 +185,7 @@ function render(p) {
     return 'stop';
   }
 
-  if (phase === 'complete' && !(created > 0)) {
+  if (phase === 'complete' && !(created > 0) && !(sweeps > 0)) {
     paint(det, { state: 'done', pct: 100, detail: p.error || 'No detections were generated: none of the selected techniques produced a query.' });
     hideLoading();
     setState('Nothing generated');
@@ -152,10 +210,13 @@ function render(p) {
     hideLoading();
   } else {
     detPctShown = 100;
+    const made = total || created
+      ? `${fmt(created)} techniques produced detections${sweeps ? `, plus ${sweepNote}` : ''}`
+      : `${sweepNote} (no techniques were selected)`;
     paint(det, {
       state: 'done', pct: 100,
       count: total ? `${fmt(processed || total)} / ${fmt(total)} techniques` : '',
-      detail: [strong('Complete: '), document.createTextNode(`${fmt(created)} techniques produced detections`)],
+      detail: [strong('Complete: '), document.createTextNode(made)],
       time: timing('detections', now, p),
     });
     hideLoading();
@@ -201,7 +262,7 @@ function render(p) {
         count: p.total_pairs ? `${fmt(p.total_pairs)} / ${fmt(p.total_pairs)} pairs` : '',
         detail: [strong('Complete: '), document.createTextNode(`${fmt(p.vendor_count || 0)} correlated technique pairs (merged on the results page)`)],
         time: timing('correlations', now, p),
-      } : { state: 'waiting', pct: 0, detail: 'Correlation was not requested for this run' });
+      } : { state: 'waiting', pct: 0, detail: total || created ? 'Correlation was not requested for this run' : 'No techniques to correlate' });
     }
   }
 
@@ -214,26 +275,38 @@ function render(p) {
   return 'continue';
 }
 
+let pausedUntil = 0;   // a moment on each finished group before the next one
+
 async function refresh() {
-  if (!group || redirecting) return;
+  if (!group || redirecting || Date.now() < pausedUntil) return;
   try {
-    const res = await fetch(`/progress_status?group_name=${encodeURIComponent(group)}`);
+    const polled = pendingNext || group;
+    const res = await fetch(`/progress_status?group_name=${encodeURIComponent(polled)}`);
     const j = await res.json();
+    if (pendingNext && polled === pendingNext) switchToPending();
+    if (polled !== group) return;
     const outcome = render(j.progress || {});
-    if (outcome === 'stop') {
-      clearInterval(pollTimer);
-    } else if (outcome === 'done') {
-      clearInterval(pollTimer);
-      redirecting = true;
-      // A moment on the finished bars before the results page
-      setTimeout(() => {
-        window.location.href = `/results?group_name=${encodeURIComponent(group)}`;
-      }, 1000);
+    if (outcome === 'continue') return;
+    if (queue.length > 1 && advanceQueue(outcome === 'done' ? 'done' : 'failed')) {
+      pausedUntil = Date.now() + (outcome === 'done' ? 1000 : 3000);
+      return;
     }
+    if (queue.length > 1) {
+      queueState[group] = outcome === 'done' ? 'done' : 'failed';
+      renderQueue();
+    }
+    // The first group that produced something, else this one
+    const target = queue.find(g => queueState[g] === 'done') || (outcome === 'done' ? group : null);
+    clearInterval(pollTimer);
+    if (!target) return;
+    redirecting = true;
+    // A moment on the finished bars before the results page
+    setTimeout(() => { window.location.href = resultsUrl(target); }, 1000);
   } catch (e) {
     console.error('Progress polling error:', e);
   }
 }
 
+renderQueue();
 pollTimer = setInterval(refresh, POLL_MS);
 refresh();

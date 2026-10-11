@@ -2,7 +2,7 @@
 Headed Playwright walkthrough of the Archer UI, one captioned step per feature.
 
 Run:  .venv/bin/python tests/ui/walkthrough.py [step ...] [--headless]
-Steps: login group cve research upload upload-error profile ask library coverage manual how user
+Steps: login group cve research upload upload-iocs upload-error profile ask library coverage manual how user
 Env:  ARCHER_BASE_URL, ARCHER_EMAIL, ARCHER_PASSWORD, ARCHER_GEN_TIMEOUT (seconds)
 """
 
@@ -115,7 +115,12 @@ _BAR_VALUES = """() => ['yaml-progress', 'genai-progress'].map(id => {
 
 
 def check_progress_bars(page, seen):
-    """Correlations must not move before detections finish, and neither bar may go back."""
+    """Correlations must not move before detections finish, and neither bar may go back.
+
+    A Profile run moves through several groups; the bars start again for each one.
+    """
+    from urllib.parse import parse_qs, urlparse
+
     if "/progress" not in page.url:
         return
     try:
@@ -124,11 +129,12 @@ def check_progress_bars(page, seen):
         return  # navigating to results
     if det is None or corr is None:
         return
+    group = parse_qs(urlparse(page.url).query).get("group_name", [""])[0]
     if corr > 0 and det < 100:
-        raise RuntimeError(f"correlation bar at {corr}% while detections at {det}%")
-    if seen and (det < seen[-1][0] or corr < seen[-1][1]):
-        raise RuntimeError(f"progress bar went backwards: {seen[-1]} -> {(det, corr)}")
-    seen.append((det, corr))
+        raise RuntimeError(f"{group}: correlation bar at {corr}% while detections at {det}%")
+    if seen and seen[-1][2] == group and (det < seen[-1][0] or corr < seen[-1][1]):
+        raise RuntimeError(f"{group}: progress bar went backwards: {seen[-1][:2]} -> {(det, corr)}")
+    seen.append((det, corr, group))
 
 
 def wait_for_results(page, label):
@@ -140,7 +146,9 @@ def wait_for_results(page, label):
         if "/results" in url:
             page.wait_for_load_state("domcontentloaded")
             if seen:
-                caption(page, f"{label} — progress bars: {len(seen)} samples, in order, never backwards")
+                groups = list(dict.fromkeys(g for _, _, g in seen))
+                across = f" across {len(groups)} groups ({', '.join(groups)})" if len(groups) > 1 else ""
+                caption(page, f"{label} — progress bars: {len(seen)} samples{across}, in order, never backwards")
             return url
         check_progress_bars(page, seen)
         if url != last:
@@ -159,7 +167,8 @@ def wait_for_results(page, label):
                 shown = "PAGE DID NOT SHOW FAILURE"
             shot(page, "progress_failed")
             raise RuntimeError(f"run failed at stage {status.get('stage')} ({shown}): {status.get('error', 'no error recorded')}")
-        if status and status.get("status") in ("complete", "genai_complete") and not status.get("created_yaml"):
+        if (status and status.get("status") in ("complete", "genai_complete")
+                and not status.get("created_yaml") and not status.get("ioc_sweeps")):
             try:
                 page.wait_for_function(
                     "() => (document.getElementById('progress-state') || {}).textContent === 'Nothing generated'",
@@ -384,8 +393,8 @@ def research(page):
     return f"Iran attributed={len(attributed)} targeted={len(targeted)}; {rows} table rows"
 
 
-@step("Upload — threat intel blog URL (CISA AA23-320A, Scattered Spider)")
-def upload_blog(page):
+def _extract_blog(page):
+    """Analyse the CISA advisory and wait for the review modal's technique list."""
     open_tab(page, "upload")
     caption(page, "Upload tab: extract TTPs/IOCs from a threat intel blog")
     page.fill("#blog_url_input", "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-320a")
@@ -405,10 +414,43 @@ def upload_blog(page):
     shot(page, "upload_extraction")
     body = resp.json()
     extracted = f"{body.get('ttps_count', 0)} TTPs, {body.get('iocs_count', 0)} IOCs extracted"
+    return extracted
+
+
+@step("Upload — threat intel blog URL (CISA AA23-320A, Scattered Spider)")
+def upload_blog(page):
+    extracted = _extract_blog(page)
     caption(page, f"{extracted} — proceeding to generation")
     page.click("#proceed-generation", timeout=5000)
     wait_for_results(page, "CISA AA23-320A")
     return f"{extracted}; {tour_results(page, 'CISA AA23-320A')}"
+
+
+@step("Upload — IOCs only (every TTP deselected)")
+def upload_iocs(page):
+    extracted = _extract_blog(page)
+    page.locator("#ttps-container .ttp-checkbox").evaluate_all("els => els.forEach(e => { e.checked = false; })")
+    caption(page, f"{extracted} — every TTP deselected, IOCs kept")
+    shot(page, "upload_iocs_only")
+    page.click("#proceed-generation", timeout=5000)
+    page.wait_for_url("**/progress**", timeout=30000)
+    page.wait_for_function(
+        "() => /IOC sweeps/.test((document.getElementById('last-yaml-file') || {}).textContent || '')"
+        " || location.pathname === '/results'",
+        timeout=120000,
+    )
+    state = page.evaluate("() => (document.getElementById('progress-state') || {}).textContent || ''")
+    if state in ("Nothing generated", "Failed"):
+        raise RuntimeError(f"IOC-only run ended as '{state}'")
+    if "/progress" in page.url:
+        shot(page, "upload_iocs_progress")
+        caption(page, page.inner_text("#last-yaml-file"))
+    page.wait_for_url("**/results**", timeout=60000)
+    page.wait_for_load_state("domcontentloaded")
+    shot(page, "upload_iocs_results")
+    if "IOC Sweep" not in page.inner_text("body"):
+        raise RuntimeError("results page has no IOC Sweep detection")
+    return "IOC-only run completed; IOC Sweep detection on the results page"
 
 
 @step("Upload — rejected URL shows an inline error")
@@ -448,6 +490,9 @@ def profile(page):
     missing = [label for label, text in expected.items() if text not in summary]
     if missing:
         raise RuntimeError(f"profile summary missing: {', '.join(missing)}")
+    # Two groups: enough to follow the queue from one group to the next without
+    # generating all nine recommendations
+    page.locator(".group-checkbox").evaluate_all("els => els.forEach((e, i) => { e.checked = i < 2; })")
     page.click("#confirm-generation")
     wait_for_results(page, "tesco.com")
     return tour_results(page, "tesco.com")
@@ -515,7 +560,7 @@ def user_profile(page):
 
 STEPS = {
     "login": login, "group": hunt_group, "cve": hunt_cve, "research": research,
-    "upload": upload_blog, "upload-error": upload_error, "profile": profile, "ask": ask_archer, "library": library,
+    "upload": upload_blog, "upload-iocs": upload_iocs, "upload-error": upload_error, "profile": profile, "ask": ask_archer, "library": library,
     "coverage": coverage, "manual": manual, "how": how, "user": user_profile,
 }
 

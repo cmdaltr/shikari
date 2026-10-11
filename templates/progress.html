@@ -511,6 +511,25 @@ body, html {
 [data-theme="dark"] .pg-card[data-state="active"] .pg-badge { background: color-mix(in srgb, var(--pg-accent) 20%, transparent); }
 [data-theme="dark"] .pg-card[data-state="done"] .pg-badge { background: rgba(76,175,80,.18); color: #81c784; }
 
+/* Profile queue: one chip per group; finished groups link to their results */
+.pg-queue { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: -4px 0 20px; }
+.pg-queue-pos { font-size: 15px; font-weight: 600; color: #495057; }
+.pg-queue-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.pg-chip {
+  padding: 5px 12px; border-radius: 999px; font-size: 14px; font-weight: 500; text-decoration: none;
+  background: #f1f3f5; color: #6c757d; border: 1px solid transparent;
+}
+.pg-chip[data-state="active"] { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; }
+.pg-chip[data-state="done"] { background: #e8f5e9; color: #2e7d32; }
+.pg-chip[data-state="done"]::before { content: "\2713  "; }
+.pg-chip[data-state="done"]:hover { text-decoration: underline; }
+.pg-chip[data-state="failed"] { background: #fdecea; color: #c62828; }
+[data-theme="dark"] .pg-queue-pos { color: var(--text-secondary, #b0b0b0); }
+[data-theme="dark"] .pg-chip { background: #2a2f35; color: #9aa0a6; }
+[data-theme="dark"] .pg-chip[data-state="active"], [data-theme="dark"] .pg-chip[data-state="done"] { background: rgba(76,175,80,.18); color: #81c784; border-color: transparent; }
+[data-theme="dark"] .pg-chip[data-state="active"] { border-color: #81c784; }
+[data-theme="dark"] .pg-chip[data-state="failed"] { background: rgba(198,40,40,.2); color: #ef9a9a; }
+
 /* Loading Indicator - Full Page Overlay */
 .loading-indicator {
   position: fixed;
@@ -581,8 +600,14 @@ body, html {
   <div class="results-container">
     <!-- Page heading -->
     <p class="lead">
-      <span id="progress-state">Processing</span><br><span style="color:#8B0000; font-size: 28px;">{{ group_name }}</span>
+      <span id="progress-state">Processing</span><br><span id="progress-group" style="color:#8B0000; font-size: 28px;">{{ group_name }}</span>
     </p>
+
+    <!-- Profile runs: the groups being generated, one after another -->
+    <div class="pg-queue" id="pg-queue" hidden>
+      <span class="pg-queue-pos"></span>
+      <div class="pg-queue-list"></div>
+    </div>
 
     <!-- Loading Indicator -->
     <div class="loading-indicator" id="loading-indicator">

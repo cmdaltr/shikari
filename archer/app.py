@@ -36,7 +36,7 @@ import logging
 import threading
 import re
 import html
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 import yaml
 from archer.build.progress import read_progress, start_progress, write_progress
 from archer.config import (
@@ -4133,36 +4133,15 @@ async def generate_from_upload(
         bundle = getattr(request.app.state, "bundle", None)
         report_actor = extraction_data.get("group_name") or synthetic_group_name
 
-        # Process in background thread
         def _bg():
-            try:
-                # The report's atomic IOCs aren't tied to a technique: one sweep per SIEM
-                from archer.build.ioc_sweep import write_ioc_sweeps
-
-                sweeps = write_ioc_sweeps(synthetic_group_name, iocs, filename, GENERATE_DIR)
-                if sweeps:
-                    print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
-                manual_data = _report_manual_data(ttps, bundle, report_actor, filename)
-            except Exception as e:
-                print(f"Error preparing upload generation: {e}")
-                write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
-                return
-            try:
-                modified_process_group_wrapper(
-                    synthetic_group_name,
-                    f"Generated from uploaded file: {filename}",
-                    manual_data=manual_data,
-                    genai_mode="semantic" if not use_ai else "ai_generators",
-                    run_correlation=True,  # Always enabled by default
-                    osint_enhancement=(osint_enhancement == "true"),  # Default to False for uploads
-                    osint_comparison=False,  # Default to false for uploads
-                )
-            except Exception as e:
-                print(f"Error processing upload: {e}")
-                try:
-                    write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
-                except Exception:
-                    pass
+            _run_report_generation(
+                synthetic_group_name, ttps, iocs, filename, bundle, report_actor,
+                f"Generated from uploaded file: {filename}",
+                genai_mode="semantic" if not use_ai else "ai_generators",
+                run_correlation=True,  # Always enabled by default
+                osint_enhancement=(osint_enhancement == "true"),  # Default to False for uploads
+                osint_comparison=False,  # Default to false for uploads
+            )
 
         # Fresh record first, so the thread's own updates land after it
         try:
@@ -4369,34 +4348,13 @@ async def generate_from_blog(
         bundle = getattr(request.app.state, "bundle", None)
         report_actor = extraction_data.get("group_name") or synthetic_group_name
 
-        # Process in background thread
         def _bg():
-            try:
-                # The report's atomic IOCs aren't tied to a technique: one sweep per SIEM
-                from archer.build.ioc_sweep import write_ioc_sweeps
-
-                sweeps = write_ioc_sweeps(synthetic_group_name, iocs, url, GENERATE_DIR)
-                if sweeps:
-                    print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
-                manual_data = _report_manual_data(ttps, bundle, report_actor, url)
-            except Exception as e:
-                print(f"Error preparing blog generation: {e}")
-                write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
-                return
-            try:
-                modified_process_group_wrapper(
-                    synthetic_group_name,
-                    f"Generated from blog post: {url}",
-                    manual_data=manual_data,
-                    genai_mode="semantic" if not use_ai else "ai_generators",
-                    run_correlation=run_correlation,
-                )
-            except Exception as e:
-                print(f"Error processing blog analysis: {e}")
-                try:
-                    write_progress(synthetic_group_name, {"status": "failed", "error": str(e)})
-                except Exception:
-                    pass
+            _run_report_generation(
+                synthetic_group_name, ttps, iocs, url, bundle, report_actor,
+                f"Generated from blog post: {url}",
+                genai_mode="semantic" if not use_ai else "ai_generators",
+                run_correlation=run_correlation,
+            )
 
         # Fresh record first, so the thread's own updates land after it
         try:
@@ -5214,27 +5172,28 @@ async def generate_detections_from_profile(
             f"\nGenerating detections for {len(groups)} selected threat groups from {domain} profile..."
         )
 
-        # Use the first group as primary (for progress tracking)
-        primary_group = groups[0]
-
-        # Start background generation for all selected groups
+        # Groups run one after another; the progress page follows each in turn
         def _generate_bg():
-            try:
-                for group in groups:
-                    print(f"Generating detections for: {group}")
+            for group in groups:
+                print(f"Generating detections for: {group}")
+                try:
                     result = process_group(group, run_correlation=should_correlate)
                     print(f"Generated detections for {group}: {result}")
-            except Exception as e:
-                print(f"Error generating detections: {e}")
-                import traceback
+                except Exception as e:
+                    import traceback
 
-                traceback.print_exc()
+                    traceback.print_exc()
+                    write_progress(group, {"status": "failed", "error": str(e)})
 
         import threading
 
-        # Fresh record before the thread starts: the page must not read the primary
-        # group's previous run (which would show it complete and redirect to old results)
-        start_progress(primary_group, {"stage": "queued", "created_yaml": 0, "source_type": "profile"})
+        # A fresh record for every group before the thread starts: the page must not read
+        # a group's previous run (it would show it complete and move on)
+        for position, group in enumerate(groups):
+            start_progress(group, {
+                "stage": "queued", "created_yaml": 0, "source_type": "profile",
+                **({"current_step": f"Queued behind {groups[position - 1]}"} if position else {}),
+            })
         threading.Thread(target=_generate_bg, daemon=True).start()
 
         # Return progress redirect
@@ -5245,7 +5204,7 @@ async def generate_detections_from_profile(
         return JSONResponse(
             {
                 "success": True,
-                "redirect_url": f"/progress?group_name={primary_group}",
+                "redirect_url": "/progress?" + urlencode({"group_name": groups[0], "queue": ",".join(groups)}),
                 "message": f"Generating detections for: {group_list}",
                 "groups": groups,
             }
@@ -5256,6 +5215,42 @@ async def generate_detections_from_profile(
 
         traceback.print_exc()
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+def _run_report_generation(group, ttps, iocs, source, bundle, actor, description, **kwargs):
+    """
+    Background job for an uploaded file or blog post: IOC sweeps, then the techniques.
+
+    The sweep count goes into the progress record, so a run with IOCs but no techniques
+    finishes as a success rather than "nothing generated".
+    """
+    from archer.build.ioc_sweep import write_ioc_sweeps
+
+    try:
+        # The report's atomic IOCs aren't tied to a technique: one sweep per SIEM
+        sweeps = write_ioc_sweeps(group, iocs, source, GENERATE_DIR)
+        if sweeps:
+            print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
+        write_progress(group, {"ioc_sweeps": len(sweeps)})
+        if not ttps:
+            write_progress(group, {
+                "status": "complete", "phase": "complete", "created_yaml": 0, "total_yaml": 0,
+                **({} if sweeps else {"error": "No techniques were selected and none of the IOCs could be swept for."}),
+            })
+            return
+        manual_data = _report_manual_data(ttps, bundle, actor, source)
+    except Exception as e:
+        print(f"Error preparing report generation: {e}")
+        write_progress(group, {"status": "failed", "error": str(e)})
+        return
+    try:
+        modified_process_group_wrapper(group, description, manual_data=manual_data, **kwargs)
+    except Exception as e:
+        print(f"Error processing report: {e}")
+        try:
+            write_progress(group, {"status": "failed", "error": str(e)})
+        except Exception:
+            pass
 
 
 def _report_manual_data(ttps, bundle, actor: str, source: str) -> list:
