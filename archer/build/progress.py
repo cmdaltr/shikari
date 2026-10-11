@@ -49,6 +49,11 @@ def write_progress(group_name: str, data: Dict[str, Any]):
 
                 # Merge new data into existing (new data takes precedence)
                 merged = {**existing, **data}
+                # Stamp each phase's start, so the progress page can show real elapsed times
+                phase = data.get("phase")
+                if phase and phase != existing.get("phase"):
+                    merged.setdefault("phase_started", {})
+                    merged["phase_started"] = {**merged["phase_started"], phase: time.time()}
 
                 # DEBUG LOGGING: Track what's being written
                 if "processed" in data or "processed" in existing:
@@ -86,6 +91,30 @@ def write_progress(group_name: str, data: Dict[str, Any]):
             print(f"⚠️  Progress write error for '{group_name}': {e}")
             import traceback
             traceback.print_exc()
+
+
+def start_progress(group_name: str, data: Dict[str, Any]):
+    """
+    Begin a run's progress record afresh.
+
+    write_progress merges into the existing record, so a previous run's correlation
+    counters would otherwise show on the next run's progress page. Call this before
+    starting the run's background thread, so the thread's own updates land after it.
+    """
+    path = progress_path(group_name)
+    lock_path = path + ".lock"
+    now = time.time()
+    record = {"status": "started", "phase": "preparing", "started_at": now,
+              "phase_started": {"preparing": now}, **data}
+    with open(lock_path, "w") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            temp_path = path + ".tmp"
+            with open(temp_path, "w", encoding="utf-8") as fh:
+                json.dump(record, fh, indent=2)
+            os.replace(temp_path, path)
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def read_progress(group_name: str) -> Dict[str, Any]:

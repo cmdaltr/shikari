@@ -450,104 +450,66 @@ body, html {
   box-sizing: border-box;
 }
 
-/* Progress Bars - Modern style matching progress.css */
-.progress-bar {
-  width: 100%;
-  background: #e9ecef;
-  border-radius: 8px;
-  overflow: hidden;
-  height: 48px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+/* Progress cards: one per phase. data-state is waiting | active | done | failed */
+.pg-card {
+  --pg-accent: #2e7d32;
+  --pg-track: #e9ecef;
+  background: white;
+  border-radius: 16px;
+  padding: 24px 28px 22px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+  transition: opacity .3s;
 }
-
-.progress-fill {
-  height: 100%;
-  width: 0%;
-  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 0.5em;
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 500;
-  will-change: width;
+.pg-card.correlation { --pg-accent: #1565c0; }
+.pg-card[data-state="waiting"] { opacity: .55; }
+.pg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pg-title { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 24px; font-weight: 600; color: #1a1a1a; }
+.pg-title svg { width: 28px; height: 28px; stroke: var(--pg-accent); flex-shrink: 0; }
+.pg-badge {
+  font-size: 13px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 999px; background: #f1f3f5; color: #6c757d;
 }
-
-.progress-fill.yaml {
-  background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
+.pg-card[data-state="active"] .pg-badge { background: color-mix(in srgb, var(--pg-accent) 12%, white); color: var(--pg-accent); }
+.pg-card[data-state="done"] .pg-badge { background: #e8f5e9; color: #2e7d32; }
+.pg-card[data-state="failed"] .pg-badge { background: #fdecea; color: #c62828; }
+.pg-figures { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 0 10px; }
+.pg-pct { font-size: 40px; font-weight: 700; line-height: 1; color: #1a1a1a; font-variant-numeric: tabular-nums; }
+.pg-count { font-size: 16px; color: #495057; font-variant-numeric: tabular-nums; }
+.pg-track {
+  position: relative; height: 28px; border-radius: 14px; overflow: hidden;
+  background: var(--pg-track); box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
 }
-
-.progress-fill.genai {
-  background: linear-gradient(90deg, #2196f3 0%, #1976d2 100%);
+.pg-fill {
+  height: 100%; width: 0; border-radius: inherit; background: var(--pg-accent);
+  transition: width .6s cubic-bezier(.4,0,.2,1);
 }
-
-.progress-fill.cross-vendor {
-  background: linear-gradient(90deg, #e91e63 0%, #c2185b 100%);
+/* Moving sheen while work is under way, so a slow step still looks alive */
+.pg-card[data-state="active"] .pg-fill {
+  background-image: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.28) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: pg-sheen 1.6s linear infinite;
 }
-
-.progress-fill.complete {
-  width: 100% !important;
+/* No total yet: an indeterminate sweep instead of a fake percentage */
+.pg-card.is-indeterminate .pg-fill { width: 30% !important; animation: pg-sweep 1.4s ease-in-out infinite; }
+@keyframes pg-sheen { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@keyframes pg-sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }
+.pg-foot { display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; font-size: 15px; color: #6c757d; min-height: 1.4em; }
+.pg-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-detail strong { color: #2e7d32; }
+.pg-detail .pg-error { color: #c62828; font-weight: 600; }
+.pg-time { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  .pg-fill, .pg-card[data-state="active"] .pg-fill, .pg-card.is-indeterminate .pg-fill { animation: none; transition: none; }
 }
-
-/* Cross-vendor section greyed out state */
-#cross-vendor-section.disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-#cross-vendor-section.disabled h3 {
-  color: #999;
-}
-
-#cross-vendor-section.disabled .progress-bar {
-  background: #f0f0f0;
-}
-
-#cross-vendor-section.disabled .progress-fill {
-  background: #ccc !important;
-}
-
-/* Progress section icons */
-.progress-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-  vertical-align: middle;
-}
-
-.progress-icon.detection {
-  background: transparent;
-}
-
-.progress-icon.correlation {
-  background: transparent;
-}
-
-.progress-icon.cross-vendor {
-  background: transparent;
-}
-
-.progress-icon svg {
-  width: 28px;
-  height: 28px;
-}
-
-.progress-icon.detection svg {
-  stroke: #4caf50;
-}
-
-.progress-icon.correlation svg {
-  stroke: #2196f3;
-}
-
-.progress-icon.cross-vendor svg {
-  stroke: #e91e63;
-}
+[data-theme="dark"] .pg-card { background: var(--bg-secondary); box-shadow: 0 2px 8px var(--shadow); --pg-track: #2a2f35; }
+[data-theme="dark"] .pg-card.detection { --pg-accent: #4caf50; }
+[data-theme="dark"] .pg-card.correlation { --pg-accent: #42a5f5; }
+[data-theme="dark"] .pg-title, [data-theme="dark"] .pg-pct { color: var(--text-primary, #e8e8e8); }
+[data-theme="dark"] .pg-count { color: var(--text-secondary, #b0b0b0); }
+[data-theme="dark"] .pg-badge { background: #2a2f35; color: #9aa0a6; }
+[data-theme="dark"] .pg-card[data-state="active"] .pg-badge { background: color-mix(in srgb, var(--pg-accent) 20%, transparent); }
+[data-theme="dark"] .pg-card[data-state="done"] .pg-badge { background: rgba(76,175,80,.18); color: #81c784; }
 
 /* Loading Indicator - Full Page Overlay */
 .loading-indicator {
@@ -630,65 +592,48 @@ body, html {
       </div>
     </div>
 
-    <!-- Progress Sections -->
-    <div class="detection-section">
-      <div class="detection-header">
-        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 600; color: #1a1a1a;">
-          <div class="progress-icon detection">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
-            </svg>
-          </div>
+    <!-- Progress: detections, then correlations. Driven by static/js/progress.js -->
+    <section class="pg-card detection" id="pg-detection" data-state="waiting">
+      <div class="pg-head">
+        <h3 class="pg-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
           Detections
         </h3>
+        <span class="pg-badge">Waiting</span>
       </div>
-      <div class="progress-bar">
-        <div class="progress-fill yaml" id="yaml-progress"></div>
+      <div class="pg-figures">
+        <span class="pg-pct">0%</span>
+        <span class="pg-count"></span>
       </div>
-      <div id="last-yaml-file" aria-live="polite" style="margin-top: 12px; color: #666;"></div>
-    </div>
+      <div class="pg-track" role="progressbar" aria-label="Detections" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="pg-fill" id="yaml-progress"></div>
+      </div>
+      <div class="pg-foot">
+        <span class="pg-detail" id="last-yaml-file" aria-live="polite"></span>
+        <span class="pg-time"></span>
+      </div>
+    </section>
 
-    <div class="detection-section">
-      <div class="detection-header">
-        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 600; color: #1a1a1a;">
-          <div class="progress-icon correlation">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="18" cy="5" r="3"/>
-              <circle cx="6" cy="12" r="3"/>
-              <circle cx="18" cy="19" r="3"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-          </div>
+    <section class="pg-card correlation" id="pg-correlation" data-state="waiting">
+      <div class="pg-head">
+        <h3 class="pg-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           Correlations
         </h3>
+        <span class="pg-badge">Waiting</span>
       </div>
-      <div class="progress-bar">
-        <div class="progress-fill genai" id="genai-progress"></div>
+      <div class="pg-figures">
+        <span class="pg-pct">0%</span>
+        <span class="pg-count"></span>
       </div>
-      <div id="last-correlation" aria-live="polite" style="margin-top: 12px; color: #666;"></div>
-    </div>
-
-    <div class="detection-section disabled" id="cross-vendor-section">
-      <div class="detection-header">
-        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 600; color: #1a1a1a;">
-          <div class="progress-icon cross-vendor">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2">
-              <path d="M3 16 L3 19 L21 19 L21 16"/>
-              <path d="M6 16 L6 10"/>
-              <path d="M12 16 L12 6"/>
-              <path d="M18 16 L18 10"/>
-              <path d="M2 19 L22 19" stroke-width="2.5"/>
-            </svg>
-          </div>
-          Cross-vendor
-        </h3>
+      <div class="pg-track" role="progressbar" aria-label="Correlations" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="pg-fill" id="genai-progress"></div>
       </div>
-      <div class="progress-bar">
-        <div class="progress-fill cross-vendor" id="cross-vendor-progress"></div>
+      <div class="pg-foot">
+        <span class="pg-detail" id="last-correlation" aria-live="polite"></span>
+        <span class="pg-time"></span>
       </div>
-      <div id="last-cross-vendor" aria-live="polite" style="margin-top: 12px; color: #666;">Coming Soon</div>
-    </div>
+    </section>
 
   </div>
 
@@ -841,7 +786,7 @@ if (downloadAllBtn) {
   });
 
   // Observe all progress bars
-  const progressBars = document.querySelectorAll('.progress-fill');
+  const progressBars = document.querySelectorAll('.pg-fill');
   progressBars.forEach(bar => {
     observer.observe(bar, { attributes: true });
   });

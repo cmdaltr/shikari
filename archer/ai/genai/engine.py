@@ -1051,7 +1051,8 @@ def generate_correlations(group_name: str, yaml_dir: str, progress_prefix: str =
         # print(f"GenAI: Found {len(files)} YAML files for {group_name}")
         write_progress(
             group_name,
-            {"status": "genai_started", "total_files": len(files), "processed": 0},
+            {"status": "genai_started", "step": "loading", "total_files": len(files),
+             "processed": 0, "total_pairs": 0},
         )
 
         # If configured to use a local model, attempt it and gracefully fallback
@@ -1096,8 +1097,8 @@ def generate_correlations(group_name: str, yaml_dir: str, progress_prefix: str =
             group_name,
             {
                 "status": "genai_complete",
+                "step": "done",
                 "vendor_count": len(results.get("vendor_correlations", [])),
-                "cross_count": 0,  # Always 0 now
             },
         )
         return results
@@ -1919,7 +1920,8 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
     vendor_pair_counts = {}
     MAX_PAIRS_PER_VENDOR = 10000
 
-    for v, paths in by_vendor.items():
+    # Count the merged groups the loop below pairs, so the bar reaches 100% exactly
+    for v, paths in by_vendor_merged.items():
         if v.lower() not in CORRELATION_VENDORS or len(paths) < 2:
             continue
 
@@ -1939,10 +1941,12 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
         group_name,
         {
             "status": "genai_processing",
+            "step": "pairing",
             "total_pairs": total_pairs_all_vendors,
             "processed": 0,
         },
     )
+    last_report = time.monotonic()
 
     # Generate vendor correlations (files from same vendor)
     vendor_corr = []
@@ -2011,6 +2015,20 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                 # Increment pairs_evaluated for every pair we look at
                 pairs_evaluated += 1
                 cumulative_count += 1
+
+                # Report on a timer: later filters skip pairs with `continue`, and a
+                # file write per pair would slow the loop down
+                if time.monotonic() - last_report >= 0.4:
+                    last_report = time.monotonic()
+                    write_progress(
+                        group_name,
+                        {
+                            "status": "genai_processing",
+                            "step": "pairing",
+                            "total_pairs": total_pairs_all_vendors,
+                            "processed": cumulative_count,
+                        },
+                    )
 
                 # For merged groups, use the first file as representative
                 # (In production, you'd want to combine queries intelligently)
@@ -2097,20 +2115,6 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                 if skip_pair and skip_reason:
                     filter_stats[skip_reason] += 1
 
-                # Update progress periodically with cumulative count (every 10 pairs evaluated)
-                if cumulative_count % 10 == 0:
-                    # print(
-                    #     f"GenAI: Evaluated {cumulative_count} pairs total ({count} kept for vendor '{v}')"
-                    # )
-                    write_progress(
-                        group_name,
-                        {
-                            "status": "genai_processing",
-                            "total_pairs": total_pairs_all_vendors,
-                            "processed": cumulative_count,
-                        },
-                    )
-
                 # Skip pair if filtered out
                 if skip_pair:
                     continue
@@ -2165,6 +2169,16 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
     # print(f"GenAI: Total correlations before filtering: {len(vendor_corr)}")
 
+    write_progress(
+        group_name,
+        {
+            "status": "genai_processing",
+            "step": "scoring",
+            "total_pairs": total_pairs_all_vendors,
+            "processed": cumulative_count,
+        },
+    )
+
     # Score correlations but don't filter aggressively
     # MODIFIED: Reduced filtering to allow more correlations through
     if vendor_corr:
@@ -2197,11 +2211,12 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
         vendor_corr = filtered_corr
 
-    # Send final progress update with complete count
+    # Pairing is done; grouping and writing the results file remain
     write_progress(
         group_name,
         {
-            "status": "genai_complete",
+            "status": "genai_processing",
+            "step": "grouping",
             "total_pairs": total_pairs_all_vendors,
             "processed": cumulative_count,
         },

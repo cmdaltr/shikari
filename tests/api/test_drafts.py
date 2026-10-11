@@ -39,12 +39,3 @@ class TestManualYAML:
         }, allow_redirects=False)
         assert r.status_code in [200, 302, 303, 400, 401, 422]
 
-
-class TestCompleteYAML:
-    """POST /complete_yaml auto-completes partial YAML."""
-
-    def test_complete_partial_yaml(self, api, ensure_running):
-        r = api.post("/complete_yaml", json={
-            "yaml_content": "title: Incomplete\ntechnique_id: T1059.001",
-        })
-        assert r.status_code in [200, 401, 422]

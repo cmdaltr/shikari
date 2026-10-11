@@ -278,7 +278,6 @@ The API test suite covers every endpoint in Archer:
 | `GET /list_drafts` | `test_drafts.py` | List drafts |
 | `GET /manual` | `test_drafts.py` | Manual editor |
 | `POST /manual_submit` | `test_drafts.py` | Submit YAML |
-| `POST /complete_yaml` | `test_drafts.py` | Auto-complete |
 | `GET /library` | `test_library.py` | Library page |
 | `GET /api/library/detections` | `test_library.py` | List detections |
 | `POST /api/library/search` | `test_library.py` | Search |

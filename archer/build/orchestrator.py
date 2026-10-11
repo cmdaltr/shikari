@@ -35,6 +35,23 @@ def safe_progress_update(group_name, status_data):
         traceback.print_exc()
 
 
+def _report_technique(group_name, technique_id, technique_name):
+    """Name the technique being built, for the progress page."""
+    label = technique_id if not technique_name or technique_name == technique_id else f"{technique_id} {technique_name}"
+    safe_progress_update(group_name, {"current_technique": label})
+
+
+def _report_detections(group_name, processed, created, total):
+    safe_progress_update(group_name, {
+        "status": "creating_yamls",
+        "phase": "detections",
+        "stage": "yaml",
+        "processed_yaml": processed,
+        "created_yaml": created,
+        "total_yaml": total,
+    })
+
+
 def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None):
     global _dry_run_active
     _dry_run_active = dry_run
@@ -61,7 +78,8 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
     # existing record, so clear fields a previous run may have left behind.
     safe_progress_update(
         group_name,
-        {"status": "started", "stage": "init", "created_yaml": 0, "total_yaml": None, "error": None},
+        {"status": "started", "phase": "preparing", "stage": "init", "created_yaml": 0,
+         "processed_yaml": 0, "total_yaml": None, "current_technique": None, "error": None},
     )
 
     # Fail the whole run up front: compile_query loads mappings per technique and
@@ -86,11 +104,14 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             group_name,
             {
                 "status": "creating_yamls",
+                "phase": "detections",
                 "stage": "yaml",
                 "created_yaml": 0,
+                "processed_yaml": 0,
                 "total_yaml": total,
             },
         )
+        processed = 0
 
         created = 0
         for entry in manual_data:
@@ -156,24 +177,18 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                                                    or f"Detection for {technique}")
 
                 # Build detection queries and YAML
+                _report_technique(group_name, technique, retrieved_data["technique"])
                 try:
                     compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
                     created += 1
-                    safe_progress_update(
-                        group_name,
-                        {
-                            "status": "creating_yamls",
-                            "stage": "yaml",
-                            "created_yaml": created,
-                            "total_yaml": total,
-                        },
-                    )
                 except Exception as e:
                     import traceback
                     print(f"❌ Error processing technique {technique}: {e}")
                     traceback.print_exc()
                     # Continue to next technique instead of failing completely
-                    continue
+                # Failed techniques count as processed: the bar tracks work done, not successes
+                processed += 1
+                _report_detections(group_name, processed, created, total)
 
     else:
         # retrieve group id based on group name provided
@@ -195,11 +210,14 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             group_name,
             {
                 "status": "creating_yamls",
+                "phase": "detections",
                 "stage": "yaml",
                 "created_yaml": 0,
+                "processed_yaml": 0,
                 "total_yaml": total,
             },
         )
+        processed = 0
 
         for procedure in procedures:
             retrieved_data["technique_id"] = procedure[0]
@@ -220,24 +238,17 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 retrieved_data["technique_description"] = procedure[9]
                 retrieved_data["technique_platforms"] = procedure[10]
 
+            _report_technique(group_name, procedure[0], procedure[1])
             try:
                 compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
                 created += 1
-                safe_progress_update(
-                    group_name,
-                    {
-                        "status": "creating_yamls",
-                        "stage": "yaml",
-                        "created_yaml": created,
-                        "total_yaml": total,
-                    },
-                )
             except Exception as e:
                 import traceback
                 print(f"❌ Error processing procedure {procedure[0]} ({procedure[1]}): {e}")
                 traceback.print_exc()
                 # Continue to next procedure instead of failing completely
-                continue
+            processed += 1
+            _report_detections(group_name, processed, created, total)
 
     if dry_run:
         _dry_run_active = False
@@ -249,8 +260,12 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
     # After YAMLs are created, run the GenAI correlation generator only if requested and YAMLs exist
     if run_correlation and created > 0:
         try:
+            # Only the backend moves the run to correlations, once every technique is done
             safe_progress_update(group_name, {
                 "status": "genai_starting",
+                "phase": "correlations",
+                "step": "starting",
+                "current_technique": None,
                 "created_yaml": created,
                 "total_yaml": total,
             })
@@ -259,6 +274,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             generate_correlations(group_name, yaml_dir)
 
             # Generate attack flow visualizations
+            safe_progress_update(group_name, {"status": "building_flows", "phase": "finalising"})
             try:
                 from archer.visualization.attack_flow import generate_all_correlation_flows, generate_actor_flow
 
@@ -308,6 +324,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
             safe_progress_update(group_name, {
                 "status": "complete",
+                "phase": "complete",
                 "created_yaml": created,
                 "total_yaml": total,
             })
@@ -315,14 +332,19 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             print(f"Correlation error: {e}")
             import traceback
             traceback.print_exc()
+            # The detections are still good: finish the run and say correlation failed
             safe_progress_update(group_name, {
-                "status": "genai_failed",
+                "status": "complete",
+                "phase": "complete",
+                "correlation_error": str(e),
                 "created_yaml": created,
                 "total_yaml": total,
             })
     else:
         safe_progress_update(group_name, {
             "status": "complete",
+            "phase": "complete",
+            "current_technique": None,
             "created_yaml": created,
             "total_yaml": total,
         })

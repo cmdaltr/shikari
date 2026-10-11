@@ -107,14 +107,42 @@ def _progress_status(page):
     return (resp.json() or {}).get("progress") if resp.ok else None
 
 
+_BAR_VALUES = """() => ['yaml-progress', 'genai-progress'].map(id => {
+    const fill = document.getElementById(id);
+    const track = fill && fill.closest('[role=progressbar]');
+    return track ? Number(track.getAttribute('aria-valuenow')) : null;
+})"""
+
+
+def check_progress_bars(page, seen):
+    """Correlations must not move before detections finish, and neither bar may go back."""
+    if "/progress" not in page.url:
+        return
+    try:
+        det, corr = page.evaluate(_BAR_VALUES)
+    except Exception:
+        return  # navigating to results
+    if det is None or corr is None:
+        return
+    if corr > 0 and det < 100:
+        raise RuntimeError(f"correlation bar at {corr}% while detections at {det}%")
+    if seen and (det < seen[-1][0] or corr < seen[-1][1]):
+        raise RuntimeError(f"progress bar went backwards: {seen[-1]} -> {(det, corr)}")
+    seen.append((det, corr))
+
+
 def wait_for_results(page, label):
     deadline = time.time() + GEN_TIMEOUT
     last = ""
+    seen = []
     while time.time() < deadline:
         url = page.url
         if "/results" in url:
             page.wait_for_load_state("domcontentloaded")
+            if seen:
+                caption(page, f"{label} — progress bars: {len(seen)} samples, in order, never backwards")
             return url
+        check_progress_bars(page, seen)
         if url != last:
             last = url
             caption(page, f"{label} — generating… ({url.replace(BASE, '')})")
@@ -142,7 +170,7 @@ def wait_for_results(page, label):
                 shown = "PAGE STILL WAITING"
             shot(page, "progress_empty")
             raise RuntimeError(f"run completed with no detections ({shown})")
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(1000)
     raise TimeoutError(f"no /results after {GEN_TIMEOUT}s (stuck on {page.url})")
 
 

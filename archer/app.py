@@ -29,7 +29,6 @@ from archer.mitre import (
 )
 from archer.mitre.enterprise import check_group_in_mitre
 from archer.build.orchestrator import process_group
-from archer.ai.genai import process_genai
 from datetime import datetime
 import os
 import json
@@ -39,7 +38,7 @@ import re
 import html
 from urllib.parse import quote
 import yaml
-from archer.build.progress import read_progress, write_progress
+from archer.build.progress import read_progress, start_progress, write_progress
 from archer.config import (
     GENERATE_DIR,
     CORRELATE_DIR,
@@ -2649,7 +2648,6 @@ async def generate(
     ai_provider: str = Form(None),
     ai_model: str = Form(None),
     run_correlation: str = Form(None),
-    cross_vendor_correlation: str = Form(None),
     run_emulation: str = Form(None),
     emulation_mode: str = Form("simulate"),
     vectr_export: str = Form(None),
@@ -2849,21 +2847,20 @@ async def generate(
                 except Exception:
                     pass
 
-        threading.Thread(target=_bg, daemon=True).start()
-        # Initialize a progress file so the front-end has something to poll
+        # Fresh record first, so the thread's own updates land after it
         try:
-            write_progress(
+            start_progress(
                 group_name,
                 {
                     "status": "started",
                     "stage": "queued",
                     "created_yaml": 0,
-                    "cross_vendor_enabled": (cross_vendor_correlation == "true"),
                     "auto_validate_enabled": (auto_validate == "true"),
                 },
             )
         except Exception:
             pass
+        threading.Thread(target=_bg, daemon=True).start()
         return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}"})
     else:
         # Group not in ATT&CK - search blogs automatically
@@ -2968,9 +2965,10 @@ async def generate_cve(
                 group_name,
                 {
                     "status": "researching_cve",
+                    "phase": "preparing",
                     "stage": "CVE Research",
                     "created_yaml": 0,
-                    "total_yaml": len(cve_ids),
+                    "total_yaml": None,
                 },
             )
 
@@ -3197,11 +3195,9 @@ async def generate_cve(
             except Exception:
                 pass
 
-    threading.Thread(target=_bg, daemon=True).start()
-
-    # Initialize progress
+    # Fresh record first, so the thread's own updates land after it
     try:
-        write_progress(
+        start_progress(
             group_name,
             {
                 "status": "started",
@@ -3214,6 +3210,7 @@ async def generate_cve(
         )
     except Exception:
         pass
+    threading.Thread(target=_bg, daemon=True).start()
 
     return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}"})
 
@@ -3303,9 +3300,10 @@ async def hunt_technique(
                 group_name,
                 {
                     "status": "researching_techniques",
+                    "phase": "preparing",
                     "stage": "Technique Research",
                     "created_yaml": 0,
-                    "total_yaml": len(technique_id_list),
+                    "total_yaml": None,
                 },
             )
 
@@ -3381,11 +3379,9 @@ async def hunt_technique(
             except Exception:
                 pass
 
-    threading.Thread(target=_bg, daemon=True).start()
-
-    # Initialize progress
+    # Fresh record first, so the thread's own updates land after it
     try:
-        write_progress(
+        start_progress(
             group_name,
             {
                 "status": "started",
@@ -3398,6 +3394,7 @@ async def hunt_technique(
         )
     except Exception:
         pass
+    threading.Thread(target=_bg, daemon=True).start()
 
     return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}"})
 
@@ -3645,11 +3642,12 @@ async def manual_submit(
             except Exception:
                 pass
 
-    threading.Thread(target=_bg_manual, daemon=True).start()
+    # Fresh record first, so the thread's own updates land after it
     try:
-        write_progress(group_name, {"status": "started", "stage": "queued", "created_yaml": 0})
+        start_progress(group_name, {"status": "started", "stage": "queued", "created_yaml": 0})
     except Exception:
         pass
+    threading.Thread(target=_bg_manual, daemon=True).start()
 
     # Redirect user to progress page
     return RedirectResponse(url=f"/progress?group_name={quote(group_name)}", status_code=303)
@@ -3748,67 +3746,6 @@ async def get_threat_groups(query: str = ""):
     return JSONResponse({"ok": True, "groups": unique_groups[:10]})
 
 
-# Add this function to explicitly start the GenAI processing after YAML generation
-def start_genai_processing(group_name):
-    """
-    Helper function to start GenAI processing explicitly after YAML generation completes.
-    This ensures proper transition between phases.
-    """
-    # Update progress to mark YAML generation as complete
-    progress_data = read_progress(group_name) or {}
-
-    # Make sure created_yaml equals total_yaml to show 100% completion
-    if "total_yaml" in progress_data and progress_data.get("total_yaml", 0) > 0:
-        progress_data["created_yaml"] = progress_data["total_yaml"]
-    else:
-        # If total_yaml is not set, set both to ensure 100% progress
-        progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
-        progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
-
-    # Mark status as transitioning to GenAI
-    progress_data["status"] = "genai_starting"
-    write_progress(group_name, progress_data)
-
-    # Start the actual GenAI processing
-    try:
-        import importlib.util
-
-        spec = importlib.util.find_spec("archer.build.genai")
-        if spec:
-            genai_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(genai_module)
-
-            # Start GenAI processing in a new thread
-            def _bg_genai():
-                try:
-                    # Call the appropriate GenAI processing function
-                    if hasattr(genai_module, "process_genai"):
-                        # This is where GenAI correlation starts (dynamically loaded)
-                        genai_module.process_genai(group_name)
-                    elif hasattr(genai_module, "process"):
-                        # Alternative entry point for GenAI processing
-                        genai_module.process(group_name)
-                    else:
-                        print(f"Warning: GenAI module loaded but no process function found")
-                        # Update progress to show GenAI is complete (fallback)
-                        progress_data = read_progress(group_name) or {}
-                        progress_data["status"] = "genai_complete"
-                        write_progress(group_name, progress_data)
-                except Exception as e:
-                    print(f"Error in GenAI processing: {e}")
-                    # Mark as failed
-                    try:
-                        progress_data = read_progress(group_name) or {}
-                        progress_data["status"] = "failed"
-                        write_progress(group_name, progress_data)
-                    except:
-                        pass
-
-            threading.Thread(target=_bg_genai, daemon=True).start()
-    except Exception as e:
-        print(f"Error starting GenAI: {e}")
-
-
 # Modify the orchestrator process to ensure completion
 def modified_process_group_wrapper(
     group_name,
@@ -3904,7 +3841,7 @@ def modified_process_group_wrapper(
                         user_id=user_id,
                         activity_type="correlate",
                         title=title,
-                        description=f"Generated {detection_count} detections and {correlation_count} cross-vendor correlations",
+                        description=f"Generated {detection_count} detections and {correlation_count} correlations",
                         metadata={
                             "detection_count": detection_count,
                             "correlation_count": correlation_count,
@@ -3917,13 +3854,9 @@ def modified_process_group_wrapper(
 
             # Mark as complete (IMPORTANT: Set status to "complete" for correlations too)
             progress_data = read_progress(group_name) or {}
-            if "total_yaml" in progress_data:
-                progress_data["created_yaml"] = progress_data["total_yaml"]
-            else:
-                progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
-                progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
-
             progress_data["status"] = "complete"
+            progress_data["phase"] = "complete"
+            progress_data["current_technique"] = None
             progress_data["duration"] = duration_seconds
             # print(f"✅ Setting progress status to 'complete' for {group_name} (correlations finished)")
             # print(f"   Progress data: created_yaml={progress_data.get('created_yaml')}, total_yaml={progress_data.get('total_yaml')}, processed={progress_data.get('processed')}, total_pairs={progress_data.get('total_pairs')}")
@@ -3932,13 +3865,9 @@ def modified_process_group_wrapper(
 
         # Otherwise, just mark as complete
         progress_data = read_progress(group_name) or {}
-        if "total_yaml" in progress_data:
-            progress_data["created_yaml"] = progress_data["total_yaml"]
-        else:
-            progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
-            progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
-
         progress_data["status"] = "complete"
+        progress_data["phase"] = "complete"
+        progress_data["current_technique"] = None
         progress_data["duration"] = duration_seconds
         write_progress(group_name, progress_data)
 
@@ -3982,60 +3911,6 @@ def modified_process_group_wrapper(
             write_progress(group_name, {"status": "failed", "error": str(e)})
         except:
             pass
-
-
-# Add a new endpoint to handle completion signals from the frontend
-@app.post("/complete_yaml")
-async def complete_yaml(request: Request, group_name: str = ""):
-    """Handle explicit completion signal from frontend when YAML progress reaches 100%."""
-    if not group_name:
-        return JSONResponse({"ok": False, "error": "group_name required"}, status_code=400)
-
-    # Fetch current progress
-    progress_data = read_progress(group_name) or {}
-
-    # Only proceed if we're not already in GenAI phase
-    if progress_data.get("status") not in [
-        "genai_started",
-        "genai_starting",
-        "genai_processing",
-        "genai_complete",
-    ]:
-        # Ensure YAML progress shows as complete
-        if "total_yaml" in progress_data:
-            progress_data["created_yaml"] = progress_data["total_yaml"]
-        else:
-            progress_data["created_yaml"] = progress_data.get("created_yaml", 10)
-            progress_data["total_yaml"] = progress_data.get("created_yaml", 10)
-
-        # Mark as ready for GenAI (but preserve any existing GenAI progress fields)
-        progress_data["status"] = "genai_starting"
-        write_progress(group_name, progress_data)
-
-        # Start GenAI processing in a background thread
-        try:
-
-            def _bg_genai():
-                try:
-                    print(f"Starting GenAI correlation for {group_name} in background thread")
-                    process_genai(group_name)
-                    print(f"GenAI correlation for {group_name} completed")
-                except Exception as e:
-                    print(f"Error in GenAI processing: {e}")
-                    try:
-                        progress_data = read_progress(group_name) or {}
-                        progress_data["status"] = "failed"
-                        write_progress(group_name, progress_data)
-                    except:
-                        pass
-
-            thread = threading.Thread(target=_bg_genai, daemon=True)
-            thread.start()
-            print(f"Started background thread for GenAI processing: {thread.name}")
-        except Exception as e:
-            print(f"Error starting GenAI: {e}")
-
-    return JSONResponse({"ok": True})
 
 
 @app.post("/upload")
@@ -4289,11 +4164,9 @@ async def generate_from_upload(
                 except Exception:
                     pass
 
-        threading.Thread(target=_bg, daemon=True).start()
-
-        # Initialize progress
+        # Fresh record first, so the thread's own updates land after it
         try:
-            write_progress(
+            start_progress(
                 synthetic_group_name,
                 {
                     "status": "processing",
@@ -4304,6 +4177,7 @@ async def generate_from_upload(
             )
         except Exception:
             pass
+        threading.Thread(target=_bg, daemon=True).start()
 
         return JSONResponse(
             {
@@ -4524,11 +4398,9 @@ async def generate_from_blog(
                 except Exception:
                     pass
 
-        threading.Thread(target=_bg, daemon=True).start()
-
-        # Initialize progress
+        # Fresh record first, so the thread's own updates land after it
         try:
-            write_progress(
+            start_progress(
                 synthetic_group_name,
                 {
                     "status": "processing",
@@ -4539,6 +4411,7 @@ async def generate_from_blog(
             )
         except Exception:
             pass
+        threading.Thread(target=_bg, daemon=True).start()
 
         return JSONResponse(
             {
@@ -5359,6 +5232,9 @@ async def generate_detections_from_profile(
 
         import threading
 
+        # Fresh record before the thread starts: the page must not read the primary
+        # group's previous run (which would show it complete and redirect to old results)
+        start_progress(primary_group, {"stage": "queued", "created_yaml": 0, "source_type": "profile"})
         threading.Thread(target=_generate_bg, daemon=True).start()
 
         # Return progress redirect
