@@ -344,27 +344,26 @@ def _call_anthropic(prompt: str, api_key: str, config: dict) -> str:
     """Call Anthropic Claude API."""
     import requests
 
-    model = config.get("model", "claude-sonnet-4-20250514")
+    model = config.get("model", "claude-sonnet-5-5")
     max_tokens = config.get("max_tokens", 4096)
     base_url = config.get("base_url", "https://api.anthropic.com")
 
-    resp = requests.post(
-        f"{base_url}/v1/messages",
-        headers={
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": model,
-            "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}],
-        },
-        timeout=180,
-    )
+    body = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+        # Newer models think by default and can spend the whole budget doing it
+        "thinking": {"type": "between_tools"},
+    }
+    headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
+    resp = requests.post(f"{base_url}/v1/messages", headers=headers, json=body, timeout=600)
+    if resp.status_code == 400 and "thinking" in resp.text:
+        body.pop("thinking")  # older models don't know "between_tools"
+        resp = requests.post(f"{base_url}/v1/messages", headers=headers, json=body, timeout=600)
     resp.raise_for_status()
     data = resp.json()
-    return data["content"][0]["text"]
+    # Newer models put thinking blocks before the text
+    return "".join(b.get("text", "") for b in data["content"] if b.get("type") == "text")
 
 
 def _call_openai(prompt: str, api_key: str, config: dict) -> str:
@@ -479,7 +478,13 @@ def _call_via_factory(prompt: str, config: dict) -> str:
         # Ollama's OpenAI endpoint cuts long prompts to 4096 tokens; size the context
         return _call_local(prompt, config["endpoint"], config)
     llm = create_llm(config)
-    return llm.generate(prompt, temperature=0.2, max_tokens=config.get("max_tokens", 4096)).content
+    if hasattr(llm, "think"):
+        llm.think = False
+    response = llm.generate(prompt, temperature=0.2, max_tokens=config.get("max_tokens", 4096))
+    if (response.metadata or {}).get("stop_reason") == "max_tokens":
+        print(f"  ⚠️  LLM answer hit the output limit ({config.get('max_tokens')} tokens) and is cut short; "
+              f"raise ARCHER_LLM_MAX_TOKENS")
+    return response.content
 
 
 def _call_local(prompt: str, endpoint: str, config: dict) -> str:

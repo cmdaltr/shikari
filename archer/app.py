@@ -9176,12 +9176,18 @@ async def get_timeline(request: Request):
     return {"timeline": []}
 
 
+KEY_MASK = "••••••••"
+
+
+def mask_api_key(value: str) -> str:
+    return KEY_MASK + (value[-4:] if len(value) > 8 else "") if value else ""
+
+
 @app.get("/api/profile/apikeys")
 async def get_api_keys(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
-    Get user's API keys (decrypted for display).
-
-    Requires authentication. Returns decrypted API keys for the logged-in user.
+    The user's saved keys, masked: only the last 4 characters reach the browser. A
+    masked value posted back unchanged leaves the stored key as it is.
     """
     # Check authentication
     auth_result = require_auth(request, archer_session)
@@ -9198,8 +9204,7 @@ async def get_api_keys(request: Request, archer_session: Optional[str] = Cookie(
         result = {}
         for key in api_keys:
             try:
-                decrypted_value = decrypt_api_key(key.encrypted_key)
-                result[key.platform] = decrypted_value
+                result[key.platform] = mask_api_key(decrypt_api_key(key.encrypted_key))
             except Exception as e:
                 logger.error(f"Failed to decrypt API key {key.platform}: {e}")
                 result[key.platform] = ""
@@ -9253,6 +9258,8 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
                 .first()
             )
 
+            if key_value.startswith(KEY_MASK):
+                continue  # the masked value the page was given: unchanged
             if not key_value:
                 if existing_key and clear_empty:
                     db.delete(existing_key)
@@ -9348,7 +9355,9 @@ async def probe_local_model(request: Request, archer_session: Optional[str] = Co
     user, db = auth_result
     try:
         body = await request.json()
-        key = body.get("api_key") or stored_keys(db, user.id).get("local", "")
+        key = body.get("api_key") or ""
+        if not key or key.startswith(KEY_MASK):
+            key = stored_keys(db, user.id).get("local", "")
     finally:
         db.close()
     return await asyncio.get_event_loop().run_in_executor(None, probe_local, body.get("endpoint", ""), key)

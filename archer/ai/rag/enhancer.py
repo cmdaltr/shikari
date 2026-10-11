@@ -40,7 +40,7 @@ class QueryEnhancer:
         """Get default model for provider."""
         defaults = {
             "openai": "gpt-4",
-            "anthropic": "claude-3-sonnet-20240229",
+            "anthropic": "claude-sonnet-5-5",
             "ollama": "llama2"
         }
         return defaults.get(self.llm_provider, "gpt-4")
@@ -203,7 +203,7 @@ Improved Query:"""
             ]
         )
 
-        enhanced_query = message.content[0].text.strip()
+        enhanced_query = "".join(b.text for b in message.content if b.type == "text").strip()
         return enhanced_query
 
     def _call_ollama(self, prompt: str) -> str:

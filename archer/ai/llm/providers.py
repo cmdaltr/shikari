@@ -45,13 +45,35 @@ class LLMProvider(ABC):
         pass
 
 
+def _create_message(client, kwargs: Dict):
+    """
+    messages.create, dropping the parameters a model refuses: newer models (Sonnet 5.5
+    on) reject temperature, older ones reject thinking type "between_tools".
+    """
+    import anthropic
+
+    for _ in range(3):
+        try:
+            return client.messages.create(**kwargs)
+        except anthropic.BadRequestError as e:
+            refused = [k for k in ("temperature", "thinking") if k in kwargs and k in str(e)]
+            if not refused:
+                raise
+            for key in refused:
+                kwargs.pop(key)
+    return client.messages.create(**kwargs)
+
+
 class AnthropicProvider(LLMProvider):
     """Anthropic Claude provider"""
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         import anthropic
         self.client = anthropic.Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
-        self.model = model or os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+        self.model = model or os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+        # False for long structured answers: newer models think by default and can spend
+        # the whole output budget thinking (a 116k-char detection prompt did, 16k tokens)
+        self.think = True
 
     def generate(
         self,
@@ -72,19 +94,23 @@ class AnthropicProvider(LLMProvider):
         if system_prompt:
             kwargs["system"] = system_prompt
 
-        response = self.client.messages.create(**kwargs)
+        if not self.think:
+            kwargs["thinking"] = {"type": "between_tools"}
+
+        response = _create_message(self.client, kwargs)
 
         tokens_used = response.usage.input_tokens + response.usage.output_tokens
 
         return LLMResponse(
-            content=response.content[0].text,
+            content="".join(b.text for b in response.content if b.type == "text"),  # thinking blocks come first on newer models
             model=self.model,
             provider="anthropic",
             tokens_used=tokens_used,
             cost_estimate=self.estimate_cost(tokens_used),
             metadata={
                 "input_tokens": response.usage.input_tokens,
-                "output_tokens": response.usage.output_tokens
+                "output_tokens": response.usage.output_tokens,
+                "stop_reason": response.stop_reason,
             }
         )
 

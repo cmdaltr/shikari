@@ -139,3 +139,13 @@
 
 /* Upload review modal: Proceed waits for the technique list */
 #proceed-generation:disabled { opacity: .5; cursor: wait; }
+
+/* Phones: side-by-side form columns stack, and hover tooltips sit in the viewport
+   (fixed, so a hidden one can't widen the page) */
+@media (max-width: 768px) {
+  .stack-sm { grid-template-columns: 1fr !important; }
+  .stack-sm > [style*="border-right"] { border-right: none !important; }
+  .container { padding-left: 16px !important; padding-right: 16px !important; max-width: 100% !important; }
+  .option-info-tooltip { position: fixed; top: 30vh; bottom: auto; left: 16px; right: 16px; width: auto !important; transform: none; }
+  .option-info-tooltip::after { display: none; }
+}

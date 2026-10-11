@@ -495,11 +495,15 @@
     box-shadow: none;
   }
 
+  /* The header is a grid: wrap the tabs onto rows instead of squeezing labels together */
   .tabs-header {
-    flex-direction: column;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   }
 
   .tab-button {
+    padding: 0.8em 0.6em;
+    font-size: 0.95rem;
     border-bottom: 1px solid #e9ecef;
     border-left: 3px solid transparent;
   }

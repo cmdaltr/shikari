@@ -132,3 +132,36 @@ def test_run_stops_calling_the_llm_at_the_cap(capsys):
             detections._run_bespoke_generation({"technique_id": "T1"}, [], "llm", config)
     assert gen.call_count == 2
     assert capsys.readouterr().out.count("LLM call limit") == 1
+
+
+@pytest.mark.unit
+def test_pre_compromise_techniques_spend_no_llm_call():
+    from archer.build import detections
+
+    config = {"max_calls": 5, "label": "X"}
+    with patch("archer.build.llm_queries.generate_llm_queries", return_value=[]) as gen:
+        detections._run_bespoke_generation({"technique_id": "T1598", "tactic": "Reconnaissance"}, [], "llm", config)
+        detections._run_bespoke_generation({"technique_id": "T1583", "tactic": "resource-development"}, [], "llm", config)
+        detections._run_bespoke_generation({"technique_id": "T1566", "tactic": "Reconnaissance, Initial Access"}, [], "llm", config)
+    assert gen.call_count == 1
+    assert config["_calls"] == 1
+
+
+@pytest.mark.unit
+def test_anthropic_drops_parameters_a_model_refuses():
+    import anthropic
+    import httpx
+
+    from archer.ai.llm.providers import _create_message
+
+    def refuse(message):
+        response = httpx.Response(400, request=httpx.Request("POST", "https://api.anthropic.com/v1/messages"))
+        return anthropic.BadRequestError(message, response=response, body=None)
+
+    client = MagicMock()
+    client.messages.create.side_effect = [refuse("`temperature` is deprecated for this model."),
+                                          refuse('"thinking.type.between_tools" is not supported'), "ok"]
+    kwargs = {"model": "m", "temperature": 0.2, "thinking": {"type": "between_tools"}}
+    assert _create_message(client, kwargs) == "ok"
+    assert "temperature" not in client.messages.create.call_args.kwargs
+    assert "thinking" not in client.messages.create.call_args.kwargs

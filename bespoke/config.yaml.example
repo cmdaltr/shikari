@@ -86,7 +86,7 @@ llm:
   # --- Option 1: Anthropic Claude ---
   # provider: anthropic
   # api_key: "sk-ant-..."
-  # model: "claude-sonnet-4-20250514"
+  # model: "claude-sonnet-5-5"
   # max_tokens: 4096
 
   # --- Option 2: OpenAI / ChatGPT Enterprise ---

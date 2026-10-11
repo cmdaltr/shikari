@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # id -> (label, default model shown as the placeholder; "" = the provider class default)
 CLOUD_PROVIDERS = {
-    "anthropic": ("Anthropic Claude", "claude-sonnet-4-5-20250929"),
+    "anthropic": ("Anthropic Claude", "claude-sonnet-5-5"),
     "openai": ("OpenAI", "gpt-4o"),
     "google": ("Google Gemini", "gemini-2.0-flash"),
     "deepseek": ("DeepSeek", "deepseek-chat"),

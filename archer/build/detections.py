@@ -732,6 +732,15 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
         )
 
 
+PRE_COMPROMISE_TACTICS = {"reconnaissance", "resource development", "resource-development"}
+
+
+def _pre_compromise_only(tactic) -> bool:
+    tactics = tactic if isinstance(tactic, (list, tuple)) else re.split(r"[,;|]", tactic or "")
+    tactics = {str(t).strip().lower() for t in tactics if str(t).strip()}
+    return bool(tactics) and tactics <= PRE_COMPROMISE_TACTICS
+
+
 def _run_bespoke_generation(retrieved_data, identifiers, use_llm, llm_config):
     """Run bespoke query generation (LLM or fallback)."""
     name = retrieved_data.get("technique", "")
@@ -747,6 +756,12 @@ def _run_bespoke_generation(retrieved_data, identifiers, use_llm, llm_config):
         evidence_json = json.dumps(identifiers)
 
     detectable_via = retrieved_data.get("detectable_via", "")
+
+    if use_llm == "llm" and _pre_compromise_only(tactic):
+        # Nothing in the indexes sees Reconnaissance/Resource Development; the LLM says
+        # so and the call is spent for no queries
+        print(f"  ⏭️  {tid} is pre-compromise ({tactic}); no LLM call")
+        return
 
     if use_llm == "llm" and llm_config and llm_config.get("max_calls"):
         # A run's LLM spend is capped (profile setting): a group can have hundreds of
