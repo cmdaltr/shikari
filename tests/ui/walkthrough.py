@@ -7,6 +7,7 @@ Env:  ARCHER_BASE_URL, ARCHER_EMAIL, ARCHER_PASSWORD, ARCHER_GEN_TIMEOUT (second
 """
 
 import os
+import re
 import sys
 import time
 from datetime import datetime
@@ -450,7 +451,22 @@ def upload_iocs(page):
     shot(page, "upload_iocs_results")
     if "IOC Sweep" not in page.inner_text("body"):
         raise RuntimeError("results page has no IOC Sweep detection")
-    return "IOC-only run completed; IOC Sweep detection on the results page"
+    # Earlier UNC3944 runs left technique detections: the page opens on this run only
+    switch = page.locator(".run-view")
+    if not switch.count():
+        raise RuntimeError("no Latest run / All runs switch on the results page")
+    latest = page.inner_text(".run-view-opt.is-active")
+    if "Latest run" not in latest:
+        raise RuntimeError(f"results opened on '{latest}', not the latest run")
+    run_n = int(re.search(r"(\d+) files", latest).group(1))
+    page.click(".run-view-opt:not(.is-active)")
+    page.wait_for_load_state("domcontentloaded")
+    all_n = int(re.search(r"(\d+) files", page.inner_text(".run-view-opt.is-active")).group(1))
+    if all_n <= run_n:
+        raise RuntimeError(f"All runs shows {all_n} files, latest run {run_n}")
+    caption(page, f"Latest run: {run_n} files; all runs: {all_n} files")
+    shot(page, "upload_iocs_all_runs")
+    return f"IOC-only run completed; latest run {run_n} files (IOC Sweeps) of {all_n} for the group"
 
 
 @step("Upload — rejected URL shows an inline error")
@@ -490,9 +506,15 @@ def profile(page):
     missing = [label for label, text in expected.items() if text not in summary]
     if missing:
         raise RuntimeError(f"profile summary missing: {', '.join(missing)}")
-    # Two groups: enough to follow the queue from one group to the next without
-    # generating all nine recommendations
-    page.locator(".group-checkbox").evaluate_all("els => els.forEach((e, i) => { e.checked = i < 2; })")
+    ticked = page.locator(".group-checkbox:checked").count()
+    if ticked > 3:
+        raise RuntimeError(f"{ticked} groups pre-ticked; only the top 3 should be")
+    page.wait_for_function("/Estimated time/.test(document.getElementById('profile-estimate').textContent)", timeout=10000)
+    caption(page, f"{ticked} groups pre-ticked; {page.inner_text('#profile-estimate')}")
+    # Two groups: enough to follow the queue from one group to the next
+    page.locator(".group-checkbox").evaluate_all(
+        "els => els.forEach((e, i) => { e.checked = i < 2; e.dispatchEvent(new Event('change', {bubbles: true})); })")
+    caption(page, f"Two groups ticked; {page.inner_text('#profile-estimate')}")
     page.click("#confirm-generation")
     wait_for_results(page, "tesco.com")
     return tour_results(page, "tesco.com")

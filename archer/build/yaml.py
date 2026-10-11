@@ -1,3 +1,4 @@
+from archer.build import run_files
 from archer.build.collate import collate_data
 from archer.config import GENERATE_DIR
 from archer.validation.mde_field_validator import format_mde_query
@@ -204,6 +205,7 @@ def map_entities(query):
 
 
 def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None):
+    run_files.note(query_file, tag)
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
@@ -463,6 +465,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
 
 
 def update_yaml(yamlfile, tag):
+    run_files.note(yamlfile, tag)
 
     def increment_version(match):
         major = match.group(1)

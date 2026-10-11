@@ -1149,6 +1149,22 @@ window.clearFileSelection = function () {
   if (uploadBtn) uploadBtn.disabled = true;
 };
 
+// Profile: how many recommended groups start ticked
+var PROFILE_PRESELECT = 3;
+
+// Measured per group: 45-60s preparing (ATT&CK data; longer just after a server
+// restart), ~0.04s per procedure, ~10s to correlate. Groups run one after another.
+// Unknown sizes count as a typical 250.
+function estimateProfileTime(sizes, correlate) {
+  var secs = sizes.reduce(function(sum, n) {
+    return sum + 60 + 0.04 * (n || 250) + (correlate ? 10 : 0);
+  }, 0);
+  var low = Math.max(1, Math.round(secs * 0.8 / 60));
+  var high = Math.max(low + 1, Math.ceil(secs * 1.5 / 60));
+  return 'Estimated time: about ' + low + '\u2013' + high + ' min for ' + sizes.length +
+    ' group' + (sizes.length === 1 ? '' : 's');
+}
+
 // Threat Group Selection Modal
 function showThreatGroupSelection(domain, recommendedGroups, profile) {
   // Create modal overlay
@@ -1200,10 +1216,11 @@ function showThreatGroupSelection(domain, recommendedGroups, profile) {
   html += '<label style="display: block; margin-bottom: 0.5em;"><input type="checkbox" id="select-all-groups" style="margin-right: 0.5em;"><strong>Select All</strong></label>';
   html += '<hr style="margin: 0.5em 0;">';
 
+  // Only the top recommendations start ticked: each group is a full generation run
   recommendedGroups.forEach(function(group, index) {
     html += '<label style="display: block; padding: 0.5em; margin: 0.3em 0; background: ' + (index % 2 === 0 ? '#f8f9fa' : 'white') + '; border-radius: 3px; cursor: pointer;">';
-    html += '<input type="checkbox" class="group-checkbox" value="' + group + '" checked style="margin-right: 0.5em;">';
-    html += '<span style="font-weight: 500;">' + group + '</span>';
+    html += '<input type="checkbox" class="group-checkbox" value="' + escapeHtml(group) + '"' + (index < PROFILE_PRESELECT ? ' checked' : '') + ' style="margin-right: 0.5em;">';
+    html += '<span style="font-weight: 500;">' + escapeHtml(group) + '</span>';
     html += '</label>';
   });
   html += '</div>';
@@ -1214,7 +1231,8 @@ function showThreatGroupSelection(domain, recommendedGroups, profile) {
   html += '</div>';
 
   // Buttons
-  html += '<div style="margin-top: 1.5em; display: flex; gap: 1em; justify-content: flex-end;">';
+  html += '<div style="margin-top: 1.5em; display: flex; gap: 1em; justify-content: flex-end; align-items: center;">';
+  html += '<span id="profile-estimate" aria-live="polite" style="margin-right: auto; color: #555; font-size: 0.95em;"></span>';
   html += '<button id="cancel-generation" style="padding: 0.7em 1.5em; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>';
   html += '<button id="confirm-generation" style="padding: 0.7em 1.5em; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate Detections</button>';
   html += '</div>';
@@ -1223,12 +1241,29 @@ function showThreatGroupSelection(domain, recommendedGroups, profile) {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
+  // Time estimate from each group's ATT&CK procedure count
+  var groupSizes = {};
+  function updateEstimate() {
+    var el = document.getElementById('profile-estimate');
+    if (!el) return;
+    var picked = Array.prototype.filter.call(document.querySelectorAll('.group-checkbox'), function(cb) { return cb.checked; });
+    var correlate = document.getElementById('run-correlation').checked;
+    el.textContent = picked.length ? estimateProfileTime(picked.map(function(cb) { return groupSizes[cb.value]; }), correlate) : '';
+  }
+  fetch('/api/group-sizes?groups=' + encodeURIComponent(recommendedGroups.join(',')))
+    .then(function(r) { return r.json(); })
+    .then(function(j) { groupSizes = j.sizes || {}; updateEstimate(); })
+    .catch(function() {});
+  updateEstimate();
+  modal.addEventListener('change', updateEstimate);
+
   // Event handlers
   document.getElementById('select-all-groups').addEventListener('change', function(e) {
     var checkboxes = document.querySelectorAll('.group-checkbox');
     checkboxes.forEach(function(cb) {
       cb.checked = e.target.checked;
     });
+    updateEstimate();
   });
 
   document.getElementById('cancel-generation').addEventListener('click', function() {

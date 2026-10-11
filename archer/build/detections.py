@@ -845,6 +845,9 @@ def _write_bespoke_yamls(queries, group_name, technique_id, technique_name, tact
 
         with open(filepath, "w") as f:
             yaml.dump(detection, f, default_flow_style=False, sort_keys=False)
+        from archer.build import run_files
+
+        run_files.note(str(filepath), group_name)
 
 
 def main():

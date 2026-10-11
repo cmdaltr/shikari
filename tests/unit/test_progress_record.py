@@ -7,7 +7,10 @@ from archer.build import progress
 
 @pytest.fixture(autouse=True)
 def progress_dir(tmp_path, monkeypatch):
+    from archer.build import run_files
+
     monkeypatch.setattr(progress, "PROGRESS_DIR", str(tmp_path))
+    monkeypatch.setattr(run_files, "RUNS_DIR", str(tmp_path / "runs"))
 
 
 def test_start_progress_drops_previous_run():
@@ -62,3 +65,26 @@ def test_report_with_nothing_to_sweep_or_build_says_why(monkeypatch):
     app_module._run_report_generation("UNC3944", [], {}, "report", None, "UNC3944", "desc")
     rec = progress.read_progress("UNC3944")
     assert rec["phase"] == "complete" and rec["ioc_sweeps"] == 0 and rec["error"]
+
+
+def test_run_records_the_files_it_wrote_or_retagged():
+    from archer.build import run_files
+
+    progress.start_progress("UNC3944", {})
+    run_files.note("data/groups/T1566_GoogleSecOps.yaml", "UNC3944")
+    run_files.note("data/groups/T1566_GoogleSecOps.yaml", "UNC3944")
+    run_files.note("data/groups/T1078_DeviceLogonEvents.yaml", "APT29")  # another group's run
+    assert run_files.latest_run("UNC3944") is None  # nothing saved until the run completes
+    progress.write_progress("UNC3944", {"phase": "complete", "status": "complete"})
+    assert run_files.latest_run("UNC3944")["files"] == ["T1566_GoogleSecOps.yaml"]
+
+
+def test_writes_outside_a_run_keep_the_last_manifest():
+    from archer.build import run_files
+
+    progress.start_progress("UNC3944", {})
+    run_files.note("IOCSweepUNC3944_GoogleSecOps.yaml", "UNC3944")
+    progress.write_progress("UNC3944", {"phase": "complete"})
+    run_files.note("T1003_DeviceEvents.yaml", "UNC3944")  # no run in progress: ignored
+    progress.write_progress("UNC3944", {"phase": "complete", "status": "complete"})
+    assert run_files.latest_run("UNC3944")["files"] == ["IOCSweepUNC3944_GoogleSecOps.yaml"]

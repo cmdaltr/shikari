@@ -40,6 +40,7 @@ from urllib.parse import quote, urlencode
 import yaml
 from archer.build.progress import read_progress, start_progress, write_progress
 from archer.config import (
+    DATA_DIR,
     GENERATE_DIR,
     CORRELATE_DIR,
     DRAFTS_DIR,
@@ -5142,6 +5143,31 @@ async def get_actors_by_keyword(keyword: str = "", keywords: str = "", mode: str
     return JSONResponse({"ok": True, "actors": matched, "count": len(matched), "keywords": kw_list, "mode": mode.upper(), "scope": scope})
 
 
+_GROUP_SIZES = {"mtime": None, "counts": {}}
+
+
+@app.get("/api/group-sizes")
+async def group_sizes(groups: str = ""):
+    """ATT&CK procedure count per group, for the Profile modal's time estimate."""
+    import csv
+
+    path = os.path.join(DATA_DIR, "mitre_procedures.csv")
+    try:
+        mtime = os.path.getmtime(path)
+        if _GROUP_SIZES["mtime"] != mtime:
+            counts = {}
+            with open(path, newline="", encoding="utf-8") as fh:
+                for row in csv.DictReader(fh):
+                    name = (row.get("group_name") or row.get("group_sw_name") or "").strip().lower()
+                    if name:
+                        counts[name] = counts.get(name, 0) + 1
+            _GROUP_SIZES.update(mtime=mtime, counts=counts)
+    except OSError:
+        pass
+    wanted = [g.strip() for g in groups.split(",") if g.strip()]
+    return {"sizes": {g: _GROUP_SIZES["counts"].get(g.lower()) for g in wanted}}
+
+
 @app.post("/profile/generate-detections")
 async def generate_detections_from_profile(
     request: Request,
@@ -5383,9 +5409,12 @@ from datetime import timedelta
 
 
 @app.get("/results", response_class=HTMLResponse)
-def results_page(request: Request, group_name: str, archer_session: Optional[str] = Cookie(None)):
+def results_page(request: Request, group_name: str, run: str = "", archer_session: Optional[str] = Cookie(None)):
     """
     Render the results dashboard showing generated detections, correlations, and attack flows.
+
+    run=latest limits the detections to the files the group's latest run produced;
+    without it, every detection tagged for the group is shown.
     """
     # Check if user is logged in (but don't require it)
     user = None
@@ -5397,6 +5426,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             db.close()
 
     safe_group = sanitize_group_name(group_name)
+    run_view = None
 
     # Collect detection files by vendor
     generate_dir = GENERATE_DIR
@@ -5419,6 +5449,23 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
 
     if os.path.exists(generate_dir):
         yaml_files = group_yaml_files(group_name, generate_dir)
+
+        # Group YAMLs accumulate across runs: offer the latest run on its own
+        from archer.build.run_files import latest_run
+
+        latest = latest_run(group_name)
+        in_run = set((latest or {}).get("files") or [])
+        run_files_now = [f for f in yaml_files if os.path.basename(f) in in_run]
+        if run_files_now and len(run_files_now) < len(yaml_files):
+            completed = (latest or {}).get("completed_at")
+            run_view = {
+                "active": run == "latest",
+                "run_count": len(run_files_now),
+                "all_count": len(yaml_files),
+                "completed": datetime.fromtimestamp(completed).strftime("%d %b %Y %H:%M") if completed else "",
+            }
+            if run == "latest":
+                yaml_files = run_files_now
 
         for yaml_file in yaml_files:
             filename = os.path.basename(yaml_file)
@@ -6271,6 +6318,7 @@ def results_page(request: Request, group_name: str, archer_session: Optional[str
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "validation_results": validation_results,
             "validation_summary": validation_summary,
+            "run_view": run_view,
         },
     )
 

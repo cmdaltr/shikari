@@ -75,6 +75,9 @@ data/profiles/*
 data/progress/*
 !data/progress/.gitkeep
 
+# Each group's latest run: which detection files it produced
+data/runs/*
+
 # Uploads (user-uploaded files)
 data/uploads/*
 !data/uploads/.gitkeep

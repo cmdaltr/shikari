@@ -38,7 +38,8 @@ function resetRun() {
   corrPctShown = 0;
 }
 
-function resultsUrl(g) { return `/results?group_name=${encodeURIComponent(g)}`; }
+// The run just finished; the results page can switch to all runs
+function resultsUrl(g) { return `/results?group_name=${encodeURIComponent(g)}&run=latest`; }
 
 function renderQueue() {
   const box = document.getElementById('pg-queue');

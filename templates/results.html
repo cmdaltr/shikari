@@ -6,6 +6,21 @@
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/attack_flow.css') }}?v={{ request.app.state.asset_version }}">
 <style>
+/* Latest run / All runs switch */
+.run-view { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 16px; }
+.run-view-label { font-size: 14px; font-weight: 600; color: #6c757d; text-transform: uppercase; letter-spacing: .4px; }
+.run-view-opt {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
+  border: 1px solid #d0d7de; background: #fff; color: #374151; font-weight: 600; font-size: 15px; text-decoration: none;
+}
+.run-view-opt:hover { border-color: #667eea; }
+.run-view-opt.is-active { background: #667eea; border-color: #667eea; color: #fff; }
+.run-view-n { font-weight: 500; font-size: 13px; opacity: .8; }
+.run-view-when { font-size: 14px; color: #6c757d; }
+[data-theme="dark"] .run-view-opt { background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary); }
+[data-theme="dark"] .run-view-opt.is-active { background: #667eea; border-color: #667eea; color: #fff; }
+[data-theme="dark"] .run-view-label, [data-theme="dark"] .run-view-when { color: var(--text-secondary); }
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -27,6 +42,20 @@
     {% set manual_hours = (total_detections * 2)|round(1) %}
     {% set archer_hours = ((duration / 3600) if duration else (total_detections * 0.1))|round(2) %}
     {% set hours_saved = (manual_hours - archer_hours)|round(1) %}
+
+    {% if run_view %}
+    <!-- The group's detections accumulate across runs: the latest run, or all of them -->
+    <nav class="run-view" aria-label="Which detections to show">
+      <span class="run-view-label">Showing</span>
+      <a href="?group_name={{ group_name|urlencode }}&run=latest" class="run-view-opt{% if run_view.active %} is-active{% endif %}"{% if run_view.active %} aria-current="page"{% endif %}>
+        Latest run <span class="run-view-n">{{ run_view.run_count }} files</span>
+      </a>
+      <a href="?group_name={{ group_name|urlencode }}" class="run-view-opt{% if not run_view.active %} is-active{% endif %}"{% if not run_view.active %} aria-current="page"{% endif %}>
+        All runs <span class="run-view-n">{{ run_view.all_count }} files</span>
+      </a>
+      <span class="run-view-when">{% if run_view.completed %}Latest run finished {{ run_view.completed }}.{% endif %}{% if run_view.active %} Correlations and the ATT&amp;CK Flow cover all runs.{% endif %}</span>
+    </nav>
+    {% endif %}
 
     <!-- Statistics Section -->
     <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">

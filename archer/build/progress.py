@@ -64,6 +64,9 @@ def write_progress(group_name: str, data: Dict[str, Any]):
 
                     # Progress validation (silent - no logging needed)
 
+                if phase == "complete" and existing.get("phase") != "complete":
+                    _finish_run(group_name, merged.get("started_at"))
+
                 # Write merged data atomically
                 temp_path = path + ".tmp"
                 with open(temp_path, "w", encoding="utf-8") as fh:
@@ -93,6 +96,15 @@ def write_progress(group_name: str, data: Dict[str, Any]):
             traceback.print_exc()
 
 
+def _finish_run(group_name: str, started_at):
+    try:
+        from .run_files import finish
+
+        finish(group_name, started_at)
+    except Exception as e:
+        print(f"⚠️  Could not record the run's files for '{group_name}': {e}")
+
+
 def start_progress(group_name: str, data: Dict[str, Any]):
     """
     Begin a run's progress record afresh.
@@ -106,6 +118,9 @@ def start_progress(group_name: str, data: Dict[str, Any]):
     now = time.time()
     record = {"status": "started", "phase": "preparing", "started_at": now,
               "phase_started": {"preparing": now}, **data}
+    from .run_files import begin
+
+    begin(group_name)
     with open(lock_path, "w") as lock_file:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         try:
