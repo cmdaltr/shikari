@@ -327,10 +327,21 @@ function toggleApiKeyVisibility(inputId) {
   }
 }
 
-const API_KEY_FIELDS = ['splunk', 'mde', 'elastic', 'shodan', 'securitytrails', 'github',
-  'openai', 'anthropic', 'google', 'deepseek', 'qwen', 'grok', 'local'];
-let apiKeysLoaded = false;   // a cleared field only removes a key once the saved ones were shown
+// SIEM and OSINT keys: one input each. AI keys are the provider rows below.
+const API_KEY_FIELDS = ['splunk', 'mde', 'elastic', 'shodan', 'securitytrails', 'github'];
+const AI_PROVIDERS = [
+  { id: 'anthropic', label: 'Anthropic Claude', placeholder: 'sk-ant-...' },
+  { id: 'openai', label: 'OpenAI', placeholder: 'sk-...' },
+  { id: 'google', label: 'Google Gemini', placeholder: 'AIza...' },
+  { id: 'deepseek', label: 'DeepSeek', placeholder: 'sk-...' },
+  { id: 'qwen', label: 'Qwen (DashScope)', placeholder: 'sk-...' },
+  { id: 'grok', label: 'Grok (xAI)', placeholder: 'xai-...' },
+  { id: 'local', label: 'Local model (OpenAI-compatible)', placeholder: 'API key (optional)' },
+];
+let apiKeysLoaded = false;   // a cleared key is only removed once the saved ones were shown
+let savedKeys = {};          // GET /api/profile/apikeys
 let aiState = null;          // GET /api/profile/ai-settings
+let localModels = [];        // from the last endpoint test
 
 async function saveApiKeys() {
   const apiKeys = { _loaded: apiKeysLoaded };
@@ -338,27 +349,26 @@ async function saveApiKeys() {
     const el = document.getElementById(`${name}-key`);
     if (el) apiKeys[name] = el.value;
   });
+  if (await postApiKeys(apiKeys)) showNotification('API keys saved', 'success');
+}
 
+async function postApiKeys(payload) {
   try {
     const response = await fetch('/api/profile/apikeys', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(apiKeys)
+      body: JSON.stringify(payload)
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || result.success === false) {
       showNotification(`Failed to save API keys${result.error ? ': ' + result.error : ''}`, 'error');
-      return;
+      return false;
     }
-    // The local endpoint and model belong to the AI settings, not the key store
-    const saved = await postAiSettings({ local: {
-      endpoint: document.getElementById('local-endpoint').value,
-      model: document.getElementById('local-model').value,
-    } });
-    if (saved) showNotification('API keys saved', 'success');
+    return true;
   } catch (error) {
     console.error('Error saving API keys:', error);
     showNotification('An error occurred while saving', 'error');
+    return false;
   }
 }
 
@@ -368,6 +378,7 @@ async function loadApiKeys() {
     if (response.ok) {
       const data = await response.json();
       if (!data.error) {
+        savedKeys = data;
         API_KEY_FIELDS.forEach(name => {
           const el = document.getElementById(`${name}-key`);
           if (el && data[name]) el.value = data[name];
@@ -381,7 +392,24 @@ async function loadApiKeys() {
   await loadAiSettings();
 }
 
-// --- AI settings: local model, assignment, remembered Hunt choice (GitHub #10) ---
+// --- Key-type tabs: AI Models | OSINT Sources | SIEM Platforms | Emulation Tools ---
+
+function initKeyTabs() {
+  document.querySelectorAll('.key-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.key-tab').forEach(t => {
+        const on = t === tab;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on);
+      });
+      document.querySelectorAll('.key-panel').forEach(panel => {
+        panel.hidden = panel.dataset.keypanel !== tab.dataset.keytab;
+      });
+    });
+  });
+}
+
+// --- AI providers: one row per provider, + adds another (GitHub #10) ---
 
 async function loadAiSettings() {
   try {
@@ -389,12 +417,206 @@ async function loadAiSettings() {
     if (!response.ok) return;
     aiState = await response.json();
     const local = aiState.settings.local || {};
-    document.getElementById('local-endpoint').value = local.endpoint || '';
-    setLocalModels(local.model ? [local.model] : [], local.model);
-    renderAssignment();
+    if (local.model) localModels = [local.model];
+    const rows = AI_PROVIDERS
+      .filter(p => p.id === 'local' ? local.endpoint : savedKeys[p.id])
+      .map(p => ({ provider: p.id, key: savedKeys[p.id] || '', endpoint: local.endpoint, model: local.model }));
+    renderProviderRows(rows.length ? rows : [{ provider: unusedProviders([])[0] }]);
   } catch (error) {
     console.error('Error loading AI settings:', error);
   }
+}
+
+function unusedProviders(used) {
+  return AI_PROVIDERS.map(p => p.id).filter(id => !used.includes(id));
+}
+
+function providerRows() {
+  return Array.from(document.querySelectorAll('#ai-provider-rows .ai-provider-row'));
+}
+
+function rowValues(row) {
+  return {
+    provider: row.querySelector('.ai-row-provider').value,
+    key: row.querySelector('.ai-row-key').value.trim(),
+    endpoint: (row.querySelector('.ai-row-endpoint') || {}).value || '',
+    model: (row.querySelector('.ai-row-model') || {}).value || '',
+  };
+}
+
+function renderProviderRows(rows) {
+  const box = document.getElementById('ai-provider-rows');
+  box.innerHTML = '';
+  rows.forEach(r => box.appendChild(buildProviderRow(r)));
+  syncProviderRows();
+}
+
+function buildProviderRow(r) {
+  const row = document.createElement('div');
+  row.className = 'ai-provider-row';
+  row.innerHTML = `
+    <div class="ai-row-main">
+      <select class="form-input ai-row-provider" aria-label="AI provider"></select>
+      <div class="apikey-input-group">
+        <input type="password" class="form-input apikey-input ai-row-key" aria-label="API key" autocomplete="off">
+      </div>
+      <button type="button" class="ai-row-btn ai-row-remove" title="Remove this provider" aria-label="Remove this provider">&times;</button>
+      <button type="button" class="ai-row-btn ai-row-add" title="Add another provider" aria-label="Add another provider">+</button>
+    </div>
+    <div class="ai-row-local" hidden>
+      <input type="url" class="form-input ai-row-endpoint" placeholder="http://localhost:11434" aria-label="Local server URL">
+      <button type="button" class="btn-secondary ai-row-test">Test</button>
+      <select class="form-input ai-row-model" aria-label="Local model"></select>
+      <div class="apikey-hint ai-row-status"></div>
+    </div>`;
+  const select = row.querySelector('.ai-row-provider');
+  AI_PROVIDERS.forEach(p => select.add(new Option(p.label, p.id, false, p.id === r.provider)));
+  row.querySelector('.ai-row-key').value = r.key || '';
+  row.querySelector('.ai-row-endpoint').value = r.endpoint || '';
+  setRowModels(row, localModels, r.model);
+
+  const keyInput = row.querySelector('.ai-row-key');
+  select.addEventListener('change', () => {
+    keyInput.value = savedKeys[select.value] || '';
+    syncProviderRows();
+  });
+  keyInput.addEventListener('input', renderAssignment);
+  row.querySelector('.ai-row-endpoint').addEventListener('input', renderAssignment);
+  row.querySelector('.ai-row-model').addEventListener('change', renderAssignment);
+  row.querySelector('.ai-row-test').addEventListener('click', () => probeLocalModel(row));
+  row.querySelector('.ai-row-remove').addEventListener('click', () => {
+    row.remove();
+    if (!providerRows().length) renderProviderRows([{ provider: 'anthropic' }]);
+    syncProviderRows();
+  });
+  row.querySelector('.ai-row-add').addEventListener('click', () => {
+    const used = providerRows().map(x => x.querySelector('.ai-row-provider').value);
+    const next = unusedProviders(used)[0];
+    if (!next) return;
+    document.getElementById('ai-provider-rows').appendChild(buildProviderRow({ provider: next }));
+    syncProviderRows();
+  });
+  return row;
+}
+
+// One row per provider: each dropdown hides the ones other rows use; + only on the last row
+function syncProviderRows() {
+  const rows = providerRows();
+  const used = rows.map(r => r.querySelector('.ai-row-provider').value);
+  rows.forEach((row, i) => {
+    const select = row.querySelector('.ai-row-provider');
+    Array.from(select.options).forEach(o => { o.disabled = o.value !== select.value && used.includes(o.value); });
+    const p = AI_PROVIDERS.find(x => x.id === select.value);
+    row.querySelector('.ai-row-key').placeholder = p ? p.placeholder : 'API key';
+    row.querySelector('.ai-row-local').hidden = select.value !== 'local';
+    row.querySelector('.ai-row-add').style.visibility =
+      i === rows.length - 1 && used.length < AI_PROVIDERS.length ? 'visible' : 'hidden';
+  });
+  renderAssignment();
+}
+
+function setRowModels(row, models, selected) {
+  const select = row.querySelector('.ai-row-model');
+  select.innerHTML = '';
+  if (!models.length) {
+    select.add(new Option('Test the server to list its models', ''));
+    return;
+  }
+  models.forEach(m => select.add(new Option(m, m, false, m === selected)));
+}
+
+async function probeLocalModel(row) {
+  const status = row.querySelector('.ai-row-status');
+  const endpoint = row.querySelector('.ai-row-endpoint').value.trim();
+  if (!endpoint) { status.textContent = 'Enter the server URL first, e.g. http://localhost:11434'; return; }
+  status.textContent = 'Testing…';
+  status.className = 'apikey-hint ai-row-status';
+  try {
+    const response = await fetch('/api/profile/ai-settings/probe-local', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint, api_key: row.querySelector('.ai-row-key').value })
+    });
+    const result = await response.json();
+    if (!result.ok) {
+      status.textContent = result.error || 'Not reachable';
+      status.className = 'apikey-hint ai-row-status ai-status-error';
+      return;
+    }
+    localModels = result.models;
+    setRowModels(row, localModels, row.querySelector('.ai-row-model').value || (aiState && aiState.settings.local.model));
+    status.textContent = `Reachable (${result.kind === 'ollama' ? 'Ollama' : 'OpenAI API'}): ${result.models.length} model${result.models.length === 1 ? '' : 's'}`;
+    status.className = 'apikey-hint ai-row-status ai-status-ok';
+    renderAssignment();
+  } catch (error) {
+    status.textContent = 'Test failed';
+    status.className = 'apikey-hint ai-row-status ai-status-error';
+  }
+}
+
+// --- Assignment: lists the providers in the rows above, saved or not ---
+
+function rowProviders() {
+  return providerRows().map(rowValues)
+    .filter(v => v.provider === 'local' ? v.endpoint : v.key)
+    .map(v => {
+      const p = AI_PROVIDERS.find(x => x.id === v.provider);
+      const known = ((aiState && aiState.providers) || []).find(x => x.id === v.provider);
+      return {
+        id: v.provider,
+        label: v.provider === 'local' ? 'Local model' : p.label,
+        model: v.provider === 'local' ? v.model : ((known && known.model) || ''),
+        detection: v.provider !== 'local',
+      };
+    });
+}
+
+function renderAssignment() {
+  if (!aiState) return;
+  const settings = aiState.settings;
+  const providers = rowProviders();
+  ['ask', 'detection'].forEach(job => {
+    const select = document.getElementById(`assign-${job}-provider`);
+    const modelInput = document.getElementById(`assign-${job}-model`);
+    // Keep what's on screen across re-renders; fall back to the saved assignment
+    const current = select.dataset.touched ? select.value : (settings[job] || {}).provider;
+    select.innerHTML = '';
+    select.add(new Option(job === 'ask' ? 'Not assigned (first available)' : 'None (no AI)', ''));
+    providers.forEach(p => {
+      const opt = new Option(p.label, p.id, false, p.id === current);
+      if (job === 'detection' && !p.detection) {
+        opt.disabled = true;
+        opt.textContent = `${p.label} (Ask only, #9)`;
+      }
+      select.add(opt);
+    });
+    if (!select.dataset.touched) modelInput.value = (settings[job] || {}).model || '';
+    syncModelHints(job);
+    select.onchange = () => { select.dataset.touched = '1'; modelInput.value = ''; syncModelHints(job); };
+  });
+  document.getElementById('assign-max-calls').value = settings.max_detection_calls || 25;
+  const remember = settings.remember;
+  const label = document.getElementById('assign-remember');
+  const forget = document.getElementById('assign-forget');
+  if (!remember) {
+    label.textContent = 'Asks on every hunt';
+    forget.hidden = true;
+  } else {
+    const p = AI_PROVIDERS.find(x => x.id === remember.provider);
+    label.textContent = remember.provider ? `Always uses ${p ? p.label : remember.provider}${remember.model ? ' / ' + remember.model : ''}` : 'Always runs without AI';
+    forget.hidden = false;
+  }
+}
+
+function syncModelHints(job) {
+  const pid = document.getElementById(`assign-${job}-provider`).value;
+  const p = rowProviders().find(x => x.id === pid);
+  const input = document.getElementById(`assign-${job}-model`);
+  const list = document.getElementById(`assign-${job}-models`);
+  input.disabled = !pid;
+  input.placeholder = p && p.model ? `Default: ${p.model}` : 'Model (blank = provider default)';
+  list.innerHTML = '';
+  if (pid === 'local') localModels.forEach(m => list.appendChild(new Option(m)));
 }
 
 async function postAiSettings(update) {
@@ -410,108 +632,41 @@ async function postAiSettings(update) {
   }
   aiState.settings = result.settings;
   aiState.providers = result.providers;
-  renderAssignment();
   return true;
 }
 
-function setLocalModels(models, selected) {
-  const select = document.getElementById('local-model');
-  select.innerHTML = '';
-  if (!models.length) {
-    select.add(new Option('Test the endpoint to list its models', ''));
-    return;
-  }
-  models.forEach(m => select.add(new Option(m, m, false, m === selected)));
-}
-
-async function probeLocalModel() {
-  const status = document.getElementById('local-status');
-  const endpoint = document.getElementById('local-endpoint').value.trim();
-  if (!endpoint) { status.textContent = 'Enter the server URL first, e.g. http://localhost:11434'; return; }
-  status.textContent = 'Testing…';
-  status.className = 'apikey-hint';
-  try {
-    const response = await fetch('/api/profile/ai-settings/probe-local', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ endpoint, api_key: document.getElementById('local-key').value })
-    });
-    const result = await response.json();
-    if (!result.ok) {
-      status.textContent = result.error || 'Not reachable';
-      status.className = 'apikey-hint ai-status-error';
-      return;
-    }
-    const current = document.getElementById('local-model').value || (aiState && aiState.settings.local.model);
-    setLocalModels(result.models, current);
-    status.textContent = `Reachable (${result.kind === 'ollama' ? 'Ollama' : 'OpenAI API'}): ${result.models.length} model${result.models.length === 1 ? '' : 's'}. Save API Keys to keep it.`;
-    status.className = 'apikey-hint ai-status-ok';
-  } catch (error) {
-    status.textContent = 'Test failed';
-    status.className = 'apikey-hint ai-status-error';
-  }
-}
-
-function renderAssignment() {
-  if (!aiState) return;
-  const { settings, providers } = aiState;
-  ['ask', 'detection'].forEach(job => {
-    const select = document.getElementById(`assign-${job}-provider`);
-    const modelInput = document.getElementById(`assign-${job}-model`);
-    const assigned = settings[job] || {};
-    select.innerHTML = '';
-    select.add(new Option(job === 'ask' ? 'Not assigned (first available)' : 'None (no AI)', ''));
-    providers.forEach(p => {
-      const opt = new Option(p.label, p.id, false, p.id === assigned.provider);
-      if (job === 'detection' && !p.detection) {
-        opt.disabled = true;
-        opt.textContent = `${p.label} (Ask only, #9)`;
-      }
-      select.add(opt);
-    });
-    modelInput.value = assigned.model || '';
-    syncModelHints(job);
-    select.onchange = () => { modelInput.value = ''; syncModelHints(job); };
+// One Save for the tab: keys first (the assignment is validated against them), then the
+// local endpoint and the assignment. Two buttons let an assignment go unsaved.
+async function saveAiTab() {
+  const rows = providerRows().map(rowValues);
+  const keys = { _loaded: apiKeysLoaded };
+  AI_PROVIDERS.forEach(p => {
+    const row = rows.find(r => r.provider === p.id);
+    keys[p.id] = row ? row.key : '';   // a removed row removes its key
   });
-  document.getElementById('assign-max-calls').value = settings.max_detection_calls || 25;
-  const remember = settings.remember;
-  const label = document.getElementById('assign-remember');
-  const forget = document.getElementById('assign-forget');
-  if (!remember) {
-    label.textContent = 'Asks on every hunt';
-    forget.hidden = true;
-  } else {
-    const p = providers.find(x => x.id === remember.provider);
-    label.textContent = remember.provider ? `Always uses ${p ? p.label : remember.provider}${remember.model ? ' / ' + remember.model : ''}` : 'Always runs without AI';
-    forget.hidden = false;
-  }
-}
-
-function syncModelHints(job) {
-  const pid = document.getElementById(`assign-${job}-provider`).value;
-  const p = (aiState.providers || []).find(x => x.id === pid);
-  const input = document.getElementById(`assign-${job}-model`);
-  const list = document.getElementById(`assign-${job}-models`);
-  input.disabled = !pid;
-  input.placeholder = p && p.model ? `Default: ${p.model}` : 'Model (blank = provider default)';
-  list.innerHTML = '';
-  if (pid === 'local') {
-    Array.from(document.getElementById('local-model').options).filter(o => o.value)
-      .forEach(o => list.appendChild(new Option(o.value)));
-  }
-}
-
-async function saveAiAssignment() {
-  const update = { max_detection_calls: Number(document.getElementById('assign-max-calls').value) };
+  if (!(await postApiKeys(keys))) return;
+  const local = rows.find(r => r.provider === 'local');
+  const update = {
+    local: { endpoint: local ? local.endpoint : '', model: local ? local.model : '' },
+    max_detection_calls: Number(document.getElementById('assign-max-calls').value),
+  };
   ['ask', 'detection'].forEach(job => {
     const provider = document.getElementById(`assign-${job}-provider`).value;
     update[job] = provider ? { provider, model: document.getElementById(`assign-${job}-model`).value } : null;
   });
-  if (await postAiSettings(update)) showNotification('AI assignment saved', 'success');
+  if (await postAiSettings(update)) {
+    savedKeys = Object.fromEntries(rows.filter(r => r.key).map(r => [r.provider, r.key]));
+    document.querySelectorAll('#ai-assignment select').forEach(s => delete s.dataset.touched);
+    renderAssignment();
+    showNotification('AI settings saved', 'success');
+  }
 }
 
 async function forgetHuntChoice() {
-  if (await postAiSettings({ remember: null })) showNotification('The Hunt page will ask again', 'success');
+  if (await postAiSettings({ remember: null })) {
+    renderAssignment();
+    showNotification('The Hunt page will ask again', 'success');
+  }
 }
 
 // Notification System
@@ -563,6 +718,8 @@ document.addEventListener('DOMContentLoaded', function() {
       timelineButton.addEventListener('click', loadTimelineData);
     }
   }
+
+  initKeyTabs();
 
   // Load API keys if on API keys tab
   const apikeysTab = document.getElementById('tab-apikeys');

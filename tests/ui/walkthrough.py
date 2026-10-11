@@ -586,32 +586,38 @@ def ask_archer(page):
 
 @step("AI assignment — local model for Ask Archer (profile)")
 def ai_assignment(page):
-    """Profile → API Keys: a local endpoint, Ask Archer assigned to it, detection generation not (#9)."""
+    """Profile → API Keys → AI Models: add a local endpoint row, assign Ask Archer to it (#10);
+    detection generation can't take a local model yet (#9). The user's own settings are restored."""
     model = "llama3.2:3b"
+    before = page.request.get(f"{BASE}/api/profile/ai-settings").json()["settings"]
     page.goto(f"{BASE}/profile")
     page.click('[data-tab="apikeys"]')
-    page.wait_for_timeout(800)
-    caption(page, "Profile → API Keys: a local OpenAI-compatible model")
-    page.fill("#local-endpoint", "http://localhost:11434")
-    page.click("#local-test-btn")
-    page.wait_for_selector("#local-status.ai-status-ok", timeout=15000)
-    if not page.locator(f'#local-model option[value="{model}"]').count():
-        raise RuntimeError(f"{model} not listed by the local endpoint: {page.inner_text('#local-status')}")
-    page.select_option("#local-model", model)
+    page.wait_for_selector(".ai-provider-row")
+    caption(page, "API Keys → AI Models: one row per provider, + adds another")
+    row = page.locator(".ai-provider-row").last
+    if row.locator(".ai-row-provider").input_value() != "local" or not row.locator(".ai-row-endpoint").input_value():
+        page.locator(".ai-row-add:visible").last.click()
+        row = page.locator(".ai-provider-row").last
+        row.locator(".ai-row-provider").select_option("local")
+    row.locator(".ai-row-endpoint").fill("http://localhost:11434")
+    row.locator(".ai-row-test").click()
+    row.locator(".ai-row-status.ai-status-ok").wait_for(timeout=15000)
+    if not row.locator(f'.ai-row-model option[value="{model}"]').count():
+        raise RuntimeError(f"{model} not listed by the local endpoint: {row.locator('.ai-row-status').inner_text()}")
+    row.locator(".ai-row-model").select_option(model)
     shot(page, "ai_local_model")
-    with page.expect_response(lambda r: r.url.endswith("/api/profile/ai-settings") and r.request.method == "POST"):
-        page.click("button[onclick='saveApiKeys()']")
     page.locator("#ai-assignment").scroll_into_view_if_needed()
-    page.wait_for_function("document.querySelector('#assign-ask-provider option[value=\"local\"]')")
     if not page.locator('#assign-detection-provider option[value="local"]').is_disabled():
         raise AssertionError("a local model should not be assignable to detection generation yet (#9)")
     page.select_option("#assign-ask-provider", "local")
     page.fill("#assign-ask-model", model)
-    caption(page, f"Ask Archer → local {model}; detection generation stays without AI")
+    caption(page, f"Ask Archer → local {model}; one Save for keys and assignment")
     with page.expect_response(lambda r: r.url.endswith("/api/profile/ai-settings") and r.request.method == "POST") as saved:
-        page.click("button[onclick='saveAiAssignment()']")
+        page.click("button[onclick='saveAiTab()']")
     if not saved.value.json().get("success"):
-        raise AssertionError(f"assignment not saved: {saved.value.json()}")
+        raise AssertionError(f"AI settings not saved: {saved.value.json()}")
+    if (saved.value.json()["settings"].get("ask") or {}).get("provider") != "local":
+        raise AssertionError("Save didn't store the Ask Archer assignment")
     shot(page, "ai_assignment")
 
     try:
@@ -632,9 +638,9 @@ def ai_assignment(page):
         shot(page, "ai_ask_answer")
         page.click("#aap-close")  # the panel stays open across pages and would cover the next step
     finally:
-        # Leave the profile as it was: no local endpoint, nothing assigned
+        # Put back the user's own Ask assignment and local endpoint; their keys were never touched
         page.request.post(f"{BASE}/api/profile/ai-settings",
-                          data={"ask": None, "local": {"endpoint": "", "model": ""}})
+                          data={"ask": before.get("ask"), "local": before.get("local") or {"endpoint": "", "model": ""}})
     return f"Ask Archer answered by {provider}"
 
 
