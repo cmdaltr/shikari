@@ -4,7 +4,9 @@ from archer.cli import __version__
 
 
 def get_banner() -> str:
-    module_count = 4
+    from archer.cli.modules import MODULE_REGISTRY
+
+    module_count = len(MODULE_REGISTRY)
     return f"""
 \033[36m
        ▄▄▄      ▓█████▄   █████▒

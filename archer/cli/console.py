@@ -28,10 +28,17 @@ class AdfConsole(cmd.Cmd):
         histfile = os.path.expanduser("~/.adfconsole_history")
         try:
             readline.read_history_file(histfile)
-        except FileNotFoundError:
-            pass
+        except OSError:
+            pass  # none yet, or unreadable: the console works without it
         import atexit
-        atexit.register(readline.write_history_file, histfile)
+
+        def save():
+            try:
+                readline.write_history_file(histfile)
+            except OSError:
+                pass
+
+        atexit.register(save)
         readline.set_history_length(1000)
 
     def preloop(self):
@@ -116,11 +123,11 @@ class AdfConsole(cmd.Cmd):
                 print("  No module selected.")
         elif arg == "modules":
             print("\n  Available modules:\n")
-            print(f"  {'Name':<15} Description")
-            print(f"  {'----':<15} -----------")
+            print(f"  {'Name':<18} Description")
+            print(f"  {'----':<18} -----------")
             for name in sorted(MODULE_REGISTRY.keys()):
                 inst = MODULE_REGISTRY[name]()
-                print(f"  {name:<15} {inst.description}")
+                print(f"  {name:<18} {inst.description}")
             print()
         else:
             print("  Usage: show options | show modules")
@@ -289,3 +296,7 @@ def main():
         console.cmdloop()
     except KeyboardInterrupt:
         print("\n  Exiting adfconsole...")
+
+
+if __name__ == "__main__":
+    main()

@@ -22,6 +22,19 @@ class GenerateModule(BaseModule):
                 default="standard",
                 choices=["standard", "llm", "fallback"],
             ),
+            "PROVIDER": ModuleOption(
+                name="PROVIDER",
+                description="MODE llm: assigned (profile of ARCHER_EMAIL) | anthropic | openai | google | deepseek | qwen | grok",
+                default="assigned",
+            ),
+            "MODEL": ModuleOption(
+                name="MODEL",
+                description="MODE llm: model override (blank = the profile's model)",
+            ),
+            "MAX_CALLS": ModuleOption(
+                name="MAX_CALLS",
+                description="MODE llm: max LLM calls this run (blank = the profile's limit)",
+            ),
             "CORRELATE": ModuleOption(
                 name="CORRELATE",
                 description="Run correlation after generation",
@@ -71,6 +84,12 @@ class GenerateModule(BaseModule):
         elif mode == "fallback":
             use_llm = "fallback"
 
+        llm_config = None
+        if use_llm == "llm":
+            llm_config = self._llm_config()
+            if llm_config is False:
+                return
+
         dry_run = bool(self.options["DRY_RUN"].effective_value)
         action = "Previewing" if dry_run else "Generating"
 
@@ -98,7 +117,43 @@ class GenerateModule(BaseModule):
             osint_enhancement=bool(self.options["OSINT"].effective_value),
             osint_comparison=bool(self.options["OSINT_COMPARE"].effective_value),
             use_llm=use_llm,
+            llm_config=llm_config,
             dry_run=dry_run,
             siem_filter=siem_filter,
             index_filter=index_filter,
         )
+
+    def _llm_config(self):
+        """
+        The detection provider from the profile of ARCHER_EMAIL (the same resolution as a
+        web hunt, call cap included); False when nothing usable is configured.
+        """
+        import os
+
+        from archer.ai.assignment import DEFAULT_MAX_DETECTION_CALLS, detection_llm_config, resolve
+        from archer.database.db import SessionLocal
+        from archer.database.models import User
+
+        provider = (self.options["PROVIDER"].effective_value or "assigned").lower()
+        model = self.options["MODEL"].effective_value or None
+        max_calls = self.options["MAX_CALLS"].effective_value
+        email = os.getenv("ARCHER_EMAIL")
+        db = SessionLocal()
+        try:
+            users = db.query(User).filter(User.email == email).all() if email else db.query(User).all()
+            if len(users) != 1:
+                print("  Set ARCHER_EMAIL to the account whose AI settings and keys MODE llm should use")
+                return False
+            resolved = resolve(db, users[0].id, "detection", None if provider == "assigned" else provider, model)
+        finally:
+            db.close()
+        if not resolved:
+            print(f"  {users[0].email} has no {'detection provider assigned' if provider == 'assigned' else provider + ' key'}"
+                  f" (Profile → API Keys)")
+            return False
+        config = detection_llm_config(resolved)
+        if max_calls:
+            config["max_calls"] = int(max_calls)
+        print(f"  🤖 {resolved['label']} / {resolved['model'] or 'default model'}, "
+              f"up to {config.get('max_calls', DEFAULT_MAX_DETECTION_CALLS)} LLM calls")
+        return config

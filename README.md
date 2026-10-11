@@ -96,12 +96,26 @@ Archer is a modular Python service for automated threat hunting with optional ad
 
 ### Modules
 
-| Module | Description |
-|--------|-------------|
-| `generate` | Generate detection queries for a MITRE ATT&CK threat group |
-| `correlate` | Build correlation queries from existing detection YAMLs |
-| `hunt` | Hunt for a specific technique and generate detections |
-| `emulate` | Execute adversary emulation tests |
+Local modules run in the console's own process. Server modules drive a running Archer server through `archer/client.py`, the same client the MCP server and agents use, so they run exactly what the web app runs: the profile's AI assignment and call cap, IOC sweeps, IOC flow and the latest-run view.
+
+| Module | Runs | Description |
+|--------|------|-------------|
+| `generate` | local | Generate detections for a threat group (`MODE llm` uses the profile's detection provider: `PROVIDER`, `MODEL`, `MAX_CALLS`) |
+| `correlate` | local | Build correlation queries from existing detection YAMLs (`MIN_RELEVANCE`) |
+| `hunt` | local | Look up a technique and compile its detections |
+| `emulate` | local | Execute adversary emulation tests |
+| `hunt/group` | server | Group hunt with AI, OSINT, merging, SIEM exclusions, validation, emulation and an optional briefing |
+| `hunt/cve` | server | CVE hunt: exploitation detections plus IOC sweeps from the CVE's references |
+| `hunt/technique` | server | Technique hunt across every group that uses the techniques |
+| `intel/report` | server | Extract TTPs and IOCs from a report URL or file and hunt them (`MODE all \| iocs \| review`) |
+| `intel/company` | server | Profile a company from OSINT and hunt the groups that target it |
+| `research/actors` | server | Find actors by keyword (country, industry) and consolidate their techniques; XLSX export |
+| `ai/ask` | server | Ask Archer |
+| `ai/briefing` | server | Threat briefing: prioritised techniques and coverage gaps |
+| `ai/settings` | server | Show or change the AI provider and model for Ask and detection generation |
+| `results` | server | A run's detections, correlations and IOC flow; zip download |
+
+Server modules sign in with `ARCHER_EMAIL` and `ARCHER_PASSWORD` (the console prompts for anything unset) against `ARCHER_URL` (default `http://127.0.0.1:8000`). `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.
 
 ### Commands
 
@@ -170,6 +184,24 @@ adfconsole > search all T1059
 
 Results are colour-coded by type (technique, group, software, detection, correlation, reference) with highlighted search terms.
 
+### Server Module Example
+
+```
+adfconsole > use hunt/cve
+adfconsole (hunt/cve) > set CVE CVE-2024-3400
+adfconsole (hunt/cve) > run
+  Run started: CVE-2024-3400
+  … detections
+  … complete
+
+  6 detections across 1 techniques (Splunk: 4, GoogleSecOps: 1, MicrosoftThreatProtection: 1)
+  IOC sweeps: GoogleSecOps, MicrosoftThreatProtection
+  IOC flow (58 IOCs, 1 links) from references for CVE-2024-3400 (unit42.paloaltonetworks.com, www.volexity.com)
+    Staging / download (7)
+  → Payload / execution (31)
+  → Infrastructure (role not stated) (20)
+```
+
 ### Query Generation Modes
 
 The `generate` module supports three modes via `set MODE <mode>`:
@@ -177,7 +209,7 @@ The `generate` module supports three modes via `set MODE <mode>`:
 | Mode | Description |
 |------|-------------|
 | `standard` | Default — uses Archer's built-in indicator extraction and platform validation |
-| `llm` | Sends bespoke prompt templates + technique data to an LLM for high-fidelity query generation (requires `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `LLM_ENDPOINT`) |
+| `llm` | Sends bespoke prompt templates + technique data to the detection provider in your profile (Profile → API Keys), capped at the profile's max LLM calls per run |
 | `fallback` | Template-based query builder — maps MITRESaw evidence indicators to SIEM fields using bespoke mapping files, no LLM needed |
 
 ---

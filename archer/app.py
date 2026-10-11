@@ -3709,6 +3709,73 @@ async def correlations_json(group_name: str):
         return JSONResponse({"ok": False}, status_code=500)
 
 
+@app.get("/api/results/{group_name}")
+def results_json(group_name: str, run: str = ""):
+    """
+    A run's results as JSON (the CLI, the MCP server and the agents read this; the
+    results page renders the same files). run=latest limits it to the latest run.
+    """
+    import yaml as _yaml
+
+    from archer.build.ioc_flow import load_ioc_flow
+    from archer.build.run_files import latest_run
+
+    files = group_yaml_files(group_name, GENERATE_DIR) if os.path.exists(GENERATE_DIR) else []
+    latest = latest_run(group_name) or {}
+    run_only = None
+    if run == "latest" and latest.get("files"):
+        run_only = set(latest["files"])
+        files = [f for f in files if os.path.basename(f) in run_only]
+
+    detections = []
+    for path in sorted(files):
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                doc = _yaml.safe_load(fh) or {}
+        except Exception as e:
+            detections.append({"file": os.path.basename(path), "error": str(e)})
+            continue
+        # Standard files: one query plus requiredDataConnectors; bespoke: a queries list
+        connectors = [c.get("connectorId", "") for c in doc.get("requiredDataConnectors") or [] if isinstance(c, dict)]
+        platform = ", ".join(doc.get("detection_platforms") or connectors)
+        queries = doc.get("queries") or ([{"platform": platform, "query": doc.get("query", "")}] if doc.get("query") else [])
+        technique = doc.get("technique_id")
+        detections.append({
+            "file": os.path.basename(path),
+            "name": doc.get("name", ""),
+            "techniques": doc.get("techniques") or ([technique] if technique else []),
+            "tactics": doc.get("tactics") or [],
+            "severity": doc.get("severity", ""),
+            "platforms": doc.get("detection_platforms") or sorted({q.get("platform", "") for q in queries} - {""}),
+            "queries": [{"platform": q.get("platform", ""), "data_source": q.get("data_source", ""),
+                         "query": q.get("query", "")} for q in queries],
+        })
+
+    correlations = []
+    for name in (sanitize_group_name(group_name), group_name):
+        corr_path = os.path.join(CORRELATE_DIR, f"{name}.json")
+        if os.path.exists(corr_path):
+            try:
+                with open(corr_path, "r", encoding="utf-8") as fh:
+                    correlations = _run_correlations(json.load(fh).get("vendor_correlations", []), run_only)
+            except (ValueError, AttributeError):
+                pass
+            break
+    return JSONResponse({
+        "ok": True,
+        "group_name": group_name,
+        "run": "latest" if run == "latest" else "all",
+        "latest_run": {"completed_at": latest.get("completed_at"), "files": len(latest.get("files") or [])} if latest else None,
+        "detections": detections,
+        "correlations": [{"vendor": c.get("vendor", ""), "a": os.path.basename(c.get("a") or ""),
+                          "b": os.path.basename(c.get("b") or ""), "tactics": c.get("tactics") or [],
+                          "techniques": c.get("techniques_involved") or [], "relevance": c.get("relevance_score"),
+                          "query": c.get("combined_query") or ""}
+                         for c in correlations],
+        "ioc_flow": load_ioc_flow(group_name) or None,
+    })
+
+
 @app.get("/list_drafts")
 async def list_drafts(request: Request, user_id: str = "", archer_session: Optional[str] = Cookie(None)):
     user_id, err = _draft_user(request, archer_session, user_id)
