@@ -135,3 +135,14 @@ def test_brackets_inside_an_indicator_string_are_not_an_empty_group(tmp_path):
     write_yaml(str(path), "Domain Trust Discovery", "T1482", "desc", "MicrosoftThreatProtection", ["Discovery"], "FIN13",
                'DeviceProcessEvents\n| where (ProcessCommandLine has "DSEnumerateDomainTrusts()")', datatype="DeviceProcessEvents")
     assert path.exists()
+
+
+def test_technique_hunt_threshold_reaches_the_wrapper(monkeypatch):
+    # /hunt/technique passed correlation_min_relevance, which the wrapper didn't take:
+    # every technique hunt failed with a TypeError before generating anything
+    import inspect
+
+    from archer import app as app_module
+
+    assert "correlation_min_relevance" in inspect.signature(app_module.modified_process_group_wrapper).parameters
+

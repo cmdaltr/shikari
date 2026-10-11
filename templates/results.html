@@ -5,6 +5,7 @@
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/attack_flow.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/ioc_flow.css') }}?v={{ request.app.state.asset_version }}">
 <style>
 /* Latest run / All runs switch */
 .run-view { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 16px; }
@@ -1285,6 +1286,9 @@
 
     <!-- ATT&CK Flow: kill-chain lanes, coverage and correlation links -->
     {% include "partials/attack_flow.html" %}
+
+    <!-- IOC Flow: the report's indicators in the order the intrusion used them -->
+    {% if ioc_flow %}{% include "partials/ioc_flow.html" %}{% endif %}
 
     <!-- Divider -->
     <div style="border-top: 2px solid #e5e7eb; margin: 40px 0;"></div>
@@ -2964,4 +2968,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script src="{{ url_for('static', path='js/attack_flow.js') }}?v={{ request.app.state.asset_version }}"></script>
+{% if ioc_flow %}<script src="{{ url_for('static', path='js/ioc_flow.js') }}?v={{ request.app.state.asset_version }}"></script>{% endif %}
 {% endblock %}

@@ -51,3 +51,30 @@ def test_github_poc_null_description_normalised(tmp_path):
         pocs = hunter._search_github_pocs("CVE-2024-3400")
 
     assert pocs[0]["description"] == ""
+
+
+def test_product_name_is_not_turned_into_guessed_files(tmp_path):
+    # "pan-os" used to become pan-os.jar, libpan-os.so... for a firewall OS
+    research = {"cve_id": "CVE-2024-3400", "nvd_data": {"description": "Command injection", "product": "pan-os"}, "pocs": []}
+    assert _hunter(tmp_path)._extract_iocs(research)["file"] == []
+
+
+def test_reference_iocs_read_write_ups_and_skip_catalogues(tmp_path):
+    pages = {
+        "https://www.volexity.com/blog/cve": {"success": True, "iocs": {"ip": ["172.233.228[.]93"], "hash": ["a" * 64], "file": ["/css/bootstrap.min.css"]}},
+        "https://security.vendor.com/advisory": {"success": True, "iocs": {}},
+    }
+    seen = []
+
+    def fake(url):
+        seen.append(url)
+        return pages[url]
+
+    nvd = {"references": ["https://nvd.nist.gov/vuln/detail/CVE-2024-3400", "https://github.com/x/poc",
+                          *pages, "https://www.volexity.com/blog/cve"]}
+    with patch("archer.parsers.blog_analyzer.analyze_blog_post", side_effect=fake):
+        refs = _hunter(tmp_path)._reference_iocs(nvd)
+
+    assert seen == list(pages)  # catalogue and code host skipped, duplicate read once
+    assert refs["sources"] == ["https://www.volexity.com/blog/cve"]
+    assert refs["iocs"] == {"ip": ["172.233.228[.]93"], "domain": [], "hash": ["a" * 64]}

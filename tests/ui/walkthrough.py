@@ -90,11 +90,10 @@ def open_tab(page, tab):
 
 def answer_ai_prompt(page):
     """The 'Use AI for this hunt?' modal appears on submit; decline for a deterministic run."""
-    try:
-        page.locator("#ai-prompt-no-btn").click(timeout=4000)
-        caption(page, "Declined AI for this run (heuristic generation)")
-    except PWTimeout:
-        pass
+    # Only the Hunt button asks. The modal follows an availability check that probes
+    # local LLMs, which can take seconds (Ollama's models on a sleeping SD card)
+    page.locator("#ai-prompt-no-btn").click(timeout=30000)
+    caption(page, "Declined AI for this run (heuristic generation)")
 
 
 def _progress_status(page):
@@ -193,7 +192,36 @@ def tour_results(page, label):
     shot(page, "results_scrolled")
     page.mouse.wheel(0, -5000)
     queries = page.locator("pre, code").count()
-    return f"{queries} query blocks rendered; {tour_attack_flow(page)}"
+    flow = tour_attack_flow(page)
+    iocs = tour_ioc_flow(page)
+    return f"{queries} query blocks rendered; {flow}" + (f"; {iocs}" if iocs else "")
+
+
+def tour_ioc_flow(page, required=False):
+    """IOC flow: staged indicators, and a selected one shows the report's words for it."""
+    if not page.locator("#ioc-flow").count():
+        if required:
+            raise AssertionError("no IOC flow on a run with IOC sweeps")
+        return ""
+    page.locator("#ioc-flow").scroll_into_view_if_needed()
+    stages = page.locator(".if-stage").count()
+    nodes = page.locator(".if-node").count()
+    links = page.locator("#if-edges path").count()
+    if not stages or not nodes:
+        raise AssertionError("IOC flow rendered no indicators")
+    caption(page, f"IOC Flow: {nodes} indicators in {stages} stages, {links} links")
+    shot(page, "ioc_flow")
+    pick = page.locator("#if-edges path").first.get_attribute("data-from") if links else None
+    node = page.locator(f'.if-node[data-id="{pick}"]') if pick else page.locator(".if-node:not(.is-inferred)").first
+    if node.count():
+        node.click()
+        page.wait_for_selector("#if-detail:not([hidden])", timeout=5000)
+        if "what the report says" not in page.inner_text("#if-detail").lower():
+            raise AssertionError("selected IOC shows no evidence from the report")
+        caption(page, "Selected indicator: the report's own words, and what it leads to")
+        shot(page, "ioc_flow_selected")
+        page.click("#if-detail-close")
+    return f"IOC flow {nodes} IOCs / {stages} stages / {links} links"
 
 
 def tour_flow_hiding(page):
@@ -343,7 +371,19 @@ def hunt_cve(page):
     page.click("#generate_btn")
     answer_ai_prompt(page)
     wait_for_results(page, "CVE-2024-3400")
-    return tour_results(page, "CVE-2024-3400")
+    # A firewall CVE: the exploit runs where no EDR does, so the detections are the
+    # exploitation indicators from the CVE's write-ups (Volexity, Unit 42), one sweep per SIEM
+    body = page.content()  # collapsed query blocks are not in inner_text
+    for siem, marker in (("SecOps", "rule archer_ioc_sweep_cve_2024_3400"), ("MDE", "RemoteIP in (ioc_ip)")):
+        if marker not in body:
+            raise AssertionError(f"no {siem} IOC sweep for CVE-2024-3400")
+    if body.count("172.233.228.93") < 2:
+        raise AssertionError("IOC sweep is missing Unit 42's exploitation IP 172.233.228.93")
+    if page.locator(".af-node").count():
+        return tour_results(page, "CVE-2024-3400")
+    caption(page, "CVE-2024-3400 — results: SecOps and MDE IOC sweeps from the CVE's references")
+    shot(page, "results_top")
+    return f"IOC sweeps for SecOps and MDE; {tour_ioc_flow(page, required=True)}"
 
 
 @step("Research — keyword + actor consolidation")
@@ -403,7 +443,6 @@ def _extract_blog(page):
     page.wait_for_function("!document.getElementById('upload_btn').disabled", timeout=10000)
     with page.expect_response(lambda r: "/analyze_blog" in r.url, timeout=120000) as resp_info:
         page.click("#upload_btn")
-        answer_ai_prompt(page)
     resp = resp_info.value
     if not resp.ok:
         raise RuntimeError(f"/analyze_blog returned {resp.status}: {resp.json().get('message', '')[:150]}")
@@ -451,6 +490,7 @@ def upload_iocs(page):
     shot(page, "upload_iocs_results")
     if "IOC Sweep" not in page.inner_text("body"):
         raise RuntimeError("results page has no IOC Sweep detection")
+    tour_ioc_flow(page, required=True)
     # Earlier UNC3944 runs left technique detections: the page opens on this run only
     switch = page.locator(".run-view")
     if not switch.count():
@@ -476,7 +516,6 @@ def upload_error(page):
     page.fill("#blog_url_input", "http://192.168.1.10/report.html")
     page.wait_for_function("!document.getElementById('upload_btn').disabled", timeout=10000)
     page.click("#upload_btn")
-    answer_ai_prompt(page)
     err = page.locator("#upload-error")
     err.wait_for(state="visible", timeout=30000)
     err.scroll_into_view_if_needed()
@@ -495,7 +534,6 @@ def profile(page):
     shot(page, "profile_form")
     page.wait_for_function("!document.getElementById('profile_btn').disabled", timeout=10000)
     page.click("#profile_btn")
-    answer_ai_prompt(page)
     caption(page, "Profiling tesco.com (Wikidata, homepage, OSINT)…")
     modal = page.locator("#threat-group-selection-overlay")
     modal.wait_for(state="visible", timeout=300000)

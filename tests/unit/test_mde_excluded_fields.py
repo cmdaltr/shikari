@@ -14,7 +14,7 @@ def where(query):
 @pytest.mark.unit
 def test_has_all_condition_is_removed_whole():
     # The old regex stopped at has_all's first ")", leaving "where ())))) or ..."
-    q = BASE + '(AdditionalFields has_all("aws", "create-key-pair") or ActionType has_any("CreateKeyPair"))'
+    q = BASE + '(SHA1 has_all("aws", "create-key-pair") or ActionType has_any("CreateKeyPair"))'
     assert where(strip_excluded_fields(q)) == '| where (ActionType has_any("CreateKeyPair"))'
 
 
@@ -41,3 +41,12 @@ def test_trailing_comment_is_kept():
 def test_field_names_sharing_a_prefix_are_kept():
     q = BASE + 'RemoteIPType == "Public" or RemoteUrl has "x"'
     assert where(strip_excluded_fields(q)) == '| where RemoteIPType == "Public" or RemoteUrl has "x"'
+
+
+@pytest.mark.unit
+def test_additional_fields_still_filter():
+    # Left out of projections, but on DeviceEvents it is often the only field with the detail
+    q = BASE + 'AdditionalFields has_all("aws", "create-key-pair") or SHA1 == "abc"\n| project Timestamp, AdditionalFields, DeviceName'
+    out = strip_excluded_fields(q)
+    assert '| where AdditionalFields has_all("aws", "create-key-pair")' in out
+    assert out.endswith("| project Timestamp, DeviceName")

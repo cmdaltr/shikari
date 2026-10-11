@@ -111,6 +111,8 @@ class FileIntelligenceParser:
                 "file_name": os.path.basename(file_path) if file_path else "uploaded_file"
             }
         }
+        from archer.build.ioc_flow import ioc_mentions
+        result["ioc_mentions"] = ioc_mentions(text, result["iocs"])
 
         return result
 
@@ -437,6 +439,11 @@ class FileIntelligenceParser:
             # Clean up for analysis (remove all bracket variations)
             clean_domain = domain.replace('[[.]]', '.').replace('[.]', '.').replace('[', '').replace(']', '')
             parts = clean_domain.split('.')
+
+            # Two sentences run together by text extraction ("persistence.In addition"):
+            # a capitalised word after an unfanged dot, never written that way for a domain
+            if '[' not in domain and re.fullmatch(r'[A-Z][a-z]+', parts[-1]):
+                continue
 
             # CHECK FILES FIRST: File extensions and known file indicators
             # Check against clean_domain since domain_lower might have [.] or [[.]]

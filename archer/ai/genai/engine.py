@@ -2198,7 +2198,8 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             # Use config relevance threshold (default 75%)
             from archer.config import CoreConfig
 
-            min_relevance = CoreConfig.correlation_min_relevance
+            # Read per run: a technique hunt can set its own threshold (CoreConfig is fixed at import)
+            min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", CoreConfig.correlation_min_relevance))
 
             top_vendor_corrs = _score_and_filter_correlations(
                 corrs, file_info, min_relevance=min_relevance,

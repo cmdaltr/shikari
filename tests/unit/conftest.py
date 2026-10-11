@@ -258,3 +258,11 @@ def read_json_file():
         with open(filepath) as f:
             return json.load(f)
     return _read
+
+
+@pytest.fixture(autouse=True)
+def _ioc_flows_in_tmp(tmp_path, monkeypatch):
+    """write_ioc_sweeps saves an IOC flow; keep it out of the real data/ioc_flows."""
+    from archer.build import ioc_flow
+
+    monkeypatch.setattr(ioc_flow, "IOC_FLOWS_DIR", str(tmp_path / "ioc_flows"))

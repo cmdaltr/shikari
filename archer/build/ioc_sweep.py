@@ -139,13 +139,20 @@ def secops_sweep(iocs: Dict[str, List[str]], label: str) -> Optional[str]:
 
 
 def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str,
-                     siems=("secops", "mde"), excluded_vendors=None) -> List[str]:
-    """Write one IOC-sweep detection YAML per SIEM; returns the paths written."""
+                     siems=("secops", "mde"), excluded_vendors=None, mentions=None) -> List[str]:
+    """
+    Write one IOC-sweep detection YAML per SIEM; returns the paths written.
+
+    mentions (ioc_flow.ioc_mentions over the report text) places each IOC in the
+    IOC flow shown on the results page; without it the flow falls back to IOC type.
+    """
+    from archer.build.ioc_flow import build_ioc_flow, save_ioc_flow
     from archer.build.yaml import write_yaml
 
     clean = clean_report_iocs(iocs)
     if not clean:
         return []
+    save_ioc_flow(group_name, build_ioc_flow(clean, mentions, source))
     excluded = {v.lower() for v in excluded_vendors or []}
     safe = re.sub(r"[^A-Za-z0-9]+", "", group_name)
     desc = f"Atomic indicators from {source}: " + "; ".join(f"{len(v)} {k}" for k, v in clean.items())

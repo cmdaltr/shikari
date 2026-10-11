@@ -1,0 +1,70 @@
+{# IOC flow. Context: ioc_flow (archer.build.ioc_flow.build_ioc_flow); only included when it has IOCs #}
+{% set kind_names = {'ip': 'IP', 'domain': 'Domain', 'sha256': 'SHA256', 'sha1': 'SHA1', 'md5': 'MD5', 'file': 'File'} %}
+{% set shown = 8 %}
+<div id="ioc-flow" class="detection-section af-section if-section">
+  <div class="detection-header">
+    <h2>
+      <div class="card-icon" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="5" cy="12" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="19" cy="19" r="3"/>
+          <path d="M8 11l8-5M8 13l8 5"/>
+        </svg>
+      </div>
+      IOC Flow
+    </h2>
+    <div class="af-toolbar" role="toolbar" aria-label="IOC flow">
+      <button type="button" class="af-chip is-on" id="if-toggle-edges" aria-pressed="true" title="Show links between indicators">Links</button>
+      <button type="button" class="af-chip" id="if-expand-all" title="Show every indicator in every stage">Show all</button>
+    </div>
+  </div>
+
+  <p class="af-stats">
+    <strong>{{ ioc_flow.stats.iocs }}</strong> indicators across {{ ioc_flow.stats.stages }} stage{{ 's' if ioc_flow.stats.stages != 1 }} ·
+    <strong>{{ ioc_flow.stats.links }}</strong> link{{ 's' if ioc_flow.stats.links != 1 }} ·
+    {{ ioc_flow.stats.with_evidence }} placed from the report's own words{% if ioc_flow.source %} · from {{ ioc_flow.source }}{% endif %}
+  </p>
+
+  <div class="af-body">
+    <div class="if-canvas" id="if-canvas">
+      <svg class="if-edges" id="if-edges" aria-hidden="true">
+        <defs>
+          <marker id="if-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#0EA5E9"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="if-stages">
+        {% for stage in ioc_flow.stages %}
+        <section class="if-stage" data-stage="{{ stage.key }}" aria-label="{{ stage.label }}">
+          <h3 class="af-lane-head">{{ stage.label }} <span class="af-lane-count">{{ stage.nodes|length }}</span></h3>
+          {% for n in stage.nodes %}
+          <button type="button" class="if-node{% if not n.evidence %} is-inferred{% endif %}" data-id="{{ n.id }}"
+                  {% if loop.index > shown %}hidden data-more{% endif %}
+                  title="{{ n.value }}{% if not n.evidence %} (placed by type: the report gives no context){% endif %}">
+            <span class="if-kind if-kind-{{ n.kind }}">{{ kind_names.get(n.kind, n.kind) }}</span>
+            <span class="if-value">{{ n.value }}</span>
+          </button>
+          {% endfor %}
+          {% if stage.nodes|length > shown %}
+          <button type="button" class="if-more" data-stage="{{ stage.key }}">+{{ stage.nodes|length - shown }} more</button>
+          {% endif %}
+        </section>
+        {% endfor %}
+      </div>
+    </div>
+
+    <aside class="af-detail" id="if-detail" aria-live="polite" hidden>
+      <button type="button" class="af-detail-close" id="if-detail-close" aria-label="Close details">×</button>
+      <div id="if-detail-body"></div>
+    </aside>
+  </div>
+
+  <div class="af-legend">
+    <span>Stage: inferred from the sentence or IOC-table row that mentions the indicator</span>
+    <span><span class="af-legend-edge if-legend-edge"></span> mentioned together (same sentence or command), earlier stage → later</span>
+    <span><span class="if-legend-inferred"></span> no context in the report: placed by type</span>
+    <span class="af-legend-hint">Select an indicator for the report's words and what it leads to</span>
+  </div>
+
+  <script type="application/json" id="if-data">{{ ioc_flow|tojson }}</script>
+</div>

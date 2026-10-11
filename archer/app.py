@@ -36,7 +36,7 @@ import logging
 import threading
 import re
 import html
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlparse
 import yaml
 from archer.build.progress import read_progress, start_progress, write_progress
 from archer.config import (
@@ -1903,7 +1903,7 @@ async def get_local_llm_status():
 @app.get("/api/ai/availability")
 async def get_ai_availability():
     """
-    Combined AI/LLM availability check: local endpoints (detected at startup),
+    Combined AI/LLM availability check: local endpoints (detected on each call),
     cloud provider API keys (checked live, since these are just env reads), and
     network reachability (checked at startup — see detect_network_connectivity).
 
@@ -1913,6 +1913,12 @@ async def get_ai_availability():
     reported separately rather than offered as a selectable option — selecting
     it would just fail.
     """
+    # Detected again on each ask (concurrent, 2s timeouts): an Ollama started after
+    # Archer was otherwise never offered, while Ask Archer (chat.py) already saw it
+    try:
+        await detect_local_llm()
+    except Exception as e:
+        print(f"Local LLM re-detection failed: {e}")
     local_endpoints = getattr(app.state, "local_llm_endpoints", None)
     if local_endpoints is None:
         # Fall back to the single-endpoint shape if detect_local_llm hasn't
@@ -2985,6 +2991,11 @@ async def generate_cve(
                 "domain": [],
             }
 
+            from archer.build.ioc_flow import merge_mentions
+
+            reference_iocs = {"ip": [], "domain": [], "hash": []}
+            reference_sources = []
+            reference_mentions = {}
             for cve in cve_ids:
                 # print(f"Researching {cve}...")
                 research = research_and_hunt(cve)
@@ -2995,6 +3006,23 @@ async def generate_cve(
                 # Collect IOCs
                 for ioc_type in all_iocs:
                     all_iocs[ioc_type].extend(research.get("iocs", {}).get(ioc_type, []))
+                refs = research.get("reference_iocs") or {}
+                for ioc_type, values in (refs.get("iocs") or {}).items():
+                    reference_iocs.setdefault(ioc_type, []).extend(values)
+                reference_sources.extend(refs.get("sources") or [])
+                reference_mentions = merge_mentions(reference_mentions, refs.get("mentions"))
+
+            # Exploitation indicators from the advisories and write-ups: one sweep per SIEM.
+            # For an appliance CVE (PAN-OS, Ivanti, Citrix) these are the detections there are.
+            from archer.build.ioc_sweep import write_ioc_sweeps
+
+            source = "references for " + ", ".join(cve_ids)
+            if reference_sources:
+                source += " (" + ", ".join(sorted({urlparse(u).netloc for u in reference_sources})) + ")"
+            sweeps = write_ioc_sweeps(group_name, reference_iocs, source, GENERATE_DIR, mentions=reference_mentions)
+            if sweeps:
+                print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
+            write_progress(group_name, {"ioc_sweeps": len(sweeps)})
 
             # Deduplicate
             all_techniques = list(set(all_techniques))
@@ -3748,6 +3776,9 @@ async def get_threat_groups(query: str = ""):
 
 
 # Modify the orchestrator process to ensure completion
+_CONFIGURED_MIN_RELEVANCE = os.environ.get("CORRELATION_MIN_RELEVANCE")
+
+
 def modified_process_group_wrapper(
     group_name,
     hypothesis,
@@ -3759,6 +3790,7 @@ def modified_process_group_wrapper(
     merge_by_tactic=False,
     merge_by_parent=False,
     excluded_vendors=None,
+    correlation_min_relevance=None,
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
@@ -3781,6 +3813,14 @@ def modified_process_group_wrapper(
         os.environ["CORRELATION_MERGE_BY_PARENT"] = "true"
     else:
         os.environ.pop("CORRELATION_MERGE_BY_PARENT", None)
+
+    # Technique hunts can set the threshold; every other run gets the configured one back
+    if correlation_min_relevance is not None:
+        os.environ["CORRELATION_MIN_RELEVANCE"] = str(correlation_min_relevance)
+    elif _CONFIGURED_MIN_RELEVANCE is None:
+        os.environ.pop("CORRELATION_MIN_RELEVANCE", None)
+    else:
+        os.environ["CORRELATION_MIN_RELEVANCE"] = _CONFIGURED_MIN_RELEVANCE
 
     try:
         # Call the original process_group with run_correlation parameter
@@ -4027,6 +4067,7 @@ async def upload_file(
                     "filename": safe_filename,
                     "ttps": ttps,
                     "iocs": iocs,
+                    "ioc_mentions": result.get("ioc_mentions") or {},
                     "synthetic_group_name": synthetic_group_name,
                     "use_openai": use_ai,
                     "run_correlation": run_correlation == "true",
@@ -4138,6 +4179,7 @@ async def generate_from_upload(
             _run_report_generation(
                 synthetic_group_name, ttps, iocs, filename, bundle, report_actor,
                 f"Generated from uploaded file: {filename}",
+                mentions=extraction_data.get("ioc_mentions"),
                 genai_mode="semantic" if not use_ai else "ai_generators",
                 run_correlation=True,  # Always enabled by default
                 osint_enhancement=(osint_enhancement == "true"),  # Default to False for uploads
@@ -4257,6 +4299,7 @@ async def analyze_blog(
                     "group_name": group_name,
                     "ttps": ttps,
                     "iocs": iocs,
+                    "ioc_mentions": result.get("ioc_mentions") or {},
                     "procedures": procedures,
                     "synthetic_group_name": synthetic_group_name,
                     "use_openai": use_openai == "true",
@@ -4353,6 +4396,7 @@ async def generate_from_blog(
             _run_report_generation(
                 synthetic_group_name, ttps, iocs, url, bundle, report_actor,
                 f"Generated from blog post: {url}",
+                mentions=extraction_data.get("ioc_mentions"),
                 genai_mode="semantic" if not use_ai else "ai_generators",
                 run_correlation=run_correlation,
             )
@@ -5243,7 +5287,7 @@ async def generate_detections_from_profile(
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
-def _run_report_generation(group, ttps, iocs, source, bundle, actor, description, **kwargs):
+def _run_report_generation(group, ttps, iocs, source, bundle, actor, description, mentions=None, **kwargs):
     """
     Background job for an uploaded file or blog post: IOC sweeps, then the techniques.
 
@@ -5254,7 +5298,7 @@ def _run_report_generation(group, ttps, iocs, source, bundle, actor, description
 
     try:
         # The report's atomic IOCs aren't tied to a technique: one sweep per SIEM
-        sweeps = write_ioc_sweeps(group, iocs, source, GENERATE_DIR)
+        sweeps = write_ioc_sweeps(group, iocs, source, GENERATE_DIR, mentions=mentions)
         if sweeps:
             print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
         write_progress(group, {"ioc_sweeps": len(sweeps)})
@@ -5495,7 +5539,11 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
 
             # Determine vendor from YAML connectorId field (more reliable than filename)
             vendor = None
-            connector_value = yaml_data.get("connectorId", "")
+            # Sentinel-style files nest it: requiredDataConnectors: [{connectorId: ...}]
+            connector_value = yaml_data.get("connectorId", "") or " ".join(
+                str(c.get("connectorId", "")) for c in yaml_data.get("requiredDataConnectors") or []
+                if isinstance(c, dict)
+            )
             if connector_value:
                 if "MicrosoftThreatProtection" in connector_value:
                     vendor = "mde"
@@ -6257,6 +6305,13 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
     except Exception as e:
         print(f"Attack flow view unavailable: {e}")
 
+    # IOC flow: only when this view includes the run's IOC sweep (no IOCs, no diagram)
+    ioc_flow = None
+    if any(d["file"].startswith("IOCSweep") for entries in detection_files.values() for d in entries):
+        from archer.build.ioc_flow import load_ioc_flow
+
+        ioc_flow = load_ioc_flow(group_name) or None
+
     # Calculate duration (if progress file exists)
     # Progress files are saved with the original group name (with spaces), not sanitized
     duration = 0
@@ -6337,6 +6392,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             "correlations": grouped_correlations,
             "attack_flow_exists": attack_flow_exists,
             "attack_flow": attack_flow,
+            "ioc_flow": ioc_flow,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "validation_results": validation_results,
             "validation_summary": validation_summary,

@@ -178,6 +178,9 @@ def analyze_blog_post(url: str) -> Dict:
             ),
         }
 
+        from archer.build.ioc_flow import ioc_mentions
+        result["ioc_mentions"] = ioc_mentions(text, result["iocs"])
+
         return result
 
     except requests.exceptions.RequestException as e:

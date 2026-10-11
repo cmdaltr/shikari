@@ -462,8 +462,13 @@ def _should_include_field(field: str, query: str) -> bool:
     return False
 
 
+# Excluded from output columns but still allowed to filter: on DeviceEvents most ActionTypes
+# carry their detail only in AdditionalFields, so dropping these conditions threw away
+# thousands of DeviceEvents detections.
+FILTERABLE_EXCLUDED_FIELDS = {"AdditionalFields"}
+
 _EXCLUDED_CONDITION = re.compile(
-    r"^(?:" + "|".join(EXCLUDED_MDE_FIELDS) + r")\s*(?:==|=~|!=|!has|has_any|has_all|has|contains|startswith|endswith|in~?|matches)(?![A-Za-z0-9_])",
+    r"^(?:" + "|".join(f for f in EXCLUDED_MDE_FIELDS if f not in FILTERABLE_EXCLUDED_FIELDS) + r")\s*(?:==|=~|!=|!has|has_any|has_all|has|contains|startswith|endswith|in~?|matches)(?![A-Za-z0-9_])",
     re.IGNORECASE,
 )
 

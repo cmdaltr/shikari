@@ -175,6 +175,8 @@ def parse_llm_response(response_text: str) -> List[Dict]:
         List of query dicts with keys: platform, data_source, query,
         technique_id, technique_name, reason.
     """
+    # Reasoning models (qwen3, deepseek-r1) can put their thinking first
+    response_text = re.sub(r"<think>[\s\S]*?</think>", "", response_text or "")
     # Try to extract JSON from the response
     json_match = re.search(r"\{[\s\S]*\}", response_text)
     if not json_match:
@@ -424,12 +426,58 @@ def _call_azure_openai(
     return data["choices"][0]["message"]["content"]
 
 
+def _is_ollama(endpoint: str) -> bool:
+    import requests
+
+    try:
+        return requests.get(f"{endpoint}/api/version", timeout=3).ok
+    except Exception:
+        return False
+
+
+def _call_ollama(prompt: str, endpoint: str, config: dict) -> str:
+    """
+    Ollama's native chat API, with a context sized to the prompt.
+
+    Its OpenAI-compatible endpoint runs every model at Ollama's default context
+    (4096 tokens) and silently cuts the prompt to fit: the ~29k-token detection prompt
+    arrived as its last 2k tokens, and qwen3 answered an LSASS request with a WAF
+    query repeated until max_tokens.
+    """
+    import requests
+
+    max_tokens = config.get("max_tokens", 4096)
+    # ~3.5 characters a token for this English/query mix, plus room for the answer
+    needed = int(len(prompt) / 3.5) + max_tokens + 1024
+    num_ctx = int(config.get("num_ctx") or min(max(8192, -(-needed // 4096) * 4096), 131072))
+    resp = requests.post(
+        f"{endpoint}/api/chat",
+        json={
+            "model": config.get("model", "default"),
+            "stream": False,
+            "think": False,  # qwen3 and other reasoning models: the answer, not the reasoning
+            "options": {"num_ctx": num_ctx, "num_predict": max_tokens},
+            "messages": [{"role": "user", "content": prompt}],
+        },
+        timeout=int(config.get("timeout", 1800)),  # a 30k-token prompt on CPU takes minutes
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    estimated = int(len(prompt) / 3.5)
+    if data.get("prompt_eval_count") and data["prompt_eval_count"] < estimated // 2:
+        print(f"  ⚠️  Ollama read {data['prompt_eval_count']} of ~{estimated} prompt tokens: the prompt was cut")
+    return data.get("message", {}).get("content", "")
+
+
 def _call_local(prompt: str, endpoint: str, config: dict) -> str:
     """Call any OpenAI-compatible endpoint (local LLMs, LiteLLM, vLLM, Ollama, etc.)."""
     import requests
 
     model = config.get("model", "default")
     max_tokens = config.get("max_tokens", 4096)
+
+    if _is_ollama(endpoint):
+        return _call_ollama(prompt, endpoint, config)
 
     resp = requests.post(
         f"{endpoint}/v1/chat/completions",

@@ -761,6 +761,7 @@ def _run_bespoke_generation(retrieved_data, identifiers, use_llm, llm_config):
             platforms=technique_platforms,
             detectable_via=detectable_via,
             group_name=group_name,
+            use_local=bool((llm_config or {}).get("use_local")),
             config=llm_config,
         )
     else:

@@ -6,6 +6,7 @@ from archer.validation.mde_field_validator import format_mde_query
 import getpass
 import json
 import os
+import textwrap
 import re
 import uuid
 
@@ -479,7 +480,9 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
         # Warn-only by default; ARCHER_CONTRACT_STRICT=1 refuses to write a query with findings.
         try:
             from archer.contract import gate_query
-            allowed, _ = gate_query(query, label=os.path.basename(query_file))
+            # Linted as written, not with the YAML block indent: an indented closing
+            # "}" hid every YARA-L condition section (false YL-5 on each SecOps rule)
+            allowed, _ = gate_query(textwrap.dedent(query), label=os.path.basename(query_file))
         except Exception as gate_err:  # the gate must never take the pipeline down
             print(f"  [contract] gate error for {query_file}: {gate_err}")
             allowed = True

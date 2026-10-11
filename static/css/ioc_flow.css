@@ -1,0 +1,59 @@
+/* Results page: IOC flow (templates/partials/ioc_flow.html). Shares the af- tokens and chrome. */
+.if-section { --if-accent: #0EA5E9; }
+.if-canvas { position: relative; overflow-x: auto; padding: 4px 2px 12px; }
+.if-edges { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.if-edges path { fill: none; stroke: var(--if-accent); stroke-width: 1.6; opacity: .55; }
+.if-edges path.is-lit { opacity: 1; stroke-width: 2.4; }
+.if-edges.is-dim path:not(.is-lit) { opacity: .12; }
+.if-section.no-edges .if-edges { display: none; }
+
+.if-stages { position: relative; display: flex; gap: 36px; align-items: flex-start; min-width: min-content; }
+.if-stage {
+  /* min-width: 0 so a 64-character hash truncates instead of widening the column */
+  flex: 0 0 250px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 10px;
+  background: var(--af-lane-bg); border: 1px solid var(--af-border); border-radius: 10px;
+}
+/* Stage order arrow between columns */
+.if-stage + .if-stage::before {
+  content: "→"; position: absolute; margin-left: -30px; margin-top: 2px; color: var(--af-muted); font-weight: 700;
+}
+
+.if-node {
+  display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; overflow: hidden; padding: 6px 8px; cursor: pointer; text-align: left;
+  font: inherit; font-size: .8em; color: var(--af-text);
+  background: var(--af-node-bg); border: 1px solid var(--af-border); border-left: 3px solid var(--if-accent); border-radius: 6px;
+}
+.if-node[hidden] { display: none; }
+.if-node.is-inferred { border-left-style: dashed; border-left-color: var(--af-gap); }
+.if-node.is-selected, .if-node.is-lit { border-color: var(--if-accent); box-shadow: 0 0 0 2px rgba(14, 165, 233, .25); }
+.if-section.has-selection .if-node:not(.is-selected):not(.is-lit) { opacity: .4; }
+.if-node:focus-visible, .if-more:focus-visible { outline: 2px solid var(--if-accent); outline-offset: 2px; }
+.if-kind {
+  flex: 0 0 auto; font-size: .78em; font-weight: 700; padding: 1px 6px; border-radius: 8px;
+  background: rgba(14, 165, 233, .12); color: #0369A1;
+}
+.if-kind-sha256, .if-kind-sha1, .if-kind-md5, .if-kind-file { background: rgba(139, 92, 246, .12); color: #6D28D9; }
+.if-kind-domain { background: rgba(16, 185, 129, .12); color: #047857; }
+[data-theme="dark"] .if-kind { color: #7DD3FC; }
+[data-theme="dark"] .if-kind-sha256, [data-theme="dark"] .if-kind-sha1, [data-theme="dark"] .if-kind-md5, [data-theme="dark"] .if-kind-file { color: #C4B5FD; }
+[data-theme="dark"] .if-kind-domain { color: #6EE7B7; }
+.if-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: "JetBrains Mono", ui-monospace, monospace; }
+.if-more {
+  font: inherit; font-size: .78em; font-weight: 600; padding: 4px; cursor: pointer; border-radius: 6px;
+  border: 1px dashed var(--af-border); background: transparent; color: var(--af-muted);
+}
+
+.if-legend-edge { border-top-color: var(--if-accent) !important; }
+.if-legend-inferred { display: inline-block; width: 18px; height: 12px; border: 1px solid var(--af-border); border-left: 3px dashed var(--af-gap); border-radius: 3px; vertical-align: middle; margin-right: 4px; }
+
+.if-detail-value { font-family: "JetBrains Mono", ui-monospace, monospace; word-break: break-all; font-weight: 700; }
+.if-evidence { margin: 6px 0 0; padding-left: 10px; border-left: 3px solid var(--if-accent); color: var(--af-text); font-size: .88em; }
+.if-evidence mark { background: rgba(14, 165, 233, .2); color: inherit; padding: 0 2px; border-radius: 2px; }
+.if-detail-links { margin: 4px 0 0; padding-left: 18px; font-size: .88em; }
+.if-detail-links button { font: inherit; padding: 0; border: 0; background: none; color: var(--if-accent); cursor: pointer; text-decoration: underline; word-break: break-all; }
+
+@media (max-width: 768px) {
+  .if-stages { flex-direction: column; gap: 22px; min-width: 0; }
+  .if-stage { flex-basis: auto; width: 100%; box-sizing: border-box; }
+  .if-stage + .if-stage::before { content: "↓"; margin: -24px 0 0 50%; }
+}

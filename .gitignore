@@ -77,6 +77,7 @@ data/progress/*
 
 # Each group's latest run: which detection files it produced
 data/runs/*
+data/ioc_flows/*
 
 # Uploads (user-uploaded files)
 data/uploads/*

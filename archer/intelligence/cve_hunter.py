@@ -47,6 +47,12 @@ class CVEHunter:
         # Check cache first
         cached = self._get_cached_research(cve_id)
         if cached:
+            # Re-derived each time (no network): a cache written by an older extractor
+            # still carries its guessed indicators
+            cached["iocs"] = self._extract_iocs(cached)
+            if "mentions" not in (cached.get("reference_iocs") or {}):  # cached before references were read
+                cached["reference_iocs"] = self._reference_iocs(cached.get("nvd_data") or {})
+                self._cache_research(cve_id, cached)
             return cached
 
         result = {
@@ -89,6 +95,7 @@ class CVEHunter:
         # 4. Analyze techniques and extract IOCs
         result["techniques"] = self._map_to_attack(result)
         result["iocs"] = self._extract_iocs(result)
+        result["reference_iocs"] = self._reference_iocs(result["nvd_data"])
 
         # 5. Generate detection queries
         result["detection_queries"] = self._generate_detection_queries(result)
@@ -448,20 +455,11 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
                 matches = re.findall(pattern, full_text, re.IGNORECASE)
                 iocs[ioc_type].extend(matches)
 
-        # Extract file names mentioned in description
-        # Look for product names that might be file names
-        product = nvd_data.get("product", "")
-        if product:
-            if any(ext in product.lower() for ext in ['.jar', '.war', '.dll', '.so', '.exe']):
-                iocs["file"].append(product)
-            else:
-                # Add common variations
-                iocs["file"].extend([
-                    f"{product}.jar",
-                    f"{product}.war",
-                    f"{product}-core.jar",
-                    f"lib{product}.so"
-                ])
+        # A product name is a file indicator only when it is a file name. Guessed variants
+        # ("pan-os-core.jar", "libpan-os.so" for a firewall OS) matched nothing real.
+        product = nvd_data.get("product") or ""
+        if any(product.lower().endswith(ext) for ext in ['.jar', '.war', '.dll', '.so', '.exe']):
+            iocs["file"].append(product)
 
         # Extract version-specific patterns for Log4j (CVE-2021-44228)
         if "log4j" in description or "log4j" in cve_id.lower():
@@ -491,6 +489,52 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
             ])
 
         return iocs
+
+    # Catalogues, trackers and code hosts: no indicators in the page itself
+    _NO_INDICATOR_HOSTS = ("nvd.nist.gov", "cve.org", "cve.mitre.org", "cisa.gov/known-exploited",
+                           "github.com", "twitter.com", "x.com", "exploit-db.com", "packetstormsecurity")
+    MAX_REFERENCE_PAGES = 6
+
+    def _reference_iocs(self, nvd_data: Dict) -> Dict[str, Any]:
+        """
+        Atomic indicators (IPs, domains, hashes) from the CVE's reference pages.
+
+        The advisories and research write-ups NVD links to (Volexity, Unit 42 and the like)
+        carry the exploitation indicators. For a network appliance they are the only thing
+        an endpoint or SecOps rule can hunt for: the exploit runs where no EDR does.
+        File names are left out: write-ups cite web paths like /css/bootstrap.min.css.
+        """
+        from archer.parsers.blog_analyzer import analyze_blog_post
+
+        from archer.build.ioc_flow import merge_mentions
+
+        merged: Dict[str, List[str]] = {"ip": [], "domain": [], "hash": []}
+        sources = []
+        mentions: Dict[str, List[str]] = {}
+        read = 0
+        for url in dict.fromkeys(nvd_data.get("references") or []):
+            if read >= self.MAX_REFERENCE_PAGES:
+                break
+            if not url or any(h in url.lower() for h in self._NO_INDICATOR_HOSTS):
+                continue
+            read += 1
+            try:
+                page = analyze_blog_post(url)
+            except Exception as e:
+                print(f"Could not read CVE reference {url}: {e}")
+                continue
+            if not page.get("success"):
+                continue
+            found = False
+            for kind, values in merged.items():
+                for v in (page.get("iocs") or {}).get(kind) or []:
+                    if v not in values:
+                        values.append(v)
+                        found = True
+            if found:
+                sources.append(url)
+                mentions = merge_mentions(mentions, page.get("ioc_mentions"))
+        return {"iocs": merged, "sources": sources, "mentions": mentions}
 
     def _extract_from_text(self, text: str, iocs: Dict) -> Dict:
         """Extract IOCs from arbitrary text."""
