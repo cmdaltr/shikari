@@ -24,11 +24,6 @@ form#main-form .form-grid input[type="submit"] {
   max-width: 400px;
   min-width: 400px;
 }
-html {
-  /* Zoom out by 10% - makes all content appear slightly smaller */
-  zoom: 0.9;
-}
-
 html, body {
   height: 100%;
   margin: 0;
