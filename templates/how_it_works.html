@@ -1324,8 +1324,7 @@ data/APT29/
 │   ├── T1078_Valid_Accounts.yml
 │   └── ...
 ├── correlations/
-│   ├── vendor_correlations.json
-│   └── cross_vendor_correlations.json
+│   └── vendor_correlations.json
 └── attack_flows/
     ├── APT29_complete_flow.json
     ├── APT29_complete_flow.html
@@ -1536,11 +1535,10 @@ data/APT29/
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">Correlations and Cross-vendor?</summary>
+                <summary class="faq-question">How do correlations work?</summary>
                 <div class="faq-answer">
-                    <p><strong>Correlations:</strong> Combines similar queries from the same vendor (either Splunk or MDE) into multi-stage detections. This is enabled by default and helps create detection chains that track attack progressions within a single SIEM platform.</p>
+                    <p><strong>Correlations:</strong> Combines queries for the same SIEM (Google SecOps, MDE, Splunk or Elastic) into multi-stage detections. This is enabled by default and helps create detection chains that track attack progressions within a single SIEM platform.</p>
                     <p>The results page shows each technique in a correlation as an <strong>individual query block</strong>, stacked with "chained with" connectors. The combined JOIN query is available via "Show Combined Query" below the stack.</p>
-                    <p><strong>Cross-vendor:</strong> (Coming Soon) Will correlate queries across different vendors (Splunk + MDE) to create unified detection workflows across multiple security platforms.</p>
                 </div>
             </details>
 
