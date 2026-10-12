@@ -22,28 +22,27 @@
       <a href="/library">library</a>: open its results and use <strong>Save to Library</strong>.</p>
   </section>
   {% else %}
-  <form class="fl-pick" method="get" action="/flows">
-    <label for="fl-group">Flow</label>
-    <select id="fl-group" name="group" onchange="this.form.submit()">
-      {% for kind, flows in kinds.items() %}
-      <optgroup label="{{ kind }}{{ 's' if flows|length != 1 }}">
-        {% for f in flows %}
-        <option value="{{ f.group }}" {% if chosen and f.group == chosen.group %}selected{% endif %}>{{ f.label }}{% if not f.view %} (not built yet){% endif %}</option>
+  <!-- One row: the flow to show, what it is, when it was saved, and its results -->
+  <div class="fl-bar">
+    <form class="fl-pick" method="get" action="/flows">
+      <label for="fl-group">Flow</label>
+      <select id="fl-group" name="group" onchange="this.form.submit()">
+        {% for kind, flows in kinds.items() %}
+        <optgroup label="{{ kind }}{{ 's' if flows|length != 1 }}">
+          {% for f in flows %}
+          <option value="{{ f.group }}" {% if chosen and f.group == chosen.group %}selected{% endif %}>{{ f.label }}{% if not f.view %} (not built yet){% endif %}</option>
+          {% endfor %}
+        </optgroup>
         {% endfor %}
-      </optgroup>
-      {% endfor %}
-    </select>
-    <noscript><button type="submit">Open</button></noscript>
-  </form>
-
-  {% if chosen %}
-  <section class="fl-meta">
+      </select>
+      <noscript><button type="submit">Open</button></noscript>
+    </form>
+    {% if chosen %}
     <span class="fl-kind">{{ chosen.kind }}</span>
-    <strong>{{ chosen.label }}</strong>
     {% if chosen.saved %}<span class="fl-when">flow saved {{ chosen.saved.strftime('%d %b %Y %H:%M') }}</span>{% endif %}
     <a class="fl-open" href="/results?group_name={{ chosen.group|urlencode }}">Open results →</a>
-  </section>
-  {% endif %}
+    {% endif %}
+  </div>
 
   {% if attack_flow %}
     {% include "partials/attack_flow.html" %}

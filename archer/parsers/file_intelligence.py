@@ -28,16 +28,19 @@ class FileIntelligenceParser:
     Parse threat intelligence files and extract TTPs and IOCs using GenAI.
     """
 
-    def __init__(self, use_openai: bool = False, use_local_llm: bool = False):
+    def __init__(self, use_openai: bool = False, use_local_llm: bool = False, llm_config: Optional[Dict] = None):
         """
         Initialize the parser with optional AI backends.
 
         Args:
-            use_openai: Use OpenAI API for extraction
+            use_openai: Use OpenAI API for extraction (OPENAI_API_KEY)
             use_local_llm: Use local LLM for extraction
+            llm_config: the provider chosen for this run (app._hunt_llm_args); takes
+                precedence over the two flags above
         """
-        self.use_openai = use_openai
-        self.use_local_llm = use_local_llm
+        self.use_openai = use_openai and not llm_config
+        self.use_local_llm = use_local_llm and not llm_config
+        self.llm_config = llm_config
         self.openai_client = None
         self.local_llm = None
 
@@ -388,7 +391,7 @@ class FileIntelligenceParser:
         ttps.extend([m.upper() for m in matches])
 
         # Use GenAI for semantic extraction if available
-        if self.use_openai or self.use_local_llm:
+        if self.llm_config or self.use_openai or self.use_local_llm:
             ai_ttps = self._extract_ttps_with_ai(text)
             ttps.extend(ai_ttps)
 
@@ -703,7 +706,7 @@ class FileIntelligenceParser:
                     iocs["cmd"].append(cleaned)
 
         # Extract command-line indicators using GenAI if available
-        if self.use_openai or self.use_local_llm:
+        if self.llm_config or self.use_openai or self.use_local_llm:
             ai_iocs = self._extract_iocs_with_ai(text)
             for key in ai_iocs:
                 if key in iocs:
@@ -771,6 +774,8 @@ class FileIntelligenceParser:
 
     def _extract_ttps_with_ai(self, text: str) -> List[str]:
         """Use AI to extract TTPs from text based on semantic understanding."""
+        if self.llm_config:
+            return llm_extract_ttps(text, self.llm_config)
         if self.use_openai and self.openai_client:
             return self._extract_ttps_openai(text)
         elif self.use_local_llm and self.local_llm:
@@ -779,6 +784,8 @@ class FileIntelligenceParser:
 
     def _extract_iocs_with_ai(self, text: str) -> Dict[str, List[str]]:
         """Use AI to extract IOCs from text based on semantic understanding."""
+        if self.llm_config:
+            return llm_extract_iocs(text, self.llm_config)
         if self.use_openai and self.openai_client:
             return self._extract_iocs_openai(text)
         elif self.use_local_llm and self.local_llm:
@@ -873,7 +880,8 @@ def parse_intelligence_file(
     file_path: str = None,
     file_content: bytes = None,
     use_openai: bool = False,
-    use_local_llm: bool = False
+    use_local_llm: bool = False,
+    llm_config: Optional[Dict] = None,
 ) -> Dict[str, Any]:
     """
     Convenience function to parse a threat intelligence file.
@@ -883,9 +891,67 @@ def parse_intelligence_file(
         file_content: File content bytes (if file is uploaded)
         use_openai: Use OpenAI for enhanced extraction
         use_local_llm: Use local LLM for enhanced extraction
+        llm_config: the provider chosen for this run (see FileIntelligenceParser)
 
     Returns:
         Dict with extracted TTPs and IOCs
     """
-    parser = FileIntelligenceParser(use_openai=use_openai, use_local_llm=use_local_llm)
+    parser = FileIntelligenceParser(use_openai=use_openai, use_local_llm=use_local_llm, llm_config=llm_config)
     return parser.parse_file(file_path or "uploaded_file", file_content)
+
+
+# AI extraction through the provider chosen for the run (Hunt's AI prompt; Profile → API
+# Keys), for uploaded files and blog posts alike. Each returns nothing on any failure, so
+# a run carries on with what the patterns found.
+_TECHNIQUE_ID = re.compile(r"^T\d{4}(?:\.\d{3})?$")
+_EXTRACT_MAX_CHARS = 8000
+
+
+def _ask(prompt: str, llm_config: Dict, max_tokens: int) -> str:
+    from archer.build.llm_queries import call_llm
+
+    return call_llm(prompt, {**llm_config, "max_tokens": max_tokens}) or ""
+
+
+def _json_in(reply: str, opener: str, closer: str):
+    start, end = reply.find(opener), reply.rfind(closer)
+    if start == -1 or end <= start:
+        return None
+    try:
+        return json.loads(reply[start:end + 1])
+    except ValueError:
+        return None
+
+
+def llm_extract_ttps(text: str, llm_config: Dict) -> List[str]:
+    """ATT&CK technique IDs the text names or describes."""
+    prompt = (
+        "Analyse the following threat intelligence text and extract every MITRE ATT&CK technique it "
+        "names or clearly describes. Return ONLY a JSON array of technique IDs, e.g. "
+        '["T1059.001", "T1566"]. Return [] if there are none.\n\nText:\n' + text[:_EXTRACT_MAX_CHARS]
+    )
+    try:
+        found = _json_in(_ask(prompt, llm_config, 600), "[", "]")
+    except Exception as e:
+        print(f"AI technique extraction failed: {e}")
+        return []
+    return sorted({t.strip().upper() for t in found or [] if isinstance(t, str) and _TECHNIQUE_ID.match(t.strip().upper())})
+
+
+def llm_extract_iocs(text: str, llm_config: Dict) -> Dict[str, List[str]]:
+    """Command lines, software and file names the text describes, for detection queries."""
+    prompt = (
+        "Analyse the following threat intelligence text and extract indicators that detection queries "
+        "can match. Return ONLY a JSON object with these keys: \"cmd\" (command lines), \"sw\" "
+        "(software or process names), \"file\" (file names, not paths). Use empty arrays when there "
+        "are none.\n\nText:\n" + text[:_EXTRACT_MAX_CHARS]
+    )
+    try:
+        found = _json_in(_ask(prompt, llm_config, 1200), "{", "}")
+    except Exception as e:
+        print(f"AI indicator extraction failed: {e}")
+        return {}
+    if not isinstance(found, dict):
+        return {}
+    return {k: [str(v).strip() for v in found.get(k) or [] if str(v).strip()] for k in ("cmd", "sw", "file")
+            if isinstance(found.get(k), list)}

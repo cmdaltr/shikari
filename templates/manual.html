@@ -25,7 +25,9 @@ html, body {
   <div id="group-name" class="mn-group" {% if not group_name %}hidden{% endif %}>{{ group_name | default('', true) }}</div>
 
   <div id="manual-content" class="mn-grid">
-    <section class="mn-card">
+    <!-- Technique entry is one L-shaped card: beside report analysis at the top (.mn-entry-top),
+         full width from Tactics down (.mn-entry-rest) -->
+    <section class="mn-card mn-entry-top">
       <h2 class="mn-card-title">Technique entry</h2>
 
       <div id="group_desc_block" class="mn-field">
@@ -43,7 +45,23 @@ html, body {
         </select>
         <div class="technique-help">Select one technique only.</div>
       </div>
+    </section>
 
+    <section class="mn-card mn-report">
+      <h2 class="mn-card-title">Blog/Report Analysis</h2>
+      <p class="mn-hint">Provide a URL to a blog post or threat report. Archer analyses it and generates detections from its findings.</p>
+      <div class="mn-field">
+        <label for="blog_url" class="section-label">Blog Post or Report URL</label>
+        <input type="url" name="blog_url" id="blog_url" placeholder="https://example.com/blog/threat-analysis">
+        <div class="technique-help">Examples: CrowdStrike blog, The DFIR Report, security vendor threat intelligence</div>
+      </div>
+      <div class="mn-actions">
+        <button type="button" id="analyze-blog-btn" class="btn">Analyse Blog Post</button>
+      </div>
+      <div id="blog-analysis-status"></div>
+    </section>
+
+    <section class="mn-card mn-entry-rest">
       <div class="mn-field">
         <span class="section-label">Tactics</span>
         <div class="mn-tactics">
@@ -64,20 +82,6 @@ html, body {
         <button type="submit" id="submit-btn" class="btn">Submit</button>
       </div>
       <div id="append-message"></div>
-    </section>
-
-    <section class="mn-card">
-      <h2 class="mn-card-title">Blog/Report Analysis</h2>
-      <p class="mn-hint">Provide a URL to a blog post or threat report. Archer analyses it and generates detections from its findings.</p>
-      <div class="mn-field">
-        <label for="blog_url" class="section-label">Blog Post or Report URL</label>
-        <input type="url" name="blog_url" id="blog_url" placeholder="https://example.com/blog/threat-analysis">
-        <div class="technique-help">Examples: CrowdStrike blog, The DFIR Report, security vendor threat intelligence</div>
-      </div>
-      <div class="mn-actions">
-        <button type="button" id="analyze-blog-btn" class="btn">Analyse Blog Post</button>
-      </div>
-      <div id="blog-analysis-status"></div>
     </section>
   </div>
 

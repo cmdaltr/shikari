@@ -88,10 +88,20 @@ def open_tab(page, tab):
     page.wait_for_timeout(600)
 
 
+def decline_ai_if_asked(page, timeout=5000):
+    """Upload asks the same AI question as Hunt (when the profile has a provider): decline it."""
+    try:
+        page.locator("#ai-prompt-modal").wait_for(state="visible", timeout=timeout)
+    except PWTimeout:
+        return
+    page.locator("#ai-prompt-no-btn").click()
+    caption(page, "Declined AI for this report (pattern extraction)")
+
+
 def answer_ai_prompt(page):
     """The 'Use AI for this hunt?' modal appears on submit; decline for a deterministic run."""
-    # Only the Hunt button asks, and only when the profile has a provider that can
-    # generate detections (GitHub #10): otherwise the hunt goes straight to progress
+    # Asked only when the profile has a provider that can generate detections (GitHub
+    # #10): otherwise the hunt goes straight to progress
     page.wait_for_function(
         "() => location.pathname === '/progress' ||"
         " getComputedStyle(document.getElementById('ai-prompt-modal')).display !== 'none'",
@@ -357,17 +367,19 @@ def hunt_group(page):
     open_tab(page, "generate")
     caption(page, "Hunt tab: generate detections for a threat group")
     page.fill("#group_name_input", "Scattered Spider")
-    options = page.locator("#tab-generate details.options-section").first
-    if options.get_attribute("open") is None:  # open by default; older pages had it closed
-        options.locator("summary").click()
-    caption(page, "Additional options: enabling Threat Briefing")
-    page.check("#briefing_checkbox")
     shot(page, "hunt_group_form")
     page.wait_for_function("!document.getElementById('generate_btn').disabled", timeout=10000)
     page.click("#generate_btn")
     answer_ai_prompt(page)
     wait_for_results(page, "Scattered Spider")
-    return tour_results(page, "Scattered Spider")
+    # Every results page opens with a threat briefing, worked out without AI
+    briefing = page.locator("#briefing")
+    briefing.wait_for(state="visible", timeout=15000)
+    caption(page, "Threat briefing: coverage, the weakest stage and the gaps to close first")
+    briefing.scroll_into_view_if_needed()
+    shot(page, "results_briefing")
+    gaps = briefing.locator(".briefing-gaps li").count()
+    return tour_results(page, "Scattered Spider") + f"; briefing lists {gaps} gaps"
 
 
 @step("Hunt — CVE (CVE-2024-3400, PAN-OS GlobalProtect)")
@@ -452,6 +464,7 @@ def _extract_blog(page):
     page.wait_for_function("!document.getElementById('upload_btn').disabled", timeout=10000)
     with page.expect_response(lambda r: "/analyze_blog" in r.url, timeout=120000) as resp_info:
         page.click("#upload_btn")
+        decline_ai_if_asked(page)
     resp = resp_info.value
     if not resp.ok:
         raise RuntimeError(f"/analyze_blog returned {resp.status}: {resp.json().get('message', '')[:150]}")
@@ -525,6 +538,7 @@ def upload_error(page):
     page.fill("#blog_url_input", "http://192.168.1.10/report.html")
     page.wait_for_function("!document.getElementById('upload_btn').disabled", timeout=10000)
     page.click("#upload_btn")
+    decline_ai_if_asked(page)
     err = page.locator("#upload-error")
     err.wait_for(state="visible", timeout=30000)
     err.scroll_into_view_if_needed()

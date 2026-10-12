@@ -705,17 +705,49 @@ document.addEventListener('DOMContentLoaded', function () {
         return false;
       }
 
-      if (hasUrl && !hasFile) {
-        // Blog URL analysis
-        showLoading('blog analysis');
-        var blogFormData = new FormData();
-        blogFormData.append('url', url.trim());
-        var useOpenAI = document.getElementById('upload_use_openai');
-        if (useOpenAI && useOpenAI.checked) blogFormData.append('use_openai', 'true');
+      // The same AI prompt as Hunt: the chosen AI reads the report and generates detections
+      function run() {
+        if (hasUrl && !hasFile) {
+          // Blog URL analysis
+          showLoading('blog analysis');
+          var blogFormData = new FormData();
+          blogFormData.append('url', url.trim());
+          blogFormData.append('ai_provider', document.getElementById('upload_ai_provider').value);
+          blogFormData.append('ai_model', document.getElementById('upload_ai_model').value);
 
-        fetch('/analyze_blog', {
+          fetch('/analyze_blog', {
+            method: 'POST',
+            body: blogFormData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
+          .then(function (response) {
+            var contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) return response.json();
+            return response.text();
+          })
+          .then(function (data) {
+            hideLoading();
+            if (uploadFailed(data)) return;
+            if (typeof data === 'object' && data.show_extraction) { showExtractionResults(data); return; }
+            if (typeof data === 'object' && data.redirect_url) { window.location = data.redirect_url; return; }
+            if (typeof data === 'object' && data.redirect) { window.location = data.redirect; return; }
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(data, 'text/html');
+            var newContent = doc.getElementById('main-content');
+            var oldContent = document.getElementById('main-content');
+            if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
+          })
+          .catch(function (err) { hideLoading(); showUploadError('Request failed: ' + err.message); });
+          return;
+        }
+
+        // File upload
+        showLoading('file upload');
+        var formData = new FormData(uploadForm);
+
+        fetch('/upload', {
           method: 'POST',
-          body: blogFormData,
+          body: formData,
           headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function (response) {
@@ -726,58 +758,36 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function (data) {
           hideLoading();
           if (uploadFailed(data)) return;
-          if (typeof data === 'object' && data.show_extraction) { showExtractionResults(data); return; }
-          if (typeof data === 'object' && data.redirect_url) { window.location = data.redirect_url; return; }
-          if (typeof data === 'object' && data.redirect) { window.location = data.redirect; return; }
+          if (typeof data === 'object' && data.show_extraction) {
+            showExtractionResults(data);
+            return;
+          }
+          if (typeof data === 'object' && data.redirect_url) {
+            window.location = data.redirect_url;
+            return;
+          }
+          if (typeof data === 'object' && data.redirect) {
+            window.location = data.redirect;
+            return;
+          }
           var parser = new DOMParser();
           var doc = parser.parseFromString(data, 'text/html');
           var newContent = doc.getElementById('main-content');
           var oldContent = document.getElementById('main-content');
           if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
         })
-        .catch(function (err) { hideLoading(); showUploadError('Request failed: ' + err.message); });
-        return;
+        .catch(function (err) {
+          hideLoading();
+          showUploadError('Request failed: ' + err.message);
+        });
       }
-
-      // File upload
-      showLoading('file upload');
-      var formData = new FormData(uploadForm);
-
-      fetch('/upload', {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      })
-      .then(function (response) {
-        var contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) return response.json();
-        return response.text();
-      })
-      .then(function (data) {
-        hideLoading();
-        if (uploadFailed(data)) return;
-        if (typeof data === 'object' && data.show_extraction) {
-          showExtractionResults(data);
-          return;
-        }
-        if (typeof data === 'object' && data.redirect_url) {
-          window.location = data.redirect_url;
-          return;
-        }
-        if (typeof data === 'object' && data.redirect) {
-          window.location = data.redirect;
-          return;
-        }
-        var parser = new DOMParser();
-        var doc = parser.parseFromString(data, 'text/html');
-        var newContent = doc.getElementById('main-content');
-        var oldContent = document.getElementById('main-content');
-        if (newContent && oldContent) oldContent.innerHTML = newContent.innerHTML;
-      })
-      .catch(function (err) {
-        hideLoading();
-        showUploadError('Request failed: ' + err.message);
-      });
+      if (!window.archerAskAi) return run();
+      window.archerAskAi({ title: 'Use AI for this report?', purpose: 'read the report and generate detections alongside the standard pipeline', run: 'process it' },
+        function (providerId, modelId) {
+          document.getElementById('upload_ai_provider').value = providerId;
+          document.getElementById('upload_ai_model').value = modelId;
+          run();
+        });
     });
   }
 });

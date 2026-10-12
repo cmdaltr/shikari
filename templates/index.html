@@ -335,20 +335,6 @@
                         <span class="option-hint" id="auto-validate-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
                       </div>
                     </label>
-                    <!-- Threat Briefing -->
-                    <label class="option-item" id="briefing-checkbox-label" style="align-items: flex-start;">
-                      <input type="checkbox" id="briefing_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
-                      <div style="flex: 1; min-width: 0;">
-                        <span class="option-label">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            <path d="M9 12l2 2 4-4"/>
-                          </svg>
-                          Threat Briefing
-                        </span>
-                        <span class="option-hint" style="margin-top: 0.4em; display: block;">Generate an AI threat briefing after detection generation</span>
-                      </div>
-                    </label>
 
                   <!-- Column 1: OSINT Enhancement -->
                   <label class="option-item">
@@ -1767,19 +1753,6 @@
                         <span class="option-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
                       </div>
                     </label>
-                    <label class="option-item" style="align-items: flex-start;">
-                      <input type="checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
-                      <div style="flex: 1; min-width: 0;">
-                        <span class="option-label">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            <path d="M9 12l2 2 4-4"/>
-                          </svg>
-                          Threat Briefing
-                        </span>
-                        <span class="option-hint" style="margin-top: 0.4em; display: block;">Generate an AI threat briefing after detection generation</span>
-                      </div>
-                    </label>
 
                   <!-- Row 1 Column 1: OSINT Enhancement -->
                   <label class="option-item">
@@ -1806,27 +1779,7 @@
                     </span>
                   </label>
 
-                  <!-- Row 1 Column 3: AI Generators -->
-                  <label class="option-item">
-                    <input type="checkbox" name="use_openai" id="upload_use_openai" value="true">
-                    <span class="option-label">
-                      AI Generators
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Use AI (OpenAI GPT, local LLMs) to enhance detection generation quality with smarter query logic. Requires OPENAI_API_KEY for cloud AI or local LLM server.</span>
-                      </span>
-                    </span>
-                  </label>
 
-                  <!-- Row 2 Column 1: AI Correlations -->
-                  <label class="option-item">
-                    <input type="checkbox" name="ai_correlations" value="true">
-                    <span class="option-label">
-                      AI Correlations
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip"><strong>What AI does:</strong> Improves correlation JOIN query combination strategies (smarter query logic).<br><br><strong>What AI does NOT do:</strong> Detection pairing and scoring remain rule-based (6-factor, 0-140 points). AI cannot change which detections get paired or their relevance scores.<br><br>Requires AI Generators checkbox + OPENAI_API_KEY.</span>
-                      </span>
-                    </span>
-                  </label>
 
 
                 </div>
@@ -1836,6 +1789,9 @@
               </div>
 
               <div class="hp-actions">
+                <!-- AI choice, set by the prompt before reading (archerAskAi) -->
+                <input type="hidden" name="ai_provider" id="upload_ai_provider" value="">
+                <input type="hidden" name="ai_model" id="upload_ai_model" value="">
                 <button type="button" class="hp-btn" id="upload_btn" disabled>Upload &amp; Process</button>
               </div>
               <div id="upload-error" class="error-message" role="alert" style="display:none;"></div>
@@ -2354,7 +2310,7 @@
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="font-size: 2em;">🤖</div>
-                    <h2 style="margin: 0; font-size: 1.5em; font-weight: 600;">Use AI for this hunt?</h2>
+                    <h2 id="ai-prompt-title" style="margin: 0; font-size: 1.5em; font-weight: 600;">Use AI for this hunt?</h2>
                 </div>
             </div>
             <div style="padding: 24px;">
@@ -2380,26 +2336,14 @@
     </div>
 
     <script>
-    // Hunt AI prompt (GitHub #10): offered only when the user's profile has a provider
-    // that can generate detections; the provider assigned to detection generation is
-    // preselected, and a remembered choice skips the prompt.
+    // The AI prompt before a run (GitHub #10), for Hunt and Upload: offered only when the
+    // user's profile has a provider that can generate detections; the provider assigned to
+    // detection generation is preselected, and a remembered choice skips the prompt.
+    // archerAskAi({title, purpose, run}, onChoice) calls onChoice(providerId, modelId),
+    // both empty for "no AI".
     (function() {
         var options = [];
-
-        function submitGenerateForm() {
-            var form = document.getElementById('generate-form');
-            if (!form) return;
-            // Dispatch a real 'submit' event so the existing AJAX handler in
-            // static/js/index.js runs (validation, endpoint routing, fetch,
-            // progress UI) — a native form.submit() would bypass all of that
-            // and cause a full page POST instead.
-            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-        }
-
-        function setChoice(providerId, modelId) {
-            document.getElementById('hidden_ai_provider').value = providerId || '';
-            document.getElementById('hidden_ai_model').value = modelId || '';
-        }
+        var pending = null;
 
         function rememberChoice(providerId, modelId) {
             return fetch('/api/profile/ai-settings', {
@@ -2409,22 +2353,21 @@
             }).catch(function() {});
         }
 
-        function closeModalAndSubmit(providerId, modelId) {
-            setChoice(providerId, modelId);
+        function choose(providerId, modelId) {
+            var done = pending;
+            pending = null;
             document.getElementById('ai-prompt-modal').style.display = 'none';
             var remember = document.getElementById('ai-prompt-remember');
             if (remember.checked) {
                 remember.checked = false;
-                rememberChoice(providerId, modelId).then(submitGenerateForm);
-            } else {
-                submitGenerateForm();
+                rememberChoice(providerId, modelId).then(function() { if (done) done(providerId || '', modelId || ''); });
+            } else if (done) {
+                done(providerId || '', modelId || '');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            var genBtn = document.getElementById('generate_btn');
-            if (!genBtn) return;
-
+        window.archerAskAi = function(text, onChoice) {
+            pending = onChoice;
             var modal = document.getElementById('ai-prompt-modal');
             var yesBtn = document.getElementById('ai-prompt-yes-btn');
             var noBtn = document.getElementById('ai-prompt-no-btn');
@@ -2432,57 +2375,69 @@
             var select = document.getElementById('ai-provider-select');
             var intro = document.getElementById('ai-prompt-intro');
             var note = document.getElementById('ai-prompt-note');
+            document.getElementById('ai-prompt-title').textContent = text.title;
 
-            noBtn.addEventListener('click', function() { closeModalAndSubmit(null, null); });
-            yesBtn.addEventListener('click', function() {
+            fetch('/api/ai/availability')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    options = data.providers || [];
+                    // Nothing in the profile that can generate detections: don't ask
+                    if (!data.any_available) return choose(null, null);
+                    // A remembered choice that's still configured (or "no AI")
+                    var remembered = data.remember;
+                    if (remembered && (!remembered.provider || options.some(function(o) { return o.id === remembered.provider; }))) {
+                        return choose(remembered.provider, remembered.model);
+                    }
+
+                    var assigned = data.assigned || {};
+                    select.innerHTML = '';
+                    options.forEach(function(o) {
+                        if (o.id === assigned.provider && assigned.model) o.model = assigned.model;
+                        var el = new Option(o.label + (o.model ? ' / ' + o.model : ''), o.id, false, o.id === assigned.provider);
+                        select.appendChild(el);
+                    });
+                    if (options.length === 1) {
+                        picker.style.display = 'none';
+                        intro.textContent = 'Use ' + options[0].label + (options[0].model ? ' / ' + options[0].model : '') +
+                            ' to ' + text.purpose + '?';
+                        yesBtn.textContent = 'Yes';
+                    } else {
+                        picker.style.display = 'block';
+                        intro.textContent = 'Archer can use AI to ' + text.purpose + '.';
+                        yesBtn.textContent = 'Use this and ' + text.run;
+                    }
+                    noBtn.textContent = 'Run without AI';
+                    var notes = ['Up to ' + (data.max_calls || 25) + ' LLM calls this run (set under Profile → API Keys).'];
+                    (data.ask_only || []).forEach(function(a) { notes.push(a.label + ': ' + a.note + '.'); });
+                    note.textContent = notes.join(' ');
+                    modal.style.display = 'flex';
+                })
+                .catch(function() {
+                    // Availability check failed: don't block the run, just run without AI
+                    choose(null, null);
+                });
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var select = document.getElementById('ai-provider-select');
+            document.getElementById('ai-prompt-no-btn').addEventListener('click', function() { choose(null, null); });
+            document.getElementById('ai-prompt-yes-btn').addEventListener('click', function() {
                 var opt = options[options.length > 1 ? select.selectedIndex : 0] || {};
-                closeModalAndSubmit(opt.id, opt.model);
+                choose(opt.id, opt.model);
             });
 
-            // Intercept the button click (before any 'submit' event fires) so we
-            // can hold the hunt until the user has made an AI choice, then
-            // re-dispatch 'submit' ourselves once they have.
-            genBtn.addEventListener('click', function(e) {
+            // Hunt: hold the hunt until the AI choice is made, then dispatch a real 'submit'
+            // so the AJAX handler in static/js/index.js runs (a native form.submit() would
+            // bypass it and POST the whole page)
+            var genBtn = document.getElementById('generate_btn');
+            if (genBtn) genBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-
-                fetch('/api/ai/availability')
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        options = data.providers || [];
-                        // Nothing in the profile that can generate detections: don't ask
-                        if (!data.any_available) return closeModalAndSubmit(null, null);
-                        // A remembered choice that's still configured (or "no AI")
-                        var remembered = data.remember;
-                        if (remembered && (!remembered.provider || options.some(function(o) { return o.id === remembered.provider; }))) {
-                            return closeModalAndSubmit(remembered.provider, remembered.model);
-                        }
-
-                        var assigned = data.assigned || {};
-                        select.innerHTML = '';
-                        options.forEach(function(o) {
-                            if (o.id === assigned.provider && assigned.model) o.model = assigned.model;
-                            var el = new Option(o.label + (o.model ? ' / ' + o.model : ''), o.id, false, o.id === assigned.provider);
-                            select.appendChild(el);
-                        });
-                        if (options.length === 1) {
-                            picker.style.display = 'none';
-                            intro.textContent = 'Use ' + options[0].label + (options[0].model ? ' / ' + options[0].model : '') +
-                                ' to generate detections alongside the standard pipeline?';
-                            yesBtn.textContent = 'Yes';
-                        } else {
-                            picker.style.display = 'block';
-                            intro.textContent = 'Archer can use AI to generate detections alongside the standard pipeline.';
-                            yesBtn.textContent = 'Use this and run hunt';
-                        }
-                        noBtn.textContent = 'Run without AI';
-                        var notes = ['Up to ' + (data.max_calls || 25) + ' LLM calls this run (set under Profile → API Keys).'];
-                        (data.ask_only || []).forEach(function(a) { notes.push(a.label + ': ' + a.note + '.'); });
-                        note.textContent = notes.join(' ');
-                        modal.style.display = 'flex';
-                    })
-                    .catch(function() {
-                        // Availability check failed — don't block the hunt, just run without AI.
-                        closeModalAndSubmit(null, null);
+                window.archerAskAi({ title: 'Use AI for this hunt?', purpose: 'generate detections alongside the standard pipeline', run: 'run hunt' },
+                    function(providerId, modelId) {
+                        document.getElementById('hidden_ai_provider').value = providerId;
+                        document.getElementById('hidden_ai_model').value = modelId;
+                        var form = document.getElementById('generate-form');
+                        if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
                     });
             });
         });

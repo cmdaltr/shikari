@@ -214,15 +214,6 @@
 .vendor-icon {
   width: 18px;
   height: 18px;
-  opacity: 0.9;
-}
-
-.vendor-icon.splunk {
-  fill: white;
-}
-
-.vendor-icon.mde {
-  fill: white;
 }
 
 /* Table Sections */
@@ -303,14 +294,6 @@
 .table-vendor-icon {
   width: 20px;
   height: 20px;
-}
-
-.table-vendor-icon.splunk {
-  fill: #65a637;
-}
-
-.table-vendor-icon.mde {
-  fill: #0078d4;
 }
 
 .platform-list {
@@ -425,6 +408,33 @@
 {% block main_class %}page-shell{% endblock %}
 
 {% block content %}
+<!-- Vendor logos, the same as the attack flow and the home page options -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="cv-g-gblue" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4285F4"/><stop offset="100%" stop-color="#1967D2"/></linearGradient>
+    <linearGradient id="cv-g-gred" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#EA4335"/><stop offset="100%" stop-color="#C5221F"/></linearGradient>
+    <linearGradient id="cv-g-gyellow" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FBBC04"/><stop offset="100%" stop-color="#F29900"/></linearGradient>
+    <linearGradient id="cv-g-ggreen" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34A853"/><stop offset="100%" stop-color="#1E8E3E"/></linearGradient>
+    <linearGradient id="cv-g-mde" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5AC4F0"/><stop offset="50%" stop-color="#0078D4"/><stop offset="100%" stop-color="#004E8C"/></linearGradient>
+    <radialGradient id="cv-g-splunk" cx="30%" cy="30%"><stop offset="0%" stop-color="#FF6B9D"/><stop offset="50%" stop-color="#E91E8C"/><stop offset="100%" stop-color="#C4166C"/></radialGradient>
+    <linearGradient id="cv-g-eyellow"><stop offset="0%" stop-color="#FED10A"/><stop offset="100%" stop-color="#FDB42F"/></linearGradient>
+    <linearGradient id="cv-g-eteal"><stop offset="0%" stop-color="#00BFB3"/><stop offset="100%" stop-color="#00A9A5"/></linearGradient>
+    <linearGradient id="cv-g-eblue"><stop offset="0%" stop-color="#24BBB1"/><stop offset="100%" stop-color="#0077CC"/></linearGradient>
+  </defs>
+  <symbol id="cv-logo-googlesecops" viewBox="0 0 100 100">
+    <circle cx="30" cy="48" r="16" fill="url(#cv-g-gblue)"/><circle cx="50" cy="38" r="20" fill="url(#cv-g-gred)"/>
+    <circle cx="70" cy="48" r="16" fill="url(#cv-g-gyellow)"/><rect x="22" y="52" width="56" height="20" rx="8" fill="url(#cv-g-ggreen)"/>
+  </symbol>
+  <symbol id="cv-logo-mde" viewBox="0 0 100 100">
+    <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#cv-g-mde)"/>
+  </symbol>
+  <symbol id="cv-logo-splunk" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="48" fill="url(#cv-g-splunk)"/><path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </symbol>
+  <symbol id="cv-logo-elastic" viewBox="0 0 100 100">
+    <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#cv-g-eyellow)"/><rect x="15" y="44" width="70" height="12" rx="6" fill="url(#cv-g-eteal)"/><rect x="20" y="68" width="70" height="12" rx="6" fill="url(#cv-g-eblue)"/>
+  </symbol>
+</svg>
 <div class="coverage-container">
   <a href="/" class="back-link">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -483,11 +493,11 @@
         <span>3+ queries</span>
       </div>
       <div class="key-item" style="margin-left: 20px;">
-        <svg class="table-vendor-icon splunk" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-splunk"/></svg>
         <span>Splunk</span>
       </div>
       <div class="key-item">
-        <svg class="table-vendor-icon mde" viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 7h4v4H7V7zm6 0h4v4h-4V7zm-6 6h4v4H7v-4zm6 0h4v4h-4v-4z"/></svg>
+        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-mde"/></svg>
         <span>MDE</span>
       </div>
     </div>
@@ -581,14 +591,9 @@
 </div>
 
 <script>
-// SVG icons for vendors
-const SPLUNK_ICON = `<svg class="vendor-icon splunk" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>`;
-
-const MDE_ICON = `<svg class="vendor-icon mde" viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 7h4v4H7V7zm6 0h4v4h-4V7zm-6 6h4v4H7v-4zm6 0h4v4h-4v-4z"/></svg>`;
-
-const TABLE_SPLUNK_ICON = `<svg class="table-vendor-icon splunk" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>`;
-
-const TABLE_MDE_ICON = `<svg class="table-vendor-icon mde" viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 7h4v4H7V7zm6 0h4v4h-4V7zm-6 6h4v4H7v-4zm6 0h4v4h-4v-4z"/></svg>`;
+// Vendor logos (the sprite above): the same marks as the attack flow and home page
+const VENDOR_LOGOS = {'Google SecOps': 'googlesecops', 'MDE': 'mde', 'Splunk': 'splunk', 'Elastic': 'elastic'};
+const vendorLogo = (key, cls, name) => `<svg class="${cls}" role="img" aria-label="${name}"><title>${name}</title><use href="#cv-logo-${key}"/></svg>`;
 
 function getColorLevel(count) {
   if (count === 0) return 'level-0';
@@ -598,14 +603,10 @@ function getColorLevel(count) {
 }
 
 function getVendorIcons(vendors, forTable = false) {
-  const icons = [];
-  if (vendors.includes('Splunk')) {
-    icons.push(forTable ? TABLE_SPLUNK_ICON : SPLUNK_ICON);
-  }
-  if (vendors.includes('MDE')) {
-    icons.push(forTable ? TABLE_MDE_ICON : MDE_ICON);
-  }
-  return icons.join('');
+  return Object.entries(VENDOR_LOGOS)
+    .filter(([name]) => vendors.includes(name))
+    .map(([name, key]) => vendorLogo(key, forTable ? 'table-vendor-icon' : 'vendor-icon', name))
+    .join('');
 }
 
 let activeTactic = null;

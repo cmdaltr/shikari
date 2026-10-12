@@ -14,28 +14,33 @@
   --af-gap-bg: #1f2329;
 }
 
-.af-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.af-toolbar-sep { width: 1px; height: 22px; background: var(--af-border); margin: 0 4px; }
+.af-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.af-toolbar-sep { width: 1px; height: 28px; background: var(--af-border); margin: 0 4px; }
 .af-vendor-toggle {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+  width: 40px; height: 40px; border-radius: 8px; cursor: pointer;
   border: 1px solid var(--af-border); background: var(--af-node-bg);
   opacity: 0.35; filter: grayscale(1); transition: opacity .15s, filter .15s, border-color .15s;
 }
 .af-vendor-toggle.is-on { opacity: 1; filter: none; border-color: var(--af-focus); }
 .af-vendor-toggle .af-logo { width: 22px; height: 22px; }
+/* Toolbar buttons: full-size text and a clear outline, so each reads as a button */
 .af-chip {
-  font: inherit; font-size: 0.82em; font-weight: 600; padding: 6px 12px; border-radius: 16px; cursor: pointer;
-  border: 1px solid var(--af-border); background: var(--af-node-bg); color: var(--af-muted);
-  text-decoration: none;
+  display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box;
+  font: inherit; font-size: 0.95em; font-weight: 600; padding: 0 16px; border-radius: 8px; cursor: pointer;
+  border: 1.5px solid #cbd5e1; background: var(--af-node-bg); color: var(--af-text);
+  text-decoration: none; transition: background .15s, border-color .15s;
 }
+.af-chip:hover:not(:disabled) { border-color: var(--af-focus); background: rgba(66, 133, 244, .08); }
 .af-chip.is-on { background: var(--af-focus); border-color: var(--af-focus); color: #fff; }
-.af-chip:disabled { opacity: .45; cursor: default; }
+.af-chip:disabled { color: var(--af-muted); border-style: dashed; opacity: .7; cursor: not-allowed; }
+[data-theme="dark"] .af-chip { border-color: var(--af-border); }
 .af-chip[hidden] { display: none; }
 .af-search {
-  font: inherit; font-size: 0.85em; padding: 6px 10px; width: 170px; border-radius: 16px;
-  border: 1px solid var(--af-border); background: var(--af-node-bg); color: var(--af-text);
+  font: inherit; font-size: 0.95em; height: 40px; box-sizing: border-box; padding: 0 12px; width: 240px; border-radius: 8px;
+  border: 1.5px solid #cbd5e1; background: var(--af-node-bg); color: var(--af-text);
 }
+[data-theme="dark"] .af-search { border-color: var(--af-border); }
 .af-vendor-toggle:focus-visible, .af-chip:focus-visible, .af-search:focus-visible, .af-node:focus-visible {
   outline: 2px solid var(--af-focus); outline-offset: 2px;
 }
@@ -135,15 +140,17 @@
 .af-jump:hover { border-color: var(--af-focus); }
 .af-jump span { margin-left: 2px; }
 
+/* Key: full-size text in the body colour; the how-to line on its own row */
 .af-legend {
-  display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 0.8em; color: var(--af-muted); align-items: center;
+  display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 12px; font-size: 0.95em; color: var(--af-text); align-items: center;
+  line-height: 1.5;
 }
-.af-legend > span { display: inline-flex; align-items: center; gap: 5px; }
-.af-legend .af-logo { width: 14px; height: 14px; }
-.af-legend-gap { width: 18px; height: 11px; border: 1px dashed var(--af-gap); background: var(--af-gap-bg); border-radius: 3px; }
-.af-legend-edge { width: 22px; height: 0; border-top: 2px solid #4285F4; }
+.af-legend > span { display: inline-flex; align-items: center; gap: 8px; }
+.af-legend .af-logo { width: 18px; height: 18px; }
+.af-legend-gap { width: 22px; height: 14px; border: 1.5px dashed var(--af-gap); background: var(--af-gap-bg); border-radius: 3px; }
+.af-legend-edge { width: 28px; height: 0; border-top: 2.5px solid #4285F4; }
 .af-legend-edge.is-back { border-top-style: dashed; }
-.af-legend-hint { font-style: italic; }
+.af-legend > .af-legend-hint { flex-basis: 100%; color: var(--af-muted); font-size: 0.95em; }
 .af-notes { margin-top: 8px; font-size: 0.8em; color: var(--af-muted); }
 .af-notes summary { cursor: pointer; width: max-content; }
 .af-notes p { margin: 6px 0 4px; }

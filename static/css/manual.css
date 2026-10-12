@@ -6,7 +6,19 @@
 
 .mn-group { color: var(--accent); font-size: 1.2em; font-weight: 600; margin: -14px 0 20px; }
 
-.mn-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.mn-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); column-gap: 20px; row-gap: 0; align-items: start; }
+
+/* Technique entry: one card in two parts joined into an L. The top sits beside report
+   analysis; the rest spans both columns, its top edge drawn only where nothing sits on it */
+.mn-card.mn-entry-top { grid-column: 1; grid-row: 1; align-self: stretch; border-bottom: none; border-radius: 12px 12px 0 0; padding-bottom: 0; }
+.mn-card.mn-report { grid-column: 2; grid-row: 1; margin-bottom: 20px; }
+.mn-card.mn-entry-rest { grid-column: 1 / -1; grid-row: 2; position: relative; border-top: none; border-radius: 0 12px 12px 12px; }
+.mn-entry-rest::before {
+  content: ''; position: absolute; top: 0; right: -1px; left: calc((100% - 20px) * 2 / 3 - 1px); height: 12px;
+  border-top: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-top-right-radius: 12px;
+  pointer-events: none;
+}
+.mn-card.mn-entry-top, .mn-card.mn-entry-rest, .mn-card.mn-report { box-shadow: none; }
 .mn-card {
   background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px;
   padding: 18px 22px; box-shadow: 0 2px 8px var(--shadow); min-width: 0;
@@ -82,6 +94,10 @@
 
 @media (max-width: 900px) {
   .mn-grid { grid-template-columns: 1fr; }
+  .mn-card.mn-entry-top { grid-row: 1; }
+  .mn-card.mn-entry-rest { grid-column: 1; grid-row: 2; border-radius: 0 0 12px 12px; }
+  .mn-entry-rest::before { display: none; }
+  .mn-card.mn-report { grid-column: 1; grid-row: 3; margin: 20px 0 0; }
   .mn-tactics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 480px) {

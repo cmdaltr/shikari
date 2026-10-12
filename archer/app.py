@@ -2065,6 +2065,16 @@ def _siem_args(archer_session: Optional[str], *extra_excluded: str) -> dict:
     return {"excluded_vendors": sorted(excluded)} if excluded else {}
 
 
+def _report_ai_args(archer_session: Optional[str], extraction: dict) -> dict:
+    """
+    genai_mode and use_llm/llm_config for generating from an upload or blog post: the AI
+    chosen in the prompt before it was read (saved with the extraction), as for a hunt.
+    """
+    provider, model = extraction.get("ai_provider") or None, extraction.get("ai_model") or None
+    return {"genai_mode": _apply_ai_provider_choice(provider, model) or "semantic",
+            **_hunt_llm_args(archer_session, provider, model)}
+
+
 def _apply_ai_provider_choice(ai_provider: str, ai_model: str = None) -> str:
     """
     Given the provider id chosen in the Hunt-page AI prompt, configure the
@@ -4463,7 +4473,8 @@ def modified_process_group_wrapper(
 async def upload_file(
     request: Request,
     file: UploadFile = File(...),
-    use_openai: str = Form(None),
+    ai_provider: str = Form(None),
+    ai_model: str = Form(None),
     auto_generate: str = Form(None),
     run_correlation: str = Form(None),
     archer_session: Optional[str] = Cookie(None),
@@ -4538,13 +4549,13 @@ async def upload_file(
         # Import the file intelligence parser
         from archer.parsers.file_intelligence import parse_intelligence_file
 
-        # Parse the file to extract TTPs and IOCs
-        use_ai = use_openai == "true"
+        # Parse the file to extract TTPs and IOCs; the AI chosen in the run's prompt (if any)
+        # reads it as well as the patterns
+        llm_config = _hunt_llm_args(archer_session, ai_provider, ai_model).get("llm_config")
         result = parse_intelligence_file(
             file_path=safe_filename,
             file_content=file_content,
-            use_openai=use_ai,
-            use_local_llm=False,
+            llm_config=llm_config,
         )
 
         # Extract data
@@ -4574,7 +4585,8 @@ async def upload_file(
                     "iocs": iocs,
                     "ioc_mentions": result.get("ioc_mentions") or {},
                     "synthetic_group_name": synthetic_group_name,
-                    "use_openai": use_ai,
+                    "ai_provider": ai_provider or "",
+                    "ai_model": ai_model or "",
                     "run_correlation": run_correlation == "true",
                 },
                 f,
@@ -4674,8 +4686,8 @@ async def generate_from_upload(
         else:
             iocs = extraction_data.get("iocs", {})
         filename = extraction_data.get("filename", "unknown")
-        use_ai = extraction_data.get("use_openai", False)
         run_correlation = extraction_data.get("run_correlation", False)
+        report_ai = _report_ai_args(archer_session, extraction_data)
 
         bundle = getattr(request.app.state, "bundle", None)
         report_actor = extraction_data.get("group_name") or synthetic_group_name
@@ -4685,10 +4697,10 @@ async def generate_from_upload(
                 synthetic_group_name, ttps, iocs, filename, bundle, report_actor,
                 f"Generated from uploaded file: {filename}",
                 mentions=extraction_data.get("ioc_mentions"),
-                genai_mode="semantic" if not use_ai else "ai_generators",
                 run_correlation=True,  # Always enabled by default
                 osint_enhancement=(osint_enhancement == "true"),  # Default to False for uploads
                 osint_comparison=False,  # Default to false for uploads
+                **report_ai,
                 **_siem_args(archer_session),
             )
 
@@ -4727,9 +4739,11 @@ async def generate_from_upload(
 async def analyze_blog(
     request: Request,
     url: str = Form(...),
-    use_openai: str = Form(None),
+    ai_provider: str = Form(None),
+    ai_model: str = Form(None),
     auto_generate: str = Form(None),
     run_correlation: str = Form(None),
+    archer_session: Optional[str] = Cookie(None),
 ):
     """
     Analyze a blog post or threat report URL and extract TTPs, procedures, and IOCs.
@@ -4747,7 +4761,8 @@ async def analyze_blog(
 
         # Analyze the blog post
         print(f"\nAnalyzing blog post: {url}")
-        result = analyze_blog_post(url)
+        llm_config = _hunt_llm_args(archer_session, ai_provider, ai_model).get("llm_config")
+        result = analyze_blog_post(url, include_text=bool(llm_config))
 
         if not result.get("success"):
             error_msg = result.get("error", "Failed to analyze blog post")
@@ -4780,6 +4795,13 @@ async def analyze_blog(
         ttps = result.get("techniques", [])
         iocs = result.get("iocs", {})
         group_name = result.get("group_name", "")
+        if llm_config and result.get("text"):
+            # The AI chosen in the run's prompt reads the post as well as the patterns
+            from archer.parsers.file_intelligence import llm_extract_iocs, llm_extract_ttps
+
+            ttps = sorted(set(ttps) | set(llm_extract_ttps(result["text"], llm_config)))
+            for kind, found in llm_extract_iocs(result["text"], llm_config).items():
+                iocs[kind] = sorted(set(iocs.get(kind) or []) | set(found))
         procedures = result.get("procedures", [])
 
         # Create a synthetic group name for tracking if not found
@@ -4808,7 +4830,8 @@ async def analyze_blog(
                     "ioc_mentions": result.get("ioc_mentions") or {},
                     "procedures": procedures,
                     "synthetic_group_name": synthetic_group_name,
-                    "use_openai": use_openai == "true",
+                    "ai_provider": ai_provider or "",
+                    "ai_model": ai_model or "",
                     "run_correlation": run_correlation == "true",
                 },
                 f,
@@ -4892,8 +4915,8 @@ async def generate_from_blog(
         else:
             iocs = extraction_data.get("iocs", {})
         url = extraction_data.get("url", "unknown")
-        use_ai = extraction_data.get("use_openai", False)
         run_correlation = extraction_data.get("run_correlation", False)
+        report_ai = _report_ai_args(archer_session, extraction_data)
 
         bundle = getattr(request.app.state, "bundle", None)
         report_actor = extraction_data.get("group_name") or synthetic_group_name
@@ -4903,8 +4926,8 @@ async def generate_from_blog(
                 synthetic_group_name, ttps, iocs, url, bundle, report_actor,
                 f"Generated from blog post: {url}",
                 mentions=extraction_data.get("ioc_mentions"),
-                genai_mode="semantic" if not use_ai else "ai_generators",
                 run_correlation=run_correlation,
+                **report_ai,
                 **_siem_args(archer_session),
             )
 
@@ -6926,6 +6949,12 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
         finally:
             db.close()
 
+    # Threat briefing, without AI; an AI summary only when someone asks for one
+    from archer.build import briefing as briefing_lib
+
+    no_detection = _no_detection(group_name)
+    briefing = briefing_lib.build(attack_flow, no_detection)
+
     return templates.TemplateResponse(
         "results.html",
         {
@@ -6949,9 +6978,55 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             "validation_results": validation_results,
             "validation_summary": validation_summary,
             "run_view": run_view,
-            "no_detection": _no_detection(group_name),
+            "no_detection": no_detection,
+            "briefing": briefing,
+            "briefing_ai": briefing_lib.load_summary(safe_group, briefing),
         },
     )
+
+
+@app.post("/api/briefing/summary")
+async def briefing_summary(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Body: {"group_name": ...}. A short AI-written briefing from the run's facts (the same
+    briefing the results page shows), with the provider assigned to Ask Archer in the
+    profile; saved so the results page shows it until the run changes.
+    """
+    from archer.build import briefing as briefing_lib
+    from archer.chat import _generate, _provider_candidates
+    from archer.visualization.flow_view import without_pre_compromise
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        group = sanitize_group_name(str((await request.json()).get("group_name") or ""))
+        try:
+            with open(os.path.join(ATTACK_FLOWS_DIR, f"{group}_flow_view.json"), encoding="utf-8") as fh:
+                flow = without_pre_compromise(json.load(fh).get("view"))
+        except (OSError, ValueError):
+            return JSONResponse({"error": "Open the run's results first: the briefing comes from its attack flow"},
+                                status_code=404)
+        facts = briefing_lib.build(flow, _no_detection(group))
+        if not facts:
+            return JSONResponse({"error": "This run has no techniques to brief on"}, status_code=404)
+        endpoints = getattr(request.app.state, "local_llm_endpoints", None) or []
+        candidates, assigned = _provider_candidates(user.id, db, endpoints)
+        if not candidates:
+            return JSONResponse({"error": "No AI provider: add one under Profile → API Keys"}, status_code=503)
+        try:
+            reply, provider = _generate(candidates, assigned, "Threat briefing summary",
+                                        prompt=briefing_lib.prompt(group, facts), temperature=0.3, max_tokens=600)
+        except HTTPException as e:
+            return JSONResponse({"error": str(e.detail)}, status_code=e.status_code)
+        text = (getattr(reply, "content", reply) or "").strip()
+        if not text:
+            return JSONResponse({"error": f"{provider} returned nothing"}, status_code=502)
+        saved = briefing_lib.save_summary(group, facts, text, provider)
+        return {"text": saved["text"], "provider": provider}
+    finally:
+        db.close()
 
 
 def _no_detection(group_name: str) -> list:
