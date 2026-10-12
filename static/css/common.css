@@ -63,20 +63,20 @@ body::before {
 .nav-tab {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    height: 40px;
-    padding: 0 12px;
+    gap: 8px;
+    height: 56px;
+    padding: 0 10px;
     box-sizing: border-box;
     border-radius: 6px;
     border: 1px solid transparent;
     color: rgba(255,255,255,0.86);
-    font-size: 14px;
+    font-size: 22.4px;
     font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
     transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.nav-tab svg { width: 18px; height: 18px; flex-shrink: 0; }
+.nav-tab svg { width: 24px; height: 24px; flex-shrink: 0; }
 a.nav-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .nav-tab.is-active { background: rgba(255,255,255,0.12); border-color: var(--accent); color: #fff; }
 .nav-tab.is-disabled { color: rgba(255,255,255,0.32); cursor: not-allowed; }
@@ -87,9 +87,9 @@ a.nav-auth:hover { background: var(--accent); }
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    padding: 8px;
+    width: 56px;
+    height: 56px;
+    padding: 12px;
     border: 1px solid rgba(255,255,255,0.25);
     border-radius: 6px;
     background: transparent;
@@ -100,10 +100,18 @@ a.nav-auth:hover { background: var(--accent); }
     box-sizing: border-box;
 }
 .nav-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-.nav-icon-btn svg { width: 20px; height: 20px; }
+.nav-icon-btn svg { width: 30px; height: 30px; }
 
-/* Narrower windows: icons only (the label stays as the tooltip and accessible name) */
-@media (max-width: 1240px) {
+/* The full-size labels need a window about 1540px wide; narrower ones get smaller labels,
+   then icons only (the label stays as the tooltip and accessible name) */
+@media (max-width: 1540px) {
+    .nav-tab { font-size: 17px; gap: 6px; }
+    .nav-tab svg { width: 20px; height: 20px; }
+    .nav-tab, .nav-icon-btn { height: 46px; }
+    .nav-icon-btn { width: 46px; padding: 9px; }
+    .nav-icon-btn svg { width: 26px; height: 26px; }
+}
+@media (max-width: 1290px) {
     .nav-tabs .nav-tab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     .nav-tabs .nav-tab { padding: 0 10px; }
 }
