@@ -156,7 +156,7 @@
     {% include "partials/nav_controls.html" %}
     {% block content %}
     <div style="flex: 1; width: 100%;">
-    <div class="container" style="width: 1320px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
+    <div class="container" style="width: 1500px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">
         <div style="margin-bottom: 1em; margin-top: 28px;">
@@ -318,6 +318,21 @@
                   </div>
                 </div>
               </form>
+
+            </div>
+
+            <!-- Settings that apply to every hunt and the threat feed, under the profile form -->
+            <div class="profile-prefs">
+              <!-- SIEMs every hunt generates for (app._siem_args) -->
+              <section class="industries" id="siems">
+                <h3>SIEM platforms</h3>
+                <p class="industries-hint">Hunts, uploads and reports generate detections only for the platforms ticked here, which saves processing time. Leave both unticked to generate for all of them.</p>
+                <div class="industries-grid" id="siems-grid"></div>
+                <div class="industries-actions">
+                  <button type="button" class="btn-primary" id="siems-save">Save SIEM platforms</button>
+                  <span class="industries-status" id="siems-status" role="status"></span>
+                </div>
+              </section>
 
               <!-- Threat feed industries (archer.intelligence.feed) -->
               <section class="industries" id="industries">

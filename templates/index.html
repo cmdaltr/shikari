@@ -143,59 +143,6 @@
         100% { transform: rotate(360deg); }
       }
 
-      /* Exclude checkbox styling - red cross instead of blue checkmark */
-      .exclude-checkbox {
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
-        width: 18px;
-        height: 18px;
-        border: 2px solid #d1d5db;
-        border-radius: 4px;
-        background-color: white;
-        cursor: pointer;
-        position: relative;
-        transition: all 0.2s;
-        flex-shrink: 0;
-      }
-
-      .exclude-checkbox:checked {
-        background-color: #dc2626;
-        border-color: #dc2626;
-      }
-
-      .exclude-checkbox:checked::before,
-      .exclude-checkbox:checked::after {
-        content: '';
-        position: absolute;
-        background-color: white;
-        width: 2px;
-        height: 12px;
-        top: 50%;
-        left: 50%;
-      }
-
-      .exclude-checkbox:checked::before {
-        transform: translate(-50%, -50%) rotate(45deg);
-      }
-
-      .exclude-checkbox:checked::after {
-        transform: translate(-50%, -50%) rotate(-45deg);
-      }
-
-      .exclude-checkbox:hover {
-        border-color: #dc2626;
-      }
-
-      [data-theme="dark"] .exclude-checkbox {
-        background-color: #2d2d2d;
-        border-color: #404040;
-      }
-
-      [data-theme="dark"] .exclude-checkbox:checked {
-        background-color: #dc2626;
-        border-color: #dc2626;
-      }
     </style>
     {% endblock %}
 </head>
@@ -278,19 +225,6 @@
             </svg>
             <span>Hunt</span>
           </button>
-          <button class="tab-button" data-tab="research">
-            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
-              <circle cx="11" cy="11" r="7" stroke="#06b6d4"/>
-              <line x1="16.5" y1="16.5" x2="22" y2="22" stroke="#06b6d4"/>
-              <circle cx="8" cy="9" r="1.5" stroke="#06b6d4" fill="#06b6d4"/>
-              <circle cx="13" cy="9" r="1.5" stroke="#06b6d4" fill="#06b6d4"/>
-              <circle cx="11" cy="13" r="1.5" stroke="#06b6d4" fill="#06b6d4"/>
-              <line x1="8" y1="9" x2="13" y2="9" stroke="#06b6d4"/>
-              <line x1="8" y1="9" x2="11" y2="13" stroke="#06b6d4"/>
-              <line x1="13" y1="9" x2="11" y2="13" stroke="#06b6d4"/>
-            </svg>
-            <span>Research</span>
-          </button>
           <button class="tab-button" data-tab="upload">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
               <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1" stroke="#3b82f6"/>
@@ -306,6 +240,19 @@
               <path d="M2 12h20" stroke="#8b5cf6"/>
             </svg>
             <span>Profile</span>
+          </button>
+          <button class="tab-button" data-tab="research">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
+              <circle cx="11" cy="11" r="7" stroke="#06b6d4"/>
+              <line x1="16.5" y1="16.5" x2="22" y2="22" stroke="#06b6d4"/>
+              <circle cx="8" cy="9" r="1.5" stroke="#06b6d4" fill="#06b6d4"/>
+              <circle cx="13" cy="9" r="1.5" stroke="#06b6d4" fill="#06b6d4"/>
+              <circle cx="11" cy="13" r="1.5" stroke="#06b6d4" fill="#06b6d4"/>
+              <line x1="8" y1="9" x2="13" y2="9" stroke="#06b6d4"/>
+              <line x1="8" y1="9" x2="11" y2="13" stroke="#06b6d4"/>
+              <line x1="13" y1="9" x2="11" y2="13" stroke="#06b6d4"/>
+            </svg>
+            <span>Research</span>
           </button>
         </div>
 
@@ -435,60 +382,6 @@
                 </div>
               </details>
 
-              <!-- Exclude SIEM Platforms -->
-              <details class="options-section">
-                <summary class="options-header">Exclude SIEM Platforms
-                  <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px; font-weight: 400;">(Save processing time by skipping platforms you don't use)</span>
-                </summary>
-                <div class="stack-sm" style="padding: 1em; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                  <label class="option-item exclude-option">
-                    <input type="checkbox" name="exclude_secops" value="true" class="exclude-checkbox">
-                    <span class="option-label">
-                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                        <defs>
-                          <linearGradient id="googleBlue" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
-                          </linearGradient>
-                          <linearGradient id="googleRed" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
-                          </linearGradient>
-                          <linearGradient id="googleYellow" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
-                          </linearGradient>
-                          <linearGradient id="googleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
-                          </linearGradient>
-                        </defs>
-                        <circle cx="30" cy="48" r="16" fill="url(#googleBlue)"/>
-                        <circle cx="50" cy="38" r="20" fill="url(#googleRed)"/>
-                        <circle cx="70" cy="48" r="16" fill="url(#googleYellow)"/>
-                        <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen)"/>
-                      </svg>
-                      Google SecOps
-                    </span>
-                  </label>
-                  <label class="option-item exclude-option">
-                    <input type="checkbox" name="exclude_mde" value="true" class="exclude-checkbox">
-                    <span class="option-label">
-                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                        <defs>
-                          <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
-                            <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
-                          </linearGradient>
-                        </defs>
-                        <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
-                      </svg>
-                      MDE
-                    </span>
-                  </label>
-                </div>
-              </details>
 
               </div>
 
@@ -563,10 +456,18 @@
               kwTextInput.addEventListener('focus', function () { kwInputWrap.style.borderColor = '#007bff'; });
               kwTextInput.addEventListener('blur',  function () { kwInputWrap.style.borderColor = ''; });
 
+              // Icons for the toggles: AND/OR as overlap/union, Attributed as a flag, Targeted as a crosshair
+              var KW_ICONS = {
+                AND: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/><path d="M12 7.2a6 6 0 0 1 0 9.6a6 6 0 0 1 0-9.6z" fill="currentColor"/></svg>',
+                OR: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>',
+                attributed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg>',
+                targeted: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>'
+              };
+
               /* AND / OR single toggle */
               kwModeBtn.addEventListener('click', function () {
                 kwMode = kwMode === 'AND' ? 'OR' : 'AND';
-                kwModeBtn.textContent = kwMode;
+                kwModeBtn.innerHTML = KW_ICONS[kwMode] + '<span>' + kwMode + '</span>';
                 kwModeBtn.classList.toggle('is-alt', kwMode !== 'AND');
                 kwModeBtn.setAttribute('aria-pressed', kwMode === 'AND' ? 'false' : 'true');
                 if (activeKeywords.length) runKeywordIntersection();
@@ -576,7 +477,7 @@
               kwScopeBtn.addEventListener('click', function () {
                 kwScope = kwScope === 'attributed' ? 'targeted' : 'attributed';
                 var attributed = kwScope === 'attributed';
-                kwScopeBtn.textContent = attributed ? 'Attributed' : 'Targeted';
+                kwScopeBtn.innerHTML = KW_ICONS[kwScope] + '<span>' + (attributed ? 'Attributed' : 'Targeted') + '</span>';
                 kwScopeBtn.setAttribute('aria-pressed', attributed ? 'false' : 'true');
                 kwScopeBtn.classList.toggle('is-alt', !attributed);
                 if (activeKeywords.length) runKeywordIntersection();
@@ -1642,11 +1543,11 @@
                   <div class="hp-slot">
                   <!-- AND / OR single toggle button -->
                   <button id="kw-mode-btn" type="button" class="hp-toggle mode" aria-pressed="false"
-                    title="Keywords: groups must match all of them (AND) or any of them (OR)">AND</button>
+                    title="Keywords: groups must match all of them (AND) or any of them (OR)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/><path d="M12 7.2a6 6 0 0 1 0 9.6a6 6 0 0 1 0-9.6z" fill="currentColor"/></svg><span>AND</span></button>
                   <!-- Country keywords: groups attributed to the country, or groups that have targeted it -->
                   <button id="kw-scope-btn" type="button" aria-pressed="false"
                     title="Country keywords: match groups attributed to the country, or groups that have targeted it"
-                    class="hp-toggle scope">Attributed</button>
+                    class="hp-toggle scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg><span>Attributed</span></button>
                   </div>
                 </div>
               </div>
@@ -1684,10 +1585,18 @@
                 </div>
               </div>
 
+              <details class="options-section hp-explain" open>
+                <summary class="options-header">What each button does</summary>
+                <div class="hp-explain-grid">
+                  <p><strong>Consolidate Techniques</strong> Builds a table of the ATT&amp;CK techniques the matched groups use and which of them use each one, so you can see what they share. Nothing is generated.</p>
+                  <p><strong>Hunt Threat Groups</strong> Puts the chosen groups' names into the Hunt tab, ready to generate detections for each group.</p>
+                  <p><strong>Hunt Techniques</strong> Puts the techniques shown in the consolidated table into the Hunt tab, so shared techniques are hunted once rather than per group.</p>
+                </div>
+              </details>
               </div>
 
               <div class="hp-actions">
-                <button id="actor-consolidate-btn" type="button" class="hp-btn is-wide" disabled>Consolidate Techniques</button>
+                <button id="actor-consolidate-btn" type="button" class="hp-btn" disabled>Consolidate Techniques</button>
                 <button id="actor-hunt-groups-btn" type="button" class="hp-btn" disabled>Hunt Threat Groups</button>
                 <button id="actor-hunt-techniques-btn" type="button" class="hp-btn" disabled>Hunt Techniques</button>
               </div>
@@ -1848,7 +1757,7 @@
               <!-- Additional Options -->
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
-                <div class="options-grid">
+                <div class="options-grid is-four">
 
                   <!-- Row 0: Auto-validate + Threat Briefing -->
                   <div class="stack-sm" style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
@@ -1934,60 +1843,6 @@
                 </div>
               </details>
 
-              <!-- Exclude SIEM Platforms -->
-              <details class="options-section">
-                <summary class="options-header">Exclude SIEM Platforms
-                  <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px; font-weight: 400;">(Save processing time by skipping platforms you don't use)</span>
-                </summary>
-                <div class="stack-sm" style="padding: 1em; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                  <label class="option-item exclude-option">
-                    <input type="checkbox" name="exclude_secops" value="true" class="exclude-checkbox">
-                    <span class="option-label">
-                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                        <defs>
-                          <linearGradient id="googleBlue3" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#1967D2;stop-opacity:1" />
-                          </linearGradient>
-                          <linearGradient id="googleRed3" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#EA4335;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#C5221F;stop-opacity:1" />
-                          </linearGradient>
-                          <linearGradient id="googleYellow3" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#FBBC04;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#F29900;stop-opacity:1" />
-                          </linearGradient>
-                          <linearGradient id="googleGreen3" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#34A853;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#1E8E3E;stop-opacity:1" />
-                          </linearGradient>
-                        </defs>
-                        <circle cx="30" cy="48" r="16" fill="url(#googleBlue3)"/>
-                        <circle cx="50" cy="38" r="20" fill="url(#googleRed3)"/>
-                        <circle cx="70" cy="48" r="16" fill="url(#googleYellow3)"/>
-                        <rect x="22" y="52" width="56" height="20" rx="8" fill="url(#googleGreen3)"/>
-                      </svg>
-                      Google SecOps
-                    </span>
-                  </label>
-                  <label class="option-item exclude-option">
-                    <input type="checkbox" name="exclude_mde" value="true" class="exclude-checkbox">
-                    <span class="option-label">
-                      <svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="margin-right: 6px; vertical-align: text-bottom;">
-                        <defs>
-                          <linearGradient id="defenderGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
-                            <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
-                          </linearGradient>
-                        </defs>
-                        <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient2)"/>
-                      </svg>
-                      MDE
-                    </span>
-                  </label>
-                </div>
-              </details>
 
               </div>
 
@@ -2016,6 +1871,15 @@
                         </span>
                       </span>
                     </label>
+                    <label class="option-item">
+                      <input type="checkbox" name="use_openai" value="true">
+                      <span class="option-label">
+                        AI Enhancement
+                        <span class="option-info-icon">i
+                          <span class="option-info-tooltip">Use AI for deeper analysis (requires an API key in Profile → API Keys)</span>
+                        </span>
+                      </span>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -2025,40 +1889,21 @@
               </div>
 
               <div class="hp-options">
-              <details class="options-section">
-                <summary class="options-header">Additional Options</summary>
-                <div class="options-grid">
-                  <label class="option-item">
-                    <input type="checkbox" name="use_openai" value="true">
-                    <span class="option-label">
-                      AI Enhancement
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Use AI for deeper analysis (requires API key)</span>
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              </details>
-
-              <!-- API Key Guidance -->
-              <details class="options-section">
+              <details class="options-section hp-keys" open>
                 <summary class="options-header">OSINT API Keys
-                  <span style="color: #6b7280; font-size: 0.85em; margin-left: 8px; font-weight: 400;">(Optional: more sources for a fuller profile)</span>
+                  <span class="hp-summary-note">(Optional: more sources for a fuller profile)</span>
                 </summary>
-                <div style="padding: 1em; background: #f8f9fa; border-radius: 4px; font-size: 0.9em;">
-                  <p style="margin: 0 0 0.5em 0; font-weight: 500;">Enhanced profiling uses multiple OSINT sources. Most work without API keys, but for full coverage set these environment variables:</p>
-                  <ul style="margin: 0.5em 0; padding-left: 1.5em; line-height: 1.6;">
-                    <li><code>SHODAN_API_KEY</code> - Internet-facing assets (get free key at <a href="https://account.shodan.io/register" target="_blank">shodan.io</a>)</li>
-                    <li><code>SECURITYTRAILS_API_KEY</code> - DNS history (get key at <a href="https://securitytrails.com/app/signup" target="_blank">securitytrails.com</a>)</li>
-                    <li><code>GITHUB_TOKEN</code> - Secret scanning (create at <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>)</li>
-                    <li><code>OPENAI_API_KEY</code> - AI enhancement (get key at <a href="https://platform.openai.com/api-keys" target="_blank">openai.com</a>)</li>
+                <div class="hp-keys-body">
+                  <p>Most sources work without a key. These add coverage:</p>
+                  <ul class="hp-keys-list">
+                    <li><code>SHODAN_API_KEY</code> Internet-facing assets (<a href="https://account.shodan.io/register" target="_blank" rel="noopener">shodan.io</a>)</li>
+                    <li><code>SECURITYTRAILS_API_KEY</code> DNS history (<a href="https://securitytrails.com/app/signup" target="_blank" rel="noopener">securitytrails.com</a>)</li>
+                    <li><code>GITHUB_TOKEN</code> Secret scanning (<a href="https://github.com/settings/tokens" target="_blank" rel="noopener">github.com</a>)</li>
+                    <li><code>OPENAI_API_KEY</code> AI Enhancement (<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">openai.com</a>)</li>
                   </ul>
-                  <p style="margin: 0.5em 0 0 0; font-size: 0.85em; color: #666;">
-                    💡 <strong>How to set:</strong> Go to <a href="/profile" style="color: #0078D4; text-decoration: none; font-weight: 500;">Profile → API Keys</a> to configure OSINT sources, or add to <code>.env</code> file in project root.
-                  </p>
+                  <p class="hp-keys-how">Set them in <a href="/profile">Profile → API Keys</a>, or in <code>.env</code> in the project root.</p>
                 </div>
               </details>
-
               </div>
 
               <div class="hp-actions">

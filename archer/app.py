@@ -2035,6 +2035,36 @@ def _hunt_llm_args(archer_session: Optional[str], ai_provider: Optional[str], ai
     return {"use_llm": "llm", "llm_config": detection_llm_config(resolved)}
 
 
+# SIEMs a user can choose in Profile, and the vendor key process_group excludes them by
+SIEM_PLATFORMS = {"secops": "googlesecops", "mde": "mde"}
+SIEM_LABELS = {"secops": "Google SecOps", "mde": "Microsoft Defender (MDE)"}
+
+
+def _user_siems(user) -> list:
+    try:
+        chosen = json.loads(user.siem_platforms) if user and user.siem_platforms else []
+    except (ValueError, TypeError):
+        return []
+    return [s for s in chosen if s in SIEM_PLATFORMS]
+
+
+def _siem_args(archer_session: Optional[str], *extra_excluded: str) -> dict:
+    """
+    process_group's excluded_vendors for the SIEMs the user generates for (Profile → SIEM
+    platforms; none chosen means all), plus any the request excludes itself.
+    """
+    excluded = set(extra_excluded)
+    if archer_session:
+        db = next(get_db())
+        try:
+            chosen = _user_siems(get_user_from_session_id(archer_session, db))
+        finally:
+            db.close()
+        if chosen:
+            excluded |= {v for k, v in SIEM_PLATFORMS.items() if k not in chosen}
+    return {"excluded_vendors": sorted(excluded)} if excluded else {}
+
+
 def _apply_ai_provider_choice(ai_provider: str, ai_model: str = None) -> str:
     """
     Given the provider id chosen in the Hunt-page AI prompt, configure the
@@ -2924,16 +2954,11 @@ async def generate(
 
         def _bg():
             try:
-                # Build list of excluded vendors
-                excluded = []
-                if exclude_splunk == "true":
-                    excluded.append("splunk")
-                if exclude_mde == "true":
-                    excluded.append("mde")
-                if exclude_secops == "true":
-                    excluded.append("googlesecops")
-                if exclude_elastic == "true":
-                    excluded.append("elastic")
+                # Profile → SIEM platforms, plus exclusions sent by API clients (archer.client)
+                siem_args = _siem_args(archer_session, *[
+                    vendor for flag, vendor in ((exclude_splunk, "splunk"), (exclude_mde, "mde"),
+                                                (exclude_secops, "googlesecops"), (exclude_elastic, "elastic"))
+                    if flag == "true"])
 
                 # Use the modified wrapper instead of direct process_group
                 modified_process_group_wrapper(
@@ -2946,7 +2971,7 @@ async def generate(
                     osint_comparison=(osint_comparison == "true"),
                     merge_by_tactic=(merge_by_tactic == "true"),
                     merge_by_parent=(merge_by_parent == "true"),
-                    excluded_vendors=excluded if excluded else None,
+                    **siem_args,
                     **llm_args,
                 )
 
@@ -3193,6 +3218,7 @@ async def generate_cve(
         elif ai_generators == "true":
             genai_mode = "ai_generators"
     llm_args = _hunt_llm_args(archer_session, ai_provider, ai_model)
+    siem_args = _siem_args(archer_session)
 
     def _bg():
         try:
@@ -3443,6 +3469,7 @@ async def generate_cve(
                 run_correlation=True,  # Always enabled by default
                 osint_enhancement=True,  # Always enabled by default
                 osint_comparison=False,  # Default to false for CVE hunting
+                **siem_args,
                 **llm_args,
             )
 
@@ -3551,6 +3578,7 @@ async def hunt_technique(
         elif ai_generators == "true":
             genai_mode = "ai_generators"
     llm_args = _hunt_llm_args(archer_session, ai_provider, ai_model)
+    siem_args = _siem_args(archer_session)
 
     # Techniques known to produce nothing in this mode (technique_yield): a run of only
     # those would spend its time for an empty results page
@@ -3621,6 +3649,7 @@ async def hunt_technique(
                 merge_by_tactic=merge_tactic,
                 merge_by_parent=merge_parent,
                 correlation_min_relevance=correlation_threshold,
+                **siem_args,
                 **llm_args,
             )
 
@@ -3794,6 +3823,7 @@ async def manual_submit(
     group_name: str = Form("manual"),
     group_desc: str = Form(""),
     technique_entries: str = Form(""),
+    archer_session: Optional[str] = Cookie(None),
 ):
     """
     Receive manual technique entries (JSON string), validate them,
@@ -3907,6 +3937,7 @@ async def manual_submit(
                 manual_data=manual_data,
                 genai_mode=None,
                 run_correlation=False,
+                **_siem_args(archer_session),
             )
         except Exception:
             try:
@@ -4579,7 +4610,7 @@ async def generate_from_upload(
     synthetic_group_name: str = Form(...),
     selected_ttps: str = Form(None),
     selected_iocs: str = Form(None),
-    osint_enhancement: str = Form(None),
+    osint_enhancement: str = Form(None),    archer_session: Optional[str] = Cookie(None),
 ):
     """
     Generate detections from previously uploaded and extracted file.
@@ -4642,6 +4673,7 @@ async def generate_from_upload(
                 run_correlation=True,  # Always enabled by default
                 osint_enhancement=(osint_enhancement == "true"),  # Default to False for uploads
                 osint_comparison=False,  # Default to false for uploads
+                **_siem_args(archer_session),
             )
 
         # Fresh record first, so the thread's own updates land after it
@@ -4796,7 +4828,7 @@ async def generate_from_blog(
     request: Request,
     synthetic_group_name: str = Form(...),
     selected_ttps: str = Form(None),
-    selected_iocs: str = Form(None),
+    selected_iocs: str = Form(None),    archer_session: Optional[str] = Cookie(None),
 ):
     """
     Generate detections from previously analyzed blog post.
@@ -4857,6 +4889,7 @@ async def generate_from_blog(
                 mentions=extraction_data.get("ioc_mentions"),
                 genai_mode="semantic" if not use_ai else "ai_generators",
                 run_correlation=run_correlation,
+                **_siem_args(archer_session),
             )
 
         # Fresh record first, so the thread's own updates land after it
@@ -5756,7 +5789,8 @@ def _run_report_generation(group, ttps, iocs, source, bundle, actor, description
 
     try:
         # The report's atomic IOCs aren't tied to a technique: one sweep per SIEM
-        sweeps = write_ioc_sweeps(group, iocs, source, GENERATE_DIR, mentions=mentions)
+        sweeps = write_ioc_sweeps(group, iocs, source, GENERATE_DIR, mentions=mentions,
+                                  excluded_vendors=kwargs.get("excluded_vendors"))
         if sweeps:
             print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
         write_progress(group, {"ioc_sweeps": len(sweeps)})
@@ -9674,6 +9708,36 @@ def _user_industries(user) -> list:
         return json.loads(user.industries) if user and user.industries else []
     except (ValueError, TypeError):
         return []
+
+
+@app.get("/api/profile/siems")
+def get_profile_siems(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """The SIEMs this user's hunts generate detections for (none chosen: all of them)."""
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    return {"siems": _user_siems(user),
+            "choices": [{"id": k, "label": label} for k, label in SIEM_LABELS.items()]}
+
+
+@app.post("/api/profile/siems")
+async def set_profile_siems(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Body: {"siems": ["secops"]} (ids from GET; an empty list means all)."""
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        wanted = (await request.json()).get("siems") or []
+        if not isinstance(wanted, list) or any(s not in SIEM_PLATFORMS for s in wanted):
+            return JSONResponse({"error": "Unknown SIEM"}, status_code=400)
+        user.siem_platforms = json.dumps([s for s in SIEM_PLATFORMS if s in wanted])
+        db.commit()
+        return {"success": True, "siems": _user_siems(user)}
+    finally:
+        db.close()
 
 
 @app.get("/api/profile/industries")

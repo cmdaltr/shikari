@@ -1,5 +1,5 @@
 /* Threat Feed page (templates/feed.html) */
-.fd-page { --fd-accent: #0EA5A4; max-width: min(1320px, calc(100vw - 4em)); }
+.fd-page { --fd-accent: #0EA5A4; }
 .fd-intro, .fd-section, .fd-sources { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; color: var(--text-primary); line-height: 1.55; }
 .fd-intro p { margin: 0 0 8px; }
 .fd-intro a, .fd-sources a { color: var(--accent); }

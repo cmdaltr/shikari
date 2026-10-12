@@ -1,8 +1,13 @@
 /* Manual Page - Matching index.html Design System */
 
 /* Page Layout */
-.manual-group-container {
-  padding: 0 2em;
+.manual-group-container,
+#main-content > .manual-group-container.page-container {
+  width: 1500px !important;
+  max-width: calc(100vw - 4em) !important;
+  margin: 0 auto;
+  padding: 0 2em !important;
+  box-sizing: border-box;
 }
 
 #main-content.page-shell {
@@ -312,8 +317,10 @@ textarea {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .manual-group-container {
-    padding: 0 16px;
+  .manual-group-container,
+  #main-content > .manual-group-container.page-container {
+    max-width: 100% !important;
+    padding: 0 16px !important;
   }
 
   .page-title {

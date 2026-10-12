@@ -40,6 +40,7 @@ class User(Base):
     full_name = Column(String(255), nullable=False)
     team = Column(String(255), nullable=True)  # User's team/department
     industries = Column(Text, nullable=True)  # JSON array: threat feed industries (archer.intelligence.feed)
+    siem_platforms = Column(Text, nullable=True)  # JSON array: SIEMs hunts generate for (empty: all)
     password_hash = Column(String(255), nullable=False)  # bcrypt hash
     role = Column(Enum(UserRole), nullable=False, default=UserRole.STANDARD)
     is_active = Column(Boolean, default=True, nullable=False)

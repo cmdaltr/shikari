@@ -1,5 +1,4 @@
 /* Attack Flows page (templates/flows.html) */
-.fl-page { max-width: min(1400px, calc(100vw - 4em)); }
 .fl-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .fl-pick label { font-weight: 600; color: var(--text-secondary); }
 .fl-pick select {

@@ -2823,9 +2823,7 @@ document.addEventListener('click', function(e) {
   if (!target) return;
 
   // Check if this is a navigation link (not download or save buttons)
-  const isNavLink = target.classList.contains('nav-icon-btn') ||
-                    target.classList.contains('header-logo') ||
-                    target === target.closest('.header-logo-container')?.querySelector('a');
+  const isNavLink = target.tagName === 'A' && !!target.closest('.global-nav-controls');
 
   if (isNavLink && !hasDownloadedOrSaved) {
     // Show custom confirmation dialog

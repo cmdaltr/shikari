@@ -44,6 +44,31 @@
 .home-tabs .hp-options { min-height: 136px; padding-top: 4px; }
 .home-tabs .hp-options .options-section { margin-top: 12px; }
 .home-tabs .hp-options .options-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.home-tabs .hp-options .options-grid.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.home-tabs .hp-summary-note { color: #6b7280; font-size: 0.85em; margin-left: 8px; font-weight: 400; }
+
+/* Profile: two side controls (Supply Chain, AI Enhancement); the hint is short, so the
+   open OSINT keys panel sits straight under it and the pane keeps the shared height */
+.home-tabs #tab-profile .hp-slot { flex-basis: auto; }
+.home-tabs #tab-profile .hp-secondary { min-height: 0; }
+.home-tabs #tab-profile .hp-hint { margin-top: 1.2em; }
+
+/* Upload: the drop zone is taller, so the pane takes its content's height rather than
+   leaving a gap above Upload & Process */
+.home-tabs #upload-form.hp-form { min-height: 0; }
+.home-tabs #tab-upload .hp-options { min-height: 0; }
+
+/* Profile: OSINT API keys, open by default and sized to the pane */
+.home-tabs .hp-keys-body { padding: 12px 16px 14px; font-size: 0.92rem; line-height: 1.5; color: #374151; }
+.home-tabs .hp-keys-body p { margin: 0 0 8px; }
+.home-tabs .hp-keys-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; }
+.home-tabs .hp-keys-list li { min-width: 0; overflow-wrap: anywhere; }
+.home-tabs .hp-keys-list code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.85em; font-weight: 600; color: var(--tab-accent-dark); margin-right: 6px; }
+.home-tabs .hp-keys-body a { color: var(--tab-accent-dark); }
+.home-tabs .hp-keys-how { color: #6b7280; font-size: 0.9em; margin: 0 !important; }
+[data-theme="dark"] .home-tabs .hp-keys-body { color: var(--text-primary); }
+[data-theme="dark"] .home-tabs .hp-keys-list code, [data-theme="dark"] .home-tabs .hp-keys-body a { color: var(--tab-accent); }
+[data-theme="dark"] .home-tabs .hp-keys-how, [data-theme="dark"] .home-tabs .hp-summary-note { color: var(--text-secondary); }
 
 .home-tabs .hp-actions {
   margin-top: auto; padding-top: 16px; border-top: 1px solid #dee2e6; display: flex; gap: 8px;
@@ -55,7 +80,7 @@
   box-shadow: 0 2px 8px rgba(var(--tab-accent-rgb), 0.3);
   transition: transform .15s, box-shadow .15s, opacity .15s;
 }
-.home-tabs .hp-btn.is-wide { flex: 2; }
+.home-tabs .hp-actions .hp-btn { flex: 1 1 0; min-width: 0; }
 .home-tabs .hp-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(var(--tab-accent-rgb), 0.4); }
 .home-tabs .hp-btn:disabled { background: rgba(var(--tab-accent-rgb), 0.4); box-shadow: none; cursor: not-allowed; transform: none; opacity: 1 !important; }
 .home-tabs .hp-after { margin-top: 0; }
@@ -83,12 +108,21 @@
   border: 2px solid var(--tab-accent); background: var(--tab-accent); color: #fff;
 }
 .home-tabs .hp-toggle.is-alt { background: #fff; color: var(--tab-accent-dark); }
-.home-tabs .hp-toggle.mode { width: 72px; }
-.home-tabs .hp-toggle.scope { width: 124px; }
+.home-tabs .hp-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.home-tabs .hp-toggle svg { width: 18px; height: 18px; flex-shrink: 0; }
+.home-tabs .hp-toggle.mode { width: 96px; }
+.home-tabs .hp-toggle.scope { width: 150px; }
 
-/* Upload: a one-row drop zone the height of an input */
+/* Research: what each action button does, one column per button */
+.home-tabs .hp-explain-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 12px 16px 14px; }
+.home-tabs .hp-explain-grid p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: #4b5563; }
+.home-tabs .hp-explain-grid strong { display: block; color: var(--tab-accent-dark); margin-bottom: 2px; }
+[data-theme="dark"] .home-tabs .hp-explain-grid p { color: var(--text-secondary); }
+[data-theme="dark"] .home-tabs .hp-explain-grid strong { color: var(--tab-accent); }
+
+/* Upload: a one-row drop zone, twice the height of an input */
 .home-tabs .hp-drop {
-  display: flex; align-items: center; gap: 14px; height: 50px; box-sizing: border-box; padding: 0 8px 0 14px;
+  display: flex; align-items: center; gap: 14px; height: 100px; box-sizing: border-box; padding: 0 8px 0 14px;
   border: 2px dashed #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; text-align: left;
   transition: border-color .2s, background .2s;
 }
@@ -113,6 +147,8 @@
   .home-tabs .hp-secondary { height: auto; }
   .home-tabs .hp-form { min-height: 0; }
   .home-tabs .hp-drop .upload-text p { display: none; }
+  .home-tabs .hp-options .options-grid.is-four, .home-tabs .hp-keys-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-tabs .hp-explain-grid { grid-template-columns: 1fr; }
 }
 
 /* Chosen file, shown in the drop zone row in place of its instructions */

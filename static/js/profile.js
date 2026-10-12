@@ -838,3 +838,24 @@ document.head.appendChild(style);
     status.className = 'industries-status ' + (res.ok ? 'is-ok' : 'is-error');
   });
 })();
+
+
+// SIEM platforms every hunt generates for (Profile tab)
+(function () {
+  const grid = document.getElementById('siems-grid');
+  if (!grid) return;
+  const status = document.getElementById('siems-status');
+  fetch('/api/profile/siems').then(r => r.json()).then(data => {
+    const chosen = new Set(data.siems || []);
+    grid.innerHTML = (data.choices || []).map(c => `<label class="industry-option"><input type="checkbox" value="${c.id}"${chosen.has(c.id) ? ' checked' : ''}> <span>${c.label.replace(/</g, '&lt;')}</span></label>`).join('');
+  });
+  document.getElementById('siems-save').addEventListener('click', async () => {
+    const siems = Array.from(grid.querySelectorAll('input:checked')).map(i => i.value);
+    const res = await fetch('/api/profile/siems', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siems }),
+    });
+    const data = await res.json().catch(() => ({}));
+    status.textContent = res.ok ? (siems.length ? 'Saved: hunts generate for ' + grid.querySelectorAll('input:checked + span').length + ' platform' + (siems.length === 1 ? '' : 's') : 'Saved: hunts generate for all platforms') : (data.error || 'Not saved');
+    status.className = 'industries-status ' + (res.ok ? 'is-ok' : 'is-error');
+  });
+})();

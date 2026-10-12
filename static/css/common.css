@@ -38,7 +38,8 @@ body::before {
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
-/* ========== Global Navigation Controls ========== */
+/* ========== Global Navigation (templates/partials/nav_controls.html) ========== */
+/* Every page lists every page, in the same order; guests see account-only pages greyed out */
 .global-nav-controls {
     position: fixed;
     top: 0;
@@ -46,47 +47,90 @@ body::before {
     transform: translateX(-50%);
     width: min(1500px, calc(100vw - 4em));
     height: 85px;
+    box-sizing: border-box;
     display: flex;
-    justify-content: flex-end;
     align-items: center;
-    gap: 12px;
-    padding-right: 3em;
+    gap: 16px;
     z-index: 10001;
-    pointer-events: none;
+    font-family: 'Inter', sans-serif;
 }
-.global-nav-controls > * {
-    pointer-events: all;
+.nav-logo { display: inline-flex; align-items: center; flex-shrink: 0; margin-right: auto; }
+.nav-logo img { height: 44px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+.nav-logo:hover { opacity: 0.85; }
+.nav-tabs, .nav-tools { display: flex; align-items: center; gap: 4px; }
+.nav-tabs { margin-left: auto; min-width: 0; }
+.nav-tab, .nav-icon-btn { flex-shrink: 0; position: relative; }
+.nav-tools { flex-shrink: 0; gap: 8px; padding-left: 12px; border-left: 1px solid rgba(255,255,255,0.18); }
+
+.nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 40px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    color: rgba(255,255,255,0.86);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
+.nav-tab svg { width: 18px; height: 18px; flex-shrink: 0; }
+a.nav-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-tab.is-active { background: rgba(255,255,255,0.12); border-color: var(--accent); color: #fff; }
+.nav-tab.is-disabled { color: rgba(255,255,255,0.32); cursor: not-allowed; }
+.nav-auth { border-color: var(--accent); color: #fff; }
+a.nav-auth:hover { background: var(--accent); }
 
 .nav-icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 40px;
-    min-height: 40px;
+    height: 40px;
     padding: 8px;
-    border: 2px solid var(--accent);
+    border: 1px solid rgba(255,255,255,0.25);
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--accent);
+    background: transparent;
+    color: rgba(255,255,255,0.86);
     cursor: pointer;
     transition: all 0.2s;
     text-decoration: none;
     box-sizing: border-box;
 }
+.nav-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-icon-btn svg { width: 20px; height: 20px; }
 
-[data-theme="dark"] .nav-icon-btn {
-    background: rgba(45, 45, 45, 0.95);
+/* Narrower windows: icons only (the label stays as the tooltip and accessible name) */
+@media (max-width: 1240px) {
+    .nav-tabs .nav-tab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .nav-tabs .nav-tab { padding: 0 10px; }
+}
+/* Phones: the bar scrolls sideways rather than wrapping */
+@media (max-width: 768px) {
+    .global-nav-controls { width: 100vw; padding: 0 12px; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+    .global-nav-controls::-webkit-scrollbar { display: none; }
+    .nav-logo { display: none; }
+    .nav-tabs, .nav-tools { margin-left: 0; flex-shrink: 0; }
+    .nav-auth span { display: none; }
 }
 
-.nav-icon-btn:hover {
-    background: var(--accent);
-    color: white;
+/* ========== Page Width ========== */
+/* Every page is the Home page's width (templates/index.html .container) */
+.results-container {
+    width: 1500px;
+    max-width: calc(100vw - 4em);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2em;
+    padding-right: 2em;
+    box-sizing: border-box;
 }
-
-.nav-icon-btn svg {
-    width: 20px;
-    height: 20px;
+@media (max-width: 768px) {
+    .results-container { max-width: 100%; padding-left: 16px; padding-right: 16px; }
 }
 
 /* ========== Flexbox Footer Layout ========== */
