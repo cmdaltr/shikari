@@ -41,9 +41,13 @@
 .home-tabs .hp-hint { margin: 1.6em 0 0; color: #6b7280; font-size: 0.95rem; line-height: 1.55; }
 
 .home-tabs .hp-options { padding-top: 4px; }
+/* Every pane is the height of the tallest (equalisePanes in index.html); the open panel
+   takes up the difference, so the actions line up with no empty band above them */
+.home-tabs .hp-options { flex: 1 0 auto; display: flex; flex-direction: column; }
+.home-tabs .hp-options > .options-section:last-of-type { flex: 1 0 auto; }
 .home-tabs .hp-options .options-section { margin-top: 12px; }
 .home-tabs .hp-options .options-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.home-tabs .hp-options .options-grid.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.home-tabs .hp-options .options-grid.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; }
 .home-tabs .hp-summary-note { color: #6b7280; font-size: 0.85em; margin-left: 8px; font-weight: 400; }
 
 /* Profile: two side controls (Supply Chain, AI Enhancement) */
@@ -69,7 +73,7 @@
 [data-theme="dark"] .home-tabs .hp-keys-how { color: var(--text-primary); background: rgba(var(--tab-accent-rgb), 0.15); }
 
 .home-tabs .hp-actions {
-  margin-top: auto; padding-top: 16px; border-top: 1px solid #dee2e6; display: flex; gap: 8px;
+  margin-top: 16px; padding-top: 16px; border-top: 1px solid #dee2e6; display: flex; gap: 8px;
 }
 .home-tabs .hp-btn {
   flex: 1; height: 48px; margin: 0; padding: 0 1em; border: none; border-radius: 6px; cursor: pointer;

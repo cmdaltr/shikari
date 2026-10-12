@@ -316,12 +316,10 @@
 
               <div class="hp-options">
               <!-- Additional Options -->
-              <details class="options-section">
+              <details class="options-section" open>
                 <summary class="options-header">Additional Options</summary>
                 <div class="options-grid is-four">
 
-                  <!-- Row 0: Auto-validate + Threat Briefing (span full width as 2-col) -->
-                  <div class="stack-sm" style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
                     <!-- Auto-validate -->
                     <label class="option-item auto-validate-label" id="auto-validate-label" style="align-items: flex-start;">
                       <input type="checkbox" name="auto_validate" id="auto_validate_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
@@ -331,7 +329,7 @@
                             <path d="M9 12l2 2 4-4"/>
                             <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
                           </svg>
-                          Auto-validate detections after generation
+                          Auto-validate
                           <span id="docker-status-badge" class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
                         </span>
                         <span class="option-hint" id="auto-validate-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
@@ -351,10 +349,6 @@
                         <span class="option-hint" style="margin-top: 0.4em; display: block;">Generate an AI threat briefing after detection generation</span>
                       </div>
                     </label>
-                  </div>
-
-                  <!-- Divider -->
-                  <div style="grid-column: 1 / -1; border-top: 1px solid #e2e8f0; margin: 8px 0 16px;"></div>
 
                   <!-- Column 1: OSINT Enhancement -->
                   <label class="option-item">
@@ -1755,12 +1749,10 @@
 
               <div class="hp-options">
               <!-- Additional Options -->
-              <details class="options-section">
+              <details class="options-section" open>
                 <summary class="options-header">Additional Options</summary>
                 <div class="options-grid is-four">
 
-                  <!-- Row 0: Auto-validate + Threat Briefing -->
-                  <div class="stack-sm" style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
                     <label class="option-item auto-validate-label" style="align-items: flex-start;">
                       <input type="checkbox" name="auto_validate" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
                       <div style="flex: 1; min-width: 0;">
@@ -1769,7 +1761,7 @@
                             <path d="M9 12l2 2 4-4"/>
                             <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
                           </svg>
-                          Auto-validate detections after generation
+                          Auto-validate
                           <span class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
                         </span>
                         <span class="option-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
@@ -1788,10 +1780,6 @@
                         <span class="option-hint" style="margin-top: 0.4em; display: block;">Generate an AI threat briefing after detection generation</span>
                       </div>
                     </label>
-                  </div>
-
-                  <!-- Divider -->
-                  <div style="grid-column: 1 / -1; border-top: 1px solid #e2e8f0; margin: 8px 0 16px;"></div>
 
                   <!-- Row 1 Column 1: OSINT Enhancement -->
                   <label class="option-item">
@@ -2069,6 +2057,48 @@
 
     <!-- Auto-Validate Docker Status Check -->
     <script>
+        // Every home tab is the height of the tallest. Hidden panes are measured off-screen
+        // at the open pane's width; re-run when the window, a panel or a pane's content changes.
+        (function () {
+            const forms = Array.from(document.querySelectorAll('.home-tabs .tab-pane .hp-form'));
+            if (forms.length < 2) return;
+            let busy = false;
+            function equalisePanes() {
+                if (busy) return;
+                busy = true;
+                const open = document.querySelector('.home-tabs .tab-pane.active');
+                const width = open ? open.getBoundingClientRect().width : 0;
+                forms.forEach(f => { f.style.minHeight = ''; });
+                const heights = forms.map(function (f) {
+                    const pane = f.closest('.tab-pane');
+                    if (pane.classList.contains('active') || !width) return f.offsetHeight;
+                    const saved = pane.style.cssText;
+                    pane.style.cssText = saved + ';display:block;position:absolute;visibility:hidden;left:-99999px;width:' + width + 'px';
+                    const h = f.offsetHeight;
+                    pane.style.cssText = saved;
+                    return h;
+                });
+                const tallest = Math.max.apply(null, heights);
+                forms.forEach(f => { f.style.minHeight = tallest + 'px'; });
+                busy = false;
+            }
+            window.equalisePanes = equalisePanes;
+            document.addEventListener('DOMContentLoaded', equalisePanes);
+            window.addEventListener('load', equalisePanes);
+            window.addEventListener('resize', equalisePanes);
+            document.addEventListener('toggle', function (e) {
+                if (e.target.closest && e.target.closest('.home-tabs')) equalisePanes();
+            }, true);
+            document.addEventListener('click', function (e) {
+                if (e.target.closest('.home-tabs .tab-button')) setTimeout(equalisePanes, 0);
+            });
+            // Content that changes height without a resize: chips wrapping, a chosen file
+            if (window.ResizeObserver) {
+                const watch = new ResizeObserver(() => requestAnimationFrame(equalisePanes));
+                document.querySelectorAll('.home-tabs .hp-primary, .home-tabs .hp-secondary').forEach(el => watch.observe(el));
+            }
+        })();
+
         // Docker status for every Auto-validate option (Hunt and Upload)
         document.addEventListener('DOMContentLoaded', async function() {
             const labels = Array.from(document.querySelectorAll('.auto-validate-label'));

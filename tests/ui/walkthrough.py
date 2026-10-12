@@ -357,7 +357,9 @@ def hunt_group(page):
     open_tab(page, "generate")
     caption(page, "Hunt tab: generate detections for a threat group")
     page.fill("#group_name_input", "Scattered Spider")
-    page.locator("details.options-section summary").first.click()
+    options = page.locator("#tab-generate details.options-section").first
+    if options.get_attribute("open") is None:  # open by default; older pages had it closed
+        options.locator("summary").click()
     caption(page, "Additional options: enabling Threat Briefing")
     page.check("#briefing_checkbox")
     shot(page, "hunt_group_form")
