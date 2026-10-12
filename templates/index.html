@@ -2059,12 +2059,31 @@
 
     <!-- Auto-Validate Docker Status Check -->
     <script>
-        // Every home tab is the height of the tallest. Hidden panes are measured off-screen
-        // at the open pane's width; re-run when the window, a panel or a pane's content changes.
+        // Every home tab is the height of the tallest, as built: what a person adds afterwards
+        // (Research's group and keyword chips, its over-limit banner) grows only that tab and
+        // never the others. Research counts at its empty height, remembered from the last time
+        // it was empty. Hidden panes are measured off-screen at the open pane's width; re-run
+        // when the window, a panel or a pane's content changes.
         (function () {
             const forms = Array.from(document.querySelectorAll('.home-tabs .tab-pane .hp-form'));
             if (forms.length < 2) return;
-            let busy = false;
+            const research = document.querySelector('#tab-research .hp-form');
+            let researchEmpty = 0, busy = false;
+
+            function researchIsEmpty() {
+                const chips = document.querySelectorAll('#keyword-filters-row > *, #actor-tags-list > *').length;
+                const banner = document.getElementById('actor-overlimit-banner');
+                return !chips && !(banner && banner.offsetParent);
+            }
+            function natural(f, width) {
+                const pane = f.closest('.tab-pane');
+                if (pane.classList.contains('active') || !width) return f.offsetHeight;
+                const saved = pane.style.cssText;
+                pane.style.cssText = saved + ';display:block;position:absolute;visibility:hidden;left:-99999px;width:' + width + 'px';
+                const h = f.offsetHeight;
+                pane.style.cssText = saved;
+                return h;
+            }
             function equalisePanes() {
                 if (busy) return;
                 busy = true;
@@ -2072,13 +2091,11 @@
                 const width = open ? open.getBoundingClientRect().width : 0;
                 forms.forEach(f => { f.style.minHeight = ''; });
                 const heights = forms.map(function (f) {
-                    const pane = f.closest('.tab-pane');
-                    if (pane.classList.contains('active') || !width) return f.offsetHeight;
-                    const saved = pane.style.cssText;
-                    pane.style.cssText = saved + ';display:block;position:absolute;visibility:hidden;left:-99999px;width:' + width + 'px';
-                    const h = f.offsetHeight;
-                    pane.style.cssText = saved;
-                    return h;
+                    if (f !== research) return natural(f, width);
+                    // With chips in, their height can't be taken out: the empty height from
+                    // before stands in until Research is empty again
+                    if (researchIsEmpty() || !researchEmpty) researchEmpty = natural(f, width);
+                    return researchEmpty;
                 });
                 const tallest = Math.max.apply(null, heights);
                 forms.forEach(f => { f.style.minHeight = tallest + 'px'; });
