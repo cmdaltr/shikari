@@ -24,23 +24,8 @@
 }
 .af-vendor-toggle.is-on { opacity: 1; filter: none; border-color: var(--af-focus); }
 .af-vendor-toggle .af-logo { width: 22px; height: 22px; }
-/* Toolbar buttons: full-size text and a clear outline, so each reads as a button */
-.af-chip {
-  display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box;
-  font: inherit; font-size: 0.95em; font-weight: 600; padding: 0 16px; border-radius: 8px; cursor: pointer;
-  border: 1.5px solid #cbd5e1; background: var(--af-node-bg); color: var(--af-text);
-  text-decoration: none; transition: background .15s, border-color .15s;
-}
-.af-chip:hover:not(:disabled) { border-color: var(--af-focus); background: rgba(66, 133, 244, .08); }
-.af-chip.is-on { background: var(--af-focus); border-color: var(--af-focus); color: #fff; }
-.af-chip:disabled { color: var(--af-muted); border-style: dashed; opacity: .7; cursor: not-allowed; }
-[data-theme="dark"] .af-chip { border-color: var(--af-border); }
-.af-chip[hidden] { display: none; }
-.af-search {
-  font: inherit; font-size: 0.95em; height: 40px; box-sizing: border-box; padding: 0 12px; width: 240px; border-radius: 8px;
-  border: 1.5px solid #cbd5e1; background: var(--af-node-bg); color: var(--af-text);
-}
-[data-theme="dark"] .af-search { border-color: var(--af-border); }
+/* Toolbar buttons are the shared pills, and the search box's height and border are shared too (static/css/ui.css) */
+.af-search { font: inherit; font-size: 0.95em; box-sizing: border-box; padding: 0 12px; width: 240px; color: var(--af-text); }
 .af-vendor-toggle:focus-visible, .af-chip:focus-visible, .af-search:focus-visible, .af-node:focus-visible {
   outline: 2px solid var(--af-focus); outline-offset: 2px;
 }

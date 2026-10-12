@@ -10,43 +10,30 @@
 
 /* Technique entry: one card in two parts joined into an L. The top sits beside report
    analysis; the rest spans both columns, its top edge drawn only where nothing sits on it */
-.mn-card.mn-entry-top { grid-column: 1; grid-row: 1; align-self: stretch; border-bottom: none; border-radius: 12px 12px 0 0; padding-bottom: 0; }
+.mn-card.mn-entry-top { grid-column: 1; grid-row: 1; align-self: stretch; padding-bottom: 0; }
 .mn-card.mn-report { grid-column: 2; grid-row: 1; margin-bottom: 20px; }
-.mn-card.mn-entry-rest { grid-column: 1 / -1; grid-row: 2; position: relative; border-top: none; border-radius: 0 12px 12px 12px; }
+.mn-card.mn-entry-rest { grid-column: 1 / -1; grid-row: 2; position: relative; }
 .mn-entry-rest::before {
   content: ''; position: absolute; top: 0; right: -1px; left: calc((100% - 20px) * 2 / 3 - 1px); height: 12px;
   border-top: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-top-right-radius: 12px;
   pointer-events: none;
 }
-.mn-card.mn-entry-top, .mn-card.mn-entry-rest, .mn-card.mn-report { box-shadow: none; }
 .mn-card {
-  background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px;
-  padding: 18px 22px; box-shadow: 0 2px 8px var(--shadow); min-width: 0;
+  padding: 18px 22px;
+  min-width: 0;
 }
-/* Card headings: the section titles Profile and Coverage use */
-.mn-card-title { display: flex; align-items: center; gap: 12px; font-size: 1.2rem; font-weight: 600; color: var(--text-primary); margin: 0 0 16px; }
-.mn-card-title svg { width: 24px; height: 24px; stroke: var(--accent); flex-shrink: 0; }
+/* .mn-card-title: static/css/ui.css */
+
 .mn-hint { color: var(--text-secondary); font-size: .92rem; line-height: 1.5; margin: 0 0 14px; }
 
 .mn-field { margin-bottom: 18px; }
 .mn-page .section-label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--text-primary); font-size: .95rem; }
 
+/* Fields share the standard look (static/css/ui.css); here, only their size */
 .mn-page textarea,
 .mn-page select,
-.mn-page input[type="url"] {
-  width: 100%; box-sizing: border-box; padding: 0.75em 1em; margin: 0;
-  border: 2px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);
-  font: inherit; font-size: 1rem; transition: border-color .2s;
-}
+.mn-page input[type="url"] { width: 100%; margin: 0; }
 .mn-page textarea { min-height: 96px; resize: vertical; }
-.mn-page select {
-  cursor: pointer; appearance: none; -webkit-appearance: none; padding-right: 2.5em;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 1em center;
-}
-.mn-page textarea:focus, .mn-page select:focus, .mn-page input[type="url"]:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(197, 48, 48, .12);
-}
 
 .technique-help, .procedures-help { font-size: .85rem; color: var(--text-secondary); margin-top: 6px; }
 
@@ -57,17 +44,10 @@
   transition: background .2s ease;
 }
 .mn-tactics .option-item:hover { background: rgba(197, 48, 48, .06); }
-.mn-tactics input[type="checkbox"] { width: 18px; height: 18px; margin: 0; flex-shrink: 0; cursor: pointer; accent-color: var(--accent); }
 .mn-tactics .option-label { font-weight: 500; color: var(--text-primary); }
 
 .mn-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
-.mn-page .btn {
-  padding: .8em 1.8em; border: 2px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff;
-  font: inherit; font-weight: 600; cursor: pointer; transition: transform .15s, box-shadow .15s;
-}
-.mn-page .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(197, 48, 48, .3); }
-.mn-page .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
-.mn-page .btn.ghost { background: transparent; color: var(--accent); }
+/* .btn and .btn.ghost: static/css/ui.css */
 
 #append-message {
   display: none; margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-weight: 500;
@@ -97,7 +77,7 @@
 @media (max-width: 900px) {
   .mn-grid { grid-template-columns: 1fr; }
   .mn-card.mn-entry-top { grid-row: 1; }
-  .mn-card.mn-entry-rest { grid-column: 1; grid-row: 2; border-radius: 0 0 12px 12px; }
+  .mn-card.mn-entry-rest { grid-column: 1; grid-row: 2; }
   .mn-entry-rest::before { display: none; }
   .mn-card.mn-report { grid-column: 1; grid-row: 3; margin: 20px 0 0; }
   .mn-tactics { grid-template-columns: repeat(2, minmax(0, 1fr)); }

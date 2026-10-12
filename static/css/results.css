@@ -358,7 +358,7 @@
 }
 
 /* Buttons */
-.btn-primary, .btn-secondary, .btn-outline, .btn-text, .btn-icon {
+.btn-secondary, .btn-outline, .btn-text, .btn-icon {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -372,18 +372,7 @@
   text-decoration: none;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #C53030 0%, #a82828 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(197, 48, 48, 0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #a82828 0%, #8b2020 100%);
-  box-shadow: 0 4px 12px rgba(197, 48, 48, 0.4);
-  transform: translateY(-1px);
-}
-
+/* .btn-primary: static/css/ui.css */
 .btn-secondary {
   background: white;
   color: #C53030;
@@ -580,11 +569,7 @@
 
 /* Detection Section */
 .detection-section {
-  background: var(--bg-secondary);
-  border-radius: 16px;
   padding: 16px;
-  border: none;
-  box-shadow: 0 2px 8px var(--shadow);
   margin-bottom: 24px;
 }
 
@@ -597,15 +582,7 @@
   border-bottom: 2px solid var(--border-color);
 }
 
-.detection-header h2 {
-  font-size: 26px;
-  margin: 0;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
+/* .detection-header h2: static/css/ui.css */
 
 .expand-btn {
   color: var(--accent);
@@ -990,33 +967,7 @@
 }
 
 /* Action buttons for results page */
-.btn-action {
-  flex: 1;
-  min-width: 0;
-  padding: 12px 18px;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 0.95em;
-  background: var(--accent);
-  color: white;
-  border-color: var(--accent);
-  white-space: nowrap;
-}
-
-.btn-action:hover:not([disabled]) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(197, 48, 48, 0.3);
-  background: #a52a2a;
-  border-color: #a52a2a;
-}
-
+/* .btn-action: static/css/ui.css; disabled stays grey here */
 .btn-action[disabled] {
   background: #e0e0e0;
   color: #999;

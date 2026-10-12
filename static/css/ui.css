@@ -105,6 +105,7 @@
   gap: 8px;
   width: auto;
   flex: 0 0 auto;
+  box-sizing: border-box;
   margin: 0;
   padding: 12px 24px;
   border: 2px solid var(--accent);
@@ -204,7 +205,7 @@
 .mn-page textarea, .mn-page select, .mn-page input[type="url"],
 .fl-pick select,
 .ag-field input, .ag-field textarea, .ag-model select,
-.dropdown-style, .dropdown-styled,
+.dropdown-styled,
 #search-input,
 .fd-search {
   box-sizing: border-box;
@@ -222,7 +223,7 @@
 .mn-page textarea:focus, .mn-page select:focus, .mn-page input[type="url"]:focus,
 .fl-pick select:focus,
 .ag-field input:focus, .ag-field textarea:focus, .ag-model select:focus,
-.dropdown-style:focus, .dropdown-styled:focus,
+.dropdown-styled:focus,
 #search-input:focus,
 .fd-search:focus {
   outline: none;
@@ -233,7 +234,7 @@ select.form-input,
 .mn-page select,
 .fl-pick select,
 .ag-model select,
-select.dropdown-style, select.dropdown-styled {
+select.dropdown-styled {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 2.5em !important;

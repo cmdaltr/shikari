@@ -1,16 +1,14 @@
 /* Threat Feed page (templates/feed.html) */
 .fd-page { --fd-accent: var(--accent); }
-.fd-intro, .fd-section, .fd-sources { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; color: var(--text-primary); line-height: 1.55; }
+.fd-intro, .fd-section, .fd-sources { padding: 16px 20px; margin-bottom: 20px; color: var(--text-primary); line-height: 1.55; }
 .fd-intro p { margin: 0 0 8px; }
 .fd-intro a, .fd-sources a { color: var(--accent); }
 .fd-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--text-secondary); font-size: .9em; margin: 0 !important; }
-.fd-refresh { font: inherit; font-weight: 600; padding: 6px 14px; border-radius: 6px; cursor: pointer; border: 2px solid var(--fd-accent); background: var(--fd-accent); color: #fff; }
-.fd-refresh:disabled { opacity: .5; cursor: not-allowed; }
+/* .fd-refresh: static/css/ui.css */
 .fd-controls { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 16px; }
-.fd-search { flex: 1 1 280px; min-width: 0; font: inherit; font-size: 1rem; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); }
+.fd-search { flex: 1 1 280px; min-width: 0; }
 .fd-filters { display: flex; flex-wrap: wrap; gap: 6px; }
-.fd-filter { font: inherit; font-size: .88em; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); }
-.fd-filter.is-active { background: var(--fd-accent); border-color: var(--fd-accent); color: #fff; }
+/* .fd-filter: static/css/ui.css */
 .fd-count { color: var(--text-secondary); font-size: .9em; }
 /* Every card the same height: titles and descriptions are clamped (the full text is the
    tooltip), and every row is as tall as the tallest card */

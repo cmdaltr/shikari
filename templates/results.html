@@ -10,22 +10,15 @@
 /* Latest run / All runs switch */
 .run-view { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 16px; }
 .run-view-label { font-size: 14px; font-weight: 600; color: #6c757d; text-transform: uppercase; letter-spacing: .4px; }
-.run-view-opt {
-  display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
-  border: 1px solid #d0d7de; background: #fff; color: #374151; font-weight: 600; font-size: 15px; text-decoration: none;
-}
-.run-view-opt:hover { border-color: #667eea; }
-.run-view-opt.is-active { background: #667eea; border-color: #667eea; color: #fff; }
+/* .run-view-opt: static/css/ui.css */
 .run-view-n { font-weight: 500; font-size: 13px; opacity: .8; }
 .run-view-when { font-size: 14px; color: #6c757d; }
-[data-theme="dark"] .run-view-opt { background: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary); }
-[data-theme="dark"] .run-view-opt.is-active { background: #667eea; border-color: #667eea; color: #fff; }
 [data-theme="dark"] .run-view-label, [data-theme="dark"] .run-view-when { color: var(--text-secondary); }
 
 /* Techniques the latest run built nothing for */
 /* Threat briefing (archer/build/briefing.py): no AI unless someone asks for a summary */
-.briefing { margin: 0 0 20px; padding: 16px 20px; background: var(--bg-secondary, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-.briefing h2 { margin: 0 0 6px; font-size: 1.15rem; color: var(--text-primary, #1a1a1a); }
+.briefing { margin: 0 0 20px; padding: 16px 20px; }
+/* .briefing h2: static/css/ui.css */
 .briefing-lead { margin: 0 0 14px; color: var(--text-primary, #1a1a1a); line-height: 1.55; }
 .briefing-stats { display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 0 0 14px; }
 .briefing-stat strong { display: block; font-size: 1.5rem; color: var(--accent, #C53030); }
@@ -35,7 +28,7 @@
 .briefing-chain li.is-partial { background: rgba(245,158,11,.15); color: #b45309; }
 .briefing-chain li.is-none { background: rgba(197,48,48,.1); color: #b91c1c; }
 .briefing-chain li.is-weakest { outline: 2px solid currentColor; }
-.briefing h3 { margin: 0 0 6px; font-size: .95rem; color: var(--text-primary, #1a1a1a); }
+/* .briefing h3: static/css/ui.css */
 .briefing-gaps { margin: 0 0 14px; padding-left: 1.2em; line-height: 1.6; color: var(--text-primary, #1a1a1a); }
 .briefing-gaps a { color: var(--accent, #C53030); font-weight: 600; }
 .briefing-gaps .why { color: var(--text-secondary, #666); font-size: .9em; }

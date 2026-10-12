@@ -97,9 +97,6 @@
 .library-controls {
   margin: 0;
   padding: 24px;
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px var(--shadow);
 }
 
 .search-row {
@@ -107,15 +104,7 @@
   margin-bottom: 16px;
 }
 
-.search-row #search-input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1em;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
+.search-row #search-input { flex: 1; }
 
 .filters-row {
   display: flex;
@@ -238,11 +227,7 @@
 
 /* Detection Section */
 .detection-section {
-  background: var(--bg-secondary);
-  border-radius: 16px;
   padding: 16px;
-  border: none;
-  box-shadow: 0 2px 8px var(--shadow);
   margin-bottom: 24px;
 }
 
@@ -255,15 +240,7 @@
   border-bottom: 2px solid var(--border-color);
 }
 
-.detection-header h2 {
-  font-size: 26px;
-  margin: 0;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
+/* .detection-header h2: static/css/ui.css */
 
 /* Selection buttons */
 .btn-selection {

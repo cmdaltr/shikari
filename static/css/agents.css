@@ -1,6 +1,6 @@
 /* Agents page (templates/agents.html) */
 .ag-page { --ag-accent: var(--accent); padding-top: 80px; padding-bottom: 120px; }
-.ag-intro { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; color: var(--text-primary); line-height: 1.55; }
+.ag-intro { padding: 16px 20px; margin-bottom: 20px; color: var(--text-primary); line-height: 1.55; }
 .ag-intro p { margin: 0 0 8px; }
 .ag-meta { color: var(--text-secondary); font-size: .9em; margin: 0 !important; }
 .ag-meta a { color: var(--accent); }
@@ -14,22 +14,18 @@
 .ag-pick-title { font-weight: 700; }
 .ag-pick-summary { font-size: .85em; color: var(--text-secondary); line-height: 1.4; }
 
-.ag-form { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px; }
+.ag-form { padding: 16px 20px; }
 .ag-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .ag-field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: .9em; color: var(--text-secondary); min-width: 0; }
 .ag-field-wide { grid-column: 1 / -1; }
-.ag-field input, .ag-field textarea {
-  font: inherit; font-weight: 400; font-size: 1rem; padding: 12px 14px; border: 2px solid var(--border-color); border-radius: 6px;
-  background: var(--bg-primary); color: var(--text-primary); box-sizing: border-box; width: 100%; min-width: 0;
-}
+.ag-field input, .ag-field textarea { width: 100%; min-width: 0; }
 .ag-field textarea { resize: vertical; }
 .ag-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
 .ag-approve { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: .9em; }
-.ag-start, .ag-stop, .ag-approval-actions button {
+.ag-stop, .ag-approval-actions button {
   font: inherit; font-weight: 600; padding: 10px 22px; border-radius: 6px; cursor: pointer; border: 2px solid var(--ag-accent);
   background: var(--ag-accent); color: #fff;
 }
-.ag-start:disabled { opacity: .5; cursor: not-allowed; }
 .ag-continue { padding: 6px 14px; margin-left: auto; }
 .ag-stop { background: transparent; color: var(--text-secondary); border-color: var(--border-color); padding: 6px 14px; }
 .ag-built { margin-top: 14px; color: var(--text-secondary); font-size: .9em; }
@@ -76,10 +72,9 @@
 }
 
 .ag-model { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 8px; }
-.ag-model select { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); max-width: 100%; }
+.ag-model select { max-width: 100%; }
 .ag-status.is-interrupted { background: rgba(107, 114, 128, .15); color: var(--text-secondary); }
-.ag-history { margin-top: 20px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px; }
-.ag-history h2 { font-size: 1.05rem; margin: 0 0 4px; color: var(--text-primary); }
+.ag-history { margin-top: 20px; padding: 16px 20px; }
 .ag-history-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ag-history-list button {
   width: 100%; display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 4px 10px; align-items: center; text-align: left;

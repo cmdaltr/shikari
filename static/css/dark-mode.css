@@ -40,7 +40,6 @@
 
 /* Cards and containers */
 [data-theme="dark"] .summary-card,
-[data-theme="dark"] .detection-section,
 [data-theme="dark"] .success-banner,
 [data-theme="dark"] .tab-content {
     background: var(--bg-secondary);

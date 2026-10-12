@@ -148,28 +148,7 @@ main {
 }
 
 /* ========== Button Styles ========== */
-/* Primary button - accent color */
-.btn-primary {
-    flex: 1;
-    padding: 14px 20px;
-    border: 2px solid var(--accent);
-    border-radius: 6px;
-    background: var(--accent);
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-sizing: border-box;
-    font-size: 1em;
-    font-family: 'Inter', sans-serif;
-    line-height: 1.2;
-}
-
-.btn-primary:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-    transform: translateY(-1px);
-}
+/* .btn-primary: static/css/ui.css */
 
 /* Secondary button - transparent with border */
 .btn-secondary {
