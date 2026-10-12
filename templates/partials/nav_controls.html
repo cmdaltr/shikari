@@ -1,7 +1,7 @@
 {#
   The one navigation bar, on every page. Every page is always listed, in the same order;
-  pages that need an account are greyed out for guests. Pages with their own large banner
-  (home, profile, login, help) leave nav_logo unset; base.html sets it.
+  pages that need an account are greyed out for guests. The bar spans the page's main
+  content, so Home and Log out sit on its edges (common.css).
 #}
 {% set path = request.url.path %}
 {% set here = (request.url.path ~ ('?' ~ request.url.query if request.url.query else '')) | urlencode %}
@@ -17,11 +17,6 @@
   ('/how-it-works', 'Help', false, '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
 ] %}
 <nav class="global-nav-controls" aria-label="Archer">
-    {% if nav_logo %}
-    <a href="/" class="nav-logo" aria-label="Archer home">
-        <img src="{{ url_for('static', path='images/archer_banner.png') }}" alt="Archer">
-    </a>
-    {% endif %}
     <div class="nav-tabs">
         {% for href, label, needs_auth, icon in pages %}
         {% set active = path == href or (href != '/' and path.startswith(href ~ '/')) %}
