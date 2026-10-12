@@ -82,7 +82,9 @@ On CISA AA23-320A (Scattered Spider) it found 35 of 43 techniques uncovered, hun
 
 ## History
 
-Each session is saved to SQLite (`agent_runs`) as it runs: the task, every tool call and result preview, approvals, the answer and token counts. The Agents page lists recent runs and replays any of them; the console has `agent/history`. A run the server was in the middle of when it restarted shows as interrupted. The model's conversation is saved after every complete turn, so an interrupted run, one you stopped, or one that hit its turn limit can carry on: **Continue** on the Agents page, or `agent/history` with `SESSION <id>` and `CONTINUE true`. It continues on the provider it started on (the saved conversation is in that API's shape) and gets another full set of turns. Runs from before this change have no saved conversation and can only be replayed.
+Each session is saved to SQLite (`agent_runs`) as it runs: the task, every tool call and result preview, approvals, the answer and token counts. The Agents page lists recent runs and replays any of them; the console has `agent/history`. A run the server was in the middle of when it restarted shows as interrupted. The model's conversation is saved after every complete turn, so an interrupted run, one you stopped, or one that hit its turn limit can carry on: **Continue** on the Agents page, or `agent/history` with `SESSION <id>` and `CONTINUE true`. It gets another full set of turns.
+
+> **Continue needs the same provider.** A run continues only on the provider it started on, because the saved conversation is in that provider's API shape: Anthropic's tool_use and tool_result blocks, with thinking blocks, can't be sent to an OpenAI-compatible API, and the reverse. The model can change within the provider (e.g. Sonnet to Opus), not the provider. If that provider is no longer configured in your profile, Continue is refused with that reason; add the key back, or start a new run on another provider. The Agents page names the provider on the Continue button, and `agent/history` prints it before continuing. Runs from before this change have no saved conversation and can only be replayed.
 
 ## Approvals
 

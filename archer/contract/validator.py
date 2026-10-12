@@ -322,8 +322,10 @@ def lint_kql(q: str, rep: Report, rule: Optional[dict] = None) -> List[str]:
             if not re.fullmatch(r"\s*(?:\"S\"|'S'|[A-Za-z_][A-Za-z0-9_]*|-?\d+(?:\.\d+)?)\s*", item):
                 rep.fail("KQL-16", f"malformed string list item: {item.strip()[:50]!r}"); break
     for stmt in re.split(r"\n\s*\|", strip_comments(q, "kql")):
+        # Verbatim @"..." strings double their quotes; ordinary strings escape them as \" (valid KQL)
         s = re.sub(r'@"(?:[^"]|"")*"', "", stmt)
-        if s.count('"') % 2: rep.fail("KQL-16", f"unbalanced double quotes in statement: {stmt.strip()[:60]}")
+        s = re.sub(r'"(?:[^"\\\n]|\\.)*"', "", s)
+        if '"' in s: rep.fail("KQL-16", f"unbalanced double quotes in statement: {stmt.strip()[:60]}")
     if re.search(r"\bhas_(?:any|all)\s*\(\s*\"[^\"]*\n", q): rep.fail("KQL-16", "string literal inside has_any/has_all spans a line break")
     # Bracket structure, strings scrubbed: an empty group (not a call like count()) or an
     # unbalanced bracket is a query that won't parse, e.g. "where ())))) or (...)"

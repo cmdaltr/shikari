@@ -56,3 +56,19 @@ def test_advisory_boilerplate_is_not_reported_exploitation():
     assert "vulnerability exploitation" in reasons("Threat Actors Exploit Critical AhsayCBS Flaws")
     assert "vulnerability exploitation" in reasons("attackers have been exploiting CVE-2026-1234")
     assert not reasons("Successful exploitation of these vulnerabilities could allow an attacker to exploit the device")
+
+
+def test_groups_count_only_in_the_title_or_near_technique_ids():
+    text = "\n".join([
+        "Japan's new strategy mentions APT29 among many others.",   # far from any technique ID
+        "Background paragraph.",
+        "Another paragraph.",
+        "The intrusion began with a phishing email.",                # next to a technique ID
+        "Initial access used T1566.001 attachments; Lazarus staged payloads.",
+        "Persistence followed.",
+        "Unrelated closing remarks about Turla.",
+    ])
+    ctx = feed.technique_context("Report on Volt Typhoon", text)
+    assert "Volt Typhoon" in ctx and "Lazarus" in ctx and "phishing email" in ctx and "Persistence" in ctx
+    assert "APT29" not in ctx and "Turla" not in ctx
+    assert feed.technique_context("Title", "No technique IDs here; APT29.") == "Title"

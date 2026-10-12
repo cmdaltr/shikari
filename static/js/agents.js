@@ -102,11 +102,24 @@
     if (['done', 'stopped', 'error', 'interrupted'].includes(view.status)) {
       timer = null; stopBtn.hidden = true;
       continueBtn.hidden = !view.resumable;
+      if (view.resumable) {
+        // The saved conversation is in that provider's API shape, so it can't move to another one
+        const provider = providerLabel(view.provider);
+        continueBtn.textContent = `Continue on ${provider}`;
+        continueBtn.title = `A run continues only on the provider it started on (${provider}).`;
+      }
       if (view.answer) { answer.innerHTML = markdown(view.answer); answer.hidden = false; }
       history();
       return;
     }
     timer = setTimeout(poll, 1200);
+  }
+
+  function providerLabel(id) {
+    const opt = document.querySelector(`#ag-provider option[value="${CSS.escape(id || '')}"]`);
+    // Options read "<label>: <model>"; a local label carries its own host:port
+    const text = opt ? opt.textContent : '';
+    return text.includes(': ') ? text.slice(0, text.indexOf(': ')) : (text || id || 'the same provider');
   }
 
   function setStatus(s) {

@@ -106,6 +106,7 @@ class Session:
         return {"session_id": self.id, "agent": self.agent.name, "status": self.status,
                 "events": self.events[since:], "next": len(self.events), "pending": self.pending,
                 "answer": self.answer, "turns": self.turns, "tokens": self.tokens, "model": self.model,
+                "provider": self.provider,
                 "resumable": self.status in ("stopped", "error") and bool(self.conversation)}
 
     def decide(self, approve: bool) -> None:

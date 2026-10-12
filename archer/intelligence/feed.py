@@ -8,7 +8,9 @@ IOCs), then matched two ways:
 
 - Targets your industry: it names an ATT&CK group whose targeting (group_metadata's
   target_sectors) includes one of the user's industries, or it names the industry itself
-  repeatedly or in its title.
+  repeatedly or in its title. A group counts only when it (or an alias) is named in the
+  title or in a paragraph with a technique ID or next to one: a passing mention in a
+  policy piece or a "related reading" list isn't the post being about that group.
 - Opportunistic: activity that picks no industry and can land in any of them: supply-chain
   and package-registry compromise, mass exploitation of a vulnerability, ransomware
   affiliates, infostealers, botnets, malvertising. A group whose ATT&CK objective is
@@ -36,7 +38,7 @@ from typing import Dict, Iterable, List, Optional
 from archer.config import DATA_DIR
 
 FEED_DAYS = 7
-ANALYSIS_VERSION = 3        # bump when the matchers change: cached posts are analysed again
+ANALYSIS_VERSION = 4        # bump when the matchers change: cached posts are analysed again
 REFRESH_EVERY = 6 * 3600
 FEED_DIR = os.path.join(DATA_DIR, "feed")
 CACHE_PATH = os.path.join(FEED_DIR, "posts.json")
@@ -100,6 +102,10 @@ OPPORTUNISTIC = [
 # Group names that are also ordinary words: matching them in prose would be noise
 _AMBIGUOUS_NAMES = {"Silence", "Inception", "Equation", "Axiom", "Patchwork", "Leviathan", "Poseidon",
                     "Machete", "Sidewinder", "Moafee", "Elderwood", "Strider", "Suckfly", "Scarlet Mimic"}
+
+# Paragraphs either side of one with a technique ID in which a group name still counts
+NEAR_TECHNIQUES = 1
+_TECHNIQUE_ID = re.compile(r"\bT\d{4}(?:\.\d{3})?\b")
 
 _lock = threading.Lock()
 _refreshing = False
@@ -229,6 +235,16 @@ def _sector_mentions(text: str, title: str) -> Dict[str, int]:
     return out
 
 
+def technique_context(title: str, text: str, near: int = NEAR_TECHNIQUES) -> str:
+    """The title plus each paragraph with a technique ID and the `near` paragraphs either side."""
+    paragraphs = [p for p in text.split("\n") if p.strip()]
+    keep = set()
+    for i, paragraph in enumerate(paragraphs):
+        if _TECHNIQUE_ID.search(paragraph):
+            keep.update(range(max(0, i - near), min(len(paragraphs), i + near + 1)))
+    return "\n".join([title] + [paragraphs[i] for i in sorted(keep)])
+
+
 def analyse_post(post: Dict, groups: List[Dict]) -> Dict:
     """The post with what the report analyser and the matchers found; industry-independent."""
     from archer.parsers.blog_analyzer import analyze_blog_post
@@ -238,7 +254,8 @@ def analyse_post(post: Dict, groups: List[Dict]) -> Dict:
         return {**post, "error": result.get("error") or "could not be read", "analysed": time.time()}
     text = result.get("text") or ""
     full = f"{post['title']}\n{text}"
-    named = [g for g in groups if g["pattern"].search(full)]
+    context = technique_context(post["title"], text)
+    named = [g for g in groups if g["pattern"].search(context)]
     iocs = result.get("iocs") or {}
     return {
         **post,

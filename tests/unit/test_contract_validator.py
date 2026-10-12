@@ -300,3 +300,11 @@ def test_yl21_is_judged_per_branch(contract):
     assert "YL-21" not in contract.lint_query(BRANCHED_YARAL).gates()
     same_branch = BRANCHED_YARAL.replace("$e.target.registry.registry_key", "$e.target.process.command_line")
     assert "YL-21" in contract.lint_query(same_branch).gates()
+
+
+@pytest.mark.unit
+def test_kql16_allows_escaped_quotes_in_ordinary_strings(contract):
+    ok = 'DeviceProcessEvents\n| where ProcessCommandLine has_all("SYSTEMD_UNIT_PATH=\\"", "lib")'
+    assert "KQL-16" not in contract.lint_query(ok).gates()
+    bad = 'DeviceProcessEvents\n| where ProcessCommandLine has_all("a\\"b, "c")'
+    assert "KQL-16" in contract.lint_query(bad).gates()

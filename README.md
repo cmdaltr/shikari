@@ -78,7 +78,7 @@ Set your industries in Profile → Threat Feed industries, then open the feed (t
 
 | List | Why a post is there |
 |---|---|
-| Targeting your industries | It names an ATT&CK group (name or alias) whose ATT&CK description lists one of your industries, or names the industry itself four or more times |
+| Targeting your industries | It names an ATT&CK group (name or alias) whose ATT&CK description lists one of your industries, in the title or in a paragraph with a technique ID or next to one (a passing mention elsewhere doesn't count); or it names the industry itself four or more times |
 | Opportunistic | Supply-chain or package-registry compromise, reported exploitation, ransomware-as-a-service, infostealers, botnets, malvertising and fake updates, initial access brokers, or a group whose objective is ransomware |
 
 Posts with no technique ID, IOCs, CVE or named group (product news, webinars) are left out. Matching is regular expressions over the text plus ATT&CK's own group data, so no AI is used. **Analyse in Archer** opens the post on the Hunt page's Upload tab.
@@ -160,7 +160,7 @@ Local modules run in the console's own process. Server modules drive a running A
 | `agent/repair` | server | Agent: fix a run's queries that won't parse or can't match, re-checking each fix |
 | `agent/ask` | server | Agent: Ask Archer with tools (library, coverage, ATT&CK, hunts) |
 | `agent/triage` | server | Agent: triage a threat report into coverage gaps, hunts and a briefing |
-| `agent/history` | server | Recent agent runs (kept across restarts); replay one, or `CONTINUE true` to carry on an interrupted or stopped one |
+| `agent/history` | server | Recent agent runs (kept across restarts); replay one, or `CONTINUE true` to carry on an interrupted or stopped one (**only on the provider it started on**) |
 
 Server modules sign in with `ARCHER_TOKEN`, an API token from Profile → Security → API Tokens (works with MFA), or with `ARCHER_EMAIL` and `ARCHER_PASSWORD` (the console prompts for anything unset), against `ARCHER_URL` (default `http://127.0.0.1:8000`). Agents take `PROVIDER` and `MODEL` too. `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.
 

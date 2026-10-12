@@ -154,6 +154,8 @@ class AgentHistoryModule(ServerModule):
                     print(f"\n  This session can't be continued ({view['status']})")
                     return
                 approve_all = self.options["APPROVE"].effective_value == "all"
+                print(f"\n  Continuing on {view.get('provider') or 'the provider it started on'} "
+                      f"(a run continues only on the provider it started on)")
                 c.resume_agent(session_id, auto_approve=approve_all)
                 since = view["next"]
                 try:
