@@ -53,21 +53,21 @@ def _check_public_url(url: str) -> None:
             raise ValueError("Access to private, internal or reserved addresses is not allowed.")
 
 
-def _fetch_public_url(url: str, max_redirects: int = 3) -> requests.Response:
+def _fetch_public_url(url: str, max_redirects: int = 3, timeout: int = 30) -> requests.Response:
     """GET url following redirects manually so each hop is re-validated (requests would skip the check)."""
     from urllib.parse import urljoin
 
     headers = FETCH_HEADERS
     for _ in range(max_redirects + 1):
         _check_public_url(url)
-        response = requests.get(url, headers=headers, timeout=30, allow_redirects=False)
+        response = requests.get(url, headers=headers, timeout=timeout, allow_redirects=False)
         if not response.is_redirect:
             return response
         url = urljoin(url, response.headers.get("Location", ""))
     raise ValueError(f"Too many redirects (max {max_redirects}).")
 
 
-def analyze_blog_post(url: str, include_text: bool = False) -> Dict:
+def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30) -> Dict:
     """
     Analyze a blog post URL and extract threat intelligence.
 
@@ -88,7 +88,7 @@ def analyze_blog_post(url: str, include_text: bool = False) -> Dict:
     try:
         # SECURITY: every hop (the URL and each redirect) must resolve only to public addresses
         try:
-            response = _fetch_public_url(url, max_redirects=3)
+            response = _fetch_public_url(url, max_redirects=3, timeout=timeout)
         except ValueError as e:
             return {"success": False, "error": str(e)}
 

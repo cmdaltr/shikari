@@ -16,7 +16,11 @@ Standard library only.
     archer install                put `archer` on your PATH (~/bin, or ~/.local/bin)
     archer docker <args>          docker compose with the project's docker-compose.yml
 
-Options given to start or restart are remembered in data/run/settings.json.
+Options given to start or restart are remembered in settings.json in the state directory:
+~/Library/Application Support/Archer (macOS) or $XDG_STATE_HOME/archer (Linux), or
+$ARCHER_STATE_DIR. Logs go to ~/Library/Logs/Archer (macOS) or <state dir>/logs. Neither is
+in the repository: the repository can sit in a synced folder (OneDrive), which replaces
+files open for writing and kills the processes writing them.
 """
 
 import argparse
@@ -33,8 +37,20 @@ from pathlib import Path
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
-RUN_DIR = ROOT / "data" / "run"
-LOG_DIR = ROOT / "logs"
+
+
+def _state_dirs():
+    base = os.environ.get("ARCHER_STATE_DIR")
+    if base:
+        return Path(base).expanduser() / "run", Path(base).expanduser() / "logs"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "Archer", Path.home() / "Library" / "Logs" / "Archer"
+    state = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "archer"
+    return state / "run", state / "logs"
+
+
+RUN_DIR, LOG_DIR = _state_dirs()
+LEGACY_RUN_DIR = ROOT / "data" / "run"  # before 2026-10-12: inside the repository
 PID_FILE = RUN_DIR / "supervisor.pid"
 STATE_FILE = RUN_DIR / "service.json"
 SETTINGS_FILE = RUN_DIR / "settings.json"
@@ -158,7 +174,7 @@ def ago(seconds):
 
 
 def open_log(name):
-    LOG_DIR.mkdir(exist_ok=True)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
     path = LOG_DIR / f"{name}.log"
     if path.exists() and path.stat().st_size > LOG_ROTATE_BYTES:
         path.replace(path.with_suffix(".log.1"))
@@ -166,7 +182,17 @@ def open_log(name):
 
 
 def log(msg):
-    print(f"{datetime.now():%Y-%m-%d %H:%M:%S} {msg}", flush=True)
+    """The supervisor's log line. A failed write must never stop the supervisor: reopen and carry on."""
+    line = f"{datetime.now():%Y-%m-%d %H:%M:%S} {msg}"
+    for _ in range(2):
+        try:
+            print(line, flush=True)
+            return
+        except (OSError, ValueError):
+            try:
+                sys.stdout = open_log("supervisor")
+            except OSError:
+                return
 
 
 # --- supervisor -------------------------------------------------------------------------------
@@ -304,14 +330,19 @@ def supervise(settings, skip_index=False):
     last = None
     try:
         while not stopping:
-            ok = all(c.check() for c in children if c.name == "archer")
-            for c in children:
-                if c.name != "archer":
-                    c.check()
-            snapshot = json.dumps([c.state() for c in children], default=str)
-            if snapshot != last:
-                save("running")
-                last = snapshot
+            try:
+                ok = all(c.check() for c in children if c.name == "archer")
+                for c in children:
+                    if c.name != "archer":
+                        c.check()
+                snapshot = json.dumps([c.state() for c in children], default=str)
+                if snapshot != last:
+                    save("running")
+                    last = snapshot
+            except Exception as e:
+                # Whatever went wrong (a state file it couldn't write), keep supervising
+                log(f"supervisor: {e.__class__.__name__}: {e}")
+                ok = True
             if not ok:
                 break
             time.sleep(1)
@@ -332,6 +363,8 @@ def supervise(settings, skip_index=False):
 # --- commands ---------------------------------------------------------------------------------
 
 def load_settings(args=None):
+    if not SETTINGS_FILE.exists() and (LEGACY_RUN_DIR / "settings.json").exists():
+        write_json(SETTINGS_FILE, read_json(LEGACY_RUN_DIR / "settings.json", {}))
     settings = {**DEFAULTS, **read_json(SETTINGS_FILE, {})}
     if args is not None:
         if args.port:

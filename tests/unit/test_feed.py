@@ -23,19 +23,51 @@ def test_rss_and_atom_are_parsed():
     assert atom[0]["url"] == "https://example.com/b" and atom[0]["published"].startswith("2026-10-11T08:00")
 
 
-def _post(**kw):
-    return {"title": "t", "techniques": [], "iocs": 0, "cves": [], "groups": [], "sectors": {}, "opportunistic": [], **kw}
+def _analysed(text, title="t", summary="", groups=(), profiles=None):
+    from unittest.mock import patch
+
+    post = {"title": title, "url": "https://e/x", "source": "S", "published": "2026-10-12T00:00:00+00:00",
+            "summary": summary}
+    result = {"success": True, "text": text, "techniques": feed._TECHNICAL.findall(text) and ["T1059"] or [], "iocs": {}}
+    with patch("archer.parsers.blog_analyzer.analyze_blog_post", return_value=result):
+        return feed.analyse_post(post, list(groups), profiles or {})
 
 
-def test_classification_by_group_targeting_and_opportunistic_activity():
-    apt38 = {"id": "G0082", "name": "APT38", "sectors": ["Finance / Banking"], "opportunistic": False}
-    post = _post(groups=[apt38], techniques=["T1059"])
-    assert feed.classify(post, ["Finance / Banking"])["industry"] == ["APT38 (G0082) targets Finance / Banking"]
-    assert feed.classify(post, ["Government"]) is None
-    supply = _post(opportunistic=["supply-chain compromise"], iocs=5)
-    assert feed.classify(supply, ["Government"]) == {"industry": [], "opportunistic": ["supply-chain compromise"]}
-    assert feed.classify(_post(opportunistic=["botnet"]), ["Government"]) is None  # nothing technical
-    assert feed.classify(_post(sectors={"Government": 5}, cves=["CVE-2026-1"]), ["Government"])["industry"] == ["names Government (5×)"]
+APT38 = {"id": "G0082", "name": "APT38", "pattern": __import__("re").compile(r"\bAPT38\b"),
+         "sectors": ["Finance / Banking"], "nexus": "North Korea", "financial": True}
+
+
+def test_tags_come_from_groups_nations_and_motives_in_technical_paragraphs():
+    text = "\n".join([
+        "Japan's strategy paper mentions China-nexus actors in passing.",
+        "Background.", "More background.",
+        "APT38 operators ran powershell -enc to stage the loader.",
+        "Chinese state-sponsored actors also used T1190 against edge devices.",
+        "The campaign was financially motivated and deployed ransomware.",
+    ])
+    post = _analysed(text, groups=[APT38], profiles={"China": ["Government"], "North Korea": ["Finance / Banking"]})
+    assert post["industries"] == {"Finance / Banking": ["APT38 (G0082)"], "Government": ["China-nexus activity"]}
+    assert post["nations"] == ["China", "North Korea"]
+    assert feed.tags(post)["motives"] == ["Financially motivated"]
+    view_entry = {"Finance / Banking": ["APT38 (G0082)"]}
+    assert {feed.industry_label(i): v for i, v in post["industries"].items() if i == "Finance / Banking"} == view_entry
+
+
+def test_attribution_outside_technical_paragraphs_does_not_count():
+    text = "\n".join(["China-nexus actors are a policy concern for Japan.", "A", "B", "C",
+                      "Nothing technical here at all, just commentary on strategy."])
+    post = _analysed(text, profiles={"China": ["Government"]})
+    assert post["nations"] == [] and post["industries"] == {}
+
+
+def test_description_prefers_a_real_summary_and_falls_back_to_the_opening():
+    summary = ("Threat actors exploited a flaw in AhsayCBS to drop webshells. They then deployed XMRig "
+               "on the servers. Patch to 10.3.4 now. A fourth sentence that should not appear.")
+    assert feed.describe(summary, "") == ("Threat actors exploited a flaw in AhsayCBS to drop webshells. They then "
+                                          "deployed XMRig on the servers. Patch to 10.3.4 now.")
+    text = "\n".join(["Title", "By Someone", "Cisco Talos identified a spear-phishing campaign against research "
+                      "organisations in Taiwan this month. The operators used public cloud services for staging."])
+    assert feed.describe("Advisory at a Glance; Title", text, "Title").startswith("Cisco Talos identified")
 
 
 def test_group_names_match_as_proper_nouns_only():
@@ -43,10 +75,10 @@ def test_group_names_match_as_proper_nouns_only():
         {"type": "intrusion-set", "name": "Silence", "aliases": ["Silence"], "external_references": [{"source_name": "mitre-attack", "external_id": "G0091"}]},
         {"type": "intrusion-set", "name": "APT29", "aliases": ["Cozy Bear"], "external_references": [{"source_name": "mitre-attack", "external_id": "G0016"}]},
     ])
-    groups = feed.group_index(bundle, {"G0016": {"target_sectors": "Government", "primary_objectives": "Espionage"}})
+    groups = feed.group_index(bundle, {"G0016": {"target_sectors": "Government", "primary_objectives": "Espionage", "nexus": "Russia"}})
     assert [g["name"] for g in groups] == ["APT29"]
     assert groups[0]["pattern"].search("attributed to Cozy Bear.") and not groups[0]["pattern"].search("cozy bear")
-    assert groups[0]["sectors"] == ["Government"]
+    assert groups[0]["sectors"] == ["Government"] and groups[0]["financial"] is False
 
 
 def test_advisory_boilerplate_is_not_reported_exploitation():
@@ -58,17 +90,25 @@ def test_advisory_boilerplate_is_not_reported_exploitation():
     assert not reasons("Successful exploitation of these vulnerabilities could allow an attacker to exploit the device")
 
 
-def test_groups_count_only_in_the_title_or_near_technique_ids():
+def test_context_is_the_title_and_technical_paragraphs():
     text = "\n".join([
-        "Japan's new strategy mentions APT29 among many others.",   # far from any technique ID
+        "Japan's new strategy mentions APT29 among many others.",
         "Background paragraph.",
         "Another paragraph.",
-        "The intrusion began with a phishing email.",                # next to a technique ID
-        "Initial access used T1566.001 attachments; Lazarus staged payloads.",
+        "The intrusion began with a phishing email.",
+        "The loader ran rundll32.exe from %TEMP%; Lazarus staged payloads.",
         "Persistence followed.",
         "Unrelated closing remarks about Turla.",
     ])
-    ctx = feed.technique_context("Report on Volt Typhoon", text)
+    ctx = feed.technical_context("Report on Volt Typhoon", text)
     assert "Volt Typhoon" in ctx and "Lazarus" in ctx and "phishing email" in ctx and "Persistence" in ctx
     assert "APT29" not in ctx and "Turla" not in ctx
-    assert feed.technique_context("Title", "No technique IDs here; APT29.") == "Title"
+    assert feed.technical_context("Title", "Commentary only; APT29.") == "Title"
+
+
+def test_nation_profiles_keep_the_industries_most_of_its_groups_target():
+    meta = {"G1": {"nexus": "Iran", "target_sectors": "Government; Energy / Utilities"},
+            "G2": {"nexus": "Iran", "target_sectors": "Government"},
+            "G3": {"nexus": "Iran", "target_sectors": "Technology"},
+            "G4": {"nexus": "Iran", "target_sectors": "Government"}}
+    assert feed.nation_profiles(meta, share=0.5)["Iran"] == ["Government"]

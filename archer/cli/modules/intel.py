@@ -108,11 +108,14 @@ class CompanyModule(ServerModule):
 
 class FeedModule(ServerModule):
     name = "intel/feed"
-    description = "This week's research about groups targeting your industries, plus opportunistic activity"
+    description = "This week's threat research, tagged by industry, nation and motive (no AI)"
     author = "Archer Team"
 
     def _register_options(self):
         self.options = {
+            "SEARCH": ModuleOption(name="SEARCH", description="Only posts whose title or description contain this"),
+            "SHOW": ModuleOption(name="SHOW", description="relevant (your industries, opportunistic, financial) | all",
+                                 default="relevant", choices=["relevant", "all"]),
             "INDUSTRIES": ModuleOption(name="INDUSTRIES", description="Set your industries first, comma-separated "
                                        "(e.g. Finance / Banking,Government); 'list' shows the choices"),
             "REFRESH": ModuleOption(name="REFRESH", description="Collect the sources again now", default=False),
@@ -134,18 +137,19 @@ class FeedModule(ServerModule):
         data = c.feed()
         while data["refreshing"] and self.options["WAIT"].effective_value:
             print("  Collecting this week's posts…")
-            time.sleep(10)
+            time.sleep(5)
             data = c.feed()
-        print(f"\n  {data['considered']} posts from the last {data['days']} days; industries: "
+        search = (self.options["SEARCH"].effective_value or "").strip().lower()
+        posts = [p for p in data["posts"] if (self.options["SHOW"].effective_value == "all" or p["relevant"])
+                 and (not search or search in f"{p['title']} {p['description']}".lower())]
+        print(f"\n  {len(posts)} of {len(data['posts'])} posts from the last {data['days']} days; your industries: "
               f"{', '.join(data['labels']) or 'none set (INDUSTRIES list)'}")
-        for title, posts in (("Targeting your industries", data["industry"]),
-                             ("Opportunistic: any industry", data["opportunistic"])):
-            print(f"\n  {title} ({len(posts)})")
-            for p in posts:
-                print(f"\n  {p['published'][:10]}  {p['source']}: {p['title']}")
-                print(f"    {p['url']}")
-                why = p["why"]["industry"] + p["why"]["opportunistic"]
-                print(textwrap.fill("; ".join(why), 100, initial_indent="    why: ", subsequent_indent="         "))
-                if p["techniques"]:
-                    print(textwrap.fill(" ".join(p["techniques"]), 100, initial_indent="    ttps: ", subsequent_indent="          "))
+        for p in posts:
+            t = p["tags"]
+            print(f"\n  {p['published'][:10]}  {p['source']}: {p['title']}")
+            print(textwrap.fill(p["description"] or "", 100, initial_indent="    ", subsequent_indent="    "))
+            labels = [f"[{x}]" for x in t["industries"] + t["nations"] + t["motives"]]
+            if labels:
+                print(textwrap.fill(" ".join(labels), 100, initial_indent="    ", subsequent_indent="    "))
+            print(f"    {p['url']}")
         print("\n  Hunt one: use intel/report with URL set to the post")

@@ -36,7 +36,7 @@ archer stop
 - 🎯 **MITRE ATT&CK Integration** - Automated detection generation from threat group TTPs
 - 📤 **File Upload & Intelligence Extraction** - Upload threat intel files (PDF, TXT, JSON, CSV, XLSX, YARA, DOCX) for automatic TTP/IOC extraction
 - 🌐 **Blog Analysis** - Paste a threat intel blog URL and extract TTPs/IOCs automatically
-- 📰 **Threat Feed** - The last 7 days of vendor and government research (20 sources), kept to posts about groups that target the industries in your profile, plus opportunistic activity such as supply-chain compromise and mass exploitation; no AI involved ([details](#threat-feed))
+- 📰 **Threat Feed** - A searchable wall of the last 7 days of vendor and government research (20 sources), each post tagged with targeted industries, the attacker's nation, and opportunistic or financial motive; collected on start-up and on demand, no AI involved ([details](#threat-feed))
 - 🗺️ **Attack Flows** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow
 - 🔍 **Multi-Platform Support** - Splunk (SPL), KQL (Microsoft Defender/Sentinel), Google SecOps (YARA-L) and Elastic (DSL) queries
 - 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries
@@ -74,14 +74,22 @@ archer stop
 
 ### Threat Feed
 
-Set your industries in Profile → Threat Feed industries, then open the feed (the RSS icon in the header) or run `intel/feed` in the console. Archer reads the RSS/Atom feeds of 20 research sources (Microsoft, Google/Mandiant, Unit 42, Talos, CrowdStrike, SentinelLABS, Securelist, ESET, Proofpoint, The DFIR Report, Red Canary, Huntress, Check Point, Elastic, CISA, NCSC, Recorded Future, Trend Micro, Rapid7, FortiGuard) every six hours, fetches each post from the last seven days and runs it through the report analyser. A post lands in one of two lists:
+The Threat Feed (the RSS icon in the header, or `intel/feed` in the console) is a wall of the last seven days of research, one card per post: title, a two-to-three sentence description, and tags. The search box matches titles and descriptions; the filters show posts relevant to you (your industries, plus anything opportunistic or financially motivated), your industries only, opportunistic or financial only, or everything. Set your industries in Profile → Threat Feed industries. **Analyse in Archer** opens a post on the Hunt page's Upload tab.
 
-| List | Why a post is there |
+The feed is collected in the background every time Archer starts and whenever you press **Refresh now**. Only posts it hasn't seen are fetched and analysed, so a refresh with nothing new takes about ten seconds. No AI is involved: tags come from regular expressions over the text and ATT&CK's own group data.
+
+Sources (RSS/Atom): Microsoft Threat Intelligence, Google Threat Intelligence (Mandiant), Unit 42, Cisco Talos, CrowdStrike, SentinelLABS, Kaspersky Securelist, ESET WeLiveSecurity, Proofpoint, The DFIR Report, Red Canary, Huntress, Check Point Research, Elastic Security Labs, CISA, NCSC (UK), Recorded Future, Trend Micro Research, Rapid7 and FortiGuard Labs.
+
+Tags are taken from the post's title and its technical paragraphs only: a paragraph with a technique ID, CVE, hash, IP, defanged domain, file name, command-line tool, registry key or command-line switch, and the paragraph either side. A passing mention in a policy piece or a reading list doesn't count.
+
+| Tag | From |
 |---|---|
-| Targeting your industries | It names an ATT&CK group (name or alias) whose ATT&CK description lists one of your industries, in the title or in a paragraph with a technique ID or next to one (a passing mention elsewhere doesn't count); or it names the industry itself four or more times |
-| Opportunistic | Supply-chain or package-registry compromise, reported exploitation, ransomware-as-a-service, infostealers, botnets, malvertising and fake updates, initial access brokers, or a group whose objective is ransomware |
+| Industries | The targeting in ATT&CK of each group named there (name or alias); the industries most of a nation's ATT&CK groups target (30% or more), when activity is attributed to China, Russia, Iran or North Korea ("China-nexus", "DPRK", "Russian GRU"); and industries the post itself names twice or in its title |
+| Nation | Attribution to China, Russia, Iran or North Korea there, and the nexus of each named group |
+| Opportunistic | Supply-chain or package-registry compromise, reported exploitation, ransomware-as-a-service, infostealers, botnets, malvertising and fake updates, initial access brokers |
+| Financially motivated | Ransomware, extortion, BEC, crypto theft or mining, banking trojans, carding, or a named group whose ATT&CK objective is financial |
 
-Posts with no technique ID, IOCs, CVE or named group (product news, webinars) are left out. Matching is regular expressions over the text plus ATT&CK's own group data, so no AI is used. **Analyse in Archer** opens the post on the Hunt page's Upload tab.
+Posts with no technique ID, IOCs, CVE or named group (product news, webinars) aren't shown.
 
 ### Techniques that can't produce a detection
 
@@ -151,7 +159,7 @@ Local modules run in the console's own process. Server modules drive a running A
 | `hunt/technique` | server | Technique hunt across every group that uses the techniques |
 | `intel/report` | server | Extract TTPs and IOCs from a report URL or file and hunt them (`MODE all \| iocs \| review`) |
 | `intel/company` | server | Profile a company from OSINT and hunt the groups that target it |
-| `intel/feed` | server | This week's research about groups targeting your industries, plus opportunistic activity (`INDUSTRIES list` to choose) |
+| `intel/feed` | server | This week's research, tagged by industry, nation and motive; `SEARCH` titles and descriptions, `SHOW relevant\|all` (`INDUSTRIES list` to choose yours) |
 | `research/actors` | server | Find actors by keyword (country, industry) and consolidate their techniques; XLSX export |
 | `ai/ask` | server | Ask Archer |
 | `ai/briefing` | server | Threat briefing: prioritised techniques and coverage gaps |

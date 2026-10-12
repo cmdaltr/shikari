@@ -1714,10 +1714,10 @@ def load_mitre_data():
 
         app.state.group_metadata = group_meta
 
-        # The threat feed's posts, when the cache is older than its refresh interval
+        # The threat feed, collected in the background on every start (only new posts are fetched)
         from archer.intelligence.feed import refresh_in_background as refresh_feed
 
-        refresh_feed(bundle, group_meta)
+        refresh_feed(bundle, group_meta, force=True)
 
     except Exception as _e:
         import traceback

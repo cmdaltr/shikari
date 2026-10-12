@@ -1,26 +1,32 @@
 """
-Threat feed: the last week's research from reputable sources, sorted by whether it
-matters to the user's industries.
+Threat feed: the last week's research from reputable sources, as a wall of posts tagged
+with the industries targeted, the attacker's nation, and opportunistic or financially
+motivated activity. No AI is involved: regular expressions over the text plus ATT&CK's
+own group data.
 
 Each post in the sources' RSS/Atom feeds from the last FEED_DAYS days is fetched and run
-through the report analyser (archer.parsers.blog_analyzer: technique IDs, procedures,
-IOCs), then matched two ways:
+through the report analyser (archer.parsers.blog_analyzer: technique IDs, IOCs), then
+tagged from its title and its technical paragraphs only: those with a technique ID, CVE,
+hash, IP, defanged domain, file name, command or registry key, and the paragraph either
+side. A passing mention in a policy piece or a "related reading" list doesn't count.
 
-- Targets your industry: it names an ATT&CK group whose targeting (group_metadata's
-  target_sectors) includes one of the user's industries, or it names the industry itself
-  repeatedly or in its title. A group counts only when it (or an alias) is named in the
-  title or in a paragraph with a technique ID or next to one: a passing mention in a
-  policy piece or a "related reading" list isn't the post being about that group.
-- Opportunistic: activity that picks no industry and can land in any of them: supply-chain
-  and package-registry compromise, mass exploitation of a vulnerability, ransomware
-  affiliates, infostealers, botnets, malvertising. A group whose ATT&CK objective is
-  ransomware or extortion counts too.
+- Industries: the targeting (group_metadata's target_sectors) of each ATT&CK group named
+  there (name or alias); the industries a nation's groups mostly target, when the
+  activity is attributed to that nation ("China-nexus", "DPRK", "Russian GRU"); and
+  industries the post itself names twice or in its title.
+- Nations: those attributed in that text, and the nexus of each named group.
+- Opportunistic: supply-chain and package-registry compromise, reported exploitation,
+  ransomware-as-a-service, infostealers, botnets, malvertising, initial access brokers.
+- Financially motivated: ransomware, extortion, BEC, crypto theft or mining, banking
+  trojans, or a named group whose ATT&CK objective is financial.
 
-Posts with neither are left out, as are posts with no technical content (no technique ID,
-IOCs, CVE or named group): product news and webinars.
+Posts with no technical content at all (no technique ID, IOCs, CVE or named group) are
+left out: product news and webinars. Each post also gets a two-to-three sentence
+description, from its RSS summary or, when that is thin or boilerplate, its opening
+paragraphs.
 
-The analysis of each post is industry-independent and cached (data/feed/posts.json), so a
-refresh only fetches posts it hasn't seen, and each user's view is computed on request.
+The analysis is user-independent and cached (data/feed/posts.json), so a refresh only
+fetches posts it hasn't seen; it runs when Archer starts and on demand.
 """
 
 import html
@@ -38,7 +44,7 @@ from typing import Dict, Iterable, List, Optional
 from archer.config import DATA_DIR
 
 FEED_DAYS = 7
-ANALYSIS_VERSION = 4        # bump when the matchers change: cached posts are analysed again
+ANALYSIS_VERSION = 5        # bump when the matchers change: cached posts are analysed again
 REFRESH_EVERY = 6 * 3600
 FEED_DIR = os.path.join(DATA_DIR, "feed")
 CACHE_PATH = os.path.join(FEED_DIR, "posts.json")
@@ -103,9 +109,36 @@ OPPORTUNISTIC = [
 _AMBIGUOUS_NAMES = {"Silence", "Inception", "Equation", "Axiom", "Patchwork", "Leviathan", "Poseidon",
                     "Machete", "Sidewinder", "Moafee", "Elderwood", "Strider", "Suckfly", "Scarlet Mimic"}
 
-# Paragraphs either side of one with a technique ID in which a group name still counts
-NEAR_TECHNIQUES = 1
-_TECHNIQUE_ID = re.compile(r"\bT\d{4}(?:\.\d{3})?\b")
+# Paragraphs either side of a technical one that still count as its context
+NEAR_TECHNICAL = 1
+FETCH_TIMEOUT = 15
+# A paragraph with any of these is technical: technique ID, CVE, hash, IPv4, defanged
+# domain or URL, file name, command-line tool, registry key, command-line switch
+_TECHNICAL = re.compile(
+    r"\bT\d{4}(?:\.\d{3})?\b|\bCVE-\d{4}-\d{4,7}\b|\b(?:[a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64})\b"
+    r"|\b\d{1,3}(?:\[?\.\]?\d{1,3}){3}\b|\[\.\]|hxxps?://"
+    r"|\b[\w-]+\.(?:exe|dll|ps1|bat|vbs|hta|lnk|msi|sh|jar|scr|iso|zip)\b"
+    r"|\b(?:cmd\.exe|powershell|rundll32|regsvr32|mshta|wmic|schtasks|certutil|bitsadmin|curl|wget|chmod|crontab|osascript)\b"
+    r"|\bHK(?:LM|CU|EY_[A-Z_]+)\\|(?<=\s)--?[a-z][\w-]{0,20}(?=\s)", re.I)
+
+# Attribution to a nation: "China-nexus", "Chinese state-sponsored", "DPRK hackers"; a bare
+# country name is usually geography (the victim), not the attacker
+NATIONS = {
+    "China": r"China|Chinese|PRC",
+    "Russia": r"Russia|Russian|GRU|FSB|SVR",
+    "Iran": r"Iran|Iranian|IRGC|MOIS",
+    "North Korea": r"North Korea|North Korean|DPRK",
+}
+_ATTRIBUTED = (r"(?:-|\s)(?:nexus|linked|based|backed|sponsored|state[- ]sponsored|affiliated|aligned|government[- ]linked"
+               r"|nation[- ]state|APT|threat actors?|hackers|actors?|operators|groups?|cluster|intelligence)")
+NATION_PATTERNS = {n: re.compile(rf"\b(?:{alt}){_ATTRIBUTED}\b|\b(?:state[- ]sponsored|nation[- ]state)\s+(?:{alt})\b", re.I)
+                   for n, alt in NATIONS.items()}
+# A nation's industries: those at least this share of its ATT&CK groups target
+NATION_SECTOR_SHARE = 0.3
+
+FINANCIAL = re.compile(r"financially[- ]motivated|\bransomware\b|\bextortion\b|business email compromise|\bBEC\b"
+                       r"|crypto(?:currency)?[- ](?:theft|heist|drain)|cryptomin(?:er|ing)|\bXMRig\b|banking trojan"
+                       r"|\bcarding\b|payment card (?:theft|skimm)", re.I)
 
 _lock = threading.Lock()
 _refreshing = False
@@ -176,7 +209,7 @@ def fetch_sources(days: int = FEED_DAYS, sources=SOURCES) -> List[Dict]:
     def one(src):
         name, url = src
         try:
-            r = requests.get(url, timeout=20, headers=HEADERS)
+            r = requests.get(url, timeout=FETCH_TIMEOUT, headers=HEADERS)
             r.raise_for_status()
             return [p for p in parse_feed(r.content, name)
                     if p["published"] and datetime.fromisoformat(p["published"]) >= since]
@@ -197,7 +230,7 @@ def fetch_sources(days: int = FEED_DAYS, sources=SOURCES) -> List[Dict]:
 # ---------------------------------------------------------------- analysis
 
 def group_index(bundle, group_meta: Dict) -> List[Dict]:
-    """ATT&CK groups as {id, name, pattern, sectors, opportunistic} for matching in prose."""
+    """ATT&CK groups as {id, name, pattern, sectors, nexus, financial} for matching in prose."""
     groups = []
     for obj in getattr(bundle, "objects", None) or []:
         if obj.get("type") != "intrusion-set" or obj.get("revoked") or obj.get("x_mitre_deprecated"):
@@ -217,9 +250,24 @@ def group_index(bundle, group_meta: Dict) -> List[Dict]:
             "pattern": re.compile(r"(?<![\w-])(?:" + "|".join(map(re.escape, sorted(names, key=len, reverse=True)))
                                   + r")(?![\w-])"),
             "sectors": sectors,
-            "opportunistic": "Ransomware" in objectives,
+            "nexus": meta.get("nexus") or "",
+            "financial": "Ransomware" in objectives or "Financial" in objectives,
         })
     return groups
+
+
+def nation_profiles(group_meta: Dict, share: float = NATION_SECTOR_SHARE) -> Dict[str, List[str]]:
+    """Industries most of each nation's ATT&CK groups target (NATIONS only: the rest are too few)."""
+    profiles = {}
+    groups = [v for k, v in group_meta.items() if k.startswith("G")]
+    for nation in NATIONS:
+        members = [g for g in groups if g.get("nexus") == nation]
+        counts: Dict[str, int] = {}
+        for g in members:
+            for sector in {s.strip() for s in (g.get("target_sectors") or "").split(";") if s.strip()}:
+                counts[sector] = counts.get(sector, 0) + 1
+        profiles[nation] = sorted(s for s, n in counts.items() if members and n / len(members) >= share)
+    return profiles
 
 
 def _sector_mentions(text: str, title: str) -> Dict[str, int]:
@@ -235,64 +283,108 @@ def _sector_mentions(text: str, title: str) -> Dict[str, int]:
     return out
 
 
-def technique_context(title: str, text: str, near: int = NEAR_TECHNIQUES) -> str:
-    """The title plus each paragraph with a technique ID and the `near` paragraphs either side."""
+def technical_context(title: str, text: str, near: int = NEAR_TECHNICAL) -> str:
+    """The title plus each technical paragraph (_TECHNICAL) and the `near` paragraphs either side."""
     paragraphs = [p for p in text.split("\n") if p.strip()]
     keep = set()
     for i, paragraph in enumerate(paragraphs):
-        if _TECHNIQUE_ID.search(paragraph):
+        if _TECHNICAL.search(paragraph):
             keep.update(range(max(0, i - near), min(len(paragraphs), i + near + 1)))
     return "\n".join([title] + [paragraphs[i] for i in sorted(keep)])
 
 
-def analyse_post(post: Dict, groups: List[Dict]) -> Dict:
-    """The post with what the report analyser and the matchers found; industry-independent."""
+_BOILERPLATE = re.compile(r"appeared first on|advisory at a glance|read more|subscribe|cookie|all rights reserved"
+                          r"|click here|sign up|table of contents|share this|\bwebinar\b", re.I)
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z\"“(])")
+
+
+def describe(summary: str, text: str, title: str = "", max_sentences: int = 3, max_chars: int = 420) -> str:
+    """Two or three sentences: the RSS summary, or the article's opening when that's thin or boilerplate."""
+    def sentences(block: str) -> List[str]:
+        return [x.strip() for x in _SENTENCE_END.split(re.sub(r"\s+", " ", block).strip()) if x.strip()]
+
+    def usable(paragraph: str) -> bool:
+        words = paragraph.split()
+        return len(words) >= 12 and paragraph.rstrip()[-1:] in ".!?\"”)" and not _BOILERPLATE.search(paragraph) \
+            and paragraph.strip() != title.strip()
+
+    candidates = []
+    if summary and len(summary) >= 120 and not _BOILERPLATE.search(summary):
+        candidates.append(summary)
+    candidates += [p for p in text.split("\n")[:60] if usable(p)]
+    out: List[str] = []
+    for block in candidates:
+        for sentence in sentences(block):
+            if len(" ".join(out + [sentence])) > max_chars and out:
+                return " ".join(out)
+            if sentence not in out:
+                out.append(sentence)
+            if len(out) >= max_sentences:
+                return " ".join(out)
+        if len(out) >= 2:
+            break
+    return " ".join(out) or (summary or "")[:max_chars]
+
+
+def analyse_post(post: Dict, groups: List[Dict], profiles: Optional[Dict[str, List[str]]] = None) -> Dict:
+    """The post with its tags and description; user-independent (cached)."""
     from archer.parsers.blog_analyzer import analyze_blog_post
 
-    result = analyze_blog_post(post["url"], include_text=True)
+    result = analyze_blog_post(post["url"], include_text=True, timeout=FETCH_TIMEOUT)
     if not result.get("success"):
-        return {**post, "error": result.get("error") or "could not be read", "analysed": time.time()}
+        return {**post, "error": result.get("error") or "could not be read", "analysed": time.time(),
+                "version": ANALYSIS_VERSION}
     text = result.get("text") or ""
-    full = f"{post['title']}\n{text}"
-    context = technique_context(post["title"], text)
+    context = technical_context(post["title"], text)
     named = [g for g in groups if g["pattern"].search(context)]
     iocs = result.get("iocs") or {}
+
+    reasons: Dict[str, List[str]] = {}
+
+    def because(industry: str, why: str) -> None:
+        if industry in INDUSTRIES and why not in reasons.setdefault(industry, []):
+            reasons[industry].append(why)
+
+    for g in named:
+        for sector in g["sectors"]:
+            because(sector, f"{g['name']} ({g['id']})")
+    nations = sorted({n for n, pattern in NATION_PATTERNS.items() if pattern.search(context)})
+    for nation in nations:
+        for sector in (profiles or {}).get(nation, []):
+            because(sector, f"{nation}-nexus activity")
+    for label, n in _sector_mentions(technical_context("", text), post["title"]).items():
+        if n >= 2:
+            because(label, "named in the post")
+    nations = sorted(set(nations) | {g["nexus"] for g in named if g["nexus"]})
+    opportunistic = sorted({reason for pattern, reason in OPPORTUNISTIC if pattern.search(context)})
+    financial = sorted({m.group(0).lower() for m in FINANCIAL.finditer(context)}
+                       | {f"{g['name']} (financial)" for g in named if g["financial"]})
     return {
         **post,
+        "description": describe(post.get("summary") or "", text, post["title"]),
         "techniques": result.get("techniques", [])[:60],
-        "procedures": len(result.get("procedures") or []),
         "iocs": sum(len(v) for v in iocs.values() if isinstance(v, list)),
-        "cves": sorted(set(re.findall(r"\bCVE-\d{4}-\d{4,7}\b", full)))[:20],
-        "groups": [{"id": g["id"], "name": g["name"], "sectors": g["sectors"],
-                    "opportunistic": g["opportunistic"]} for g in named][:15],
-        "sectors": _sector_mentions(text, post["title"]),
-        "opportunistic": sorted({reason for pattern, reason in OPPORTUNISTIC if pattern.search(full)}),
+        "cves": sorted(set(re.findall(r"\bCVE-\d{4}-\d{4,7}\b", f"{post['title']}\n{text}")))[:20],
+        "groups": [{"id": g["id"], "name": g["name"], "nexus": g["nexus"]} for g in named][:15],
+        "industries": reasons,
+        "nations": nations,
+        "opportunistic": opportunistic,
+        "financial": financial[:8],
         "analysed": time.time(), "version": ANALYSIS_VERSION,
     }
 
 
-def classify(post: Dict, industries: Iterable[str]) -> Optional[Dict]:
-    """Why the post matters to these industries ({"industry": [...], "opportunistic": [...]}), or None."""
-    if post.get("error"):
-        return None
-    # The analyser's "procedures" are sentences with attack verbs: product posts have them too
-    technical = post.get("techniques") or post.get("iocs", 0) >= 3 or post.get("groups") or post.get("cves")
-    if not technical:
-        return None
-    wanted = set(industries)
-    industry = []
-    for g in post.get("groups", []):
-        hit = [s for s in g["sectors"] if s in wanted]
-        if hit:
-            industry.append(f"{g['name']} ({g['id']}) targets {', '.join(map(industry_label, hit))}")
-    for label, n in sorted(post.get("sectors", {}).items(), key=lambda kv: -kv[1]):
-        if label in wanted and n >= 4:
-            industry.append(f"names {industry_label(label)} ({n}×)")
-    opportunistic = list(post.get("opportunistic") or [])
-    opportunistic += [f"{g['name']}: ransomware or extortion" for g in post.get("groups", []) if g["opportunistic"]]
-    if not industry and not opportunistic:
-        return None
-    return {"industry": industry, "opportunistic": opportunistic}
+def technical(post: Dict) -> bool:
+    """Whether the post has anything to hunt with: technique IDs, IOCs, a CVE or a named group."""
+    return not post.get("error") and bool(post.get("techniques") or post.get("iocs", 0) >= 3
+                                          or post.get("groups") or post.get("cves"))
+
+
+def tags(post: Dict) -> Dict:
+    motives = (["Opportunistic"] if post.get("opportunistic") else []) + \
+              (["Financially motivated"] if post.get("financial") else [])
+    return {"industries": [industry_label(i) for i in INDUSTRIES if i in post.get("industries", {})],
+            "nations": post.get("nations", []), "motives": motives}
 
 
 # ---------------------------------------------------------------- cache and refresh
@@ -313,7 +405,7 @@ def _save(data: Dict) -> None:
     os.replace(tmp, CACHE_PATH)
 
 
-def refresh(bundle, group_meta: Dict, days: int = FEED_DAYS, workers: int = 6) -> Dict:
+def refresh(bundle, group_meta: Dict, days: int = FEED_DAYS, workers: int = 10) -> Dict:
     """Fetch the sources, analyse new posts, drop ones older than the window. Returns the cache."""
     global _refreshing
     with _lock:
@@ -328,9 +420,10 @@ def refresh(bundle, group_meta: Dict, days: int = FEED_DAYS, workers: int = 6) -
         fresh = [p for p in fetch_sources(days) if p["url"] not in posts or posts[p["url"]].get("error")
                  or posts[p["url"]].get("version") != ANALYSIS_VERSION]
         groups = group_index(bundle, group_meta)
+        profiles = nation_profiles(group_meta)
         print(f"Threat feed: analysing {len(fresh)} new post(s)")
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            for post in pool.map(lambda p: analyse_post(p, groups), fresh):
+            for post in pool.map(lambda p: analyse_post(p, groups, profiles), fresh):
                 posts[post["url"]] = post
         data = {"posts": posts, "last_refresh": time.time()}
         _save(data)
@@ -361,24 +454,32 @@ def refresh_in_background(bundle, group_meta: Dict, force: bool = False) -> bool
 
 
 def view(industries: Iterable[str], days: int = FEED_DAYS) -> Dict:
-    """This user's feed: matching posts, newest first, split into industry and opportunistic."""
+    """
+    The wall: every technical post of the window, newest first, with its tags. relevant: it
+    targets one of the user's industries, or it's opportunistic or financially motivated
+    (which can land in any industry).
+    """
     industries = [i for i in industries if i in INDUSTRIES]
     data = _load()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    industry, opportunistic, considered = [], [], 0
+    posts, considered = [], 0
     for post in sorted(data.get("posts", {}).values(), key=lambda p: p.get("published") or "", reverse=True):
-        if (post.get("published") or "") < cutoff:
+        if (post.get("published") or "") < cutoff or post.get("version") != ANALYSIS_VERSION:
             continue
         considered += 1
-        why = classify(post, industries)
-        if not why:
+        if not technical(post):
             continue
-        entry = {k: post.get(k) for k in ("title", "url", "source", "published", "summary", "techniques",
-                                          "cves", "procedures", "iocs")}
-        entry["groups"] = [g["name"] for g in post.get("groups", [])]
-        entry["why"] = why
-        (industry if why["industry"] else opportunistic).append(entry)
+        yours = {industry_label(i): post["industries"][i] for i in industries if i in post.get("industries", {})}
+        posts.append({
+            **{k: post.get(k) for k in ("title", "url", "source", "published", "description", "techniques", "cves", "iocs")},
+            "groups": [g["name"] for g in post.get("groups", [])],
+            "tags": tags(post),
+            "yours": yours,
+            "opportunistic": post.get("opportunistic", []),
+            "financial": post.get("financial", []),
+            "relevant": bool(yours or post.get("opportunistic") or post.get("financial")),
+        })
     return {"industries": industries, "labels": [industry_label(i) for i in industries], "days": days,
-            "industry": industry, "opportunistic": opportunistic, "considered": considered,
+            "posts": posts, "relevant": sum(1 for p in posts if p["relevant"]), "considered": considered,
             "last_refresh": data.get("last_refresh"), "refreshing": _status["refreshing"],
             "sources": [name for name, _ in SOURCES]}
