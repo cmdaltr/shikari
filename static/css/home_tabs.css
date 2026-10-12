@@ -1,12 +1,11 @@
 /* Home page tabs (templates/index.html): one layout for Hunt, Research, Upload and Profile.
  *
- * Hunt is the reference. Every pane has the same zones in the same order and size, so
- * the primary input, its side control, the options and the action buttons sit in the
- * same place whichever tab is open:
+ * Hunt is the reference. Every pane has the same zones in the same order, sized to their
+ * content (no fixed heights), so panes with the same content are the same size:
  *   .hp-primary    label + primary input + .hp-slot (fixed-width side control)
- *   .hp-secondary  the alternative input (fixed height)
- *   .hp-options    collapsible option panels (fixed height while collapsed)
- *   .hp-actions    action buttons, pinned to the bottom of the pane
+ *   .hp-secondary  the alternative input
+ *   .hp-options    collapsible option panels
+ *   .hp-actions    action buttons
  * Each pane takes its colours from --tab-accent, set per tab below.
  */
 
@@ -25,7 +24,7 @@
 /* Pane: same height for every tab; the action bar sits at the bottom */
 .home-tabs .tabs-content { min-height: 0; }
 .home-tabs .tab-pane.active { display: block; }
-.home-tabs .hp-form { display: flex; flex-direction: column; min-height: 470px; margin: 0; }
+.home-tabs .hp-form { display: flex; flex-direction: column; margin: 0; }
 
 .home-tabs .hp-primary { margin: 0; }
 .home-tabs .hp-primary .form-label { font-size: 1rem; }
@@ -36,27 +35,21 @@
 }
 .home-tabs .hp-slot .option-item { padding: 0.5em 0.75em; white-space: nowrap; }
 
-.home-tabs .hp-secondary { min-height: 132px; box-sizing: border-box; }
+.home-tabs .hp-secondary { box-sizing: border-box; }
 .home-tabs .hp-secondary .form-separator { margin: 1.1em 0 0.9em; }
 .home-tabs .hp-secondary .form-label { margin-bottom: 6px; }
 .home-tabs .hp-hint { margin: 1.6em 0 0; color: #6b7280; font-size: 0.95rem; line-height: 1.55; }
 
-.home-tabs .hp-options { min-height: 136px; padding-top: 4px; }
+.home-tabs .hp-options { padding-top: 4px; }
 .home-tabs .hp-options .options-section { margin-top: 12px; }
 .home-tabs .hp-options .options-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .home-tabs .hp-options .options-grid.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .home-tabs .hp-summary-note { color: #6b7280; font-size: 0.85em; margin-left: 8px; font-weight: 400; }
 
-/* Profile: two side controls (Supply Chain, AI Enhancement); the hint is short, so the
-   open OSINT keys panel sits straight under it and the pane keeps the shared height */
+/* Profile: two side controls (Supply Chain, AI Enhancement) */
 .home-tabs #tab-profile .hp-slot { flex-basis: auto; }
-.home-tabs #tab-profile .hp-secondary { min-height: 0; }
 .home-tabs #tab-profile .hp-hint { margin-top: 1.2em; }
 
-/* Upload: the pane takes its content's height rather than leaving a gap above
-   Upload & Process */
-.home-tabs #upload-form.hp-form { min-height: 0; }
-.home-tabs #tab-upload .hp-options { min-height: 0; }
 
 /* Profile: OSINT API keys, open by default and sized to the pane */
 .home-tabs .hp-keys-body { padding: 12px 16px 14px; font-size: 0.92rem; line-height: 1.5; color: #374151; }

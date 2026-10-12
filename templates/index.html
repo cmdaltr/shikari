@@ -318,12 +318,12 @@
               <!-- Additional Options -->
               <details class="options-section">
                 <summary class="options-header">Additional Options</summary>
-                <div class="options-grid">
+                <div class="options-grid is-four">
 
                   <!-- Row 0: Auto-validate + Threat Briefing (span full width as 2-col) -->
                   <div class="stack-sm" style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
                     <!-- Auto-validate -->
-                    <label class="option-item" id="auto-validate-label" style="align-items: flex-start;">
+                    <label class="option-item auto-validate-label" id="auto-validate-label" style="align-items: flex-start;">
                       <input type="checkbox" name="auto_validate" id="auto_validate_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
                       <div style="flex: 1; min-width: 0;">
                         <span class="option-label">
@@ -1761,7 +1761,7 @@
 
                   <!-- Row 0: Auto-validate + Threat Briefing -->
                   <div class="stack-sm" style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;">
-                    <label class="option-item" style="align-items: flex-start;">
+                    <label class="option-item auto-validate-label" style="align-items: flex-start;">
                       <input type="checkbox" name="auto_validate" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
                       <div style="flex: 1; min-width: 0;">
                         <span class="option-label">
@@ -1770,6 +1770,7 @@
                             <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
                           </svg>
                           Auto-validate detections after generation
+                          <span class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
                         </span>
                         <span class="option-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
                       </div>
@@ -2068,48 +2069,36 @@
 
     <!-- Auto-Validate Docker Status Check -->
     <script>
+        // Docker status for every Auto-validate option (Hunt and Upload)
         document.addEventListener('DOMContentLoaded', async function() {
-            const checkbox = document.getElementById('auto_validate_checkbox');
-            const badge = document.getElementById('docker-status-badge');
-            const hint = document.getElementById('auto-validate-hint');
-            const label = document.getElementById('auto-validate-label');
-
-            if (!checkbox || !badge) return;
-
+            const labels = Array.from(document.querySelectorAll('.auto-validate-label'));
+            if (!labels.length) return;
+            let state;
             try {
-                const response = await fetch('/api/validation/docker-status');
-                const data = await response.json();
-
-                if (data.available) {
-                    // Docker is available
-                    badge.textContent = 'Docker Ready';
-                    badge.style.display = 'inline';
-                    badge.style.background = 'rgba(16, 185, 129, 0.15)';
-                    badge.style.color = '#059669';
-                    checkbox.disabled = false;
-                } else {
-                    // Docker not available
-                    badge.textContent = 'Docker Required';
-                    badge.style.display = 'inline';
-                    badge.style.background = 'rgba(245, 158, 11, 0.15)';
-                    badge.style.color = '#d97706';
-                    checkbox.disabled = true;
-                    checkbox.checked = false;
-                    if (hint) {
-                        hint.textContent = data.message || 'Docker is required for validation';
-                    }
-                    if (label) {
-                        label.style.opacity = '0.6';
-                    }
-                }
+                const data = await (await fetch('/api/validation/docker-status')).json();
+                state = data.available
+                    ? { text: 'Docker Ready', bg: 'rgba(16, 185, 129, 0.15)', fg: '#059669', ok: true }
+                    : { text: 'Docker Required', bg: 'rgba(245, 158, 11, 0.15)', fg: '#d97706', ok: false,
+                        hint: data.message || 'Docker is required for validation' };
             } catch (error) {
                 console.error('Failed to check Docker status:', error);
-                badge.textContent = 'Status Unknown';
-                badge.style.display = 'inline';
-                badge.style.background = 'rgba(107, 114, 128, 0.15)';
-                badge.style.color = '#6b7280';
-                checkbox.disabled = true;
+                state = { text: 'Status Unknown', bg: 'rgba(107, 114, 128, 0.15)', fg: '#6b7280', ok: false };
             }
+            labels.forEach(function (label) {
+                const checkbox = label.querySelector('input[type="checkbox"]');
+                const badge = label.querySelector('.docker-status-badge');
+                const hint = label.querySelector('.option-hint');
+                if (badge) {
+                    badge.textContent = state.text;
+                    badge.style.display = 'inline';
+                    badge.style.background = state.bg;
+                    badge.style.color = state.fg;
+                }
+                checkbox.disabled = !state.ok;
+                if (!state.ok) checkbox.checked = false;
+                if (state.hint && hint) hint.textContent = state.hint;
+                if (state.hint) label.style.opacity = '0.6';
+            });
         });
     </script>
 
