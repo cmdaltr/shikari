@@ -44,7 +44,7 @@ from typing import Dict, Iterable, List, Optional
 from archer.config import DATA_DIR
 
 FEED_DAYS = 7
-ANALYSIS_VERSION = 6        # bump when the matchers change: cached posts are analysed again
+ANALYSIS_VERSION = 7        # bump when the matchers change: cached posts are analysed again
 REFRESH_EVERY = 6 * 3600
 FEED_DIR = os.path.join(DATA_DIR, "feed")
 CACHE_PATH = os.path.join(FEED_DIR, "posts.json")
@@ -75,18 +75,29 @@ SOURCES = [
     ("FortiGuard Labs", "https://feeds.fortinet.com/fortinet/blog/threat-research"),
 ]
 
-# Industries a user can follow: the sector labels ATT&CK groups are tagged with
-# (archer.mitre.group_metadata), so a group's targeting matches directly
+# Industries a user can follow and posts are tagged with
 INDUSTRIES = [
-    "Finance / Banking", "Government", "Defense / Military", "Aerospace / Aviation", "Energy / Utilities",
-    "Healthcare / Pharma", "Technology", "Telecommunications", "Education / Research",
-    "Manufacturing / Industrial", "Retail / Hospitality", "Media / Entertainment", "Transport / Logistics",
-    "Critical Infrastructure", "NGO / Civil Society", "Think Tank / Policy",
+    "Aerospace", "Critical Infrastructure", "Energy", "Education", "Finance", "Government", "Healthcare",
+    "Logistics", "Manufacturing", "Media", "Military / Defence", "NGO", "Retail", "Technology",
+    "Telecommunications",
 ]
 
+# The sector labels ATT&CK groups are tagged with (archer.mitre.group_metadata), and the
+# industry each counts as. Think tanks have no industry of their own here.
+SECTOR_INDUSTRY = {
+    "Aerospace / Aviation": "Aerospace", "Critical Infrastructure": "Critical Infrastructure",
+    "Energy / Utilities": "Energy", "Education / Research": "Education", "Finance / Banking": "Finance",
+    "Government": "Government", "Healthcare / Pharma": "Healthcare", "Transport / Logistics": "Logistics",
+    "Manufacturing / Industrial": "Manufacturing", "Media / Entertainment": "Media",
+    "Defense / Military": "Military / Defence", "NGO / Civil Society": "NGO", "Retail / Hospitality": "Retail",
+    "Technology": "Technology", "Telecommunications": "Telecommunications",
+}
 
-def industry_label(industry: str) -> str:
-    return industry.replace("Defense", "Defence")
+
+def as_industries(names: Iterable[str]) -> List[str]:
+    """Industries from saved choices or sector labels (older profiles saved sector labels), in list order."""
+    chosen = {SECTOR_INDUSTRY.get(n, n) for n in names}
+    return [i for i in INDUSTRIES if i in chosen]
 
 
 # Activity that picks no industry
@@ -353,7 +364,8 @@ def analyse_post(post: Dict, groups: List[Dict], profiles: Optional[Dict[str, Li
 
     reasons: Dict[str, List[str]] = {}
 
-    def because(industry: str, why: str) -> None:
+    def because(sector: str, why: str) -> None:
+        industry = SECTOR_INDUSTRY.get(sector, sector)
         if industry in INDUSTRIES and why not in reasons.setdefault(industry, []):
             reasons[industry].append(why)
 
@@ -399,7 +411,7 @@ def technical(post: Dict) -> bool:
 def tags(post: Dict) -> Dict:
     motives = (["Opportunistic"] if post.get("opportunistic") else []) + \
               (["Financially motivated"] if post.get("financial") else [])
-    return {"industries": [industry_label(i) for i in INDUSTRIES if i in post.get("industries", {})],
+    return {"industries": [i for i in INDUSTRIES if i in post.get("industries", {})],
             "nations": post.get("nations", []), "motives": motives}
 
 
@@ -475,7 +487,7 @@ def view(industries: Iterable[str], days: int = FEED_DAYS) -> Dict:
     targets one of the user's industries, or it's opportunistic or financially motivated
     (which can land in any industry).
     """
-    industries = [i for i in industries if i in INDUSTRIES]
+    industries = as_industries(industries)
     data = _load()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     posts, considered = [], 0
@@ -485,7 +497,7 @@ def view(industries: Iterable[str], days: int = FEED_DAYS) -> Dict:
         considered += 1
         if not technical(post):
             continue
-        yours = {industry_label(i): post["industries"][i] for i in industries if i in post.get("industries", {})}
+        yours = {i: post["industries"][i] for i in industries if i in post.get("industries", {})}
         posts.append({
             **{k: post.get(k) for k in ("title", "url", "source", "published", "description", "techniques", "cves", "iocs")},
             "groups": [g["name"] for g in post.get("groups", [])],
@@ -495,7 +507,7 @@ def view(industries: Iterable[str], days: int = FEED_DAYS) -> Dict:
             "financial": post.get("financial", []),
             "relevant": bool(yours or post.get("opportunistic") or post.get("financial")),
         })
-    return {"industries": industries, "labels": [industry_label(i) for i in industries], "days": days,
+    return {"industries": industries, "labels": industries, "days": days,
             "posts": posts, "relevant": sum(1 for p in posts if p["relevant"]), "considered": considered,
             "last_refresh": data.get("last_refresh"), "refreshing": _status["refreshing"],
             "sources": [name for name, _ in SOURCES]}

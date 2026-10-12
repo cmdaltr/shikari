@@ -117,7 +117,7 @@ class FeedModule(ServerModule):
             "SHOW": ModuleOption(name="SHOW", description="relevant (your industries, opportunistic, financial) | all",
                                  default="relevant", choices=["relevant", "all"]),
             "INDUSTRIES": ModuleOption(name="INDUSTRIES", description="Set your industries first, comma-separated "
-                                       "(e.g. Finance / Banking,Government); 'list' shows the choices"),
+                                       "(e.g. Finance,Government); 'list' shows the choices"),
             "REFRESH": ModuleOption(name="REFRESH", description="Collect the sources again now", default=False),
             "WAIT": ModuleOption(name="WAIT", description="Wait for a running collection to finish", default=True),
         }

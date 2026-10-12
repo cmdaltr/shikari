@@ -58,8 +58,9 @@
 /* Profile: OSINT API keys, open by default and sized to the pane */
 .home-tabs .hp-keys-body { padding: 12px 16px 14px; font-size: 0.92rem; line-height: 1.5; color: #374151; }
 .home-tabs .hp-keys-body p { margin: 0 0 8px; }
-.home-tabs .hp-keys-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; }
-.home-tabs .hp-keys-list li { min-width: 0; overflow-wrap: anywhere; }
+.home-tabs .hp-keys-list { margin: 0 0 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 20px; }
+.home-tabs .hp-keys-list .option-item { min-width: 0; overflow-wrap: anywhere; cursor: default; }
+.home-tabs .hp-keys-list input:disabled { opacity: 1; cursor: default; }
 .home-tabs .hp-keys-list code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.85em; font-weight: 600; color: var(--tab-accent-dark); margin-right: 6px; }
 .home-tabs .hp-keys-body a { color: var(--tab-accent-dark); }
 .home-tabs .hp-keys-how {

@@ -360,7 +360,7 @@
       })
       .finally(function () {
         analyzeBlogBtn.disabled = false;
-        analyzeBlogBtn.textContent = 'Analyze Blog Post';
+        analyzeBlogBtn.textContent = 'Analyse Blog Post';
       });
     });
   }

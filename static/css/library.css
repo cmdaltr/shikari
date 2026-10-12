@@ -782,3 +782,13 @@
   color: #93c5fd;
 }
 /* Updated Mon Nov 10 07:09:27 GMT 2025 - vendor CSS synchronized */
+
+/* ATT&CK Flow section: one card per saved flow */
+.lib-flows { list-style: none; margin: 0; padding: 16px 0 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.lib-flow { display: flex; flex-direction: column; gap: 4px; height: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-secondary); color: var(--text-primary); text-decoration: none; transition: border-color .15s, transform .15s; }
+.lib-flow:hover { border-color: #FF9800; transform: translateY(-1px); }
+.lib-flow.is-pending { opacity: .65; }
+.lib-flow-kind { font-size: .75em; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; color: #FF9800; }
+.lib-flow-name { font-weight: 700; overflow-wrap: anywhere; }
+.lib-flow-stats { font-size: .85em; color: var(--text-secondary); }
+.lib-flows-empty { text-align: center; color: var(--text-secondary); padding: 32px 0; margin: 0; }

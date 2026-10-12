@@ -12,12 +12,14 @@
 .fd-filter { font: inherit; font-size: .88em; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); }
 .fd-filter.is-active { background: var(--fd-accent); border-color: var(--fd-accent); color: #fff; }
 .fd-count { color: var(--text-secondary); font-size: .9em; }
-.fd-wall { list-style: none; margin: 0 0 20px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+/* Every card the same height: titles and descriptions are clamped (the full text is the
+   tooltip), and every row is as tall as the tallest card */
+.fd-wall { list-style: none; margin: 0 0 20px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); grid-auto-rows: 1fr; gap: 14px; }
 .fd-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 16px; min-width: 0; display: flex; flex-direction: column; }
 .fd-head { display: flex; justify-content: space-between; gap: 10px; font-size: .78em; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
-.fd-title { display: block; margin: 6px 0; font-weight: 700; color: var(--text-primary); text-decoration: none; overflow-wrap: anywhere; line-height: 1.35; }
+.fd-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; margin: 6px 0; font-weight: 700; color: var(--text-primary); text-decoration: none; overflow-wrap: anywhere; line-height: 1.35; }
 .fd-title:hover { color: var(--fd-accent); }
-.fd-desc { margin: 0 0 10px; color: var(--text-secondary); font-size: .9em; line-height: 1.5; overflow-wrap: anywhere; }
+.fd-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; line-clamp: 5; overflow: hidden; margin: 0 0 10px; color: var(--text-secondary); font-size: .9em; line-height: 1.5; overflow-wrap: anywhere; }
 .fd-tags { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
 .fd-tag { font-size: .75em; font-weight: 600; border-radius: 999px; padding: 2px 9px; background: rgba(100, 116, 139, .14); color: var(--text-secondary); }
 .fd-tag.is-yours { background: rgba(14, 165, 164, .18); color: #0f766e; }
@@ -36,6 +38,6 @@ mark { background: rgba(250, 204, 21, .45); color: inherit; border-radius: 2px; 
 @media (max-width: 600px) {
   .fd-page { width: 100%; max-width: 100%; padding-left: 16px; padding-right: 16px; }
   .fd-intro, .fd-sources { padding: 14px; }
-  .fd-wall { grid-template-columns: 1fr; }
+  .fd-wall { grid-template-columns: 1fr; grid-auto-rows: auto; }
   .fd-card { padding: 12px; }
 }

@@ -10,10 +10,10 @@
 
 {% block content %}
   <div class="results-container">
-        <!-- Page heading -->
-        <p class="lead">
-            <span style="color:#666666; font-size: 28px;">Library</span>
-        </p>
+        <div class="page-header">
+            <h1>Library</h1>
+            <p>Detections and correlations you have saved, by SIEM, with filters and exports</p>
+        </div>
 
         <!-- Metrics Section -->
         <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px var(--shadow);">
@@ -1151,8 +1151,8 @@
     </div>
 
 
-    <!-- ATT&CK Flow Section - Coming Soon -->
-    <div class="detection-section" style="opacity: 0.5; pointer-events: none;">
+    <!-- ATT&CK Flow: one per saved group, report or CVE (flow_layouts.library_flows); each opens on /flows -->
+    <div class="detection-section" id="library-flows">
       <div class="detection-header">
         <h2>
           <div class="card-icon attack-flow" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
@@ -1160,16 +1160,35 @@
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
             </svg>
           </div>
-          ATT&CK Flow
+          ATT&amp;CK Flow
         </h2>
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <span class="expand-btn" style="opacity: 0.5;">Expand All</span>
-          <span class="expand-btn" style="opacity: 0.5; cursor: not-allowed;">Expand</span>
-        </div>
+        <a class="expand-btn" href="/flows">Open Flows</a>
       </div>
 
       <div class="attack-flow-content">
-        <p style="text-align: center; color: #999; padding: 40px 0; font-style: italic;">Coming Soon</p>
+        {% if flows %}
+        <ul class="lib-flows">
+          {% for f in flows %}
+          <li>
+            {% if f.view %}
+            <a class="lib-flow" href="/flows?group={{ f.group | urlencode }}">
+              <span class="lib-flow-kind">{{ f.kind }}</span>
+              <span class="lib-flow-name">{{ f.label }}</span>
+              <span class="lib-flow-stats">{{ f.stats.techniques or 0 }} techniques · {{ f.stats.detected or 0 }} detected · {{ f.stats.edges or 0 }} links</span>
+            </a>
+            {% else %}
+            <a class="lib-flow is-pending" href="/results?group_name={{ f.group | urlencode }}" title="Open its results once to build the flow">
+              <span class="lib-flow-kind">{{ f.kind }}</span>
+              <span class="lib-flow-name">{{ f.label }}</span>
+              <span class="lib-flow-stats">Not built yet: open its results</span>
+            </a>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="lib-flows-empty">Save detections from a hunt, report or CVE and its attack flow appears here.</p>
+        {% endif %}
       </div>
     </div>
 

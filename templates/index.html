@@ -1883,13 +1883,15 @@
                   <span class="hp-summary-note">(Optional: more sources for a fuller profile)</span>
                 </summary>
                 <div class="hp-keys-body">
-                  <p>Most sources work without a key. These add coverage:</p>
-                  <ul class="hp-keys-list">
-                    <li><code>SHODAN_API_KEY</code> Internet-facing assets (<a href="https://account.shodan.io/register" target="_blank" rel="noopener">shodan.io</a>)</li>
-                    <li><code>SECURITYTRAILS_API_KEY</code> DNS history (<a href="https://securitytrails.com/app/signup" target="_blank" rel="noopener">securitytrails.com</a>)</li>
-                    <li><code>GITHUB_TOKEN</code> Secret scanning (<a href="https://github.com/settings/tokens" target="_blank" rel="noopener">github.com</a>)</li>
-                    <li><code>OPENAI_API_KEY</code> AI Enhancement (<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">openai.com</a>)</li>
-                  </ul>
+                  <p>Most sources work without a key. These add coverage (ticked: set):</p>
+                  <div class="hp-keys-list">
+                    {% for k in osint_keys %}
+                    <label class="option-item" title="{{ 'Set' if k.set else 'Not set' }}">
+                      <input type="checkbox" disabled {% if k.set %}checked{% endif %} aria-label="{{ k.env }} {{ 'set' if k.set else 'not set' }}">
+                      <span class="option-label"><code>{{ k.env }}</code><span>{{ k.what }} (<a href="{{ k.url }}" target="_blank" rel="noopener">{{ k.site }}</a>)</span></span>
+                    </label>
+                    {% endfor %}
+                  </div>
                   <p class="hp-keys-how">Set them in <a href="/profile">Profile → API Keys</a>, or in <code>.env</code> in the project root.</p>
                 </div>
               </details>

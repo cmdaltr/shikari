@@ -46,11 +46,14 @@ def test_tags_come_from_groups_nations_and_motives_in_technical_paragraphs():
         "The campaign was financially motivated and deployed ransomware.",
     ])
     post = _analysed(text, groups=[APT38], profiles={"China": ["Government"], "North Korea": ["Finance / Banking"]})
-    assert post["industries"] == {"Finance / Banking": ["APT38 (G0082)"], "Government": ["China-nexus activity"]}
+    assert post["industries"] == {"Finance": ["APT38 (G0082)"], "Government": ["China-nexus activity"]}
     assert post["nations"] == ["China", "North Korea"]
     assert feed.tags(post)["motives"] == ["Financially motivated"]
-    view_entry = {"Finance / Banking": ["APT38 (G0082)"]}
-    assert {feed.industry_label(i): v for i, v in post["industries"].items() if i == "Finance / Banking"} == view_entry
+
+
+def test_industries_from_sector_labels_and_older_saved_choices():
+    assert feed.as_industries(["Defense / Military", "Finance / Banking", "Think Tank / Policy", "Media"]) == \
+        ["Finance", "Media", "Military / Defence"]
 
 
 def test_attribution_outside_technical_paragraphs_does_not_count():

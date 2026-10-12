@@ -56,8 +56,8 @@
       ].join('');
       return `<li class="fd-card">
         <div class="fd-head"><span class="fd-source">${esc(p.source)}</span><span class="fd-date">${esc(date)}</span></div>
-        <a class="fd-title" href="${esc(p.url)}" target="_blank" rel="noopener">${mark(p.title, words)}</a>
-        <p class="fd-desc">${mark(p.description || '', words)}</p>
+        <a class="fd-title" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(p.title)}">${mark(p.title, words)}</a>
+        <p class="fd-desc" title="${esc(p.description || '')}">${mark(p.description || '', words)}</p>
         ${tags ? `<ul class="fd-tags">${tags}</ul>` : ''}
         <a class="fd-analyse" href="/?report=${encodeURIComponent(p.url)}">Analyse in Archer →</a>
       </li>`;

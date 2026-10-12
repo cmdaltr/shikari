@@ -2666,18 +2666,34 @@ def read_form(request: Request, archer_session: Optional[str] = Cookie(None)):
 
     # Check if user is logged in (but don't require it)
     user = None
+    saved_keys = set()
     if archer_session:
         db = next(get_db())
         try:
             user = get_user_from_session_id(archer_session, db)
+            if user:
+                saved_keys = {k.platform for k in db.query(APIKey.platform).filter(APIKey.user_id == user.id)}
         finally:
             db.close()
+
+    # Which OSINT keys are set (Profile → API Keys or the environment), for the Profile tab.
+    # Only whether each is present; values never reach the page.
+    osint_keys = [
+        {"env": env, "set": platform in saved_keys or bool(os.environ.get(env)), "what": what, "url": url, "site": site}
+        for env, platform, what, url, site in (
+            ("SHODAN_API_KEY", "shodan", "Internet-facing assets", "https://account.shodan.io/register", "shodan.io"),
+            ("SECURITYTRAILS_API_KEY", "securitytrails", "DNS history", "https://securitytrails.com/app/signup", "securitytrails.com"),
+            ("GITHUB_TOKEN", "github", "Secret scanning", "https://github.com/settings/tokens", "github.com"),
+            ("OPENAI_API_KEY", "openai", "AI Enhancement", "https://platform.openai.com/api-keys", "openai.com"),
+        )
+    ]
 
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "user": user,
+            "osint_keys": osint_keys,
             "techniques": getattr(app.state, "techniques_to_choose", []),
             "message": None,
             "actor_found": None,
@@ -8723,6 +8739,10 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
 
         grouped_correlations.sort(key=sort_correlations)
 
+        from archer.visualization.flow_layouts import library_flows
+
+        flows = library_flows(db, user.id, getattr(request.app.state, "bundle", None))
+
         template_response = templates.TemplateResponse(
             "library.html",
             {
@@ -8739,6 +8759,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "hours_saved": hours_saved,
                 "manual_hours": manual_hours,
                 "archer_hours": archer_hours,
+                "flows": flows,
             },
         )
         return template_response
@@ -9704,8 +9725,10 @@ async def update_profile(request: Request, archer_session: Optional[str] = Cooki
 
 
 def _user_industries(user) -> list:
+    from archer.intelligence.feed import as_industries
+
     try:
-        return json.loads(user.industries) if user and user.industries else []
+        return as_industries(json.loads(user.industries)) if user and user.industries else []
     except (ValueError, TypeError):
         return []
 
@@ -9743,7 +9766,7 @@ async def set_profile_siems(request: Request, archer_session: Optional[str] = Co
 @app.get("/api/profile/industries")
 def get_profile_industries(request: Request, archer_session: Optional[str] = Cookie(None)):
     """The industries the threat feed follows for this user, and the ones to choose from."""
-    from archer.intelligence.feed import INDUSTRIES, industry_label
+    from archer.intelligence.feed import INDUSTRIES
 
     auth_result = require_auth(request, archer_session)
     if isinstance(auth_result, RedirectResponse):
@@ -9751,12 +9774,12 @@ def get_profile_industries(request: Request, archer_session: Optional[str] = Coo
     user, db = auth_result
     db.close()
     return {"industries": _user_industries(user),
-            "choices": [{"id": i, "label": industry_label(i)} for i in INDUSTRIES]}
+            "choices": [{"id": i, "label": i} for i in INDUSTRIES]}
 
 
 @app.post("/api/profile/industries")
 async def set_profile_industries(request: Request, archer_session: Optional[str] = Cookie(None)):
-    """Body: {"industries": ["Finance / Banking", ...]} (ids from GET)."""
+    """Body: {"industries": ["Finance", ...]} (ids from GET)."""
     from archer.intelligence.feed import INDUSTRIES
 
     auth_result = require_auth(request, archer_session)

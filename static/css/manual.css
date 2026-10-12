@@ -1,342 +1,90 @@
-/* Manual Page - Matching index.html Design System */
+/* Manual page (templates/manual.html): the page shell and title every page uses
+   (.results-container, .page-header in common.css), with the entry form and report
+   analysis as cards side by side */
 
-/* Page Layout */
-.manual-group-container,
-#main-content > .manual-group-container.page-container {
-  width: 1500px !important;
-  max-width: calc(100vw - 4em) !important;
-  margin: 0 auto;
-  padding: 0 2em !important;
-  box-sizing: border-box;
+.mn-page { padding-top: 80px; padding-bottom: 120px; }
+
+.mn-group { color: var(--accent); font-size: 1.2em; font-weight: 600; margin: -14px 0 20px; }
+
+.mn-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.mn-card {
+  background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px;
+  padding: 18px 22px; box-shadow: 0 2px 8px var(--shadow); min-width: 0;
+}
+.mn-card-title { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0 0 14px; }
+.mn-hint { color: var(--text-secondary); font-size: .92rem; line-height: 1.5; margin: 0 0 14px; }
+
+.mn-field { margin-bottom: 18px; }
+.mn-page .section-label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--text-primary); font-size: .95rem; }
+
+.mn-page textarea,
+.mn-page select,
+.mn-page input[type="url"] {
+  width: 100%; box-sizing: border-box; padding: 0.75em 1em; margin: 0;
+  border: 2px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);
+  font: inherit; font-size: 1rem; transition: border-color .2s;
+}
+.mn-page textarea { min-height: 96px; resize: vertical; }
+.mn-page select {
+  cursor: pointer; appearance: none; -webkit-appearance: none; padding-right: 2.5em;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 1em center;
+}
+.mn-page textarea:focus, .mn-page select:focus, .mn-page input[type="url"]:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(197, 48, 48, .12);
 }
 
-#main-content.page-shell {
-  padding-top: var(--page-top) !important;
-  margin-top: 0 !important;
-}
+.technique-help, .procedures-help { font-size: .85rem; color: var(--text-secondary); margin-top: 6px; }
 
-.content-wrap {
-  padding: 0 16px 32px;
+/* Tactics: the same checkbox rows as the home page options */
+.mn-tactics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 12px; }
+.mn-tactics .option-item {
+  display: flex; align-items: center; gap: .6em; padding: .45em .6em; border-radius: 6px; cursor: pointer;
+  color: var(--text-primary); font-size: .95rem; transition: background .15s;
 }
+.mn-tactics .option-item:hover { background: rgba(197, 48, 48, .06); }
+.mn-tactics input[type="checkbox"] { width: 18px; height: 18px; margin: 0; flex-shrink: 0; cursor: pointer; }
+.mn-tactics input[type="checkbox"] { accent-color: var(--accent); }
 
-/* Navigation */
-.nav-row {
-  display: flex;
-  align-items: center;
-  margin: 1em 0 1.5em;
+.mn-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.mn-page .btn {
+  padding: .8em 1.8em; border: 2px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff;
+  font: inherit; font-weight: 600; cursor: pointer; transition: transform .15s, box-shadow .15s;
 }
+.mn-page .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(197, 48, 48, .3); }
+.mn-page .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+.mn-page .btn.ghost { background: transparent; color: var(--accent); }
 
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #007bff;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
-  padding: 0.5em 0;
-  transition: all 0.2s ease;
-}
-
-.back-btn:hover {
-  color: #0056b3;
-  text-decoration: none;
-  transform: translateX(-3px);
-}
-
-.back-btn .arrow {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-/* Page Title */
-.page-title {
-  text-align: center;
-  font-size: 2em;
-  margin: 0 0 0.5em 0;
-  color: #333;
-  font-weight: 600;
-}
-
-#group-name {
-  color: #007bff;
-  font-size: 1.2em;
-  font-weight: 500;
-  text-align: center;
-  margin-bottom: 2em;
-}
-
-/* Form Layout */
-#manual-content {
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 2em 0;
-}
-
-.center-left {
-  width: 100%;
-}
-
-form {
-  width: 100%;
-}
-
-/* Form Sections - Match index.html styling */
-.form-section,
-#group_desc_block,
-#manual-content > div {
-  margin-bottom: 1.5em;
-}
-
-/* Labels - Match index.html form-label */
-label.section-label,
-label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5em;
-  color: #333;
-  font-size: 0.95rem;
-}
-
-/* Form Inputs - Match index.html form-input */
-textarea,
-select,
-input[type="text"] {
-  width: 100%;
-  padding: 0.75em 1em;
-  border: 2px solid #dee2e6;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.2s ease;
-  box-sizing: border-box;
-  background: white;
-  margin-bottom: 0;
-}
-
-textarea:focus,
-select:focus,
-input[type="text"]:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-select {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 1em center;
-  padding-right: 2.5em;
-}
-
-textarea {
-  min-height: 120px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-/* Helper Text - Match index.html option-hint style */
-.technique-help,
-.procedures-help,
-.form-hint {
-  font-size: 0.875rem;
-  color: #6c757d;
-  margin-top: 0.5em;
-}
-
-/* Tactics Section */
-.tactics-item {
-  display: block;
-  margin-bottom: 0.5em;
-}
-
-.tactics-item label {
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-  cursor: pointer;
-  padding: 0.4em 0.5em;
-  border-radius: 4px;
-  transition: background 0.2s ease;
-  font-size: 0.95rem;
-  font-weight: normal;
-}
-
-.tactics-item label:hover {
-  background: rgba(0, 123, 255, 0.05);
-}
-
-.tactics-item input[type="checkbox"] {
-  cursor: pointer;
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  flex-shrink: 0;
-}
-
-/* Two Column Layout for Tactics */
-#manual-content table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-#manual-content table td {
-  vertical-align: top;
-  padding: 0 0.5em;
-}
-
-#manual-content table td:first-child {
-  padding-left: 0;
-}
-
-#manual-content table td:last-child {
-  padding-right: 0;
-}
-
-/* Buttons - Match index.html btn-primary style */
-.btn {
-  padding: 0.875em 2em;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn:hover {
-  background: #0056b3;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-.btn:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.6;
-  transform: none;
-}
-
-.btn.ghost {
-  background: white;
-  color: #007bff;
-  border: 2px solid #007bff;
-}
-
-.btn.ghost:hover {
-  background: #007bff;
-  color: white;
-}
-
-/* Form Actions */
-.form-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 2em;
-  gap: 1em;
-}
-
-.form-actions > div:first-child,
-.form-actions > div:last-child {
-  flex: 1;
-}
-
-.form-actions > div:nth-child(2) {
-  flex: 0 0 auto;
-}
-
-/* Success Message */
 #append-message {
-  margin-top: 1em;
-  padding: 1em;
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-  border-radius: 6px;
-  text-align: center;
-  display: none;
-  font-weight: 500;
+  display: none; margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-weight: 500;
+  background: #d4edda; color: #155724; border: 1px solid #c3e6cb;
 }
+#blog-analysis-status { margin-top: 10px; font-size: .9rem; }
 
-/* Technique List */
-#technique-list {
-  margin-top: 3em;
-  padding-top: 2em;
-  border-top: 2px solid #e9ecef;
+/* Techniques appended so far (manual.js) */
+.mn-list:not(:empty) {
+  margin-top: 20px; background: var(--bg-secondary); border: 1px solid var(--border-color);
+  border-radius: 12px; padding: 18px 22px;
 }
-
-/* Modal - Match modern design */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  animation: fadeIn 0.2s ease;
-}
-
-.modal {
-  background: white;
-  padding: 2em;
-  border-radius: 12px;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-}
-
-.modal .actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1em;
-  margin-top: 1.5em;
-}
-
-/* Tactic Badge */
 .tactic-badge {
-  display: inline-block;
-  background: #e7f3ff;
-  color: #007bff;
-  border-radius: 12px;
-  padding: 0.25em 0.75em;
-  font-size: 0.85rem;
-  margin-right: 0.5em;
-  margin-bottom: 0.5em;
-  font-weight: 500;
+  display: inline-block; background: rgba(197, 48, 48, .08); color: var(--accent); border-radius: 12px;
+  padding: .25em .75em; font-size: .85rem; margin: 0 .5em .5em 0; font-weight: 500;
 }
 
-/* Required Field Indicator */
-.required {
-  color: #dc3545;
+/* Modal (manual.js) */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .5); display: none;
+  align-items: center; justify-content: center; z-index: 9999;
 }
+.modal { background: var(--bg-secondary); padding: 2em; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 8px 32px rgba(0, 0, 0, .2); }
+.modal .actions { display: flex; justify-content: flex-end; gap: 1em; margin-top: 1.5em; }
+.required { color: #dc3545; }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .manual-group-container,
-  #main-content > .manual-group-container.page-container {
-    max-width: 100% !important;
-    padding: 0 16px !important;
-  }
-
-  .page-title {
-    font-size: 1.75em;
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-
-  .form-actions > div:first-child,
-  .form-actions > div:last-child {
-    width: 100%;
-  }
-
-  .btn {
-    width: 100%;
-  }
+@media (max-width: 900px) {
+  .mn-grid { grid-template-columns: 1fr; }
+  .mn-tactics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .mn-tactics { grid-template-columns: 1fr; }
+  .mn-actions .btn { flex: 1; }
 }

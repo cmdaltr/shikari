@@ -11,7 +11,10 @@
 
 {% block content %}
 <div class="results-container fl-page">
-  <p class="lead"><span style="color:#666666; font-size: 28px;">Attack Flows</span></p>
+  <div class="page-header">
+    <h1>Attack Flows</h1>
+    <p>The attack flow of every group, report and CVE in your library, with what you can and can't detect</p>
+  </div>
 
   {% if not kinds %}
   <section class="fl-empty">
