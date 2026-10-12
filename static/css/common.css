@@ -312,6 +312,16 @@ main {
     width: 100%;
 }
 
+/* Edge to edge on every page. Some pages sized it with 100vw, which the page zoom shrinks
+   (Chrome) or stretches (Safari); every footer's parent is already full width, so fill that */
+.page-footer {
+    box-sizing: border-box !important;
+    width: auto !important;
+    align-self: stretch;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
 /* Also target generic footer element */
 footer.page-footer,
 body > footer:last-of-type {

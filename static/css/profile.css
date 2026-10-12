@@ -649,7 +649,11 @@
 .industries-hint a { color: var(--accent); }
 .industries-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px 16px; }
 .industry-option { display: flex; align-items: center; gap: 8px; color: var(--text-primary); cursor: pointer; }
-.industries-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+/* Both sections stretch to the taller one and keep their Save buttons on its bottom edge */
+.profile-prefs > .industries { display: flex; flex-direction: column; }
+.industries-actions { display: flex; align-items: center; gap: 12px; margin-top: auto; padding-top: 14px; flex-wrap: wrap; }
+.industry-option.is-soon { opacity: .55; cursor: default; }
+.siem-soon { font-size: .72em; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 1px 8px; border-radius: 999px; background: var(--border-color); color: var(--text-secondary); white-space: nowrap; }
 .industries-actions .btn-primary { width: auto; flex: 0 0 auto; }
 .industries-status.is-ok { color: #15803d; }
 .industries-status.is-error { color: #b91c1c; }

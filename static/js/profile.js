@@ -847,7 +847,9 @@ document.head.appendChild(style);
   const status = document.getElementById('siems-status');
   fetch('/api/profile/siems').then(r => r.json()).then(data => {
     const chosen = new Set(data.siems || []);
-    grid.innerHTML = (data.choices || []).map(c => `<label class="industry-option"><input type="checkbox" value="${c.id}"${chosen.has(c.id) ? ' checked' : ''}> <span>${c.label.replace(/</g, '&lt;')}</span></label>`).join('');
+    grid.innerHTML = (data.choices || []).map(c => c.soon
+      ? `<label class="industry-option is-soon" title="Archer doesn't generate ${c.label.replace(/</g, '&lt;')} queries yet"><input type="checkbox" disabled> <span>${c.label.replace(/</g, '&lt;')}</span><span class="siem-soon">Coming soon</span></label>`
+      : `<label class="industry-option"><input type="checkbox" value="${c.id}"${chosen.has(c.id) ? ' checked' : ''}> <span>${c.label.replace(/</g, '&lt;')}</span></label>`).join('');
   });
   document.getElementById('siems-save').addEventListener('click', async () => {
     const siems = Array.from(grid.querySelectorAll('input:checked')).map(i => i.value);

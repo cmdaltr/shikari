@@ -2036,8 +2036,10 @@ def _hunt_llm_args(archer_session: Optional[str], ai_provider: Optional[str], ai
 
 
 # SIEMs a user can choose in Profile, and the vendor key process_group excludes them by
-SIEM_PLATFORMS = {"secops": "googlesecops", "mde": "mde"}
-SIEM_LABELS = {"secops": "Google SecOps", "mde": "Microsoft Defender (MDE)"}
+SIEM_PLATFORMS = {"secops": "googlesecops", "mde": "mde", "splunk": "splunk"}
+SIEM_LABELS = {"secops": "Google SecOps", "mde": "Microsoft Defender (MDE)", "splunk": "Splunk"}
+# Listed in Profile but not choosable: build.yaml doesn't generate Elastic queries yet
+SIEM_COMING_SOON = {"elastic": "Elastic"}
 
 
 def _user_siems(user) -> list:
@@ -9817,7 +9819,8 @@ def get_profile_siems(request: Request, archer_session: Optional[str] = Cookie(N
     user, db = auth_result
     db.close()
     return {"siems": _user_siems(user),
-            "choices": [{"id": k, "label": label} for k, label in SIEM_LABELS.items()]}
+            "choices": [{"id": k, "label": label} for k, label in SIEM_LABELS.items()]
+                       + [{"id": k, "label": label, "soon": True} for k, label in SIEM_COMING_SOON.items()]}
 
 
 @app.post("/api/profile/siems")
