@@ -65,10 +65,15 @@
 .home-tabs .hp-keys-list li { min-width: 0; overflow-wrap: anywhere; }
 .home-tabs .hp-keys-list code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.85em; font-weight: 600; color: var(--tab-accent-dark); margin-right: 6px; }
 .home-tabs .hp-keys-body a { color: var(--tab-accent-dark); }
-.home-tabs .hp-keys-how { color: #6b7280; font-size: 0.9em; margin: 0 !important; }
+.home-tabs .hp-keys-how {
+  margin: 4px 0 0 !important; padding: 8px 12px; border-left: 3px solid var(--tab-accent); border-radius: 4px;
+  background: rgba(var(--tab-accent-rgb), 0.08); color: #1f2937; font-weight: 600;
+}
+.home-tabs .hp-keys-how a { font-weight: 700; }
 [data-theme="dark"] .home-tabs .hp-keys-body { color: var(--text-primary); }
 [data-theme="dark"] .home-tabs .hp-keys-list code, [data-theme="dark"] .home-tabs .hp-keys-body a { color: var(--tab-accent); }
-[data-theme="dark"] .home-tabs .hp-keys-how, [data-theme="dark"] .home-tabs .hp-summary-note { color: var(--text-secondary); }
+[data-theme="dark"] .home-tabs .hp-summary-note { color: var(--text-secondary); }
+[data-theme="dark"] .home-tabs .hp-keys-how { color: var(--text-primary); background: rgba(var(--tab-accent-rgb), 0.15); }
 
 .home-tabs .hp-actions {
   margin-top: auto; padding-top: 16px; border-top: 1px solid #dee2e6; display: flex; gap: 8px;
