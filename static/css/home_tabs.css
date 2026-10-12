@@ -53,8 +53,8 @@
 .home-tabs #tab-profile .hp-secondary { min-height: 0; }
 .home-tabs #tab-profile .hp-hint { margin-top: 1.2em; }
 
-/* Upload: the drop zone is taller, so the pane takes its content's height rather than
-   leaving a gap above Upload & Process */
+/* Upload: the pane takes its content's height rather than leaving a gap above
+   Upload & Process */
 .home-tabs #upload-form.hp-form { min-height: 0; }
 .home-tabs #tab-upload .hp-options { min-height: 0; }
 
@@ -120,9 +120,9 @@
 [data-theme="dark"] .home-tabs .hp-explain-grid p { color: var(--text-secondary); }
 [data-theme="dark"] .home-tabs .hp-explain-grid strong { color: var(--tab-accent); }
 
-/* Upload: a one-row drop zone, twice the height of an input */
+/* Upload: a one-row drop zone the height of an input */
 .home-tabs .hp-drop {
-  display: flex; align-items: center; gap: 14px; height: 100px; box-sizing: border-box; padding: 0 8px 0 14px;
+  display: flex; align-items: center; gap: 14px; height: 50px; box-sizing: border-box; padding: 0 8px 0 14px;
   border: 2px dashed #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; text-align: left;
   transition: border-color .2s, background .2s;
 }
