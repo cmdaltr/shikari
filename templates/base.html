@@ -64,6 +64,8 @@
 
     </style>
     {% block head %}{% endblock %}
+    <!-- Shared components, after every page's own styles -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/ui.css') }}?v={{ request.app.state.asset_version }}">
 </head>
 <body>
     {% include "partials/nav_controls.html" %}

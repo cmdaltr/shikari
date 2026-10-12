@@ -1,5 +1,5 @@
 /* Threat Feed page (templates/feed.html) */
-.fd-page { --fd-accent: #0EA5A4; }
+.fd-page { --fd-accent: var(--accent); }
 .fd-intro, .fd-section, .fd-sources { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; color: var(--text-primary); line-height: 1.55; }
 .fd-intro p { margin: 0 0 8px; }
 .fd-intro a, .fd-sources a { color: var(--accent); }
@@ -22,7 +22,7 @@
 .fd-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; line-clamp: 5; overflow: hidden; margin: 0 0 10px; color: var(--text-secondary); font-size: .9em; line-height: 1.5; overflow-wrap: anywhere; }
 .fd-tags { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
 .fd-tag { font-size: .75em; font-weight: 600; border-radius: 999px; padding: 2px 9px; background: rgba(100, 116, 139, .14); color: var(--text-secondary); }
-.fd-tag.is-yours { background: rgba(14, 165, 164, .18); color: #0f766e; }
+.fd-tag.is-yours { background: rgba(197, 48, 48, .1); color: var(--accent); }
 .fd-tag.is-nation { background: rgba(139, 0, 0, .12); color: #8B0000; }
 .fd-tag.is-opp { background: rgba(245, 158, 11, .18); color: #B45309; }
 .fd-tag.is-fin { background: rgba(124, 58, 237, .14); color: #6d28d9; }

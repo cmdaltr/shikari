@@ -67,10 +67,10 @@
 
 {% block content %}
   <div class="results-container">
-    <!-- Page heading -->
-    <p class="lead">
-      Results for<br><span style="color:#8B0000; font-size: 28px;">{{ group_name.replace('_', ' ') }}</span>
-    </p>
+    <div class="page-header">
+      <h1>{{ group_name.replace('_', ' ') }}</h1>
+      <p>Results: detections, correlations and the attack flow{% if run_view %} for this run{% endif %}</p>
+    </div>
 
     {# Calculate time-related metrics once for use across both Statistics and Metrics sections #}
     {% set total_detections_calc = total_detections %}
@@ -95,7 +95,7 @@
     {% if briefing %}
     <!-- Threat briefing: coverage, the weakest stage and the gaps to close first; AI only on request -->
     <section class="briefing" id="briefing">
-      <h2>Threat briefing</h2>
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Threat briefing</h2>
       <p class="briefing-lead">{{ briefing.summary }}</p>
       <div class="briefing-stats">
         <div class="briefing-stat"><strong>{{ briefing.coverage }}%</strong><span>coverage</span></div>
@@ -176,7 +176,7 @@
     {% endif %}
 
     <!-- Statistics Section -->
-    <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    <div class="ui-card" style="padding: 16px; margin-bottom: 30px;">
         <div class="detection-header">
             <h2 onclick="toggleStatistics()" style="cursor: pointer; user-select: none;">
                 <div class="card-icon metrics" style="width: 40px; height: 40px; margin-right: 12px;">
@@ -463,7 +463,7 @@
     </div>
 
     <!-- Key Section -->
-    <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    <div class="ui-card" style="padding: 16px; margin-bottom: 30px;">
         <div class="detection-header">
             <h2 onclick="toggleKeyMetrics()" style="cursor: pointer; user-select: none;">
                 <div class="card-icon technique" style="width: 40px; height: 40px; margin-right: 12px;">
@@ -481,7 +481,7 @@
 
             <!-- MITRE ATT&CK Tactics Legend -->
             <div style="margin-bottom: 32px;">
-              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">MITRE ATT&CK Tactics</h3>
+              <h3 class="ui-subtitle">MITRE ATT&CK Tactics</h3>
               <p style="margin: 0 0 12px 0; color: #64748b; font-size: 0.9em;">Typical attack progression from initial compromise to final impact</p>
               <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: 20px;">
                 <span style="display: inline-block; background: #E3F2FD; color: #01579B; padding: 6px 4px; border-radius: 4px; font-weight: 600;">🚪 Initial Access</span>
@@ -512,7 +512,7 @@
 
             <!-- Label Indicators -->
             <div style="margin-bottom: 32px;">
-              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Label Indicators</h3>
+              <h3 class="ui-subtitle">Label Indicators</h3>
 
               <div style="margin-bottom: 16px;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; margin-left: 20px;">
@@ -563,7 +563,7 @@
 
             <!-- Confidence of Detection -->
             <div style="margin-bottom: 32px;">
-              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Confidence of Detection</h3>
+              <h3 class="ui-subtitle">Confidence of Detection</h3>
               <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
                 Each detection includes a confidence score indicating the estimated probability of successful detection. This likelihood percentage is calculated based on:
               </p>
@@ -581,7 +581,7 @@
 
             <!-- How Detections are Generated -->
             <div style="margin-bottom: 32px;">
-              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">How Detections are Generated</h3>
+              <h3 class="ui-subtitle">How Detections are Generated</h3>
               <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
                 Archer generates detections through an automated pipeline that transforms threat intelligence into actionable security rules:
               </p>
@@ -597,7 +597,7 @@
 
             <!-- How Correlations are Compiled -->
             <div style="margin-bottom: 32px;">
-              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">How Correlations are Compiled</h3>
+              <h3 class="ui-subtitle">How Correlations are Compiled</h3>
               <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
                 Actor correlations combine multiple data points to build comprehensive detection coverage for threat groups:
               </p>
@@ -618,7 +618,7 @@
 
             <!-- Additional Information -->
             <div>
-              <h3 style="font-size: 1.1em; font-weight: 600; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Important Notes</h3>
+              <h3 class="ui-subtitle">Important Notes</h3>
               <ul style="margin: 0; padding-left: 24px; margin-left: 20px; color: #475569; font-size: 0.9em; line-height: 1.8;">
                 <li><strong>Review Before Deployment</strong> - All generated detections should be reviewed and tuned for your environment before production deployment</li>
                 <li><strong>False Positives</strong> - Detection rules may require adjustment to reduce false positives based on your organization's baseline activity</li>

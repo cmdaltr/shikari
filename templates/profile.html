@@ -150,6 +150,7 @@
       }
     </style>
     {% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/ui.css') }}?v={{ request.app.state.asset_version }}">
 </head>
 <body>
     <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help) -->
@@ -320,7 +321,7 @@
             <div class="profile-prefs">
               <!-- SIEMs every hunt generates for (app._siem_args) -->
               <section class="industries" id="siems">
-                <h3>SIEM platforms</h3>
+                <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>SIEM platforms</h3>
                 <p class="industries-hint">Hunts, uploads and reports generate detections only for the platforms ticked here, which saves processing time. Leave them all unticked to generate for all of them.</p>
                 <div class="industries-grid" id="siems-grid"></div>
                 <div class="industries-actions">
@@ -331,7 +332,7 @@
 
               <!-- Threat feed industries (archer.intelligence.feed) -->
               <section class="industries" id="industries">
-                <h3>Threat Feed industries</h3>
+                <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>Threat Feed industries</h3>
                 <p class="industries-hint">The <a href="/feed">Threat Feed</a> keeps the week's research about groups that target these industries. Opportunistic activity, such as supply-chain compromise, is shown whatever you choose.</p>
                 <div class="industries-grid" id="industries-grid"></div>
                 <div class="industries-actions">
@@ -716,9 +717,7 @@
 
               <!-- LEFT COLUMN: Change Password -->
               <div class="security-section">
-                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
-                  Change Password
-                </h3>
+                <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Change Password</h3>
 
                 <form id="password-change-form">
                   <div class="form-section">
@@ -775,9 +774,7 @@
 
                 <!-- MFA Section -->
                 <div class="security-section">
-                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
-                    Two-Factor Authentication (MFA)
-                  </h3>
+                  <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Two-Factor Authentication (MFA)</h3>
 
                   <div id="mfa-status-section">
                     <p style="color: var(--text-secondary); margin-bottom: 16px;">
@@ -848,9 +845,7 @@
 
                 <!-- Backup Codes Section -->
                 <div class="security-section">
-                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
-                    Backup Codes
-                  </h3>
+                  <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Backup Codes</h3>
 
                   <p style="color: var(--text-secondary); margin-bottom: 16px;">
                     Generate backup codes to access your account if you lose your MFA device. Each code can only be used once.
@@ -922,7 +917,7 @@
             <!-- API tokens (archer/auth/tokens.py) -->
             <div class="security-section api-tokens">
               <div style="height: 1px; background: var(--border-color); margin: 32px 0 24px;"></div>
-              <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; color: var(--text-primary);">API Tokens</h3>
+              <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>API Tokens</h3>
               <p style="color: var(--text-secondary); margin-bottom: 16px;">
                 For the console (<code>adfconsole</code>), the MCP server and your own scripts: set
                 <code>ARCHER_TOKEN</code> instead of a password. Works with MFA. A token acts as you, so treat it
@@ -953,9 +948,9 @@
 
             <div style="margin-top: 24px;">
               <!-- CORRELATION PARAMETERS SECTION -->
-              <div style="background: white; border-radius: 8px; padding: 24px; border: 1px solid #e5e7eb; margin-bottom: 32px;">
-                <h3 style="margin: 0 0 16px 0; font-size: 1.3em; color: #1a1a1a; display: flex; align-items: center; gap: 10px;">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+              <div class="ui-card" style="padding: 24px; margin-bottom: 32px;">
+                <h3 class="section-title">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
                     <circle cx="12" cy="12" r="3"/>
                     <circle cx="19" cy="5" r="2"/>
                     <circle cx="5" cy="19" r="2"/>
@@ -965,16 +960,16 @@
                   Correlation Parameters
                 </h3>
 
-                <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+                <div style="background: rgba(197, 48, 48, .05); border-left: 4px solid var(--accent); border-radius: 6px; padding: 16px; margin-bottom: 24px;">
                   <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
                       <circle cx="12" cy="12" r="10"/>
                       <line x1="12" y1="16" x2="12" y2="12"/>
                       <line x1="12" y1="8" x2="12.01" y2="8"/>
                     </svg>
-                    <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">About Correlation Parameters</span>
+                    <span style="font-weight: 600; color: var(--accent); font-size: 1.05em;">About Correlation Parameters</span>
                   </div>
-                  <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                  <div style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                     These parameters control how many and which correlations are generated system-wide. Adjusting these values affects detection quality and quantity. Changes apply to all future correlation generation runs.
                   </div>
                 </div>
@@ -983,70 +978,70 @@
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px;">
                   <!-- Correlation Threshold -->
                   <div>
-                    <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 1.05em;">
+                    <label style="display: block; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; font-size: 1.05em;">
                       Correlation Threshold
-                      <span style="font-weight: 400; color: #666; font-size: 0.9em;">(0-100%)</span>
+                      <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.9em;">(0-100%)</span>
                     </label>
                     <div style="position: relative;">
                       <input type="number" id="correlation-threshold" class="form-input" min="0" max="100" step="1" value="40" style="padding-right: 45px;">
                       <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #999; font-weight: 600;">%</span>
                     </div>
-                    <p style="margin: 6px 0 0 0; font-size: 0.85em; color: #666; line-height: 1.4;">
+                    <p style="margin: 6px 0 0 0; font-size: 0.85em; color: var(--text-secondary); line-height: 1.4;">
                       Minimum relevance score. Higher = fewer, higher-quality correlations. <strong>Recommended: 30-50%</strong>
                     </p>
                   </div>
 
                   <!-- Per-Vendor Limit -->
                   <div>
-                    <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 1.05em;">
+                    <label style="display: block; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; font-size: 1.05em;">
                       Per-Vendor Limit
-                      <span style="font-weight: 400; color: #666; font-size: 0.9em;">(correlations)</span>
+                      <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.9em;">(correlations)</span>
                     </label>
                     <input type="number" id="correlation-per-vendor" class="form-input" min="1" max="500" step="1" value="60">
-                    <p style="margin: 6px 0 0 0; font-size: 0.85em; color: #666; line-height: 1.4;">
+                    <p style="margin: 6px 0 0 0; font-size: 0.85em; color: var(--text-secondary); line-height: 1.4;">
                       Maximum correlations per vendor (MDE, Splunk, etc.). <strong>Recommended: 25-100</strong>
                     </p>
                   </div>
 
                   <!-- Tech Frequency Limit -->
                   <div>
-                    <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 1.05em;">
+                    <label style="display: block; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; font-size: 1.05em;">
                       Tech Frequency Limit
-                      <span style="font-weight: 400; color: #666; font-size: 0.9em;">(occurrences)</span>
+                      <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.9em;">(occurrences)</span>
                     </label>
                     <input type="number" id="correlation-tech-freq" class="form-input" min="1" max="100" step="1" value="20">
-                    <p style="margin: 6px 0 0 0; font-size: 0.85em; color: #666; line-height: 1.4;">
+                    <p style="margin: 6px 0 0 0; font-size: 0.85em; color: var(--text-secondary); line-height: 1.4;">
                       Max times a technique appears as first technique. <strong>Recommended: 20-40</strong>
                     </p>
                   </div>
                 </div>
 
                 <!-- Current Values Display -->
-                <div style="background: #f9fafb; border-radius: 6px; padding: 16px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
-                  <div style="font-weight: 600; color: #333; margin-bottom: 12px;">Current Configuration:</div>
+                <div style="background: var(--bg-primary); border-radius: 6px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+                  <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Current Configuration:</div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 0.95em;">
                     <div>
-                      <span style="color: #666;">Threshold:</span>
-                      <strong id="current-threshold" style="color: #8b5cf6; margin-left: 6px;">40%</strong>
+                      <span style="color: var(--text-secondary);">Threshold:</span>
+                      <strong id="current-threshold" style="color: var(--accent); margin-left: 6px;">40%</strong>
                     </div>
                     <div>
-                      <span style="color: #666;">Per-Vendor:</span>
-                      <strong id="current-per-vendor" style="color: #8b5cf6; margin-left: 6px;">60</strong>
+                      <span style="color: var(--text-secondary);">Per-Vendor:</span>
+                      <strong id="current-per-vendor" style="color: var(--accent); margin-left: 6px;">60</strong>
                     </div>
                     <div>
-                      <span style="color: #666;">Tech Frequency:</span>
-                      <strong id="current-tech-freq" style="color: #8b5cf6; margin-left: 6px;">20</strong>
+                      <span style="color: var(--text-secondary);">Tech Frequency:</span>
+                      <strong id="current-tech-freq" style="color: var(--accent); margin-left: 6px;">20</strong>
                     </div>
                   </div>
                 </div>
 
                 <!-- Action Buttons -->
-                <div style="display: flex; gap: 12px;">
-                  <button id="save-correlation-params" style="flex: 1; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; border: none; padding: 14px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);">
-                    Save Configuration
-                  </button>
-                  <button id="reset-correlation-params" style="background: #f3f4f6; color: #666; border: 1px solid #e5e7eb; padding: 14px 24px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                <div class="ui-actions">
+                  <button id="reset-correlation-params" class="btn-ghost">
                     Reset to Current
+                  </button>
+                  <button id="save-correlation-params" class="btn-primary">
+                    Save Configuration
                   </button>
                 </div>
 
@@ -1055,24 +1050,24 @@
               </div>
 
               <!-- MAPPINGS SECTION -->
-              <h3 style="margin: 0 0 16px 0; font-size: 1.3em; color: #1a1a1a; display: flex; align-items: center; gap: 10px;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+              <h3 class="section-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
                   <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
                 SIEM Mappings
               </h3>
 
               <!-- Info Banner -->
-              <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+              <div style="background: rgba(197, 48, 48, .05); border-left: 4px solid var(--accent); border-radius: 6px; padding: 16px; margin-bottom: 24px;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
                     <circle cx="12" cy="12" r="10"/>
                     <line x1="12" y1="16" x2="12" y2="12"/>
                     <line x1="12" y1="8" x2="12.01" y2="8"/>
                   </svg>
-                  <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">About Mapping Files</span>
+                  <span style="font-weight: 600; color: var(--accent); font-size: 1.05em;">About Mapping Files</span>
                 </div>
-                <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
+                <div style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                   Mapping files tell Archer how to map indicator types (commands, files, registry, network) to your actual index/source names and field schemas. Configure these to match your SIEM environment.
                 </div>
               </div>
@@ -1108,7 +1103,7 @@
               </div>
 
               <!-- Mapping Configuration -->
-              <div id="mapping-config" style="background: #f9fafb; border-radius: 8px; padding: 24px; border: 1px solid #e5e7eb; opacity: 0.6; pointer-events: none; position: relative;">
+              <div id="mapping-config" style="background: var(--bg-primary); border-radius: 8px; padding: 24px; border: 1px solid var(--border-color); opacity: 0.6; pointer-events: none; position: relative;">
                 <!-- Coming Soon Badge -->
                 <div style="position: absolute; top: 16px; right: 16px; background: #6b7280; color: white; padding: 6px 16px; border-radius: 20px; font-size: 0.85em; font-weight: 600; letter-spacing: 0.5px;">
                   COMING SOON
@@ -1167,10 +1162,10 @@
               </div>
 
               <!-- Documentation Link -->
-              <div style="margin-top: 24px; padding: 16px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                <p style="margin: 0; color: #666; font-size: 0.95em; line-height: 1.6;">
+              <div style="margin-top: 24px; padding: 16px; background: var(--bg-primary); border-radius: 6px; border: 1px solid var(--border-color);">
+                <p style="margin: 0; color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                   <strong>Need help?</strong> Check out the
-                  <a href="/docs/MAPPING_SETUP_GUIDE.md" target="_blank" style="color: #8b5cf6; text-decoration: none; font-weight: 500;">Mapping Setup Guide</a>
+                  <a href="/docs/MAPPING_SETUP_GUIDE.md" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 500;">Mapping Setup Guide</a>
                   for detailed instructions on configuring mapping files.
                 </p>
               </div>

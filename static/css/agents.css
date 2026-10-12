@@ -1,5 +1,5 @@
 /* Agents page (templates/agents.html) */
-.ag-page { --ag-accent: #0EA5A4; padding-top: 80px; padding-bottom: 120px; }
+.ag-page { --ag-accent: var(--accent); padding-top: 80px; padding-bottom: 120px; }
 .ag-intro { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; color: var(--text-primary); line-height: 1.55; }
 .ag-intro p { margin: 0 0 8px; }
 .ag-meta { color: var(--text-secondary); font-size: .9em; margin: 0 !important; }
@@ -10,7 +10,7 @@
   display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px 16px; cursor: pointer; font: inherit;
   background: var(--bg-secondary); color: var(--text-primary); border: 2px solid var(--border-color); border-radius: 10px;
 }
-.ag-pick.is-active { border-color: var(--ag-accent); box-shadow: 0 0 0 3px rgba(14, 165, 164, .15); }
+.ag-pick.is-active { border-color: var(--ag-accent); box-shadow: 0 0 0 3px rgba(197, 48, 48, .12); }
 .ag-pick-title { font-weight: 700; }
 .ag-pick-summary { font-size: .85em; color: var(--text-secondary); line-height: 1.4; }
 

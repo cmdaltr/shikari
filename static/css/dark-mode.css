@@ -127,11 +127,11 @@
     color: var(--text-primary) !important;
 }
 
-/* Labels inside white tab content areas should remain dark for readability */
+/* Tab panels follow the theme (ui.css), so their labels do too */
 [data-theme="dark"] .tab-pane .form-label,
 [data-theme="dark"] .tab-pane .form-label-small,
 [data-theme="dark"] .tab-pane label {
-    color: #333333 !important;
+    color: var(--text-primary) !important;
 }
 
 [data-theme="dark"] input[type="text"],

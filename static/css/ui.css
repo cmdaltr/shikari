@@ -1,0 +1,283 @@
+/* ==========================================================================
+   Shared components: one look for each, on every page. Loaded after every
+   page's own stylesheet, so these win over the older per-page versions.
+
+   Section title  .section-title                  1.2rem, weight 600, accent line icon
+   Card           .ui-card                        white, 1px border, 12px corners, flat
+   Primary button .btn-primary                    red, 6px corners, auto width
+   Ghost button   .btn-ghost                      red outline
+   Pill toggle    .ui-pill (.is-active)           outline pill; red when on
+   Form controls  .form-input and the page fields --bg-primary, 1px border, 6px corners
+   Checkbox       input[type=checkbox]            18px, red (the tab's colour on Home)
+   ========================================================================== */
+
+/* ---------- Section titles ---------- */
+.section-title,
+.mn-card-title,
+.detection-header h2,
+.industries h3,
+.ag-history h2,
+.briefing h2,
+.gap-section h3,
+.tactic-section-title,
+.hiw-section-title {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px !important;
+  padding: 0;
+  border: none;
+  font-size: 1.2rem !important;
+  font-weight: 600 !important;
+  line-height: 1.3;
+  color: var(--text-primary) !important;
+}
+.detection-header h2 { margin: 0 !important; }
+.section-title svg,
+.mn-card-title svg,
+.detection-header h2 svg,
+.industries h3 svg,
+.ag-history h2 svg,
+.briefing h2 svg,
+.gap-section h3 svg,
+.tactic-section-title svg,
+.hiw-section-title svg {
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0;
+  fill: none !important;
+  stroke: var(--accent) !important;
+}
+/* Icon tiles and coloured icon boxes become the plain accent icon */
+.section-title .icon,
+.tactic-section-title .icon,
+.detection-header h2 .card-icon {
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  background: none !important;
+  border-radius: 0;
+}
+
+/* Sub-headings inside a section */
+.ui-subtitle,
+.briefing h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ---------- Cards ---------- */
+.ui-card,
+.detection-section,
+.library-controls,
+.tactic-section,
+.coming-soon-box,
+.briefing,
+.table-section,
+.legend-bar,
+.fd-intro, .fd-section, .fd-sources,
+.ag-intro, .ag-form, .ag-history,
+.mn-card {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+.ui-card { padding: 16px 20px; margin-bottom: 20px; }
+/* The Manual page's L-shaped card draws its own seam */
+.mn-card.mn-entry-top { border-bottom: none !important; border-radius: 12px 12px 0 0 !important; }
+.mn-card.mn-entry-rest { border-top: none !important; border-radius: 0 12px 12px 12px !important; }
+@media (max-width: 900px) { .mn-card.mn-entry-rest { border-radius: 0 0 12px 12px !important; } }
+
+/* ---------- Buttons ---------- */
+.btn-primary,
+.btn-ghost,
+.mn-page .btn,
+.btn-action,
+.fd-refresh,
+.ag-start,
+.fl-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 12px 24px;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: none;
+  cursor: pointer;
+  transition: filter .15s, transform .15s;
+}
+.btn-primary:hover:not(:disabled),
+.mn-page .btn:hover:not(:disabled),
+.btn-action:hover:not([disabled]),
+.fd-refresh:hover:not(:disabled),
+.ag-start:hover:not(:disabled),
+.fl-open:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+.btn-ghost,
+.mn-page .btn.ghost {
+  background: transparent;
+  color: var(--accent);
+}
+.btn-ghost:hover:not(:disabled),
+.mn-page .btn.ghost:hover:not(:disabled) { background: rgba(197, 48, 48, .06); filter: none; }
+.btn-primary svg { width: 18px; height: 18px; }
+.btn-primary:disabled, .mn-page .btn:disabled, .fd-refresh:disabled, .ag-start:disabled {
+  opacity: .55; cursor: not-allowed; transform: none; filter: none;
+}
+/* Buttons sit at the end of their row */
+.form-actions, .ui-actions { display: flex; justify-content: flex-end; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Results' action bar keeps its row of equal buttons */
+.btn-action { flex: 1 1 0; min-width: 0; padding: 12px 18px; }
+
+/* ---------- Pill toggles ---------- */
+.ui-pill,
+.fd-filter,
+.run-view-opt,
+.filter-btn,
+.tactic-tab,
+.af-chip,
+.key-tab {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  box-sizing: border-box;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 999px !important;
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  font: inherit;
+  font-size: .9rem !important;
+  font-weight: 600 !important;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.ui-pill:hover:not(:disabled),
+.fd-filter:hover,
+.run-view-opt:hover,
+.filter-btn:hover:not(.active),
+.tactic-tab:hover,
+.af-chip:hover:not(:disabled),
+.key-tab:hover { border-color: var(--accent) !important; background: var(--bg-secondary) !important; }
+.ui-pill.is-active,
+.fd-filter.is-active,
+.run-view-opt.is-active,
+.filter-btn.active,
+.tactic-tab.active,
+.af-chip.is-on,
+.key-tab.active {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+.af-chip:disabled { color: var(--text-secondary) !important; border-style: dashed !important; opacity: .7; cursor: not-allowed; }
+.af-chip[hidden] { display: none !important; }
+.filter-btn svg { width: 16px; height: 16px; }
+/* API Keys sub-tabs: a row of pills, not a folder tab strip */
+.key-tabs { gap: 8px !important; border-bottom: none !important; margin-bottom: 0 !important; flex-wrap: wrap; }
+
+/* ---------- Form controls ---------- */
+.form-input,
+.mn-page textarea, .mn-page select, .mn-page input[type="url"],
+.fl-pick select,
+.ag-field input, .ag-field textarea, .ag-model select,
+.dropdown-style, .dropdown-styled,
+#search-input,
+.fd-search {
+  box-sizing: border-box;
+  padding: .75em 1em;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 6px !important;
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 1rem !important;
+  font-weight: 400;
+  transition: border-color .2s, box-shadow .2s;
+}
+.form-input:focus,
+.mn-page textarea:focus, .mn-page select:focus, .mn-page input[type="url"]:focus,
+.fl-pick select:focus,
+.ag-field input:focus, .ag-field textarea:focus, .ag-model select:focus,
+.dropdown-style:focus, .dropdown-styled:focus,
+#search-input:focus,
+.fd-search:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(197, 48, 48, .12);
+}
+select.form-input,
+.mn-page select,
+.fl-pick select,
+.ag-model select,
+select.dropdown-style, select.dropdown-styled {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5em !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1em center !important;
+  cursor: pointer;
+}
+/* Fields that can't be edited look it */
+.form-input[readonly], .form-input:disabled { background-color: transparent !important; color: var(--text-secondary); cursor: not-allowed; }
+/* The attack flow's search box keeps the toolbar's height */
+.af-search { height: 36px !important; border: 1px solid var(--border-color) !important; border-radius: 6px !important; background: var(--bg-primary) !important; }
+
+/* ---------- Checkboxes ---------- */
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.industry-option, .ag-approve, .option-item { gap: .75em; }
+.industry-option > span:first-of-type, .ag-approve { font-weight: 500; color: var(--text-primary); }
+
+/* ---------- Tab bars ---------- */
+/* The active tab stays red under the pointer (the hover rule used to win and grey it out) */
+.tabs-header .tab-button.active,
+.tabs-header .tab-button.active:hover:not([disabled]) {
+  background: var(--bg-secondary);
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.home-tabs .tabs-header .tab-button.active,
+.home-tabs .tabs-header .tab-button.active:hover:not([disabled]) {
+  color: var(--tab-accent);
+  border-bottom-color: var(--tab-accent);
+}
+.home-tabs .form-input:focus { border-color: var(--tab-accent) !important; box-shadow: 0 0 0 3px rgba(var(--tab-accent-rgb), .15); }
+
+/* The Flows page title already names the flow; its own heading stays hidden */
+.fl-page .af-section > .detection-header > h2 { display: none !important; }
+
+/* Tab panels follow the theme (Profile and Help stayed white in dark mode) */
+[data-theme="dark"] .tabs-container,
+[data-theme="dark"] .tabs-content,
+[data-theme="dark"] .tab-pane { background: var(--bg-secondary); }

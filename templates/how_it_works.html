@@ -45,7 +45,6 @@
             background: linear-gradient(to bottom, #f5f7f8 0%, #e8eef1 100%);
             background-attachment: fixed;
             min-height: 100vh;
-            font-family: 'Roboto', Arial, sans-serif;
         }
 
         [data-theme="dark"] body {
@@ -60,7 +59,6 @@
         .header {
             text-align: center;
             margin-bottom: 3em;
-            font-family: 'Roboto', Arial, sans-serif;
         }
         /* Global navigation buttons */
         
@@ -134,51 +132,33 @@
             background: var(--accent);
             color: white;
         }
+        /* Cards and headings: the shared ones (static/css/ui.css) */
         .section {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 2.5em;
+            padding: 2em;
             margin-bottom: 2em;
-            box-shadow: 0 4px 12px rgba(31, 45, 53, 0.15);
         }
 
-        [data-theme="dark"] .section {
-            background: rgba(45, 45, 45, 0.7);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
+        .section h2 { margin: 0 0 16px; }
 
-        .section h2 {
-            color: #1f2d35;
-            border-bottom: 3px solid #C53030;
-            padding-bottom: 0.5em;
-            margin-top: 0;
-            font-size: 1.8em;
-        }
-
-        [data-theme="dark"] .section h2 {
-            color: var(--text-primary);
-            border-bottom-color: var(--accent);
-        }
+        .tab-pane h3 { color: var(--text-primary); font-size: 1.2rem; font-weight: 600; margin: 1.5em 0 .6em; }
+        .tab-pane h3:first-child { margin-top: 0; }
+        .tab-pane h4 { color: var(--text-primary); font-size: 1rem; font-weight: 600; }
 
         .section h3 {
-            color: #2a3a44;
-            margin-top: 1.5em;
-            font-size: 1.4em;
-        }
-
-        [data-theme="dark"] .section h3 {
             color: var(--text-primary);
+            margin: 1.5em 0 .6em;
+            font-size: 1.2rem;
+            font-weight: 600;
         }
 
         .section h4 {
-            color: #3a4a54;
-            margin-top: 1.2em;
-            font-size: 1.2em;
-        }
-
-        [data-theme="dark"] .section h4 {
-            color: var(--text-secondary);
+            color: var(--text-primary);
+            margin: 1.2em 0 .5em;
+            font-size: 1rem;
+            font-weight: 600;
         }
 
         [data-theme="dark"] .section p,
@@ -260,7 +240,6 @@
         .tabs-content {
             padding: 0;
             min-height: 400px;
-            font-family: 'Roboto', Arial, sans-serif;
             width: 100%;
             box-sizing: border-box;
             position: relative;
@@ -271,7 +250,6 @@
             display: none;
             animation: fadeIn 0.3s ease;
             padding: 2.5em;
-            font-family: 'Roboto', Arial, sans-serif;
             font-size: 15.96px;
             width: 100%;
             box-sizing: border-box;
@@ -281,7 +259,6 @@
         .tab-pane li,
         .tab-pane td,
         .tab-pane span:not(.speed-badge):not(.expand-btn) {
-            font-family: 'Roboto', Arial, sans-serif;
             font-size: 15.96px;
         }
 
@@ -326,7 +303,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            font-family: 'Roboto', Arial, sans-serif;
         }
         .diagram img {
             max-width: 100%;
@@ -340,13 +316,11 @@
             color: #666;
             font-style: italic;
             order: 2;
-            font-family: 'Roboto', Arial, sans-serif;
         }
         .library-table {
             width: 100%;
             border-collapse: collapse;
             margin: 1.5em 0;
-            font-family: 'Roboto', Arial, sans-serif;
         }
         .library-table th {
             background: #1f2d35;
@@ -354,12 +328,10 @@
             padding: 12px;
             text-align: left;
             font-weight: 500;
-            font-family: 'Roboto', Arial, sans-serif;
         }
         .library-table td {
             padding: 12px;
             border-bottom: 1px solid #e5e8eb;
-            font-family: 'Roboto', Arial, sans-serif;
         }
         .library-table tr:hover {
             background: #f8f9fa;
@@ -370,33 +342,30 @@
             padding: 1.5em;
             margin: 1em 0;
             border-radius: 4px;
-            font-family: 'Roboto', Arial, sans-serif;
         }
         .workflow-step h4 {
             margin-top: 0;
-            color: #C53030;
-            font-family: 'Roboto', Arial, sans-serif;
+            color: var(--text-primary);
         }
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5em;
             margin: 2em 0;
-            font-family: 'Roboto', Arial, sans-serif;
         }
         .feature-card {
-            background: #f8f9fa;
-            padding: 0.75em;
+            background: var(--bg-primary);
+            padding: 1em 1.25em;
             border-radius: 8px;
-            border: 1px solid #e5e8eb;
-            font-family: 'Roboto', Arial, sans-serif;
+            border: 1px solid var(--border-color);
             position: relative;
         }
         .feature-card h4 {
-            color: #C53030;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
             margin-top: 0;
             margin-bottom: 0.4em;
-            font-family: 'Roboto', Arial, sans-serif;
             padding-right: 100px;
         }
         .feature-card p {
@@ -419,7 +388,6 @@
             font-size: 0.9em;
             font-weight: 500;
             display: inline-block;
-            font-family: 'Roboto', Arial, sans-serif;
             position: absolute;
             top: 0.75em;
             right: 0.75em;
@@ -540,12 +508,11 @@
 
         /* FAQ Styling */
         .faq-item {
-            background: rgba(255, 255, 255, 0.5);
+            background: var(--bg-primary);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             margin-bottom: 1em;
             transition: all 0.3s ease;
-            font-family: 'Roboto', Arial, sans-serif;
         }
 
         [data-theme="dark"] .faq-item {
@@ -553,8 +520,7 @@
         }
 
         .faq-item:hover {
-            background: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-color: var(--accent);
         }
 
         [data-theme="dark"] .faq-item:hover {
@@ -571,7 +537,6 @@
             list-style: none;
             display: flex;
             align-items: center;
-            font-family: 'Roboto', Arial, sans-serif;
             gap: 12px;
             user-select: none;
             transition: color 0.2s;
@@ -617,7 +582,6 @@
             color: var(--text-secondary);
             line-height: 1.7;
             animation: fadeIn 0.3s ease;
-            font-family: 'Roboto', Arial, sans-serif;
         }
 
         .faq-answer p {
@@ -637,6 +601,7 @@
             color: var(--text-primary);
         }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/ui.css') }}?v={{ request.app.state.asset_version }}">
 </head>
 <body>
     <a id="top"></a>
@@ -725,7 +690,7 @@
 
             <div class="feature-grid">
                 <div class="feature-card">
-                    <h4>🎯 What It Does</h4>
+                    <h4>What It Does</h4>
                     <ul>
                         <li>6 generation modes</li>
                         <li>Multi-vendor queries</li>
@@ -737,7 +702,7 @@
                     </ul>
                 </div>
                 <div class="feature-card">
-                    <h4>⚡ Why It's Fast</h4>
+                    <h4>Why It's Fast</h4>
                     <ul>
                         <li>Local OSINT repos (no API rate limits)</li>
                         <li>Template caching (90% faster)</li>
@@ -748,7 +713,7 @@
                     </ul>
                 </div>
                 <div class="feature-card">
-                    <h4>🔧 How It Works</h4>
+                    <h4>How It Works</h4>
                     <ul>
                         <li>5 analysis modes inc. AI (inc. Local LLM)</li>
                         <li>Real-time MITRE ATT&CK integration</li>
@@ -764,21 +729,21 @@
                 <div class="feature-card">
                     <h4>Use Cases</h4>
                     <ul>
-                        <li>🎯 Threat hunting operations</li>
-                        <li>🎯 Incident response preparation</li>
-                        <li>🎯 Detection engineering</li>
-                        <li>🎯 Purple team exercises</li>
-                        <li>🎯 SIEM content development</li>
+                        <li>Threat hunting operations</li>
+                        <li>Incident response preparation</li>
+                        <li>Detection engineering</li>
+                        <li>Purple team exercises</li>
+                        <li>SIEM content development</li>
                     </ul>
                 </div>
                 <div class="feature-card">
                     <h4>Future Enhancements</h4>
                     <ul>
-                        <li>🔜 VECTR integration</li>
-                        <li>🔜 Atomic Red Team emulation</li>
-                        <li>🔜 Additional SIEM platforms</li>
-                        <li>🔜 Real-time threat feeds</li>
-                        <li>🔜 Custom query templates</li>
+                        <li>VECTR integration</li>
+                        <li>Atomic Red Team emulation</li>
+                        <li>Additional SIEM platforms</li>
+                        <li>Real-time threat feeds</li>
+                        <li>Custom query templates</li>
                     </ul>
                 </div>
             </div>
@@ -1023,7 +988,7 @@ python archer.py run_vectr_command export "APT29"</code></pre>
             </div>
 
             <div class="callout callout-info">
-                <strong>💡 Performance Benchmark:</strong> Generating 200 detection queries for APT29 takes approximately
+                <strong>Performance Benchmark:</strong> Generating 200 detection queries for APT29 takes approximately
                 <strong>30 seconds</strong> with caching enabled, compared to 4-5 minutes without optimization.
             </div>
             </div>
@@ -1085,7 +1050,7 @@ python archer.py run_vectr_command export "APT29"</code></pre>
             </table>
 
             <div class="callout callout-info">
-                <strong>💡 Mode Selection:</strong> Archer automatically selects the best available mode. If <code>OPENAI_API_KEY</code>
+                <strong>Mode Selection:</strong> Archer automatically selects the best available mode. If <code>OPENAI_API_KEY</code>
                 is set, it defaults to <strong>ai_generators</strong>. Otherwise, it gracefully falls back to <strong>heuristic</strong> mode.
             </div>
 
@@ -1422,7 +1387,7 @@ data/APT29/
             </div>
 
             <div class="callout callout-info">
-                <strong>💡 Interactive Visualization:</strong> Flow JSON files are automatically converted to interactive
+                <strong>Interactive Visualization:</strong> Flow JSON files are automatically converted to interactive
                 HTML visualizations that can be viewed in any browser.
             </div>
             </div>
@@ -1434,7 +1399,7 @@ data/APT29/
 
         <!-- FAQ Section -->
         <div class="section" style="margin-top: 3em;">
-            <h2>Frequently Asked Questions</h2>
+            <h2 class="hiw-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Frequently Asked Questions</h2>
 
             <details class="faq-item">
                 <summary class="faq-question">What is Archer and what does it do?</summary>
