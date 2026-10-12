@@ -80,7 +80,7 @@ The feed is collected in the background every time Archer starts and whenever yo
 
 Sources (RSS/Atom): Microsoft Threat Intelligence, Google Threat Intelligence (Mandiant), Unit 42, Cisco Talos, CrowdStrike, SentinelLABS, Kaspersky Securelist, ESET WeLiveSecurity, Proofpoint, The DFIR Report, Red Canary, Huntress, Check Point Research, Elastic Security Labs, CISA, NCSC (UK), Recorded Future, Trend Micro Research, Rapid7 and FortiGuard Labs.
 
-Tags are taken from the post's title and its technical paragraphs only: a paragraph with a technique ID, CVE, hash, IP, defanged domain, file name, command-line tool, registry key or command-line switch, and the paragraph either side. A passing mention in a policy piece or a reading list doesn't count.
+Tags are taken from the post's title and its technical paragraphs only: a paragraph with a technique ID, hash, IP, defanged domain, file name, command-line tool, registry key or command-line switch, and the paragraph either side. A CVE makes a paragraph technical only when the post has one of those other indicators too, because newsletters and policy pieces cite CVEs in passing. A passing mention in a policy piece or a reading list doesn't count.
 
 | Tag | From |
 |---|---|
@@ -89,7 +89,7 @@ Tags are taken from the post's title and its technical paragraphs only: a paragr
 | Opportunistic | Supply-chain or package-registry compromise, reported exploitation, ransomware-as-a-service, infostealers, botnets, malvertising and fake updates, initial access brokers |
 | Financially motivated | Ransomware, extortion, BEC, crypto theft or mining, banking trojans, carding, or a named group whose ATT&CK objective is financial |
 
-Posts with no technique ID, IOCs, CVE or named group (product news, webinars) aren't shown.
+Posts with no technique ID, IOCs or named group, and no CVE alongside another indicator (product news, webinars, newsletters), aren't shown.
 
 ### Techniques that can't produce a detection
 

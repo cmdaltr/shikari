@@ -28,7 +28,7 @@ def _analysed(text, title="t", summary="", groups=(), profiles=None):
 
     post = {"title": title, "url": "https://e/x", "source": "S", "published": "2026-10-12T00:00:00+00:00",
             "summary": summary}
-    result = {"success": True, "text": text, "techniques": feed._TECHNICAL.findall(text) and ["T1059"] or [], "iocs": {}}
+    result = {"success": True, "text": text, "techniques": feed._INDICATOR.findall(text) and ["T1059"] or [], "iocs": {}}
     with patch("archer.parsers.blog_analyzer.analyze_blog_post", return_value=result):
         return feed.analyse_post(post, list(groups), profiles or {})
 
@@ -112,3 +112,15 @@ def test_nation_profiles_keep_the_industries_most_of_its_groups_target():
             "G3": {"nexus": "Iran", "target_sectors": "Technology"},
             "G4": {"nexus": "Iran", "target_sectors": "Government"}}
     assert feed.nation_profiles(meta, share=0.5)["Iran"] == ["Government"]
+
+
+def test_a_cve_counts_only_alongside_other_indicators():
+    newsletter = "\n".join(["Welcome to the newsletter; Microsoft patched CVE-2026-1234 this week.",
+                            "A", "B", "C", "China-nexus actors remain busy, says a government."])
+    assert feed.technical_context("Newsletter", newsletter) == "Newsletter"
+    assert not feed.technical({"techniques": [], "iocs": 0, "groups": [], "cves": ["CVE-2026-1234"],
+                               "indicators": feed.has_indicators("Newsletter", newsletter)})
+    report = newsletter + "\nThe actors then ran certutil -urlcache to fetch the payload."
+    assert "CVE-2026-1234" in feed.technical_context("Report", report)
+    assert feed.technical({"techniques": [], "iocs": 0, "groups": [], "cves": ["CVE-2026-1234"],
+                           "indicators": feed.has_indicators("Report", report)})

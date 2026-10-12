@@ -6,9 +6,9 @@ own group data.
 
 Each post in the sources' RSS/Atom feeds from the last FEED_DAYS days is fetched and run
 through the report analyser (archer.parsers.blog_analyzer: technique IDs, IOCs), then
-tagged from its title and its technical paragraphs only: those with a technique ID, CVE,
-hash, IP, defanged domain, file name, command or registry key, and the paragraph either
-side. A passing mention in a policy piece or a "related reading" list doesn't count.
+tagged from its title and its technical paragraphs only: those with a technique ID, hash,
+IP, defanged domain, file name, command or registry key (or a CVE, when the post has one of
+those too), and the paragraph either side. A passing mention in a policy piece or a "related reading" list doesn't count.
 
 - Industries: the targeting (group_metadata's target_sectors) of each ATT&CK group named
   there (name or alias); the industries a nation's groups mostly target, when the
@@ -20,8 +20,8 @@ side. A passing mention in a policy piece or a "related reading" list doesn't co
 - Financially motivated: ransomware, extortion, BEC, crypto theft or mining, banking
   trojans, or a named group whose ATT&CK objective is financial.
 
-Posts with no technical content at all (no technique ID, IOCs, CVE or named group) are
-left out: product news and webinars. Each post also gets a two-to-three sentence
+Posts with no technical content at all (no technique ID, IOCs or named group, and no CVE
+alongside another indicator) are left out: product news and webinars. Each post also gets a two-to-three sentence
 description, from its RSS summary or, when that is thin or boilerplate, its opening
 paragraphs.
 
@@ -44,7 +44,7 @@ from typing import Dict, Iterable, List, Optional
 from archer.config import DATA_DIR
 
 FEED_DAYS = 7
-ANALYSIS_VERSION = 5        # bump when the matchers change: cached posts are analysed again
+ANALYSIS_VERSION = 6        # bump when the matchers change: cached posts are analysed again
 REFRESH_EVERY = 6 * 3600
 FEED_DIR = os.path.join(DATA_DIR, "feed")
 CACHE_PATH = os.path.join(FEED_DIR, "posts.json")
@@ -112,14 +112,17 @@ _AMBIGUOUS_NAMES = {"Silence", "Inception", "Equation", "Axiom", "Patchwork", "L
 # Paragraphs either side of a technical one that still count as its context
 NEAR_TECHNICAL = 1
 FETCH_TIMEOUT = 15
-# A paragraph with any of these is technical: technique ID, CVE, hash, IPv4, defanged
-# domain or URL, file name, command-line tool, registry key, command-line switch
-_TECHNICAL = re.compile(
-    r"\bT\d{4}(?:\.\d{3})?\b|\bCVE-\d{4}-\d{4,7}\b|\b(?:[a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64})\b"
+# A paragraph with any of these is technical: technique ID, hash, IPv4, defanged domain or
+# URL, file name, command-line tool, registry key, command-line switch
+_INDICATOR = re.compile(
+    r"\bT\d{4}(?:\.\d{3})?\b|\b(?:[a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64})\b"
     r"|\b\d{1,3}(?:\[?\.\]?\d{1,3}){3}\b|\[\.\]|hxxps?://"
     r"|\b[\w-]+\.(?:exe|dll|ps1|bat|vbs|hta|lnk|msi|sh|jar|scr|iso|zip)\b"
     r"|\b(?:cmd\.exe|powershell|rundll32|regsvr32|mshta|wmic|schtasks|certutil|bitsadmin|curl|wget|chmod|crontab|osascript)\b"
     r"|\bHK(?:LM|CU|EY_[A-Z_]+)\\|(?<=\s)--?[a-z][\w-]{0,20}(?=\s)", re.I)
+# A CVE is technical only alongside one of those somewhere in the post: newsletters and policy
+# pieces cite CVEs in passing
+_CVE = re.compile(r"\bCVE-\d{4}-\d{4,7}\b")
 
 # Attribution to a nation: "China-nexus", "Chinese state-sponsored", "DPRK hackers"; a bare
 # country name is usually geography (the victim), not the attacker
@@ -283,12 +286,21 @@ def _sector_mentions(text: str, title: str) -> Dict[str, int]:
     return out
 
 
+def has_indicators(title: str, text: str) -> bool:
+    """Any indicator other than a CVE in the post (_INDICATOR)."""
+    return bool(_INDICATOR.search(title) or _INDICATOR.search(text))
+
+
 def technical_context(title: str, text: str, near: int = NEAR_TECHNICAL) -> str:
-    """The title plus each technical paragraph (_TECHNICAL) and the `near` paragraphs either side."""
+    """
+    The title plus each technical paragraph and the `near` paragraphs either side. A technical
+    paragraph has an indicator (_INDICATOR), or a CVE when the post has an indicator elsewhere.
+    """
     paragraphs = [p for p in text.split("\n") if p.strip()]
+    cves_count = has_indicators(title, text)
     keep = set()
     for i, paragraph in enumerate(paragraphs):
-        if _TECHNICAL.search(paragraph):
+        if _INDICATOR.search(paragraph) or (cves_count and _CVE.search(paragraph)):
             keep.update(range(max(0, i - near), min(len(paragraphs), i + near + 1)))
     return "\n".join([title] + [paragraphs[i] for i in sorted(keep)])
 
@@ -364,7 +376,8 @@ def analyse_post(post: Dict, groups: List[Dict], profiles: Optional[Dict[str, Li
         "description": describe(post.get("summary") or "", text, post["title"]),
         "techniques": result.get("techniques", [])[:60],
         "iocs": sum(len(v) for v in iocs.values() if isinstance(v, list)),
-        "cves": sorted(set(re.findall(r"\bCVE-\d{4}-\d{4,7}\b", f"{post['title']}\n{text}")))[:20],
+        "cves": sorted(set(_CVE.findall(f"{post['title']}\n{text}")))[:20],
+        "indicators": has_indicators(post["title"], text),
         "groups": [{"id": g["id"], "name": g["name"], "nexus": g["nexus"]} for g in named][:15],
         "industries": reasons,
         "nations": nations,
@@ -375,9 +388,12 @@ def analyse_post(post: Dict, groups: List[Dict], profiles: Optional[Dict[str, Li
 
 
 def technical(post: Dict) -> bool:
-    """Whether the post has anything to hunt with: technique IDs, IOCs, a CVE or a named group."""
+    """
+    Whether the post has anything to hunt with: technique IDs, IOCs, a named group, or CVEs
+    alongside other indicators (a CVE on its own is usually a passing citation).
+    """
     return not post.get("error") and bool(post.get("techniques") or post.get("iocs", 0) >= 3
-                                          or post.get("groups") or post.get("cves"))
+                                          or post.get("groups") or (post.get("cves") and post.get("indicators")))
 
 
 def tags(post: Dict) -> Dict:
