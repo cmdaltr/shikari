@@ -1,5 +1,6 @@
 from archer.build import run_files
 from archer.build.collate import collate_data
+from archer.build.severity import rate as rate_severity
 from archer.config import GENERATE_DIR
 from archer.validation.mde_field_validator import format_mde_query
 
@@ -255,6 +256,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
         # Fallback if no valid line found
         if not datatype:
             datatype = "UnknownDataType"
+    severity = rate_severity(tactic)
     tactic = str(tactic)[2:-2].replace("', '", "\n  - ")
 
     # Indent ALL query lines properly for YAML literal block
@@ -308,7 +310,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
         .replace("§name§", name)
         .replace("§tid§", tid)
         .replace("§tdesc§", desc)
-        .replace("§severity§", "")
+        .replace("§severity§", severity)
         .replace("§connectorId§", connector_id)
         .replace("§dataTypes§", datatype)
         .replace("§tactic§", tactic)
@@ -834,6 +836,7 @@ def construct_yaml(
             technique_id=tid,
             technique_name=name,
             tactic=tactic,
+            tactics=all_tactics,
             description=tdesc,
             indicators=identifiers,
             osint_data=osint_enhancement_data,

@@ -46,12 +46,16 @@ def test_entities_and_placeholders():
     assert clean_indicator("`whoami /all`") == "whoami /all"
 
 
-def _rule(indicators, name="Test Technique", tid="T1000"):
-    return SecOpsGenerator().generate_yaral_rule(tid, name, "x", "d", indicators)
+def _rule(indicators, name="Test Technique", tid="T1000", tactics=None):
+    return SecOpsGenerator().generate_yaral_rule(tid, name, "x", "d", indicators, tactics=tactics)
 
 
 def _events(code):
-    return code.split("events:")[1].split("condition:")[0]
+    return code.split("events:")[1].split("outcome:")[0].split("condition:")[0]
+
+
+def _outcome(code):
+    return code.split("outcome:")[1].split("condition:")[0]
 
 
 def test_network_context_never_lands_on_a_process_event():
@@ -90,8 +94,33 @@ def test_every_pattern_is_a_literal():
 
 
 def test_meta_severity_matches_returned_severity():
-    r = _rule({"cmd": ["mimikatz"]}, name="OS Credential Dumping")
+    r = _rule({"cmd": ["mimikatz"]}, name="OS Credential Dumping", tactics=["Credential Access"])
     assert r["severity"] == "HIGH" and 'severity = "HIGH"' in r["yaral_code"]
+
+
+def test_severity_comes_from_the_tactic_not_the_name():
+    # "Credential" in the name used to make it HIGH whatever the stage
+    assert _rule({"cmd": ["dir"]}, name="Credential Discovery", tactics=["Discovery"])["severity"] == "LOW"
+    assert _rule({"cmd": ["vssadmin delete shadows"]}, tactics=["Impact"])["severity"] == "CRITICAL"
+    # Several tactics: the most severe
+    assert _rule({"cmd": ["x.exe"]}, tactics=["Execution", "Lateral Movement"])["severity"] == "HIGH"
+
+
+def test_outcome_carries_risk_and_entities_without_aggregation():
+    r = _rule({"cmd": ["procdump -ma lsass.exe"]}, tactics=["Credential Access"])
+    out = _outcome(r["yaral_code"])
+    assert "$risk_score = 75" in out
+    assert "$hostname = $e.principal.hostname" in out and "$command_line = $e.target.process.command_line" in out
+    # Single event, no aggregation: no match section (contract R06.2)
+    assert "match:" not in r["yaral_code"] and not re.search(r"\b(array_distinct|count|max|min|sum)\(", out)
+    # Repeated UDM fields can't be assigned without match
+    assert "target.ip" not in out and "dns.questions" not in out
+
+
+def test_network_rule_outcome_names_the_target():
+    out = _outcome(_rule({"protocol": ["SSH"], "port": ["22"]})["yaral_code"])
+    assert "$target_host = $e.target.hostname" in out and "$target_port = $e.target.port" in out
+    assert "command_line" not in out
 
 
 def test_wrapped_description_still_writes_valid_yaml(tmp_path, monkeypatch):

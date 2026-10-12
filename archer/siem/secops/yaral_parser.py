@@ -41,7 +41,7 @@ class YaralParser:
 
         # Extract meta section
         meta = {}
-        meta_match = re.search(r'meta:\s*(.*?)(?=events:|match:|condition:|$)', yaral_code, re.DOTALL)
+        meta_match = re.search(r'meta:\s*(.*?)(?=events:|match:|outcome:|condition:|$)', yaral_code, re.DOTALL)
         if meta_match:
             meta_text = meta_match.group(1)
             for line in meta_text.strip().split('\n'):
@@ -53,7 +53,7 @@ class YaralParser:
 
         # Extract events section
         events = []
-        events_match = re.search(r'events:\s*(.*?)(?=match:|condition:|$)', yaral_code, re.DOTALL)
+        events_match = re.search(r'events:\s*(.*?)(?=match:|outcome:|condition:|$)', yaral_code, re.DOTALL)
         if events_match:
             events_text = events_match.group(1)
             # Parse each event condition line
@@ -64,7 +64,7 @@ class YaralParser:
 
         # Extract match section (optional)
         match_clause = None
-        match_match = re.search(r'match:\s*(.*?)(?=condition:|$)', yaral_code, re.DOTALL)
+        match_match = re.search(r'match:\s*(.*?)(?=outcome:|condition:|$)', yaral_code, re.DOTALL)
         if match_match:
             match_clause = match_match.group(1).strip()
 

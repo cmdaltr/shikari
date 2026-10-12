@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from archer.build.indicator_hygiene import clean_identifier_map
+from archer.build.severity import RISK_SCORE, rate as rate_severity
 
 
 class SecOpsGenerator:
@@ -37,7 +38,8 @@ class SecOpsGenerator:
         description: str,
         indicators: Optional[Dict] = None,
         osint_data: Optional[Dict] = None,
-        group_name: Optional[str] = None
+        group_name: Optional[str] = None,
+        tactics: Optional[List[str]] = None,
     ) -> Dict[str, any]:
         """
         Generate YARA-L detection rule for Google SecOps using templates
@@ -48,15 +50,16 @@ class SecOpsGenerator:
         """
         rule_name = f"{technique_id.replace('.', '_')}_{technique_name.replace(' ', '_')}"
 
-        severity = "MEDIUM"
-        if any(keyword in technique_name.lower() for keyword in ['credential', 'privilege', 'persistence', 'lateral']):
-            severity = "HIGH"
+        # The technique's kill-chain stage (archer.build.severity), as the YAML records it
+        rating = rate_severity(tactics or [tactic])
+        severity = rating.upper()
 
         yaral_code, event_types = self._build_yaral_query(
             technique_id=technique_id,
             technique_name=technique_name,
             indicators=clean_identifier_map(indicators or {}),
             severity=severity,
+            risk_score=RISK_SCORE[rating],
         )
 
         return {
@@ -74,6 +77,7 @@ class SecOpsGenerator:
         technique_name: str,
         indicators: Dict,
         severity: str = "MEDIUM",
+        risk_score: int = RISK_SCORE["Medium"],
     ):
         """
         Build a single-event YARA-L rule from indicators. Returns (rule, event_types).
@@ -101,6 +105,7 @@ class SecOpsGenerator:
             # Lines in events are ANDed, so alternatives share one line
             event_lines = [" or ".join(events)]
         context_meta = "".join(f'\n    context_{k} = "{_meta_text(", ".join(v))}"' for k, v in context.items())
+        outcome = "\n".join(f"    ${name} = {value}" for name, value in _outcome(risk_score, event_types))
 
         rule = f"""rule {technique_id.replace('.', '_')} {{
   meta:
@@ -112,10 +117,37 @@ class SecOpsGenerator:
   events:
 {chr(10).join("    " + line for line in event_lines)}
 
+  outcome:
+{outcome}
+
   condition:
     $e
 }}"""
         return rule, event_types
+
+
+# The entities an analyst triages first (contract R15.1), taken from the one event. Single
+# values, not aggregates, so the rule needs no match section (R06.2). Only non-repeated UDM
+# fields: a repeated one (target.ip, network.dns.questions) can't be assigned without match.
+_OUTCOME_BY_TYPE = {
+    "PROCESS_LAUNCH": [("process", "$e.target.process.file.full_path"),
+                       ("command_line", "$e.target.process.command_line"),
+                       ("parent_command_line", "$e.principal.process.command_line")],
+    "NETWORK_CONNECTION": [("target_host", "$e.target.hostname"), ("target_port", "$e.target.port")],
+    "NETWORK_HTTP": [("target_url", "$e.target.url")],
+}
+_REGISTRY_OUTCOME = [("registry_key", "$e.target.registry.registry_key"),
+                     ("registry_value", "$e.target.registry.registry_value_name")]
+
+
+def _outcome(risk_score: int, event_types: List[str]):
+    """outcome variables: the risk score, the host and account, then each event type's own evidence."""
+    rows = [("risk_score", str(risk_score)), ("hostname", "$e.principal.hostname"),
+            ("user", "$e.principal.user.userid")]
+    for et in event_types:
+        extra = _REGISTRY_OUTCOME if et.startswith("REGISTRY_") else _OUTCOME_BY_TYPE.get(et, [])
+        rows += [r for r in extra if r not in rows]
+    return rows
 
 
 # ── Indicator → UDM ────────────────────────────────────────────────────────

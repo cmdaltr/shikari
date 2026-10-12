@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 
 from archer.build.indicator_hygiene import clean_indicator
 from archer.build.secops import _re_literal
+from archer.build.severity import RISK_SCORE
 
 _DOMAIN = re.compile(r"^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 _HASH_KIND = {64: "sha256", 40: "sha1", 32: "md5"}
@@ -139,6 +140,14 @@ def secops_sweep(iocs: Dict[str, List[str]], label: str) -> Optional[str]:
 
   events:
     ({" or ".join(alts)})
+
+  outcome:
+    $risk_score = {RISK_SCORE["High"]}
+    $hostname = $e.principal.hostname
+    $user = $e.principal.user.userid
+    $target_host = $e.target.hostname
+    $file = $e.target.file.full_path
+    $command_line = $e.target.process.command_line
 
   condition:
     $e

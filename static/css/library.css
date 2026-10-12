@@ -125,46 +125,31 @@
   min-width: 150px;
 }
 
-#clear-filters-btn {
-  padding: 12px 10px;
-  border: 2px solid var(--accent);
-  background: transparent;
-  color: var(--accent);
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#clear-filters-btn:hover {
-  background: var(--accent);
-  color: white;
-}
-
-.action-btn {
-  padding: 12px 10px;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+/* Filter-row actions: clear, tag and export are outlined; delete is the one filled
+   button, since it's the one that can't be undone */
+#clear-filters-btn, .action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  padding: 12px 10px;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s, color .15s, filter .15s;
 }
 
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+#clear-filters-btn:hover, .action-btn:hover {
+  background: var(--accent);
+  color: #fff;
 }
 
-#manage-tags-btn { background: #3b82f6; color: white; border: 2px solid #3b82f6; }
-#export-btn { background: #10b981; color: white; border: 2px solid #10b981; }
-#delete-btn { background: #ef4444; color: white; border: 2px solid #ef4444; }
+#delete-btn { background: var(--accent); color: #fff; }
+#delete-btn:hover { filter: brightness(1.08); }
 
 #select-all-btn, #deselect-all-btn {
   padding: 12px 10px;
