@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Archer - Attack Flows{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/attack_flow.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/flows.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container fl-page">
+  <p class="lead"><span style="color:#666666; font-size: 28px;">Attack Flows</span></p>
+
+  {% if not kinds %}
+  <section class="fl-empty">
+    <p>No attack flows yet. A flow appears here once a threat group's, report's or CVE's results are saved to your
+      <a href="/library">library</a>: open its results and use <strong>Save to Library</strong>.</p>
+  </section>
+  {% else %}
+  <form class="fl-pick" method="get" action="/flows">
+    <label for="fl-group">Flow</label>
+    <select id="fl-group" name="group" onchange="this.form.submit()">
+      {% for kind, flows in kinds.items() %}
+      <optgroup label="{{ kind }}{{ 's' if flows|length != 1 }}">
+        {% for f in flows %}
+        <option value="{{ f.group }}" {% if chosen and f.group == chosen.group %}selected{% endif %}>{{ f.label }}{% if not f.view %} (not built yet){% endif %}</option>
+        {% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+    <noscript><button type="submit">Open</button></noscript>
+  </form>
+
+  {% if chosen %}
+  <section class="fl-meta">
+    <span class="fl-kind">{{ chosen.kind }}</span>
+    <strong>{{ chosen.label }}</strong>
+    {% if chosen.saved %}<span class="fl-when">flow saved {{ chosen.saved.strftime('%d %b %Y %H:%M') }}</span>{% endif %}
+    <a class="fl-open" href="/results?group_name={{ chosen.group|urlencode }}">Open results →</a>
+  </section>
+  {% endif %}
+
+  {% if attack_flow %}
+    {% include "partials/attack_flow.html" %}
+  {% elif chosen %}
+  <section class="fl-empty">
+    <p>This flow hasn't been built yet. <a href="/results?group_name={{ chosen.group|urlencode }}">Open its results</a>
+      once and it will be saved here.</p>
+  </section>
+  {% endif %}
+  {% endif %}
+</div>
+{% if attack_flow %}<script src="{{ url_for('static', path='js/attack_flow.js') }}?v={{ request.app.state.asset_version }}"></script>{% endif %}
+{% endblock %}

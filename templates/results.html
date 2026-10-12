@@ -22,6 +22,18 @@
 [data-theme="dark"] .run-view-opt.is-active { background: #667eea; border-color: #667eea; color: #fff; }
 [data-theme="dark"] .run-view-label, [data-theme="dark"] .run-view-when { color: var(--text-secondary); }
 
+/* Techniques the latest run built nothing for */
+.no-detection { margin: 0 0 20px; padding: 12px 16px; border: 1px solid #f0c36d; border-radius: 10px; background: #fffbeb; }
+.no-detection summary { cursor: pointer; font-weight: 600; color: #92400e; }
+.no-detection table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 14px; }
+.no-detection th, .no-detection td { text-align: left; padding: 6px 8px; border-top: 1px solid #f3dfb0; vertical-align: top; }
+.no-detection td:first-child { white-space: nowrap; }
+.no-detection-hint { margin: 10px 0 0; font-size: 14px; color: #6b4e16; }
+[data-theme="dark"] .no-detection { background: var(--bg-secondary); border-color: #8a6a1f; }
+[data-theme="dark"] .no-detection summary, [data-theme="dark"] .no-detection-hint { color: #f0c36d; }
+[data-theme="dark"] .no-detection th, [data-theme="dark"] .no-detection td { border-color: var(--border-color); color: var(--text-primary); }
+@media (max-width: 600px) { .no-detection td:first-child { white-space: normal; } }
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -56,6 +68,27 @@
       </a>
       <span class="run-view-when">{% if run_view.completed %}Latest run finished {{ run_view.completed }}.{% endif %}</span>
     </nav>
+    {% endif %}
+
+    {% if no_detection %}
+    <!-- Techniques the latest run built nothing for, and why -->
+    <details class="no-detection">
+      <summary>{{ no_detection|length }} technique{{ '' if no_detection|length == 1 else 's' }} in the latest run produced no detection</summary>
+      <table>
+        <thead><tr><th>Technique</th><th>Why</th></tr></thead>
+        <tbody>
+        {% for m in no_detection %}
+          <tr>
+            <td><a href="{{ m.url }}" target="_blank" rel="noopener">{{ m.technique }}</a> {{ m.name if m.name != m.technique else '' }}</td>
+            <td>{{ m.text }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% if no_detection|selectattr('reason', 'equalto', 'no_indicators')|list %}
+      <p class="no-detection-hint">Run again with an AI model or OSINT enhancement to build queries for the "no indicator" techniques; the standard pipeline never will.</p>
+      {% endif %}
+    </details>
     {% endif %}
 
     <!-- Statistics Section -->

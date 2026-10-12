@@ -1471,6 +1471,37 @@ def get_indicators_from_yaml(yaml_file, yaml_data=None):
 app = FastAPI(title="Archer Threat Hunting Service")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+def _bearer_token(request: Request) -> Optional[str]:
+    auth = request.headers.get("authorization") or ""
+    return auth[7:].strip() if auth[:7].lower() == "bearer " else None
+
+
+@app.middleware("http")
+async def api_token_auth(request: Request, call_next):
+    """
+    Authorization: Bearer <API token> signs the request in as the token's owner. The token
+    is swapped for that user's session cookie, so every route accepts it unchanged
+    (archer/auth/tokens.py).
+    """
+    token = _bearer_token(request)
+    if token is None:
+        return await call_next(request)
+    from starlette.concurrency import run_in_threadpool
+
+    from archer.auth.tokens import session_for
+
+    session_id = await run_in_threadpool(session_for, token)
+    if not session_id:
+        return JSONResponse({"error": "Invalid or revoked API token"}, status_code=401)
+    cookies = [c for c in (request.headers.get("cookie") or "").split(";")
+               if c.strip() and not c.strip().startswith("archer_session=")]
+    headers = [(k, v) for k, v in request.scope["headers"] if k != b"cookie"]
+    headers.append((b"cookie", "; ".join(cookies + [f"archer_session={session_id}"]).encode()))
+    request.scope["headers"] = headers
+    return await call_next(request)
+
+
 # Include validation API router
 app.include_router(get_validation_router())
 
@@ -1651,6 +1682,11 @@ def load_mitre_data():
     app.state.techniques_to_choose = obtain_all_techniques(bundle)
     app.state.technique_descriptions = obtain_technique_descriptions(bundle)
 
+    # Techniques with nothing in ATT&CK to build a query from; rebuilt when ATT&CK changes
+    from archer.build.technique_yield import ensure as ensure_technique_yield
+
+    ensure_technique_yield(bundle)
+
     # Build / load enriched group metadata cache
     # (heuristic extraction from STIX descriptions — no external APIs needed)
     try:
@@ -1677,6 +1713,11 @@ def load_mitre_data():
             group_meta = load_group_metadata(cache_path)
 
         app.state.group_metadata = group_meta
+
+        # The threat feed's posts, when the cache is older than its refresh interval
+        from archer.intelligence.feed import refresh_in_background as refresh_feed
+
+        refresh_feed(bundle, group_meta)
 
     except Exception as _e:
         import traceback
@@ -2641,7 +2682,7 @@ def how_it_works(request: Request, archer_session: Optional[str] = Cookie(None))
 
 @app.get("/agents", response_class=HTMLResponse)
 def agents_page(request: Request, archer_session: Optional[str] = Cookie(None)):
-    from archer.agents import AGENTS, agent_llm
+    from archer.agents import AGENTS, agent_llm, agent_providers
     from archer.agents.tools import ToolContext
 
     auth_result = require_auth(request, archer_session)
@@ -2650,16 +2691,19 @@ def agents_page(request: Request, archer_session: Optional[str] = Cookie(None)):
     user, db = auth_result
     try:
         llm = agent_llm(db, user.id)
+        providers = agent_providers(db, user.id)
     finally:
         db.close()
     agents = [{"agent": a, "tools": a.tools(ToolContext(client=None))} for a in AGENTS.values()]
-    return templates.TemplateResponse("agents.html", {"request": request, "user": user, "agents": agents,
-                                                      "model": llm["model"] if llm else None})
+    return templates.TemplateResponse("agents.html", {
+        "request": request, "user": user, "agents": agents, "providers": providers,
+        "model": llm["model"] if llm else None, "provider": llm["provider"] if llm else None,
+    })
 
 
 @app.get("/api/agents")
 def list_agents(request: Request, archer_session: Optional[str] = Cookie(None)):
-    from archer.agents import AGENTS, agent_llm
+    from archer.agents import AGENTS, agent_llm, agent_providers
     from archer.agents.tools import ToolContext
 
     auth_result = require_auth(request, archer_session)
@@ -2668,10 +2712,13 @@ def list_agents(request: Request, archer_session: Optional[str] = Cookie(None)):
     user, db = auth_result
     try:
         llm = agent_llm(db, user.id)
+        providers = agent_providers(db, user.id)
     finally:
         db.close()
     return {
         "model": llm["model"] if llm else None,
+        "provider": llm["provider"] if llm else None,
+        "providers": providers,
         "agents": [{"name": a.name, "title": a.title, "summary": a.summary, "inputs": a.inputs,
                     "tools": [{"name": t.name, "changes": t.changes} for t in a.tools(ToolContext(client=None))],
                     "max_turns": a.max_turns}
@@ -2681,8 +2728,12 @@ def list_agents(request: Request, archer_session: Optional[str] = Cookie(None)):
 
 @app.post("/api/agents/{name}/start")
 async def start_agent(name: str, request: Request, archer_session: Optional[str] = Cookie(None)):
-    """Body: {"input": {...}, "auto_approve": false}. The agent acts as the signed-in user."""
+    """
+    Body: {"input": {...}, "auto_approve": false, "provider": "", "model": ""}. The agent
+    acts as the signed-in user; provider/model default as agent_llm describes.
+    """
     from archer.agents import AGENTS, NO_KEY, agent_llm, start
+    from archer.agents.store import save as save_agent_session
     from archer.agents.tools import ToolContext
     from archer.client import ArcherClient
 
@@ -2690,40 +2741,59 @@ async def start_agent(name: str, request: Request, archer_session: Optional[str]
     if isinstance(auth_result, RedirectResponse):
         return JSONResponse({"error": "Not authenticated"}, status_code=401)
     user, db = auth_result
+    body = await request.json()
     try:
-        llm = agent_llm(db, user.id)
+        llm = agent_llm(db, user.id, (body.get("provider") or "").strip() or None,
+                        (body.get("model") or "").strip() or None)
     finally:
         db.close()
     agent = AGENTS.get(name)
     if not agent:
         return JSONResponse({"error": f"No agent named {name}"}, status_code=404)
     if not llm:
-        return JSONResponse({"error": NO_KEY}, status_code=400)
-    body = await request.json()
+        return JSONResponse({"error": NO_KEY if not body.get("provider") else
+                             f"{body['provider']} isn't configured in your profile (or has no model set)"},
+                            status_code=400)
     # Tools call this server's own routes as the user, so an agent does what the web app does
     internal = os.getenv("ARCHER_INTERNAL_URL") or str(request.base_url)
-    context = ToolContext(client=ArcherClient(url=internal, session_cookie=archer_session, timeout=300))
+    client = ArcherClient(url=internal, session_cookie=archer_session, timeout=300)
     try:
-        session = start(agent, body.get("input") or {}, user_id=user.id, llm=llm, context=context,
-                        auto_approve=bool(body.get("auto_approve")))
+        session = start(agent, body.get("input") or {}, user_id=user.id, llm=llm, context=ToolContext(client=client),
+                        auto_approve=bool(body.get("auto_approve")), persist=save_agent_session)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
-    print(f"🤖 Agent {agent.name} started for {user.email} on {llm['model']} ({session.id[:8]})")
-    return {"session_id": session.id, "model": llm["model"]}
+    print(f"🤖 Agent {agent.name} started for {user.email} on {llm['label']} {llm['model']} ({session.id[:8]})")
+    return {"session_id": session.id, "model": llm["model"], "provider": llm["provider"]}
 
 
 def _agent_session(request: Request, archer_session: Optional[str], session_id: str):
+    """A session this server is running, else one saved before (read-only)."""
     from archer.agents import get_session
+    from archer.agents.store import load
 
     auth_result = require_auth(request, archer_session)
     if isinstance(auth_result, RedirectResponse):
         return None, JSONResponse({"error": "Not authenticated"}, status_code=401)
     user, db = auth_result
     db.close()
-    session = get_session(session_id, user.id)
+    session = get_session(session_id, user.id) or load(session_id, user.id)
     if not session:
         return None, JSONResponse({"error": "No such agent session"}, status_code=404)
     return session, None
+
+
+@app.get("/api/agents/sessions")
+def agent_sessions(request: Request, limit: int = 20, archer_session: Optional[str] = Cookie(None)):
+    """The user's recent agent sessions, newest first (kept across restarts)."""
+    from archer.agents import live_ids
+    from archer.agents.store import recent
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    return {"sessions": recent(user.id, min(max(limit, 1), 100), live=live_ids())}
 
 
 @app.get("/api/agents/sessions/{session_id}")
@@ -2741,6 +2811,53 @@ async def agent_decision(session_id: str, request: Request, archer_session: Opti
         return JSONResponse({"error": "Nothing is waiting for approval"}, status_code=409)
     session.decide(bool((await request.json()).get("approve")))
     return {"ok": True}
+
+
+@app.post("/api/agents/sessions/{session_id}/resume")
+async def agent_resume(session_id: str, request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Continue a session that was interrupted by a restart, stopped, or hit its turn limit, on
+    the provider it ran on. Body (optional): {"auto_approve": false, "model": ""}.
+    """
+    from archer.agents import AGENTS, agent_llm, resume
+    from archer.agents.store import load, save as save_agent_session
+    from archer.agents.tools import ToolContext
+    from archer.client import ArcherClient
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    saved = load(session_id, user.id)
+    if not saved:
+        db.close()
+        return JSONResponse({"error": "No such agent session"}, status_code=404)
+    if not saved.resumable:
+        db.close()
+        return JSONResponse({"error": "This session can't be continued: it finished, or ran before "
+                                      "sessions kept their conversation"}, status_code=409)
+    try:
+        llm = agent_llm(db, user.id, saved.provider, (body.get("model") or "").strip() or saved.model)
+    finally:
+        db.close()
+    agent = AGENTS.get(saved.agent_name)
+    if not agent or not llm:
+        return JSONResponse({"error": f"{saved.provider} isn't configured in your profile any more; "
+                                      "the conversation can only continue on the provider it started on"},
+                            status_code=400)
+    internal = os.getenv("ARCHER_INTERNAL_URL") or str(request.base_url)
+    client = ArcherClient(url=internal, session_cookie=archer_session, timeout=300)
+    try:
+        session = resume(saved, agent, llm=llm, context=ToolContext(client=client),
+                         auto_approve=bool(body.get("auto_approve")), persist=save_agent_session)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=409)
+    print(f"🤖 Agent {agent.name} continued for {user.email} on {llm['label']} {llm['model']} ({session.id[:8]})")
+    return {"session_id": session.id, "model": llm["model"], "provider": llm["provider"]}
 
 
 @app.post("/api/agents/sessions/{session_id}/stop")
@@ -3435,6 +3552,17 @@ async def hunt_technique(
             genai_mode = "ai_generators"
     llm_args = _hunt_llm_args(archer_session, ai_provider, ai_model)
 
+    # Techniques known to produce nothing in this mode (technique_yield): a run of only
+    # those would spend its time for an empty results page
+    from archer.build.technique_yield import preflight
+
+    doomed = preflight(technique_id_list, ai=bool(llm_args.get("use_llm")), osint=osint_enh or osint_comp)
+    if len(doomed) == len(technique_id_list):
+        return JSONResponse({
+            "error": "None of these techniques can produce a detection this way: "
+                     + "; ".join(f"{t} ({d['text']})" for t, d in doomed.items()),
+            "no_detection": doomed}, status_code=422)
+
     # Parse correlation threshold
     correlation_threshold = None
     if correlation_min_relevance:
@@ -3469,30 +3597,7 @@ async def hunt_technique(
                 else:
                     tactic = tech_info.get("tactic", "Unknown Tactic")
 
-                if tactic not in tactic_map:
-                    tactic_map[tactic] = []
-
-                # Build technique entry
-                technique_entry = {
-                    "technique": tech_id,
-                    "op_guidance": (
-                        tech_info.get("description", f"Hunt for {tech_id}")
-                        if tech_info
-                        else f"Hunt for {tech_id}"
-                    ),
-                    "red_tool": {},
-                    "detect_guidance": (
-                        tech_info.get("description", f"Detect usage of {tech_id}")
-                        if tech_info
-                        else f"Detect usage of {tech_id}"
-                    ),
-                }
-
-                # Add platforms if available
-                if tech_info and "platforms" in tech_info:
-                    technique_entry["procedure_platforms"] = tech_info["platforms"]
-
-                tactic_map[tactic].append(technique_entry)
+                tactic_map.setdefault(tactic, []).extend(_technique_entries(tech_id, tech_info))
 
             # Convert tactic_map to manual_data format
             manual_data = []
@@ -3546,7 +3651,24 @@ async def hunt_technique(
         pass
     threading.Thread(target=_bg, daemon=True).start()
 
-    return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}"})
+    return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}", "no_detection": doomed})
+
+
+@app.get("/api/techniques/yield")
+def api_technique_yield(ids: str = "", ai: bool = False, osint: bool = False):
+    """
+    Techniques that can't produce a detection: with ids, those of a planned run in the given
+    mode; without, the whole list (ATT&CK no-indicator techniques, and AI-empty ones).
+    """
+    from archer.build import technique_yield as ty
+
+    if ids:
+        return {"no_detection": ty.preflight([t for t in ids.split(",") if t.strip()], ai=ai, osint=osint)}
+    ledger = {t: v for t, v in ty._read_json(ty.LEDGER_PATH).items() if v.get("empty", 0) >= ty.LLM_EMPTY_LIMIT}
+    meta = ty._read_json(ty.STATIC_PATH)
+    return {"attack_version": meta.get("attack_version"), "checked": meta.get("checked"),
+            "no_indicators": ty.static_list(), "ai_empty": ledger,
+            "reasons": {k: ty.describe(k) for k in ty.REASONS}}
 
 
 # Progress page endpoint
@@ -5694,14 +5816,57 @@ def _report_manual_data(ttps, bundle, actor: str, source: str) -> list:
                     "software_platforms": proc[8] if len(proc) > 8 else {},
                 })
         else:
-            description = info.get("description") or f"Detect usage of {tid}"
-            by_tactic.setdefault(tactic, []).append({
-                "technique": tid, "name": name,
-                "activity_desc": f"Reported in {source}. {description}",
-                "op_guidance": description, "red_tool": {}, "detect_guidance": description,
-                "procedure_platforms": info.get("platforms", []),
-            })
+            for entry in _technique_entries(tid, info, bundle):
+                entry["activity_desc"] = f"Reported in {source}. {entry['activity_desc']}"
+                by_tactic.setdefault(tactic, []).append(entry)
     return [{"tactic": tactic, "techniques": techs} for tactic, techs in by_tactic.items()]
+
+
+def _technique_entries(tid: str, info: Optional[dict], bundle=None) -> list:
+    """
+    process_group's entries for a technique with no group behind it: a technique hunt, or a
+    report technique its actor has no ATT&CK procedure for.
+
+    A technique's description names no commands, files or registry keys, so without AI or
+    OSINT nothing could be built from it. The procedure examples of the ATT&CK groups that
+    use the technique do (T1003.001: procdump -ma lsass.exe), so their indicators are used.
+    A parent's own examples are often vague (T1003), so its sub-techniques' examples, which
+    retrieve_procedures expands, each become an entry too.
+    """
+    info = info or {}
+    description = info.get("description") or f"Detect usage of {tid}"
+    entry = {
+        "technique": tid, "name": info.get("name", tid),
+        "activity_desc": description, "op_guidance": description, "red_tool": {},
+        "detect_guidance": description, "procedure_platforms": info.get("platforms", []),
+    }
+    bundle = bundle if bundle is not None else getattr(app.state, "bundle", None)
+    if bundle is None or not info.get("stix_id"):
+        return [entry]
+    from archer.mitre.retrieve import retrieve_procedures
+
+    try:
+        procs = [p for p in retrieve_procedures(bundle, [(description, info["stix_id"])])
+                 if p[0] == tid or p[0].startswith(tid + ".")]
+    except Exception as e:
+        print(f"Could not gather ATT&CK procedure indicators for {tid}: {e}")
+        return [entry]
+    entries = []
+    for proc in procs:
+        if not (isinstance(proc[4], dict) and any(k != "description" for k in proc[4])):
+            continue
+        own = proc[0] == tid
+        entries.append({
+            **entry,
+            "technique": proc[0], "name": entry["name"] if own else (proc[1] or proc[0]),
+            "activity_desc": description if own else (proc[3] or description),
+            "op_guidance": proc[4], "red_tool": proc[5] or {},
+            "procedure_platforms": (proc[7] if len(proc) > 7 and proc[7] else entry["procedure_platforms"]),
+            "software_platforms": proc[8] if len(proc) > 8 else {},
+        })
+        print(f"{proc[0]}: indicators from ATT&CK procedure examples "
+              f"({', '.join(k for k in proc[4] if k != 'description')})")
+    return entries or [entry]
 
 
 def _get_technique_info(ttp_id: str) -> dict:
@@ -5724,6 +5889,7 @@ def _get_technique_info(ttp_id: str) -> dict:
 
                     return {
                         "tid": ttp_id,
+                        "stix_id": obj.get("id"),
                         "name": obj.get("name", ttp_id),
                         "tactic": tactics[0] if tactics else "Unknown",
                         "description": obj.get("description", ""),
@@ -6733,8 +6899,19 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             "validation_results": validation_results,
             "validation_summary": validation_summary,
             "run_view": run_view,
+            "no_detection": _no_detection(group_name),
         },
     )
+
+
+def _no_detection(group_name: str) -> list:
+    """The latest run's techniques that produced nothing, each with why (technique_yield.REASONS)."""
+    from archer.build.run_files import latest_run
+    from archer.build.technique_yield import describe
+
+    return [{**m, "text": describe(m.get("reason", ""), m.get("technique", "")),
+             "url": "https://attack.mitre.org/techniques/" + m.get("technique", "").replace(".", "/") + "/"}
+            for m in (latest_run(group_name) or {}).get("no_detection") or []]
 
 
 @app.post("/api/detections/splunk/generate")
@@ -7698,6 +7875,33 @@ async def profile_page(request: Request, archer_session: Optional[str] = Cookie(
         )
     finally:
         db.close()
+
+
+@app.get("/flows", response_class=HTMLResponse)
+def flows_page(request: Request, group: str = "", archer_session: Optional[str] = Cookie(None)):
+    """Attack flows of everything saved to the library: pick a group, report or CVE to open its flow."""
+    from archer.visualization.flow_layouts import library_flows, load_layout
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+    user, db = auth_result
+    try:
+        flows = library_flows(db, user.id, getattr(request.app.state, "bundle", None))
+        chosen = next((f for f in flows if f["group"] == group), None) or next((f for f in flows if f["view"]), None)
+        state = load_layout(db, user.id, chosen["group"]) if chosen and chosen["view"] else None
+    finally:
+        db.close()
+    kinds = {}
+    for f in flows:
+        kinds.setdefault(f["kind"], []).append(f)
+    return templates.TemplateResponse("flows.html", {
+        "request": request, "user": user, "kinds": kinds, "chosen": chosen,
+        "group_name": chosen["group"] if chosen else "",
+        "attack_flow": chosen["view"] if chosen else None,
+        "flow_layout": {"logged_in": True, "persist": True, "state": state,
+                        "group_name": chosen["group"]} if chosen else None,
+    })
 
 
 @app.get("/library", response_class=HTMLResponse)
@@ -9465,6 +9669,87 @@ async def update_profile(request: Request, archer_session: Optional[str] = Cooki
         db.close()
 
 
+def _user_industries(user) -> list:
+    try:
+        return json.loads(user.industries) if user and user.industries else []
+    except (ValueError, TypeError):
+        return []
+
+
+@app.get("/api/profile/industries")
+def get_profile_industries(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """The industries the threat feed follows for this user, and the ones to choose from."""
+    from archer.intelligence.feed import INDUSTRIES, industry_label
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    return {"industries": _user_industries(user),
+            "choices": [{"id": i, "label": industry_label(i)} for i in INDUSTRIES]}
+
+
+@app.post("/api/profile/industries")
+async def set_profile_industries(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Body: {"industries": ["Finance / Banking", ...]} (ids from GET)."""
+    from archer.intelligence.feed import INDUSTRIES
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        wanted = (await request.json()).get("industries") or []
+        if not isinstance(wanted, list) or any(i not in INDUSTRIES for i in wanted):
+            return JSONResponse({"error": "Unknown industry"}, status_code=400)
+        user.industries = json.dumps(sorted(set(wanted), key=INDUSTRIES.index))
+        db.commit()
+        return {"success": True, "industries": json.loads(user.industries)}
+    finally:
+        db.close()
+
+
+@app.get("/feed", response_class=HTMLResponse)
+def feed_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """The last week's research that matters to the user's industries, plus opportunistic activity."""
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+    user, db = auth_result
+    db.close()
+    return templates.TemplateResponse("feed.html", {"request": request, "user": user})
+
+
+@app.get("/api/feed")
+def api_feed(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """The user's threat feed (cached; a stale cache starts a refresh in the background)."""
+    from archer.intelligence import feed
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    feed.refresh_in_background(getattr(request.app.state, "bundle", None),
+                               getattr(request.app.state, "group_metadata", {}) or {})
+    return feed.view(_user_industries(user))
+
+
+@app.post("/api/feed/refresh")
+def api_feed_refresh(request: Request, archer_session: Optional[str] = Cookie(None)):
+    from archer.intelligence import feed
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    _, db = auth_result
+    db.close()
+    started = feed.refresh_in_background(getattr(request.app.state, "bundle", None),
+                                         getattr(request.app.state, "group_metadata", {}) or {}, force=True)
+    return {"started": started}
+
+
 @app.post("/api/profile/picture")
 async def upload_profile_picture(profile_picture: UploadFile = File(...)):
     """
@@ -9503,6 +9788,60 @@ async def get_timeline(request: Request):
 
     # For now, return empty timeline
     return {"timeline": []}
+
+
+@app.get("/api/profile/tokens")
+def list_api_tokens(request: Request, archer_session: Optional[str] = Cookie(None)):
+    from archer.auth.tokens import list_tokens
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        return {"tokens": list_tokens(db, user.id)}
+    finally:
+        db.close()
+
+
+@app.post("/api/profile/tokens")
+async def create_api_token(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Body: {"name": "..."}. The token is in this response only; only its hash is kept."""
+    from archer.auth.tokens import create_token
+
+    if _bearer_token(request):
+        return JSONResponse({"error": "Create API tokens from the profile page, not with a token"}, status_code=403)
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        body = await request.json()
+        name = str(body.get("name") or "").strip()
+        if not name:
+            return JSONResponse({"error": "Give the token a name (what will use it)"}, status_code=400)
+        token, info = create_token(db, user.id, name)
+        log_activity(user.id, "api_token_created", f"API token created: {info['name']} ({info['prefix']}…)")
+        return {"token": token, **info}
+    finally:
+        db.close()
+
+
+@app.delete("/api/profile/tokens/{token_id}")
+def revoke_api_token(token_id: int, request: Request, archer_session: Optional[str] = Cookie(None)):
+    from archer.auth.tokens import revoke_token
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        if not revoke_token(db, user.id, token_id):
+            return JSONResponse({"error": "No such token"}, status_code=404)
+        log_activity(user.id, "api_token_revoked", f"API token {token_id} revoked")
+        return {"ok": True}
+    finally:
+        db.close()
 
 
 KEY_MASK = "••••••••"

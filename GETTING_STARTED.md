@@ -61,7 +61,8 @@ docker-compose up --build
 python3 -m venv .venv          # add --copies if this checkout is inside a synced (OneDrive/Dropbox) folder
 source .venv/bin/activate
 pip install -r requirements.txt
-python3 scripts/deployment/start-archer.py
+./archer-cli install           # once: puts `archer` on your PATH (~/bin)
+archer start                   # background, restarted if it crashes; archer status | logs | stop
 ```
 
 ### 3. Access
@@ -126,7 +127,8 @@ docker-compose down
 python3 -m venv .venv          # add --copies if this checkout is inside a synced (OneDrive/Dropbox) folder
 source .venv/bin/activate
 pip install -r requirements.txt
-python3 scripts/deployment/start-archer.py
+./archer-cli install           # once: puts `archer` on your PATH (~/bin)
+archer start                   # background, restarted if it crashes; archer status | logs | stop
 ```
 
 

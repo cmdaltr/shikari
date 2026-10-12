@@ -171,3 +171,12 @@ restore-elastic-splunk.patch
 
 # UI walkthrough run output
 tests/screenshots/walkthrough/
+
+# archer start/stop supervisor state (archer/service.py)
+data/run/
+logs/
+
+# Blog post analysis output
+data/blog_analysis/
+data/technique_yield_llm.json
+data/feed/

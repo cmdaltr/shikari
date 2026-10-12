@@ -763,3 +763,78 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+// API tokens (security tab): create (shown once), list, revoke
+(function () {
+  const form = document.getElementById('api-token-form');
+  if (!form) return;
+  const rows = document.getElementById('api-token-rows');
+  const table = document.getElementById('api-token-table');
+  const message = document.getElementById('api-token-message');
+  const fresh = document.getElementById('api-token-new');
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const when = iso => iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'never';
+
+  async function load() {
+    const res = await fetch('/api/profile/tokens');
+    const data = await res.json().catch(() => ({}));
+    const tokens = data.tokens || [];
+    table.hidden = !tokens.length;
+    if (!tokens.length && !message.textContent) message.textContent = 'No tokens yet.';
+    rows.innerHTML = tokens.map(t => `<tr><td>${esc(t.name)}</td><td><code>${esc(t.prefix)}…</code></td>`
+      + `<td>${when(t.created)}</td><td>${when(t.last_used)}</td>`
+      + `<td><button type="button" data-id="${t.id}">Revoke</button></td></tr>`).join('');
+    rows.querySelectorAll('button').forEach(b => b.addEventListener('click', async () => {
+      // Two clicks, no dialog: the first arms the button
+      if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Confirm revoke'; return; }
+      b.disabled = true;
+      const r = await fetch(`/api/profile/tokens/${b.dataset.id}`, { method: 'DELETE' });
+      message.textContent = r.ok ? 'Token revoked: anything using it is signed out.' : 'Could not revoke the token.';
+      if (r.ok) { fresh.hidden = true; document.getElementById('api-token-value').textContent = ''; }
+      load();
+    }));
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = document.getElementById('api-token-name').value.trim();
+    const res = await fetch('/api/profile/tokens', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { message.textContent = data.error || `HTTP ${res.status}`; return; }
+    document.getElementById('api-token-value').textContent = data.token;
+    fresh.hidden = false;
+    message.textContent = '';
+    form.reset();
+    load();
+  });
+
+  document.getElementById('api-token-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(document.getElementById('api-token-value').textContent)
+      .then(() => { message.textContent = 'Copied.'; }, () => { message.textContent = 'Select the token and copy it.'; });
+  });
+
+  load();
+})();
+
+
+// Threat Feed industries (Profile tab)
+(function () {
+  const grid = document.getElementById('industries-grid');
+  if (!grid) return;
+  const status = document.getElementById('industries-status');
+  fetch('/api/profile/industries').then(r => r.json()).then(data => {
+    const chosen = new Set(data.industries || []);
+    grid.innerHTML = (data.choices || []).map(c => `<label class="industry-option"><input type="checkbox" value="${c.id.replace(/"/g, '&quot;')}"${chosen.has(c.id) ? ' checked' : ''}> <span>${c.label.replace(/</g, '&lt;')}</span></label>`).join('');
+  });
+  document.getElementById('industries-save').addEventListener('click', async () => {
+    const industries = Array.from(grid.querySelectorAll('input:checked')).map(i => i.value);
+    const res = await fetch('/api/profile/industries', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ industries }),
+    });
+    const data = await res.json().catch(() => ({}));
+    status.textContent = res.ok ? `Saved: ${industries.length ? industries.length + ' industr' + (industries.length === 1 ? 'y' : 'ies') : 'none'}` : (data.error || 'Not saved');
+    status.className = 'industries-status ' + (res.ok ? 'is-ok' : 'is-error');
+  });
+})();

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Archer - Threat Feed{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/feed.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container fd-page">
+  <p class="lead"><span style="color:#666666; font-size: 28px;">Threat Feed</span></p>
+
+  <section class="fd-intro">
+    <p>The last <span id="fd-days">7</span> days of research from vendor and government sources, kept to what
+      describes attacks on <strong id="fd-industries">your industries</strong>, plus opportunistic activity that picks no
+      industry: supply-chain compromise, mass exploitation, ransomware affiliates, infostealers.
+      Industries are set in <a href="/profile#industries">Profile</a>.</p>
+    <p class="fd-meta"><span id="fd-status">Loading…</span>
+      <button type="button" class="fd-refresh" id="fd-refresh">Refresh now</button></p>
+  </section>
+
+  <section class="fd-section">
+    <h2>Targeting your industries <span class="fd-count" id="fd-industry-count"></span></h2>
+    <ol class="fd-list" id="fd-industry"></ol>
+  </section>
+
+  <section class="fd-section">
+    <h2>Opportunistic: any industry <span class="fd-count" id="fd-opp-count"></span></h2>
+    <ol class="fd-list" id="fd-opportunistic"></ol>
+  </section>
+
+  <details class="fd-sources"><summary>Sources</summary><p id="fd-sources"></p></details>
+</div>
+<script src="{{ url_for('static', path='js/feed.js') }}?v={{ request.app.state.asset_version }}"></script>
+{% endblock %}

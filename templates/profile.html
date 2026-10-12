@@ -318,6 +318,17 @@
                   </div>
                 </div>
               </form>
+
+              <!-- Threat feed industries (archer.intelligence.feed) -->
+              <section class="industries" id="industries">
+                <h3>Threat Feed industries</h3>
+                <p class="industries-hint">The <a href="/feed">Threat Feed</a> keeps the week's research about groups that target these industries. Opportunistic activity, such as supply-chain compromise, is shown whatever you choose.</p>
+                <div class="industries-grid" id="industries-grid"></div>
+                <div class="industries-actions">
+                  <button type="button" class="btn-primary" id="industries-save">Save industries</button>
+                  <span class="industries-status" id="industries-status" role="status"></span>
+                </div>
+              </section>
             </div>
           </div>
 
@@ -896,6 +907,31 @@
                 </div>
 
               </div>
+            </div>
+
+            <!-- API tokens (archer/auth/tokens.py) -->
+            <div class="security-section api-tokens">
+              <div style="height: 1px; background: var(--border-color); margin: 32px 0 24px;"></div>
+              <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; color: var(--text-primary);">API Tokens</h3>
+              <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                For the console (<code>adfconsole</code>), the MCP server and your own scripts: set
+                <code>ARCHER_TOKEN</code> instead of a password. Works with MFA. A token acts as you, so treat it
+                like a password; revoke it here if it leaks.
+              </p>
+              <form id="api-token-form" class="api-token-form" autocomplete="off">
+                <input type="text" id="api-token-name" class="form-input" maxlength="100" placeholder="What will use it, e.g. Claude Code MCP" required>
+                <button type="submit" class="btn-primary">Create token</button>
+              </form>
+              <div id="api-token-new" class="api-token-new" hidden>
+                <p><strong>Copy this token now.</strong> It won't be shown again.</p>
+                <div class="api-token-value"><code id="api-token-value"></code>
+                  <button type="button" class="btn-secondary" id="api-token-copy">Copy</button></div>
+              </div>
+              <div id="api-token-message" class="api-token-message"></div>
+              <table class="api-token-table" id="api-token-table" hidden>
+                <thead><tr><th>Name</th><th>Token</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+                <tbody id="api-token-rows"></tbody>
+              </table>
             </div>
           </div>
 

@@ -590,12 +590,12 @@ def agents(page):
     caption(page, "Agents: a model in a loop with Archer's tools")
     page.wait_for_selector(".ag-pick")
     if page.locator(".ag-start[disabled]").count():
-        return "skipped: no Anthropic key in the profile"
+        return "skipped: no AI provider in the profile"
     # A run whose queries all pass the checks: one or two turns, no changes to approve
     page.click('.ag-pick[data-agent="repair"]')
     page.fill('form[data-agent="repair"] input[name=run]', "CVE-2024-3400")
     page.click('form[data-agent="repair"] .ag-start')
-    page.wait_for_selector(".ag-status.is-done, .ag-status.is-error, .ag-status.is-stopped", timeout=240000)
+    page.wait_for_selector("#ag-status.is-done, #ag-status.is-error, #ag-status.is-stopped", timeout=240000)
     shot(page, "agents")
     status = page.inner_text("#ag-status")
     assert status == "Done", f"agent ended: {status}"

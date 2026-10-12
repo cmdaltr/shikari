@@ -561,7 +561,8 @@ def generate_llm_queries(
         config: Optional LLM config dict.
 
     Returns:
-        List of query dicts (same format as bespoke_queries.generate_fallback_queries).
+        List of query dicts (same format as bespoke_queries.generate_fallback_queries),
+        or None when the LLM call itself failed.
     """
     # Build the prompt
     prompt = build_llm_prompt(
@@ -580,8 +581,9 @@ def generate_llm_queries(
     try:
         response = call_llm(prompt, config)
     except Exception as e:
+        # None, not []: a failed call says nothing about whether the technique can yield
         print(f"  LLM call failed for {technique_id}: {e}")
-        return []
+        return None
 
     # Contract documents (root key archer_output) are validated and persisted by the
     # contract pipeline; a failing or rejected document returns nothing (fail closed).

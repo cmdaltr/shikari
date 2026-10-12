@@ -43,10 +43,31 @@ def init_db():
     """
     Base.metadata.create_all(bind=engine)
     AuditBase.metadata.create_all(bind=engine)
+    _add_missing_columns(Base)
     print(f"✓ Database initialized at {DB_PATH}")
 
     # Create default admin account if no users exist
     _create_default_admin()
+
+
+def _add_missing_columns(base) -> None:
+    """
+    create_all makes new tables but never changes existing ones: a nullable column added to
+    a model since the database was made is added here (ALTER TABLE ... ADD COLUMN).
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table in base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            have = {c["name"] for c in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name not in have and column.nullable:
+                    conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" '
+                                      f"{column.type.compile(dialect=engine.dialect)}"))
+                    print(f"✓ Database: added {table.name}.{column.name}")
 
 
 def get_db() -> SQLAlchemySession:

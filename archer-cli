@@ -1,134 +1,15 @@
 #!/usr/bin/env bash
-# archer-cli — manage the Archer platform
-# Usage: archer <start|stop|restart|status|logs|install> [args]
+# archer: start, stop, restart and check the local Archer server (and Ollama) from anywhere.
+# `./archer-cli install` links this file into ~/bin as `archer`. The work is in archer/service.py.
 set -euo pipefail
 
-# ── locate project root (where docker-compose.yml lives) ──────────────────────
-# PROJECT_DIR is baked in at install time; falls back to script dir for local use
-BAKED_PROJECT_DIR=""  # replaced by install
+self="${BASH_SOURCE[0]}"
+while [[ -L "$self" ]]; do
+  target="$(readlink "$self")"
+  [[ "$target" == /* ]] && self="$target" || self="$(dirname "$self")/$target"
+done
+ROOT="$(cd "$(dirname "$self")" && pwd)"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -n "$BAKED_PROJECT_DIR" && -f "$BAKED_PROJECT_DIR/docker-compose.yml" ]]; then
-  PROJECT_DIR="$BAKED_PROJECT_DIR"
-elif [[ -f "$SCRIPT_DIR/docker-compose.yml" ]]; then
-  PROJECT_DIR="$SCRIPT_DIR"
-else
-  echo "❌  Cannot find docker-compose.yml. Run 'archer install' first or run from the project directory." >&2
-  exit 1
-fi
-
-DC="docker compose -f $PROJECT_DIR/docker-compose.yml"
-
-# ── colours ───────────────────────────────────────────────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
-
-info()    { echo -e "${CYAN}[archer]${RESET} $*"; }
-success() { echo -e "${GREEN}[archer]${RESET} $*"; }
-warn()    { echo -e "${YELLOW}[archer]${RESET} $*"; }
-error()   { echo -e "${RED}[archer]${RESET} $*" >&2; }
-
-# ── commands ──────────────────────────────────────────────────────────────────
-
-cmd_start() {
-  info "Starting Archer…"
-  $DC up -d --remove-orphans
-  success "Archer is running → http://localhost:8000"
-}
-
-cmd_stop() {
-  info "Stopping Archer…"
-  $DC down
-  success "Archer stopped."
-}
-
-cmd_restart() {
-  local service="${1:-archer}"
-  info "Restarting ${service}…"
-  $DC restart "$service"
-  success "${service} restarted."
-}
-
-cmd_status() {
-  info "Archer service status:"
-  $DC ps
-}
-
-cmd_logs() {
-  local service="${1:-archer}"
-  local lines="${2:-200}"
-  info "Logs for ${service} (last ${lines} lines, following)…"
-  $DC logs -f --tail="$lines" "$service"
-}
-
-cmd_install() {
-  info "Installing Archer…"
-
-  # 1. Check for Docker
-  if ! command -v docker &>/dev/null; then
-    error "Docker is not installed. Install it from https://docs.docker.com/get-docker/"
-    exit 1
-  fi
-
-  # 2. Build images
-  info "Building Docker images…"
-  $DC build
-
-  # 3. Start services
-  info "Starting services…"
-  $DC up -d --remove-orphans
-
-  # 4. Install this script to /usr/local/bin so 'archer' works from anywhere
-  local target="/usr/local/bin/archer"
-  local this_script="${BASH_SOURCE[0]}"
-  if [[ "$this_script" != "$target" ]]; then
-    info "Installing CLI to ${target} (may ask for sudo)…"
-    # Bake the project directory into the installed copy
-    local baked
-    baked="$(sed "s|BAKED_PROJECT_DIR=\"\"|BAKED_PROJECT_DIR=\"${PROJECT_DIR}\"|" "$this_script")"
-    if [[ -w "$(dirname "$target")" ]]; then
-      echo "$baked" > "$target" && chmod +x "$target"
-    else
-      echo "$baked" | sudo tee "$target" > /dev/null && sudo chmod +x "$target"
-    fi
-    success "CLI installed. You can now run 'archer <command>' from anywhere."
-  fi
-
-  success "Archer is running → http://localhost:8000"
-  echo
-  echo -e "  ${BOLD}archer start${RESET}           Start Archer"
-  echo -e "  ${BOLD}archer stop${RESET}            Stop Archer"
-  echo -e "  ${BOLD}archer restart [svc]${RESET}   Restart a service (default: archer)"
-  echo -e "  ${BOLD}archer status${RESET}          Show running containers"
-  echo -e "  ${BOLD}archer logs [svc] [N]${RESET}  Tail logs (default: archer, last 200 lines)"
-  echo -e "  ${BOLD}archer install${RESET}         Build, start, and install CLI"
-}
-
-cmd_help() {
-  echo -e "${BOLD}Archer CLI${RESET}"
-  echo
-  echo -e "  ${CYAN}archer start${RESET}                Start all services"
-  echo -e "  ${CYAN}archer stop${RESET}                 Stop all services"
-  echo -e "  ${CYAN}archer restart [service]${RESET}    Restart a service        (default: archer)"
-  echo -e "  ${CYAN}archer status${RESET}               Show container status"
-  echo -e "  ${CYAN}archer logs [service] [N]${RESET}   Tail logs                (default: archer, 200 lines)"
-  echo -e "  ${CYAN}archer install${RESET}              Build images, start, and install CLI globally"
-  echo
-  echo -e "  Services: archer, splunk, elastic, secops-simulator, mde-simulator"
-}
-
-# ── dispatch ──────────────────────────────────────────────────────────────────
-case "${1:-help}" in
-  start)   cmd_start ;;
-  stop)    cmd_stop ;;
-  restart) cmd_restart "${2:-archer}" ;;
-  status)  cmd_status ;;
-  logs)    cmd_logs "${2:-archer}" "${3:-200}" ;;
-  install) cmd_install ;;
-  help|--help|-h) cmd_help ;;
-  *)
-    error "Unknown command: $1"
-    cmd_help
-    exit 1
-    ;;
-esac
+PY="$ROOT/.venv/bin/python"
+[[ -x "$PY" ]] || PY="$(command -v python3)"
+exec "$PY" "$ROOT/archer/service.py" "$@"

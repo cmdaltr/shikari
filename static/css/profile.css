@@ -619,3 +619,33 @@
   .key-tab { padding: 10px 6px; border: 2px solid var(--border-color); border-radius: 8px; margin-bottom: 0; }
   .key-tab.active { border-bottom: 2px solid var(--border-color); }
 }
+
+/* API tokens (security tab) */
+.api-token-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.api-token-form .form-input { flex: 1 1 260px; min-width: 0; margin: 0; }
+.api-token-new { margin-top: 16px; padding: 12px 16px; border: 1px solid rgba(245, 158, 11, .5); background: rgba(245, 158, 11, .1); border-radius: 8px; }
+.api-token-new p { margin: 0 0 8px; color: var(--text-primary); }
+.api-token-value { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.api-token-value code { font-family: "JetBrains Mono", ui-monospace, monospace; word-break: break-all; flex: 1 1 280px; min-width: 0; color: var(--text-primary); }
+.api-token-message { margin-top: 10px; color: var(--text-secondary); font-size: .9em; }
+.api-token-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: .92em; }
+.api-token-table th, .api-token-table td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+.api-token-table th { color: var(--text-secondary); font-weight: 600; }
+.api-token-table code { font-family: "JetBrains Mono", ui-monospace, monospace; }
+.api-token-table button { font: inherit; padding: 4px 12px; border-radius: 6px; cursor: pointer; background: transparent; color: var(--accent); border: 1px solid var(--border-color); }
+@media (max-width: 640px) {
+  .api-token-table th:nth-child(3), .api-token-table td:nth-child(3) { display: none; }
+}
+.api-token-form .btn-primary, .api-token-value .btn-secondary { width: auto; flex: 0 0 auto; margin: 0; }
+
+/* Threat Feed industries */
+.industries { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+.industries h3 { margin: 0 0 6px; }
+.industries-hint { margin: 0 0 12px; color: var(--text-secondary); font-size: .92em; }
+.industries-hint a { color: var(--accent); }
+.industries-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px 16px; }
+.industry-option { display: flex; align-items: center; gap: 8px; color: var(--text-primary); cursor: pointer; }
+.industries-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.industries-actions .btn-primary { width: auto; }
+.industries-status.is-ok { color: #15803d; }
+.industries-status.is-error { color: #b91c1c; }

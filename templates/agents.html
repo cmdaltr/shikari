@@ -17,8 +17,16 @@
       different set of Archer's tools. The trace shows every step. Anything that changes something, such as a hunt or
       a saved query, waits for you to allow it unless you turn approval off.</p>
     <p class="ag-meta">
-      {% if model %}Running on <code>{{ model }}</code> with your Anthropic key.{% else %}
-      <strong>Agents need an Anthropic API key</strong>: add one in <a href="/profile">Profile → API Keys</a>.{% endif %}
+      {% if providers %}
+      <label class="ag-model">Model
+        <select id="ag-provider">
+          {% for p in providers %}<option value="{{ p.id }}" {% if p.id == provider %}selected{% endif %}>{{ p.label }}: {{ p.model }}</option>{% endfor %}
+        </select>
+      </label>
+      Claude is the most reliable at multi-step tool use; small local models often stop early or call tools wrongly.
+      {% else %}
+      <strong>Agents need a model that can call tools</strong>: add an API key or a local endpoint in
+      <a href="/profile">Profile → API Keys</a>.{% endif %}
       The same tools are available to any MCP client (<code>archer-mcp</code>) and in the console (<code>agent/*</code>).
       <a href="https://github.com/cmdaltr/archer/blob/main/docs/agents/README.md" target="_blank" rel="noopener">How these are built</a>
     </p>
@@ -50,7 +58,7 @@
     </div>
     <div class="ag-actions">
       <label class="ag-approve"><input type="checkbox" name="approve" checked> Ask before actions that change something</label>
-      <button type="submit" class="ag-start" {% if not model %}disabled{% endif %}>Start</button>
+      <button type="submit" class="ag-start" {% if not providers and not model %}disabled{% endif %}>Start</button>
     </div>
     <details class="ag-built">
       <summary>How this agent is built</summary>
@@ -69,9 +77,16 @@
       <span class="ag-status" id="ag-status">Running</span>
       <span class="ag-usage" id="ag-usage"></span>
       <button type="button" class="ag-stop" id="ag-stop">Stop</button>
+      <button type="button" class="ag-start ag-continue" id="ag-continue" hidden>Continue</button>
     </div>
     <ol class="ag-trace" id="ag-trace" aria-live="polite"></ol>
     <div class="ag-answer" id="ag-answer" hidden></div>
+  </section>
+
+  <section class="ag-history" id="ag-history" hidden>
+    <h2>Recent runs</h2>
+    <p class="ag-meta">Kept across restarts: every step, and what you allowed or declined.</p>
+    <ul class="ag-history-list" id="ag-history-list"></ul>
   </section>
 </div>
 <script src="{{ url_for('static', path='js/agents.js') }}?v={{ request.app.state.asset_version }}"></script>

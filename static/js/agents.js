@@ -6,7 +6,9 @@
   const usage = document.getElementById('ag-usage');
   const answer = document.getElementById('ag-answer');
   const stopBtn = document.getElementById('ag-stop');
+  const continueBtn = document.getElementById('ag-continue');
   let session = null, since = 0, timer = null;
+  const LABELS = { running: 'Running', needs_approval: 'Waiting for you', done: 'Done', stopped: 'Stopped', error: 'Error', interrupted: 'Interrupted' };
 
   // --- agent picker ---
   document.querySelectorAll('.ag-pick').forEach(btn => btn.addEventListener('click', () => {
@@ -27,21 +29,60 @@
       if (el.value.trim()) input[el.name] = el.value.trim();
     });
     const autoApprove = !form.querySelector('input[name=approve]').checked;
+    const provider = document.getElementById('ag-provider')?.value || '';
     const res = await fetch(`/api/agents/${form.dataset.agent}/start`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input, auto_approve: autoApprove }),
+      body: JSON.stringify({ input, auto_approve: autoApprove, provider }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { showError(data.error || `HTTP ${res.status}`); return; }
-    session = data.session_id; since = 0;
+    open(data.session_id);
+  }));
+
+  function open(id) {
+    clearTimeout(timer);
+    session = id; since = 0;
     trace.innerHTML = ''; answer.hidden = true; answer.innerHTML = '';
-    run.hidden = false; stopBtn.hidden = false;
+    run.hidden = false; stopBtn.hidden = false; continueBtn.hidden = true;
     setStatus('running');
     poll();
     run.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }));
+  }
+
+  // --- recent runs (saved in the database) ---
+  async function history() {
+    const res = await fetch('/api/agents/sessions?limit=15');
+    const data = await res.json().catch(() => ({}));
+    const list = document.getElementById('ag-history-list');
+    const sessions = data.sessions || [];
+    document.getElementById('ag-history').hidden = !sessions.length;
+    list.innerHTML = sessions.map(s => `<li><button type="button" data-id="${esc(s.session_id)}">`
+      + `<span class="ag-status is-${esc(s.status)}">${esc(LABELS[s.status] || s.status)}</span>`
+      + `<span class="ag-history-agent">${esc(s.agent)}</span>`
+      + `<span class="ag-history-task">${esc(s.task)}</span>`
+      + `<span class="ag-history-meta">${new Date(s.created).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}`
+      + ` · ${esc(s.model)} · ${s.turns} turns</span></button></li>`).join('');
+    list.querySelectorAll('button').forEach(b => b.addEventListener('click', () => open(b.dataset.id)));
+  }
+  history();
 
   stopBtn.addEventListener('click', () => session && fetch(`/api/agents/sessions/${session}/stop`, { method: 'POST' }));
+
+  // An interrupted, stopped or turn-limited run carries on from its saved conversation
+  continueBtn.addEventListener('click', async () => {
+    if (!session) return;
+    continueBtn.disabled = true;
+    const res = await fetch(`/api/agents/sessions/${session}/resume`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    });
+    const data = await res.json().catch(() => ({}));
+    continueBtn.disabled = false;
+    if (!res.ok) { showError(data.error || `HTTP ${res.status}`); return; }
+    continueBtn.hidden = true; stopBtn.hidden = false;
+    trace.querySelectorAll('.ag-ev-error').forEach(el => el.remove());
+    setStatus('running');
+    poll();
+  });
 
   async function poll() {
     clearTimeout(timer);
@@ -58,17 +99,18 @@
     usage.textContent = `${view.turns} turn${view.turns === 1 ? '' : 's'} · ${view.tokens.input.toLocaleString()} in / ${view.tokens.output.toLocaleString()} out tokens`;
     setStatus(view.status);
     if (view.status === 'needs_approval' && view.pending) showApproval(view.pending);
-    if (['done', 'stopped', 'error'].includes(view.status)) {
+    if (['done', 'stopped', 'error', 'interrupted'].includes(view.status)) {
       timer = null; stopBtn.hidden = true;
+      continueBtn.hidden = !view.resumable;
       if (view.answer) { answer.innerHTML = markdown(view.answer); answer.hidden = false; }
+      history();
       return;
     }
     timer = setTimeout(poll, 1200);
   }
 
   function setStatus(s) {
-    const label = { running: 'Running', needs_approval: 'Waiting for you', done: 'Done', stopped: 'Stopped', error: 'Error' }[s] || s;
-    status.textContent = label;
+    status.textContent = LABELS[s] || s;
     status.className = `ag-status is-${s}`;
   }
 
@@ -78,7 +120,7 @@
     li.className = `ag-ev ag-ev-${e.type}`;
     switch (e.type) {
       case 'task':
-        li.innerHTML = `<span class="ag-ev-icon">▶</span><div><strong>Task</strong> ${esc(e.text)}<div class="ag-ev-sub">${esc(e.model)} · tools: ${e.tools.map(t => `<code>${esc(t)}</code>`).join(' ')}</div></div>`;
+        li.innerHTML = `<span class="ag-ev-icon">▶</span><div><strong>Task</strong> ${esc(e.text)}<div class="ag-ev-sub">${esc(e.model)}${e.provider ? ` (${esc(e.provider)})` : ''} · tools: ${e.tools.map(t => `<code>${esc(t)}</code>`).join(' ')}</div></div>`;
         break;
       case 'text':
         if (e.final) return;  // the answer is shown below the trace
@@ -97,6 +139,9 @@
       case 'approval':
         li.innerHTML = `<span class="ag-ev-icon">${e.approved ? '✓' : '✗'}</span><div>${e.approved ? 'Allowed' : 'Declined'} <code>${esc(e.tool)}</code></div>`;
         document.querySelectorAll('.ag-approval').forEach(el => el.remove());
+        break;
+      case 'resumed':
+        li.innerHTML = `<span class="ag-ev-icon">↻</span><div>${esc(e.text)}</div>`;
         break;
       case 'done':
         li.innerHTML = `<span class="ag-ev-icon">■</span><div>Finished (${esc(e.stop_reason || '')})</div>`;

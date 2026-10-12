@@ -156,3 +156,21 @@ def test_export_applies_edits_to_the_saved_view(tmp_path):
         assert not [o for o in r.json()["objects"] if o["type"] == "attack-action"]
         assert client.post("/api/attack-flow/export", json={"group_name": "APT1", "state": {}}).status_code == 404
         assert client.post("/api/attack-flow/export", json={"group_name": "../etc", "state": {}}).status_code in (400, 404)
+
+
+def test_library_flows_lists_each_saved_group_with_its_flow(db, tmp_path, monkeypatch):
+    monkeypatch.setattr("archer.config.ATTACK_FLOWS_DIR", str(tmp_path))
+    monkeypatch.setattr("archer.build.progress.read_progress", lambda g: {})
+    (tmp_path / "APT29_flow_view.json").write_text(json.dumps(
+        {"group_name": "APT29", "view": {"lanes": [], "stats": {"techniques": 3}}}))
+    _save_to_library(db, ["Group:APT29", "Incident-1"])
+    _save_to_library(db, ["CVE:CVE-2024-3400"])
+    _save_to_library(db, ["Group:Some Blog Post"])
+    bundle = SimpleNamespace(objects=[{"type": "intrusion-set", "name": "APT29", "aliases": ["Cozy Bear"]}])
+
+    flows = fl.library_flows(db, 1, bundle)
+    assert [(f["group"], f["kind"]) for f in flows] == [
+        ("APT29", "Threat group"), ("Some_Blog_Post", "Report"), ("CVE-2024-3400", "CVE")]
+    assert flows[0]["stats"] == {"techniques": 3} and flows[0]["saved"]
+    assert flows[1]["view"] is None
+    assert fl.library_flows(db, 2, bundle) == []

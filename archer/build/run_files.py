@@ -21,6 +21,8 @@ RUNS_DIR = os.path.join(DATA_DIR, "runs")
 _lock = threading.Lock()
 _active: Dict[str, Set[str]] = {}
 _touches: Dict[str, int] = {}
+_missed: Dict[str, Dict[str, dict]] = {}
+_hit: Dict[str, Set[str]] = {}
 
 
 def _manifest_path(group: str) -> str:
@@ -31,6 +33,8 @@ def begin(group: str) -> None:
     with _lock:
         _active[group] = set()
         _touches[group] = 0
+        _missed[group] = {}
+        _hit[group] = set()
 
 
 def note(path: str, group: Optional[str]) -> None:
@@ -50,18 +54,34 @@ def touches(group: str) -> Optional[int]:
         return _touches.get(group) if group in _active else None
 
 
+def outcome(group: str, technique: str, name: str, produced: bool, reason: Optional[str]) -> None:
+    """A technique's result in the run; one produced by any of its procedures counts as produced."""
+    with _lock:
+        if group not in _active or not technique:
+            return
+        if produced:
+            _hit[group].add(technique)
+            _missed[group].pop(technique, None)
+        elif technique not in _hit[group]:
+            _missed[group][technique] = {"technique": technique, "name": name or technique,
+                                         "reason": reason or "no_source"}
+
+
 def finish(group: str, started_at: Optional[float] = None) -> None:
     """Save the run's files; a group with no run in progress keeps its last manifest."""
     with _lock:
         files = _active.pop(group, None)
         _touches.pop(group, None)
+        missed = list(_missed.pop(group, {}).values())
+        _hit.pop(group, None)
     if files is None:
         return
     os.makedirs(RUNS_DIR, exist_ok=True)
     tmp = _manifest_path(group) + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         json.dump({"group": group, "started_at": started_at, "completed_at": time.time(),
-                   "files": sorted(files)}, fh, indent=2)
+                   "files": sorted(files),
+                   "no_detection": sorted(missed, key=lambda m: m["technique"])}, fh, indent=2)
     os.replace(tmp, _manifest_path(group))
 
 

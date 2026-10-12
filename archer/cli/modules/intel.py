@@ -1,4 +1,7 @@
-"""Intel-driven hunts on the Archer server: threat reports and company profiles."""
+"""Intel-driven hunts on the Archer server: threat reports, company profiles, the threat feed."""
+
+import textwrap
+import time
 
 from .base import ModuleOption
 from .server import ServerModule, client, run_options
@@ -101,3 +104,48 @@ class CompanyModule(ServerModule):
         print(f"  Hunting {len(runs)} groups, one after another: {', '.join(runs)}")
         for run in runs:
             self.follow(run)
+
+
+class FeedModule(ServerModule):
+    name = "intel/feed"
+    description = "This week's research about groups targeting your industries, plus opportunistic activity"
+    author = "Archer Team"
+
+    def _register_options(self):
+        self.options = {
+            "INDUSTRIES": ModuleOption(name="INDUSTRIES", description="Set your industries first, comma-separated "
+                                       "(e.g. Finance / Banking,Government); 'list' shows the choices"),
+            "REFRESH": ModuleOption(name="REFRESH", description="Collect the sources again now", default=False),
+            "WAIT": ModuleOption(name="WAIT", description="Wait for a running collection to finish", default=True),
+        }
+
+    def execute(self):
+        c = client()
+        wanted = (self.options["INDUSTRIES"].effective_value or "").strip()
+        if wanted.lower() == "list":
+            info = c.industries()
+            print("  Choices:  " + "\n            ".join(ch["id"] for ch in info["choices"]))
+            print(f"  Yours:    {', '.join(info['industries']) or 'none'}")
+            return
+        if wanted:
+            print(f"  Industries: {', '.join(c.set_industries([i.strip() for i in wanted.split(',') if i.strip()]))}")
+        if self.options["REFRESH"].effective_value:
+            c.refresh_feed()
+        data = c.feed()
+        while data["refreshing"] and self.options["WAIT"].effective_value:
+            print("  Collecting this week's posts…")
+            time.sleep(10)
+            data = c.feed()
+        print(f"\n  {data['considered']} posts from the last {data['days']} days; industries: "
+              f"{', '.join(data['labels']) or 'none set (INDUSTRIES list)'}")
+        for title, posts in (("Targeting your industries", data["industry"]),
+                             ("Opportunistic: any industry", data["opportunistic"])):
+            print(f"\n  {title} ({len(posts)})")
+            for p in posts:
+                print(f"\n  {p['published'][:10]}  {p['source']}: {p['title']}")
+                print(f"    {p['url']}")
+                why = p["why"]["industry"] + p["why"]["opportunistic"]
+                print(textwrap.fill("; ".join(why), 100, initial_indent="    why: ", subsequent_indent="         "))
+                if p["techniques"]:
+                    print(textwrap.fill(" ".join(p["techniques"]), 100, initial_indent="    ttps: ", subsequent_indent="          "))
+        print("\n  Hunt one: use intel/report with URL set to the post")

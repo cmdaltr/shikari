@@ -638,6 +638,15 @@ document.addEventListener('DOMContentLoaded', function () {
     blogUrlInput.addEventListener('input', validateUpload);
   }
 
+  // /?report=<url> (the Threat Feed's "Analyse in Archer"): open the Upload tab with the URL filled in
+  var reportParam = new URLSearchParams(window.location.search).get('report');
+  if (blogUrlInput && reportParam && /^https?:\/\//.test(reportParam)) {
+    var uploadTab = document.querySelector('.tab-button[data-tab="upload"]');
+    if (uploadTab) uploadTab.click();
+    blogUrlInput.value = reportParam;
+    validateUpload();
+  }
+
   // Drag and drop support
   if (dropzone) {
     dropzone.addEventListener('dragover', function (e) {

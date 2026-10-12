@@ -6,12 +6,11 @@ plus the three agents' instructions as prompts.
 It talks to a running Archer server as a user (archer.client), so it does what the web
 app does with that user's AI settings and keys, which never reach the MCP client.
 
-  ARCHER_URL=http://127.0.0.1:8000 ARCHER_EMAIL=you@example.com ARCHER_PASSWORD=... \\
-      python -m archer.mcp_server
+  ARCHER_URL=http://127.0.0.1:8000 ARCHER_TOKEN=arch_... python -m archer.mcp_server
 
-Claude Code:
-  claude mcp add archer --env ARCHER_EMAIL=you@example.com --env ARCHER_PASSWORD=... \\
-      -- /path/to/archer/.venv/bin/python -m archer.mcp_server
+Claude Code (the token is from Profile → Security → API tokens; ARCHER_EMAIL and
+ARCHER_PASSWORD also work for accounts without MFA):
+  claude mcp add archer --env ARCHER_TOKEN=arch_... -- /path/to/archer/.venv/bin/python -m archer.mcp_server
 
 Tools that change something (hunts, saving a query fix) are marked as not read-only, so
 the client asks before calling them.

@@ -60,6 +60,64 @@ def group_from_tag(tag: str) -> Optional[str]:
     return None
 
 
+def library_groups(db, user_id: int) -> set:
+    """The results-page group names of everything the user has saved to their library."""
+    groups = set()
+    for model in (LibraryDetection, LibraryCorrelation):
+        for (raw,) in db.query(model.tags).filter(model.user_id == user_id).all():
+            try:
+                tags = json.loads(raw) if raw else []
+            except (ValueError, TypeError):
+                continue
+            groups.update(g for g in map(group_from_tag, tags if isinstance(tags, list) else []) if g)
+    return groups
+
+
+def library_flows(db, user_id: int, bundle=None) -> list:
+    """
+    The attack flows of the user's library: one per saved group, CVE or report, from the
+    flow view the results page last saved (data/attack_flows/<group>_flow_view.json).
+    kind: "Threat group" (an ATT&CK group), "CVE", "Technique hunt", "Company profile" or
+    "Report". view is None when the results page hasn't built the flow yet.
+    """
+    from datetime import datetime
+
+    from archer.build.progress import read_progress
+    from archer.config import ATTACK_FLOWS_DIR
+    from archer.visualization.flow_view import without_pre_compromise
+
+    attack_groups = set()
+    for obj in getattr(bundle, "objects", None) or []:
+        if obj.get("type") == "intrusion-set":
+            attack_groups.update(n.lower() for n in [obj.get("name", "")] + list(obj.get("aliases") or []))
+    flows = []
+    for group in library_groups(db, user_id):
+        path = os.path.join(ATTACK_FLOWS_DIR, f"{group}_flow_view.json")
+        view, saved = None, None
+        if os.path.dirname(os.path.abspath(path)) == os.path.abspath(ATTACK_FLOWS_DIR) and os.path.exists(path):
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    view = without_pre_compromise(json.load(fh).get("view"))
+                saved = datetime.fromtimestamp(os.path.getmtime(path))
+            except (OSError, ValueError):
+                view = None
+        source = (read_progress(group) or {}).get("source_type")
+        if group.upper().startswith("CVE-") or source == "cve":
+            kind = "CVE"
+        elif source == "technique_hunt" or group.startswith("Hunt_"):
+            kind = "Technique hunt"
+        elif source == "profile":
+            kind = "Company profile"
+        elif group.replace("_", " ").lower() in attack_groups or group.lower() in attack_groups:
+            kind = "Threat group"
+        else:
+            kind = "Report"
+        flows.append({"group": group, "label": group.replace("_", " "), "kind": kind, "view": view,
+                      "saved": saved, "stats": (view or {}).get("stats") or {}})
+    order = {"Threat group": 0, "Report": 1, "CVE": 2, "Technique hunt": 3, "Company profile": 4}
+    return sorted(flows, key=lambda f: (order.get(f["kind"], 9), f["label"].lower()))
+
+
 def prune_layouts(db, user_id: int, tag_lists: Iterable[Optional[str]]) -> int:
     """
     Delete the saved layouts of groups no longer in the user's library.

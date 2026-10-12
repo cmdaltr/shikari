@@ -67,7 +67,7 @@ def _fetch_public_url(url: str, max_redirects: int = 3) -> requests.Response:
     raise ValueError(f"Too many redirects (max {max_redirects}).")
 
 
-def analyze_blog_post(url: str) -> Dict:
+def analyze_blog_post(url: str, include_text: bool = False) -> Dict:
     """
     Analyze a blog post URL and extract threat intelligence.
 
@@ -82,6 +82,7 @@ def analyze_blog_post(url: str) -> Dict:
         - techniques: List[str] (T-codes)
         - tactics: List[str]
         - procedures: List[str]
+        - text, title: the article's text and page title (include_text=True)
         - error: str (if failed)
     """
     try:
@@ -180,6 +181,9 @@ def analyze_blog_post(url: str) -> Dict:
 
         from archer.build.ioc_flow import ioc_mentions
         result["ioc_mentions"] = ioc_mentions(text, result["iocs"])
+        if include_text:
+            result["text"] = text
+            result["title"] = (page_meta.title.string or "").strip() if page_meta.title else ""
 
         return result
 

@@ -1,7 +1,8 @@
 """
 Modules that drive a running Archer server (archer.client), so the console runs
-exactly what the web app runs. ARCHER_URL / ARCHER_EMAIL / ARCHER_PASSWORD pick the
-server and account; the console prompts for whatever is missing.
+exactly what the web app runs. ARCHER_URL picks the server; ARCHER_TOKEN (an API token,
+works with MFA) or ARCHER_EMAIL / ARCHER_PASSWORD the account. The console prompts for a
+missing email or password.
 """
 
 from collections import Counter

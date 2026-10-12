@@ -4,10 +4,10 @@ from .generate import GenerateModule
 from .correlate import CorrelateModule
 from .hunt import HuntModule
 from .hunts import CveHuntModule, GroupHuntModule, TechniqueHuntModule
-from .intel import CompanyModule, ReportModule
+from .intel import CompanyModule, FeedModule, ReportModule
 from .research import ResearchModule
 from .ai import AISettingsModule, AskModule, BriefingModule, ResultsModule
-from .agents import AskAgentModule, RepairAgentModule, TriageAgentModule
+from .agents import AgentHistoryModule, AskAgentModule, RepairAgentModule, TriageAgentModule
 from archer.config import EMULATION_ENABLED
 
 # generate, correlate, hunt and emulate run in this process; the rest drive a running
@@ -21,6 +21,7 @@ MODULE_REGISTRY = {
     "hunt/technique": TechniqueHuntModule,
     "intel/report": ReportModule,
     "intel/company": CompanyModule,
+    "intel/feed": FeedModule,
     "research/actors": ResearchModule,
     "ai/ask": AskModule,
     "ai/briefing": BriefingModule,
@@ -29,6 +30,7 @@ MODULE_REGISTRY = {
     "agent/repair": RepairAgentModule,
     "agent/ask": AskAgentModule,
     "agent/triage": TriageAgentModule,
+    "agent/history": AgentHistoryModule,
 }
 
 if EMULATION_ENABLED:

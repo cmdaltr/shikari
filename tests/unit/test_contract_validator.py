@@ -279,3 +279,24 @@ def test_empty_and_unbalanced_brackets_are_caught(contract):
     assert "KQL-17" in contract.lint_query(broken).gates()
     ok = 'DeviceEvents\n| where Timestamp > ago(1d) and FileName has ")("\n| summarize count() by DeviceName\n'
     assert "KQL-17" not in contract.lint_query(ok).gates(), contract.lint_query(ok).fails
+
+
+BRANCHED_YARAL = r"""rule t1564_003 {
+meta:
+author = "Archer"
+
+events:
+($e.metadata.event_type = "PROCESS_LAUNCH" and re.regex($e.target.process.command_line, `powershell\.exe\s+-WindowStyle\s+Hidden`) nocase) or (($e.metadata.event_type = "REGISTRY_CREATION" or $e.metadata.event_type = "REGISTRY_MODIFICATION") and re.regex($e.target.registry.registry_key, `HKEY_CURRENT_USER\\Console`) nocase)
+
+condition:
+$e
+}
+"""
+
+
+@pytest.mark.unit
+def test_yl21_is_judged_per_branch(contract):
+    # Each OR branch carries its own event type: command_line belongs to the PROCESS_LAUNCH branch
+    assert "YL-21" not in contract.lint_query(BRANCHED_YARAL).gates()
+    same_branch = BRANCHED_YARAL.replace("$e.target.registry.registry_key", "$e.target.process.command_line")
+    assert "YL-21" in contract.lint_query(same_branch).gates()

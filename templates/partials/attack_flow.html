@@ -79,6 +79,7 @@
     <strong>{{ attack_flow.stats.detected }}</strong> detected ·
     <strong class="af-stats-gap">{{ attack_flow.stats.gaps }}</strong> gaps ·
     <strong id="af-stat-edges">{{ attack_flow.stats.edges }}</strong> correlation links
+    {% if attack_flow.stats.pre_compromise %}<span class="af-stats-note">· {{ attack_flow.stats.pre_compromise }} Reconnaissance / Resource Development technique{{ 's' if attack_flow.stats.pre_compromise != 1 }} left out (adversary-side, no log source sees them)</span>{% endif %}
   </p>
 
   <div class="af-body">

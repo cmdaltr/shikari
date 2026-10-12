@@ -167,3 +167,4 @@ body.af-noscroll { overflow: hidden; }
   .af-detail { width: 100%; max-height: none; }
   .af-search { width: 100%; }
 }
+.af-stats-note { color: var(--text-secondary); font-size: .9em; }

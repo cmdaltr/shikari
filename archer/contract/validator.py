@@ -57,6 +57,51 @@ def hours(d: str) -> float:
     return n / 60 if u == "m" else n if u == "h" else n * 24
 
 
+def _split_or(text: str) -> list:
+    """Split at the top-level `or`s, outside brackets, strings and regexes."""
+    parts, depth, quote, start, i = [], 0, None, 0, 0
+    while i < len(text):
+        c = text[i]
+        if quote:
+            if c == "\\":
+                i += 1
+            elif c == quote:
+                quote = None
+        elif c in "\"`'":
+            quote = c
+        elif c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif depth == 0 and re.match(r"\sor\s", text[i:i + 4], re.I):
+            parts.append(text[start:i])
+            start = i + 3
+        i += 1
+    parts.append(text[start:])
+    return [p.strip() for p in parts if p.strip()]
+
+
+def _or_branches(text: str) -> list:
+    """
+    The alternatives of an events section, each with its own event-type guard:
+    (type = PROCESS_LAUNCH and command_line ...) or (type = REGISTRY_* and registry_key ...)
+    is two branches, so a field one branch tests isn't held against the other's type.
+    """
+    parts = _split_or(text)
+    if len(parts) > 1:
+        return [b for p in parts for b in _or_branches(p)]
+    t = text.strip()
+    if t.startswith("(") and t.endswith(")"):
+        depth = 0
+        for i, c in enumerate(t):
+            depth += c == "("
+            depth -= c == ")"
+            if depth == 0 and i < len(t) - 1:
+                return [t]
+        return _or_branches(t[1:-1])
+    return [t]
+
+
 class Report:
     def __init__(self, path: str = "<text>"):
         self.path, self.fails = path, []
@@ -196,12 +241,15 @@ def lint_yaral(q: str, rep: Report, rule: Optional[dict] = None) -> List[str]:
     if len(evars) > 1 and "match" not in sections: rep.fail("YL-6", "multi-event rule without match section")
     # Mutually exclusive field for the declared event type (Q048 pattern)
     raw_ev = raw_sections.get("events", "")
-    for var in evars:
-        etypes = re.findall(rf"\${var}\.metadata\.event_type\s*=\s*\"([A-Z_]+)\"", raw_ev)
-        for et in etypes:
-            for bad in UDM_EVENT_FIELD_CONTRADICTIONS.get(et, ()):
-                if re.search(rf"\${var}\.{re.escape(bad)}", raw_ev):
-                    rep.fail("YL-21", f"${var} is {et} but is tested on {bad}* which that event type does not carry")
+    reported = set()
+    for branch in _or_branches(raw_ev):
+        for var in evars:
+            etypes = re.findall(rf"\${var}\.metadata\.event_type\s*=\s*\"([A-Z_]+)\"", branch)
+            for et in etypes:
+                for bad in UDM_EVENT_FIELD_CONTRADICTIONS.get(et, ()):
+                    if (var, et, bad) not in reported and re.search(rf"\${var}\.{re.escape(bad)}", branch):
+                        reported.add((var, et, bad))
+                        rep.fail("YL-21", f"${var} is {et} but is tested on {bad}* which that event type does not carry")
     for p in UDM_KNOWN_EMPTY:
         if p in body: rep.fail("YL-18", f"{p} is known_empty for MDE-sourced UDM")
     if re.search(r"\.pid\s*(>|<|>=|<=)\s*\d", ev): rep.fail("YL-13", "process.pid compared with an integer (UDM pid is a string)")

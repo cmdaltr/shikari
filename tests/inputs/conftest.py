@@ -144,5 +144,5 @@ def test_data_dir():
 def ensure_archer_running(client):
     """Ensure Archer is running before tests."""
     if not client.check_health():
-        pytest.skip("Archer is not running. Start with: python scripts/deployment/start-archer.py")
+        pytest.skip("Archer is not running. Start it with: archer start")
     return True

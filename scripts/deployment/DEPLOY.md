@@ -4,22 +4,24 @@ Scripts for deploying, managing, and maintaining Archer instances.
 
 ## Scripts
 
-### start-archer.py / stop-archer.py / restart-archer.py / status-archer.py
-Bare-metal process management — no Docker required. Stdlib only.
+### archer start / stop / restart / status / logs
+Bare-metal process management, no Docker required. Stdlib only. `./archer-cli install` links `archer` into `~/bin`; the work is in `archer/service.py`.
 
 **Usage**:
 ```bash
-python3 scripts/deployment/start-archer.py [-b|--background] [-p|--port PORT]
-python3 scripts/deployment/stop-archer.py
-python3 scripts/deployment/restart-archer.py [-b|--background]
-python3 scripts/deployment/status-archer.py
+archer start [--port PORT] [--no-reload] [--no-ollama] [--ollama-models DIR] [--skip-index]
+archer stop [--force]
+archer restart
+archer status
+archer logs [archer|ollama|supervisor] [-f]
 ```
 
 **What they do**:
-- `start-archer.py` uses `.venv/bin/python3` if present, otherwise falls back to the interpreter running the script. Binds to `0.0.0.0:8000` by default so the app is reachable from other machines and from reverse proxies (e.g. Caddy via `host.docker.internal`) — not just `127.0.0.1`. Before starting uvicorn, it also rebuilds the OSINT technique index (`scripts/data/build_osint_index.py --skip-clone`) if `data/cache/osint_technique_index.json` is missing or more than 24 hours old — pass `--skip-index` to skip this (e.g. for fast dev-loop restarts). This never clones/updates the OSINT repos themselves, only re-indexes whatever's already on disk, so it adds a few seconds at most; a failure here is non-fatal and just falls back to live OSINT search. `restart-archer.py` passes `--skip-index` through if given.
-- `stop-archer.py` finds and terminates running Archer/Uvicorn processes by matching the process command line. If Archer is run alongside other tools (Docker Desktop/OrbStack helpers, other Python services), double-check its output before trusting a "stopped" process was actually Archer.
-- `restart-archer.py` is `stop` then `start`.
-- `status-archer.py` reports whether a matching process is running and whether the port responds.
+- `archer start` launches a supervisor in the background (`data/run/supervisor.pid`, state in `data/run/service.json`, logs in `logs/`). It runs uvicorn with `.venv/bin/python`, bound to `0.0.0.0:8000` so reverse proxies (e.g. Caddy via `host.docker.internal`) reach it, and restarts it if it exits: after 1s, backing off to 60s for repeated quick failures, giving up after 6 in a row. If Ollama is installed and nothing answers on port 11434, it also runs `ollama serve` (with `--ollama-models` as `OLLAMA_MODELS`) and restarts that too. Options are remembered in `data/run/settings.json`.
+- Before the first start it rebuilds the OSINT technique index (`scripts/data/build_osint_index.py --skip-clone`) if `data/cache/osint_technique_index.json` is missing or more than 24 hours old; `--skip-index` skips it. This only re-indexes what's on disk, and a failure is non-fatal.
+- `archer stop` stops the supervisor, which stops what it started. `--force` also stops an Archer on the port that was started some other way (matched on `archer.app` in its command line).
+- `archer status` shows what's running, uptime, crash restarts, and whether `/health` answers.
+- `start-archer.py`, `stop-archer.py`, `restart-archer.py` and `status-archer.py` remain as wrappers for older instructions: `start-archer.py -b` is `archer start`, without `-b` it supervises in the foreground (`archer run`).
 
 **Note**: If your checkout lives inside a OneDrive/Dropbox-synced folder, build the venv with `--copies` (`python3 -m venv --copies .venv`) rather than the default symlink-based venv — cloud-sync clients can flatten venv symlinks into plain text files, breaking `.venv/bin/python3`.
 
@@ -123,7 +125,7 @@ python3 -m venv .venv          # add --copies if this checkout is inside a synce
 source .venv/bin/activate
 pip install -r requirements.txt
 python scripts/validation/setup_mappings.py
-python3 scripts/deployment/start-archer.py --background
+archer start
 ```
 
 Requires Python 3.11 or 3.12. `requirements.txt` pins `torch==2.2.2` for macOS x86_64 (Intel) wheel compatibility — PyTorch dropped Intel Mac wheel builds after that release, and none of the newer releases have a matching wheel for Python 3.13+ on Intel Macs either.
@@ -140,7 +142,7 @@ docker-compose up --build
 git pull
 source .venv/bin/activate
 pip install -r requirements.txt --upgrade
-python3 scripts/deployment/restart-archer.py --background
+archer restart
 ```
 
 ### Clean Restart
@@ -156,16 +158,16 @@ python scripts/deployment/start_clean.py
 python scripts/validation/setup_mappings.py
 
 # Start
-docker-compose up --build  # or python3 scripts/deployment/start-archer.py --background
+docker-compose up --build  # or archer start
 ```
 
 ## Troubleshooting
 
-**Reachable at `127.0.0.1:8000` but not via a reverse proxy / hostname (e.g. FlightDeck's `archer.lab`)**: `start-archer.py` binds to `0.0.0.0` by default so this shouldn't happen on current versions — but if you're running uvicorn manually, make sure you pass `--host 0.0.0.0`, not `--host 127.0.0.1`. Reverse proxies running in Docker (Caddy via `host.docker.internal`, etc.) connect via a gateway interface, not literal loopback, so a loopback-only bind rejects the connection even though direct `127.0.0.1` access works fine.
+**Reachable at `127.0.0.1:8000` but not via a reverse proxy / hostname (e.g. FlightDeck's `archer.lab`)**: `archer start` binds to `0.0.0.0` by default so this shouldn't happen on current versions — but if you're running uvicorn manually, make sure you pass `--host 0.0.0.0`, not `--host 127.0.0.1`. Reverse proxies running in Docker (Caddy via `host.docker.internal`, etc.) connect via a gateway interface, not literal loopback, so a loopback-only bind rejects the connection even though direct `127.0.0.1` access works fine.
 
 **`pip install -r requirements.txt` fails with a `torch` dependency conflict on macOS**: you're likely on an Intel Mac with a Python version newer than 3.12. Install Python 3.11 or 3.12 (`brew install python@3.11`) and rebuild the venv with that interpreter — `torch==2.2.2` (the last Intel-mac-compatible release, pinned in `requirements.txt`) doesn't have wheels for Python 3.13+.
 
-**`.venv/bin/python3` exists but `start-archer.py` fails with `Exec format error`**: the venv's interpreter binary/symlink got corrupted, typically by a cloud-sync client (OneDrive, Dropbox) rewriting it. Rebuild with `python3 -m venv --copies .venv` to avoid symlinks entirely.
+**`.venv/bin/python3` exists but `archer start` fails with `Exec format error`**: the venv's interpreter binary/symlink got corrupted, typically by a cloud-sync client (OneDrive, Dropbox) rewriting it. Rebuild with `python3 -m venv --copies .venv` to avoid symlinks entirely.
 
 ## Related Documentation
 

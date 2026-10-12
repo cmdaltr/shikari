@@ -1,0 +1,36 @@
+/* Threat Feed page (templates/feed.html) */
+.fd-page { --fd-accent: #0EA5A4; max-width: min(1100px, calc(100vw - 4em)); }
+.fd-intro, .fd-section, .fd-sources { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; color: var(--text-primary); line-height: 1.55; }
+.fd-intro p { margin: 0 0 8px; }
+.fd-intro a, .fd-sources a { color: var(--accent); }
+.fd-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--text-secondary); font-size: .9em; margin: 0 !important; }
+.fd-refresh { font: inherit; font-weight: 600; padding: 6px 14px; border-radius: 6px; cursor: pointer; border: 2px solid var(--fd-accent); background: var(--fd-accent); color: #fff; }
+.fd-refresh:disabled { opacity: .5; cursor: not-allowed; }
+.fd-section h2 { margin: 0 0 12px; font-size: 1.15em; }
+.fd-count { color: var(--text-secondary); font-weight: 500; }
+.fd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.fd-post { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.fd-head { display: flex; justify-content: space-between; gap: 10px; font-size: .82em; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
+.fd-title { display: block; margin: 4px 0 6px; font-weight: 700; color: var(--text-primary); text-decoration: none; overflow-wrap: anywhere; }
+.fd-title:hover { color: var(--fd-accent); }
+.fd-summary { margin: 0 0 8px; color: var(--text-secondary); font-size: .9em; overflow-wrap: anywhere; }
+.fd-whys { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.fd-why { font-size: .8em; font-weight: 600; border-radius: 999px; padding: 2px 10px; }
+.fd-why.is-industry { background: rgba(14, 165, 164, .15); color: #0f766e; }
+.fd-why.is-opp { background: rgba(245, 158, 11, .15); color: #B45309; }
+.fd-facts { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .85em; color: var(--text-secondary); overflow-wrap: anywhere; }
+.fd-facts b { color: var(--text-primary); font-weight: 600; margin-right: 4px; }
+.fd-ttps { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.fd-ttp { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78em; padding: 1px 6px; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); text-decoration: none; }
+.fd-more { font-size: .78em; color: var(--text-secondary); align-self: center; }
+.fd-analyse { display: inline-block; margin-top: 10px; font-weight: 600; font-size: .9em; color: var(--fd-accent); text-decoration: none; }
+.fd-empty { color: var(--text-secondary); }
+.fd-sources summary { cursor: pointer; font-weight: 600; }
+.fd-sources p { margin: 8px 0 0; color: var(--text-secondary); font-size: .9em; }
+[data-theme="dark"] .fd-why.is-industry { color: #5eead4; }
+[data-theme="dark"] .fd-why.is-opp { color: #fcd34d; }
+@media (max-width: 600px) {
+  .fd-page { width: 100%; max-width: 100%; padding-left: 16px; padding-right: 16px; }
+  .fd-intro, .fd-section, .fd-sources { padding: 14px; }
+  .fd-post { padding: 10px 12px; }
+}

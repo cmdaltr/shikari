@@ -81,8 +81,15 @@ class TechniqueHuntModule(ServerModule):
     def execute(self):
         o = {k: v.effective_value for k, v in self.options.items()}
         provider, model = self.ai_choice()
+        ids = [t.strip().upper() for t in o["TECHNIQUES"].split(",") if t.strip()]
+        doomed = client().technique_yield(ids, ai=bool(provider), osint=o["OSINT"] or o["OSINT_COMPARE"])["no_detection"]
+        for tid, d in doomed.items():
+            print(f"  {tid} will produce nothing: {d['text']}")
+        if len(doomed) == len(ids):
+            print("  Not started: set PROVIDER to an AI model, or OSINT true")
+            return
         run = client().hunt_techniques(
-            [t.strip().upper() for t in o["TECHNIQUES"].split(",") if t.strip()], provider=provider, model=model,
+            ids, provider=provider, model=model,
             merge_by_tactic=o["MERGE_BY_TACTIC"], merge_by_parent=o["MERGE_BY_PARENT"], osint=o["OSINT"],
             osint_compare=o["OSINT_COMPARE"], min_relevance=float(o["MIN_RELEVANCE"]) if o["MIN_RELEVANCE"] else None)
         self.follow(run)

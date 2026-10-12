@@ -6,6 +6,8 @@ This module defines SQLAlchemy models for:
 - Sessions: Session management with expiration
 - APIKeys: User-specific encrypted API keys for SIEM/AI platforms
 - AISettings: Per-user AI provider models and job assignments
+- ApiTokens: Personal API tokens (hashed) for the CLI, MCP server and scripts
+- AgentRuns: Agent session traces
 - SecurityQuestions: For password reset fallback
 """
 
@@ -37,6 +39,7 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     full_name = Column(String(255), nullable=False)
     team = Column(String(255), nullable=True)  # User's team/department
+    industries = Column(Text, nullable=True)  # JSON array: threat feed industries (archer.intelligence.feed)
     password_hash = Column(String(255), nullable=False)  # bcrypt hash
     role = Column(Enum(UserRole), nullable=False, default=UserRole.STANDARD)
     is_active = Column(Boolean, default=True, nullable=False)
@@ -126,6 +129,47 @@ class AISettings(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
     settings = Column(Text, nullable=False, default="{}")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class ApiToken(Base):
+    """
+    A personal API token for the console, the MCP server and scripts: they sign in with it
+    instead of a password, so accounts with MFA can use them too. Only a hash is stored;
+    the token is shown once, when it's created.
+    """
+    __tablename__ = "api_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)  # sha256 hex
+    prefix = Column(String(16), nullable=False)  # first characters, to tell tokens apart
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_used_at = Column(DateTime, nullable=True)
+
+
+class AgentRun(Base):
+    """
+    One agent session (archer/agents): the trace a person watched, kept after the server
+    restarts. Doubles as an audit log of what each agent did and who allowed it.
+    """
+    __tablename__ = "agent_runs"
+
+    id = Column(String(32), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    agent = Column(String(32), nullable=False)
+    model = Column(String(128), nullable=False, default="")
+    status = Column(String(20), nullable=False)
+    task = Column(Text, nullable=False, default="")
+    answer = Column(Text, nullable=False, default="")
+    events = Column(Text, nullable=False, default="[]")  # JSON, as Session.events
+    provider = Column(String(32), nullable=True)
+    conversation = Column(Text, nullable=True)  # JSON: the model's messages, to resume from
+    turns = Column(Integer, nullable=False, default=0)
+    input_tokens = Column(Integer, nullable=False, default=0)
+    output_tokens = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 

@@ -389,6 +389,8 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
 
     # OSINT comparison data (will be populated if indicators exist or if no indicators)
     osint_enhancement_data = None
+    # Why nothing was built, if nothing is (technique_yield.REASONS); returned to the orchestrator
+    reason = "no_source" if identifiers else "no_indicators"
 
     # Only construct YAML if there are identifiers for detection
     if identifiers:
@@ -609,6 +611,7 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
 
         if osint_comparison or osint_enhancement:
             from archer.build.osint_comparison import search_osint_for_technique, should_create_detection
+            reason = "osint_empty"
 
             # Search OSINT sources
             osint_found, osint_data = search_osint_for_technique(
@@ -727,9 +730,10 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
     # Runs after the standard pipeline, using MITRESaw evidence data
     # -----------------------------------------------------------------
     if use_llm is not None and use_llm is not False:
-        _run_bespoke_generation(
+        reason = _run_bespoke_generation(
             retrieved_data, identifiers, use_llm, llm_config
-        )
+        ) or reason
+    return reason
 
 
 PRE_COMPROMISE_TACTICS = {"reconnaissance", "resource development", "resource-development"}
@@ -761,7 +765,17 @@ def _run_bespoke_generation(retrieved_data, identifiers, use_llm, llm_config):
         # Nothing in the indexes sees Reconnaissance/Resource Development; the LLM says
         # so and the call is spent for no queries
         print(f"  ⏭️  {tid} is pre-compromise ({tactic}); no LLM call")
-        return
+        return "pre_compromise"
+
+    if use_llm == "llm":
+        from archer.build import technique_yield
+
+        empty_runs = technique_yield.llm_exhausted(tid)
+        if empty_runs:
+            # The AI has come back empty for this technique run after run; the call would
+            # spend another prompt for nothing (python -m archer.build.technique_yield --reset-llm)
+            print(f"  ⏭️  {tid}: AI returned no queries on its last {empty_runs} runs; no LLM call")
+            return "llm_empty"
 
     if use_llm == "llm" and llm_config and llm_config.get("max_calls"):
         # A run's LLM spend is capped (profile setting): a group can have hundreds of
@@ -803,12 +817,19 @@ def _run_bespoke_generation(retrieved_data, identifiers, use_llm, llm_config):
             detectable_via=detectable_via,
         )
 
+    if use_llm == "llm" and queries is not None:
+        from archer.build import technique_yield
+
+        technique_yield.record_llm(tid, bool(queries))
+
     if queries:
         # Write bespoke queries to data/groups/ as YAML files
         _write_bespoke_yamls(queries, group_name, tid, name, tactic)
         print(f"  ✅ {len(queries)} bespoke queries generated for {tid}")
     else:
         print(f"  ⚠️  No bespoke queries generated for {tid}")
+        if use_llm == "llm":
+            return "ai_failed" if queries is None else "ai_none"
 
 
 def _write_bespoke_yamls(queries, group_name, technique_id, technique_name, tactic):

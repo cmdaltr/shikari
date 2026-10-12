@@ -14,6 +14,19 @@ Archer is a modular Python service for automated threat hunting with optional ad
 
 **⌨️ Usage instructions and guidance: [USAGE.md](docs/USAGE.md)**
 
+### Running Archer
+
+```bash
+./archer-cli install      # once: links `archer` into ~/bin
+archer start              # background; restarts Archer (and Ollama) if they crash
+archer status
+archer logs -f
+archer restart
+archer stop
+```
+
+`archer start` runs a small supervisor (`archer/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `archer serve` runs the server in the foreground without the supervisor; `archer docker ...` is `docker compose` with the project's compose file.
+
 ---
 <br>
 
@@ -23,6 +36,8 @@ Archer is a modular Python service for automated threat hunting with optional ad
 - 🎯 **MITRE ATT&CK Integration** - Automated detection generation from threat group TTPs
 - 📤 **File Upload & Intelligence Extraction** - Upload threat intel files (PDF, TXT, JSON, CSV, XLSX, YARA, DOCX) for automatic TTP/IOC extraction
 - 🌐 **Blog Analysis** - Paste a threat intel blog URL and extract TTPs/IOCs automatically
+- 📰 **Threat Feed** - The last 7 days of vendor and government research (20 sources), kept to posts about groups that target the industries in your profile, plus opportunistic activity such as supply-chain compromise and mass exploitation; no AI involved ([details](#threat-feed))
+- 🗺️ **Attack Flows** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow
 - 🔍 **Multi-Platform Support** - Splunk (SPL), KQL (Microsoft Defender/Sentinel), Google SecOps (YARA-L) and Elastic (DSL) queries
 - 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries
 - 🛡️ **Threat Briefing** - Grounded ATT&CK prioritisation grounded in real MITRE data and your detection coverage gaps
@@ -56,6 +71,30 @@ Archer is a modular Python service for automated threat hunting with optional ad
 
 ---
 <br>
+
+### Threat Feed
+
+Set your industries in Profile → Threat Feed industries, then open the feed (the RSS icon in the header) or run `intel/feed` in the console. Archer reads the RSS/Atom feeds of 20 research sources (Microsoft, Google/Mandiant, Unit 42, Talos, CrowdStrike, SentinelLABS, Securelist, ESET, Proofpoint, The DFIR Report, Red Canary, Huntress, Check Point, Elastic, CISA, NCSC, Recorded Future, Trend Micro, Rapid7, FortiGuard) every six hours, fetches each post from the last seven days and runs it through the report analyser. A post lands in one of two lists:
+
+| List | Why a post is there |
+|---|---|
+| Targeting your industries | It names an ATT&CK group (name or alias) whose ATT&CK description lists one of your industries, or names the industry itself four or more times |
+| Opportunistic | Supply-chain or package-registry compromise, reported exploitation, ransomware-as-a-service, infostealers, botnets, malvertising and fake updates, initial access brokers, or a group whose objective is ransomware |
+
+Posts with no technique ID, IOCs, CVE or named group (product news, webinars) are left out. Matching is regular expressions over the text plus ATT&CK's own group data, so no AI is used. **Analyse in Archer** opens the post on the Hunt page's Upload tab.
+
+### Techniques that can't produce a detection
+
+About 318 of ATT&CK's 697 techniques name no command, file, registry key or other indicator in their description or in any group's procedure examples (**T1190**, **T1566.001**, much of Reconnaissance and Resource Development). The standard pipeline can't build a query for them; only AI or OSINT can. Archer keeps that list in `archer/data/technique_yield.json`, rebuilt when ATT&CK's version changes:
+
+- A technique hunt whose techniques are all on the list, run without AI or OSINT, is refused with the reason instead of producing an empty run; `hunt/technique` says which techniques will produce nothing before it starts.
+- Every run records the techniques that produced nothing and why, shown at the top of its results page.
+- With AI, a technique the model has returned no queries for on three runs in a row is skipped (no prompt spent) until a call succeeds or the list is reset.
+
+```bash
+.venv/bin/python -m archer.build.technique_yield              # both lists
+.venv/bin/python -m archer.build.technique_yield --reset-llm  # forget the AI list
+```
 
 ## 📚 Documentation & Resources
 
@@ -112,6 +151,7 @@ Local modules run in the console's own process. Server modules drive a running A
 | `hunt/technique` | server | Technique hunt across every group that uses the techniques |
 | `intel/report` | server | Extract TTPs and IOCs from a report URL or file and hunt them (`MODE all \| iocs \| review`) |
 | `intel/company` | server | Profile a company from OSINT and hunt the groups that target it |
+| `intel/feed` | server | This week's research about groups targeting your industries, plus opportunistic activity (`INDUSTRIES list` to choose) |
 | `research/actors` | server | Find actors by keyword (country, industry) and consolidate their techniques; XLSX export |
 | `ai/ask` | server | Ask Archer |
 | `ai/briefing` | server | Threat briefing: prioritised techniques and coverage gaps |
@@ -120,8 +160,9 @@ Local modules run in the console's own process. Server modules drive a running A
 | `agent/repair` | server | Agent: fix a run's queries that won't parse or can't match, re-checking each fix |
 | `agent/ask` | server | Agent: Ask Archer with tools (library, coverage, ATT&CK, hunts) |
 | `agent/triage` | server | Agent: triage a threat report into coverage gaps, hunts and a briefing |
+| `agent/history` | server | Recent agent runs (kept across restarts); replay one, or `CONTINUE true` to carry on an interrupted or stopped one |
 
-Server modules sign in with `ARCHER_EMAIL` and `ARCHER_PASSWORD` (the console prompts for anything unset) against `ARCHER_URL` (default `http://127.0.0.1:8000`). `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.
+Server modules sign in with `ARCHER_TOKEN`, an API token from Profile → Security → API Tokens (works with MFA), or with `ARCHER_EMAIL` and `ARCHER_PASSWORD` (the console prompts for anything unset), against `ARCHER_URL` (default `http://127.0.0.1:8000`). Agents take `PROVIDER` and `MODEL` too. `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.
 
 ### Commands
 

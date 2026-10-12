@@ -189,8 +189,10 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 _report_technique(group_name, technique, retrieved_data["technique"])
                 try:
                     before = run_files.touches(group_name)
-                    compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
-                    if dry_run or _produced(group_name, before):
+                    reason = compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
+                    produced = dry_run or _produced(group_name, before)
+                    run_files.outcome(group_name, technique, retrieved_data["technique"], produced, reason)
+                    if produced:
                         created += 1
                 except Exception as e:
                     import traceback
@@ -252,8 +254,10 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             _report_technique(group_name, procedure[0], procedure[1])
             try:
                 before = run_files.touches(group_name)
-                compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
-                if dry_run or _produced(group_name, before):
+                reason = compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
+                produced = dry_run or _produced(group_name, before)
+                run_files.outcome(group_name, procedure[0], procedure[1], produced, reason)
+                if produced:
                     created += 1
             except Exception as e:
                 import traceback

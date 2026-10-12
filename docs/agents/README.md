@@ -11,7 +11,7 @@ Archer has three agents, an MCP server that gives the same tools to any MCP clie
 | MCP | `archer-mcp`: Archer's tools and the three agents' prompts in Claude Code, Claude Desktop or your own agent |
 | Example | [`examples/agents/minimal_agent.py`](../../examples/agents/minimal_agent.py): about 100 lines, no Archer dependency |
 
-Agents run on Claude through tool use, with the Anthropic key in your profile (Profile → API Keys). Your Ask Archer model is used if you've assigned an Anthropic one; otherwise `claude-sonnet-5-5`.
+Agents run on any provider in your profile that can call tools (Profile → API Keys): Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok, or a local endpoint (Ollama, LM Studio, llama.cpp). Pick one on the Agents page or with `set PROVIDER` in the console. Without a choice, Claude is used if you have an Anthropic key (it's the most reliable at multi-step tool use), otherwise your Ask Archer provider.
 
 ## The loop
 
@@ -74,7 +74,15 @@ The tools are `analyse_report`, `technique_coverage`, `technique_info`, `find_ac
 
 Given a report URL, it extracts the techniques and IOCs, checks coverage, works out who the actor is, decides what to hunt, runs the hunt, waits, reads the results and writes a briefing (summary, technique table, IOCs, gaps, next steps). Here the model chooses the order and stops when it has enough; the instructions give it a plan, but nothing forces the sequence.
 
-On CISA AA23-320A (Scattered Spider) it found 35 of 43 techniques uncovered, hunted them with the IOC sweeps, and called out that the run created no technique detections. That's a real gap in the pipeline (see below), not an agent fault, and the agent said so rather than inventing results.
+On CISA AA23-320A (Scattered Spider) it found 35 of 43 techniques uncovered, hunted them with the IOC sweeps, and called out that the run created no technique detections rather than inventing results. That was a pipeline gap, since fixed: technique hunts now borrow indicators from ATT&CK procedure examples.
+
+## Two APIs, one loop
+
+[`llm.py`](../../archer/agents/llm.py) adapts the loop to Anthropic's Messages API and to the OpenAI-compatible Chat Completions API that every other provider speaks. The differences are only in shape: where the system prompt goes, how a tool request is marked up (a `tool_use` content block, or `tool_calls` with the arguments as a JSON string), and how results go back (one user message of `tool_result` blocks, or one `tool` message per result). The loop, the tools and the approvals don't change.
+
+## History
+
+Each session is saved to SQLite (`agent_runs`) as it runs: the task, every tool call and result preview, approvals, the answer and token counts. The Agents page lists recent runs and replays any of them; the console has `agent/history`. A run the server was in the middle of when it restarted shows as interrupted. The model's conversation is saved after every complete turn, so an interrupted run, one you stopped, or one that hit its turn limit can carry on: **Continue** on the Agents page, or `agent/history` with `SESSION <id>` and `CONTINUE true`. It continues on the provider it started on (the saved conversation is in that API's shape) and gets another full set of turns. Runs from before this change have no saved conversation and can only be replayed.
 
 ## Approvals
 
@@ -97,9 +105,10 @@ Each agent has a turn limit (repair 60, ask 20, triage 25). Hunts that an agent 
 ## MCP: Archer as tools for any agent
 
 ```bash
-claude mcp add archer --env ARCHER_EMAIL=you@example.com --env ARCHER_PASSWORD=... \
-    -- /path/to/archer/.venv/bin/python -m archer.mcp_server
+claude mcp add archer --env ARCHER_TOKEN=arch_... -- /path/to/archer/.venv/bin/python -m archer.mcp_server
 ```
+
+Create the token in Profile → Security → API Tokens. It's shown once, works with MFA, and revoking it signs out whatever uses it; `ARCHER_EMAIL` and `ARCHER_PASSWORD` still work for accounts without MFA.
 
 `archer-mcp` exposes the same 20 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the three agents' instructions as prompts (`repair`, `ask`, `triage`). It signs in to a running Archer as you, so hunts use your AI settings and your keys stay on the server.
 
@@ -111,8 +120,14 @@ claude mcp add archer --env ARCHER_EMAIL=you@example.com --env ARCHER_PASSWORD=.
 
 **Testing** without spending money: [`tests/unit/test_agent_runtime.py`](../../tests/unit/test_agent_runtime.py) scripts the model's responses and checks the loop, approvals, errors and turn limits.
 
+## Local models
+
+On local `qwen3:8b` through Ollama, the Ask agent answered "which of FIN7's Execution techniques have no detection?" correctly in 2 turns (one `group_coverage` call), taking about 110 seconds on an Intel Mac Mini. Small models get through short lookups like that; on longer runs (repair, triage) they tend to stop early, skip the check step, or call tools with malformed arguments. Two settings matter:
+
+- **Context.** Ollama defaults to 4k tokens and truncates silently, and one tool result can be 5k. `archer start` runs Ollama with `OLLAMA_CONTEXT_LENGTH=16384` unless you set it yourself.
+- **Tool support.** The model has to support tool calling (qwen3, qwen2.5, llama3.1, mistral do; base and coder-base models don't).
+
 ## Known gaps
 
-- **Technique hunts create nothing without AI or OSINT.** With neither, no indicators are found in the ATT&CK data and no detection is written. That's why the triage hunt and a plain T1003.001 hunt produced 0 technique files. Fix: fall back to the bespoke template generator (`MODE fallback`) when extraction finds no indicators, so a hunt always produces something reviewable.
-- **Agents need an Anthropic key.** The runtime uses Claude's tool use. Fix: add an OpenAI-compatible tool-calling path in `runtime.py` for OpenAI, DeepSeek and Qwen, and local models that support tools.
-- **Sessions live in memory.** A server restart loses running agents. Fix: persist the session events to SQLite; the transcript would also make a useful audit log.
+
+- **A run continues only on the provider it started on.** Anthropic and OpenAI-compatible APIs shape tool calls and results differently, and the saved conversation is in the original shape. Fix: convert between the two shapes on resume (tool_use/tool_result blocks ↔ tool_calls/tool messages; Anthropic thinking blocks would be dropped).

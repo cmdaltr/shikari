@@ -266,3 +266,11 @@ def _ioc_flows_in_tmp(tmp_path, monkeypatch):
     from archer.build import ioc_flow
 
     monkeypatch.setattr(ioc_flow, "IOC_FLOWS_DIR", str(tmp_path / "ioc_flows"))
+
+
+@pytest.fixture(autouse=True)
+def _isolated_technique_yield_ledger(tmp_path, monkeypatch):
+    """LLM calls in tests record empty results; keep them out of data/technique_yield_llm.json."""
+    from archer.build import technique_yield
+
+    monkeypatch.setattr(technique_yield, "LEDGER_PATH", str(tmp_path / "technique_yield_llm.json"))

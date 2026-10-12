@@ -7,8 +7,9 @@ app: profile AI assignment and call cap, IOC sweeps, IOC flow, latest-run view.
 
 Connection settings come from the environment:
   ARCHER_URL       default http://127.0.0.1:8000
-  ARCHER_EMAIL     the account to sign in as
-  ARCHER_PASSWORD  its password (the console prompts when unset and interactive)
+  ARCHER_TOKEN     an API token from Profile → Security → API tokens (works with MFA)
+  ARCHER_EMAIL     or the account to sign in as...
+  ARCHER_PASSWORD  ...and its password (the console prompts when unset and interactive)
 """
 
 import getpass
@@ -32,8 +33,12 @@ class ArcherError(RuntimeError):
 
 class ArcherClient:
     def __init__(self, url: Optional[str] = None, email: Optional[str] = None,
-                 password: Optional[str] = None, timeout: int = 120, session_cookie: Optional[str] = None):
-        """session_cookie: an existing archer_session (agents running inside the server act as their user)."""
+                 password: Optional[str] = None, timeout: int = 120, session_cookie: Optional[str] = None,
+                 token: Optional[str] = None):
+        """
+        token: an API token (ARCHER_TOKEN), sent as a bearer token on every request.
+        session_cookie: an existing archer_session (agents running inside the server act as their user).
+        """
         self.url = (url or os.getenv("ARCHER_URL") or DEFAULT_URL).rstrip("/")
         self.email = email or os.getenv("ARCHER_EMAIL")
         self._password = password or os.getenv("ARCHER_PASSWORD")
@@ -43,6 +48,11 @@ class ArcherClient:
         if session_cookie:
             self.session.cookies.set("archer_session", session_cookie)
             self._signed_in = True
+        else:
+            token = token or (None if email or password else os.getenv("ARCHER_TOKEN"))
+            if token:
+                self.session.headers["Authorization"] = f"Bearer {token}"
+                self._signed_in = True
 
     # ------------------------------------------------------------------
     # Session
@@ -56,11 +66,12 @@ class ArcherClient:
         if not self._password and interactive and sys.stdin.isatty():
             self._password = getpass.getpass("  Archer password: ")
         if not self.email or not self._password:
-            raise ArcherError("Set ARCHER_EMAIL and ARCHER_PASSWORD (the account to sign in to Archer as)")
+            raise ArcherError("Set ARCHER_TOKEN (Profile → Security → API tokens), or ARCHER_EMAIL and "
+                              "ARCHER_PASSWORD (the account to sign in to Archer as)")
         try:
             page = self.session.get(f"{self.url}/login", timeout=15)
         except requests.ConnectionError:
-            raise ArcherError(f"Archer isn't running at {self.url} (start it with `archer`, or set ARCHER_URL)")
+            raise ArcherError(f"Archer isn't running at {self.url} (start it with `archer start`, or set ARCHER_URL)")
         token = re.search(r'name="csrf_token"\s+value="([^"]+)"', page.text)
         if not token:
             raise ArcherError("The login page had no CSRF token")
@@ -68,16 +79,21 @@ class ArcherClient:
             "email": self.email, "password": self._password, "csrf_token": token.group(1), "next_url": "/",
         }, allow_redirects=False, timeout=30)
         if "archer_session" not in self.session.cookies:
-            hint = " (accounts with MFA can't sign in from the CLI yet)" if "mfa" in r.text.lower() else ""
+            hint = (" (this account uses MFA: create an API token in Profile → Security and set ARCHER_TOKEN)"
+                    if "mfa" in r.text.lower() or "/mfa" in r.headers.get("location", "") else "")
             raise ArcherError(f"Sign-in failed for {self.email}{hint}")
         self._signed_in = True
 
     def _request(self, method: str, path: str, **kwargs) -> requests.Response:
         self.login()
         kwargs.setdefault("timeout", self.timeout)
-        r = self.session.request(method, f"{self.url}{path}", **kwargs)
+        try:
+            r = self.session.request(method, f"{self.url}{path}", **kwargs)
+        except requests.ConnectionError:
+            raise ArcherError(f"Archer isn't running at {self.url} (start it with `archer start`, or set ARCHER_URL)")
         if r.status_code == 401:
-            raise ArcherError("Not signed in (session expired?)")
+            raise ArcherError("Invalid or revoked API token" if "Authorization" in self.session.headers
+                              else "Not signed in (session expired?)")
         return r
 
     def _json(self, method: str, path: str, **kwargs) -> Any:
@@ -174,8 +190,30 @@ class ArcherClient:
             data["correlation_min_relevance"] = str(min_relevance)
         return self._run_name(self._json("POST", "/hunt/technique", data=data))
 
+    def technique_yield(self, technique_ids: Optional[List[str]] = None, *, ai: bool = False,
+                        osint: bool = False) -> Dict:
+        """Techniques that can't produce a detection (all, or those of a planned run)."""
+        params = {"ai": str(ai).lower(), "osint": str(osint).lower()}
+        if technique_ids:
+            params["ids"] = ",".join(technique_ids)
+        return self._json("GET", "/api/techniques/yield", params=params)
+
     # ------------------------------------------------------------------
     # Intel: reports, files, company profiles
+
+    def feed(self) -> Dict:
+        """The threat feed for the signed-in user's industries (last 7 days)."""
+        return self._json("GET", "/api/feed")
+
+    def refresh_feed(self) -> bool:
+        return bool(self._json("POST", "/api/feed/refresh").get("started"))
+
+    def industries(self) -> Dict:
+        return self._json("GET", "/api/profile/industries")
+
+    def set_industries(self, industries: List[str]) -> List[str]:
+        return self._json("POST", "/api/profile/industries", json={"industries": industries})["industries"]
+
     # ------------------------------------------------------------------
 
     def analyse_url(self, url: str, *, use_ai: bool = False) -> Dict:
@@ -317,9 +355,16 @@ class ArcherClient:
     def agents(self) -> List[Dict]:
         return self._json("GET", "/api/agents").get("agents", [])
 
-    def start_agent(self, name: str, inputs: Dict, auto_approve: bool = False) -> str:
-        return self._json("POST", f"/api/agents/{name}/start",
-                          json={"input": inputs, "auto_approve": auto_approve})["session_id"]
+    def start_agent(self, name: str, inputs: Dict, auto_approve: bool = False,
+                    provider: Optional[str] = None, model: Optional[str] = None) -> str:
+        """provider/model: any configured provider (anthropic, openai, local, ...); default as the web page."""
+        return self._json("POST", f"/api/agents/{name}/start", json={
+            "input": inputs, "auto_approve": auto_approve, "provider": provider or "", "model": model or "",
+        })["session_id"]
+
+    def agent_sessions(self, limit: int = 20) -> List[Dict]:
+        """Recent agent sessions, newest first (kept across server restarts)."""
+        return self._json("GET", "/api/agents/sessions", params={"limit": limit}).get("sessions", [])
 
     def agent_session(self, session_id: str, since: int = 0) -> Dict:
         return self._json("GET", f"/api/agents/sessions/{session_id}", params={"since": since})
@@ -329,6 +374,11 @@ class ArcherClient:
 
     def stop_agent(self, session_id: str) -> Dict:
         return self._json("POST", f"/api/agents/sessions/{session_id}/stop")
+
+    def resume_agent(self, session_id: str, auto_approve: bool = False) -> str:
+        """Continue an interrupted, stopped or turn-limited session on the provider it ran on."""
+        return self._json("POST", f"/api/agents/sessions/{session_id}/resume",
+                          json={"auto_approve": auto_approve})["session_id"]
 
     # ------------------------------------------------------------------
     # Library
