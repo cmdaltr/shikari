@@ -9,6 +9,7 @@
 html {
     margin: 0 !important;
     padding: 0 !important;
+    zoom: 0.95; /* every page opens at 95%, as one step of browser zoom out */
 }
 
 body {
