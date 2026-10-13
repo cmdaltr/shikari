@@ -1659,8 +1659,8 @@ def _newest_object(path) -> str:
 
 
 def _check_mitresaw_attack(archer_bundle) -> None:
-    """MITRESaw reads ATT&CK from mitre/cti, Archer from mitre-attack/attack-stix-data:
-    say so when MITRESaw's copy is older than Archer's."""
+    """MITRESaw runs on a copy of Archer's bundle: say so if its copy is older than Archer's
+    (an older MITRESaw that fetched its own)."""
     from archer.mitre.procedures import _MITRESAW_DIR
 
     theirs = _newest_object(_MITRESAW_DIR / "data" / "stix" / "enterprise-attack.json")
@@ -1677,7 +1677,8 @@ def _check_mitresaw_attack(archer_bundle) -> None:
 def _refresh_procedures_if_stale(load: dict) -> None:
     """MITRESaw's procedures CSV (threat briefing, Splunk detections) follows ATT&CK: when
     the bundle is newer than the CSV, rebuild it in the background so startup isn't held."""
-    from archer.mitre.procedures import _DEFAULT_CSV, run_mitresaw_detection
+    from archer.mitre import procedures
+    from archer.mitre.procedures import _DEFAULT_CSV, MitresawBusy, run_mitresaw_detection
 
     bundle_path = load.get("cache_path")
     csv_mtime = _DEFAULT_CSV.stat().st_mtime if _DEFAULT_CSV.exists() else 0
@@ -1690,6 +1691,11 @@ def _refresh_procedures_if_stale(load: dict) -> None:
             run_mitresaw_detection(force=True)
             print("✓ Procedures CSV rebuilt")
             _check_mitresaw_attack(bundle_path)
+            if procedures.LAST_CHECK:
+                ok = procedures.LAST_CHECK["ok"]
+                print(("✓ " if ok else "Warning: ") + procedures.describe_check(procedures.LAST_CHECK))
+        except MitresawBusy as e:
+            print(f"Procedures CSV not rebuilt now: {e}")
         except Exception as e:
             print(f"Warning: procedures CSV not rebuilt: {e}")
 

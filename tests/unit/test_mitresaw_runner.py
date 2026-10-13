@@ -1,7 +1,9 @@
 """
-Archer runs MITRESaw on its own ATT&CK bundle, with MITRESaw's current flags, and only
-accepts output from that run (archer.mitre.procedures).
+Archer runs MITRESaw on its own ATT&CK bundle, with MITRESaw's current flags, one run at
+a time, only accepts output from that run, and checks it against its own walk of ATT&CK
+(archer.mitre.procedures).
 """
+import json
 import os
 import subprocess
 import time
@@ -23,6 +25,7 @@ def saw(tmp_path, monkeypatch):
     monkeypatch.setattr(p, "_MITRESAW_DIR", mitresaw)
     monkeypatch.setattr(p, "_ARCHER_BUNDLE", bundle)
     monkeypatch.setattr(p, "_mitresaw_python", lambda: "python")
+    monkeypatch.setattr(p, "_LOCK", tmp_path / ".mitresaw.lock")
     calls = []
 
     def run(cmd, **kw):
@@ -39,7 +42,7 @@ def test_shares_the_bundle_and_skips_fetch(saw):
     csv, _ = p.run_mitresaw_detection(output_csv=saw.out, force=True)
     assert (saw.dir / "data" / "stix" / "enterprise-attack.json").read_text() == '{"objects": []}'
     flags = saw.calls[0][2:]
-    assert "-F" not in flags and "-A" in flags and flags[:2] == ["-f", "Enterprise"]
+    assert "-F" not in flags and "-A" in flags and "-S" in flags and flags[:2] == ["-f", "Enterprise"]
     assert csv.read_text() == "group_sw_id\n"
 
 
@@ -58,3 +61,67 @@ def test_old_output_is_not_taken_for_a_rebuild(saw, monkeypatch):
     monkeypatch.setattr(p.subprocess, "run", lambda cmd, **kw: SimpleNamespace(returncode=0, stdout="", stderr=""))
     with pytest.raises(FileNotFoundError, match="no new mitre_procedures.csv"):
         p.run_mitresaw_detection(output_csv=saw.out)
+
+
+def test_one_rebuild_at_a_time(saw):
+    with p._mitresaw_lock():
+        with pytest.raises(p.MitresawBusy):
+            p.run_mitresaw_detection(output_csv=saw.out)
+    assert not saw.calls
+    p.run_mitresaw_detection(output_csv=saw.out)   # free again
+    assert len(saw.calls) == 1
+
+
+def _obj(type_, stix_id, ext=None, **kw):
+    o = {"type": type_, "id": stix_id, **kw}
+    if ext:
+        o["external_references"] = [{"source_name": "mitre-attack", "external_id": ext}]
+    return o
+
+
+def _uses(src, tgt, rel="uses"):
+    return {"type": "relationship", "id": f"relationship--{src}-{tgt}", "relationship_type": rel,
+            "source_ref": src, "target_ref": tgt, "description": ""}
+
+
+@pytest.fixture
+def bundle(tmp_path):
+    objects = [
+        _obj("intrusion-set", "intrusion-set--g", "G0001", name="Group"),
+        _obj("attack-pattern", "attack-pattern--a", "T1001", name="Own"),
+        _obj("attack-pattern", "attack-pattern--b", "T1002", name="From software"),
+        _obj("attack-pattern", "attack-pattern--c", "T1003", name="From a campaign"),
+        _obj("attack-pattern", "attack-pattern--r", "T1004", name="Revoked", revoked=True),
+        _obj("malware", "malware--m", "S0001", name="Malware"),
+        _obj("campaign", "campaign--c", "C0001", name="Campaign"),
+        _uses("intrusion-set--g", "attack-pattern--a"),
+        _uses("intrusion-set--g", "attack-pattern--r"),
+        _uses("intrusion-set--g", "malware--m"),
+        _uses("malware--m", "attack-pattern--b"),
+        _uses("campaign--c", "attack-pattern--c"),
+        _uses("campaign--c", "intrusion-set--g", rel="attributed-to"),
+    ]
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps({"objects": objects}))
+    return path
+
+
+def _csv(tmp_path, pairs):
+    path = tmp_path / "procedures.csv"
+    path.write_text("group_sw_id,technique_id,procedure_example\n" +
+                    "".join(f'{g},{t},"multi\nline"\n' for g, t in pairs))
+    return path
+
+
+def test_check_matches_every_path_and_ignores_revoked(tmp_path, bundle):
+    check = p.check_procedures(_csv(tmp_path, [("G0001", "T1001"), ("G0001", "T1002"), ("G0001", "T1003")]), bundle)
+    assert check["ok"] and check["groups"] == 1 and check["techniques"] == 3
+    assert "match" in p.describe_check(check)
+
+
+def test_check_reports_what_differs(tmp_path, bundle):
+    check = p.check_procedures(_csv(tmp_path, [("G0001", "T1001"), ("G0001", "T1999")]), bundle)
+    assert not check["ok"]
+    assert check["missing"] == {"G0001": ["T1002", "T1003"]}
+    assert check["extra"] == {"G0001": ["T1999"]}
+    assert "2 group-technique links missing" in p.describe_check(check)

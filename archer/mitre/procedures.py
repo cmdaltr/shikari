@@ -7,7 +7,9 @@ Adapter module that delegates MITRE ATT&CK data extraction to MITRESaw
 that Archer internals expect.
 
 Data generation (CSV / XLSX):
-    Runs MITRESaw CLI:  python MITRESaw/MITRESaw.py -d -E -R
+    Runs MITRESaw CLI:  python MITRESaw.py -f Enterprise -D -E -q -A -S
+    on Archer's ATT&CK bundle, one run at a time, then checks the CSV against
+    Archer's own walk of that bundle (check_procedures): Archer is the reference.
     Output: mitre_procedures.csv + mitre_procedures.xlsx
 
 Real-time STIX operations (used by app.py hunter/export routes):
@@ -20,6 +22,8 @@ Real-time STIX operations (used by app.py hunter/export routes):
 from __future__ import annotations
 
 import csv
+import fcntl
+import json
 import glob as _glob
 import logging
 import os
@@ -29,6 +33,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -331,9 +336,89 @@ def is_cache_stale(csv_path: Optional[Path] = None) -> bool:
 # ---------------------------------------------------------------------------
 
 # Enterprise only, the express CSV (-D) and evidence report (-E, which writes
-# mitre_procedures.csv/.xlsx), quietly, without MITRESaw's "start?" prompt (-A)
-_MITRESAW_FLAGS = ["-f", "Enterprise", "-D", "-E", "-q", "-A"]
+# mitre_procedures.csv/.xlsx), quietly, without MITRESaw's "start?" prompt (-A), with
+# techniques reached through a group's software as well as its own and its campaigns' (-S)
+_MITRESAW_FLAGS = ["-f", "Enterprise", "-D", "-E", "-q", "-A", "-S"]
 _ARCHER_BUNDLE = _PROJECT_ROOT / "archer" / "data" / "cache" / "enterprise-attack.json"
+_LOCK = _PROJECT_ROOT / "data" / ".mitresaw.lock"
+
+# The last check of MITRESaw's CSV against ATT&CK (check_procedures), for the server to report
+LAST_CHECK: Optional[Dict] = None
+
+
+class MitresawBusy(RuntimeError):
+    """Another rebuild holds the lock: two runs write the same files."""
+
+
+@contextmanager
+def _mitresaw_lock():
+    _LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with open(_LOCK, "w") as fh:
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise MitresawBusy("MITRESaw is already rebuilding the procedures CSV") from None
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
+def _expected_techniques(bundle_path: Path) -> Dict[str, Set[str]]:
+    """Archer's own walk of ATT&CK: each current group's techniques, its own, its
+    campaigns' and its software's, leaving out anything revoked or deprecated."""
+    with open(bundle_path, encoding="utf-8") as fh:
+        objects = [o for o in json.load(fh).get("objects", [])
+                   if not o.get("revoked") and not o.get("x_mitre_deprecated")]
+    groups, techniques, software, campaigns = _build_indexes(objects)
+    rows: List[dict] = []
+    seen: Set[Tuple] = set()
+    _walk_path1(objects, groups, techniques, rows, seen)
+    _walk_path2(objects, groups, techniques, software, rows, seen)
+    _walk_path3(objects, groups, techniques, campaigns, rows, seen)
+    expected: Dict[str, Set[str]] = {_attack_id(g): set() for g in groups.values()}
+    for r in rows:
+        expected.setdefault(r["group_sw_id"], set()).add(r["technique_id"])
+    return expected
+
+
+def check_procedures(csv_path: Path, bundle_path: Path) -> Dict:
+    """Compare MITRESaw's CSV with Archer's own walk of the same ATT&CK bundle: which
+    techniques each group has. Archer is the reference, so a difference is MITRESaw's."""
+    expected = _expected_techniques(bundle_path)
+    found: Dict[str, Set[str]] = {}
+    csv.field_size_limit(sys.maxsize)
+    with open(csv_path, newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            gid, tid = row.get("group_sw_id", ""), row.get("technique_id", "")
+            if gid.startswith("G") and tid:
+                found.setdefault(gid, set()).add(tid)
+    missing = {g: sorted(t - found.get(g, set())) for g, t in expected.items() if t - found.get(g, set())}
+    extra = {g: sorted(t - expected.get(g, set())) for g, t in found.items() if t - expected.get(g, set())}
+    return {
+        "ok": not missing and not extra,
+        "groups": len([g for g, t in expected.items() if t]),
+        "techniques": len(set().union(*expected.values())) if expected else 0,
+        "missing": missing,
+        "extra": extra,
+    }
+
+
+def describe_check(check: Dict) -> str:
+    """One line for the log: matches, or what differs."""
+    if check["ok"]:
+        return (f"MITRESaw's procedures match ATT&CK: {check['groups']} groups, "
+                f"{check['techniques']} techniques")
+    def sample(d):
+        return "; ".join(f"{g}: {', '.join(t[:3])}{'…' if len(t) > 3 else ''}" for g, t in list(d.items())[:3])
+    parts = []
+    if check["missing"]:
+        n = sum(map(len, check["missing"].values()))
+        parts.append(f"{n} group-technique links missing across {len(check['missing'])} groups ({sample(check['missing'])})")
+    if check["extra"]:
+        n = sum(map(len, check["extra"].values()))
+        parts.append(f"{n} not in ATT&CK across {len(check['extra'])} groups ({sample(check['extra'])})")
+    return "MITRESaw's procedures differ from ATT&CK: " + "; ".join(parts)
 
 
 def _share_attack_bundle() -> bool:
@@ -352,6 +437,14 @@ def _share_attack_bundle() -> bool:
 
 def _run_mitresaw(output_csv: Optional[Path], output_xlsx: Optional[Path],
                   force: bool) -> Tuple[Path, Optional[Path]]:
+    # One at a time: concurrent runs write the same dated folder and break each other
+    with _mitresaw_lock():
+        return _run_mitresaw_locked(output_csv, output_xlsx, force)
+
+
+def _run_mitresaw_locked(output_csv: Optional[Path], output_xlsx: Optional[Path],
+                         force: bool) -> Tuple[Path, Optional[Path]]:
+    global LAST_CHECK
     output_csv = Path(output_csv or _DEFAULT_CSV)
     output_xlsx = Path(output_xlsx or _DEFAULT_XLSX)
     output_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -400,6 +493,13 @@ def _run_mitresaw(output_csv: Optional[Path], output_xlsx: Optional[Path],
         shutil.copy2(str(src_xlsx), str(output_xlsx))
         logger.info("Copied MITRESaw XLSX to %s", output_xlsx)
         xlsx_result = output_xlsx
+
+    if _ARCHER_BUNDLE.exists():
+        try:
+            LAST_CHECK = check_procedures(output_csv, _ARCHER_BUNDLE)
+            (logger.info if LAST_CHECK["ok"] else logger.warning)(describe_check(LAST_CHECK))
+        except Exception as e:  # the check never costs the rebuild
+            logger.warning("Couldn't check MITRESaw's procedures against ATT&CK: %s", e)
     return output_csv, xlsx_result
 
 
