@@ -57,7 +57,17 @@ XLSX_URL = (
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 _DEFAULT_CSV = _PROJECT_ROOT / "data" / "mitre_procedures.csv"
 _DEFAULT_XLSX = _PROJECT_ROOT / "data" / "mitre_procedures.xlsx"
-_MITRESAW_DIR = _PROJECT_ROOT / "MITRESaw"
+
+
+def _find_mitresaw() -> Path:
+    """MITRESaw: $MITRESAW_DIR, else the submodule (./MITRESaw), else a checkout beside
+    Archer (../MITRESaw). The first that has MITRESaw.py wins."""
+    candidates = [Path(os.environ["MITRESAW_DIR"])] if os.environ.get("MITRESAW_DIR") else []
+    candidates += [_PROJECT_ROOT / "MITRESaw", _PROJECT_ROOT.parent / "MITRESaw"]
+    return next((c for c in candidates if (c / "MITRESaw.py").exists()), candidates[0])
+
+
+_MITRESAW_DIR = _find_mitresaw()
 
 # ---------------------------------------------------------------------------
 # MITRESaw CSV column order (12 columns)
