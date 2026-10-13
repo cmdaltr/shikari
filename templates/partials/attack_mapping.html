@@ -1,0 +1,81 @@
+{#
+  A detection's ATT&CK mapping: what's in force, the ATT&CK default when it differs,
+  Edit / Restore (archer.build.attack_mapping) and the history. Used on results cards
+  (ref = {"files": [...]}, endpoint /api/detections/mapping) and Library cards
+  (ref = {"ids": [...]}, endpoint /api/library/mapping). static/js/attack_mapping.js
+  drives the dialog.
+#}
+
+{% macro badge(ov) -%}
+{% if ov %}<span class="mapping-badge" title="ATT&CK default: {{ ov.default.technique_id }} ({{ ov.default.tactics|join(', ') }}). Changed by {{ ov.by }} on {{ (ov.at or '')[:10] }}: {{ ov.comment }}">Mapping changed</span>{% endif %}
+{%- endmacro %}
+
+{% macro row(technique_id, tactics, ov, history, endpoint, ref, can_edit=True, rule_name=None) %}
+<div class="mapping-row{% if ov %} is-changed{% endif %}">
+  <span class="mapping-label">ATT&amp;CK</span>
+  <code class="mapping-current">{{ technique_id or '—' }}</code>
+  <span class="mapping-tactics">{{ tactics|join(', ') }}</span>
+  {% if ov and ov.rule_name %}<span class="mapping-rule">rule <code>{{ ov.rule_name }}</code></span>{% endif %}
+  {% if ov %}
+  <span class="mapping-default">ATT&amp;CK default <code>{{ ov.default.technique_id }}</code> {{ ov.default.tactics|join(', ') }}</span>
+  {% endif %}
+  {% if can_edit %}
+  <span class="mapping-actions">
+    <button type="button" class="btn-ghost mapping-btn" data-mapping-action="change"
+            data-endpoint="{{ endpoint }}" data-ref='{{ ref|tojson }}' data-technique="{{ technique_id }}"
+            data-tactics='{{ tactics|tojson }}' data-rule="{{ rule_name or '' }}">Edit mapping</button>
+    {% if ov %}
+    <button type="button" class="btn-ghost mapping-btn" data-mapping-action="restore"
+            data-endpoint="{{ endpoint }}" data-ref='{{ ref|tojson }}' data-technique="{{ ov.default.technique_id }}"
+            data-tactics='{{ ov.default.tactics|tojson }}' data-rule="{{ ov.default.rule_name or '' }}"
+            data-renamed="{{ '1' if ov.rule_name else '' }}">Restore default</button>
+    {% endif %}
+  </span>
+  {% endif %}
+  {% if history %}
+  <details class="mapping-history">
+    <summary>History ({{ history|length }})</summary>
+    <ol>
+      {% for h in history|reverse %}
+      <li><strong>{{ 'Restored' if h.action == 'restored' else 'Changed' }}</strong>
+        <code>{{ h['from'].technique_id }}</code> {{ h['from'].tactics|join(', ') }} →
+        <code>{{ h['to'].technique_id }}</code> {{ h['to'].tactics|join(', ') }}
+        {% if h.rule_renamed %}· rule <code>{{ h.rule_renamed['from'] }}</code> → <code>{{ h.rule_renamed['to'] }}</code>{% endif %}
+        <span class="mapping-meta">{{ h.by }}, {{ (h.at or '')[:16]|replace('T', ' ') }}</span>
+        <q>{{ h.comment }}</q></li>
+      {% endfor %}
+    </ol>
+  </details>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro dialog() %}
+<div class="mapping-overlay" id="mapping-modal" role="dialog" aria-modal="true" aria-labelledby="mapping-title" hidden>
+  <form class="mapping-dialog" id="mapping-form">
+    <div class="mapping-dialog-header"><h3 id="mapping-title">Edit ATT&amp;CK mapping</h3></div>
+    <div class="mapping-dialog-body">
+      <p class="mapping-intro" id="mapping-intro"></p>
+      <div id="mapping-fields">
+        <label class="mapping-field-label" for="mapping-technique">Technique</label>
+        <input type="text" id="mapping-technique" list="mapping-technique-list" autocomplete="off" placeholder="T1055 or a technique name">
+        <datalist id="mapping-technique-list"></datalist>
+        <div class="mapping-technique-name" id="mapping-technique-name"></div>
+        <span class="mapping-field-label">Tactics</span>
+        <div class="mapping-tactic-grid" id="mapping-tactics"></div>
+        <label class="mapping-rename" id="mapping-rename-wrap" hidden>
+          <input type="checkbox" id="mapping-rename">
+          <span>Rename the SecOps rule to <code id="mapping-rename-to"></code>. SecOps treats it as a new rule: retire <code id="mapping-rename-from"></code> where it's deployed.</span>
+        </label>
+      </div>
+      <label class="mapping-field-label" for="mapping-comment">Comment <span class="mapping-required">required</span></label>
+      <textarea id="mapping-comment" rows="3" maxlength="1000" aria-required="true" placeholder="Why the mapping changes"></textarea>
+      <p class="mapping-error" id="mapping-error" hidden></p>
+    </div>
+    <div class="mapping-dialog-footer">
+      <button type="button" class="btn-ghost" id="mapping-cancel">Cancel</button>
+      <button type="submit" class="btn-primary" id="mapping-save">Save</button>
+    </div>
+  </form>
+</div>
+{% endmacro %}

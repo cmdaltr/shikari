@@ -8,6 +8,7 @@
 
 {% block main_class %}page-shell{% endblock %}
 
+{% import "partials/attack_mapping.html" as am with context %}
 {% block content %}
   <div class="results-container">
         <div class="page-header">
@@ -637,9 +638,7 @@
                   </span>
                   {% endif %}
 
-                  {% if detection.attack_override %}
-                  <span class="mapping-badge" title="ATT&CK default: {{ detection.attack_override.default.technique_id }} ({{ detection.attack_override.default.tactics|join(', ') }}). Changed by {{ detection.attack_override.by }} on {{ detection.attack_override.at[:10] }}: {{ detection.attack_override.comment }}">Mapping changed</span>
-                  {% endif %}
+                  {{ am.badge(detection.attack_override) }}
                 </div>
                 {% if detection.osint_data %}
                 <button onclick="toggleOsintDetails('det-osint-{{ vendor.name }}-{{ loop.index }}-details')" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 500; white-space: nowrap; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.background='#3b82f6'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#3b82f6';">
@@ -659,6 +658,8 @@
               </div>
               {% endif %}
               <div class="detection-description" style="white-space: pre-line; font-style: italic;">{{ detection.description_html | safe }}</div>
+              {{ am.row(detection.attack_id, detection.attack_tactics, detection.attack_override, detection.attack_mapping_history,
+                        '/api/library/mapping', {'ids': detection.ids}, detection.ids and detection.attack_tactics, detection.rule_name) }}
 
               <!-- OSINT Details (Collapsible) -->
               {% if detection.osint_data %}
@@ -2227,4 +2228,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 </script>
+{{ am.dialog() }}
+<script src="{{ url_for('static', path='js/attack_mapping.js') }}?v={{ request.app.state.asset_version }}"></script>
 {% endblock %}

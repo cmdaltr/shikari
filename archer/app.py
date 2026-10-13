@@ -5,6 +5,7 @@ from starlette.concurrency import run_in_threadpool
 from archer.security import sanitize_filename, validate_safe_path, sanitize_group_name
 from archer.build.group_files import group_yaml_files
 from archer.tactic_scope import keep as keep_tactics
+from archer.build.attack_mapping import rule_name as attack_rule_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from typing import Optional
@@ -4212,7 +4213,8 @@ async def change_detection_mapping(request: Request, archer_session: Optional[st
     """
     Change or restore the ATT&CK mapping of one or more detection files (a results card
     can hold several). A comment is required either way and is kept in each file.
-    Body: {"files": [...], "action": "change"|"restore", "technique_id", "tactics", "comment"}
+    Body: {"files": [...], "action": "change"|"restore", "technique_id", "tactics", "comment",
+           "rename_rule": bool (SecOps: rename the rule after the new technique)}
     """
     from .build import attack_mapping
     from .visualization.navigator import matrix, technique_index
@@ -4243,7 +4245,8 @@ async def change_detection_mapping(request: Request, archer_session: Optional[st
                 else:
                     results[f] = attack_mapping.change(path, str(body.get("technique_id") or ""),
                                                        body.get("tactics") or [], comment, user.email,
-                                                       index=index, tactic_order=order)
+                                                       index=index, tactic_order=order,
+                                                       rename_rule=bool(body.get("rename_rule")))
             except attack_mapping.Unchanged as err:
                 unchanged = err  # another file on the card may still need it
     except attack_mapping.MappingError as err:
@@ -6352,6 +6355,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "technique_id": str(yaml_data.get("technique_id") or ""),
                     "attack_override": yaml_data.get("attack_override"),  # ATT&CK mapping changed by hand
                     "attack_mapping_history": yaml_data.get("attack_mapping_history") or [],
+                    "rule_name": attack_rule_name(query_text),  # SecOps rule, renamable with the mapping
                 }
             )
 
@@ -6387,6 +6391,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "technique_id": file_data.get("technique_id", ""),
                     "attack_override": None,
                     "attack_mapping_history": [],
+                    "rule_name": file_data.get("rule_name"),
                 }
             else:
                 # Merge indicators from multiple detections in the same group
@@ -6445,6 +6450,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "technique_id": data["technique_id"],
                     "attack_override": data["attack_override"],
                     "attack_mapping_history": data["attack_mapping_history"],
+                    "rule_name": data["rule_name"],
                 }
             )
 
@@ -8165,6 +8171,11 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                     return default
             return default
 
+        from .build import attack_mapping
+        from .visualization.navigator import technique_index
+
+        tech_index = technique_index(getattr(app.state, "bundle", None))
+
         # Query all detections and correlations for this user
         detections = db.query(LibraryDetection).filter_by(user_id=user.id).all()
         correlations_db = db.query(LibraryCorrelation).filter_by(user_id=user.id).all()
@@ -8452,8 +8463,15 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 formatted_title = data_source or det.platform or "Unknown"
 
             tactics = keep_tactics(tactics)
+            # ATT&CK mapping as the copy holds it (archer.build.attack_mapping); none for correlations
+            mapping_state = (attack_mapping.content_state(content_data, tech_index)
+                             if isinstance(content_data, dict) and "combined_query" not in content_data else None)
             detection_data = {
                 "id": det.id,
+                "attack_id": mapping_state["mapping"]["technique_id"] if mapping_state else "",
+                "attack_tactics": mapping_state["mapping"]["tactics"] if mapping_state else [],
+                "rule_name": mapping_state["mapping"]["rule_name"] if mapping_state else None,
+                "attack_mapping_history": mapping_state["history"] if mapping_state else [],
                 "technique": technique_name,  # Changed: now the technique name, not ID (matching results page)
                 "title": formatted_title,  # Changed: now the data sources, not technique name (matching results page)
                 "data_source": data_source or det.platform or "Unknown",
@@ -8670,12 +8688,18 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         "data_source": det.get("data_source", "Unknown"),
                         "ids": [],  # Track ALL detection IDs in this group
                         "attack_override": None,
+                        "attack_id": det.get("attack_id", ""),
+                        "attack_tactics": det.get("attack_tactics", []),
+                        "rule_name": det.get("rule_name"),
+                        "attack_mapping_history": [],
                     }
 
                 # Add this detection's ID to the group
                 grouped[key]["ids"].append(det.get("id"))
                 if det.get("attack_override") and not grouped[key]["attack_override"]:
                     grouped[key]["attack_override"] = det["attack_override"]
+                if len(det.get("attack_mapping_history") or []) > len(grouped[key]["attack_mapping_history"]):
+                    grouped[key]["attack_mapping_history"] = det["attack_mapping_history"]
 
                 # Add title (data source)
                 title = det.get("title", "")
@@ -8738,6 +8762,11 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         "osint_data": data["osint_data"],
                         "detection_likelihood": data["detection_likelihood"],
                         "attack_override": data["attack_override"],
+                        "ids": data["ids"],
+                        "attack_id": data["attack_id"],
+                        "attack_tactics": data["attack_tactics"],
+                        "rule_name": data["rule_name"],
+                        "attack_mapping_history": data["attack_mapping_history"],
                     }
                 )
 
@@ -9685,6 +9714,67 @@ async def update_library_tags(request: Request, archer_session: Optional[str] = 
         db.rollback()
         logger.error(f"Error updating tags: {e}")
         raise HTTPException(status_code=500, detail="Failed to update tags")
+    finally:
+        db.close()
+
+
+@app.post("/api/library/mapping")
+async def change_library_mapping(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Change or restore the ATT&CK mapping of the caller's own Library copies, with the
+    same rules as detection files (archer.build.attack_mapping). A comment is required.
+    Body: {"ids": [...], "action": "change"|"restore", "technique_id", "tactics", "comment",
+           "rename_rule"}
+    """
+    from archer.database.models import LibraryDetection
+    from .build import attack_mapping
+    from .visualization.navigator import matrix, technique_index
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        body = await request.json()
+        ids = [int(i) for i in body.get("ids") or [] if str(i).isdigit()]
+        if not ids:
+            return JSONResponse({"error": "No Library detections given"}, status_code=400)
+        rows = (db.query(LibraryDetection)
+                .filter(LibraryDetection.id.in_(ids), LibraryDetection.user_id == user.id).all())
+        if len(rows) != len(set(ids)):
+            return JSONResponse({"error": "Only your own Library detections can be changed"}, status_code=403)
+        bundle = getattr(app.state, "bundle", None)
+        index = technique_index(bundle) or None
+        order = [c["tactic"] for c in matrix(bundle)] or None
+        comment = str(body.get("comment") or "")[:1000]
+        changed, unchanged = 0, None
+        for row in rows:
+            try:
+                content = json.loads(row.content)
+            except (TypeError, ValueError):
+                return JSONResponse({"error": f"Library item {row.id} isn't a detection"}, status_code=422)
+            if not isinstance(content, dict):
+                return JSONResponse({"error": f"Library item {row.id} isn't a detection"}, status_code=422)
+            state = attack_mapping.content_state(content, index)
+            try:
+                if body.get("action") == "restore":
+                    plan = attack_mapping.plan_restore(state, comment, user.email)
+                else:
+                    plan = attack_mapping.plan_change(
+                        state, str(body.get("technique_id") or ""), body.get("tactics") or [], comment,
+                        user.email, index, order, rename_rule=bool(body.get("rename_rule")))
+            except attack_mapping.Unchanged as err:
+                unchanged = err
+                continue
+            row.content = json.dumps(attack_mapping.apply_content(content, *plan, index=index))
+            changed += 1
+        if not changed:
+            return JSONResponse({"error": str(unchanged)}, status_code=422)
+        db.commit()
+        return {"success": True, "count": changed}
+    except attack_mapping.MappingError as err:
+        db.rollback()
+        return JSONResponse({"error": str(err)}, status_code=422)
     finally:
         db.close()
 

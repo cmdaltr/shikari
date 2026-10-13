@@ -169,3 +169,47 @@ def test_repair_history_after_the_mapping_is_kept(env):
     mapping.restore(str(path), "Back", "a@example.test")
     doc = _doc(path)
     assert doc["repair_history"] == [{"at": "x", "reason": "y"}] and "attack_override" not in doc
+
+
+def test_rule_rename_is_opt_in_and_restore_puts_it_back(env):
+    path = env / "d.yaml"
+    _write(path, query=YARAL, connector="GoogleSecOps")
+    _change(path)
+    assert "rule archer_t1003_001 {" in _doc(path)["query"]
+    mapping.change(str(path), "T1055", ["Stealth", "Impact"], "Rename it", "a@example.test",
+                   index=INDEX, tactic_order=TACTICS, rename_rule=True)
+    doc = _doc(path)
+    assert "rule archer_t1055 {" in doc["query"]
+    assert doc["attack_override"]["rule_name"] == "archer_t1055"
+    assert doc["attack_mapping_history"][-1]["rule_renamed"] == {"from": "archer_t1003_001", "to": "archer_t1055"}
+    assert not writer.file_state(str(path))["edited"]
+    mapping.restore(str(path), "Back", "a@example.test")
+    doc = _doc(path)
+    assert "rule archer_t1003_001 {" in doc["query"] and 'mitre_attack_technique = "T1003.001"' in doc["query"]
+
+
+def test_regenerate_keeps_a_renamed_rule(env):
+    path = env / "d.yaml"
+    _write(path, query=YARAL, connector="GoogleSecOps")
+    mapping.change(str(path), "T1055", ["Stealth"], "Rename", "a@example.test",
+                   index=INDEX, tactic_order=TACTICS, rename_rule=True)
+    run_files.begin("APT1", regenerate=True)
+    rewrite = writer.detection_action(str(path), "APT1")
+    _write(path, query=YARAL, connector="GoogleSecOps", **rewrite)
+    doc = _doc(path)
+    assert "rule archer_t1055 {" in doc["query"] and 'mitre_attack_technique = "T1055"' in doc["query"]
+    assert doc["attack_override"]["default"]["rule_name"] == "archer_t1003_001"
+
+
+def test_library_content_change_and_restore():
+    content = {"technique": "LSASSMemory", "technique_display": "LSASS Memory", "title": "Process",
+               "query": YARAL, "tactic": "Credential Access", "tactics": ["Credential Access"]}
+    state = mapping.content_state(content, INDEX)
+    assert state["mapping"]["technique_id"] == "T1003.001"  # from the rule's meta
+    out = mapping.apply_content(content, *mapping.plan_change(
+        state, "T1055", ["Stealth"], "Library change", "a@example.test", INDEX, TACTICS), index=INDEX)
+    assert (out["attack_id"], out["technique_display"], out["tactic"]) == ("T1055", "Process Injection", "Stealth")
+    assert 'mitre_attack_technique = "T1055"' in out["query"] and out["attack_override"]["comment"] == "Library change"
+    back = mapping.apply_content(out, *mapping.plan_restore(mapping.content_state(out, INDEX), "Back", "a"), index=INDEX)
+    assert back["tactics"] == ["Credential Access"] and "attack_override" not in back
+    assert len(back["attack_mapping_history"]) == 2
