@@ -394,3 +394,21 @@ input[type="checkbox"] {
 }
 .mapping-rename[hidden] { display: none; }
 .mapping-error { margin: 10px 0 0; color: #dc2626; font-size: 0.88em; }
+
+/* A technique ATT&CK has revoked or deprecated since the detection was built */
+.legacy-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #7f1d1d;
+  color: #fff;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: help;
+}
+.mapping-legacy { color: #b91c1c; font-weight: 600; }
+.mapping-row .btn-primary.mapping-btn { padding: 4px 12px; font-size: 0.95em; min-height: 0; }
+[data-theme="dark"] .mapping-legacy { color: #fca5a5; }

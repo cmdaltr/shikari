@@ -441,7 +441,7 @@
                   <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
                 </svg>
               </span>
-              {% elif vendor.name == 'google_secops' or vendor.name == 'Google SecOps' %}
+              {% elif vendor.name in ('googlesecops', 'google_secops', 'Google SecOps') %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
                   <defs>
@@ -639,6 +639,7 @@
                   {% endif %}
 
                   {{ am.badge(detection.attack_override) }}
+                  {{ am.legacy_badge(detection.legacy) }}
                 </div>
                 {% if detection.osint_data %}
                 <button onclick="toggleOsintDetails('det-osint-{{ vendor.name }}-{{ loop.index }}-details')" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 500; white-space: nowrap; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.background='#3b82f6'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#3b82f6';">
@@ -659,7 +660,7 @@
               {% endif %}
               <div class="detection-description" style="white-space: pre-line; font-style: italic;">{{ detection.description_html | safe }}</div>
               {{ am.row(detection.attack_id, detection.attack_tactics, detection.attack_override, detection.attack_mapping_history,
-                        '/api/library/mapping', {'ids': detection.ids}, detection.ids and detection.attack_tactics, detection.rule_name) }}
+                        '/api/library/mapping', {'ids': detection.ids}, detection.ids and detection.attack_tactics, detection.rule_name, detection.legacy) }}
 
               <!-- OSINT Details (Collapsible) -->
               {% if detection.osint_data %}
@@ -837,7 +838,7 @@
                   <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradientLibCorr)"/>
                 </svg>
               </span>
-              {% elif vendor.name == 'google_secops' or vendor.name == 'Google SecOps' %}
+              {% elif vendor.name in ('googlesecops', 'google_secops', 'Google SecOps') %}
               <span class="vendor-logo-icon">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
                   <defs>

@@ -1,62 +1,113 @@
 #!/usr/bin/env python3 -tt
 from .extract import extract_red, extract_blue
+import json
 import re
+import time
 import requests
 import stix2
 from pathlib import Path
 from datetime import datetime, timedelta
 
 
-def get_stix_data(url, cache_days=7):
+# What the last load found: the ATT&CK version in use, the one before it, and where it
+# came from. The server shows it and acts on a version change (archer.app startup).
+LAST_LOAD: dict = {}
+
+
+def _cache_path(url) -> Path:
+    cache_dir = Path(__file__).parent.parent / "data" / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir / url.split("/")[-1]
+
+
+def _meta_path(cache_path: Path) -> Path:
+    return cache_path.with_name(cache_path.name + ".meta.json")
+
+
+def _read_meta(cache_path: Path) -> dict:
+    try:
+        return json.loads(_meta_path(cache_path).read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def _write_meta(cache_path: Path, meta: dict) -> None:
+    try:
+        _meta_path(cache_path).write_text(json.dumps(meta, indent=2))
+    except OSError as e:
+        print(f"Warning: could not record the ATT&CK cache state: {e}")
+
+
+def bundle_version(text: str) -> str:
+    """x_mitre_version of the bundle's collection object, e.g. "19.2" ("" if none)."""
+    m = re.search(r'"type":\s*"x-mitre-collection".*?"x_mitre_version":\s*"([^"]+)"', text, re.S)
+    if not m:
+        m = re.search(r'"x_mitre_version":\s*"([^"]+)"[^{}]*"type":\s*"x-mitre-collection"', text, re.S)
+    return m.group(1) if m else ""
+
+
+def _parse(text: str, cache_path: Path, source: str, previous: str = ""):
+    version = bundle_version(text)
+    LAST_LOAD.clear()
+    LAST_LOAD.update(version=version, previous=previous or version, source=source,
+                     updated=bool(previous) and previous != version, cache_path=str(cache_path))
+    return stix2.parse(text, allow_custom=True)
+
+
+def get_stix_data(url, cache_days=7, check_latest=False):
     """
     Fetch MITRE ATT&CK STIX data with local caching.
 
-    Args:
-        url: URL to fetch STIX data from
-        cache_days: Number of days to cache the data (default: 7)
-
-    Returns:
-        STIX bundle object
+    check_latest (server startup): always ask upstream whether there's a newer bundle,
+    with the cached ETag/Last-Modified, so an unchanged bundle costs one small request.
+    Otherwise the cache is used while it was fetched or confirmed within cache_days.
+    Offline, or behind a failing TLS proxy, the cache is used however old it is.
     """
-    # Create cache directory inside the archer application
-    # Use __file__ to find the archer module directory, then go up to project root
-    archer_module_dir = Path(__file__).parent.parent
-    cache_dir = archer_module_dir / "data" / "cache"
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = _cache_path(url)
+    meta = _read_meta(cache_path)
+    previous = meta.get("version", "")
 
-    # Create cache file path based on URL
-    cache_filename = url.split("/")[-1]
-    cache_path = cache_dir / cache_filename
+    def from_cache(note):
+        print(f"Loading MITRE ATT&CK data from cache ({cache_path}){note}")
+        with open(cache_path, "r", encoding="utf-8") as f:
+            return _parse(f.read(), cache_path, "cache", previous)
 
-    # Check if cache exists and is fresh
-    if cache_path.exists():
-        cache_age = datetime.now() - datetime.fromtimestamp(cache_path.stat().st_mtime)
-        if cache_age < timedelta(days=cache_days):
+    if cache_path.exists() and not check_latest:
+        checked = max(cache_path.stat().st_mtime, meta.get("checked", 0))
+        if datetime.now() - datetime.fromtimestamp(checked) < timedelta(days=cache_days):
             try:
-                print(f"Loading MITRE ATT&CK data from cache ({cache_path})")
-                with open(cache_path, "r", encoding="utf-8") as f:
-                    return stix2.parse(f.read(), allow_custom=True)
+                return from_cache("")
             except Exception as e:
                 print(f"Cache read error: {e}, fetching fresh data...")
 
-    # Try to fetch from network
-    try:
-        # First attempt with SSL verification
-        print(f"Fetching MITRE ATT&CK data from {url}...")
-        response = requests.get(url, verify=True, timeout=30)
-        response.raise_for_status()
-        print("✓ MITRE ATT&CK data fetched with SSL verification")
+    headers = {}
+    if cache_path.exists():
+        if meta.get("etag"):
+            headers["If-None-Match"] = meta["etag"]
+        if meta.get("last_modified"):
+            headers["If-Modified-Since"] = meta["last_modified"]
 
-        # Save to cache
+    try:
+        print(f"Checking for the latest MITRE ATT&CK data at {url}...")
+        response = requests.get(url, verify=True, timeout=30, headers=headers)
+        if response.status_code == 304 and cache_path.exists():
+            meta["checked"] = time.time()
+            _write_meta(cache_path, meta)
+            return from_cache(f": unchanged upstream (ATT&CK v{previous})" if previous else ": unchanged upstream")
+        response.raise_for_status()
+        version = bundle_version(response.text)
+        print(f"✓ MITRE ATT&CK v{version or '?'} fetched" +
+              (f" (was v{previous})" if previous and previous != version else ""))
         try:
             with open(cache_path, "w", encoding="utf-8") as f:
                 f.write(response.text)
+            _write_meta(cache_path, {"etag": response.headers.get("ETag", ""),
+                                     "last_modified": response.headers.get("Last-Modified", ""),
+                                     "checked": time.time(), "version": version})
             print(f"Cached MITRE ATT&CK data to {cache_path}")
         except Exception as e:
             print(f"Warning: Could not cache data: {e}")
-
-        # Load the STIX bundle
-        return stix2.parse(response.text, allow_custom=True)
+        return _parse(response.text, cache_path, "network", previous)
 
     except requests.exceptions.SSLError as ssl_err:
         # No silent downgrade: an unverified bundle would be cached and trusted for cache_days.
@@ -64,19 +115,15 @@ def get_stix_data(url, cache_days=7):
         print(f"❌ SSL verification failed fetching MITRE ATT&CK data: {ssl_err}")
         print("   Set REQUESTS_CA_BUNDLE to your proxy's CA bundle if you are behind TLS inspection.")
         if cache_path.exists():
-            print(f"Using stale cache from {cache_path}")
-            with open(cache_path, "r", encoding="utf-8") as f:
-                return stix2.parse(f.read(), allow_custom=True)
+            return from_cache(" (stale)")
         raise
 
     except (requests.RequestException, requests.exceptions.ConnectionError) as e:
         # Network error - try to use stale cache if available
         print(f"Network error fetching MITRE data: {e}")
         if cache_path.exists():
-            print(f"Using stale cache from {cache_path}")
             try:
-                with open(cache_path, "r", encoding="utf-8") as f:
-                    return stix2.parse(f.read(), allow_custom=True)
+                return from_cache(" (stale)")
             except Exception as cache_err:
                 print(f"Error reading stale cache: {cache_err}")
 

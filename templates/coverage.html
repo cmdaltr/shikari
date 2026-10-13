@@ -327,6 +327,7 @@
 .nav-cell.is-changed { outline: 2px dashed #d97706; outline-offset: 1px; }
 .nav-cell.is-moved { border-style: dashed; }
 .nav-cell .nav-mark { flex: 0 0 auto; font-size: .7rem; opacity: .9; }
+.nav-upgrade { margin-top: 2px; padding: 3px 8px !important; font-size: .72rem !important; min-height: 0 !important; }
 .nav-moved-label { margin-top: 4px; font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); text-align: center; }
 .nav-matrix.covered-only .nav-cell.level-0, .nav-matrix.covered-only .nav-subs .nav-cell.level-0 { display: none; }
 
@@ -341,6 +342,7 @@
 
 {% block main_class %}page-shell{% endblock %}
 
+{% import "partials/attack_mapping.html" as am with context %}
 {% block content %}
 <!-- Vendor logos, the same as the attack flow and the home page options -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -599,7 +601,7 @@ function switchTactic(tactic) {
 // ATT&CK matrix: one column per tactic, every technique, sub-techniques under a toggle.
 // Two layers: reference queries (by ATT&CK's placement), or your detections (by the
 // mapping in force, so a technique moved to another tactic by hand shows there).
-const navState = { matrix: [], byTech: {}, layer: 'reference', det: null, revoked: {} };
+const navState = { matrix: [], byTech: {}, layer: 'reference', det: null, legacy: {} };
 const NAV_HINTS = {
   reference: "Every ATT&CK Enterprise technique under each of its tactics, coloured by reference queries. A technique counts its sub-techniques' queries too.",
   detections: "Your detections by the ATT&CK mapping in force. Dashed amber: a mapping changed by hand. Techniques a change moved into a tactic are listed at the foot of its column.",
@@ -607,7 +609,7 @@ const NAV_HINTS = {
 const NAV_ZERO = { count: 0, vendors: [], changed: false };
 
 function renderMatrix() {
-  const { matrix, byTech, layer, det, revoked } = navState;
+  const { matrix, byTech, layer, det, legacy } = navState;
   const el = document.getElementById('nav-matrix');
   el.style.setProperty('--nav-cols', matrix.length);
   document.getElementById('nav-hint').textContent = NAV_HINTS[layer];
@@ -643,26 +645,34 @@ function renderMatrix() {
     // Detections a mapping change put under a tactic ATT&CK doesn't file them under
     const extra = layer === 'detections'
       ? Object.keys((det || {})[col.tactic] || {}).filter(id => !seen.has(id)).sort() : [];
-    // Moved by a mapping change, revoked by ATT&CK since, or tactics that disagree with ATT&CK
-    const label = id => revoked[id]
-      ? `${id} ${revoked[id].name} (revoked${revoked[id].by ? ', now ' + revoked[id].by : ''})`
+    // Moved by a mapping change, revoked/deprecated by ATT&CK since, or tactics that disagree with ATT&CK
+    const label = id => legacy[id]
+      ? `${id} ${legacy[id].name} (${legacy[id].status}${legacy[id].by ? ', now ' + legacy[id].by : ''})`
       : `${id} ${names[id] || ''}`.trim();
+    const upgrade = id => {
+      const lg = legacy[id];
+      if (!lg) return '';
+      const attr = v => esc(JSON.stringify(v));
+      return `<button type="button" class="btn-primary nav-upgrade" data-mapping-action="upgrade"
+        data-endpoint="/api/detections/mapping" data-ref="${attr({ legacy_id: id })}" data-technique="${esc(lg.by)}"
+        data-tactics="${attr(lg.by_tactics)}" data-rule="" data-legacy="${attr({ ...lg, id })}">${lg.by ? 'Upgrade all to ' + esc(lg.by) : 'Choose a current technique'}</button>`;
+    };
     const group = (title, ids) => ids.length ? `<div class="nav-moved-label">${title}</div>` + ids.map(id =>
-      `<div class="nav-tech">${cell(id, label(id), stat(col.tactic, id), ' is-moved')}</div></div>`).join('') : '';
+      `<div class="nav-tech">${cell(id, label(id), stat(col.tactic, id), ' is-moved')}</div></div>${upgrade(id)}`).join('') : '';
     const isMoved = id => stat(col.tactic, id).changed;
-    const gone = extra.filter(id => !isMoved(id) && revoked[id]);
+    const gone = extra.filter(id => !isMoved(id) && legacy[id]);
     const movedIds = extra.filter(isMoved);
     moved += movedIds.length;
     stale += gone.length;
-    const extraRows = group('Moved here', movedIds) + group('Revoked in ATT&amp;CK', gone) +
-      group('Not filed here by ATT&amp;CK', extra.filter(id => !isMoved(id) && !revoked[id]));
+    const extraRows = group('Moved here', movedIds) + group('Legacy in ATT&amp;CK', gone) +
+      group('Not filed here by ATT&amp;CK', extra.filter(id => !isMoved(id) && !legacy[id]));
     covered += hits; total += col.techniques.length;
     return `<div class="nav-col"><div class="nav-head">${esc(col.tactic)}<small>${hits} / ${col.techniques.length}</small></div>${rows}${extraRows}</div>`;
   }).join('');
   document.getElementById('nav-stats').textContent = layer === 'detections'
     ? `${covered} of ${total} techniques have your detections` +
       (moved ? ` · ${moved} moved by a mapping change` : '') +
-      (stale ? ` · ${stale} on a revoked technique` : '')
+      (stale ? ` · ${stale} on a revoked or deprecated technique` : '')
     : `${covered} of ${total} techniques have reference queries`;
   if (document.getElementById('nav-expand').getAttribute('aria-pressed') === 'true') setExpanded(true);
 }
@@ -687,13 +697,15 @@ async function setLayer(layer) {
       const res = await fetch('/api/coverage/detections');
       const data = await res.json();
       navState.det = data.by_tactic || {};
-      navState.revoked = data.revoked || {};
+      navState.legacy = data.legacy || {};
     } catch (e) {
       document.getElementById('nav-stats').textContent = "Couldn't load your detections";
       return;
     }
   }
   navState.layer = layer;
+  // Kept in the URL so a reload (after an upgrade) comes back to the same layer
+  history.replaceState(null, '', layer === 'detections' ? '#my-detections' : location.pathname + location.search);
   renderMatrix();
 }
 
@@ -802,7 +814,7 @@ async function loadCoverage() {
 
     navState.matrix = matrix;
     navState.byTech = byTech;
-    renderMatrix();
+    if (location.hash === '#my-detections') setLayer('detections'); else renderMatrix();
 
     // Populate technique table
     const techTbody = document.getElementById('technique-tbody');
@@ -888,4 +900,6 @@ async function loadCoverage() {
 // Load on page ready
 document.addEventListener('DOMContentLoaded', loadCoverage);
 </script>
+{{ am.dialog() }}
+<script src="{{ url_for('static', path='js/attack_mapping.js') }}?v={{ request.app.state.asset_version }}"></script>
 {% endblock %}

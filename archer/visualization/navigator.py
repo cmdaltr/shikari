@@ -125,6 +125,21 @@ def _detection_stamp(directory: str):
     return directory, len(entries), max((e.stat().st_mtime for e in entries), default=0)
 
 
+def detection_files_for(directory: str, technique_id: str) -> List[str]:
+    """Detection files mapped to technique_id."""
+    pattern = re.compile(rf"^technique_id: *{re.escape(technique_id)}\s*$", re.M)
+    out = []
+    for entry in sorted(os.scandir(directory), key=lambda e: e.name) if os.path.isdir(directory) else []:
+        if entry.name.endswith(".yaml"):
+            try:
+                with open(entry.path, encoding="utf-8") as fh:
+                    if pattern.search(fh.read()):
+                        out.append(entry.name)
+            except OSError:
+                pass
+    return out
+
+
 def detections_by_tactic(directory: str) -> Dict[str, Dict[str, Dict]]:
     """{tactic: {technique ID: {count, vendors, changed}}} over every detection file."""
     stamp = _detection_stamp(directory)
@@ -155,14 +170,34 @@ def detections_by_tactic(directory: str) -> Dict[str, Dict[str, Dict]]:
     return result
 
 
-def revoked(bundle) -> Dict[str, Dict]:
-    """{revoked technique ID: {name, by: replacement ID or ""}}: detections can outlive
-    a technique ATT&CK has since revoked."""
+_legacy_cache: Dict[int, Dict[str, Dict]] = {}
+
+
+def legacy(bundle) -> Dict[str, Dict]:
+    """{technique ID: {name, status, by, by_name, by_tactics}} for every technique ATT&CK
+    has revoked or deprecated. status is "revoked" or "deprecated"; by is the replacement
+    ATT&CK names (revoked-by), or "" when it names none (deprecated techniques never do).
+    Detections can outlive the ATT&CK version they were built from."""
     if bundle is None:
         return {}
+    key = id(bundle)
+    if key in _legacy_cache:
+        return _legacy_cache[key]
     objects = list(_get(bundle, "objects", []) or [])
     ids = {_get(o, "id"): _attack_id(o) for o in objects if _get(o, "type") == "attack-pattern"}
     by = {_get(r, "source_ref"): ids.get(_get(r, "target_ref"), "") for r in objects
           if _get(r, "type") == "relationship" and _get(r, "relationship_type") == "revoked-by"}
-    return {ids[_get(o, "id")]: {"name": _get(o, "name", ""), "by": by.get(_get(o, "id"), "")}
-            for o in objects if _get(o, "type") == "attack-pattern" and _get(o, "revoked") and ids.get(_get(o, "id"))}
+    index = technique_index(bundle)
+    result = {}
+    for o in objects:
+        tid = ids.get(_get(o, "id")) if _get(o, "type") == "attack-pattern" else None
+        if not tid or tid in index or not (_get(o, "revoked") or _get(o, "x_mitre_deprecated")):
+            continue
+        new = by.get(_get(o, "id"), "")
+        new = new if new in index else ""
+        result[tid] = {"name": _get(o, "name", ""), "status": "revoked" if _get(o, "revoked") else "deprecated",
+                       "by": new, "by_name": index.get(new, {}).get("name", ""),
+                       "by_tactics": index.get(new, {}).get("tactics", [])}
+    _legacy_cache.clear()
+    _legacy_cache[key] = result
+    return result

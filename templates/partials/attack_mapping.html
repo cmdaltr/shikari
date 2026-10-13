@@ -10,7 +10,11 @@
 {% if ov %}<span class="mapping-badge" title="ATT&CK default: {{ ov.default.technique_id }} ({{ ov.default.tactics|join(', ') }}). Changed by {{ ov.by }} on {{ (ov.at or '')[:10] }}: {{ ov.comment }}">Mapping changed</span>{% endif %}
 {%- endmacro %}
 
-{% macro row(technique_id, tactics, ov, history, endpoint, ref, can_edit=True, rule_name=None) %}
+{% macro legacy_badge(lg) -%}
+{% if lg %}<span class="legacy-badge" title="ATT&CK {{ lg.status }} {{ lg.name }}{% if lg.by %}; replaced by {{ lg.by }} {{ lg.by_name }}{% else %}; no replacement named{% endif %}">{{ 'Revoked' if lg.status == 'revoked' else 'Deprecated' }} technique</span>{% endif %}
+{%- endmacro %}
+
+{% macro row(technique_id, tactics, ov, history, endpoint, ref, can_edit=True, rule_name=None, legacy=None) %}
 <div class="mapping-row{% if ov %} is-changed{% endif %}">
   <span class="mapping-label">ATT&amp;CK</span>
   <code class="mapping-current">{{ technique_id or '—' }}</code>
@@ -19,8 +23,17 @@
   {% if ov %}
   <span class="mapping-default">ATT&amp;CK default <code>{{ ov.default.technique_id }}</code> {{ ov.default.tactics|join(', ') }}</span>
   {% endif %}
+  {% if legacy %}
+  <span class="mapping-legacy">{{ legacy.status|capitalize }} in ATT&amp;CK{% if legacy.by %}, now <code>{{ legacy.by }}</code> {{ legacy.by_name }}{% endif %}</span>
+  {% endif %}
   {% if can_edit %}
   <span class="mapping-actions">
+    {% if legacy %}
+    <button type="button" class="btn-primary mapping-btn" data-mapping-action="upgrade"
+            data-endpoint="{{ endpoint }}" data-ref='{{ ref|tojson }}' data-technique="{{ legacy.by }}"
+            data-tactics='{{ legacy.by_tactics|tojson }}' data-rule="{{ rule_name or '' }}"
+            data-legacy='{{ dict(legacy, id=technique_id)|tojson }}'>{{ 'Upgrade to ' ~ legacy.by if legacy.by else 'Choose a current technique' }}</button>
+    {% endif %}
     <button type="button" class="btn-ghost mapping-btn" data-mapping-action="change"
             data-endpoint="{{ endpoint }}" data-ref='{{ ref|tojson }}' data-technique="{{ technique_id }}"
             data-tactics='{{ tactics|tojson }}' data-rule="{{ rule_name or '' }}">Edit mapping</button>
@@ -37,7 +50,7 @@
     <summary>History ({{ history|length }})</summary>
     <ol>
       {% for h in history|reverse %}
-      <li><strong>{{ 'Restored' if h.action == 'restored' else 'Changed' }}</strong>
+      <li><strong>{{ {'restored': 'Restored', 'upgraded': 'Upgraded'}.get(h.action, 'Changed') }}</strong>{% if h.reason %} ({{ h.reason }}){% endif %}
         <code>{{ h['from'].technique_id }}</code> {{ h['from'].tactics|join(', ') }} →
         <code>{{ h['to'].technique_id }}</code> {{ h['to'].tactics|join(', ') }}
         {% if h.rule_renamed %}· rule <code>{{ h.rule_renamed['from'] }}</code> → <code>{{ h.rule_renamed['to'] }}</code>{% endif %}

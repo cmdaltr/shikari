@@ -20,6 +20,7 @@ decides, and each side applies the plan to its own format.
 
 import copy
 import hashlib
+import os
 import re
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -163,6 +164,52 @@ def plan_change(state: Dict, technique_id: str, tactics, comment: str, by: str,
     return mapping, override, history
 
 
+def plan_upgrade(state: Dict, technique_id: str, tactics, comment: str, by: str,
+                 index: Dict[str, Dict], tactic_order: Optional[List[str]] = None,
+                 rename_rule: bool = False, status: str = "revoked") -> Tuple[Dict, Optional[Dict], List[Dict]]:
+    """Move a detection off a technique ATT&CK revoked or deprecated, onto a current one.
+    Unlike a change, the new technique becomes the ATT&CK default; tactics other than
+    its own ATT&CK tactics are kept as an override on top."""
+    comment = (comment or "").strip()
+    if not comment:
+        raise MappingError("A comment is required to upgrade the technique")
+    technique_id = (technique_id or "").strip().upper()
+    if technique_id not in (index or {}):
+        raise MappingError(f"{technique_id or '(empty)'} isn't a current ATT&CK technique")
+    tactics = _clean_tactics(tactics, tactic_order)
+    cur = state["mapping"]
+    if technique_id == cur["technique_id"]:
+        raise Unchanged("The detection is already on that technique")
+
+    rule = cur.get("rule_name")
+    if rule and rename_rule:
+        rule = yaral_rule_name(technique_id)
+    at = _now()
+    history = state["history"] + [{
+        "action": "upgraded", "at": at, "by": by, "comment": comment, "reason": f"{status} in ATT&CK",
+        "from": {"technique_id": cur["technique_id"], "tactics": cur["tactics"]},
+        "to": {"technique_id": technique_id, "tactics": tactics},
+    }]
+    if rule and rule != cur.get("rule_name"):
+        history[-1]["rule_renamed"] = {"from": cur["rule_name"], "to": rule}
+    name = index[technique_id]["name"]
+    own = [t for t in (tactic_order or index[technique_id]["tactics"]) if t in index[technique_id]["tactics"]]
+    default = {"technique_id": technique_id, "name": name, "tactics": own}
+    mapping = {"technique_id": technique_id, "name": name, "tactics": tactics}
+    if rule:
+        mapping["rule_name"] = default["rule_name"] = rule
+    override = None
+    if tactics != own:
+        override = {**mapping, "comment": comment, "by": by, "at": at, "default": default}
+        override.pop("rule_name", None)
+    return mapping, override, history
+
+
+def file_stem(name: str) -> str:
+    """The technique part of a detection's filename (archer.build.yaml: name_safe)."""
+    return name.replace(" ", "").replace("/", "")
+
+
 # ── Detection files ──────────────────────────────────────────────────────────
 
 def _query_block(content: str) -> str:
@@ -261,6 +308,27 @@ def restore(path: str, comment: str, by: str) -> Dict:
     """Put the ATT&CK default mapping back. comment is required."""
     _rewrite(path, *plan_restore(read(path), comment, by))
     return read(path)
+
+
+def upgrade(path: str, technique_id: str, tactics, comment: str, by: str, index: Dict[str, Dict],
+            tactic_order: Optional[List[str]] = None, rename_rule: bool = False,
+            status: str = "revoked") -> Dict:
+    """Upgrade a detection file to a current technique and rename the file after it, so
+    the next run reaches it instead of writing a second one. A file already at the new
+    name is left alone and reported as duplicate."""
+    _rewrite(path, *plan_upgrade(read(path), technique_id, tactics, comment, by, index, tactic_order,
+                                 rename_rule, status))
+    directory, base = os.path.split(path)
+    _, sep, suffix = base.partition("_")
+    target = os.path.join(directory, file_stem(index[technique_id]["name"]) + sep + suffix) if sep else path
+    result = {"file": base, "renamed_from": None, "duplicate": None}
+    if target != path:
+        if os.path.exists(target):
+            result["duplicate"] = os.path.basename(target)
+        else:
+            os.rename(path, target)
+            result.update(file=os.path.basename(target), renamed_from=base)
+    return result
 
 
 def reapply(path: str, override: Optional[Dict], history: Optional[List[Dict]]) -> None:

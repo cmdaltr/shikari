@@ -213,3 +213,29 @@ def test_library_content_change_and_restore():
     back = mapping.apply_content(out, *mapping.plan_restore(mapping.content_state(out, INDEX), "Back", "a"), index=INDEX)
     assert back["tactics"] == ["Credential Access"] and "attack_override" not in back
     assert len(back["attack_mapping_history"]) == 2
+
+
+def test_upgrade_moves_to_the_replacement_and_renames_the_file(env):
+    path = env / "LSASSMemory_DeviceProcessEvents.yaml"
+    _write(path)
+    index = {**INDEX, "T1685.006": {"name": "Clear Logs", "tactics": ["Stealth"]}}
+    result = mapping.upgrade(str(path), "T1685.006", ["Stealth"], "ATT&CK revoked it", "a@example.test",
+                             index, TACTICS)
+    assert result == {"file": "ClearLogs_DeviceProcessEvents.yaml", "renamed_from": path.name, "duplicate": None}
+    doc = _doc(env / result["file"])
+    assert (doc["technique_id"], doc["name"], doc["tactics"]) == ("T1685.006", "Clear Logs", ["Stealth"])
+    assert "attack_override" not in doc  # the replacement is the new ATT&CK default
+    assert doc["attack_mapping_history"][0]["action"] == "upgraded"
+    assert not path.exists() and not writer.file_state(str(env / result["file"]))["edited"]
+
+
+def test_upgrade_with_other_tactics_keeps_them_as_an_override(env):
+    path = env / "LSASSMemory_DeviceProcessEvents.yaml"
+    _write(path)
+    (env / "ClearLogs_DeviceProcessEvents.yaml").write_text("existing")
+    index = {**INDEX, "T1685.006": {"name": "Clear Logs", "tactics": ["Stealth"]}}
+    result = mapping.upgrade(str(path), "T1685.006", ["Stealth", "Impact"], "Upgrade", "a", index, TACTICS)
+    assert result["duplicate"] == "ClearLogs_DeviceProcessEvents.yaml" and result["renamed_from"] is None
+    o = _doc(path)["attack_override"]
+    assert o["default"] == {"technique_id": "T1685.006", "name": "Clear Logs", "tactics": ["Stealth"]}
+    assert o["tactics"] == ["Stealth", "Impact"]

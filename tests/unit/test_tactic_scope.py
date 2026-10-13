@@ -79,7 +79,7 @@ def test_detection_layer_uses_the_mapping_in_force(env, tmp_path):
     assert not any(tactic_scope.excluded(t) for t in layer)
 
 
-def test_revoked_techniques_name_their_replacement():
+def test_legacy_techniques_name_their_replacement():
     b = _bundle()
     ref = lambda i: [{"source_name": "mitre-attack", "external_id": i}]
     b["objects"] += [
@@ -90,4 +90,5 @@ def test_revoked_techniques_name_their_replacement():
         {"type": "relationship", "relationship_type": "revoked-by",
          "source_ref": "attack-pattern--old", "target_ref": "attack-pattern--new"},
     ]
-    assert navigator.revoked(b) == {"T1070.002": {"name": "Old Way", "by": "T1685.006"}}
+    assert navigator.legacy(b) == {"T1070.002": {
+        "name": "Old Way", "status": "revoked", "by": "T1685.006", "by_name": "New Way", "by_tactics": ["Initial Access"]}}

@@ -45,20 +45,30 @@
   async function open(btn) {
     current = { action: btn.dataset.mappingAction, endpoint: btn.dataset.endpoint,
                 ref: JSON.parse(btn.dataset.ref), rule: btn.dataset.rule || '' };
-    const restore = current.action === 'restore', tactics = JSON.parse(btn.dataset.tactics || '[]');
+    const restore = current.action === 'restore', upgrade = current.action === 'upgrade';
+    const tactics = JSON.parse(btn.dataset.tactics || '[]');
     errorEl.hidden = true;
     comment.value = '';
     rename.checked = false;
     renameWrap.hidden = true;
-    $('mapping-title').textContent = restore ? 'Restore ATT&CK mapping' : 'Edit ATT&CK mapping';
+    $('mapping-title').textContent = restore ? 'Restore ATT&CK mapping' : upgrade ? 'Upgrade the technique' : 'Edit ATT&CK mapping';
     $('mapping-fields').hidden = restore;
-    $('mapping-save').textContent = restore ? 'Restore default' : 'Save';
+    $('mapping-save').textContent = restore ? 'Restore default' : upgrade ? 'Upgrade' : 'Save';
     const items = current.ref.files || current.ref.ids || [], n = items.length;
     const what = current.ref.ids ? 'Library detection' : 'detection file';
-    $('mapping-intro').textContent = restore
-      ? `Back to ${btn.dataset.technique} (${tactics.join(', ')}), as ATT&CK maps it.` +
-        (btn.dataset.renamed ? ` The SecOps rule goes back to ${current.rule}, which SecOps treats as a new rule.` : '')
-      : `Applies to ${n} ${what}${n === 1 ? '' : 's'} on this card. Severity follows the tactics.`;
+    const scope = current.ref.legacy_id ? `every detection on ${current.ref.legacy_id}` : `${n} ${what}${n === 1 ? '' : 's'} on this card`;
+    if (upgrade) {
+      const lg = JSON.parse(btn.dataset.legacy || '{}');
+      const why = `ATT&CK ${lg.status} ${lg.id} ${lg.name}` + (lg.by ? `, replaced by ${lg.by} ${lg.by_name}` : ', with no replacement named');
+      $('mapping-intro').textContent = `${why}. Applies to ${scope}. The technique you choose becomes ` +
+        'its ATT&CK default' + (current.ref.ids ? '.' : ', and the file is renamed after it so later runs update it.');
+      comment.value = why + '.';
+    } else {
+      $('mapping-intro').textContent = restore
+        ? `Back to ${btn.dataset.technique} (${tactics.join(', ')}), as ATT&CK maps it.` +
+          (btn.dataset.renamed ? ` The SecOps rule goes back to ${current.rule}, which SecOps treats as a new rule.` : '')
+        : `Applies to ${scope}. Severity follows the tactics.`;
+    }
     modal.hidden = false;
     if (!restore) {
       try { await loadAttack(); } catch (e) { errorEl.textContent = 'Couldn\'t load ATT&CK techniques'; errorEl.hidden = false; }

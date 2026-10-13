@@ -1648,6 +1648,27 @@ def get_mitre_lists():
     return tactics, techniques
 
 
+def _refresh_procedures_if_stale(load: dict) -> None:
+    """MITRESaw's procedures CSV (threat briefing, Splunk detections) follows ATT&CK: when
+    the bundle is newer than the CSV, rebuild it in the background so startup isn't held."""
+    from archer.mitre.procedures import _DEFAULT_CSV, run_mitresaw_detection
+
+    bundle_path = load.get("cache_path")
+    csv_mtime = _DEFAULT_CSV.stat().st_mtime if _DEFAULT_CSV.exists() else 0
+    if not (load.get("updated") or (bundle_path and os.path.getmtime(bundle_path) > csv_mtime)):
+        return
+
+    def run():
+        try:
+            print(f"Rebuilding the procedures CSV for ATT&CK v{load.get('version') or '?'} (MITRESaw)...")
+            run_mitresaw_detection(force=True)
+            print("✓ Procedures CSV rebuilt")
+        except Exception as e:
+            print(f"Warning: procedures CSV not rebuilt: {e}")
+
+    threading.Thread(target=run, name="mitresaw-refresh", daemon=True).start()
+
+
 # Load MITRE data on startup and cache in app.state
 @app.on_event("startup")
 def load_mitre_data():
@@ -1656,8 +1677,13 @@ def load_mitre_data():
     # calls. These calls are synchronous during startup to ensure the data
     # is available for user requests.
     url = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
-    bundle = get_stix_data(url)
+    # Always the latest ATT&CK: a conditional request, so an unchanged bundle costs little
+    bundle = get_stix_data(url, check_latest=True)
+    from archer.mitre.enterprise import LAST_LOAD
+
+    app.state.attack = dict(LAST_LOAD)
     app.state.bundle = bundle
+    _refresh_procedures_if_stale(LAST_LOAD)
     app.state.techniques_to_choose = obtain_all_techniques(bundle)
     app.state.technique_descriptions = obtain_technique_descriptions(bundle)
 
@@ -1677,7 +1703,7 @@ def load_mitre_data():
 
         # Determine whether cache needs rebuilding:
         # rebuild if cache is absent or older than the STIX bundle cache
-        stix_cache = os.path.join("data", "cache", "enterprise-attack.json")
+        stix_cache = LAST_LOAD.get("cache_path") or ""
         needs_build = not os.path.exists(cache_path)
         if not needs_build and os.path.exists(stix_cache):
             needs_build = os.path.getmtime(stix_cache) > os.path.getmtime(cache_path)
@@ -2418,12 +2444,12 @@ async def reload_bespoke_config():
 def detection_coverage():
     """Your detections per tactic and technique, by the mapping in force: the Coverage
     matrix's "My detections" layer."""
-    from .visualization.navigator import detections_by_tactic, revoked
+    from .visualization.navigator import detections_by_tactic, legacy
 
     by_tactic = detections_by_tactic(GENERATE_DIR)
     seen = {tid for techs in by_tactic.values() for tid in techs}
-    gone = revoked(getattr(app.state, "bundle", None))
-    return {"by_tactic": by_tactic, "revoked": {tid: v for tid, v in gone.items() if tid in seen}}
+    old = legacy(getattr(app.state, "bundle", None))
+    return {"by_tactic": by_tactic, "legacy": {tid: v for tid, v in old.items() if tid in seen}}
 
 
 @app.get("/api/reference/coverage")
@@ -4225,11 +4251,14 @@ async def change_detection_mapping(request: Request, archer_session: Optional[st
     """
     Change or restore the ATT&CK mapping of one or more detection files (a results card
     can hold several). A comment is required either way and is kept in each file.
-    Body: {"files": [...], "action": "change"|"restore", "technique_id", "tactics", "comment",
+    Body: {"files": [...] or "legacy_id": every file on that technique,
+           "action": "change"|"restore"|"upgrade", "technique_id", "tactics", "comment",
            "rename_rule": bool (SecOps: rename the rule after the new technique)}
+    upgrade moves a detection off a revoked or deprecated technique: the new technique
+    becomes its ATT&CK default and the file is renamed after it.
     """
     from .build import attack_mapping
-    from .visualization.navigator import matrix, technique_index
+    from .visualization.navigator import legacy, matrix, technique_index
 
     auth_result = require_auth(request, archer_session)
     if isinstance(auth_result, RedirectResponse):
@@ -4238,6 +4267,11 @@ async def change_detection_mapping(request: Request, archer_session: Optional[st
     db.close()
     body = await request.json()
     files = [sanitize_filename(f) for f in body.get("files") or [] if f]
+    if not files and body.get("legacy_id"):
+        # Every detection on one revoked/deprecated technique (Coverage: Upgrade all)
+        from .visualization.navigator import detection_files_for
+
+        files = detection_files_for(GENERATE_DIR, str(body["legacy_id"]))
     if not files:
         return JSONResponse({"error": "No detection files given"}, status_code=400)
     paths = [os.path.join(GENERATE_DIR, f) for f in files]
@@ -4254,6 +4288,12 @@ async def change_detection_mapping(request: Request, archer_session: Optional[st
             try:
                 if body.get("action") == "restore":
                     results[f] = attack_mapping.restore(path, comment, user.email)
+                elif body.get("action") == "upgrade":
+                    old = legacy(bundle).get(attack_mapping.read(path)["technique_id"], {})
+                    results[f] = attack_mapping.upgrade(
+                        path, str(body.get("technique_id") or ""), body.get("tactics") or [], comment,
+                        user.email, index or {}, order, rename_rule=bool(body.get("rename_rule")),
+                        status=old.get("status", "legacy"))
                 else:
                     results[f] = attack_mapping.change(path, str(body.get("technique_id") or ""),
                                                        body.get("tactics") or [], comment, user.email,
@@ -6159,6 +6199,9 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
         "googlesecops": "Google SecOps",
     }
 
+    from .visualization.navigator import legacy as legacy_lookup
+
+    legacy_techniques = legacy_lookup(getattr(request.app.state, "bundle", None))
     if os.path.exists(generate_dir):
         yaml_files = all_yaml_files = group_yaml_files(group_name, generate_dir)
 
@@ -6368,6 +6411,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "attack_override": yaml_data.get("attack_override"),  # ATT&CK mapping changed by hand
                     "attack_mapping_history": yaml_data.get("attack_mapping_history") or [],
                     "rule_name": attack_rule_name(query_text),  # SecOps rule, renamable with the mapping
+                    # Revoked/deprecated in ATT&CK since the detection was built: tagged, upgradable
+                    "legacy": legacy_techniques.get(str(yaml_data.get("technique_id") or "")),
                 }
             )
 
@@ -6404,6 +6449,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "attack_override": None,
                     "attack_mapping_history": [],
                     "rule_name": file_data.get("rule_name"),
+                    "legacy": file_data.get("legacy"),
                 }
             else:
                 # Merge indicators from multiple detections in the same group
@@ -6463,6 +6509,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "attack_override": data["attack_override"],
                     "attack_mapping_history": data["attack_mapping_history"],
                     "rule_name": data["rule_name"],
+                    "legacy": data["legacy"],
                 }
             )
 
@@ -8143,6 +8190,39 @@ def flows_page(request: Request, group: str = "", archer_session: Optional[str] 
     })
 
 
+LIBRARY_VENDORS = (("googlesecops", "Google SecOps"), ("mde", "MDE"), ("splunk", "Splunk"), ("elastic", "Elastic"))
+# Not generated yet: shown, marked Coming Soon (as on the Profile page)
+LIBRARY_COMING_SOON = {"elastic"}
+
+
+def _library_vendor_key(name: str) -> str:
+    key = re.sub(r"[\s_-]+", "", str(name or "")).lower()
+    return {"microsoft": "mde", "google": "googlesecops", "secops": "googlesecops"}.get(key, key)
+
+
+def _library_vendor_slots(items: list, kind: str) -> list:
+    """The Library's vendor sections: one per SIEM in Archer's order (Google SecOps, MDE,
+    Splunk, Elastic), empty ones included, then anything else by name."""
+    by_key = {}
+    for v in items:
+        key = _library_vendor_key(v["name"])
+        if key in by_key:  # e.g. "mde" and "microsoft"
+            by_key[key][kind] += v[kind]
+            by_key[key]["count"] += v["count"]
+        else:
+            by_key[key] = {**v, "name": key}
+    slots = []
+    for key, display in LIBRARY_VENDORS:
+        slot = by_key.pop(key, None) or {"name": key, "display_name": display, "count": 0, kind: [],
+                                          "empty_state": True}
+        slot["display_name"] = display
+        if key in LIBRARY_COMING_SOON and not slot["count"]:
+            slot.pop("empty_state", None)
+            slot["coming_soon"] = True
+        slots.append(slot)
+    return slots + sorted(by_key.values(), key=lambda v: v["name"])
+
+
 @app.get("/library", response_class=HTMLResponse)
 async def library_page(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
@@ -8187,6 +8267,9 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         from .visualization.navigator import technique_index
 
         tech_index = technique_index(getattr(app.state, "bundle", None))
+        from .visualization.navigator import legacy as legacy_lookup
+
+        legacy_techniques = legacy_lookup(getattr(app.state, "bundle", None))
 
         # Query all detections and correlations for this user
         detections = db.query(LibraryDetection).filter_by(user_id=user.id).all()
@@ -8484,6 +8567,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "attack_tactics": mapping_state["mapping"]["tactics"] if mapping_state else [],
                 "rule_name": mapping_state["mapping"]["rule_name"] if mapping_state else None,
                 "attack_mapping_history": mapping_state["history"] if mapping_state else [],
+                "legacy": legacy_techniques.get(mapping_state["mapping"]["technique_id"]) if mapping_state else None,
                 "technique": technique_name,  # Changed: now the technique name, not ID (matching results page)
                 "title": formatted_title,  # Changed: now the data sources, not technique name (matching results page)
                 "data_source": data_source or det.platform or "Unknown",
@@ -8704,6 +8788,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         "attack_tactics": det.get("attack_tactics", []),
                         "rule_name": det.get("rule_name"),
                         "attack_mapping_history": [],
+                        "legacy": det.get("legacy"),
                     }
 
                 # Add this detection's ID to the group
@@ -8779,6 +8864,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         "attack_tactics": data["attack_tactics"],
                         "rule_name": data["rule_name"],
                         "attack_mapping_history": data["attack_mapping_history"],
+                        "legacy": data["legacy"],
                     }
                 )
 
@@ -8794,33 +8880,8 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 }
             )
 
-        # Add Splunk as empty placeholder (if not already present)
-        if not any(v["name"] == "splunk" for v in vendors):
-            vendors.append(
-                {
-                    "name": "splunk",
-                    "display_name": "Splunk",
-                    "count": 0,
-                    "detections": [],
-                    "empty_state": True,
-                }
-            )
-
-        # Add MDE as empty placeholder (if not already present)
-        if not any(v["name"] in ["mde", "microsoft"] for v in vendors):
-            vendors.append(
-                {
-                    "name": "mde",
-                    "display_name": "MDE",
-                    "count": 0,
-                    "detections": [],
-                    "empty_state": True,
-                }
-            )
-
-        # Sort vendors: Google SecOps, MDE, Splunk, Elastic, then others
-        vendor_order = {"googlesecops": 0, "mde": 1, "microsoft": 1, "splunk": 2, "elastic": 3}
-        vendors.sort(key=lambda v: (vendor_order.get(v["name"], 99), v["name"]))
+        # Every SIEM, in Archer's order (Google SecOps first), whether or not it has items
+        vendors = _library_vendor_slots(vendors, "detections")
 
         # Calculate summary statistics
         # Count detections that are NOT correlations (exclude correlation detection_types from LibraryDetection)
@@ -8888,74 +8949,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 }
             )
 
-        # Add Splunk as empty placeholder (if not already present)
-        if not any(v["name"] in ["Splunk", "splunk"] for v in grouped_correlations):
-            grouped_correlations.append(
-                {
-                    "name": "splunk",
-                    "display_name": "Splunk",
-                    "count": 0,
-                    "correlations": [],
-                    "empty_state": True,
-                }
-            )
-
-        # Add MDE as empty placeholder (if not already present)
-        if not any(
-            v["name"] in ["MDE", "mde", "microsoft", "Microsoft"] for v in grouped_correlations
-        ):
-            grouped_correlations.append(
-                {
-                    "name": "mde",
-                    "display_name": "MDE",
-                    "count": 0,
-                    "correlations": [],
-                    "empty_state": True,
-                }
-            )
-
-        # Add Google SecOps as "Coming Soon" placeholder (if not already present)
-        if not any(v["name"] in ["google_secops", "Google SecOps"] for v in grouped_correlations):
-            grouped_correlations.append(
-                {
-                    "name": "google_secops",
-                    "display_name": "Google SecOps",
-                    "count": 0,
-                    "correlations": [],
-                    "coming_soon": True,
-                }
-            )
-
-        # Add Elastic as "Coming Soon" placeholder (if not already present)
-        if not any(v["name"] in ["elastic", "Elastic"] for v in grouped_correlations):
-            grouped_correlations.append(
-                {
-                    "name": "elastic",
-                    "display_name": "Elastic",
-                    "count": 0,
-                    "correlations": [],
-                    "coming_soon": True,
-                }
-            )
-
-        # Sort correlations: Google SecOps, MDE, Splunk, Elastic, then others
-        # Priority: empty_state and coming_soon go after actual data
-        def sort_correlations(v):
-            vendor_order = {
-                "googlesecops": 0,
-                "Google SecOps": 0,
-                "MDE": 1,
-                "mde": 1,
-                "Splunk": 2,
-                "splunk": 2,
-                "elastic": 3,
-                "Elastic": 3,
-            }
-            is_placeholder = v.get("coming_soon", False) or v.get("empty_state", False)
-            has_data = v["count"] > 0
-            return (not has_data, is_placeholder, vendor_order.get(v["name"], 99), v["name"])
-
-        grouped_correlations.sort(key=sort_correlations)
+        grouped_correlations = _library_vendor_slots(grouped_correlations, "correlations")
 
         from archer.visualization.flow_layouts import library_flows
 
@@ -9740,7 +9734,7 @@ async def change_library_mapping(request: Request, archer_session: Optional[str]
     """
     from archer.database.models import LibraryDetection
     from .build import attack_mapping
-    from .visualization.navigator import matrix, technique_index
+    from .visualization.navigator import legacy, matrix, technique_index
 
     auth_result = require_auth(request, archer_session)
     if isinstance(auth_result, RedirectResponse):
@@ -9771,6 +9765,12 @@ async def change_library_mapping(request: Request, archer_session: Optional[str]
             try:
                 if body.get("action") == "restore":
                     plan = attack_mapping.plan_restore(state, comment, user.email)
+                elif body.get("action") == "upgrade":
+                    old = legacy(bundle).get(state["mapping"]["technique_id"], {})
+                    plan = attack_mapping.plan_upgrade(
+                        state, str(body.get("technique_id") or ""), body.get("tactics") or [], comment,
+                        user.email, index or {}, order, rename_rule=bool(body.get("rename_rule")),
+                        status=old.get("status", "legacy"))
                 else:
                     plan = attack_mapping.plan_change(
                         state, str(body.get("technique_id") or ""), body.get("tactics") or [], comment,
