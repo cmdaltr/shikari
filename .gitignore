@@ -42,6 +42,7 @@ data/*.db
 # Fernet key that decrypts every stored API key (archer/auth/encryption.py)
 data/.encryption_key
 data/.mitresaw.lock
+data/mitre_procedures.xlsx
 data/*.sqlite
 data/*.sqlite3
 
