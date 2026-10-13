@@ -8,9 +8,11 @@ Resource Development (archer.tactic_scope). No coverage here: the page colours
 each cell from the reference coverage map (archer.build.references).
 """
 
+import os
+import re
 from typing import Dict, List
 
-from archer.tactic_scope import excluded
+from archer.tactic_scope import excluded, keep
 
 _cache: Dict[int, List[Dict]] = {}
 _index_cache: Dict[int, Dict[str, Dict]] = {}
@@ -103,3 +105,64 @@ def technique_index(bundle) -> Dict[str, Dict]:
     _index_cache.clear()
     _index_cache[key] = index
     return index
+
+
+# ── Your detections, for the matrix's "My detections" layer ──────────────────
+# Placed by the mapping in force (archer.build.attack_mapping), so a technique moved to
+# another tactic by hand shows there. Read with regexes, not a YAML parse: it runs over
+# every detection on each Coverage load.
+
+_VENDORS = (("GoogleSecOps", "Google SecOps"), ("MicrosoftThreatProtection", "MDE"),
+            ("Splunk", "Splunk"), ("Elastic", "Elastic"))
+_TID = re.compile(r"^technique_id: *(\S+)", re.M)
+_TACTICS = re.compile(r"^tactics:\n((?:  - .*\n?)+)", re.M)
+_CONNECTOR = re.compile(r"connectorId: *(\S+)")
+_detections_cache: Dict[str, object] = {}
+
+
+def _detection_stamp(directory: str):
+    entries = [e for e in os.scandir(directory) if e.name.endswith(".yaml")] if os.path.isdir(directory) else []
+    return directory, len(entries), max((e.stat().st_mtime for e in entries), default=0)
+
+
+def detections_by_tactic(directory: str) -> Dict[str, Dict[str, Dict]]:
+    """{tactic: {technique ID: {count, vendors, changed}}} over every detection file."""
+    stamp = _detection_stamp(directory)
+    if _detections_cache.get("stamp") == stamp:
+        return _detections_cache["result"]
+    result: Dict[str, Dict[str, Dict]] = {}
+    for entry in sorted(os.scandir(directory), key=lambda e: e.name) if stamp[1] else []:
+        if not entry.name.endswith(".yaml"):
+            continue
+        try:
+            with open(entry.path, encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError:
+            continue
+        tid, tactics = _TID.search(text), _TACTICS.search(text)
+        if not tid or not tactics:
+            continue
+        connector = (_CONNECTOR.search(text) or [None, ""])[1]
+        vendor = next((name for key, name in _VENDORS if key.lower() in connector.lower()), None)
+        changed = bool(re.search(r"^attack_override:", text, re.M))
+        for tactic in keep([t[4:].strip() for t in tactics.group(1).splitlines() if t.strip()]):
+            stat = result.setdefault(tactic, {}).setdefault(tid.group(1), {"count": 0, "vendors": [], "changed": False})
+            stat["count"] += 1
+            stat["changed"] = stat["changed"] or changed
+            if vendor and vendor not in stat["vendors"]:
+                stat["vendors"].append(vendor)
+    _detections_cache.update(stamp=stamp, result=result)
+    return result
+
+
+def revoked(bundle) -> Dict[str, Dict]:
+    """{revoked technique ID: {name, by: replacement ID or ""}}: detections can outlive
+    a technique ATT&CK has since revoked."""
+    if bundle is None:
+        return {}
+    objects = list(_get(bundle, "objects", []) or [])
+    ids = {_get(o, "id"): _attack_id(o) for o in objects if _get(o, "type") == "attack-pattern"}
+    by = {_get(r, "source_ref"): ids.get(_get(r, "target_ref"), "") for r in objects
+          if _get(r, "type") == "relationship" and _get(r, "relationship_type") == "revoked-by"}
+    return {ids[_get(o, "id")]: {"name": _get(o, "name", ""), "by": by.get(_get(o, "id"), "")}
+            for o in objects if _get(o, "type") == "attack-pattern" and _get(o, "revoked") and ids.get(_get(o, "id"))}

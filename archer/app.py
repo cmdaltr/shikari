@@ -2414,6 +2414,18 @@ async def reload_bespoke_config():
         return {"success": False, "error": str(e)}
 
 
+@app.get("/api/coverage/detections")
+def detection_coverage():
+    """Your detections per tactic and technique, by the mapping in force: the Coverage
+    matrix's "My detections" layer."""
+    from .visualization.navigator import detections_by_tactic, revoked
+
+    by_tactic = detections_by_tactic(GENERATE_DIR)
+    seen = {tid for techs in by_tactic.values() for tid in techs}
+    gone = revoked(getattr(app.state, "bundle", None))
+    return {"by_tactic": by_tactic, "revoked": {tid: v for tid, v in gone.items() if tid in seen}}
+
+
 @app.get("/api/reference/coverage")
 async def get_reference_coverage():
     """

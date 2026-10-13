@@ -64,3 +64,30 @@ def test_matrix_and_index_leave_them_out():
     b = _bundle()
     assert [c["tactic"] for c in navigator.matrix(b)] == ["Initial Access"]
     assert set(navigator.technique_index(b)) == {"T1566"}
+
+
+def test_detection_layer_uses_the_mapping_in_force(env, tmp_path):
+    from archer.build import attack_mapping
+    d = tmp_path / "groups"
+    d.mkdir()
+    _write(d / "a.yaml", ["Initial Access"])
+    _write(d / "b.yaml", ["Reconnaissance", "Initial Access"])
+    attack_mapping.change(str(d / "b.yaml"), "T1566.002", ["Execution"], "Moved", "a@example.test")
+    layer = navigator.detections_by_tactic(str(d))
+    assert layer["Initial Access"]["T1566.002"] == {"count": 1, "vendors": ["MDE"], "changed": False}
+    assert layer["Execution"]["T1566.002"]["changed"] is True
+    assert not any(tactic_scope.excluded(t) for t in layer)
+
+
+def test_revoked_techniques_name_their_replacement():
+    b = _bundle()
+    ref = lambda i: [{"source_name": "mitre-attack", "external_id": i}]
+    b["objects"] += [
+        {"type": "attack-pattern", "id": "attack-pattern--old", "name": "Old Way", "revoked": True,
+         "external_references": ref("T1070.002")},
+        {"type": "attack-pattern", "id": "attack-pattern--new", "name": "New Way", "external_references": ref("T1685.006"),
+         "kill_chain_phases": [{"kill_chain_name": "mitre-attack", "phase_name": "initial-access"}]},
+        {"type": "relationship", "relationship_type": "revoked-by",
+         "source_ref": "attack-pattern--old", "target_ref": "attack-pattern--new"},
+    ]
+    assert navigator.revoked(b) == {"T1070.002": {"name": "Old Way", "by": "T1685.006"}}

@@ -323,6 +323,11 @@
 .nav-tech { display: flex; flex-direction: column; gap: 3px; }
 .nav-subs[hidden] { display: none; }
 .nav-subs { display: flex; flex-direction: column; gap: 3px; }
+.nav-layer { display: inline-flex; gap: 6px; }
+.nav-cell.is-changed { outline: 2px dashed #d97706; outline-offset: 1px; }
+.nav-cell.is-moved { border-style: dashed; }
+.nav-cell .nav-mark { flex: 0 0 auto; font-size: .7rem; opacity: .9; }
+.nav-moved-label { margin-top: 4px; font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); text-align: center; }
 .nav-matrix.covered-only .nav-cell.level-0, .nav-matrix.covered-only .nav-subs .nav-cell.level-0 { display: none; }
 
 .empty-tactic {
@@ -472,8 +477,13 @@
         </div>
         ATT&amp;CK Matrix
       </div>
-      <p class="nav-hint">Every ATT&amp;CK Enterprise technique under each of its tactics, coloured by reference queries. A technique counts its sub-techniques' queries too.</p>
+      <p class="nav-hint" id="nav-hint"></p>
       <div class="nav-tools">
+        <div class="nav-layer" role="radiogroup" aria-label="Colour the matrix by">
+          <button type="button" class="ui-pill is-active" role="radio" aria-checked="true" data-layer="reference">Reference queries</button>
+          <button type="button" class="ui-pill" role="radio" aria-checked="false" data-layer="detections">My detections</button>
+        </div>
+        <span class="key-divider" aria-hidden="true"></span>
         <button type="button" class="ui-pill" id="nav-expand" aria-pressed="false">Expand all sub-techniques</button>
         <button type="button" class="ui-pill" id="nav-covered" aria-pressed="false">Covered only</button>
         <span class="nav-stats" id="nav-stats"></span>
@@ -586,43 +596,105 @@ function switchTactic(tactic) {
   activeTactic = tactic;
 }
 
-// ATT&CK matrix: one column per tactic, every technique, sub-techniques under a toggle
-function renderMatrix(matrix, rollup, byTech) {
+// ATT&CK matrix: one column per tactic, every technique, sub-techniques under a toggle.
+// Two layers: reference queries (by ATT&CK's placement), or your detections (by the
+// mapping in force, so a technique moved to another tactic by hand shows there).
+const navState = { matrix: [], byTech: {}, layer: 'reference', det: null, revoked: {} };
+const NAV_HINTS = {
+  reference: "Every ATT&CK Enterprise technique under each of its tactics, coloured by reference queries. A technique counts its sub-techniques' queries too.",
+  detections: "Your detections by the ATT&CK mapping in force. Dashed amber: a mapping changed by hand. Techniques a change moved into a tactic are listed at the foot of its column.",
+};
+const NAV_ZERO = { count: 0, vendors: [], changed: false };
+
+function renderMatrix() {
+  const { matrix, byTech, layer, det, revoked } = navState;
   const el = document.getElementById('nav-matrix');
   el.style.setProperty('--nav-cols', matrix.length);
+  document.getElementById('nav-hint').textContent = NAV_HINTS[layer];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-  const cell = (id, name, count, vendors, extra = '') => {
-    const tip = `${id} ${name}\n${count} quer${count === 1 ? 'y' : 'ies'}${vendors.length ? ' (' + vendors.join(', ') + ')' : ''}`;
-    return `<div class="nav-cell ${getColorLevel(count)}${extra}" title="${esc(tip)}"><span class="nav-name">${esc(name)}</span>`;
+  const names = {};
+  matrix.forEach(c => c.techniques.forEach(t => { names[t.id] = t.name; (t.subs || []).forEach(s => { names[s.id] = `${t.name}: ${s.name}`; }); }));
+  const stat = (tactic, id) => layer === 'detections'
+    ? ((det || {})[tactic] || {})[id] || NAV_ZERO
+    : (byTech[id] ? { count: byTech[id].count || 0, vendors: byTech[id].vendors || [], changed: false } : NAV_ZERO);
+  const unit = layer === 'detections' ? ['detection', 'detections'] : ['query', 'queries'];
+  const cell = (id, name, st, extra = '') => {
+    const tip = `${id} ${name}\n${st.count} ${unit[st.count === 1 ? 0 : 1]}${st.vendors.length ? ' (' + st.vendors.join(', ') + ')' : ''}` +
+                (st.changed ? '\nATT&CK mapping changed by hand' : '');
+    return `<div class="nav-cell ${getColorLevel(st.count)}${st.changed ? ' is-changed' : ''}${extra}" title="${esc(tip)}"><span class="nav-name">${esc(name)}</span>`;
   };
-  let covered = 0, total = 0;
+  let covered = 0, total = 0, moved = 0, stale = 0;
   el.innerHTML = matrix.map(col => {
-    const hits = col.techniques.filter(t => rollup(t).count).length;
-    covered += hits; total += col.techniques.length;
+    const seen = new Set();
+    let hits = 0;
     const rows = col.techniques.map(t => {
-      const r = rollup(t);
       const subs = t.subs || [];
+      const ids = [t.id, ...subs.map(s => s.id)];
+      ids.forEach(id => seen.add(id));
+      const parts = ids.map(id => stat(col.tactic, id));
+      const roll = { count: parts.reduce((n, p) => n + p.count, 0),
+                     vendors: [...new Set(parts.flatMap(p => p.vendors))], changed: parts.some(p => p.changed) };
+      if (roll.count) hits++;
       const toggle = subs.length ? `<button type="button" class="nav-toggle" aria-expanded="false" title="Sub-techniques">▸ ${subs.length}</button>` : '';
-      const subRows = subs.map(s => {
-        const b = byTech[s.id] || {count: 0, vendors: []};
-        return cell(s.id, s.name, b.count || 0, b.vendors || [], ' is-sub') + '</div>';
-      }).join('');
-      return `<div class="nav-tech">${cell(t.id, t.name, r.count, r.vendors)}${toggle}</div>` +
+      const subRows = subs.map(s => cell(s.id, s.name, stat(col.tactic, s.id), ' is-sub') + '</div>').join('');
+      return `<div class="nav-tech">${cell(t.id, t.name, roll)}${toggle}</div>` +
              (subs.length ? `<div class="nav-subs" hidden>${subRows}</div>` : '') + '</div>';
     }).join('');
-    return `<div class="nav-col"><div class="nav-head">${esc(col.tactic)}<small>${hits} / ${col.techniques.length}</small></div>${rows}</div>`;
+    // Detections a mapping change put under a tactic ATT&CK doesn't file them under
+    const extra = layer === 'detections'
+      ? Object.keys((det || {})[col.tactic] || {}).filter(id => !seen.has(id)).sort() : [];
+    // Moved by a mapping change, revoked by ATT&CK since, or tactics that disagree with ATT&CK
+    const label = id => revoked[id]
+      ? `${id} ${revoked[id].name} (revoked${revoked[id].by ? ', now ' + revoked[id].by : ''})`
+      : `${id} ${names[id] || ''}`.trim();
+    const group = (title, ids) => ids.length ? `<div class="nav-moved-label">${title}</div>` + ids.map(id =>
+      `<div class="nav-tech">${cell(id, label(id), stat(col.tactic, id), ' is-moved')}</div></div>`).join('') : '';
+    const isMoved = id => stat(col.tactic, id).changed;
+    const gone = extra.filter(id => !isMoved(id) && revoked[id]);
+    const movedIds = extra.filter(isMoved);
+    moved += movedIds.length;
+    stale += gone.length;
+    const extraRows = group('Moved here', movedIds) + group('Revoked in ATT&amp;CK', gone) +
+      group('Not filed here by ATT&amp;CK', extra.filter(id => !isMoved(id) && !revoked[id]));
+    covered += hits; total += col.techniques.length;
+    return `<div class="nav-col"><div class="nav-head">${esc(col.tactic)}<small>${hits} / ${col.techniques.length}</small></div>${rows}${extraRows}</div>`;
   }).join('');
-  document.getElementById('nav-stats').textContent = `${covered} of ${total} techniques have reference queries`;
+  document.getElementById('nav-stats').textContent = layer === 'detections'
+    ? `${covered} of ${total} techniques have your detections` +
+      (moved ? ` · ${moved} moved by a mapping change` : '') +
+      (stale ? ` · ${stale} on a revoked technique` : '')
+    : `${covered} of ${total} techniques have reference queries`;
+  if (document.getElementById('nav-expand').getAttribute('aria-pressed') === 'true') setExpanded(true);
+}
 
-  el.addEventListener('click', e => {
-    const btn = e.target.closest('.nav-toggle');
-    if (!btn) return;
-    const subs = btn.closest('.nav-tech').querySelector('.nav-subs');
-    const open = subs.hidden;
-    subs.hidden = !open;
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    btn.textContent = (open ? '▾ ' : '▸ ') + subs.children.length;
+function setExpanded(on) {
+  document.querySelectorAll('#nav-matrix .nav-subs').forEach(s => { s.hidden = !on; });
+  document.querySelectorAll('#nav-matrix .nav-toggle').forEach(b => {
+    b.setAttribute('aria-expanded', on ? 'true' : 'false');
+    b.textContent = (on ? '▾ ' : '▸ ') + b.closest('.nav-tech').querySelector('.nav-subs').children.length;
   });
+}
+
+async function setLayer(layer) {
+  document.querySelectorAll('.nav-layer [data-layer]').forEach(b => {
+    const on = b.dataset.layer === layer;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+  if (layer === 'detections' && !navState.det) {
+    document.getElementById('nav-stats').textContent = 'Loading your detections…';
+    try {
+      const res = await fetch('/api/coverage/detections');
+      const data = await res.json();
+      navState.det = data.by_tactic || {};
+      navState.revoked = data.revoked || {};
+    } catch (e) {
+      document.getElementById('nav-stats').textContent = "Couldn't load your detections";
+      return;
+    }
+  }
+  navState.layer = layer;
+  renderMatrix();
 }
 
 function wireMatrixTools() {
@@ -632,17 +704,23 @@ function wireMatrixTools() {
     const on = expand.getAttribute('aria-pressed') !== 'true';
     expand.setAttribute('aria-pressed', on ? 'true' : 'false');
     expand.classList.toggle('is-active', on);
-    document.querySelectorAll('#nav-matrix .nav-subs').forEach(s => { s.hidden = !on; });
-    document.querySelectorAll('#nav-matrix .nav-toggle').forEach(b => {
-      b.setAttribute('aria-expanded', on ? 'true' : 'false');
-      b.textContent = (on ? '▾ ' : '▸ ') + b.closest('.nav-tech').querySelector('.nav-subs').children.length;
-    });
+    setExpanded(on);
   });
   coveredOnly.addEventListener('click', () => {
     const on = coveredOnly.getAttribute('aria-pressed') !== 'true';
     coveredOnly.setAttribute('aria-pressed', on ? 'true' : 'false');
     coveredOnly.classList.toggle('is-active', on);
     document.getElementById('nav-matrix').classList.toggle('covered-only', on);
+  });
+  document.querySelectorAll('.nav-layer [data-layer]').forEach(b => b.addEventListener('click', () => setLayer(b.dataset.layer)));
+  document.getElementById('nav-matrix').addEventListener('click', e => {
+    const btn = e.target.closest('.nav-toggle');
+    if (!btn) return;
+    const subs = btn.closest('.nav-tech').querySelector('.nav-subs');
+    const open = subs.hidden;
+    subs.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.textContent = (open ? '▾ ' : '▸ ') + subs.children.length;
   });
 }
 document.addEventListener('DOMContentLoaded', wireMatrixTools);
@@ -722,7 +800,9 @@ async function loadCoverage() {
     // Activate the first tactic with coverage
     switchTactic(firstTactic || (matrix[0] && matrix[0].tactic));
 
-    renderMatrix(matrix, rollup, byTech);
+    navState.matrix = matrix;
+    navState.byTech = byTech;
+    renderMatrix();
 
     // Populate technique table
     const techTbody = document.getElementById('technique-tbody');
