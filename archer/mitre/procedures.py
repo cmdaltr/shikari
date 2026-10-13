@@ -68,6 +68,26 @@ def _find_mitresaw() -> Path:
 
 
 _MITRESAW_DIR = _find_mitresaw()
+_MITRESAW_VENV = Path.home() / ".venvs" / "mitresaw"
+
+
+def _mitresaw_python() -> str:
+    """An interpreter that can import MITRESaw's dependencies. MITRESaw pins different
+    pandas/stix2 versions from Archer, so it runs in its own environment:
+    $MITRESAW_PYTHON, ~/.venvs/mitresaw (outside OneDrive, which breaks a venv's
+    symlinks), MITRESaw/.venv, then Archer's own interpreter."""
+    candidates = [os.environ.get("MITRESAW_PYTHON") or "", str(_MITRESAW_VENV / "bin" / "python"),
+                  str(_MITRESAW_DIR / ".venv" / "bin" / "python"), sys.executable]
+    for python in filter(None, candidates):
+        try:
+            if subprocess.run([python, "-c", "import mitreattack"], capture_output=True, timeout=60).returncode == 0:
+                return python
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+    raise RuntimeError(
+        "No Python environment can run MITRESaw (needs mitreattack-python). Create one outside "
+        f"OneDrive: python3 -m venv {_MITRESAW_VENV} && {_MITRESAW_VENV}/bin/pip install "
+        f"-r {_MITRESAW_DIR}/requirements.txt (or set MITRESAW_PYTHON)")
 
 # ---------------------------------------------------------------------------
 # MITRESaw CSV column order (12 columns)
@@ -363,7 +383,7 @@ def run_mitresaw_detection(
     )
 
     result = subprocess.run(
-        [sys.executable, str(mitresaw_script)] + flags,
+        [_mitresaw_python(), str(mitresaw_script)] + flags,
         cwd=str(_MITRESAW_DIR),
         capture_output=True,
         text=True,
@@ -453,7 +473,7 @@ def run_mitresaw(
     logger.info("Running MITRESaw: %s -d -E -R", mitresaw_script)
 
     result = subprocess.run(
-        [sys.executable, str(mitresaw_script), "-d", "-E", "-R", "-q"],
+        [_mitresaw_python(), str(mitresaw_script), "-d", "-E", "-R", "-q"],
         cwd=str(_MITRESAW_DIR),
         capture_output=True,
         text=True,
