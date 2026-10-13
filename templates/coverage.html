@@ -348,7 +348,7 @@
 
 /* ATT&CK matrix (Navigator-style): every tactic and technique, coloured by queries */
 .nav-hint { margin: -6px 0 14px; color: var(--text-secondary); font-size: .92rem; }
-.nav-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.matrix-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .nav-stats { margin-left: auto; color: var(--text-secondary); font-size: .9rem; }
 .nav-scroll { overflow-x: auto; padding-bottom: 6px; }
 .nav-matrix { display: grid; grid-template-columns: repeat(var(--nav-cols), minmax(150px, 1fr)); gap: 6px; min-width: calc(var(--nav-cols) * 156px); align-items: start; }
@@ -537,7 +537,7 @@
         ATT&amp;CK Matrix
       </div>
       <p class="nav-hint" id="nav-hint"></p>
-      <div class="nav-tools">
+      <div class="matrix-tools">
         <div class="nav-layer" role="radiogroup" aria-label="Colour the matrix by">
           <button type="button" class="ui-pill is-active" role="radio" aria-checked="true" data-layer="reference">Reference queries</button>
           <button type="button" class="ui-pill" role="radio" aria-checked="false" data-layer="detections">My detections</button>
