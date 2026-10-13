@@ -63,7 +63,12 @@
 .tactic-filter-label { font-weight: 600; font-size: 1.32rem; }
 .filter-groups { display: flex; flex-direction: column; gap: 14px; }
 .filter-row { display: flex; gap: 14px 40px; }
-.filter-row > .filter-group { min-width: 0; }
+.filter-row > .filter-group { flex: 1 1 0; min-width: 0; }
+/* Query counts and SIEMs: each half of the row, chips sharing it evenly */
+.filter-row:first-child .tactic-filter-chips > .ui-pill { flex: 1 1 0; justify-content: center; white-space: nowrap; }
+/* Tactics: 7 | 6, centred in the card */
+.tactic-filter-chips.chip-lines { flex-direction: column; }
+.chip-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
 .filter-group { display: flex; flex-direction: column; gap: 8px; }
 .filter-row:last-child .filter-group { flex: 1; }
 .filter-group-label { font-size: 1.02rem; font-weight: 600; color: var(--text-secondary); }
@@ -646,6 +651,16 @@ function renderFilter() {
         applyFilters();
       };
       chips.appendChild(chip);
+    }
+    if (g.key === 'tactic') {
+      const all = [...chips.children];
+      chips.classList.add('chip-lines');
+      for (const part of [all.slice(0, 7), all.slice(7)]) {
+        const line = document.createElement('div');
+        line.className = 'chip-line';
+        line.append(...part);
+        chips.appendChild(line);
+      }
     }
     rows[g.row].appendChild(row);
   }
