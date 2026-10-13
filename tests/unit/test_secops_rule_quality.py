@@ -137,3 +137,15 @@ def test_wrapped_description_still_writes_valid_yaml(tmp_path, monkeypatch):
     data = yaml.safe_load(out.read_text())
     assert data["technique_id"] == "T1543.002"
     assert "system/teleport.service" in data["description"]
+
+
+def test_rule_names_are_lowercase_snake_case():
+    from archer.build.secops import build_correlation_rule
+    from archer.validation.static_check import check_query
+
+    r = _rule({"cmd": ["procdump -ma lsass.exe"]}, tid="T1003.001", tactics=["Credential Access"])
+    assert r["yaral_code"].startswith("rule archer_t1003_001 {") and r["rule_name"] == "archer_t1003_001"
+    assert "YL-1" not in [f.get("check") for f in check_query(r["yaral_code"], "secops")["findings"]]
+    other = _rule({"cmd": ["psexec.exe"]}, tid="T1570", tactics=["Lateral Movement"])
+    corr = build_correlation_rule(r["yaral_code"], other["yaral_code"])
+    assert re.match(r"rule [a-z][a-z0-9_]* \{", corr)

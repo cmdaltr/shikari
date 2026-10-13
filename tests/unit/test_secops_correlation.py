@@ -39,7 +39,7 @@ def _events(rule):
 def test_two_rules_become_one_host_bound_ordered_rule():
     rule = build_correlation_rule(PHISH, PWSH, "Phishing", "PowerShell")
 
-    assert rule.startswith("rule archer_corr_T1566_then_T1059_001 {")
+    assert rule.startswith("rule archer_corr_t1566_then_t1059_001 {")
     assert "$e." not in rule  # every single-event variable rebound
     assert "$e1.principal.hostname = $host" in rule and "$e2.principal.hostname = $host" in rule
     assert "$e1.metadata.event_timestamp.seconds <= $e2.metadata.event_timestamp.seconds" in rule
@@ -55,7 +55,7 @@ def test_merged_side_is_one_line_of_alternatives():
     assert len(alt) == 1  # separate lines in events are ANDed; alternatives must share one
     assert alt[0].strip().startswith("((") and ") or (" in alt[0]
     assert "PowerShell / Remote Desktop Protocol" in rule
-    assert rule.startswith("rule archer_corr_T1566_then_T1059_001_plus1 {")
+    assert rule.startswith("rule archer_corr_t1566_then_t1059_001_plus1 {")
 
 
 def test_non_rule_input_is_refused():

@@ -48,7 +48,7 @@ class SecOpsGenerator:
             Dict with keys: rule_name, yaral_code, description, severity,
                            data_sources, event_types
         """
-        rule_name = f"{technique_id.replace('.', '_')}_{technique_name.replace(' ', '_')}"
+        rule_name = yaral_rule_name(technique_id)
 
         # The technique's kill-chain stage (archer.build.severity), as the YAML records it
         rating = rate_severity(tactics or [tactic])
@@ -107,7 +107,7 @@ class SecOpsGenerator:
         context_meta = "".join(f'\n    context_{k} = "{_meta_text(", ".join(v))}"' for k, v in context.items())
         outcome = "\n".join(f"    ${name} = {value}" for name, value in _outcome(risk_score, event_types))
 
-        rule = f"""rule {technique_id.replace('.', '_')} {{
+        rule = f"""rule {yaral_rule_name(technique_id)} {{
   meta:
     author = "Archer Detection Engineering"
     description = "Detects {_meta_text(technique_name)} ({technique_id})"
@@ -148,6 +148,12 @@ def _outcome(risk_score: int, event_types: List[str]):
         extra = _REGISTRY_OUTCOME if et.startswith("REGISTRY_") else _OUTCOME_BY_TYPE.get(et, [])
         rows += [r for r in extra if r not in rows]
     return rows
+
+
+def yaral_rule_name(technique_id: str) -> str:
+    """archer_t1003_001: lowercase snake_case, as YARA-L names must be (validator YL-1),
+    prefixed like the IOC sweeps (archer_ioc_sweep_*) and correlations (archer_corr_*)."""
+    return "archer_" + re.sub(r"\W+", "_", technique_id).strip("_").lower()
 
 
 # ── Indicator → UDM ────────────────────────────────────────────────────────
@@ -300,7 +306,7 @@ def build_correlation_rule(rules_a, rules_b, label_a: str = "", label_b: str = "
     label_a = clean(" / ".join(names_a) or label_a or " / ".join(tids_a))
     label_b = clean(" / ".join(names_b) or label_b or " / ".join(tids_b))
     extra = len(tids_a) + len(tids_b) - 2
-    name = re.sub(r"\W", "_", f"archer_corr_{tids_a[0]}_then_{tids_b[0]}" + (f"_plus{extra}" if extra else ""))
+    name = re.sub(r"\W", "_", f"archer_corr_{tids_a[0]}_then_{tids_b[0]}" + (f"_plus{extra}" if extra else "")).lower()
 
     return f"""rule {name} {{
   meta:
