@@ -2471,5 +2471,6 @@
     </script>
 
     {% endblock %}
+    <script src="{{ url_for('static', path='js/card_collapse.js') }}?v={{ request.app.state.asset_version }}"></script>
 </body>
 </html>

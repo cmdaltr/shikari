@@ -90,6 +90,8 @@
 .mn-card.mn-entry-top { border-bottom: none !important; border-radius: 12px 12px 0 0 !important; }
 .mn-card.mn-entry-rest { border-top: none !important; border-radius: 0 12px 12px 12px !important; }
 @media (max-width: 900px) { .mn-card.mn-entry-rest { border-radius: 0 0 12px 12px !important; } }
+/* Collapsed, the L's top is the whole card */
+.mn-card.mn-entry-top.is-card-collapsed { align-self: start; padding-bottom: 18px; border-bottom: 1px solid var(--border-color) !important; border-radius: 12px !important; }
 
 /* ---------- Buttons ---------- */
 .btn-primary,
@@ -414,3 +416,24 @@ input[type="checkbox"] {
 .mapping-legacy { color: #b91c1c; font-weight: 600; }
 .mapping-row .btn-primary.mapping-btn { padding: 4px 12px; font-size: 0.95em; min-height: 0; }
 [data-theme="dark"] .mapping-legacy { color: #fca5a5; }
+
+/* ---------- Collapsible cards: click a card's title (static/js/card_collapse.js) ---------- */
+.card-title-toggle { cursor: pointer; user-select: none; }
+.card-title-toggle::after {
+  content: '';
+  width: 8px; height: 8px; flex-shrink: 0;
+  margin-left: 4px;
+  border-right: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .15s;
+}
+.card-title-toggle:not(.section-title, .tactic-section-title, .mn-card-title, .hiw-section-title, .tactic-filter-label)::after { display: inline-block; vertical-align: middle; margin-left: 10px; }
+.card-title-toggle[aria-expanded="false"]::after { transform: rotate(-45deg); }
+.card-title-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+[data-card-hidden] { display: none !important; }
+.is-card-collapsed { align-self: start; }
+.is-card-collapsed .card-title-toggle,
+.is-card-collapsed .tactic-section-title,
+.is-card-collapsed .section-title,
+.is-card-collapsed .mn-card-title { margin-bottom: 0 !important; }

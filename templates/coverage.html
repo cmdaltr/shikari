@@ -66,6 +66,11 @@
 .filter-row > .filter-group { flex: 1 1 0; min-width: 0; }
 /* Query counts and SIEMs: each half of the row, chips sharing it evenly */
 .filter-row:first-child .tactic-filter-chips > .ui-pill { flex: 1 1 0; justify-content: center; white-space: nowrap; }
+/* Filter and Coverage by Tactic: title, then body (collapsible, static/js/card_collapse.js) */
+.card-head { display: flex; align-items: center; gap: 12px; }
+#filter-body { display: flex; flex-direction: column; gap: 14px; }
+.filter-active { color: var(--accent); font-weight: 600; font-size: 1rem; }
+.filter-active[hidden] { display: none; }
 /* Tactics: 7 | 6, centred in the card */
 .tactic-filter-chips.chip-lines { flex-direction: column; }
 .chip-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
@@ -436,11 +441,16 @@
 
     <!-- Tactic filter: each chip cycles include → exclude → off -->
     <div class="tactic-filter" role="group" aria-label="Filter">
-      <span class="tactic-filter-label">Filter</span>
-      <div class="filter-groups" id="coverage-filter"></div>
-      <div class="filter-foot">
-        <button type="button" class="btn-ghost tactic-filter-clear" id="tactic-filter-clear" hidden>Clear</button>
-        <span class="tactic-filter-hint">Click to include, again to exclude, again to clear</span>
+      <div class="card-head">
+        <span class="tactic-filter-label">Filter</span>
+        <span class="filter-active" id="filter-active" hidden></span>
+      </div>
+      <div class="card-body" id="filter-body">
+        <div class="filter-groups" id="coverage-filter"></div>
+        <div class="filter-foot">
+          <button type="button" class="btn-ghost tactic-filter-clear" id="tactic-filter-clear" hidden>Clear</button>
+          <span class="tactic-filter-hint">Click to include, again to exclude, again to clear</span>
+        </div>
       </div>
     </div>
 
@@ -455,6 +465,7 @@
         Coverage by Tactic
       </div>
 
+      <div class="card-body" id="tactic-body">
       <!-- Tactic cards: every ATT&CK tactic, covered or not -->
       <div class="tactic-cards" id="tactic-tabs" role="tablist" aria-label="Tactics">
         <!-- Populated by JavaScript -->
@@ -463,6 +474,7 @@
       <!-- Technique Grids (one per tactic) -->
       <div id="technique-grids">
         <!-- Populated by JavaScript -->
+      </div>
       </div>
     </div>
 
@@ -664,7 +676,12 @@ function renderFilter() {
     }
     rows[g.row].appendChild(row);
   }
-  document.getElementById('tactic-filter-clear').hidden = !FILTER_GROUPS.some(g => filterActive(g.key));
+  const active = FILTER_GROUPS.reduce((n, g) => n + filters[g.key].include.size + filters[g.key].exclude.size, 0);
+  document.getElementById('tactic-filter-clear').hidden = !active;
+  // A collapsed Filter still applies, so say so
+  const summary = document.getElementById('filter-active');
+  summary.hidden = !active;
+  summary.textContent = `${active} active`;
 }
 
 function applyFilters() {
