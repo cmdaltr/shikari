@@ -58,9 +58,11 @@
 }
 
 /* Color Key Legend */
+/* Counts | vendors, with the divider in the exact centre of the card */
 .color-key {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   gap: 24px;
   margin-bottom: 30px;
   padding: 16px;
@@ -68,6 +70,21 @@
   border: 1px solid var(--border-color);
   border-radius: 8px;
 }
+
+/* Tactic filter */
+.tactic-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: -14px 0 30px; padding: 14px 16px;
+  background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; }
+.tactic-filter-label { font-weight: 600; }
+.tactic-filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tactic-filter-chips .ui-pill { min-height: 30px; padding: 0 12px !important; font-size: .82rem !important; }
+.tactic-filter-chips .ui-pill.is-excluded { border-style: dashed !important; color: var(--text-secondary) !important; text-decoration: line-through; }
+.tactic-filter-chips .ui-pill .chip-mark { font-weight: 700; }
+.tactic-filter .btn-ghost.tactic-filter-clear { padding: 4px 12px; min-height: 0; font-size: .82rem; }
+.tactic-filter .tactic-filter-clear[hidden] { display: none !important; }
+.tactic-filter-hint { margin-left: auto; color: var(--text-secondary); font-size: .82rem; }
+/* Filtered: hidden tactics leave gaps, so drop the 4 | 5 | 4 placement */
+.tactic-cards.is-filtered > .tactic-card { grid-column: span 4 !important; }
+.tactic-cards > .tactic-card[hidden] { display: none; }
 
 .key-item {
   display: flex;
@@ -111,10 +128,20 @@
 .tactic-card.active { outline: 3px solid var(--text-primary); outline-offset: 2px; }
 .tactic-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
-/* Technique Grid */
-.technique-grid, .tactic-cards {
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
+/* Technique Grid: five to a row. Tactic cards sit on a 20-column grid, four columns
+   each, so they're the technique cards' width and the 13 tactics fall 4 | 5 | 4 with
+   the rows of four centred */
+.technique-grid, .tactic-cards { gap: 12px; }
+.technique-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.tactic-cards { grid-template-columns: repeat(20, minmax(0, 1fr)); }
+.tactic-cards > .tactic-card { grid-column: span 4; }
+.tactic-cards > .tactic-card:nth-child(1),
+.tactic-cards > .tactic-card:nth-child(10) { grid-column: 3 / span 4; }
+@media (max-width: 760px) {
+  .technique-grid, .tactic-cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .tactic-cards > .tactic-card,
+  .tactic-cards > .tactic-card:nth-child(1),
+  .tactic-cards > .tactic-card:nth-child(10) { grid-column: auto; }
 }
 .technique-grid { display: none; }
 
@@ -180,10 +207,14 @@
 
 .coverage-table th,
 .coverage-table td {
-  padding: 12px 16px;
+  padding: 16px 20px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
 }
+/* Twice the old text size: the rows were mostly empty space */
+.coverage-table td { font-size: 2rem; }
+.coverage-table td code { font-size: inherit; }
+.coverage-table th { font-size: 1.5rem; }
 
 .coverage-table th {
   background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
@@ -205,14 +236,14 @@
 }
 
 .table-vendor-icon {
-  width: 20px;
-  height: 20px;
+  width: 40px;
+  height: 40px;
 }
 
 .platform-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 8px;
 }
 
 .platform-tag {
@@ -220,8 +251,8 @@
   padding: 2px 8px;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 0.75rem;
+  border-radius: 6px;
+  font-size: 1.5rem;
   color: var(--text-secondary);
 }
 
@@ -302,6 +333,10 @@
 
 /* Key: query counts | vendors */
 .key-divider { width: 1px; align-self: stretch; background: var(--border-color); }
+.key-group { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
+.key-counts { justify-content: flex-end; }
+.key-vendors { justify-content: flex-start; }
+.key-item .table-vendor-icon { width: 20px; height: 20px; }
 
 /* ATT&CK matrix (Navigator-style): every tactic and technique, coloured by queries */
 .nav-hint { margin: -6px 0 14px; color: var(--text-secondary); font-size: .92rem; }
@@ -412,6 +447,7 @@
 
     <!-- Color Key -->
     <div class="color-key">
+      <div class="key-group key-counts">
       <div class="key-item">
         <div class="key-color grey"></div>
         <span>0 queries</span>
@@ -428,7 +464,9 @@
         <div class="key-color green"></div>
         <span>3+ queries</span>
       </div>
+      </div>
       <div class="key-divider" role="separator" aria-orientation="vertical"></div>
+      <div class="key-group key-vendors">
       <div class="key-item">
         <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-googlesecops"/></svg>
         <span>Google SecOps</span>
@@ -445,6 +483,15 @@
         <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-elastic"/></svg>
         <span>Elastic</span>
       </div>
+      </div>
+    </div>
+
+    <!-- Tactic filter: each chip cycles include → exclude → off -->
+    <div class="tactic-filter" role="group" aria-label="Filter tactics">
+      <span class="tactic-filter-label">Tactics</span>
+      <div class="tactic-filter-chips" id="tactic-filter"></div>
+      <button type="button" class="btn-ghost tactic-filter-clear" id="tactic-filter-clear" hidden>Clear</button>
+      <span class="tactic-filter-hint">Click to include, again to exclude, again to clear</span>
     </div>
 
     <!-- Tactic Coverage Section -->
@@ -602,6 +649,47 @@ function switchTactic(tactic) {
 // Two layers: reference queries (by ATT&CK's placement), or your detections (by the
 // mapping in force, so a technique moved to another tactic by hand shows there).
 const navState = { matrix: [], byTech: {}, layer: 'reference', det: null, legacy: {} };
+
+// Tactic filter: included tactics only (when any), never excluded ones
+const tacticFilter = { include: new Set(), exclude: new Set() };
+const tacticShown = t => !tacticFilter.exclude.has(t) && (!tacticFilter.include.size || tacticFilter.include.has(t));
+
+function renderTacticFilter() {
+  const box = document.getElementById('tactic-filter');
+  box.innerHTML = '';
+  for (const col of navState.matrix) {
+    const t = col.tactic, inc = tacticFilter.include.has(t), exc = tacticFilter.exclude.has(t);
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'ui-pill' + (inc ? ' is-active' : '') + (exc ? ' is-excluded' : '');
+    chip.setAttribute('aria-label', `${t}: ${inc ? 'included' : exc ? 'excluded' : 'not filtered'}`);
+    chip.innerHTML = (inc ? '<span class="chip-mark">+</span>' : exc ? '<span class="chip-mark">−</span>' : '') + t;
+    chip.onclick = () => {
+      if (inc) { tacticFilter.include.delete(t); tacticFilter.exclude.add(t); }
+      else if (exc) tacticFilter.exclude.delete(t);
+      else tacticFilter.include.add(t);
+      applyTacticFilter();
+    };
+    box.appendChild(chip);
+  }
+  document.getElementById('tactic-filter-clear').hidden = !(tacticFilter.include.size || tacticFilter.exclude.size);
+}
+
+function applyTacticFilter() {
+  renderTacticFilter();
+  const cards = document.getElementById('tactic-tabs');
+  const filtered = tacticFilter.include.size || tacticFilter.exclude.size;
+  cards.classList.toggle('is-filtered', !!filtered);
+  cards.querySelectorAll('.tactic-card').forEach(c => { c.hidden = !tacticShown(c.dataset.tactic); });
+  if (activeTactic && !tacticShown(activeTactic)) {
+    const next = [...cards.querySelectorAll('.tactic-card')].find(c => !c.hidden);
+    if (next) switchTactic(next.dataset.tactic);
+    else document.querySelectorAll('.technique-grid').forEach(g => g.classList.remove('active'));
+  } else if (activeTactic) {
+    switchTactic(activeTactic);
+  }
+  renderMatrix();
+}
 const NAV_HINTS = {
   reference: "Every ATT&CK Enterprise technique under each of its tactics, coloured by reference queries. A technique counts its sub-techniques' queries too.",
   detections: "Your detections by the ATT&CK mapping in force. Dashed amber: a mapping changed by hand. Techniques a change moved into a tactic are listed at the foot of its column.",
@@ -609,7 +697,8 @@ const NAV_HINTS = {
 const NAV_ZERO = { count: 0, vendors: [], changed: false };
 
 function renderMatrix() {
-  const { matrix, byTech, layer, det, legacy } = navState;
+  const { byTech, layer, det, legacy } = navState;
+  const matrix = navState.matrix.filter(c => tacticShown(c.tactic));
   const el = document.getElementById('nav-matrix');
   el.style.setProperty('--nav-cols', matrix.length);
   document.getElementById('nav-hint').textContent = NAV_HINTS[layer];
@@ -811,6 +900,13 @@ async function loadCoverage() {
 
     // Activate the first tactic with coverage
     switchTactic(firstTactic || (matrix[0] && matrix[0].tactic));
+    navState.matrix = matrix;
+    renderTacticFilter();
+    document.getElementById('tactic-filter-clear').onclick = () => {
+      tacticFilter.include.clear();
+      tacticFilter.exclude.clear();
+      applyTacticFilter();
+    };
 
     navState.matrix = matrix;
     navState.byTech = byTech;

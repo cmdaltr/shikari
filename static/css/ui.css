@@ -176,13 +176,15 @@
   cursor: pointer;
   transition: border-color .15s, background .15s;
 }
-.ui-pill:hover:not(:disabled),
-.fd-filter:hover,
-.run-view-opt:hover,
+/* Hover on an unselected pill only: on a selected one it turned the red background
+   white under white text */
+.ui-pill:hover:not(:disabled):not(.is-active),
+.fd-filter:hover:not(.is-active),
+.run-view-opt:hover:not(.is-active),
 .filter-btn:hover:not(.active),
-.tactic-tab:hover,
-.af-chip:hover:not(:disabled),
-.key-tab:hover { border-color: var(--accent) !important; background: var(--bg-secondary) !important; }
+.tactic-tab:hover:not(.active),
+.af-chip:hover:not(:disabled):not(.is-on),
+.key-tab:hover:not(.active) { border-color: var(--accent) !important; background: var(--bg-secondary) !important; }
 .ui-pill.is-active,
 .fd-filter.is-active,
 .run-view-opt.is-active,
