@@ -466,7 +466,8 @@ def _run_mitresaw_locked(output_csv: Optional[Path], output_xlsx: Optional[Path]
         cwd=str(_MITRESAW_DIR),
         capture_output=True,
         text=True,
-        timeout=3600,
+        # A full run with software attribution is ~13,000 procedures, about 90 minutes
+        timeout=3 * 3600,
         stdin=subprocess.DEVNULL,
     )
     if result.returncode != 0:
