@@ -116,7 +116,7 @@ def additional_tactics_cached(tid: str, tactic: str) -> List[str]:
         print(f"Warning: Could not extract tactics from STIX for {tid}: {e}")
         # Fallback to regex extraction from provided tactic
         tactics = re.findall(
-            r"Reconnaissance|Resource Development|Initial Access|Execution|Persistence|"
+            r"Initial Access|Execution|Persistence|"
             r"Privilege Escalation|Defense Evasion|Credential Access|Discovery|"
             r"Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
             tactic,
@@ -125,7 +125,7 @@ def additional_tactics_cached(tid: str, tactic: str) -> List[str]:
     # Ensure we have at least something
     if not tactics:
         tactics = re.findall(
-            r"Reconnaissance|Resource Development|Initial Access|Execution|Persistence|"
+            r"Initial Access|Execution|Persistence|"
             r"Privilege Escalation|Defense Evasion|Credential Access|Discovery|"
             r"Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
             tactic,

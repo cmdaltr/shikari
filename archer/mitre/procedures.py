@@ -566,8 +566,16 @@ def get_group_coverage(group: str, generate_dir) -> Optional[Dict]:
             if gid == group.upper() or gname == group_lower:
                 rows.append(row)
 
-    if not rows:
+    group_found = bool(rows)
+    # Reconnaissance and Resource Development are outside Archer's scope (archer.tactic_scope)
+    from archer.tactic_scope import excluded
+    rows = [r for r in rows if not excluded(r.get("tactic", ""))]
+
+    if not group_found:
         return None
+    if not rows:
+        return {"group_name": group, "group_id": "", "total": 0, "covered_count": 0, "gap_count": 0,
+                "covered": [], "gaps": []}
 
     group_name = rows[0].get("group_sw_name") or rows[0].get("group_name")
     group_id = rows[0].get("group_sw_id") or rows[0].get("group_id")

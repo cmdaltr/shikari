@@ -15,8 +15,6 @@ from pathlib import Path
 
 # MITRE ATT&CK Tactics in kill chain order
 MITRE_TACTICS = [
-    ("reconnaissance", "Reconnaissance"),
-    ("resource-development", "Resource Development"),
     ("initial-access", "Initial Access"),
     ("execution", "Execution"),
     ("persistence", "Persistence"),

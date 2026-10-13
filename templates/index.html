@@ -1078,8 +1078,6 @@
 
               /* ---- tactic badge colours (kill-chain order) ---- */
               var TACTIC_COLORS = {
-                'Reconnaissance':        { bg: '#fef3c7', color: '#92400e' },
-                'Resource Development':  { bg: '#ffedd5', color: '#9a3412' },
                 'Initial Access':        { bg: '#fee2e2', color: '#991b1b' },
                 'Execution':             { bg: '#fce7f3', color: '#9d174d' },
                 'Persistence':           { bg: '#f3e8ff', color: '#6b21a8' },
@@ -1101,7 +1099,7 @@
 
               /* MITRE ATT&CK tactic kill-chain order */
               var TACTIC_ORDER = [
-                'Reconnaissance','Resource Development','Initial Access','Execution',
+                'Initial Access','Execution',
                 'Persistence','Privilege Escalation','Defense Evasion','Credential Access',
                 'Discovery','Lateral Movement','Collection','Command And Control',
                 'Exfiltration','Impact'

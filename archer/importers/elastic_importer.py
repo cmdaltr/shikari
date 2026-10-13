@@ -24,9 +24,7 @@ TACTIC_ID_TO_NAME = {
     'TA0009': 'collection',
     'TA0010': 'exfiltration',
     'TA0011': 'command_and_control',
-    'TA0040': 'impact',
-    'TA0042': 'resource_development',
-    'TA0043': 'reconnaissance'
+    'TA0040': 'impact'
 }
 
 # Severity to risk score mapping

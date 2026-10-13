@@ -65,8 +65,7 @@ html, body {
       <div class="mn-field">
         <span class="section-label">Tactics</span>
         <div class="mn-tactics">
-          {# Reconnaissance and Resource Development happen before the target's estate: nothing to detect there #}
-          {% for tactic in tactics if tactic not in ('Reconnaissance', 'Resource Development') %}
+          {% for tactic in tactics %}
           <label class="option-item"><input type="checkbox" name="tactics" value="{{ tactic }}"> <span class="option-label">{{ tactic.replace(" And ", " and ") }}</span></label>
           {% endfor %}
         </div>

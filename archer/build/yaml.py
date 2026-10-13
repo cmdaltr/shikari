@@ -2,6 +2,7 @@ from archer.build import attack_mapping, run_files
 from archer.build.collate import collate_data
 from archer.build.severity import rate as rate_severity
 from archer.config import GENERATE_DIR
+from archer.tactic_scope import keep as keep_tactics
 from archer.validation.mde_field_validator import format_mde_query
 
 import getpass
@@ -96,7 +97,7 @@ def additional_tactics(tid, tactic):
 
     def extract_tactics(extract_from):
         extracted_tactics = re.findall(
-            "Reconnaissance|Resource Development|Initial Access|Execution|Persistence|Privilege Escalation|Defense Evasion|Credential Access|Discovery|Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
+            "Initial Access|Execution|Persistence|Privilege Escalation|Defense Evasion|Credential Access|Discovery|Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
             extract_from,
         )
 
@@ -239,6 +240,12 @@ def _brackets_balanced(query: str) -> bool:
 def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None, tags=None, version=None, attack_override=None, attack_mapping_history=None):
     """Write a detection. tags, version and a hand-made ATT&CK mapping carry over from the
     file it replaces (detection_action)."""
+    if isinstance(tactic, (list, tuple)):
+        tactic = keep_tactics(tactic)
+        if not tactic:
+            # Only Reconnaissance/Resource Development: nothing on the estate sees it
+            print(f"  ⏭️  Not written: {os.path.basename(query_file)} is pre-compromise only")
+            return
     run_files.note(query_file, tag)
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
@@ -267,7 +274,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
         if not datatype:
             datatype = "UnknownDataType"
     severity = rate_severity(tactic)
-    tactic = str(tactic)[2:-2].replace("', '", "\n  - ")
+    tactic = str(list(tactic))[2:-2].replace("', '", "\n  - ")
 
     # Indent ALL query lines properly for YAML literal block
     # Split query into lines, indent each non-empty line with 2 spaces

@@ -25,8 +25,6 @@ class ResponseActionsGenerator:
         "Command and Control": "CRITICAL",
         "Exfiltration": "CRITICAL",
         "Impact": "CRITICAL",
-        "Reconnaissance": "LOW",
-        "Resource Development": "MEDIUM",
     }
 
     def __init__(self):

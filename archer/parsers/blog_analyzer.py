@@ -285,8 +285,6 @@ def _extract_techniques(text: str) -> List[str]:
 def _extract_tactics(text: str) -> List[str]:
     """Extract MITRE ATT&CK tactics."""
     mitre_tactics = [
-        "Reconnaissance",
-        "Resource Development",
         "Initial Access",
         "Execution",
         "Persistence",

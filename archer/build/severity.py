@@ -13,8 +13,6 @@ from typing import Iterable, Union
 RATINGS = ("Low", "Medium", "High", "Critical")
 
 BY_TACTIC = {
-    "reconnaissance": "Low",
-    "resource development": "Low",
     "discovery": "Low",
     "initial access": "Medium",
     "execution": "Medium",

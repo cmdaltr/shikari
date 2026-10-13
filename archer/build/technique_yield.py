@@ -37,7 +37,7 @@ REASONS = {
     "osint_empty": "no indicators from ATT&CK and nothing usable from OSINT",
     "ai_none": "neither ATT&CK nor the AI produced a query for it",
     "ai_failed": "the AI call failed; see the server log",
-    "pre_compromise": "pre-compromise activity (Reconnaissance or Resource Development) "
+    "pre_compromise": "pre-compromise activity, on the adversary's side of the target's estate, "
                       "that no log source sees",
 }
 

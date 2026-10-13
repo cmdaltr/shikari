@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 from archer.security import sanitize_filename, validate_safe_path, sanitize_group_name
 from archer.build.group_files import group_yaml_files
+from archer.tactic_scope import keep as keep_tactics
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from typing import Optional
@@ -1637,34 +1638,11 @@ def get_mitre_lists():
       ordering defined by mitre_order).
     - techniques: cached list of technique display names stored in app.state
     """
-    mitre_order = [
-        "Reconnaissance",
-        "Resource Development",
-        "Initial Access",
-        "Execution",
-        "Persistence",
-        "Privilege Escalation",
-        "Defense Evasion",
-        "Credential Access",
-        "Discovery",
-        "Lateral Movement",
-        "Collection",
-        "Command And Control",
-        "Exfiltration",
-        "Impact",
-    ]
-    bundle = getattr(app.state, "bundle", None)
-    if bundle:
-        tactics = [
-            phase["phase_name"].title().replace("-", " ")
-            for obj in getattr(bundle, "objects", [])
-            if obj.get("type") == "attack-pattern" and "kill_chain_phases" in obj
-            for phase in obj["kill_chain_phases"]
-        ]
-        tactics = list(dict.fromkeys(tactics))
-        tactics = [t for t in mitre_order if t in tactics]
-    else:
-        tactics = []
+    from .visualization.navigator import matrix
+
+    # The Enterprise matrix's own order and names (v18: Stealth, Defense Impairment),
+    # without Reconnaissance and Resource Development
+    tactics = [c["tactic"] for c in matrix(getattr(app.state, "bundle", None))]
     techniques = getattr(app.state, "techniques_to_choose", [])
     return tactics, techniques
 
@@ -6326,7 +6304,9 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
 
             # Extract the query and tactics from YAML for preview (use already-loaded yaml_data)
             query_text = yaml_data.get("query", "")
-            tactics_list = yaml_data.get("tactics", [])
+            tactics_list = keep_tactics(yaml_data.get("tactics") or [])
+            if yaml_data.get("tactics") and not tactics_list:
+                continue  # Reconnaissance/Resource Development only: out of Archer's scope
             # Get primary tactic (first in list)
             primary_tactic = tactics_list[0] if tactics_list else "Unknown"
 
@@ -6493,8 +6473,10 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "osint_data": file_data.get("osint_data", {}),
                     "detection_likelihood": file_data.get("detection_likelihood", 50),
                     "needs_review": file_data.get("needs_review", False),
-                    "technique_id": file_data.get("technique_id", ""),
+                    # Not "technique_id": the Library tells a results-page save by its absence
+                    "attack_id": file_data.get("technique_id", ""),
                     "attack_override": file_data.get("attack_override"),
+                    "attack_mapping_history": file_data.get("attack_mapping_history") or [],
                 }
             )
 
@@ -6628,7 +6610,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                                     severities.append(severity)
 
                                     # Get tactics
-                                    tactics = yaml_data.get("tactics", [])
+                                    tactics = keep_tactics(yaml_data.get("tactics") or [])
                                     primary_tactic = "Unknown"
                                     if isinstance(tactics, list):
                                         tactics_set.update(tactics)
@@ -8469,6 +8451,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             else:
                 formatted_title = data_source or det.platform or "Unknown"
 
+            tactics = keep_tactics(tactics)
             detection_data = {
                 "id": det.id,
                 "technique": technique_name,  # Changed: now the technique name, not ID (matching results page)

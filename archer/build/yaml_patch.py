@@ -116,7 +116,7 @@ def additional_tactics_fast(tid: str, tactic: str) -> List[str]:
     # Fallback: extract from tactic string
     if not tactics:
         tactics = re.findall(
-            r"Reconnaissance|Resource Development|Initial Access|Execution|Persistence|"
+            r"Initial Access|Execution|Persistence|"
             r"Privilege Escalation|Defense Evasion|Credential Access|Discovery|"
             r"Lateral Movement|Collection|Command and Control|Exfiltration|Impact",
             tactic
