@@ -1648,6 +1648,32 @@ def get_mitre_lists():
     return tactics, techniques
 
 
+def _newest_object(path) -> str:
+    """The latest "modified" date in a STIX bundle: comparable across MITRE's feeds (the
+    STIX 2.0 one MITRESaw reads carries no ATT&CK version number)."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return max(re.findall(r'"modified":\s*"([^"]+)"', fh.read()), default="")
+    except OSError:
+        return ""
+
+
+def _check_mitresaw_attack(archer_bundle) -> None:
+    """MITRESaw reads ATT&CK from mitre/cti, Archer from mitre-attack/attack-stix-data:
+    say so when MITRESaw's copy is older than Archer's."""
+    from archer.mitre.procedures import _MITRESAW_DIR
+
+    theirs = _newest_object(_MITRESAW_DIR / "data" / "stix" / "enterprise-attack.json")
+    ours = _newest_object(archer_bundle)
+    # The two feeds stamp the same release a day or so apart; a release apart is weeks
+    lag = (datetime.fromisoformat(ours[:10]) - datetime.fromisoformat(theirs[:10])).days if theirs and ours else 0
+    if lag > 7:
+        print(f"Warning: MITRESaw's ATT&CK (newest object {theirs[:10]}) is older than Archer's "
+              f"({ours[:10]}): mitre/cti may lag attack-stix-data")
+    elif theirs and ours:
+        print(f"✓ MITRESaw and Archer are on the same ATT&CK (newest objects {theirs[:10]} / {ours[:10]})")
+
+
 def _refresh_procedures_if_stale(load: dict) -> None:
     """MITRESaw's procedures CSV (threat briefing, Splunk detections) follows ATT&CK: when
     the bundle is newer than the CSV, rebuild it in the background so startup isn't held."""
@@ -1663,6 +1689,7 @@ def _refresh_procedures_if_stale(load: dict) -> None:
             print(f"Rebuilding the procedures CSV for ATT&CK v{load.get('version') or '?'} (MITRESaw)...")
             run_mitresaw_detection(force=True)
             print("✓ Procedures CSV rebuilt")
+            _check_mitresaw_attack(bundle_path)
         except Exception as e:
             print(f"Warning: procedures CSV not rebuilt: {e}")
 
