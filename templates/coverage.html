@@ -83,7 +83,7 @@
 .tactic-filter .tactic-filter-clear[hidden] { display: none !important; }
 .tactic-filter-hint { margin-left: auto; color: var(--text-secondary); font-size: .82rem; }
 /* Filtered: hidden tactics leave gaps, so drop the 4 | 5 | 4 placement */
-.tactic-cards.is-filtered > .tactic-card { grid-column: span 4 !important; }
+.tactic-cards.is-filtered > .tactic-card { grid-column: span 10 !important; }
 .tactic-cards > .tactic-card[hidden] { display: none; }
 
 .key-item {
@@ -123,25 +123,27 @@
   border-bottom: 1px solid var(--border-color);
 }
 .tactic-card { cursor: pointer; font: inherit; }
-.tactic-card .tactic-name { font-weight: 600; font-size: 0.9rem; line-height: 1.25; }
-.tactic-card .tactic-count { margin-top: 6px; font-size: 0.8rem; opacity: .9; }
+.tactic-card .tactic-name { font-weight: 600; font-size: 1.08rem; line-height: 1.25; }
+.tactic-card .tactic-count { margin-top: 6px; font-size: 0.96rem; opacity: .9; }
 .tactic-card.active { outline: 3px solid var(--text-primary); outline-offset: 2px; }
 .tactic-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
-/* Technique Grid: five to a row. Tactic cards sit on a 20-column grid, four columns
-   each, so they're the technique cards' width and the 13 tactics fall 4 | 5 | 4 with
-   the rows of four centred */
-.technique-grid, .tactic-cards { gap: 12px; }
-.technique-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.tactic-cards { grid-template-columns: repeat(20, minmax(0, 1fr)); }
-.tactic-cards > .tactic-card { grid-column: span 4; }
+/* Technique Grid: five to a row. The 13 tactic cards fall 4 | 5 | 4, every row the
+   same width (40 of 50 columns, centred): ten columns a card in the rows of four,
+   eight in the row of five. The columns have no gap; each card's 6px side margins
+   make the 12px between cards, so spans of 10 and 8 line up exactly. */
+.technique-grid { gap: 12px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.tactic-cards { grid-template-columns: repeat(50, minmax(0, 1fr)); column-gap: 0; row-gap: 12px; }
+.tactic-cards > .tactic-card { grid-column: span 10; margin: 0 6px; }
+.tactic-cards > .tactic-card:nth-child(n+5):nth-child(-n+9) { grid-column: span 8; }
 .tactic-cards > .tactic-card:nth-child(1),
-.tactic-cards > .tactic-card:nth-child(10) { grid-column: 3 / span 4; }
+.tactic-cards > .tactic-card:nth-child(10) { grid-column: 6 / span 10; }
+.tactic-cards > .tactic-card:nth-child(5):nth-child(-n+9) { grid-column: 6 / span 8; }
 @media (max-width: 760px) {
-  .technique-grid, .tactic-cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .technique-grid, .tactic-cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
   .tactic-cards > .tactic-card,
-  .tactic-cards > .tactic-card:nth-child(1),
-  .tactic-cards > .tactic-card:nth-child(10) { grid-column: auto; }
+  .tactic-cards > .tactic-card:nth-child(n),
+  .tactic-cards.is-filtered > .tactic-card { grid-column: auto !important; margin: 0; }
 }
 .technique-grid { display: none; }
 
