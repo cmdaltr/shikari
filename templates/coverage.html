@@ -98,43 +98,37 @@
 /* Section titles and their icons: static/css/ui.css */
 .tactic-section-title .icon, .section-title .icon { display: flex; }
 
-/* Tactic Tabs */
-.tactic-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* Tactic cards: the technique cards' grid, size and colours (coloured by covered techniques) */
+.tactic-cards {
+  display: grid;
   margin-bottom: 20px;
-  padding-bottom: 16px;
+  padding-bottom: 20px;
   border-bottom: 1px solid var(--border-color);
 }
-
-/* .tactic-tab: static/css/ui.css */
-
-.tactic-tab .count {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 2px 6px;
-  background: rgba(0,0,0,0.1);
-  border-radius: 10px;
-  font-size: 0.75rem;
-}
-
-.tactic-tab.active .count {
-  background: rgba(255,255,255,0.2);
-}
+.tactic-card { cursor: pointer; font: inherit; }
+.tactic-card .tactic-name { font-weight: 600; font-size: 0.9rem; line-height: 1.25; }
+.tactic-card .tactic-count { margin-top: 6px; font-size: 0.8rem; opacity: .9; }
+.tactic-card.active { outline: 3px solid var(--text-primary); outline-offset: 2px; }
+.tactic-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 /* Technique Grid */
-.technique-grid {
-  display: none;
+.technique-grid, .tactic-cards {
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
 }
+.technique-grid { display: none; }
 
 .technique-grid.active {
   display: grid;
 }
 
+/* Tactic and technique cards share one size: two lines of content, centred */
 .technique-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 88px;
   padding: 12px;
   border-radius: 8px;
   text-align: center;
@@ -306,6 +300,31 @@
   border-radius: 8px;
 }
 
+/* Key: query counts | vendors */
+.key-divider { width: 1px; align-self: stretch; background: var(--border-color); }
+
+/* ATT&CK matrix (Navigator-style): every tactic and technique, coloured by queries */
+.nav-hint { margin: -6px 0 14px; color: var(--text-secondary); font-size: .92rem; }
+.nav-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.nav-stats { margin-left: auto; color: var(--text-secondary); font-size: .9rem; }
+.nav-scroll { overflow-x: auto; padding-bottom: 6px; }
+.nav-matrix { display: grid; grid-template-columns: repeat(var(--nav-cols), minmax(150px, 1fr)); gap: 6px; min-width: calc(var(--nav-cols) * 156px); align-items: start; }
+.nav-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.nav-head { position: sticky; top: 0; padding: 8px 6px; border-radius: 6px; background: var(--text-primary); color: var(--bg-secondary); text-align: center; font-size: .82rem; font-weight: 600; line-height: 1.25; }
+.nav-head small { display: block; font-weight: 400; opacity: .8; margin-top: 2px; }
+.nav-cell { display: flex; align-items: flex-start; gap: 4px; padding: 5px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-size: .76rem; line-height: 1.3; }
+.nav-cell .nav-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.nav-cell.level-1 { background: #ef4444; border-color: #ef4444; color: #fff; }
+.nav-cell.level-2 { background: #eab308; border-color: #eab308; color: #1a1a1a; }
+.nav-cell.level-3 { background: #22c55e; border-color: #22c55e; color: #fff; }
+.nav-cell.is-sub { margin-left: 12px; font-size: .72rem; }
+.nav-toggle { flex: 0 0 auto; border: none; background: none; color: inherit; font: inherit; font-size: .72rem; padding: 0 2px; cursor: pointer; opacity: .85; }
+.nav-toggle:hover { opacity: 1; text-decoration: underline; }
+.nav-tech { display: flex; flex-direction: column; gap: 3px; }
+.nav-subs[hidden] { display: none; }
+.nav-subs { display: flex; flex-direction: column; gap: 3px; }
+.nav-matrix.covered-only .nav-cell.level-0, .nav-matrix.covered-only .nav-subs .nav-cell.level-0 { display: none; }
+
 .empty-tactic {
   text-align: center;
   padding: 40px;
@@ -402,13 +421,22 @@
         <div class="key-color green"></div>
         <span>3+ queries</span>
       </div>
-      <div class="key-item" style="margin-left: 20px;">
-        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-splunk"/></svg>
-        <span>Splunk</span>
+      <div class="key-divider" role="separator" aria-orientation="vertical"></div>
+      <div class="key-item">
+        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-googlesecops"/></svg>
+        <span>Google SecOps</span>
       </div>
       <div class="key-item">
         <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-mde"/></svg>
         <span>MDE</span>
+      </div>
+      <div class="key-item">
+        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-splunk"/></svg>
+        <span>Splunk</span>
+      </div>
+      <div class="key-item">
+        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-elastic"/></svg>
+        <span>Elastic</span>
       </div>
     </div>
 
@@ -423,14 +451,35 @@
         Coverage by Tactic
       </div>
 
-      <!-- Tactic Tabs -->
-      <div class="tactic-tabs" id="tactic-tabs">
+      <!-- Tactic cards: every ATT&CK tactic, covered or not -->
+      <div class="tactic-cards" id="tactic-tabs" role="tablist" aria-label="Tactics">
         <!-- Populated by JavaScript -->
       </div>
 
       <!-- Technique Grids (one per tactic) -->
       <div id="technique-grids">
         <!-- Populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- ATT&CK matrix: every tactic and technique, Navigator-style -->
+    <div class="tactic-section">
+      <div class="tactic-section-title">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" stroke-width="2">
+            <rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/>
+          </svg>
+        </div>
+        ATT&amp;CK Matrix
+      </div>
+      <p class="nav-hint">Every ATT&amp;CK Enterprise technique under each of its tactics, coloured by reference queries. A technique counts its sub-techniques' queries too.</p>
+      <div class="nav-tools">
+        <button type="button" class="ui-pill" id="nav-expand" aria-pressed="false">Expand all sub-techniques</button>
+        <button type="button" class="ui-pill" id="nav-covered" aria-pressed="false">Covered only</button>
+        <span class="nav-stats" id="nav-stats"></span>
+      </div>
+      <div class="nav-scroll">
+        <div class="nav-matrix" id="nav-matrix"></div>
       </div>
     </div>
 
@@ -522,9 +571,11 @@ function getVendorIcons(vendors, forTable = false) {
 let activeTactic = null;
 
 function switchTactic(tactic) {
-  // Update tabs
-  document.querySelectorAll('.tactic-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.tactic === tactic);
+  // Update cards
+  document.querySelectorAll('.tactic-card').forEach(card => {
+    const on = card.dataset.tactic === tactic;
+    card.classList.toggle('active', on);
+    card.setAttribute('aria-selected', on ? 'true' : 'false');
   });
 
   // Update grids
@@ -534,6 +585,67 @@ function switchTactic(tactic) {
 
   activeTactic = tactic;
 }
+
+// ATT&CK matrix: one column per tactic, every technique, sub-techniques under a toggle
+function renderMatrix(matrix, rollup, byTech) {
+  const el = document.getElementById('nav-matrix');
+  el.style.setProperty('--nav-cols', matrix.length);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const cell = (id, name, count, vendors, extra = '') => {
+    const tip = `${id} ${name}\n${count} quer${count === 1 ? 'y' : 'ies'}${vendors.length ? ' (' + vendors.join(', ') + ')' : ''}`;
+    return `<div class="nav-cell ${getColorLevel(count)}${extra}" title="${esc(tip)}"><span class="nav-name">${esc(name)}</span>`;
+  };
+  let covered = 0, total = 0;
+  el.innerHTML = matrix.map(col => {
+    const hits = col.techniques.filter(t => rollup(t).count).length;
+    covered += hits; total += col.techniques.length;
+    const rows = col.techniques.map(t => {
+      const r = rollup(t);
+      const subs = t.subs || [];
+      const toggle = subs.length ? `<button type="button" class="nav-toggle" aria-expanded="false" title="Sub-techniques">▸ ${subs.length}</button>` : '';
+      const subRows = subs.map(s => {
+        const b = byTech[s.id] || {count: 0, vendors: []};
+        return cell(s.id, s.name, b.count || 0, b.vendors || [], ' is-sub') + '</div>';
+      }).join('');
+      return `<div class="nav-tech">${cell(t.id, t.name, r.count, r.vendors)}${toggle}</div>` +
+             (subs.length ? `<div class="nav-subs" hidden>${subRows}</div>` : '') + '</div>';
+    }).join('');
+    return `<div class="nav-col"><div class="nav-head">${esc(col.tactic)}<small>${hits} / ${col.techniques.length}</small></div>${rows}</div>`;
+  }).join('');
+  document.getElementById('nav-stats').textContent = `${covered} of ${total} techniques have reference queries`;
+
+  el.addEventListener('click', e => {
+    const btn = e.target.closest('.nav-toggle');
+    if (!btn) return;
+    const subs = btn.closest('.nav-tech').querySelector('.nav-subs');
+    const open = subs.hidden;
+    subs.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.textContent = (open ? '▾ ' : '▸ ') + subs.children.length;
+  });
+}
+
+function wireMatrixTools() {
+  const expand = document.getElementById('nav-expand');
+  const coveredOnly = document.getElementById('nav-covered');
+  expand.addEventListener('click', () => {
+    const on = expand.getAttribute('aria-pressed') !== 'true';
+    expand.setAttribute('aria-pressed', on ? 'true' : 'false');
+    expand.classList.toggle('is-active', on);
+    document.querySelectorAll('#nav-matrix .nav-subs').forEach(s => { s.hidden = !on; });
+    document.querySelectorAll('#nav-matrix .nav-toggle').forEach(b => {
+      b.setAttribute('aria-expanded', on ? 'true' : 'false');
+      b.textContent = (on ? '▾ ' : '▸ ') + b.closest('.nav-tech').querySelector('.nav-subs').children.length;
+    });
+  });
+  coveredOnly.addEventListener('click', () => {
+    const on = coveredOnly.getAttribute('aria-pressed') !== 'true';
+    coveredOnly.setAttribute('aria-pressed', on ? 'true' : 'false');
+    coveredOnly.classList.toggle('is-active', on);
+    document.getElementById('nav-matrix').classList.toggle('covered-only', on);
+  });
+}
+document.addEventListener('DOMContentLoaded', wireMatrixTools);
 
 async function loadCoverage() {
   try {
@@ -555,63 +667,62 @@ async function loadCoverage() {
     document.getElementById('splunk-count').textContent = data.summary.vendors?.Splunk || 0;
     document.getElementById('mde-count').textContent = data.summary.vendors?.MDE || 0;
 
-    // Build tactic tabs and grids
+    // Coverage per technique ID, and per technique with its sub-techniques rolled up
+    const byTech = data.by_technique || {};
+    const matrix = data.matrix || [];
+    const rollup = (tech) => {
+      const ids = [tech.id, ...(tech.subs || []).map(s => s.id)].filter(id => byTech[id]);
+      const vendors = [...new Set(ids.flatMap(id => byTech[id].vendors || []))];
+      return { ids, count: ids.reduce((n, id) => n + (byTech[id].count || 0), 0), vendors };
+    };
+
+    // Tactic cards and grids: every ATT&CK tactic, with the covered techniques ATT&CK files under it
     const tacticTabs = document.getElementById('tactic-tabs');
     const techniqueGrids = document.getElementById('technique-grids');
     tacticTabs.innerHTML = '';
     techniqueGrids.innerHTML = '';
-
-    const tactics = data.tactics_list || [];
-    const byTactic = data.by_tactic || {};
-
     let firstTactic = null;
 
-    for (const tactic of tactics) {
-      const tacticData = byTactic[tactic] || { techniques: [] };
-      const techCount = tacticData.techniques.length;
+    for (const col of matrix) {
+      const tactic = col.tactic;
+      const covered = col.techniques.flatMap(t => rollup(t).ids);
+      if (!firstTactic && covered.length) firstTactic = tactic;
 
-      if (techCount === 0) continue; // Skip empty tactics
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = `technique-card tactic-card ${getColorLevel(covered.length)}`;
+      card.dataset.tactic = tactic;
+      card.setAttribute('role', 'tab');
+      card.innerHTML = `<div class="tactic-name">${tactic}</div>
+        <div class="tactic-count">${covered.length} technique${covered.length === 1 ? '' : 's'}</div>`;
+      card.title = `${tactic}: ${covered.length} of ${col.techniques.length} techniques (or their sub-techniques) have reference queries`;
+      card.onclick = () => switchTactic(tactic);
+      tacticTabs.appendChild(card);
 
-      if (!firstTactic) firstTactic = tactic;
-
-      // Create tab
-      const tab = document.createElement('div');
-      tab.className = 'tactic-tab';
-      tab.dataset.tactic = tactic;
-      tab.innerHTML = `${tactic}<span class="count">${techCount}</span>`;
-      tab.onclick = () => switchTactic(tactic);
-      tacticTabs.appendChild(tab);
-
-      // Create grid
       const grid = document.createElement('div');
       grid.className = 'technique-grid';
       grid.dataset.tactic = tactic;
-
-      if (tacticData.techniques.length === 0) {
+      if (!covered.length) {
         grid.innerHTML = '<div class="empty-tactic">No reference queries for this tactic</div>';
-      } else {
-        for (const tech of tacticData.techniques) {
-          const level = getColorLevel(tech.count);
-          const vendorIcons = getVendorIcons(tech.vendors || []);
-
-          const card = document.createElement('div');
-          card.className = `technique-card ${level}`;
-          card.innerHTML = `
-            <div class="technique-id">${tech.id}</div>
-            <div class="technique-vendors">${vendorIcons}</div>
-          `;
-          card.title = `${tech.name || tech.id}\n${tech.count} queries`;
-          grid.appendChild(card);
-        }
       }
-
+      for (const id of covered.sort()) {
+        const tech = byTech[id];
+        const cell = document.createElement('div');
+        cell.className = `technique-card ${getColorLevel(tech.count)}`;
+        cell.innerHTML = `
+          <div class="technique-id">${id}</div>
+          <div class="technique-vendors">${getVendorIcons(tech.vendors || [])}</div>
+        `;
+        cell.title = `${tech.name || id}\n${tech.count} queries`;
+        grid.appendChild(cell);
+      }
       techniqueGrids.appendChild(grid);
     }
 
-    // Activate first tactic
-    if (firstTactic) {
-      switchTactic(firstTactic);
-    }
+    // Activate the first tactic with coverage
+    switchTactic(firstTactic || (matrix[0] && matrix[0].tactic));
+
+    renderMatrix(matrix, rollup, byTech);
 
     // Populate technique table
     const techTbody = document.getElementById('technique-tbody');

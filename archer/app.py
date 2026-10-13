@@ -2443,8 +2443,12 @@ async def get_reference_coverage():
     """
     try:
         from .build.references import get_coverage_map
+        from .visualization.navigator import matrix
 
-        return get_coverage_map()
+        coverage = get_coverage_map()
+        # Every ATT&CK tactic and technique, for the Navigator-style matrix
+        coverage["matrix"] = matrix(getattr(app.state, "bundle", None))
+        return coverage
     except ImportError:
         return {"error": "Reference queries module not available", "coverage": {}}
     except Exception as e:
