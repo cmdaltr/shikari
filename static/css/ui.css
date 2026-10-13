@@ -282,3 +282,20 @@ input[type="checkbox"] {
 [data-theme="dark"] .tabs-container,
 [data-theme="dark"] .tabs-content,
 [data-theme="dark"] .tab-pane { background: var(--bg-secondary); }
+
+/* ATT&CK mapping changed by hand (results, Library) */
+.mapping-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px dashed #d97706;
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: help;
+}
+[data-theme="dark"] .mapping-badge { color: #fbbf24; }

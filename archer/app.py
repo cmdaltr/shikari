@@ -4215,6 +4215,66 @@ async def save_detection_query(filename: str, request: Request, archer_session: 
     return {"success": True, "file": os.path.basename(path), "check": check}
 
 
+@app.get("/api/attack/techniques")
+def attack_techniques():
+    """Every current ATT&CK technique with its default tactics, and the tactics in matrix
+    order: the choices for changing a detection's mapping."""
+    from .visualization.navigator import matrix, technique_index
+
+    bundle = getattr(app.state, "bundle", None)
+    index = technique_index(bundle)
+    return {
+        "tactics": [c["tactic"] for c in matrix(bundle)],
+        "techniques": [{"id": tid, **v} for tid, v in sorted(index.items())],
+    }
+
+
+@app.post("/api/detections/mapping")
+async def change_detection_mapping(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Change or restore the ATT&CK mapping of one or more detection files (a results card
+    can hold several). A comment is required either way and is kept in each file.
+    Body: {"files": [...], "action": "change"|"restore", "technique_id", "tactics", "comment"}
+    """
+    from .build import attack_mapping
+    from .visualization.navigator import matrix, technique_index
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    body = await request.json()
+    files = [sanitize_filename(f) for f in body.get("files") or [] if f]
+    if not files:
+        return JSONResponse({"error": "No detection files given"}, status_code=400)
+    paths = [os.path.join(GENERATE_DIR, f) for f in files]
+    missing = [f for f, p in zip(files, paths) if not os.path.isfile(p)]
+    if missing:
+        return JSONResponse({"error": f"Not found: {', '.join(missing)}"}, status_code=404)
+    bundle = getattr(app.state, "bundle", None)
+    index = technique_index(bundle) or None
+    order = [c["tactic"] for c in matrix(bundle)] or None
+    comment = str(body.get("comment") or "")[:1000]
+    results, unchanged = {}, None
+    try:
+        for f, path in zip(files, paths):
+            try:
+                if body.get("action") == "restore":
+                    results[f] = attack_mapping.restore(path, comment, user.email)
+                else:
+                    results[f] = attack_mapping.change(path, str(body.get("technique_id") or ""),
+                                                       body.get("tactics") or [], comment, user.email,
+                                                       index=index, tactic_order=order)
+            except attack_mapping.Unchanged as err:
+                unchanged = err  # another file on the card may still need it
+    except attack_mapping.MappingError as err:
+        return JSONResponse({"error": str(err), "saved": list(results)}, status_code=422)
+    if not results:
+        return JSONResponse({"error": str(unchanged)}, status_code=422)
+    return {"success": True, "files": results}
+
+
 def _replace_query_block(text: str, query: str) -> Optional[str]:
     """Swap the body of a top-level `query: |` block; None when the file has no such block."""
     lines = text.split("\n")
@@ -6309,6 +6369,9 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "detection_likelihood": detection_likelihood,  # Likelihood score (0-100)
                     "reference_used": reference_used,  # Reference query flag (green badge)
                     "reference_sources": reference_sources,  # List of reference sources used
+                    "technique_id": str(yaml_data.get("technique_id") or ""),
+                    "attack_override": yaml_data.get("attack_override"),  # ATT&CK mapping changed by hand
+                    "attack_mapping_history": yaml_data.get("attack_mapping_history") or [],
                 }
             )
 
@@ -6340,6 +6403,10 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "tactics": file_data.get("tactics", []),
                     "detection_likelihood": file_data.get("detection_likelihood", 50),
                     "queries": [],  # Store all queries for this group
+                    "files": [],
+                    "technique_id": file_data.get("technique_id", ""),
+                    "attack_override": None,
+                    "attack_mapping_history": [],
                 }
             else:
                 # Merge indicators from multiple detections in the same group
@@ -6356,6 +6423,11 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     if file_data.get("osint_data"):
                         grouped[key]["osint_data"].update(file_data["osint_data"])
             grouped[key]["titles"].append(file_data["title"])
+            grouped[key]["files"].append(file_data["file"])
+            if file_data.get("attack_override") and not grouped[key]["attack_override"]:
+                grouped[key]["attack_override"] = file_data["attack_override"]
+            if len(file_data.get("attack_mapping_history") or []) > len(grouped[key]["attack_mapping_history"]):
+                grouped[key]["attack_mapping_history"] = file_data["attack_mapping_history"]
             # Add query if it exists and isn't already in the list
             query_text = file_data.get("query", "")
             if query_text and query_text not in grouped[key]["queries"]:
@@ -6389,6 +6461,10 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "detection_likelihood": data.get(
                         "detection_likelihood", 50
                     ),  # Likelihood score
+                    "files": data["files"],
+                    "technique_id": data["technique_id"],
+                    "attack_override": data["attack_override"],
+                    "attack_mapping_history": data["attack_mapping_history"],
                 }
             )
 
@@ -6417,6 +6493,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "osint_data": file_data.get("osint_data", {}),
                     "detection_likelihood": file_data.get("detection_likelihood", 50),
                     "needs_review": file_data.get("needs_review", False),
+                    "technique_id": file_data.get("technique_id", ""),
+                    "attack_override": file_data.get("attack_override"),
                 }
             )
 
@@ -6571,6 +6649,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                                         "tactic": primary_tactic,
                                         "query": yaml_data.get("query", "") if yaml_data else "",
                                         "file": full_path,
+                                        "attack_id": str((yaml_data or {}).get("technique_id") or ""),
+                                        "attack_override": (yaml_data or {}).get("attack_override"),
                                     }
                                 )
 
@@ -6786,9 +6866,10 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                         individual_queries = [
                             {
                                 "technique_name": t["name"],
-                                "technique_id": t["id"],
+                                "technique_id": t.get("attack_id") or t["id"],
                                 "tactic": t["tactic"],
                                 "query": t.get("query", ""),
+                                "attack_override": t.get("attack_override"),
                             }
                             for t in techniques
                             if t.get("query")
@@ -8402,6 +8483,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "group": group_name,
                 "tactic": tactics[0] if tactics else "Unknown",
                 "saved_date": det.created_at.strftime("%Y-%m-%d") if det.created_at else "",
+                "attack_override": content_data.get("attack_override"),  # ATT&CK mapping changed by hand
                 "osint_enriched": osint_enriched,
                 "osint_data": osint_data,
                 "needs_review": False,  # Generated detections always have indicators
@@ -8604,10 +8686,13 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         "detection_likelihood": det.get("detection_likelihood", 75),
                         "data_source": det.get("data_source", "Unknown"),
                         "ids": [],  # Track ALL detection IDs in this group
+                        "attack_override": None,
                     }
 
                 # Add this detection's ID to the group
                 grouped[key]["ids"].append(det.get("id"))
+                if det.get("attack_override") and not grouped[key]["attack_override"]:
+                    grouped[key]["attack_override"] = det["attack_override"]
 
                 # Add title (data source)
                 title = det.get("title", "")
@@ -8669,6 +8754,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                         "osint_enriched": data["osint_enriched"],
                         "osint_data": data["osint_data"],
                         "detection_likelihood": data["detection_likelihood"],
+                        "attack_override": data["attack_override"],
                     }
                 )
 

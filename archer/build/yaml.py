@@ -1,4 +1,4 @@
-from archer.build import run_files
+from archer.build import attack_mapping, run_files
 from archer.build.collate import collate_data
 from archer.build.severity import rate as rate_severity
 from archer.config import GENERATE_DIR
@@ -11,6 +11,8 @@ import os
 import textwrap
 import re
 import uuid
+
+import yaml as yaml_lib
 
 # Detections written by an older generator are rewritten on the next run that reaches
 # them. Bump this whenever generated detections change (fields, query shape, naming), so
@@ -234,8 +236,9 @@ def _brackets_balanced(query: str) -> bool:
     return depth == 0
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None, tags=None, version=None):
-    """Write a detection. tags and version carry over from the file it replaces (detection_action)."""
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None, tags=None, version=None, attack_override=None, attack_mapping_history=None):
+    """Write a detection. tags, version and a hand-made ATT&CK mapping carry over from the
+    file it replaces (detection_action)."""
     run_files.note(query_file, tag)
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
@@ -503,6 +506,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
             return
         with open(query_file, "w") as new_yaml:
             new_yaml.write(_stamp(yaml_content) + yaml_content)
+        attack_mapping.reapply(query_file, attack_override, attack_mapping_history)
 
 
 # ── Rewriting detections already on disk ──────────────────────────────────────
@@ -533,11 +537,19 @@ def file_state(path: str) -> dict:
     m = _STAMP.match(first)
     tags = re.search(r"^tags:\n((?:  - .*\n?)+)", content, re.M)
     version = re.search(r"^version: (\S+)", content, re.M)
+    mapping = {}
+    if re.search(rf"^({attack_mapping.OVERRIDE_KEY}|{attack_mapping.HISTORY_KEY}):", content, re.M):
+        try:
+            mapping = yaml_lib.safe_load(body) or {}
+        except yaml_lib.YAMLError:
+            pass
     return {
         "generator": int(m.group(1)) if m else None,
         "edited": bool(m) and hashlib.sha256(_query_block(body).encode()).hexdigest() != m.group(2),
         "tags": [t[4:].strip() for t in tags.group(1).splitlines() if t.strip()] if tags else [],
         "version": version.group(1) if version else "1.0",
+        "attack_override": mapping.get(attack_mapping.OVERRIDE_KEY),
+        "attack_mapping_history": mapping.get(attack_mapping.HISTORY_KEY),
     }
 
 
@@ -575,7 +587,10 @@ def detection_action(yamlfile: str, tag):
         run_files.kept(yamlfile, tag)
         return None
     if regenerate or state["generator"] != GENERATOR_VERSION:
-        return {"tags": state["tags"], "version": _next_version(state["version"])}
+        rewrite = {"tags": state["tags"], "version": _next_version(state["version"])}
+        # A hand-made ATT&CK mapping survives the rewrite (archer.build.attack_mapping)
+        rewrite.update({k: state[k] for k in ("attack_override", "attack_mapping_history") if state[k]})
+        return rewrite
     update_yaml(yamlfile, tag)
     return None
 

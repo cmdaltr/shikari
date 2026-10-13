@@ -563,6 +563,15 @@
                   This detection referenced example queries from the bespoke/llm_references directory. Reference queries are production-tested detection patterns that provide proven query structures and best practices for your SIEM platform.
                 </p>
               </div>
+
+              <div style="margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; margin-left: 20px;">
+                  <span class="mapping-badge" style="margin-left: 0;">Mapping changed</span>
+                </div>
+                <p style="margin: 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
+                  Someone changed the ATT&amp;CK technique or tactics this detection maps to, with a comment saying why. Hover the badge for the ATT&amp;CK default; <strong>Restore default</strong> puts it back. Severity follows the tactics in force, and Regenerate keeps the change.
+                </p>
+              </div>
             </div>
 
             <!-- Confidence of Detection -->
@@ -812,6 +821,10 @@
                     Referenced
                   </span>
                   {% endif %}
+
+                  {% if detection.attack_override %}
+                  <span class="mapping-badge" title="ATT&CK default: {{ detection.attack_override.default.technique_id }} ({{ detection.attack_override.default.tactics|join(', ') }}). Changed by {{ detection.attack_override.by }} on {{ detection.attack_override.at[:10] }}: {{ detection.attack_override.comment }}">Mapping changed</span>
+                  {% endif %}
                 </div>
                 {% if detection.osint_data %}
                 <button onclick="toggleOsintDetails('det-osint-{{ vendor.name }}-{{ loop.index }}-details')" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 500; margin-left: 12px; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3b82f6'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#3b82f6';">
@@ -831,6 +844,41 @@
               </div>
               {% endif %}
               <div class="detection-description" style="white-space: pre-line; font-style: italic;">{{ detection.description_html | safe }}</div>
+              {% set ov = detection.attack_override %}
+              <div class="mapping-row{% if ov %} is-changed{% endif %}">
+                <span class="mapping-label">ATT&amp;CK</span>
+                <code class="mapping-current">{{ detection.technique_id or '—' }}</code>
+                <span class="mapping-tactics">{{ detection.tactics|join(', ') }}</span>
+                {% if ov %}
+                <span class="mapping-default">ATT&amp;CK default <code>{{ ov.default.technique_id }}</code> {{ ov.default.tactics|join(', ') }}</span>
+                {% endif %}
+                {% if user and detection.files %}
+                <span class="mapping-actions">
+                  <button type="button" class="btn-ghost mapping-btn" data-mapping-action="change"
+                          data-files='{{ detection.files|tojson }}' data-technique="{{ detection.technique_id }}"
+                          data-tactics='{{ detection.tactics|tojson }}'>Edit mapping</button>
+                  {% if ov %}
+                  <button type="button" class="btn-ghost mapping-btn" data-mapping-action="restore"
+                          data-files='{{ detection.files|tojson }}' data-technique="{{ ov.default.technique_id }}"
+                          data-tactics='{{ ov.default.tactics|tojson }}'>Restore default</button>
+                  {% endif %}
+                </span>
+                {% endif %}
+                {% if detection.attack_mapping_history %}
+                <details class="mapping-history">
+                  <summary>History ({{ detection.attack_mapping_history|length }})</summary>
+                  <ol>
+                    {% for h in detection.attack_mapping_history|reverse %}
+                    <li><strong>{{ 'Restored' if h.action == 'restored' else 'Changed' }}</strong>
+                      <code>{{ h['from'].technique_id }}</code> {{ h['from'].tactics|join(', ') }} →
+                      <code>{{ h['to'].technique_id }}</code> {{ h['to'].tactics|join(', ') }}
+                      <span class="mapping-meta">{{ h.by }}, {{ h.at[:16]|replace('T', ' ') }}</span>
+                      <q>{{ h.comment }}</q></li>
+                    {% endfor %}
+                  </ol>
+                </details>
+                {% endif %}
+              </div>
 
               <!-- OSINT Details (Collapsible) -->
               {% if detection.osint_data %}
@@ -1293,6 +1341,7 @@
                     <span class="iq-name">{{ iq.technique_name }}</span>
                     {% if iq.technique_id %}<span class="iq-id">{{ iq.technique_id }}</span>{% endif %}
                     {% if iq.tactic %}<span class="iq-tactic">{{ iq.tactic }}</span>{% endif %}
+                    {% if iq.attack_override %}<span class="mapping-badge" title="ATT&CK default: {{ iq.attack_override.default.technique_id }} ({{ iq.attack_override.default.tactics|join(', ') }}). {{ iq.attack_override.comment }}">Mapping changed</span>{% endif %}
                     <button class="iq-copy" title="Copy query"
                             onclick="navigator.clipboard.writeText(this.closest('.iq-block').querySelector('code').textContent)">📋</button>
                   </div>
@@ -1650,6 +1699,31 @@
       </span>
     </div>
   </footer>
+
+<!-- Change or restore a detection's ATT&CK mapping -->
+<div class="modal-overlay" id="mapping-modal" role="dialog" aria-modal="true" aria-labelledby="mapping-title">
+  <form class="modal-dialog mapping-dialog" id="mapping-form">
+    <div class="modal-header"><h3 id="mapping-title">Edit ATT&amp;CK mapping</h3></div>
+    <div class="modal-body">
+      <p class="mapping-intro" id="mapping-intro"></p>
+      <div id="mapping-fields">
+        <label class="mapping-field-label" for="mapping-technique">Technique</label>
+        <input type="text" id="mapping-technique" list="mapping-technique-list" autocomplete="off" placeholder="T1055 or a technique name">
+        <datalist id="mapping-technique-list"></datalist>
+        <div class="mapping-technique-name" id="mapping-technique-name"></div>
+        <span class="mapping-field-label">Tactics</span>
+        <div class="mapping-tactic-grid" id="mapping-tactics"></div>
+      </div>
+      <label class="mapping-field-label" for="mapping-comment">Comment <span class="mapping-required">required</span></label>
+      <textarea id="mapping-comment" rows="3" maxlength="1000" aria-required="true" placeholder="Why the mapping changes"></textarea>
+      <p class="mapping-error" id="mapping-error" hidden></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-btn modal-btn-cancel" id="mapping-cancel">Cancel</button>
+      <button type="submit" class="modal-btn modal-btn-confirm" id="mapping-save">Save</button>
+    </div>
+  </form>
+</div>
 
 <!-- Custom Modal Dialog -->
 <div class="modal-overlay" id="modal-overlay">
@@ -3120,6 +3194,103 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (e) {
       btn.disabled = false;
       alert('Regenerate failed: ' + e.message);
+    }
+  });
+})();
+
+// Change or restore a detection's ATT&CK mapping; a comment is required either way
+(function () {
+  const modal = document.getElementById('mapping-modal');
+  if (!modal) return;
+  const form = document.getElementById('mapping-form');
+  const input = document.getElementById('mapping-technique');
+  const nameEl = document.getElementById('mapping-technique-name');
+  const tacticBox = document.getElementById('mapping-tactics');
+  const comment = document.getElementById('mapping-comment');
+  const errorEl = document.getElementById('mapping-error');
+  let attack = null, current = null, lastTid = '';
+
+  async function loadAttack() {
+    if (attack) return attack;
+    const res = await fetch('/api/attack/techniques');
+    attack = await res.json();
+    attack.byId = Object.fromEntries(attack.techniques.map(t => [t.id, t]));
+    document.getElementById('mapping-technique-list').innerHTML = attack.techniques
+      .map(t => `<option value="${t.id} — ${t.name.replace(/"/g, '&quot;')}"></option>`).join('');
+    tacticBox.innerHTML = attack.tactics.map(t =>
+      `<label class="mapping-tactic"><input type="checkbox" value="${t}"> ${t}</label>`).join('');
+    return attack;
+  }
+
+  const techniqueId = () => (input.value.match(/T\d{4}(\.\d{3})?/i) || [''])[0].toUpperCase();
+  const setTactics = list => tacticBox.querySelectorAll('input').forEach(cb => { cb.checked = list.includes(cb.value); });
+
+  function onTechnique() {
+    const tid = techniqueId(), t = attack && attack.byId[tid];
+    nameEl.textContent = t ? `${t.name} · ATT&CK tactics: ${t.tactics.join(', ')}` : (tid ? 'Not a current ATT&CK technique' : '');
+    // A different technique starts from its own ATT&CK tactics
+    if (t && tid !== lastTid) setTactics(t.tactics);
+    lastTid = tid;
+  }
+
+  async function open(btn) {
+    current = { action: btn.dataset.mappingAction, files: JSON.parse(btn.dataset.files) };
+    const restore = current.action === 'restore', tactics = JSON.parse(btn.dataset.tactics || '[]');
+    errorEl.hidden = true;
+    comment.value = '';
+    document.getElementById('mapping-title').textContent = restore ? 'Restore ATT&CK mapping' : 'Edit ATT&CK mapping';
+    document.getElementById('mapping-fields').hidden = restore;
+    document.getElementById('mapping-save').textContent = restore ? 'Restore default' : 'Save';
+    const n = current.files.length;
+    document.getElementById('mapping-intro').textContent = restore
+      ? `Back to ${btn.dataset.technique} (${tactics.join(', ')}), as ATT&CK maps it.`
+      : `Applies to ${n} detection file${n === 1 ? '' : 's'} on this card. Severity follows the tactics.`;
+    modal.classList.add('show');
+    if (!restore) {
+      try { await loadAttack(); } catch (e) { errorEl.textContent = 'Couldn\'t load ATT&CK techniques'; errorEl.hidden = false; }
+      input.value = btn.dataset.technique;
+      lastTid = btn.dataset.technique;
+      onTechnique();
+      setTactics(tactics);
+      input.focus();
+    } else {
+      comment.focus();
+    }
+  }
+
+  const close = () => { modal.classList.remove('show'); current = null; };
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-mapping-action]');
+    if (btn) open(btn);
+  });
+  input.addEventListener('input', onTechnique);
+  document.getElementById('mapping-cancel').addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('show')) close(); });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!current) return;
+    const body = { action: current.action, files: current.files, comment: comment.value.trim() };
+    if (current.action !== 'restore') {
+      body.technique_id = techniqueId();
+      body.tactics = [...tacticBox.querySelectorAll('input:checked')].map(cb => cb.value);
+    }
+    const fail = msg => { errorEl.textContent = msg; errorEl.hidden = false; };
+    if (!body.comment) return fail('A comment is required.');
+    const save = document.getElementById('mapping-save');
+    save.disabled = true;
+    try {
+      const res = await fetch('/api/detections/mapping', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (typeof navigationConfirmed !== 'undefined') navigationConfirmed = true;
+      window.location.reload();
+    } catch (err) {
+      fail(err.message);
+      save.disabled = false;
     }
   });
 })();

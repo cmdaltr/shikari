@@ -10,6 +10,7 @@ each cell from the reference coverage map (archer.build.references).
 from typing import Dict, List
 
 _cache: Dict[int, List[Dict]] = {}
+_index_cache: Dict[int, Dict[str, Dict]] = {}
 
 
 def _get(obj, key, default=None):
@@ -70,3 +71,29 @@ def matrix(bundle) -> List[Dict]:
     _cache.clear()
     _cache[key] = result
     return result
+
+
+def technique_index(bundle) -> Dict[str, Dict]:
+    """{technique ID: {name, tactics}} for every current technique and sub-technique, with
+    tactics as display names in matrix order. What a detection's mapping defaults to."""
+    if bundle is None:
+        return {}
+    key = id(bundle)
+    if key in _index_cache:
+        return _index_cache[key]
+    names = {c["shortname"]: c["tactic"] for c in matrix(bundle)}
+    order = list(names)
+    index = {}
+    for o in _get(bundle, "objects", []) or []:
+        if (_get(o, "type") != "attack-pattern" or _get(o, "revoked") or _get(o, "x_mitre_deprecated")):
+            continue
+        tid = _attack_id(o)
+        if not tid:
+            continue
+        phases = [_get(p, "phase_name") for p in _get(o, "kill_chain_phases", []) or []
+                  if _get(p, "kill_chain_name") == "mitre-attack"]
+        index[tid] = {"name": _get(o, "name", tid),
+                      "tactics": [names[s] for s in sorted(set(phases) & set(order), key=order.index)]}
+    _index_cache.clear()
+    _index_cache[key] = index
+    return index
