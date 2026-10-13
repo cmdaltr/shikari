@@ -43,6 +43,8 @@ data/*.db
 data/.encryption_key
 data/.mitresaw.lock
 data/mitre_procedures.xlsx
+data/mitre_procedures.meta.json
+data/mitre_procedures.tmp
 data/*.sqlite
 data/*.sqlite3
 

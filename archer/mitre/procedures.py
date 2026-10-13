@@ -344,6 +344,8 @@ _LOCK = _PROJECT_ROOT / "data" / ".mitresaw.lock"
 
 # The last check of MITRESaw's CSV against ATT&CK (check_procedures), for the server to report
 LAST_CHECK: Optional[Dict] = None
+# The last incremental plan: groups collected again ("run") and dropped; None for a full run
+LAST_PLAN: Optional[Dict] = None
 
 
 class MitresawBusy(RuntimeError):
@@ -436,29 +438,55 @@ def _share_attack_bundle() -> bool:
 
 
 def _run_mitresaw(output_csv: Optional[Path], output_xlsx: Optional[Path],
-                  force: bool) -> Tuple[Path, Optional[Path]]:
+                  force: bool, full: bool = False) -> Tuple[Path, Optional[Path]]:
     # One at a time: concurrent runs write the same dated folder and break each other
     with _mitresaw_lock():
-        return _run_mitresaw_locked(output_csv, output_xlsx, force)
+        return _run_mitresaw_locked(output_csv, output_xlsx, force, full)
 
 
-def _run_mitresaw_locked(output_csv: Optional[Path], output_xlsx: Optional[Path],
-                         force: bool) -> Tuple[Path, Optional[Path]]:
-    global LAST_CHECK
-    output_csv = Path(output_csv or _DEFAULT_CSV)
-    output_xlsx = Path(output_xlsx or _DEFAULT_XLSX)
-    output_csv.parent.mkdir(parents=True, exist_ok=True)
+def _meta_path(output_csv: Path) -> Path:
+    return output_csv.with_name(output_csv.stem + ".meta.json")
 
+
+def _read_meta(output_csv: Path) -> Optional[Dict]:
+    try:
+        with open(_meta_path(output_csv), encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
+def _write_meta(output_csv: Path, version: str, index: Dict, flags: List[str], mode: str,
+                plan_: Optional[Dict]) -> None:
+    meta = {
+        "attack_version": version,
+        "built": datetime.now().isoformat(timespec="seconds"),
+        "mode": mode,
+        "flags": flags,
+        "groups_collected": plan_["run"] if plan_ else "all",
+        "groups_dropped": plan_["drop"] if plan_ else [],
+        "objects": index,
+    }
+    path = _meta_path(output_csv)
+    tmp = path.with_suffix(".tmp")
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(meta, fh, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+def _read_rows(path: Path) -> Tuple[List[str], List[dict]]:
+    csv.field_size_limit(sys.maxsize)
+    with open(path, newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        return list(reader.fieldnames or []), list(reader)
+
+
+def _invoke_mitresaw(flags: List[str]) -> Path:
+    """Run MITRESaw and return the procedures CSV this run wrote."""
     mitresaw_script = _MITRESAW_DIR / "MITRESaw.py"
     if not mitresaw_script.exists():
         raise FileNotFoundError(
             f"MITRESaw not found at {mitresaw_script}. Clone it beside Archer, or set MITRESAW_DIR")
-
-    flags = list(_MITRESAW_FLAGS)
-    # With Archer's bundle shared there's nothing for MITRESaw to fetch
-    if not _share_attack_bundle() and force:
-        flags.append("-F")
-
     logger.info("Running MITRESaw: %s %s", mitresaw_script, " ".join(flags))
     started = time.time()
     result = subprocess.run(
@@ -475,26 +503,90 @@ def _run_mitresaw_locked(output_csv: Optional[Path], output_xlsx: Optional[Path]
         raise RuntimeError(f"MITRESaw exited with code {result.returncode}: {result.stderr[-2000:]}")
     logger.info("MITRESaw output:\n%s", result.stdout[-500:] if result.stdout else "(empty)")
 
-    # MITRESaw writes data/YYYY-MM-DD/ (older versions: YYYY-MM-DD/) under its own
-    # directory. Only output from this run counts: an older CSV would pass for a rebuild.
-    candidates = [p for pattern in ("data/*/mitre_procedures.csv", "data/mitre_procedures.csv",
-                                    "*/mitre_procedures.csv")
-                  for p in _MITRESAW_DIR.glob(pattern) if p.stat().st_mtime >= started - 1]
+    # MITRESaw writes data/YYYY-MM-DD/ (a subfolder of it when filtered by group; older
+    # versions: YYYY-MM-DD/) under its own directory. Only output from this run counts:
+    # an older CSV would pass for a rebuild. The evidence report's CSV sits beside its
+    # XLSX; a filtered run also writes the express CSV elsewhere.
+    fresh = lambda p: p.stat().st_mtime >= started - 1
+    candidates = [p for pattern in ("data/*/mitre_procedures.csv", "data/*/*/mitre_procedures.csv",
+                                    "data/mitre_procedures.csv", "*/mitre_procedures.csv")
+                  for p in _MITRESAW_DIR.glob(pattern) if fresh(p)]
     if not candidates:
         raise FileNotFoundError(
             f"MITRESaw finished but wrote no new mitre_procedures.csv under {_MITRESAW_DIR}. "
             f"stdout: {result.stdout[-300:]}")
-    src_csv = max(candidates, key=lambda p: p.stat().st_mtime)
-    src_xlsx = src_csv.parent / "mitre_procedures.xlsx"
+    beside_xlsx = [p for p in candidates
+                   if (p.parent / "mitre_procedures.xlsx").exists() and fresh(p.parent / "mitre_procedures.xlsx")]
+    return max(beside_xlsx or candidates, key=lambda p: p.stat().st_mtime)
 
-    shutil.copy2(str(src_csv), str(output_csv))
-    logger.info("Copied MITRESaw CSV to %s", output_csv)
+
+def _run_mitresaw_locked(output_csv: Optional[Path], output_xlsx: Optional[Path],
+                         force: bool, full: bool) -> Tuple[Path, Optional[Path]]:
+    global LAST_CHECK, LAST_PLAN
+    from archer.mitre import attack_delta
+
+    output_csv = Path(output_csv or _DEFAULT_CSV)
+    output_xlsx = Path(output_xlsx or _DEFAULT_XLSX)
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+
+    flags = list(_MITRESAW_FLAGS)
+    shared = _share_attack_bundle()
+    # With Archer's bundle shared there's nothing for MITRESaw to fetch
+    if not shared and force:
+        flags.append("-F")
+
+    # Collect only the groups ATT&CK changed since the last build, unless asked for a
+    # full collection or there's nothing to compare with (no bundle, no index, other flags)
+    index, version = None, ""
+    LAST_PLAN = None
+    if shared:
+        with open(_ARCHER_BUNDLE, encoding="utf-8") as fh:
+            objects = json.load(fh).get("objects", [])
+        index = attack_delta.build_index(objects)
+        version = next((o.get("x_mitre_version", "") for o in objects if o.get("type") == "x-mitre-collection"), "")
+    meta = _read_meta(output_csv)
+    if index is not None and not full and meta and meta.get("flags") == flags and output_csv.exists():
+        fieldnames, rows = _read_rows(output_csv)
+        links: Dict[str, Set[str]] = {}
+        for r in rows:
+            links.setdefault(r.get("group_sw_id", ""), set()).add(r.get("technique_id", ""))
+        LAST_PLAN = attack_delta.plan(meta.get("objects"), index, links)
+
     xlsx_result: Optional[Path] = None
-    if src_xlsx.exists():
-        shutil.copy2(str(src_xlsx), str(output_xlsx))
-        logger.info("Copied MITRESaw XLSX to %s", output_xlsx)
-        xlsx_result = output_xlsx
+    if LAST_PLAN is None:
+        src_csv = _invoke_mitresaw(flags)
+        shutil.copy2(str(src_csv), str(output_csv))
+        logger.info("Copied MITRESaw CSV to %s", output_csv)
+        src_xlsx = src_csv.parent / "mitre_procedures.xlsx"
+        if src_xlsx.exists():
+            shutil.copy2(str(src_xlsx), str(output_xlsx))
+            logger.info("Copied MITRESaw XLSX to %s", output_xlsx)
+            xlsx_result = output_xlsx
+        mode = "full"
+    else:
+        run, drop = LAST_PLAN["run"], LAST_PLAN["drop"]
+        logger.info("ATT&CK changes touch %d groups (%d gone)", len(run), len(drop))
+        fresh: List[dict] = []
+        if run:
+            _, new_rows = _read_rows(_invoke_mitresaw(flags + ["-g", ",".join(run)]))
+            fresh = [r for r in new_rows if r.get("group_sw_id") in set(run)]
+        if run or drop:
+            replaced = set(run) | set(drop)
+            merged = [r for r in rows if r.get("group_sw_id") not in replaced] + fresh
+            # MITRESaw lists groups by name: keep each group's rows together in that order
+            merged.sort(key=lambda r: r.get("group_sw_name", "").casefold())
+            tmp = output_csv.with_suffix(".tmp")
+            with open(tmp, "w", newline="", encoding="utf-8") as fh:
+                writer = csv.DictWriter(fh, fieldnames=fieldnames, extrasaction="ignore")
+                writer.writeheader()
+                writer.writerows(merged)
+            os.replace(tmp, output_csv)
+            logger.info("Updated %s: %d groups collected again, %d dropped", output_csv, len(run), len(drop))
+        # The evidence XLSX stays from the last full collection (nothing in Archer reads it)
+        mode = "incremental"
 
+    if index is not None:
+        _write_meta(output_csv, version, index, flags, mode, LAST_PLAN)
     if _ARCHER_BUNDLE.exists():
         try:
             LAST_CHECK = check_procedures(output_csv, _ARCHER_BUNDLE)
@@ -508,21 +600,26 @@ def run_mitresaw_detection(
     output_csv: Optional[Path] = None,
     output_xlsx: Optional[Path] = None,
     force: bool = False,
+    full: bool = False,
 ) -> Tuple[Path, Optional[Path]]:
     """
     Run MITRESaw for the procedures CSV and evidence XLSX, on Archer's ATT&CK bundle.
+    Only the groups ATT&CK changed since the last build are collected again (see
+    archer.mitre.attack_delta); full=True collects every group.
     force fetches ATT&CK in MITRESaw (-F) only when Archer has no bundle to share.
-    Returns (csv_path, xlsx_path); xlsx_path is None if no XLSX was produced.
+    Returns (csv_path, xlsx_path); xlsx_path is None unless the XLSX was rebuilt.
     """
-    return _run_mitresaw(output_csv, output_xlsx, force)
+    return _run_mitresaw(output_csv, output_xlsx, force, full)
 
 
 def run_mitresaw(
     output_csv: Optional[Path] = None,
     output_xlsx: Optional[Path] = None,
+    full: bool = False,
 ) -> Tuple[Path, Optional[Path]]:
-    """Run MITRESaw and copy mitre_procedures.csv/.xlsx into Archer's data directory."""
-    return _run_mitresaw(output_csv, output_xlsx, force=False)
+    """Run MITRESaw and update mitre_procedures.csv (and the XLSX on a full run) in
+    Archer's data directory: only the groups ATT&CK changed, unless full."""
+    return _run_mitresaw(output_csv, output_xlsx, force=False, full=full)
 
 
 def build_procedures_csv(
@@ -782,9 +879,15 @@ def _cli() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python -m archer.mitre.procedures
+  python -m archer.mitre.procedures            # only the groups ATT&CK changed
+  python -m archer.mitre.procedures --full     # every group (about 90 minutes)
   python -m archer.mitre.procedures --output /tmp/procedures.csv
         """,
+    )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Collect every group again, not just those ATT&CK changed since the last build",
     )
     parser.add_argument(
         "--output", "-o",
@@ -794,7 +897,11 @@ Examples:
     )
     args = parser.parse_args()
 
-    csv_path, xlsx_path = run_mitresaw(output_csv=args.output)
+    csv_path, xlsx_path = run_mitresaw(output_csv=args.output, full=args.full)
+    if LAST_PLAN is not None:
+        print(f"\nATT&CK changes touched {len(LAST_PLAN['run'])} groups; {len(LAST_PLAN['drop'])} dropped")
+    if LAST_CHECK:
+        print(describe_check(LAST_CHECK))
     print(f"\n✓ CSV written to {csv_path}")
     if xlsx_path:
         print(f"✓ XLSX written to {xlsx_path}")

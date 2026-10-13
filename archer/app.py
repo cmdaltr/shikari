@@ -1689,7 +1689,10 @@ def _refresh_procedures_if_stale(load: dict) -> None:
         try:
             print(f"Rebuilding the procedures CSV for ATT&CK v{load.get('version') or '?'} (MITRESaw)...")
             run_mitresaw_detection(force=True)
-            print("✓ Procedures CSV rebuilt")
+            plan = procedures.LAST_PLAN
+            print("✓ Procedures CSV rebuilt" + (
+                f" ({len(plan['run'])} groups ATT&CK changed collected again, {len(plan['drop'])} dropped)"
+                if plan is not None else " (every group)"))
             _check_mitresaw_attack(bundle_path)
             if procedures.LAST_CHECK:
                 ok = procedures.LAST_CHECK["ok"]

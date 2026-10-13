@@ -385,7 +385,8 @@ def run_splunk_detection_generation(
         "stale" if stale else "fresh",
         "force (-d -E -F -q)" if stale else "normal (-d -E -q)",
     )
-    run_mitresaw_detection(force=stale)
+    # A forced refresh collects every group; otherwise only those ATT&CK changed
+    run_mitresaw_detection(force=stale, full=force_refresh)
     logger.info("MITRESaw detection extraction complete")
 
     # ----- Step 2: Read techniques -------------------------------------------
