@@ -48,6 +48,7 @@
 [data-theme="dark"] .no-detection summary, [data-theme="dark"] .no-detection-hint { color: #f0c36d; }
 [data-theme="dark"] .no-detection th, [data-theme="dark"] .no-detection td { border-color: var(--border-color); color: var(--text-primary); }
 @media (max-width: 600px) { .no-detection td:first-child { white-space: normal; } }
+.kept-list { margin: 8px 0 0; padding-left: 1.2em; font-size: 14px; line-height: 1.6; }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
@@ -149,6 +150,16 @@
 
     {% if no_detection %}
     <!-- Techniques the latest run built nothing for, and why -->
+    {% if kept_edited %}
+    <!-- Detections the last run left alone because their query was edited by hand (archer.build.yaml.detection_action) -->
+    <details class="no-detection" id="kept-edited">
+      <summary>{{ kept_edited|length }} detection{{ 's' if kept_edited|length != 1 }} kept as edited, not regenerated</summary>
+      <p class="no-detection-hint">Their queries were changed by hand or by the repair agent, so this run left them as they were.
+        {% if can_regenerate %}<strong>Regenerate</strong> below replaces them with freshly generated queries.{% endif %}</p>
+      <ul class="kept-list">{% for f in kept_edited %}<li><code>{{ f }}</code></li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+
     <details class="no-detection">
       <summary>{{ no_detection|length }} technique{{ '' if no_detection|length == 1 else 's' }} in the latest run produced no detection</summary>
       <table>
@@ -1572,6 +1583,16 @@
           </svg>
           Run Emulation
         </button>
+        {% if can_regenerate %}
+        <button class="btn-action" id="regenerate-btn" type="button"
+                title="Run {{ group_name.replace('_', ' ') }} again and rewrite every detection, hand-edited ones included">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Regenerate
+        </button>
+        {% endif %}
         <button class="btn-action" id="new-analysis-btn" onclick="window.location.href='/'">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 5v14M5 12h14"/>
@@ -3077,4 +3098,30 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script src="{{ url_for('static', path='js/attack_flow.js') }}?v={{ request.app.state.asset_version }}"></script>
 {% if ioc_flow %}<script src="{{ url_for('static', path='js/ioc_flow.js') }}?v={{ request.app.state.asset_version }}"></script>{% endif %}
+<script>
+// Regenerate: the same hunt again, rewriting every detection it reaches, edits included
+(function () {
+  const btn = document.getElementById('regenerate-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const group = {{ group_name|tojson }};
+    if (!confirm('Regenerate every detection for ' + group.replace(/_/g, ' ') + '?\n\nQueries edited by hand or by the repair agent are replaced too.')) return;
+    btn.disabled = true;
+    try {
+      const res = await fetch('/generate', { method: 'POST', body: new URLSearchParams({ group_name: group, regenerate: 'true' }) });
+      const data = await res.json();
+      if (data.redirect_url) {
+        // Already confirmed above: skip the leave-page warning
+        if (typeof navigationConfirmed !== 'undefined') navigationConfirmed = true;
+        window.location.href = data.redirect_url;
+        return;
+      }
+      throw new Error(data.error || 'No run started');
+    } catch (e) {
+      btn.disabled = false;
+      alert('Regenerate failed: ' + e.message);
+    }
+  });
+})();
+</script>
 {% endblock %}

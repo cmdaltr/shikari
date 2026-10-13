@@ -2957,9 +2957,11 @@ async def generate(
     exclude_secops: str = Form(None),
     exclude_elastic: str = Form(None),
     auto_validate: str = Form(None),
+    regenerate: str = Form(None),
     archer_session: Optional[str] = Cookie(None),
 ):
-    # Called when the user clicks Generate on the index page. We first
+    # Called when the user clicks Generate on the index page, or Regenerate on a results
+    # page (regenerate=true: rewrite every detection the run reaches, hand edits included). We first
     # check whether the provided group name maps to a known MITRE actor.
 
     # Determine GENAI_MODE — an explicit ai_provider (from the Hunt-page AI
@@ -3150,6 +3152,7 @@ async def generate(
                     "stage": "queued",
                     "created_yaml": 0,
                     "auto_validate_enabled": (auto_validate == "true"),
+                    "regenerate": regenerate == "true",
                 },
             )
         except Exception:
@@ -4198,6 +4201,11 @@ async def save_detection_query(filename: str, request: Request, archer_session: 
         edited = yaml.dump(doc, Dumper=_BlockStrDumper, sort_keys=False, allow_unicode=True, width=10000)
     if (yaml.safe_load(edited) or {}).get("query", query) != query and not doc.get("queries"):
         return JSONResponse({"error": "Couldn't rewrite the query block safely; not saved"}, status_code=500)
+    # Keep the generator stamp: the query no longer matches its hash, so later runs keep
+    # this repair instead of rewriting the file (archer.build.yaml.detection_action)
+    stamp = text.split("\n", 1)[0]
+    if stamp.startswith("# archer-generator:") and not edited.startswith(stamp):
+        edited = stamp + "\n" + edited
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(edited)
     return {"success": True, "file": os.path.basename(path), "check": check}
@@ -6038,6 +6046,21 @@ def _run_correlations(correlations, run_only):
             and os.path.basename(c.get("b") or "") in run_only]
 
 
+
+def _latest_run_record(group_name: str):
+    from archer.build.run_files import latest_run
+
+    return latest_run(group_name)
+
+
+def _is_attack_group(group_name: str) -> bool:
+    bundle = getattr(app.state, "bundle", None)
+    try:
+        return bool(bundle) and check_group_in_mitre(bundle, group_name) == "Y"
+    except Exception:
+        return False
+
+
 @app.get("/results", response_class=HTMLResponse)
 def results_page(request: Request, group_name: str, run: str = "", archer_session: Optional[str] = Cookie(None)):
     """
@@ -6980,6 +7003,10 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             "validation_results": validation_results,
             "validation_summary": validation_summary,
             "run_view": run_view,
+            # Detections the last run left alone because their query was edited by hand
+            "kept_edited": (_latest_run_record(group_name) or {}).get("kept_edited") or [],
+            # Regenerate re-runs a threat group through /generate
+            "can_regenerate": _is_attack_group(group_name),
             "no_detection": no_detection,
             "briefing": briefing,
             "briefing_ai": briefing_lib.load_summary(safe_group, briefing),

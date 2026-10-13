@@ -5,11 +5,17 @@ from archer.config import GENERATE_DIR
 from archer.validation.mde_field_validator import format_mde_query
 
 import getpass
+import hashlib
 import json
 import os
 import textwrap
 import re
 import uuid
+
+# Detections written by an older generator are rewritten on the next run that reaches
+# them. Bump this whenever generated detections change (fields, query shape, naming), so
+# the fix reaches files already on disk without anyone deleting them.
+GENERATOR_VERSION = 2
 
 # BeautifulSoup and requests only needed for OLD slow additional_tactics function
 # This function is replaced by yaml_patch.py, so these imports are optional
@@ -228,7 +234,8 @@ def _brackets_balanced(query: str) -> bool:
     return depth == 0
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None):
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None, tags=None, version=None):
+    """Write a detection. tags and version carry over from the file it replaces (detection_action)."""
     run_files.note(query_file, tag)
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
@@ -298,8 +305,11 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
     author = getpass.getuser()
     team = get_team(author)
 
-    # Format the threat group tag with (Group) suffix
+    # Format the threat group tag with (Group) suffix; a rewrite keeps every group's tag
     formatted_tag = f"{tag} (Group)" if tag else ""
+    all_tags = list(tags or [])
+    if formatted_tag and formatted_tag not in all_tags:
+        all_tags.insert(0, formatted_tag)
 
     # Format entity mappings
     # Template already has newlines before and after placeholder, so no modification needed
@@ -314,10 +324,10 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
         .replace("§connectorId§", connector_id)
         .replace("§dataTypes§", datatype)
         .replace("§tactic§", tactic)
-        .replace("§group§", formatted_tag)
+        .replace("§group§", "\n  - ".join(all_tags) if all_tags else formatted_tag)
         .replace("§query§", query)
         .replace("§entityMappings§", entity_mappings_formatted)
-        .replace("§ver§", "1.0")
+        .replace("§ver§", version or "1.0")
         .replace("§source§", "Archer")
         .replace("§author§", author)
         .replace("§support§", team)
@@ -492,7 +502,82 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
             print(f"  [contract BLOCKED] not written: {query_file}")
             return
         with open(query_file, "w") as new_yaml:
-            new_yaml.write(yaml_content)
+            new_yaml.write(_stamp(yaml_content) + yaml_content)
+
+
+# ── Rewriting detections already on disk ──────────────────────────────────────
+# The first line records the generator that wrote the file and a hash of its query.
+# A later run rewrites a file from an older generator, unless the query no longer
+# matches its hash: someone edited it by hand, so it's kept and reported instead.
+# Regenerate on the results page rewrites every file the run reaches, edits included.
+
+_STAMP = re.compile(r"^# archer-generator: (\d+) query-sha256: ([0-9a-f]{64})\s*$")
+
+
+def _query_block(content: str) -> str:
+    """The text of the query: block, up to the next top-level key."""
+    m = re.search(r"^query: \|\n(.*?)(?=^\S|\Z)", content, re.M | re.S)
+    return m.group(1).rstrip() if m else ""
+
+
+def _stamp(content: str) -> str:
+    digest = hashlib.sha256(_query_block(content).encode()).hexdigest()
+    return f"# archer-generator: {GENERATOR_VERSION} query-sha256: {digest}\n"
+
+
+def file_state(path: str) -> dict:
+    """generator (None if unstamped), edited, tags and version of a detection on disk."""
+    with open(path, encoding="utf-8") as fh:
+        content = fh.read()
+    first, _, body = content.partition("\n")
+    m = _STAMP.match(first)
+    tags = re.search(r"^tags:\n((?:  - .*\n?)+)", content, re.M)
+    version = re.search(r"^version: (\S+)", content, re.M)
+    return {
+        "generator": int(m.group(1)) if m else None,
+        "edited": bool(m) and hashlib.sha256(_query_block(body).encode()).hexdigest() != m.group(2),
+        "tags": [t[4:].strip() for t in tags.group(1).splitlines() if t.strip()] if tags else [],
+        "version": version.group(1) if version else "1.0",
+    }
+
+
+def _next_version(version: str) -> str:
+    parts = version.split(".")
+    if len(parts) >= 2 and parts[1].isdigit():
+        parts[1] = str(int(parts[1]) + 1)
+        return ".".join(parts)
+    return "1.1"
+
+
+def detection_action(yamlfile: str, tag):
+    """
+    What to do with a detection this run produced: None means leave the file (it's been
+    tagged for the group); a dict means write it, passing the dict to write_yaml.
+
+    New file: write. Already written or tagged earlier in this run: tag only, so the
+    first procedure's query stands. Edited by hand: keep and report, unless this run is
+    a Regenerate. Written by an older generator, or a Regenerate: rewrite, keeping its
+    tags and bumping its version. Otherwise: tag only.
+    """
+    if not os.path.exists(yamlfile):
+        return {}
+    if run_files.seen(yamlfile, tag):
+        update_yaml(yamlfile, tag)
+        return None
+    try:
+        state = file_state(yamlfile)
+    except OSError:
+        return {}
+    regenerate = run_files.regenerating(tag)
+    if state["edited"] and not regenerate:
+        print(f"  ✋ Kept {os.path.basename(yamlfile)}: its query was edited by hand (Regenerate replaces it)")
+        update_yaml(yamlfile, tag)
+        run_files.kept(yamlfile, tag)
+        return None
+    if regenerate or state["generator"] != GENERATOR_VERSION:
+        return {"tags": state["tags"], "version": _next_version(state["version"])}
+    update_yaml(yamlfile, tag)
+    return None
 
 
 def update_yaml(yamlfile, tag):
@@ -773,7 +858,8 @@ def construct_yaml(
         # NOT the index_name parameter which might be a Splunk index
         filename = f"{name_safe}_{table_name}.yaml"
         yamlfile = os.path.join(GENERATE_DIR, filename)
-        if not os.path.exists(yamlfile):
+        rewrite = detection_action(yamlfile, tag)
+        if rewrite is not None:
             # Check if THIS specific query was enhanced (not just if enhancement was attempted)
             query_was_enhanced = mde_queries_enhanced.get(query, False)
 
@@ -792,9 +878,8 @@ def construct_yaml(
                 entity_mappings=entity_mappings_str,  # Pass entity mappings separately
                 reference_used=reference_used,  # Pass reference query flag
                 reference_sources=reference_sources,  # Pass reference sources
+                **rewrite,
             )
-        else:
-            update_yaml(yamlfile, tag)
 
     # Writing Splunk YAML file
     for query in appended_splunk_queries:
@@ -805,7 +890,8 @@ def construct_yaml(
         query = query.replace(" earliest=-1d\n", " earliest=-1d\n  ")
         # Use filename-safe version for Splunk filenames too
         yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_{index}.yaml")
-        if not os.path.exists(yamlfile):
+        rewrite = detection_action(yamlfile, tag)
+        if rewrite is not None:
             write_yaml(
                 yamlfile,
                 name,
@@ -820,9 +906,8 @@ def construct_yaml(
                 osint_enhanced=osint_enhancement,    # Pass enhancement flag
                 reference_used=reference_used,  # Pass reference query flag
                 reference_sources=reference_sources,  # Pass reference sources
+                **rewrite,
             )
-        else:
-            update_yaml(yamlfile, tag)
 
     # Writing Google SecOps YAML file (if Google SecOps support is enabled)
     # Google SecOps uses template-based YARA-L detection rules with UDM field mappings
@@ -846,7 +931,8 @@ def construct_yaml(
         if googlesecops_rule and googlesecops_rule.get("yaral_code"):
             # Create Google SecOps YAML file
             yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_GoogleSecOps.yaml")
-            if not os.path.exists(yamlfile):
+            rewrite = detection_action(yamlfile, tag)
+            if rewrite is not None:
                 # Get event type from the rule (e.g., PROCESS_LAUNCH)
                 event_types = googlesecops_rule.get("event_types", ["PROCESS_LAUNCH"])
                 datatype_str = event_types[0] if event_types else "PROCESS_LAUNCH"
@@ -866,10 +952,9 @@ def construct_yaml(
                     osint_enhanced=osint_enhancement,
                     reference_used=reference_used,
                     reference_sources=reference_sources,
+                    **rewrite,
                 )
                 print(f"  ✅ Generated Google SecOps YARA-L rule: {googlesecops_rule['rule_name']}")
-            else:
-                update_yaml(yamlfile, tag)
       except Exception as e:
         # Google SecOps generation is optional - don't fail if it errors
         print(f"  ⚠️  Google SecOps generation failed for {name}: {e}")
@@ -901,7 +986,8 @@ def construct_yaml(
 
                 # Create Elastic YAML file
                 yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_Elastic.yaml")
-                if not os.path.exists(yamlfile):
+                rewrite = detection_action(yamlfile, tag)
+                if rewrite is not None:
                     write_yaml(
                         yamlfile,
                         name,
@@ -917,10 +1003,9 @@ def construct_yaml(
                         osint_enhanced=osint_enhancement,
                         reference_used=reference_used,
                         reference_sources=reference_sources,
+                        **rewrite,
                     )
                     print(f"  ✅ Generated Elastic Query DSL: {elastic_query_result['query_name']}")
-                else:
-                    update_yaml(yamlfile, tag)
             else:
                 print(f"  ⚠️  Elastic query validation failed for {name}: {error}")
       except Exception as e:

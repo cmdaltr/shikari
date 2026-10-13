@@ -120,7 +120,7 @@ def start_progress(group_name: str, data: Dict[str, Any]):
               "phase_started": {"preparing": now}, **data}
     from .run_files import begin
 
-    begin(group_name)
+    begin(group_name, regenerate=bool(data.get("regenerate")))
     with open(lock_path, "w") as lock_file:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         try:

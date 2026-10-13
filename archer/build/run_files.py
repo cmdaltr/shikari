@@ -6,6 +6,9 @@ page can't tell this run's detections from earlier ones by looking at the files:
 re-run often leaves a file untouched because it already carries the group's tag. The
 YAML writer reports every file it writes or re-tags here, and the list is saved when
 the run completes (data/runs/<group>.json).
+
+A run can also ask for every detection to be rewritten (Regenerate on the results page),
+and the writer reports here any file it kept because someone edited its query by hand.
 """
 
 import json
@@ -23,18 +26,40 @@ _active: Dict[str, Set[str]] = {}
 _touches: Dict[str, int] = {}
 _missed: Dict[str, Dict[str, dict]] = {}
 _hit: Dict[str, Set[str]] = {}
+_regenerate: Set[str] = set()
+_kept: Dict[str, Set[str]] = {}
 
 
 def _manifest_path(group: str) -> str:
     return os.path.join(RUNS_DIR, group.replace("/", "_") + ".json")
 
 
-def begin(group: str) -> None:
+def begin(group: str, regenerate: bool = False) -> None:
     with _lock:
         _active[group] = set()
         _touches[group] = 0
         _missed[group] = {}
         _hit[group] = set()
+        _kept[group] = set()
+        if regenerate:
+            _regenerate.add(group)
+        else:
+            _regenerate.discard(group)
+
+
+def regenerating(group: Optional[str]) -> bool:
+    """True while the group's run rewrites every detection, hand-edited ones included."""
+    with _lock:
+        return bool(group) and group in _regenerate and group in _active
+
+
+def kept(path: str, group: Optional[str]) -> None:
+    """A detection left as it was because its query was edited by hand."""
+    if not group:
+        return
+    with _lock:
+        if group in _kept:
+            _kept[group].add(os.path.basename(path))
 
 
 def note(path: str, group: Optional[str]) -> None:
@@ -46,6 +71,14 @@ def note(path: str, group: Optional[str]) -> None:
         if files is not None:
             files.add(os.path.basename(path))
             _touches[group] += 1
+
+
+def seen(path: str, group: Optional[str]) -> bool:
+    """Whether this run has already written or tagged the file for the group."""
+    if not group:
+        return False
+    with _lock:
+        return os.path.basename(path) in _active.get(group, ())
 
 
 def touches(group: str) -> Optional[int]:
@@ -74,6 +107,8 @@ def finish(group: str, started_at: Optional[float] = None) -> None:
         _touches.pop(group, None)
         missed = list(_missed.pop(group, {}).values())
         _hit.pop(group, None)
+        kept_files = sorted(_kept.pop(group, set()))
+        _regenerate.discard(group)
     if files is None:
         return
     os.makedirs(RUNS_DIR, exist_ok=True)
@@ -81,7 +116,8 @@ def finish(group: str, started_at: Optional[float] = None) -> None:
     with open(tmp, "w", encoding="utf-8") as fh:
         json.dump({"group": group, "started_at": started_at, "completed_at": time.time(),
                    "files": sorted(files),
-                   "no_detection": sorted(missed, key=lambda m: m["technique"])}, fh, indent=2)
+                   "no_detection": sorted(missed, key=lambda m: m["technique"]),
+                   "kept_edited": kept_files}, fh, indent=2)
     os.replace(tmp, _manifest_path(group))
 
 

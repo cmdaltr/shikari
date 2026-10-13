@@ -162,8 +162,9 @@ def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str
     mentions (ioc_flow.ioc_mentions over the report text) places each IOC in the
     IOC flow shown on the results page; without it the flow falls back to IOC type.
     """
+    from archer.build import run_files
     from archer.build.ioc_flow import build_ioc_flow, save_ioc_flow
-    from archer.build.yaml import write_yaml
+    from archer.build.yaml import file_state, write_yaml
 
     clean = clean_report_iocs(iocs)
     if not clean:
@@ -187,6 +188,14 @@ def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str
         if not query:
             continue
         path = os.path.join(generate_dir, f"IOCSweep{safe}_{connector}.yaml")
+        # A sweep is rewritten every run with the report's current IOCs, unless someone
+        # edited it by hand (Regenerate replaces it anyway)
+        if os.path.exists(path) and file_state(path)["edited"] and not run_files.regenerating(group_name):
+            print(f"  ✋ Kept {os.path.basename(path)}: its query was edited by hand (Regenerate replaces it)")
+            run_files.note(path, group_name)
+            run_files.kept(path, group_name)
+            written.append(path)
+            continue
         # The name is substituted unquoted into the YAML template: no ": " allowed
         title = "IOC Sweep - " + re.sub(r"\s*:\s*", " - ", group_name)
         write_yaml(path, title, "IOC-SWEEP", desc, connector, ["IOC Sweep"],
