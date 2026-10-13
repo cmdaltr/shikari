@@ -57,50 +57,32 @@
   color: white;
 }
 
-/* Color Key Legend */
-/* Counts | vendors, with the divider in the exact centre of the card */
-.color-key {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 24px;
-  margin-bottom: 30px;
-  padding: 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-}
-
-/* Tactic filter */
-.tactic-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: -14px 0 30px; padding: 14px 16px;
+/* Filter */
+.tactic-filter { display: flex; flex-direction: column; gap: 14px; margin: 0 0 30px; padding: 18px 20px;
   background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; }
-.tactic-filter { flex-direction: column; align-items: stretch; }
-.tactic-filter-label { font-weight: 600; font-size: 1.1rem; }
-.filter-groups { display: flex; flex-direction: column; gap: 10px; }
-.filter-group { display: flex; align-items: flex-start; gap: 12px; }
-.filter-group-label { flex: 0 0 80px; padding-top: 6px; font-size: .85rem; font-weight: 600; color: var(--text-secondary); }
+.tactic-filter-label { font-weight: 600; font-size: 1.32rem; }
+.filter-groups { display: flex; flex-direction: column; gap: 14px; }
+.filter-row { display: flex; gap: 14px 40px; }
+.filter-row > .filter-group { min-width: 0; }
+.filter-group { display: flex; flex-direction: column; gap: 8px; }
+.filter-row:last-child .filter-group { flex: 1; }
+.filter-group-label { font-size: 1.02rem; font-weight: 600; color: var(--text-secondary); }
 .filter-foot { display: flex; align-items: center; gap: 12px; }
-.tactic-filter-chips .key-color { width: 14px; height: 14px; }
-.tactic-filter-chips .table-vendor-icon { width: 16px; height: 16px; }
-.tactic-filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.tactic-filter-chips .ui-pill { min-height: 30px; padding: 0 12px !important; font-size: .82rem !important; }
+.tactic-filter-chips .key-color { width: 17px; height: 17px; }
+.tactic-filter-chips .table-vendor-icon { width: 19px; height: 19px; }
+.tactic-filter-chips { display: flex; flex-wrap: wrap; gap: 9px; }
+.tactic-filter-chips .ui-pill { min-height: 36px; padding: 0 14px !important; gap: 6px; font-size: .984rem !important; }
 .tactic-filter-chips .ui-pill.is-excluded { border-style: dashed !important; color: var(--text-secondary) !important; text-decoration: line-through; }
 .tactic-filter-chips .ui-pill .chip-mark { font-weight: 700; }
-.tactic-filter .btn-ghost.tactic-filter-clear { padding: 4px 12px; min-height: 0; font-size: .82rem; }
+.tactic-filter .btn-ghost.tactic-filter-clear { padding: 5px 14px; min-height: 0; font-size: .984rem; }
 .tactic-filter .tactic-filter-clear[hidden] { display: none !important; }
-.tactic-filter-hint { margin-left: auto; color: var(--text-secondary); font-size: .82rem; }
+.tactic-filter-hint { margin-left: auto; color: var(--text-secondary); font-size: .984rem; }
 .nav-tech[hidden], .nav-cell.is-out, .technique-card.is-out, #technique-tbody tr.is-out { display: none !important; }
 /* Filtered: hidden tactics leave gaps, so drop the 4 | 5 | 4 placement */
 .tactic-cards.is-filtered > .tactic-card { grid-column: span 4 !important; }
 .tactic-cards > .tactic-card[hidden] { display: none; }
 
-.key-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 1.35rem;
-  color: var(--text-secondary);
-}
+.key-divider { width: 1px; align-self: stretch; background: var(--border-color); }
 
 .key-color {
   width: 30px;
@@ -339,12 +321,6 @@
   border-radius: 8px;
 }
 
-/* Key: query counts | vendors */
-.key-divider { width: 1px; align-self: stretch; background: var(--border-color); }
-.key-group { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
-.key-counts { justify-content: flex-end; }
-.key-vendors { justify-content: flex-start; }
-.key-item .table-vendor-icon { width: 30px; height: 30px; }
 
 /* ATT&CK matrix (Navigator-style): every tactic and technique, coloured by queries */
 .nav-hint { margin: -6px 0 14px; color: var(--text-secondary); font-size: .92rem; }
@@ -450,47 +426,6 @@
       <div class="summary-card">
         <div class="number" id="mde-count">-</div>
         <div class="label">MDE Queries</div>
-      </div>
-    </div>
-
-    <!-- Color Key -->
-    <div class="color-key">
-      <div class="key-group key-counts">
-      <div class="key-item">
-        <div class="key-color grey"></div>
-        <span>0 queries</span>
-      </div>
-      <div class="key-item">
-        <div class="key-color red"></div>
-        <span>1 query</span>
-      </div>
-      <div class="key-item">
-        <div class="key-color yellow"></div>
-        <span>2 queries</span>
-      </div>
-      <div class="key-item">
-        <div class="key-color green"></div>
-        <span>3+ queries</span>
-      </div>
-      </div>
-      <div class="key-divider" role="separator" aria-orientation="vertical"></div>
-      <div class="key-group key-vendors">
-      <div class="key-item">
-        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-googlesecops"/></svg>
-        <span>Google SecOps</span>
-      </div>
-      <div class="key-item">
-        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-mde"/></svg>
-        <span>MDE</span>
-      </div>
-      <div class="key-item">
-        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-splunk"/></svg>
-        <span>Splunk</span>
-      </div>
-      <div class="key-item">
-        <svg class="table-vendor-icon" aria-hidden="true"><use href="#cv-logo-elastic"/></svg>
-        <span>Elastic</span>
-      </div>
       </div>
     </div>
 
@@ -664,10 +599,10 @@ const navState = { matrix: [], byTech: {}, layer: 'reference', det: null, legacy
 // With any included, only those pass; excluded ones never do. Tactics pick the tactic
 // cards and matrix columns; counts and SIEMs pick techniques (cards, cells, table rows).
 const FILTER_GROUPS = [
-  { key: 'count', label: 'Queries', options: () => [['0', '0 queries', 'grey'], ['1', '1 query', 'red'],
+  { key: 'count', row: 0, label: 'No. of queries', options: () => [['0', '0 queries', 'grey'], ['1', '1 query', 'red'],
                                                    ['2', '2 queries', 'yellow'], ['3', '3+ queries', 'green']] },
-  { key: 'siem', label: 'SIEM', options: () => Object.keys(VENDOR_LOGOS).map(v => [v, v]) },
-  { key: 'tactic', label: 'Tactics', options: () => navState.matrix.map(c => [c.tactic, c.tactic]) },
+  { key: 'siem', row: 0, label: 'SIEM Vendor', options: () => Object.keys(VENDOR_LOGOS).map(v => [v, v]) },
+  { key: 'tactic', row: 1, label: 'Tactics', options: () => navState.matrix.map(c => [c.tactic, c.tactic]) },
 ];
 const filters = Object.fromEntries(FILTER_GROUPS.map(g => [g.key, { include: new Set(), exclude: new Set() }]));
 const filterActive = key => filters[key].include.size || filters[key].exclude.size;
@@ -684,7 +619,13 @@ function techShown(st) {
 function renderFilter() {
   const box = document.getElementById('coverage-filter');
   box.innerHTML = '';
+  const rows = [];
   for (const g of FILTER_GROUPS) {
+    if (!rows[g.row]) {
+      rows[g.row] = document.createElement('div');
+      rows[g.row].className = 'filter-row';
+      box.appendChild(rows[g.row]);
+    }
     const row = document.createElement('div');
     row.className = 'filter-group';
     row.innerHTML = `<span class="filter-group-label">${g.label}</span><div class="tactic-filter-chips"></div>`;
@@ -706,7 +647,7 @@ function renderFilter() {
       };
       chips.appendChild(chip);
     }
-    box.appendChild(row);
+    rows[g.row].appendChild(row);
   }
   document.getElementById('tactic-filter-clear').hidden = !FILTER_GROUPS.some(g => filterActive(g.key));
 }
