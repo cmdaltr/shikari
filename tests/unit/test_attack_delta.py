@@ -41,6 +41,10 @@ def _bundle():
         _rel("malware--m", "attack-pattern--2", desc="Malware does two"),
         _rel("campaign--k", "intrusion-set--c", rel="attributed-to"),
         _rel("campaign--k", "attack-pattern--3", desc="Campaign does three"),
+        _obj("tool", "tool--t", "S0002", name="Tool"),
+        _obj("attack-pattern", "attack-pattern--4", "T1004", name="Four", description="4"),
+        _rel("campaign--k", "tool--t"),
+        _rel("tool--t", "attack-pattern--4", desc="Tool does four"),
     ]
 
 
@@ -79,6 +83,11 @@ def test_software_changes_reach_the_groups_using_it():
 
 def test_campaign_changes_reach_the_attributed_group():
     assert _plan(lambda o: _find(o, "campaign--k").update(name="Renamed"))["run"] == ["G0003"]
+
+
+def test_software_in_a_campaign_reaches_the_attributed_group():
+    assert _plan(lambda o: _find(o, "tool--t").update(name="Renamed"))["run"] == ["G0003"]
+    assert _plan(lambda o: _find(o, "attack-pattern--4").update(description="new"))["run"] == ["G0003"]
 
 
 def test_a_technique_change_reaches_every_path():

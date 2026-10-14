@@ -92,6 +92,8 @@ def bundle(tmp_path):
         _obj("attack-pattern", "attack-pattern--b", "T1002", name="From software"),
         _obj("attack-pattern", "attack-pattern--c", "T1003", name="From a campaign"),
         _obj("attack-pattern", "attack-pattern--r", "T1004", name="Revoked", revoked=True),
+        _obj("attack-pattern", "attack-pattern--d", "T1005", name="From campaign software"),
+        _obj("tool", "tool--t", "S0002", name="Tool"),
         _obj("malware", "malware--m", "S0001", name="Malware"),
         _obj("campaign", "campaign--c", "C0001", name="Campaign"),
         _uses("intrusion-set--g", "attack-pattern--a"),
@@ -100,6 +102,8 @@ def bundle(tmp_path):
         _uses("malware--m", "attack-pattern--b"),
         _uses("campaign--c", "attack-pattern--c"),
         _uses("campaign--c", "intrusion-set--g", rel="attributed-to"),
+        _uses("campaign--c", "tool--t"),
+        _uses("tool--t", "attack-pattern--d"),
     ]
     path = tmp_path / "bundle.json"
     path.write_text(json.dumps({"objects": objects}))
@@ -114,14 +118,24 @@ def _csv(tmp_path, pairs):
 
 
 def test_check_matches_every_path_and_ignores_revoked(tmp_path, bundle):
-    check = p.check_procedures(_csv(tmp_path, [("G0001", "T1001"), ("G0001", "T1002"), ("G0001", "T1003")]), bundle)
-    assert check["ok"] and check["groups"] == 1 and check["techniques"] == 3
+    pairs = [("G0001", "T1001"), ("G0001", "T1002"), ("G0001", "T1003"), ("G0001", "T1005")]
+    check = p.check_procedures(_csv(tmp_path, pairs), bundle)
+    assert check["ok"] and check["groups"] == 1 and check["techniques"] == 4
     assert "match" in p.describe_check(check)
 
 
 def test_check_reports_what_differs(tmp_path, bundle):
     check = p.check_procedures(_csv(tmp_path, [("G0001", "T1001"), ("G0001", "T1999")]), bundle)
     assert not check["ok"]
-    assert check["missing"] == {"G0001": ["T1002", "T1003"]}
+    assert check["missing"] == {"G0001": ["T1002", "T1003", "T1005"]}
     assert check["extra"] == {"G0001": ["T1999"]}
-    assert "2 group-technique links missing" in p.describe_check(check)
+    assert "3 group-technique links missing" in p.describe_check(check)
+
+
+def test_software_used_in_a_groups_campaign_is_labelled_with_it(bundle):
+    objects = json.loads(bundle.read_text())["objects"]
+    groups, techniques, software, campaigns = p._build_indexes(objects)
+    rows, seen = [], set()
+    p._walk_path2(objects, groups, techniques, software, rows, seen)
+    assert {(r["technique_id"], r["attribution_type"]) for r in rows} == {
+        ("T1002", "via_software:Malware"), ("T1005", "via_software:Tool via Campaign")}

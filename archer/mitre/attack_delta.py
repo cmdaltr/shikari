@@ -8,7 +8,7 @@ groups whose procedures could differ are collected again:
 
   - the group itself (name, description, aliases) changed, arrived or went
   - a "uses" / "attributed-to" relationship on any of its paths changed: its own
-    techniques, its campaigns' and its software's
+    techniques, its campaigns', and its software's (software it or its campaigns use)
   - one of its campaigns or software changed (the name labels the procedure)
   - one of its techniques changed (name, description, tactics, platforms, data sources)
 
@@ -68,16 +68,23 @@ class _Graph:
         self.campaign_groups: Dict[str, Set[str]] = {}
         self.software_groups: Dict[str, Set[str]] = {}
         uses: List[Tuple[str, str]] = []
+        campaign_software: List[Tuple[str, str]] = []
+        kind = lambda k: live[k][0] if k in live else ""
         for v in live.values():
             if v[0] != "relationship":
                 continue
             src, tgt = v[3], v[4]
-            if src in live and tgt in live and live[src][0] == "campaign" and tgt in self.groups:
+            if kind(src) == "campaign" and tgt in self.groups:
                 self.campaign_groups.setdefault(src, set()).add(self.groups[tgt])
-            elif src in self.groups and tgt in live and live[tgt][0] in _SOFTWARE:
+            elif src in self.groups and kind(tgt) in _SOFTWARE:
                 self.software_groups.setdefault(tgt, set()).add(self.groups[src])
-            elif tgt in live and live[tgt][0] == "attack-pattern":
+            elif kind(src) == "campaign" and kind(tgt) in _SOFTWARE:
+                campaign_software.append((src, tgt))
+            elif kind(tgt) == "attack-pattern":
                 uses.append((src, tgt))
+        # Software used in a group's campaigns is the group's software too
+        for camp, sw in campaign_software:
+            self.software_groups.setdefault(sw, set()).update(self.campaign_groups.get(camp, set()))
         self.technique_groups: Dict[str, Set[str]] = {}
         for src, tech in uses:
             self.technique_groups.setdefault(tech, set()).update(self.groups_of(src))

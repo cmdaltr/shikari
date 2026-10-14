@@ -243,25 +243,42 @@ def _walk_path1(objects, groups, techniques, rows, seen):
 
 
 def _walk_path2(objects, groups, techniques, software, rows, seen):
+    """Techniques of the software a group uses, directly or in a campaign attributed to
+    it (as ATT&CK's own library counts a group's software: the campaign is the group)."""
     sw_to_techs: Dict[str, List[Tuple[str, str]]] = {}
+    camp_to_groups: Dict[str, Set[str]] = {}
+    camp_to_sw: Dict[str, List[Tuple[str, str]]] = {}
     for obj in objects:
-        if obj.get("type") != "relationship" or obj.get("relationship_type") != "uses":
+        if obj.get("type") != "relationship":
             continue
         src, tgt = obj.get("source_ref", ""), obj.get("target_ref", "")
-        if src in software and tgt in techniques:
+        rel = obj.get("relationship_type")
+        if rel == "uses" and src in software and tgt in techniques:
             sw_to_techs.setdefault(src, []).append((tgt, obj.get("description", "")))
+        elif rel == "attributed-to" and src.startswith("campaign--") and tgt in groups:
+            camp_to_groups.setdefault(src, set()).add(tgt)
+        elif rel == "uses" and src.startswith("campaign--") and tgt in software:
+            camp_to_sw.setdefault(src, []).append((tgt, obj.get("description", "")))
+
+    def emit(grp_id, sw_id, grp_desc, via=""):
+        sw_name = software[sw_id].get("name", sw_id)
+        for tech_ref, tech_desc in sw_to_techs.get(sw_id, []):
+            combined = " ".join(filter(None, [grp_desc, tech_desc]))
+            _emit(rows, seen, groups[grp_id], techniques[tech_ref],
+                  f"via_software:{sw_name}{via}", combined)
 
     for obj in objects:
         if obj.get("type") != "relationship" or obj.get("relationship_type") != "uses":
             continue
         src, tgt = obj.get("source_ref", ""), obj.get("target_ref", "")
         if src in groups and tgt in software:
-            sw_name = software[tgt].get("name", tgt)
-            grp_desc = obj.get("description", "")
-            for tech_ref, tech_desc in sw_to_techs.get(tgt, []):
-                combined = " ".join(filter(None, [grp_desc, tech_desc]))
-                _emit(rows, seen, groups[src], techniques[tech_ref],
-                      f"via_software:{sw_name}", combined)
+            emit(src, tgt, obj.get("description", ""))
+
+    campaign_names = {o["id"]: o.get("name", o["id"]) for o in objects if o.get("type") == "campaign"}
+    for camp_id, grp_ids in camp_to_groups.items():
+        for sw_id, desc in camp_to_sw.get(camp_id, []):
+            for grp_id in grp_ids:
+                emit(grp_id, sw_id, desc, f" via {campaign_names.get(camp_id, camp_id)}")
 
 
 def _walk_path3(objects, groups, techniques, campaigns, rows, seen):
