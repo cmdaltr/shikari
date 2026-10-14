@@ -139,3 +139,22 @@ def test_software_used_in_a_groups_campaign_is_labelled_with_it(bundle):
     p._walk_path2(objects, groups, techniques, software, rows, seen)
     assert {(r["technique_id"], r["attribution_type"]) for r in rows} == {
         ("T1002", "via_software:Malware"), ("T1005", "via_software:Tool via Campaign")}
+
+
+def test_attribution_comes_from_mitresaws_label():
+    assert p._attribution("[Software: Mimikatz] dumps credentials") == "via_software:Mimikatz"
+    assert p._attribution("[Campaign: C0017] used X") == "via_campaign:C0017"
+    assert p._attribution("[APT28](https://attack.mitre.org/groups/G0007) has used X") == "direct"
+
+
+def test_the_briefing_sees_how_each_technique_is_attributed(tmp_path, monkeypatch):
+    path = tmp_path / "procedures.csv"
+    path.write_text(
+        "group_sw_id,group_sw_name,technique_id,technique_name,tactic,procedure_example\n"
+        "G0001,Group,T1001,Own,Execution,[Group](https://attack.mitre.org/groups/G0001) did it\n"
+        "G0001,Group,T1002,Tool,Execution,[Software: Mimikatz] did it\n"
+        "G0001,Group,T1003,Op,Execution,[Campaign: C0017] did it\n")
+    monkeypatch.setattr(p, "_DEFAULT_CSV", path)
+    coverage = p.get_group_coverage("G0001", tmp_path)
+    assert {t["technique_id"]: t["attribution_type"] for t in coverage["gaps"]} == {
+        "T1001": "direct", "T1002": "via_software:Mimikatz", "T1003": "via_campaign:C0017"}

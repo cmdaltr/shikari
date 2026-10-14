@@ -107,7 +107,7 @@ def test_nothing_to_compare_means_full():
 
 # ---- the runner ----------------------------------------------------------------------
 
-HEADER = ["group_sw_id", "group_sw_name", "technique_id", "procedure_example"]
+HEADER = ["group_sw_id", "group_sw_name", "group_sw_description", "technique_id", "procedure_example"]
 
 
 def _write_csv(path, rows):
@@ -119,7 +119,8 @@ def _write_csv(path, rows):
 
 
 def _row(g, name, t, text="old"):
-    return {"group_sw_id": g, "group_sw_name": name, "technique_id": t, "procedure_example": text}
+    return {"group_sw_id": g, "group_sw_name": name, "group_sw_description": "long", "technique_id": t,
+            "procedure_example": text}
 
 
 @pytest.fixture
@@ -163,6 +164,8 @@ def test_first_build_is_full_then_only_changed_groups(saw):
     assert [_groups(c) for c in saw.calls] == [["G0001", "G0002", "G0003"]] and p.LAST_PLAN is None
     assert json.loads(p._meta_path(saw.out).read_text())["mode"] == "full"
     assert _read(saw.out) == [("G0001", "new"), ("G0002", "new"), ("G0003", "new")]
+    # Descriptions aren't stored (Archer reads them from ATT&CK)
+    assert saw.out.read_text().splitlines()[0] == "group_sw_id,group_sw_name,technique_id,procedure_example"
 
     # Nothing changed: no MITRESaw run at all
     p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
