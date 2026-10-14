@@ -1,7 +1,7 @@
 {
- "attack_version": "19.2 2026-08-05T21:33:58.496Z",
- "generated": "2026-10-12",
- "checked": 697,
+ "attack_version": "20.0 2026-10-13T17:53:10.145Z",
+ "generated": "2026-10-14",
+ "checked": 706,
  "techniques": {
   "T1001": {
    "name": "Data Obfuscation",
@@ -283,31 +283,10 @@
    ],
    "reason": "no_indicators"
   },
-  "T1059.004": {
-   "name": "Unix Shell",
-   "tactics": [
-    "Execution"
-   ],
-   "reason": "no_indicators"
-  },
-  "T1059.008": {
-   "name": "Network Device CLI",
-   "tactics": [
-    "Execution"
-   ],
-   "reason": "no_indicators"
-  },
   "T1068": {
    "name": "Exploitation for Privilege Escalation",
    "tactics": [
     "Privilege Escalation"
-   ],
-   "reason": "no_indicators"
-  },
-  "T1070.009": {
-   "name": "Clear Persistence",
-   "tactics": [
-    "Stealth"
    ],
    "reason": "no_indicators"
   },
@@ -1244,13 +1223,6 @@
    ],
    "reason": "no_indicators"
   },
-  "T1564.012": {
-   "name": "File/Path Exclusions",
-   "tactics": [
-    "Stealth"
-   ],
-   "reason": "no_indicators"
-  },
   "T1565": {
    "name": "Data Manipulation",
    "tactics": [
@@ -1437,13 +1409,6 @@
   },
   "T1583.002": {
    "name": "DNS Server",
-   "tactics": [
-    "Resource Development"
-   ],
-   "reason": "no_indicators"
-  },
-  "T1583.003": {
-   "name": "Virtual Private Server",
    "tactics": [
     "Resource Development"
    ],
@@ -2100,6 +2065,13 @@
    ],
    "reason": "no_indicators"
   },
+  "T1608.007": {
+   "name": "AI Result Poisoning",
+   "tactics": [
+    "Resource Development"
+   ],
+   "reason": "no_indicators"
+  },
   "T1619": {
    "name": "Cloud Storage Object Discovery",
    "tactics": [
@@ -2241,6 +2213,13 @@
    ],
    "reason": "no_indicators"
   },
+  "T1685.007": {
+   "name": "Impair Autonomous Defenses",
+   "tactics": [
+    "Defense Impairment"
+   ],
+   "reason": "no_indicators"
+  },
   "T1686.001": {
    "name": "Cloud Firewall",
    "tactics": [
@@ -2273,6 +2252,55 @@
    "name": "Downgrade Attack",
    "tactics": [
     "Defense Impairment"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1696": {
+   "name": "Anti-Automation Evasion",
+   "tactics": [
+    "Stealth"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1696.001": {
+   "name": "Automate CAPTCHA Completion",
+   "tactics": [
+    "Stealth"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1696.002": {
+   "name": "Avoid CAPTCHA",
+   "tactics": [
+    "Stealth"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1697": {
+   "name": "Steal Application Specific Passwords",
+   "tactics": [
+    "Credential Access"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1698": {
+   "name": "Indirect Prompt Injection",
+   "tactics": [
+    "Execution"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1699": {
+   "name": "Direct Prompt Injection",
+   "tactics": [
+    "Execution"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1700": {
+   "name": "AI-Enabled Exfiltration",
+   "tactics": [
+    "Exfiltration"
    ],
    "reason": "no_indicators"
   }
