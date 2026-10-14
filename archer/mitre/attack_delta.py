@@ -89,6 +89,11 @@ class _Graph:
         return self.campaign_groups.get(stix_id, set()) | self.software_groups.get(stix_id, set())
 
 
+def groups_in(index: Index) -> List[str]:
+    """The current groups' ATT&CK IDs."""
+    return list(_Graph(index).groups.values())
+
+
 def plan(old: Optional[Index], new: Index,
          csv_links: Optional[Dict[str, Set[str]]] = None) -> Optional[Dict[str, List[str]]]:
     """Groups to collect again (run) and groups whose rows go (drop), or None when there's

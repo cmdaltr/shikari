@@ -536,10 +536,10 @@ class TestWithCachedBundle:
         with open(cache_path) as f:
             self.bundle = json.load(f)
 
-    def test_scattered_spider_150_techniques(self):
+    def test_scattered_spider_techniques(self):
+        # The count follows the ATT&CK release (150 in v19.2, 174 in v20.0)
         rows = get_group_techniques(self.bundle, "G1015")
-        unique = {r["technique_id"] for r in rows}
-        assert len(unique) == 150
+        assert len({r["technique_id"] for r in rows}) > 100
 
     def test_scattered_spider_has_all_three_paths(self):
         rows = get_group_techniques(self.bundle, "G1015")
@@ -549,8 +549,9 @@ class TestWithCachedBundle:
         assert "via_campaign" in types
 
     def test_lookup_by_name(self):
-        rows = get_group_techniques(self.bundle, "Scattered Spider")
-        assert len({r["technique_id"] for r in rows}) == 150
+        by_name = get_group_techniques(self.bundle, "Scattered Spider")
+        by_id = get_group_techniques(self.bundle, "G1015")
+        assert {r["technique_id"] for r in by_name} == {r["technique_id"] for r in by_id}
 
     def test_signature_ttps_present(self):
         """Techniques that must be present for Scattered Spider."""

@@ -34,7 +34,7 @@ def saw(tmp_path, monkeypatch):
         out.mkdir(parents=True, exist_ok=True)
         (out / "mitre_procedures.csv").write_text("group_sw_id\n")
         return SimpleNamespace(returncode=0, stdout="ok", stderr="")
-    monkeypatch.setattr(p.subprocess, "run", run)
+    monkeypatch.setattr(p, "_run_command", run)
     return SimpleNamespace(dir=mitresaw, calls=calls, out=tmp_path / "out.csv")
 
 
@@ -58,7 +58,7 @@ def test_old_output_is_not_taken_for_a_rebuild(saw, monkeypatch):
     stale.write_text("old\n")
     old = time.time() - 86400
     os.utime(stale, (old, old))
-    monkeypatch.setattr(p.subprocess, "run", lambda cmd, **kw: SimpleNamespace(returncode=0, stdout="", stderr=""))
+    monkeypatch.setattr(p, "_run_command", lambda cmd, **kw: SimpleNamespace(returncode=0, stdout="", stderr=""))
     with pytest.raises(FileNotFoundError, match="no new mitre_procedures.csv"):
         p.run_mitresaw_detection(output_csv=saw.out)
 

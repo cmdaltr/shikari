@@ -21,6 +21,7 @@ Real-time STIX operations (used by app.py hunter/export routes):
 
 from __future__ import annotations
 
+import atexit
 import csv
 import fcntl
 import json
@@ -481,22 +482,51 @@ def _read_rows(path: Path) -> Tuple[List[str], List[dict]]:
         return list(reader.fieldnames or []), list(reader)
 
 
-def _invoke_mitresaw(flags: List[str]) -> Path:
-    """Run MITRESaw and return the procedures CSV this run wrote."""
+# MITRESaw processes this Archer process started, stopped if Archer exits first (a server
+# reload, a stopped job) so none run on unattended beside the next collection
+_CHILDREN: Set[subprocess.Popen] = set()
+
+
+@atexit.register
+def _stop_children() -> None:
+    for proc in list(_CHILDREN):
+        if proc.poll() is None:
+            proc.terminate()
+
+
+def _run_command(cmd: List[str], cwd: str, timeout: int) -> subprocess.CompletedProcess:
+    with subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          stdin=subprocess.DEVNULL, text=True) as proc:
+        _CHILDREN.add(proc)
+        try:
+            out, err = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+            raise
+        finally:
+            _CHILDREN.discard(proc)
+    return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
+
+
+def _groups_in_csv(path: Path) -> Set[str]:
+    return {r.get("group_sw_id", "") for r in _read_rows(path)[1]}
+
+
+def _invoke_mitresaw(flags: List[str]) -> Optional[Path]:
+    """Run MITRESaw and return the procedures CSV this run wrote (None when it found no
+    procedures for the groups asked for)."""
     mitresaw_script = _MITRESAW_DIR / "MITRESaw.py"
     if not mitresaw_script.exists():
         raise FileNotFoundError(
             f"MITRESaw not found at {mitresaw_script}. Clone it beside Archer, or set MITRESAW_DIR")
     logger.info("Running MITRESaw: %s %s", mitresaw_script, " ".join(flags))
     started = time.time()
-    result = subprocess.run(
+    result = _run_command(
         [_mitresaw_python(), str(mitresaw_script)] + flags,
         cwd=str(_MITRESAW_DIR),
-        capture_output=True,
-        text=True,
-        # A full run with software attribution is ~13,000 procedures, about 90 minutes
-        timeout=3 * 3600,
-        stdin=subprocess.DEVNULL,
+        # A batch of groups takes minutes; an unbatched full run (no bundle to batch by) hours
+        timeout=(3600 if "-g" in flags else 6 * 3600),
     )
     if result.returncode != 0:
         logger.error("MITRESaw failed (exit %d):\n%s", result.returncode, result.stderr)
@@ -512,12 +542,95 @@ def _invoke_mitresaw(flags: List[str]) -> Path:
                                     "data/mitre_procedures.csv", "*/mitre_procedures.csv")
                   for p in _MITRESAW_DIR.glob(pattern) if fresh(p)]
     if not candidates:
+        if "No evidence could be found" in (result.stdout or ""):
+            return None
         raise FileNotFoundError(
             f"MITRESaw finished but wrote no new mitre_procedures.csv under {_MITRESAW_DIR}. "
             f"stdout: {result.stdout[-300:]}")
+    if "-g" in flags:
+        # Another MITRESaw run may have written beside this one: only a CSV of exactly
+        # these groups is this run's
+        asked = set(flags[flags.index("-g") + 1].split(","))
+        candidates = [p for p in candidates if _groups_in_csv(p) and _groups_in_csv(p) <= asked]
+        if not candidates:
+            raise FileNotFoundError(f"MITRESaw wrote no CSV of the groups asked for ({len(asked)} groups)")
     beside_xlsx = [p for p in candidates
                    if (p.parent / "mitre_procedures.xlsx").exists() and fresh(p.parent / "mitre_procedures.xlsx")]
     return max(beside_xlsx or candidates, key=lambda p: p.stat().st_mtime)
+
+
+# Groups per MITRESaw run. All 176 in one run take hours; batches keep each run short and
+# are saved as they finish, so an interrupted collection carries on where it stopped.
+_BATCH_SIZE = 20
+
+
+def _collect(groups: List[str], flags: List[str], output_csv: Path, key: str) -> Tuple[List[str], List[dict]]:
+    """Collect these groups' rows from MITRESaw in batches. Finished batches are kept in
+    <csv>.building.csv / .building.json until the whole job is done; a later call with
+    the same key (same flags, groups and ATT&CK) resumes from them."""
+    staging = output_csv.with_name(output_csv.stem + ".building.csv")
+    progress = output_csv.with_name(output_csv.stem + ".building.json")
+    state: Dict = {}
+    try:
+        state = json.loads(progress.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    if state.get("key") != key or not staging.exists():
+        state = {"key": key, "done": [], "fieldnames": []}
+        staging.unlink(missing_ok=True)
+    done = set(state["done"])
+    fieldnames: List[str] = state["fieldnames"]
+    rows = _read_rows(staging)[1] if staging.exists() else []
+    if done:
+        logger.info("Resuming: %d of %d groups already collected", len(done), len(groups))
+
+    todo = [g for g in groups if g not in done]
+    batches = [todo[i:i + _BATCH_SIZE] for i in range(0, len(todo), _BATCH_SIZE)]
+    for n, batch in enumerate(batches, 1):
+        logger.info("MITRESaw batch %d of %d: %d groups (%d of %d collected)",
+                    n, len(batches), len(batch), len(done), len(groups))
+        src = _invoke_mitresaw(flags + ["-g", ",".join(batch)])
+        new: List[dict] = []
+        if src is not None:
+            names, out = _read_rows(src)
+            fieldnames = fieldnames or names
+            new = [r for r in out if r.get("group_sw_id") in set(batch)]
+        if new:
+            first = not staging.exists()
+            with open(staging, "a", newline="", encoding="utf-8") as fh:
+                writer = csv.DictWriter(fh, fieldnames=fieldnames, extrasaction="ignore")
+                if first:
+                    writer.writeheader()
+                writer.writerows(new)
+        rows.extend(new)
+        done.update(batch)
+        state.update(done=sorted(done), fieldnames=fieldnames)
+        tmp = progress.with_suffix(".tmp")
+        tmp.write_text(json.dumps(state), encoding="utf-8")
+        os.replace(tmp, progress)
+    return fieldnames, rows
+
+
+def _finish_collect(output_csv: Path) -> None:
+    for suffix in (".building.csv", ".building.json"):
+        output_csv.with_name(output_csv.stem + suffix).unlink(missing_ok=True)
+
+
+def _job_key(flags: List[str], groups: List[str], index: Dict) -> str:
+    import hashlib
+    body = json.dumps([flags, groups, sorted(v[2] for v in index.values())])
+    return hashlib.sha1(body.encode("utf-8")).hexdigest()
+
+
+def _write_rows(output_csv: Path, fieldnames: List[str], rows: List[dict]) -> None:
+    # MITRESaw lists groups by name: keep each group's rows together in that order
+    rows = sorted(rows, key=lambda r: r.get("group_sw_name", "").casefold())
+    tmp = output_csv.with_suffix(".tmp")
+    with open(tmp, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+    os.replace(tmp, output_csv)
 
 
 def _run_mitresaw_locked(output_csv: Optional[Path], output_xlsx: Optional[Path],
@@ -553,8 +666,12 @@ def _run_mitresaw_locked(output_csv: Optional[Path], output_xlsx: Optional[Path]
         LAST_PLAN = attack_delta.plan(meta.get("objects"), index, links)
 
     xlsx_result: Optional[Path] = None
-    if LAST_PLAN is None:
+    all_groups = sorted(set(attack_delta.groups_in(index))) if index else []
+    if LAST_PLAN is None and not all_groups:
+        # Nothing to batch by (no bundle to share): one run over every group
         src_csv = _invoke_mitresaw(flags)
+        if src_csv is None:
+            raise FileNotFoundError("MITRESaw found no procedures at all")
         shutil.copy2(str(src_csv), str(output_csv))
         logger.info("Copied MITRESaw CSV to %s", output_csv)
         src_xlsx = src_csv.parent / "mitre_procedures.xlsx"
@@ -563,24 +680,25 @@ def _run_mitresaw_locked(output_csv: Optional[Path], output_xlsx: Optional[Path]
             logger.info("Copied MITRESaw XLSX to %s", output_xlsx)
             xlsx_result = output_xlsx
         mode = "full"
+    elif LAST_PLAN is None:
+        # Every group, in batches; the evidence XLSX is per batch, so it isn't kept
+        # (nothing in Archer reads it)
+        logger.info("Full collection: %d groups in batches of %d", len(all_groups), _BATCH_SIZE)
+        fieldnames, rows = _collect(all_groups, flags, output_csv, _job_key(flags, all_groups, index))
+        _write_rows(output_csv, fieldnames, rows)
+        _finish_collect(output_csv)
+        mode = "full"
     else:
         run, drop = LAST_PLAN["run"], LAST_PLAN["drop"]
         logger.info("ATT&CK changes touch %d groups (%d gone)", len(run), len(drop))
-        fresh: List[dict] = []
-        if run:
-            _, new_rows = _read_rows(_invoke_mitresaw(flags + ["-g", ",".join(run)]))
-            fresh = [r for r in new_rows if r.get("group_sw_id") in set(run)]
         if run or drop:
+            fresh: List[dict] = []
+            if run:
+                names, fresh = _collect(run, flags, output_csv, _job_key(flags, run, index))
+                fieldnames = fieldnames or names
             replaced = set(run) | set(drop)
-            merged = [r for r in rows if r.get("group_sw_id") not in replaced] + fresh
-            # MITRESaw lists groups by name: keep each group's rows together in that order
-            merged.sort(key=lambda r: r.get("group_sw_name", "").casefold())
-            tmp = output_csv.with_suffix(".tmp")
-            with open(tmp, "w", newline="", encoding="utf-8") as fh:
-                writer = csv.DictWriter(fh, fieldnames=fieldnames, extrasaction="ignore")
-                writer.writeheader()
-                writer.writerows(merged)
-            os.replace(tmp, output_csv)
+            _write_rows(output_csv, fieldnames, [r for r in rows if r.get("group_sw_id") not in replaced] + fresh)
+            _finish_collect(output_csv)
             logger.info("Updated %s: %d groups collected again, %d dropped", output_csv, len(run), len(drop))
         # The evidence XLSX stays from the last full collection (nothing in Archer reads it)
         mode = "incremental"

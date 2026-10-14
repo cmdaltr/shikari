@@ -135,7 +135,7 @@ def saw(tmp_path, monkeypatch):
         _write_csv(out / "mitre_procedures.csv", rows)
         (out / "mitre_procedures.xlsx").write_text("xlsx")
         return SimpleNamespace(returncode=0, stdout="ok", stderr="")
-    monkeypatch.setattr(p.subprocess, "run", run)
+    monkeypatch.setattr(p, "_run_command", run)
     return SimpleNamespace(calls=calls, bundle=bundle, out=tmp_path / "out" / "mitre_procedures.csv",
                            xlsx=tmp_path / "out" / "mitre_procedures.xlsx")
 
@@ -145,10 +145,15 @@ def _read(path):
         return [(r["group_sw_id"], r["procedure_example"]) for r in csv.DictReader(fh)]
 
 
+def _groups(cmd):
+    return cmd[cmd.index("-g") + 1].split(",")
+
+
 def test_first_build_is_full_then_only_changed_groups(saw):
     p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
-    assert "-g" not in saw.calls[0] and p.LAST_PLAN is None and saw.xlsx.exists()
+    assert [_groups(c) for c in saw.calls] == [["G0001", "G0002", "G0003"]] and p.LAST_PLAN is None
     assert json.loads(p._meta_path(saw.out).read_text())["mode"] == "full"
+    assert _read(saw.out) == [("G0001", "new"), ("G0002", "new"), ("G0003", "new")]
 
     # Nothing changed: no MITRESaw run at all
     p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
@@ -161,20 +166,56 @@ def test_first_build_is_full_then_only_changed_groups(saw):
     saw.bundle.write_text(json.dumps({"objects": objects}))
     _write_csv(saw.out, [_row("G0001", "Alpha", "T1001"), _row("G0002", "Bravo", "T1002"), _row("G0003", "Charlie", "T1003")])
     p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
-    cmd = saw.calls[-1]
-    assert cmd[cmd.index("-g") + 1] == "G0002"
+    assert _groups(saw.calls[-1]) == ["G0002"]
     assert _read(saw.out) == [("G0002", "new"), ("G0003", "old")]
     assert json.loads(p._meta_path(saw.out).read_text())["mode"] == "incremental"
 
 
-def test_full_collects_every_group(saw):
+def test_full_collects_every_group_in_batches(saw, monkeypatch):
+    monkeypatch.setattr(p, "_BATCH_SIZE", 2)
     p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
     p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx, full=True)
-    assert len(saw.calls) == 2 and "-g" not in saw.calls[1]
+    assert [_groups(c) for c in saw.calls] == [["G0001", "G0002"], ["G0003"]] * 2
+    assert not list(saw.out.parent.glob("*.building.*"))
+
+
+def test_an_interrupted_collection_resumes(saw, monkeypatch):
+    monkeypatch.setattr(p, "_BATCH_SIZE", 2)
+    real = p._run_command
+
+    def dies_on_second_batch(cmd, **kw):
+        if _groups(cmd) == ["G0003"]:
+            raise p.subprocess.TimeoutExpired(cmd, 1)
+        return real(cmd, **kw)
+    monkeypatch.setattr(p, "_run_command", dies_on_second_batch)
+    with pytest.raises(p.subprocess.TimeoutExpired):
+        p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
+    assert not saw.out.exists()
+
+    monkeypatch.setattr(p, "_run_command", real)
+    p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
+    # The first batch isn't collected again
+    assert [_groups(c) for c in saw.calls] == [["G0001", "G0002"], ["G0003"]]
+    assert _read(saw.out) == [("G0001", "new"), ("G0002", "new"), ("G0003", "new")]
+
+
+def test_a_changed_attack_starts_the_collection_over(saw, monkeypatch):
+    monkeypatch.setattr(p, "_BATCH_SIZE", 2)
+    real = p._run_command
+    monkeypatch.setattr(p, "_run_command", lambda cmd, **kw: (_ for _ in ()).throw(RuntimeError("down"))
+                        if _groups(cmd) == ["G0003"] else real(cmd, **kw))
+    with pytest.raises(RuntimeError):
+        p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
+    objects = _bundle()
+    _find(objects, "intrusion-set--a")["description"] = "Changed"
+    saw.bundle.write_text(json.dumps({"objects": objects}))
+    monkeypatch.setattr(p, "_run_command", real)
+    p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
+    assert [_groups(c) for c in saw.calls] == [["G0001", "G0002"], ["G0001", "G0002"], ["G0003"]]
 
 
 def test_other_flags_mean_a_full_collection(saw, monkeypatch):
     p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
     monkeypatch.setattr(p, "_MITRESAW_FLAGS", p._MITRESAW_FLAGS + ["-x", "csv"])
     p.run_mitresaw_detection(output_csv=saw.out, output_xlsx=saw.xlsx)
-    assert "-g" not in saw.calls[1]
+    assert _groups(saw.calls[1]) == ["G0001", "G0002", "G0003"]
