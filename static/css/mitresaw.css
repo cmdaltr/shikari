@@ -1,0 +1,63 @@
+/* MITRESaw page (templates/mitresaw.html); cards, buttons and fields: static/css/ui.css */
+.ms-page [hidden] { display: none !important; }
+.ms-card h2 { margin: 0 0 14px; font-size: 1.15em; color: var(--text-primary); }
+.ms-note { margin: 0 0 12px; color: var(--text-secondary); font-size: .9em; line-height: 1.55; }
+.ms-note code, .ms-check code { font-size: .92em; }
+.ms-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 0 0 14px; }
+.ms-stats div { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; background: var(--bg-primary); min-width: 0; }
+.ms-stats dt { font-size: .75em; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--text-secondary); }
+.ms-stats dd { margin: 4px 0 0; font-size: 1.35em; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
+.ms-check { margin: 0 0 12px; font-size: .9em; padding: 8px 12px; border-radius: 6px; }
+.ms-check.is-ok { background: rgba(16, 185, 129, .1); color: #047857; }
+.ms-check.is-diff { background: rgba(245, 158, 11, .14); color: #92400e; }
+.ms-actions { margin-top: 4px; }
+.ms-state { margin-right: auto; color: var(--text-secondary); font-size: .9em; }
+.ms-dl { text-decoration: none; }
+.ms-log { margin: 14px 0 0; max-height: 260px; overflow: auto; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+  background: var(--bg-primary); font: .8em/1.5 "JetBrains Mono", ui-monospace, monospace; color: var(--text-secondary); white-space: pre-wrap; }
+.ms-log .is-warn { color: #b45309; }
+.ms-log .is-err { color: #dc2626; }
+
+.ms-filters { display: grid; grid-template-columns: 2fr repeat(4, minmax(0, 1fr)); gap: 10px 12px; margin-bottom: 10px; }
+.ms-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: .85em; font-weight: 600; color: var(--text-secondary); }
+.ms-field .form-input { width: 100%; }
+.ms-count { margin: 0 0 8px; color: var(--text-secondary); font-size: .88em; }
+.ms-table-wrap { overflow-x: auto; }
+.ms-table { width: 100%; border-collapse: collapse; font-size: .88em; }
+.ms-table th { text-align: left; font-size: .8em; text-transform: uppercase; letter-spacing: .3px; color: var(--text-secondary); padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
+.ms-table td { padding: 9px 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; color: var(--text-primary); line-height: 1.45; }
+.ms-table td:nth-child(1) { white-space: nowrap; }
+.ms-table td:nth-child(2) { min-width: 160px; }
+.ms-table td:nth-child(4) { min-width: 320px; overflow-wrap: anywhere; }
+.ms-id { display: block; font-size: .85em; color: var(--text-secondary); }
+.ms-id a { color: inherit; }
+.ms-via { display: inline-block; margin-bottom: 4px; font-size: .78em; font-weight: 600; border-radius: 999px; padding: 1px 8px; background: rgba(100, 116, 139, .14); color: var(--text-secondary); }
+.ms-via.is-campaign { background: rgba(124, 58, 237, .14); color: #6d28d9; }
+.ms-via.is-software { background: rgba(197, 48, 48, .1); color: var(--accent); }
+.ms-ind { margin: 0; padding: 0; list-style: none; }
+.ms-ind li { margin-bottom: 3px; overflow-wrap: anywhere; }
+.ms-ind b { font-size: .8em; text-transform: uppercase; color: var(--text-secondary); margin-right: 4px; }
+.ms-ind code { font-size: .92em; }
+.ms-pager { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; color: var(--text-secondary); font-size: .9em; }
+.ms-excl td { vertical-align: middle; }
+.ms-excl .form-input { width: 100%; padding: .45em .7em; }
+.ms-excl td:last-child { width: 1%; }
+.ms-remove { border: none; background: none; color: var(--text-secondary); cursor: pointer; font-size: 1.2em; padding: 2px 8px; }
+.ms-remove:hover { color: var(--accent); }
+.ms-page:not([data-signed-in="true"]) .ms-signed-in-only { opacity: .55; }
+
+[data-theme="dark"] .ms-check.is-ok { color: #6ee7b7; }
+[data-theme="dark"] .ms-check.is-diff { color: #fcd34d; }
+[data-theme="dark"] .ms-via.is-campaign { color: #c4b5fd; }
+[data-theme="dark"] .ms-via.is-software { color: #fca5a5; }
+
+@media (max-width: 900px) {
+  .ms-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ms-filters { grid-template-columns: 1fr 1fr; }
+  .ms-field-wide { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .ms-page { width: 100%; max-width: 100%; padding-left: 16px; padding-right: 16px; }
+  .ms-filters { grid-template-columns: 1fr; }
+}
+.ms-table a { color: var(--accent); }

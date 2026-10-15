@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Archer - MITRESaw{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/mitresaw.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container ms-page" data-signed-in="{{ 'true' if user else 'false' }}">
+  <div class="page-header">
+    <h1>MITRESaw</h1>
+    <p>The ATT&amp;CK procedures behind the threat briefing and Splunk detections: every group's techniques, how each reaches the group, and the indicators in its procedure</p>
+  </div>
+
+  <section class="ui-card ms-card">
+    <h2>Procedures CSV</h2>
+    <dl class="ms-stats" id="ms-stats">
+      <div><dt>ATT&amp;CK</dt><dd id="ms-version">–</dd></div>
+      <div><dt>Groups</dt><dd id="ms-groups">–</dd></div>
+      <div><dt>Techniques</dt><dd id="ms-techniques">–</dd></div>
+      <div><dt>Procedures</dt><dd id="ms-rows">–</dd></div>
+      <div><dt>Built</dt><dd id="ms-built">–</dd></div>
+    </dl>
+    <p class="ms-check" id="ms-check" hidden></p>
+    <p class="ms-note">MITRESaw runs on Archer's own ATT&amp;CK bundle (<code>-f Enterprise -D -E -q -A -S</code>), 20 groups at a time.
+      <strong>Update</strong> collects only the groups an ATT&amp;CK release changed; <strong>Full rebuild</strong> collects all of them (about 30 minutes).
+      A stopped run carries on from its last finished batch. One rebuild runs at a time, and each is checked against Archer's own walk of ATT&amp;CK.</p>
+    <div class="ui-actions ms-actions">
+      <span class="ms-state" id="ms-state" aria-live="polite"></span>
+      <a class="btn-ghost ms-dl" id="ms-dl-csv" href="/api/mitresaw/download/csv">Download CSV</a>
+      <a class="btn-ghost ms-dl" id="ms-dl-xlsx" href="/api/mitresaw/download/xlsx" hidden>Download XLSX</a>
+      <button type="button" class="btn-ghost" id="ms-stop" hidden>Stop</button>
+      <button type="button" class="btn-ghost" id="ms-full">Full rebuild</button>
+      <button type="button" class="btn-primary" id="ms-update">Update</button>
+    </div>
+    <pre class="ms-log" id="ms-log" hidden></pre>
+  </section>
+
+  <section class="ui-card ms-card">
+    <h2>Procedures</h2>
+    <div class="ms-filters">
+      <label class="ms-field ms-field-wide"><span>Search</span>
+        <input type="search" class="form-input" id="ms-q" placeholder="Procedure text, indicator, technique name…"></label>
+      <label class="ms-field"><span>Group</span>
+        <input class="form-input" id="ms-group" list="ms-group-list" placeholder="APT29 or G0016"><datalist id="ms-group-list"></datalist></label>
+      <label class="ms-field"><span>Technique</span>
+        <input class="form-input" id="ms-technique" placeholder="T1003 or T1003.001"></label>
+      <label class="ms-field"><span>Tactic</span>
+        <select class="form-input" id="ms-tactic"><option value="">Any</option></select></label>
+      <label class="ms-field"><span>Attribution</span>
+        <select class="form-input" id="ms-attribution">
+          <option value="">Any</option>
+          <option value="direct">Group's own</option>
+          <option value="via_campaign">Through a campaign</option>
+          <option value="via_software">Through software</option>
+        </select></label>
+    </div>
+    <p class="ms-count" id="ms-count" aria-live="polite"></p>
+    <div class="ms-table-wrap">
+      <table class="ms-table">
+        <thead><tr><th>Group</th><th>Technique</th><th>Tactic</th><th>Procedure</th><th>Indicators</th></tr></thead>
+        <tbody id="ms-rows-body"></tbody>
+      </table>
+    </div>
+    <div class="ms-pager">
+      <button type="button" class="ui-pill" id="ms-prev">Previous</button>
+      <span id="ms-page"></span>
+      <button type="button" class="ui-pill" id="ms-next">Next</button>
+    </div>
+  </section>
+
+  <section class="ui-card ms-card">
+    <h2>Indicator exclusions</h2>
+    <p class="ms-note">Indicators MITRESaw leaves out of the evidence it extracts (its <code>data/exclusions.csv</code>), matched without case.
+      They apply to groups collected from now on: run a <strong>Full rebuild</strong> to apply them to every group.</p>
+    <table class="ms-table ms-excl">
+      <thead><tr><th>Indicator</th><th>Reason</th><th aria-label="Remove"></th></tr></thead>
+      <tbody id="ms-excl-body"></tbody>
+    </table>
+    <div class="ui-actions">
+      <span class="ms-state" id="ms-excl-state" aria-live="polite"></span>
+      <button type="button" class="btn-ghost" id="ms-excl-add">Add</button>
+      <button type="button" class="btn-primary" id="ms-excl-save">Save</button>
+    </div>
+  </section>
+</div>
+<script src="{{ url_for('static', path='js/mitresaw.js') }}?v={{ request.app.state.asset_version }}"></script>
+{% endblock %}

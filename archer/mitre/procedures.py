@@ -390,6 +390,30 @@ def _mitresaw_lock():
             fcntl.flock(fh, fcntl.LOCK_UN)
 
 
+def is_busy() -> bool:
+    """Whether a rebuild holds the lock, in this process or another."""
+    if not _LOCK.exists():
+        return False
+    with open(_LOCK, "a") as fh:
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(fh, fcntl.LOCK_UN)
+    return False
+
+
+def stop_running() -> int:
+    """Stop the MITRESaw processes this Archer started; the batches already collected are
+    kept, so the next run carries on from them. Returns how many were stopped."""
+    stopped = 0
+    for proc in list(_CHILDREN):
+        if proc.poll() is None:
+            proc.terminate()
+            stopped += 1
+    return stopped
+
+
 def _expected_techniques(bundle_path: Path) -> Dict[str, Set[str]]:
     """Archer's own walk of ATT&CK: each current group's techniques, its own, its
     campaigns' and its software's, leaving out anything revoked or deprecated."""

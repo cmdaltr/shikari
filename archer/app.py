@@ -1514,6 +1514,10 @@ from archer.visualization.flow_layouts import router as flow_layout_router
 
 app.include_router(flow_layout_router)
 
+from archer.mitre.web import router as mitresaw_router
+
+app.include_router(mitresaw_router)
+
 
 # Favicon route - ensure favicon is served from root with no-cache headers
 @app.get("/favicon.ico", include_in_schema=False)
@@ -2536,6 +2540,19 @@ async def coverage_page(request: Request, archer_session: Optional[str] = Cookie
         finally:
             db.close()
     return templates.TemplateResponse("coverage.html", {"request": request, "user": user})
+
+
+@app.get("/mitresaw", response_class=HTMLResponse)
+async def mitresaw_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """MITRESaw: the procedures CSV, its rebuild and its exclusions (archer.mitre.web)."""
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+    return templates.TemplateResponse("mitresaw.html", {"request": request, "user": user})
 
 
 @app.get("/api/correlation/params")
