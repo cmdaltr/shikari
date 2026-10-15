@@ -338,32 +338,6 @@
                 </div>
             </div>
 
-            <!-- Horizontal Divider -->
-            <div style="border-top: 1px solid var(--border-color); margin: 20px 0;"></div>
-
-            <!-- OSINT Repository Status -->
-            <div id="osint-status-panel">
-                <!-- Toggle Header -->
-                <div onclick="toggleOsintStatus()" style="padding: 8px 0; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; transition: background 0.2s;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <svg id="osint-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" stroke-width="2" style="width: 20px; height: 20px; transition: transform 0.3s;">
-                            <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                        <span style="font-weight: 600; color: var(--text-primary); font-size: 1em;">OSINT Repository Status</span>
-                    </div>
-                    <div id="osint-status-indicator" style="display: flex; align-items: center; gap: 10px;">
-                        <div id="status-light" style="width: 12px; height: 12px; border-radius: 50%; background: #999;"></div>
-                        <span id="status-text" style="font-size: 0.9em; color: var(--text-secondary); font-weight: 500;">Checking...</span>
-                    </div>
-                </div>
-
-                <!-- Status Details (Hidden by default) -->
-                <div id="osint-status-details" style="display: none; padding: 16px 0; border-top: 1px solid var(--border-color); margin-top: 8px;">
-                    <div id="repo-statuses" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
-                        <!-- Repo statuses will be inserted here by JavaScript -->
-                    </div>
-                </div>
-            </div>
                 </div>
             </div>
         </div>
@@ -1370,7 +1344,6 @@ let activeFilters = {
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     updateSelectedCount();
-    checkOsintStatus();  // Check OSINT repository status
 });
 
 // Setup event listeners
@@ -1906,149 +1879,6 @@ async function confirmDelete() {
     } catch (error) {
         console.error('Error deleting items:', error);
         alert('Failed to delete items');
-    }
-}
-
-// OSINT Repository Status Functions
-function toggleOsintStatus() {
-    const details = document.getElementById('osint-status-details');
-    const icon = document.getElementById('osint-toggle-icon');
-    const filtersContent = document.getElementById('filters-content');
-
-    console.log('toggleOsintStatus called. Current display:', details ? details.style.display : 'element not found');
-
-    if (!details || !icon) {
-        console.error('OSINT toggle elements not found:', { details: !!details, icon: !!icon });
-        return;
-    }
-
-    if (details.style.display === 'none' || details.style.display === '') {
-        details.style.display = 'block';
-        icon.style.transform = 'rotate(90deg)';
-        console.log('Expanded OSINT details');
-
-        // Update parent container height to accommodate expanded content
-        if (filtersContent && filtersContent.style.maxHeight !== '0px') {
-            // Small delay to let the content render, then recalculate height
-            setTimeout(() => {
-                filtersContent.style.maxHeight = filtersContent.scrollHeight + 'px';
-                console.log('Updated filters-content maxHeight to:', filtersContent.scrollHeight);
-            }, 10);
-        }
-    } else {
-        details.style.display = 'none';
-        icon.style.transform = 'rotate(0deg)';
-        console.log('Collapsed OSINT details');
-
-        // Update parent container height
-        if (filtersContent && filtersContent.style.maxHeight !== '0px') {
-            setTimeout(() => {
-                filtersContent.style.maxHeight = filtersContent.scrollHeight + 'px';
-            }, 10);
-        }
-    }
-}
-
-async function checkOsintStatus() {
-    const repoStatuses = document.getElementById('repo-statuses');
-    try {
-        console.log('Checking OSINT status...');
-
-        // Show loading state
-        if (repoStatuses) {
-            repoStatuses.innerHTML = '<p style="color: var(--text-secondary); margin: 0; text-align: center; grid-column: 1 / -1;">Loading...</p>';
-        }
-
-        const response = await fetch('/api/status/osint');
-        console.log('Response status:', response.status, response.ok);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log('OSINT status data:', data);
-
-        const statusLight = document.getElementById('status-light');
-        const statusText = document.getElementById('status-text');
-
-        if (!statusLight || !statusText || !repoStatuses) {
-            console.error('Required elements not found');
-            return;
-        }
-
-        const repos = data.repos || {};
-        const repoNames = Object.keys(repos);
-        const readyCount = repoNames.filter(name => repos[name].status === 'ready').length;
-        const totalCount = repoNames.length;
-
-        // Update overall indicator
-        if (readyCount === totalCount && totalCount > 0) {
-            statusLight.style.background = '#4ade80';
-            statusText.textContent = 'All Ready';
-            statusText.style.color = '#16a34a';
-        } else if (readyCount > 0) {
-            statusLight.style.background = '#facc15';
-            statusText.textContent = `${readyCount}/${totalCount} Ready`;
-            statusText.style.color = '#ca8a04';
-        } else {
-            statusLight.style.background = '#ef4444';
-            statusText.textContent = 'Not Ready';
-            statusText.style.color = '#dc2626';
-        }
-
-        // Build repo status cards
-        const repoOrder = ['splunk', 'azure_sentinel', 'elastic', 'mitre_car'];
-        const sortedRepos = repoOrder.filter(name => repos[name]);
-
-        const getLogoSVG = (repoName) => {
-            const logos = {
-                'splunk': `<svg width="24" height="24" viewBox="0 0 100 100" fill="none"><defs><radialGradient id="splunkGradLib" cx="30%" cy="30%"><stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" /><stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" /><stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" /></radialGradient></defs><circle cx="50" cy="50" r="48" fill="url(#splunkGradLib)"/><path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
-                'azure_sentinel': `<svg width="24" height="24" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="sentinelGradLib" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" /><stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" /><stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" /></linearGradient></defs><path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#sentinelGradLib)"/></svg>`,
-                'elastic': `<svg width="24" height="24" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="elasticYellowLib" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" /><stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" /></linearGradient><linearGradient id="elasticTealLib" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" /><stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" /></linearGradient><linearGradient id="elasticBlueLib" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" /><stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" /></linearGradient></defs><rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellowLib)"/><rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTealLib)"/><rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlueLib)"/></svg>`,
-                'mitre_car': `<svg width="24" height="24" viewBox="0 0 100 100" fill="none"><defs><linearGradient id="carGradLib" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#EF4444;stop-opacity:1" /><stop offset="100%" style="stop-color:#B91C1C;stop-opacity:1" /></linearGradient></defs><rect x="10" y="10" width="80" height="80" rx="12" fill="url(#carGradLib)"/><text x="50" y="67" font-size="40" font-weight="bold" fill="white" text-anchor="middle" font-family="monospace">CAR</text></svg>`
-            };
-            return logos[repoName] || '';
-        };
-
-        const html = sortedRepos.map(repoName => {
-            const repo = repos[repoName];
-            const statusColor = repo.status === 'ready' ? '#16a34a' : '#dc2626';
-            const statusIcon = repo.status === 'ready' ? '✓' : '✗';
-            const statusTooltip = repo.status === 'ready' ? 'Ready' : 'Failed';
-            const displayName = {
-                'elastic': 'Elastic',
-                'mitre_car': 'CAR',
-                'splunk': 'Splunk',
-                'azure_sentinel': 'Sentinel'
-            }[repoName] || repoName;
-
-            return `
-                <div style="padding: 12px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
-                    <span style="display: inline-flex; align-items: center; justify-content: center;">${getLogoSVG(repoName)}</span>
-                    <span style="font-weight: 600; color: var(--text-primary); flex: 1;">${displayName}</span>
-                    <span title="${statusTooltip}" style="color: ${statusColor}; font-weight: 600; font-size: 1.2em; cursor: help;">${statusIcon}</span>
-                </div>
-            `;
-        }).join('');
-
-        repoStatuses.innerHTML = html || '<p style="color: var(--text-secondary); margin: 0; text-align: center;">No repositories configured</p>';
-        console.log('OSINT status updated successfully. HTML length:', html.length, 'Ready count:', readyCount, '/', totalCount);
-
-    } catch (error) {
-        console.error('Error checking OSINT status:', error);
-        const statusLight = document.getElementById('status-light');
-        const statusText = document.getElementById('status-text');
-        const repoStatuses = document.getElementById('repo-statuses');
-
-        if (statusLight && statusText) {
-            statusLight.style.background = '#ef4444';
-            statusText.textContent = 'Error';
-            statusText.style.color = '#dc2626';
-        }
-
-        if (repoStatuses) {
-            repoStatuses.innerHTML = `<p style="color: var(--text-secondary); margin: 0; text-align: center; grid-column: 1 / -1;">Failed to load repository status. ${error.message || 'Unknown error'}</p>`;
-        }
     }
 }
 

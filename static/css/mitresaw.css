@@ -3,6 +3,23 @@
 .ms-card h2 { margin: 0 0 14px; font-size: 1.15em; color: var(--text-primary); }
 .ms-note { margin: 0 0 12px; color: var(--text-secondary); font-size: .9em; line-height: 1.55; }
 .ms-note code, .ms-check code { font-size: .92em; }
+/* OSINT repositories */
+.ms-osint { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ms-osint-repo { border: 1px solid var(--border-color); border-left: 4px solid #9ca3af; border-radius: 10px; padding: 10px 14px; background: var(--bg-primary); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ms-osint-repo.is-ready { border-left-color: #16a34a; }
+.ms-osint-repo.is-failed, .ms-osint-repo.is-missing { border-left-color: #dc2626; }
+.ms-osint-repo.is-cloning { border-left-color: #ca8a04; }
+.ms-osint-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ms-osint-head strong { color: var(--text-primary); }
+.ms-osint-state { font-size: .8em; font-weight: 600; color: var(--text-secondary); }
+.ms-osint-repo.is-ready .ms-osint-state { color: #16a34a; }
+.ms-osint-repo.is-failed .ms-osint-state, .ms-osint-repo.is-missing .ms-osint-state { color: #dc2626; }
+.ms-osint-repo a { font-size: .82em; color: var(--text-secondary); overflow-wrap: anywhere; }
+.ms-osint-repo small { font-size: .8em; color: var(--text-secondary); }
+.ms-osint-overall { margin-left: 10px; font-size: .72em; font-weight: 600; padding: 2px 8px; border-radius: 999px; vertical-align: 2px; }
+.ms-osint-overall.is-ok { background: rgba(22,163,74,.12); color: #16a34a; }
+.ms-osint-overall.is-part, .ms-osint-overall.is-busy { background: rgba(202,138,4,.14); color: #ca8a04; }
+.ms-osint-overall.is-bad { background: rgba(220,38,38,.12); color: #dc2626; }
 .ms-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 0 0 14px; }
 .ms-stats div { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; background: var(--bg-primary); min-width: 0; }
 .ms-stats dt { font-size: .75em; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--text-secondary); }
@@ -53,6 +70,7 @@
 
 @media (max-width: 900px) {
   .ms-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ms-osint { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ms-filters { grid-template-columns: 1fr 1fr; }
   .ms-field-wide { grid-column: 1 / -1; }
 }

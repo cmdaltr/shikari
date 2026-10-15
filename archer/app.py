@@ -34,6 +34,7 @@ import os
 import functools
 import json
 import logging
+import subprocess
 import threading
 import re
 import html
@@ -2236,11 +2237,25 @@ async def set_llm_preference(
 
 @app.get("/api/status/osint")
 async def get_osint_status():
-    """Get OSINT repository initialization status."""
+    """Get OSINT repository initialization status, with each clone's last commit date."""
+    from archer.config import OSINT_REPOS_DIR
+
+    repos = {}
+    for name, state in getattr(app.state, "osint_repos", {}).items():
+        updated = None
+        path = os.path.join(OSINT_REPOS_DIR, name)
+        if os.path.isdir(os.path.join(path, ".git")):
+            try:
+                out = subprocess.run(["git", "-C", path, "log", "-1", "--format=%cs"],
+                                     capture_output=True, text=True, timeout=5)
+                updated = out.stdout.strip() or None
+            except (OSError, subprocess.SubprocessError):
+                pass
+        repos[name] = {**state, "updated": updated}
     return {
         "ready": getattr(app.state, "osint_ready", False),
         "status": getattr(app.state, "osint_status", "Unknown"),
-        "repos": getattr(app.state, "osint_repos", {}),
+        "repos": repos,
         "failed_repos": getattr(app.state, "osint_failed_repos", []),
         "user_accepted_failures": getattr(app.state, "osint_user_accepted_failures", False),
     }
@@ -2918,7 +2933,8 @@ async def generate(
                     manual_data=None,
                     genai_mode=genai_mode,
                     run_correlation=True,  # Always enabled by default
-                    osint_enhancement=True,  # Always enabled by default
+                    # The Hunt tab's OSINT Enhancement box (ticked by default); a request without it keeps it on
+                    osint_enhancement=(osint_enhancement != "false"),
                     osint_comparison=(osint_comparison == "true"),
                     merge_by_tactic=(merge_by_tactic == "true"),
                     merge_by_parent=(merge_by_parent == "true"),
@@ -3101,6 +3117,7 @@ async def generate(
 async def generate_cve(
     request: Request,
     cve_id: str = Form(...),
+    osint_enhancement: str = Form(None),
     run_correlation: str = Form(None),
     semantic: str = Form(None),
     advanced_parsing: str = Form(None),
@@ -3407,7 +3424,7 @@ async def generate_cve(
                 manual_data=manual_data,
                 genai_mode=genai_mode,
                 run_correlation=True,  # Always enabled by default
-                osint_enhancement=True,  # Always enabled by default
+                osint_enhancement=(osint_enhancement != "false"),  # The Hunt tab's box, ticked by default
                 osint_comparison=False,  # Default to false for CVE hunting
                 **siem_args,
                 **llm_args,
@@ -4693,7 +4710,7 @@ async def generate_from_upload(
                 f"Generated from uploaded file: {filename}",
                 mentions=extraction_data.get("ioc_mentions"),
                 run_correlation=True,  # Always enabled by default
-                osint_enhancement=(osint_enhancement == "true"),  # Default to False for uploads
+                osint_enhancement=(osint_enhancement == "true"),  # The Analyse tab's box (ticked by default)
                 osint_comparison=False,  # Default to false for uploads
                 **report_ai,
                 **_siem_args(archer_session),

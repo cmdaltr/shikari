@@ -14,6 +14,34 @@
     return data;
   }
 
+  // ---------- OSINT repositories (what generation searches per technique) ----------
+  const OSINT = [
+    ['splunk', 'Splunk', 'splunk/security_content'],
+    ['azure_sentinel', 'Sentinel', 'Azure/Azure-Sentinel'],
+    ['elastic', 'Elastic', 'elastic/detection-rules'],
+    ['mitre_car', 'MITRE CAR', 'mitre-attack/car'],
+  ];
+  async function osint() {
+    const box = $('ms-osint'), overall = $('ms-osint-overall');
+    let d;
+    try { d = await json('/api/status/osint'); } catch (e) { box.innerHTML = `<p class="ms-note">Couldn't read the repositories' status: ${esc(e.message)}</p>`; return; }
+    const repos = d.repos || {};
+    const ready = OSINT.filter(([k]) => (repos[k] || {}).status === 'ready').length;
+    const cloning = OSINT.some(([k]) => (repos[k] || {}).status === 'cloning');
+    overall.textContent = cloning ? 'Updating…' : ready === OSINT.length ? 'All ready' : `${ready} of ${OSINT.length} ready`;
+    overall.className = 'ms-osint-overall ' + (cloning ? 'is-busy' : ready === OSINT.length ? 'is-ok' : ready ? 'is-part' : 'is-bad');
+    box.innerHTML = OSINT.map(([k, name, upstream]) => {
+      const r = repos[k] || { status: 'missing' };
+      const label = { ready: 'Ready', cloning: 'Updating…', failed: 'Failed', missing: 'Not cloned' }[r.status] || r.status;
+      const detail = r.status === 'failed' && r.error ? esc(r.error) : r.updated ? `Last upstream commit ${esc(r.updated)}` : '';
+      return `<div class="ms-osint-repo is-${esc(r.status)}">
+        <div class="ms-osint-head"><strong>${esc(name)}</strong><span class="ms-osint-state">${esc(label)}</span></div>
+        <a href="https://github.com/${upstream}" target="_blank" rel="noopener">${upstream}</a>
+        <small>${detail}</small></div>`;
+    }).join('');
+    if (cloning) setTimeout(osint, 5000);
+  }
+
   // ---------- Status and run ----------
   async function status() {
     clearTimeout(timer);
@@ -176,6 +204,7 @@
   });
 
   status();
+  osint();
   search();
   loadExclusions();
 })();
