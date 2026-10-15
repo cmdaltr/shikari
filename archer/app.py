@@ -22,7 +22,6 @@ _PROJECT_ROOT = Path(__file__).parent.parent
 # passed between client and server.
 # -----------------------------------------------------------------------------
 
-# from archer.build import define_vectr_values
 from archer.mitre import (
     get_stix_data,
     obtain_all_techniques,
@@ -52,7 +51,6 @@ from archer.config import (
     PROGRESS_DIR,
     PROFILE_PICS_DIR,
     SEVERITY_ORDER,
-    VECTR_ENABLED,
     EMULATION_ENABLED,
 )
 
@@ -2871,8 +2869,6 @@ async def generate(
     run_correlation: str = Form(None),
     run_emulation: str = Form(None),
     emulation_mode: str = Form("simulate"),
-    vectr_export: str = Form(None),
-    vectr_campaign_name: str = Form(None),
     osint_enhancement: str = Form(None),
     osint_comparison: str = Form(None),
     merge_by_tactic: str = Form(None),
@@ -2952,18 +2948,6 @@ async def generate(
                             enrich_from_group_emulation(group_name)
                     except Exception as e:
                         print(f"Emulation error: {e}")
-
-                # Export to VECTR if requested (feature-flagged — see _archive/REINTEGRATION.md)
-                if vectr_export == "true" and VECTR_ENABLED:
-                    try:
-                        from archer.config import VECTRConfig
-                        from archer.vectr import export_to_vectr
-
-                        if VECTRConfig.is_configured():
-                            campaign_name = vectr_campaign_name if vectr_campaign_name else None
-                            export_to_vectr(threat_group=group_name, campaign_name=campaign_name)
-                    except Exception as e:
-                        print(f"VECTR export error: {e}")
 
                 # Auto-validate detections if requested
                 if auto_validate == "true":
@@ -7217,29 +7201,20 @@ def list_splunk_detections():
 @app.get("/api/detections/splunk/status")
 def splunk_detection_status():
     """
-    Return cache age and detection coverage summary.
+    Return whether the procedures CSV matches the ATT&CK bundle, and detection coverage.
     """
-    from archer.mitre.procedures import is_cache_stale, _DEFAULT_CSV, CACHE_TTL_SECONDS
-    import time as _time
+    from archer.mitre.procedures import is_cache_stale, built_version, bundle_version, _DEFAULT_CSV
 
-    csv_path = _DEFAULT_CSV
-    cache_exists = csv_path.exists()
-    cache_age_days = None
-    cache_stale = True
-
-    if cache_exists:
-        age_s = _time.time() - csv_path.stat().st_mtime
-        cache_age_days = round(age_s / 86400, 1)
-        cache_stale = age_s > CACHE_TTL_SECONDS
+    cache_exists = _DEFAULT_CSV.exists()
 
     detections_dir = _PROJECT_ROOT / "data" / "detections" / "splunk"
     detection_count = len(list(detections_dir.glob("*.json"))) if detections_dir.exists() else 0
 
     return JSONResponse({
         "cache_exists": cache_exists,
-        "cache_age_days": cache_age_days,
-        "cache_stale": cache_stale,
-        "cache_ttl_days": CACHE_TTL_SECONDS // 86400,
+        "cache_stale": is_cache_stale(),
+        "built_from_attack": built_version() or None,
+        "attack_bundle": bundle_version() or None,
         "splunk_detections_generated": detection_count,
         "detections_dir": str(detections_dir),
     })

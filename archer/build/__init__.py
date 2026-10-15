@@ -1,4 +1,3 @@
-# from .collate import define_vectr_values
 from .detections import compile_query
 from .queries import compile_mde_queries, compile_splunk_queries
 from .yaml import construct_yaml

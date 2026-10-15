@@ -338,21 +338,49 @@ def fetch_stix(url: str = STIX_URL, timeout: int = 120) -> dict:
 # Cache staleness helpers
 # ---------------------------------------------------------------------------
 
-CACHE_TTL_SECONDS: int = 7 * 24 * 3600  # 7 days
+_bundle_version_cache: Dict = {"mtime": None, "version": ""}
 
 
-def is_cache_stale(csv_path: Optional[Path] = None) -> bool:
+def bundle_version(bundle_path: Optional[Path] = None) -> str:
+    """The ATT&CK version (x-mitre-collection) of Archer's cached bundle; "" without one."""
+    path = Path(bundle_path) if bundle_path is not None else _ARCHER_BUNDLE
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return ""
+    if _bundle_version_cache["mtime"] != (path, mtime):
+        version = ""
+        try:
+            with open(path, encoding="utf-8") as fh:
+                objects = json.load(fh).get("objects", [])
+            version = next((o.get("x_mitre_version", "") for o in objects
+                            if o.get("type") == "x-mitre-collection"), "")
+        except (OSError, ValueError):
+            pass
+        _bundle_version_cache.update(mtime=(path, mtime), version=version)
+    return _bundle_version_cache["version"]
+
+
+def built_version(csv_path: Optional[Path] = None) -> str:
+    """The ATT&CK version the procedures CSV was built from (its .meta.json); "" if unknown."""
+    meta = _read_meta(Path(csv_path) if csv_path is not None else _DEFAULT_CSV) or {}
+    return meta.get("attack_version", "")
+
+
+def is_cache_stale(csv_path: Optional[Path] = None, bundle_path: Optional[Path] = None) -> bool:
     """
-    Return True if the MITRESaw CSV cache is missing or older than 7 days.
-
-    The cache is the mitre_procedures.csv in Archer's data directory —
-    the file written by run_mitresaw() / run_mitresaw_detection().
+    True if the procedures CSV needs a rebuild: it is missing, its .meta.json is missing or
+    was written with other MITRESaw flags, or it was built from another ATT&CK version than
+    Archer's bundle. Age doesn't matter: a CSV built from the current release is current.
     """
     path = Path(csv_path) if csv_path is not None else _DEFAULT_CSV
     if not path.exists():
         return True
-    age = time.time() - path.stat().st_mtime
-    return age > CACHE_TTL_SECONDS
+    meta = _read_meta(path)
+    if not meta or meta.get("flags") != _MITRESAW_FLAGS:
+        return True
+    current = bundle_version(bundle_path)
+    return bool(current) and meta.get("attack_version") != current
 
 
 # ---------------------------------------------------------------------------

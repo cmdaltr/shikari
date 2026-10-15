@@ -6,42 +6,6 @@ import os
 import re
 
 
-"""def define_vectr_values(payload, technique_descriptions, retrieved_data):
-    name = payload["variables"]["input"]["createTestCasedata"][0]["testCaseData"][
-        "name"
-    ]
-    tid = payload["variables"]["input"]["createTestCasedata"][0]["testCaseData"][
-        "technique"
-    ]
-    for description in technique_descriptions:
-        if description.startswith(f"{tid}: "):
-            tdesc = description.split(f"{tid}: ")[1]
-    tactic = payload["variables"]["input"]["createTestCasedata"][0]["testCaseData"][
-        "phase"
-    ]
-    tag = retrieved_data["group_name"]
-    identifiers = payload["variables"]["input"]["createTestCasedata"][0][
-        "testCaseData"
-    ]["identifiers"]
-    redTools = payload["variables"]["input"]["createTestCasedata"][0]["testCaseData"][
-        "redTools"
-    ]
-    log_sources = payload["variables"]["input"]["createTestCasedata"][0][
-        "testCaseData"
-    ]["log_sources"]
-
-    return (
-        name,
-        tid,
-        tdesc,
-        tactic,
-        tag,
-        identifiers,
-        redTools,
-        log_sources,
-    )
-"""
-
 
 def merge_queries_for_same_table(query1, query2):
     """

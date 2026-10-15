@@ -451,127 +451,6 @@ def run_emulation(
         return None
 
 
-def run_vectr_command(
-    action,
-    threat_group=None,
-    campaign_id=None,
-    campaign_name=None,
-    update_yamls=False,
-    verbose=False,
-):
-    """Execute VECTR integration commands"""
-    from archer.config import VECTRConfig
-
-    if not VECTRConfig.enabled:
-        print("ERROR: VECTR module is not enabled.", file=sys.stderr)
-        print("Set ENABLE_VECTR=true to use this feature.", file=sys.stderr)
-        return None
-
-    if not VECTRConfig.is_configured():
-        print("ERROR: VECTR is not configured.", file=sys.stderr)
-        print("Required environment variables:", file=sys.stderr)
-        print("  VECTR_URL=https://your-vectr-server:8081", file=sys.stderr)
-        print("  VECTR_API_TOKEN=your-api-token", file=sys.stderr)
-        return None
-
-    print("=" * 70)
-    print(f"VECTR Integration - {action.upper()}")
-    print("=" * 70)
-    print()
-
-    try:
-        if action == "export":
-            from archer.vectr import export_to_vectr
-
-            if not threat_group:
-                print("ERROR: --threat-group required for export", file=sys.stderr)
-                return None
-
-            result = export_to_vectr(
-                threat_group=threat_group,
-                campaign_name=campaign_name,
-            )
-
-            print("✅ Export complete!")
-            print(f"Campaign ID: {result['campaign']['id']}")
-            print(f"Use this ID to sync or import results later")
-            return result
-
-        elif action == "import":
-            from archer.vectr import import_from_vectr
-
-            if not campaign_id:
-                print("ERROR: --campaign-id required for import", file=sys.stderr)
-                return None
-
-            result = import_from_vectr(
-                campaign_id=campaign_id,
-                update_yamls=update_yamls,
-            )
-
-            return result
-
-        elif action == "sync":
-            from archer.vectr import sync_with_vectr
-
-            if not campaign_id:
-                print("ERROR: --campaign-id required for sync", file=sys.stderr)
-                return None
-
-            result = sync_with_vectr(
-                campaign_id=campaign_id,
-                threat_group=threat_group,
-            )
-
-            return result
-
-        elif action == "list":
-            from archer.vectr import CampaignManager
-
-            mgr = CampaignManager()
-            campaigns = mgr.list_campaigns(filter_by=threat_group)
-
-            if not campaigns:
-                print("No campaigns found")
-                return None
-
-            print(f"Found {len(campaigns)} campaign(s):\n")
-            for campaign in campaigns:
-                print(f"ID: {campaign.get('id')}")
-                print(f"Name: {campaign.get('name')}")
-                print(f"Group: {campaign.get('threat_group')}")
-                print(f"Status: {campaign.get('status')}")
-                print(f"Created: {campaign.get('created_date')}")
-                print("-" * 70)
-
-            return campaigns
-
-        elif action == "coverage":
-            from archer.vectr import TestCaseManager
-
-            if not campaign_id:
-                print("ERROR: --campaign-id required for coverage", file=sys.stderr)
-                return None
-
-            mgr = TestCaseManager()
-            report = mgr.generate_coverage_report(campaign_id)
-
-            print(report)
-            return report
-
-        else:
-            print(f"ERROR: Unknown action '{action}'", file=sys.stderr)
-            return None
-
-    except Exception as e:
-        print(f"ERROR: {e}", file=sys.stderr)
-        if verbose:
-            import traceback
-
-            traceback.print_exc()
-        return None
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Archer CLI - Threat hunting detection generator",
@@ -727,31 +606,6 @@ Optional API Keys (for enhanced features):
         "--verbose", "-v", action="store_true", help="Enable verbose output"
     )
 
-    # Optional: VECTR integration
-    vectr_parser = subparsers.add_parser(
-        "vectr", help="VECTR integration for hunt tracking (requires ENABLE_VECTR=true)"
-    )
-    vectr_parser.add_argument(
-        "action",
-        choices=["export", "import", "sync", "list", "coverage"],
-        help="VECTR action to perform",
-    )
-    vectr_parser.add_argument(
-        "--threat-group", help="Threat group name (required for export)"
-    )
-    vectr_parser.add_argument(
-        "--campaign-id", help="VECTR campaign ID (required for import/sync/coverage)"
-    )
-    vectr_parser.add_argument("--campaign-name", help="Custom campaign name for export")
-    vectr_parser.add_argument(
-        "--update-yamls",
-        action="store_true",
-        help="Update YAML files with test results (for import)",
-    )
-    vectr_parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output"
-    )
-
     args = parser.parse_args()
 
     if args.command == "generate":
@@ -785,15 +639,6 @@ Optional API Keys (for enhanced features):
             remote_platform=args.remote_platform,
             ssh_key=args.ssh_key,
             use_http=args.http,
-            verbose=args.verbose,
-        )
-    elif args.command == "vectr":
-        run_vectr_command(
-            action=args.action,
-            threat_group=args.threat_group,
-            campaign_id=args.campaign_id,
-            campaign_name=args.campaign_name,
-            update_yamls=args.update_yamls,
             verbose=args.verbose,
         )
     else:

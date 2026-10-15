@@ -259,7 +259,6 @@ function createTimelineItem(item) {
     </div>
     <div class="timeline-actions">
       <button class="timeline-action-btn" onclick="downloadResults('${item.id}')">Download</button>
-      <button class="timeline-action-btn" disabled>Export to VECTR</button>
       <button class="timeline-action-btn" disabled>Run Emulation</button>
     </div>
   `;

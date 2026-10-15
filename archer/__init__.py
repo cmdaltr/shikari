@@ -1,4 +1,3 @@
-# from .build.collate import define_vectr_values
 from .build.detections import compile_query
 from .build.yaml import construct_yaml
 from .mitre.enterprise import (

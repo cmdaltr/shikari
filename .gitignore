@@ -42,6 +42,7 @@ data/*.db
 # Fernet key that decrypts every stored API key (archer/auth/encryption.py)
 data/.encryption_key
 data/.mitresaw.lock
+data/mitre_procedures.csv
 data/mitre_procedures.xlsx
 data/mitre_procedures.meta.json
 data/mitre_procedures.tmp
@@ -97,15 +98,6 @@ data/emulation/*
 data/emulation/evidence/*
 !data/emulation/evidence/.gitkeep
 
-# VECTR output (dynamically generated)
-data/vectr/*
-!data/vectr/.gitkeep
-!data/vectr/campaigns/
-!data/vectr/exports/
-data/vectr/campaigns/*
-!data/vectr/campaigns/.gitkeep
-data/vectr/exports/*
-!data/vectr/exports/.gitkeep
 
 # Cache directory for MITRE ATT&CK data - runtime generated
 archer/data/cache/*

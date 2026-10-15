@@ -778,10 +778,7 @@ python archer.py generate_detection T1003.001
 python archer.py build_correlations "APT29"
 
 # Run adversary emulation (Atomic Red Team)
-python archer.py run_emulation "APT29" --mode simulate
-
-# VECTR integration for hunt tracking
-python archer.py run_vectr_command export "APT29"</code></pre>
+python archer.py run_emulation "APT29" --mode simulate</code></pre>
             </div>
 
             <div class="workflow-step">
@@ -824,7 +821,6 @@ python archer.py run_vectr_command export "APT29"</code></pre>
                     <li><strong>Individual Query Blocks:</strong> Stacked per-technique queries with "chained with" connectors on the results page</li>
                     <li><strong>Threat Briefing:</strong> LLM-grounded detection gap analysis — ranks top-N uncovered techniques with priority reasoning and detection approach</li>
                     <li><strong>Emulation:</strong> Atomic Red Team integration (simulate/live modes, SSH/WinRM support)</li>
-                    <li><strong>VECTR Export:</strong> Campaign and test case creation for purple team collaboration</li>
                 </ul>
             </div>
             </div>

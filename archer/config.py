@@ -32,8 +32,7 @@ SEVERITY_ORDER = ["Critical", "High", "Medium", "Low", "Informational"]
 
 # ========== Feature Flags ==========
 # These control optional integrations that require additional setup.
-# Both default to False. To re-enable, see _archive/REINTEGRATION.md.
-VECTR_ENABLED: bool = False
+# Defaults to False. To re-enable, see _archive/REINTEGRATION.md.
 EMULATION_ENABLED: bool = False
 
 
@@ -67,28 +66,6 @@ class EmulationConfig:
     def is_caldera_configured(cls) -> bool:
         """Check if CALDERA is properly configured."""
         return cls.enabled and cls.caldera_api_key is not None
-
-
-class VECTRConfig:
-    """Configuration for VECTR integration."""
-
-    enabled = os.getenv("ENABLE_VECTR", "false").lower() == "true"
-
-    # VECTR API settings
-    url = os.getenv("VECTR_URL", "https://localhost:8081")
-    api_token = os.getenv("VECTR_API_TOKEN")
-
-    # Default values
-    default_campaign = os.getenv("VECTR_DEFAULT_CAMPAIGN", "Archer-ThreatHunt")
-    default_environment = os.getenv("VECTR_DEFAULT_ENVIRONMENT", "Production")
-
-    # Output settings
-    output_dir = os.getenv("VECTR_OUTPUT_DIR", "data/vectr")
-
-    @classmethod
-    def is_configured(cls) -> bool:
-        """Check if VECTR is properly configured."""
-        return cls.enabled and cls.api_token is not None
 
 
 class CoreConfig:
