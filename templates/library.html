@@ -2090,12 +2090,10 @@ function toggleFilters() {
         // Expand
         content.style.maxHeight = content.scrollHeight + 'px';
         toggleText.textContent = 'Collapse';
-        localStorage.setItem('filtersCollapsed', 'false');
     } else {
         // Collapse
         content.style.maxHeight = '0px';
         toggleText.textContent = 'Expand';
-        localStorage.setItem('filtersCollapsed', 'true');
     }
 }
 
@@ -2182,8 +2180,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize filters
     const filtersContent = document.getElementById('filters-content');
     const filtersToggleText = document.getElementById('filters-toggle-text');
-    // Default to collapsed if no localStorage value is set
-    const filtersCollapsed = localStorage.getItem('filtersCollapsed') !== 'false';
+    // Filters open collapsed on every visit (they still apply while collapsed)
+    const filtersCollapsed = true;
 
     if (filtersCollapsed) {
         filtersContent.style.maxHeight = '0px';

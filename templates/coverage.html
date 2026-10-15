@@ -662,9 +662,8 @@ function wireFilters() {
   document.getElementById('export-btn').addEventListener('click', exportTable);
   const toggle = document.getElementById('cv-filters-toggle');
   toggle.addEventListener('click', () => setFiltersCollapsed(!document.querySelector('.cv-filters-body').hidden));
-  let collapsed = false;
-  try { collapsed = localStorage.getItem('coverageFiltersCollapsed') === '1'; } catch (e) {}
-  setFiltersCollapsed(collapsed);
+  // Filters open collapsed on every visit; the "N active" badge says when they still apply
+  setFiltersCollapsed(true);
   document.getElementById('table-view').addEventListener('change', e => showTable(e.target.value));
 }
 
@@ -672,7 +671,6 @@ function wireFilters() {
 function setFiltersCollapsed(on) {
   document.querySelector('.cv-filters-body').hidden = on;
   document.getElementById('cv-filters-toggle').textContent = on ? 'Expand' : 'Collapse';
-  try { on ? localStorage.setItem('coverageFiltersCollapsed', '1') : localStorage.removeItem('coverageFiltersCollapsed'); } catch (e) {}
 }
 
 function showTable(view) {

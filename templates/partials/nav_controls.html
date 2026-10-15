@@ -19,6 +19,7 @@
   'help': '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
   'detections': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
   'intel': '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  'emulate': '<polygon points="5 3 19 12 5 21 5 3"/>',
   'build': '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
 } %}
 {# Menus: (label, icon, [(href, label, needs an account, icon, what it is)]) #}
@@ -35,6 +36,7 @@
   ('Build', 'build', [
     ('/manual', 'Manual', false, 'manual', 'Write detections one technique at a time'),
     ('/agents', 'Agents', true, 'agents', 'Models that repair queries and triage reports'),
+    ('', 'Emulate', false, 'emulate', 'Adversary emulation to test your detections'),
   ]),
 ] %}
 {% macro svg(name) %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ICON[name] | safe }}</svg>{% endmacro %}
@@ -44,7 +46,7 @@
         <a href="/" class="nav-tab{% if is_here('/') %} is-active{% endif %}"{% if is_here('/') %} aria-current="page"{% endif %} title="Home">{{ svg('home') }}<span>Home</span></a>
         {% for label, icon, items in menus %}
         {% set ns = namespace(here=false) %}
-        {% for it in items %}{% if is_here(it[0]) %}{% set ns.here = true %}{% endif %}{% endfor %}
+        {% for it in items %}{% if it[0] and is_here(it[0]) %}{% set ns.here = true %}{% endif %}{% endfor %}
         <div class="nav-menu">
             <button type="button" class="nav-tab nav-menu-btn{% if ns.here %} is-active{% endif %}" aria-haspopup="true" aria-expanded="false" title="{{ label }}">
                 {{ svg(icon) }}<span>{{ label }}</span>
@@ -52,7 +54,9 @@
             </button>
             <div class="nav-menu-list" role="menu" aria-label="{{ label }}">
                 {% for href, name, needs_auth, ico, blurb in items %}
-                {% if needs_auth and not user %}
+                {% if not href %}
+                <span class="nav-menu-item is-disabled is-soon" role="menuitem" aria-disabled="true" title="{{ name }}: coming soon">{{ svg(ico) }}<span><strong>{{ name }} <em class="nav-soon">Soon</em></strong><small>{{ blurb }}</small></span></span>
+                {% elif needs_auth and not user %}
                 <span class="nav-menu-item is-disabled" role="menuitem" aria-disabled="true" title="Log in to use {{ name }}">{{ svg(ico) }}<span><strong>{{ name }}</strong><small>{{ blurb }}</small></span></span>
                 {% else %}
                 <a href="{{ href }}" class="nav-menu-item{% if is_here(href) %} is-active{% endif %}" role="menuitem"{% if is_here(href) %} aria-current="page"{% endif %}>{{ svg(ico) }}<span><strong>{{ name }}</strong><small>{{ blurb }}</small></span></a>
