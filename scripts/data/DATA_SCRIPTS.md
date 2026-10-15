@@ -17,6 +17,8 @@ python scripts/data/update_osint.py
 - **Splunk Security Content** (`splunk/security_content`)
 - **Azure Sentinel** analytic rules (`Azure/Azure-Sentinel`, sparse: `Detections/` and each solution's `Analytic Rules/`)
 - **Google SecOps** YARA-L rules (`chronicle/detection-rules`, sparse: `rules/community/`)
+- **LOLBAS**, **LOLRMM** and **LOLDrivers** JSON (`archer/build/lol.py`, at most daily; skipped when
+  repos are picked by flag), indexed into `data/cache/lol_index.json`
 
 **Process**:
 1. Clones each repo (shallow, `--depth 1`, sparse where set) or pulls if already cloned
@@ -52,9 +54,10 @@ python scripts/data/build_osint_index.py --skip-clone   # build from what's alre
 ```
 
 **What it does**:
-- Walks every cloned OSINT repo (Elastic, Splunk, Azure Sentinel)
+- Walks every cloned OSINT repo (Elastic, Splunk, Azure Sentinel, Google SecOps)
   once, extracting every technique ID mentioned in every rule file
-- Writes `data/cache/osint_technique_index.json`: `{technique_id: {source: [{name, source_url, query_snippet}, ...]}}`
+- Writes `data/cache/osint_technique_index.json`: `{technique_id: {source: [{name, source_url, query_snippet, false_positives?}, ...]}}`
+  (`false_positives` from Elastic and Splunk rules, for `known_false_positives` in detection YAML)
 
 Without this index, `archer/build/osint_comparison.py` searches live on every
 OSINT comparison call — a `grep -r` subprocess per technique per repo. With the
@@ -194,9 +197,12 @@ python scripts/data/update_osint.py
 
 **OSINT Repositories**:
 ```
-data/external/repos/
-├── elastic/detection_rules/  # elastic/detection-rules
-└── splunk/security_content/  # splunk/security_content
+data/repos/
+├── elastic/          # elastic/detection-rules
+├── splunk/           # splunk/security_content
+├── azure_sentinel/   # Azure/Azure-Sentinel (sparse)
+├── chronicle/        # chronicle/detection-rules (sparse)
+└── lol/              # lolbas.json, lolrmm.json, loldrivers.json
 ```
 
 **Processed Data**:

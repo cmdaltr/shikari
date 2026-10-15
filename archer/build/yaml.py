@@ -480,6 +480,14 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
 
         yaml_content += osint_section
 
+    # LOLBAS/LOLRMM/LOLDrivers entries behind added indicators, and the false positives the
+    # Elastic and Splunk rules for this technique document (LoFP-style): written whether or
+    # not the OSINT comparison found rules
+    if osint_data and (osint_data.get("lol_references") or osint_data.get("known_false_positives")):
+        extra = {k: osint_data[k] for k in ("lol_references", "known_false_positives") if osint_data.get(k)}
+        yaml_content += "\n# Living-off-the-land references and known false positives\n" + yaml_lib.safe_dump(
+            extra, default_flow_style=False, sort_keys=False, width=1000000, allow_unicode=True)
+
     # Add Reference Query metadata if references were used
     if reference_used:
         reference_section = "\n# Reference Query Metadata\n"

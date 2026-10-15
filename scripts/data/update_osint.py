@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Clone or update the OSINT detection repositories Archer searches per technique, then
-rebuild the technique index. The repositories, their URLs and sparse checkouts are
+rebuild the technique index; also fetch LOLBAS, LOLRMM and LOLDrivers (archer/build/lol.py).
+The repositories, their URLs and sparse checkouts are
 defined once, in archer/build/osint_repos.py (REPOS); Archer's start-up uses the same.
 
 Usage:
@@ -45,10 +46,19 @@ def main() -> int:
                             help=f"update only {REPOS[name]['url'].split('github.com/')[-1].removesuffix('.git')}")
     args = parser.parse_args()
 
+    chosen_only = any(getattr(args, name) for name in REPOS)
     chosen = [name for name in REPOS if getattr(args, name)] or list(REPOS)
     failed = [name for name in chosen if not clone_or_update_repo(name, force=args.force)]
     print(f"\n{len(chosen) - len(failed)} of {len(chosen)} repositories up to date"
           + (f"; failed: {', '.join(failed)}" if failed else ""))
+
+    # LOLBAS / LOLRMM / LOLDrivers: JSON over HTTPS, indexed with the standard library too
+    if not chosen_only:
+        from archer.build import lol
+        lol_status = lol.update(force=args.force)
+        for name, state in lol_status.items():
+            print(f"{'✓' if state == 'ready' else '✗'} {lol.SOURCES[name]['name']}: {state}")
+        lol.build_index()
 
     if not args.no_index:
         try:

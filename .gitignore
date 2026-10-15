@@ -136,6 +136,7 @@ data/cache/osint/*
 !data/cache/osint/.gitkeep
 # Prebuilt technique -> rule index (regenerated via scripts/data/build_osint_index.py)
 data/cache/osint_technique_index.json
+data/cache/lol_index.json
 data/external/repos/*
 !data/external/repos/.gitkeep
 

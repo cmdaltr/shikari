@@ -18,6 +18,7 @@ counts as a match.
 """
 
 import json
+import os
 import re
 import time
 from datetime import datetime
@@ -47,6 +48,25 @@ def _github_url(repo_name: str, repo_path: Path, file_path: Path) -> str:
     return f"{base}/{branch}/{rel}"
 
 
+# Known false positives, the way LoFP (br0k3nlab.com/LoFP) collects them: from each rule's
+# own false_positives (Elastic) or known_false_positives (Splunk). Boilerplate that says
+# nothing ("None identified", "Unknown") is dropped.
+_FP_BOILERPLATE = re.compile(
+    r"^\s*(none|n/?a|unknown|tbd)\b|\bno (known )?false positives?\b|false positives? (are|is|should be) "
+    r"(very |highly |extremely )?(un(known|likely)|not (known|expected|likely))|\bnone (are )?(known|identified|expected)",
+    re.I)
+
+
+def _false_positives(value) -> List[str]:
+    items = value if isinstance(value, list) else [value] if value else []
+    out = []
+    for item in items:
+        text = " ".join(str(item).split())
+        if len(text) >= 25 and not (len(text) < 160 and _FP_BOILERPLATE.search(text)) and text not in out:
+            out.append(text[:600])
+    return out[:4]
+
+
 def _index_elastic(repo_path: Path) -> Dict[str, List[Dict]]:
     index: Dict[str, List[Dict]] = {}
     search_dir = repo_path / REPOS["elastic"]["search_dir"]
@@ -74,6 +94,9 @@ def _index_elastic(repo_path: Path) -> Dict[str, List[Dict]]:
             "source_url": _github_url("elastic", repo_path, file_path),
             "query_snippet": query[:500],
         }
+        fps = _false_positives(rule_section.get("false_positives"))
+        if fps:
+            entry["false_positives"] = fps
         for tid in technique_ids:
             index.setdefault(tid, []).append(entry)
     return index
@@ -107,6 +130,9 @@ def _index_splunk(repo_path: Path) -> Dict[str, List[Dict]]:
             "source_url": _github_url("splunk", repo_path, file_path),
             "query_snippet": search_query[:500],
         }
+        fps = _false_positives(detection_data.get("known_false_positives"))
+        if fps:
+            entry["false_positives"] = fps
         for tid in technique_ids:
             index.setdefault(tid, []).append(entry)
     return index
@@ -281,6 +307,43 @@ def get_index_age_hours() -> Optional[float]:
     except Exception:
         return None
 
+
+def known_false_positives(technique_id: str, limit: int = 8, terms: Optional[List[str]] = None) -> List[Dict]:
+    """Known false positives for a technique (its sub-techniques' too, and the parent's),
+    across the Elastic and Splunk rules that cover it: [{source, rule, url, text}]. Given
+    `terms` (the detection's own binaries and tools), only rules whose name, query or false
+    positives mention one count: a technique's other rules are often about another product
+    entirely (Google Drive downloads under a certutil T1105 detection)."""
+    words = {w for t in terms or [] for w in [os.path.splitext(os.path.basename(str(t).lower()))[0]] if len(w) >= 4}
+    index = load_index()
+    if not index or not technique_id:
+        return []
+    techniques = index.get("techniques", {})
+    family = technique_id.split(".")[0]
+    tids = [t for t in techniques if t == technique_id or t == family or t.startswith(technique_id + ".")]
+    # Exact technique first, then its family; alternate Elastic and Splunk so neither fills the list
+    queues = {"elastic": [], "splunk": []}
+    seen = set()
+    for tid in sorted(tids, key=lambda t: (t != technique_id, t)):
+        for repo, queue in queues.items():
+            entries = [e for e in techniques[tid].get(repo, []) if e.get("false_positives")]
+            if words:
+                entries = [e for e in entries if any(
+                    w in " ".join([e.get("name", ""), e.get("query_snippet", "")] + e["false_positives"]).lower()
+                    for w in words)]
+            for entry in entries:
+                for text in entry["false_positives"]:
+                    key = text.lower()[:120]
+                    if key not in seen:
+                        seen.add(key)
+                        queue.append({"source": {"elastic": "Elastic", "splunk": "Splunk"}[repo],
+                                      "rule": entry.get("name"), "url": entry.get("source_url"), "text": text})
+    out = []
+    while len(out) < limit and any(queues.values()):
+        for queue in queues.values():
+            if queue and len(out) < limit:
+                out.append(queue.pop(0))
+    return out
 
 if __name__ == "__main__":
     build_full_index()

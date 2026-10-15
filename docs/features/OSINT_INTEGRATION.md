@@ -242,7 +242,21 @@ osint_query_snippets:
     url: https://github.com/splunk/security_content/...
 enrichment_notes: |
   Successfully enriched query with 15 OSINT indicators from 3 sources
+
+# Living-off-the-land references and known false positives
+lol_references:
+- source: LOLBAS
+  name: Certutil.exe
+  url: https://lolbas-project.github.io/lolbas/Binaries/Certutil/
+  detail: documented for T1105
+known_false_positives:
+- source: Splunk
+  rule: Windows File Download Via CertUtil
+  url: https://github.com/splunk/security_content/...
+  text: Administrators may use CertUtil to download legitimate files...
 ```
+
+`lol_references` and `known_false_positives` are written whether or not the comparison found rules.
 
 ---
 
@@ -367,6 +381,22 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 - **Extracts:** technique IDs from each rule's `meta:` block, and the rule from `events:` onwards as its snippet
 - **Best For:** SecOps (UDM) detections: AWS, GCP, Okta, Workspace, GitHub, SAP
 
+### Living-off-the-Land Datasets
+
+Three of the [lolol.farm](https://lolol.farm) projects, fetched as JSON over HTTPS at most daily into `data/repos/lol/` and compacted into `data/cache/lol_index.json` (`archer/build/lol.py`). They're used only with **OSINT Enhancement**, and only for a tool the technique's own indicators or procedure already name, and (for LOLBAS) only when the project documents that binary under the same technique family. A group seen using `certutil.exe` for **T1105** gets certutil's T1105 switches; a group never seen using it gets nothing from LOLBAS.
+
+| Dataset | Licence | Added when a procedure or indicator names… | Adds |
+|---|---|---|---|
+| [LOLBAS](https://lolbas-project.github.io) | GPL-3.0 (fetched, never committed) | a Windows binary, script or library | `sw` the binary; `cmd` "binary + switch" for the technique (`Certutil.exe -urlcache`) |
+| [LOLRMM](https://lolrmm.io) | Apache-2.0 | an RMM tool or its process | `sw` process names; `network` domains (no wildcards); `reg` keys that name the tool |
+| [LOLDrivers](https://www.loldrivers.io) | Apache-2.0 | a `.sys` driver | `sw` the driver; its SHA256s go to the reference (there's no hash indicator type) |
+
+Bare names that are ordinary words (`update`, `remote`, `replace`…) are never matched, and a value already in the detection isn't added twice. Each entry used is listed under `lol_references` in the YAML.
+
+### Known False Positives (LoFP)
+
+[LoFP](https://br0k3nlab.com/LoFP) aggregates the false-positive notes from Elastic, Splunk and Sigma rules. Archer does the same from the Elastic (`false_positives`) and Splunk (`known_false_positives`) rules it already indexes, without Sigma. Boilerplate ("None identified", "False positives should be very unlikely") is dropped. With OSINT comparison or enhancement on, a detection gets up to eight `known_false_positives` from the rules covering its technique, its parent and sub-techniques; when it names binaries or tools, only rules that mention one of them count, alternating Elastic and Splunk.
+
 ---
 
 ## Repository Management
@@ -378,8 +408,9 @@ data/repos/
 ├── elastic/         # 106MB, 1,504 rules
 ├── splunk/          # 58MB, 1,800+ detections
 ├── azure_sentinel/  # 256MB, 1,000+ rules
-└── chronicle/       # 2.4MB, YARA-L rules
-Total: ~425MB
+├── chronicle/       # 2.4MB, YARA-L rules
+└── lol/             # ~35MB, LOLBAS / LOLRMM / LOLDrivers JSON (LOLDrivers is 33MB of it)
+Total: ~460MB
 ```
 
 ### Automatic Updates

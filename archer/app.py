@@ -1785,6 +1785,7 @@ async def initialize_osint_repos():
     app.state.osint_status = "Initializing OSINT detection repositories..."
     app.state.osint_repos = {}  # Track status per repo
     app.state.osint_failed_repos = []
+    app.state.lol_status = {}
     app.state.osint_user_accepted_failures = False
 
     async def init_repos():
@@ -1828,6 +1829,17 @@ async def initialize_osint_repos():
                     failed_repos.append(repo_name)
 
             app.state.osint_failed_repos = failed_repos
+
+            # LOLBAS / LOLRMM / LOLDrivers JSON (at most daily), then their index
+            from archer.build import lol
+            for name in lol.SOURCES:
+                app.state.lol_status[name] = "cloning"
+            try:
+                lol_status = await loop.run_in_executor(None, lol.update)
+                await loop.run_in_executor(None, lol.build_index)
+                app.state.lol_status.update(lol_status)
+            except Exception as e:
+                app.state.lol_status.update({n: f"failed: {e}" for n in lol.SOURCES})
 
             if failed_repos:
                 app.state.osint_ready = "partial"
@@ -2252,6 +2264,11 @@ async def get_osint_status():
             except (OSError, subprocess.SubprocessError):
                 pass
         repos[name] = {**state, "updated": updated}
+    from archer.build import lol
+    for name, state in getattr(app.state, "lol_status", {}).items():
+        failed = state.startswith("failed")
+        repos[name] = {"status": "failed" if failed else state, "error": state[8:] if failed else None,
+                       "updated": lol.updated(name)}
     return {
         "ready": getattr(app.state, "osint_ready", False),
         "status": getattr(app.state, "osint_status", "Unknown"),

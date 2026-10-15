@@ -388,6 +388,24 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
             print(f"  [{tid}] {name} — no indicators extracted, no queries to preview")
         return
 
+    # LOLBAS / LOLRMM / LOLDrivers: what they document about the tools this technique's
+    # indicators and procedure already name (lol.py). Part of OSINT Enhancement; may give a
+    # technique with no indicators its first ones, from a tool the group is seen using
+    lol_refs, known_fps = [], []
+    if osint_enhancement:
+        from archer.build import lol
+        lol_added, lol_refs = lol.enrich(identifiers, tid, procedure_text)
+        identifiers = dict(identifiers)  # don't add to the retrieved data's own dict
+        for kind, values in lol_added.items():
+            identifiers.setdefault(kind, [])
+            identifiers[kind] = list(identifiers[kind]) + values
+        if lol_refs:
+            print(f" 🧰 LOL datasets: {', '.join(r['source'] + ' ' + r['name'] for r in lol_refs)}"
+                  f" (+{sum(len(v) for v in lol_added.values())} indicator(s))")
+    if osint_comparison or osint_enhancement:
+        from archer.build.osint_index import known_false_positives
+        known_fps = known_false_positives(tid, terms=list(identifiers.get("sw", [])))
+
     # OSINT comparison data (will be populated if indicators exist or if no indicators)
     osint_enhancement_data = None
     # Why nothing was built, if nothing is (technique_yield.REASONS); returned to the orchestrator
@@ -472,6 +490,13 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                 print(f" ℹ️  OSINT Enhancement DISABLED - OSINT data will be included as reference only (not merged into queries)")
         else:
             print(f" ℹ️  No additional OSINT patterns found")
+
+        if lol_refs or known_fps:
+            osint_enhancement_data = dict(osint_enhancement_data or {})
+            if lol_refs:
+                osint_enhancement_data["lol_references"] = lol_refs
+            if known_fps:
+                osint_enhancement_data["known_false_positives"] = known_fps
 
         compatible_found = False
         yaml_files_created = False
