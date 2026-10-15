@@ -40,9 +40,10 @@ body::before {
 }
 
 /* ========== Global Navigation (templates/partials/nav_controls.html) ========== */
-/* Every page lists every page, in the same order; guests see account-only pages greyed out */
-/* The bar spans the main content exactly (the page's 1500px less its 2em gutters): Home's
-   left edge and Log out's right edge line up with the content, the rest spaced evenly */
+/* Home and three menus on the left; Profile, Help and the tools as icons on the right.
+   Guests see account-only pages greyed out. The bar spans the main content exactly (the
+   page's 1500px less its 2em gutters): Home's left edge and Log out's right edge line up
+   with the content. */
 .global-nav-controls {
     position: fixed;
     top: 0;
@@ -58,7 +59,7 @@ body::before {
     z-index: 10001;
     font-family: 'Inter', sans-serif;
 }
-.nav-tabs, .nav-tools { display: contents; }
+.nav-tabs, .nav-tools { display: flex; align-items: center; gap: 10px; }
 .nav-tab, .nav-icon-btn { flex-shrink: 0; position: relative; }
 
 .nav-tab {
@@ -101,18 +102,59 @@ a.nav-auth:hover { background: var(--accent); }
     box-sizing: border-box;
 }
 .nav-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-icon-btn.is-active { background: rgba(255,255,255,0.12); border-color: var(--accent); color: #fff; }
+.nav-icon-btn.is-disabled { color: rgba(255,255,255,0.32); cursor: not-allowed; }
+.nav-icon-btn.is-disabled:hover { background: transparent; }
+
+/* Menus: open on hover or click; the list hangs under its button */
+.nav-menu { position: relative; }
+.nav-menu-btn { background: transparent; cursor: pointer; font-family: inherit; }
+.nav-menu-btn:hover, .nav-menu.is-open .nav-menu-btn { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-menu-btn.is-active { background: rgba(255,255,255,0.12); border-color: var(--accent); color: #fff; }
+.nav-menu-btn .nav-caret { width: 14px; height: 14px; margin-left: 2px; opacity: .75; transition: transform .15s; }
+.nav-menu.is-open .nav-caret { transform: rotate(180deg); }
+.nav-menu-list {
+    display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 360px;
+    padding: 6px; box-sizing: border-box; border-radius: 10px;
+    background: #fff; border: 1px solid var(--border-color, #e5e7eb);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.22); z-index: 10002;
+}
+/* A bridge over the gap, so moving down from the button keeps a hovered menu open */
+.nav-menu-list::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; height: 8px; }
+.nav-menu.is-open .nav-menu-list { display: block; }
+@media (hover: hover) { .nav-menu:hover .nav-menu-list { display: block; } }
+.nav-menu-item {
+    display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 8px;
+    color: #1f2937; text-decoration: none; border: 1px solid transparent;
+}
+.nav-menu-item svg { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--accent); }
+.nav-menu-item > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nav-menu-item strong { font-size: 15px; font-weight: 600; }
+.nav-menu-item small { font-size: 12.5px; color: #6b7280; font-weight: 400; line-height: 1.35; }
+a.nav-menu-item:hover, a.nav-menu-item:focus-visible { background: rgba(197, 48, 48, 0.07); outline: none; }
+.nav-menu-item.is-active { background: rgba(197, 48, 48, 0.09); border-color: rgba(197, 48, 48, 0.35); }
+.nav-menu-item.is-disabled { opacity: .45; cursor: not-allowed; }
+[data-theme="dark"] .nav-menu-list { background: var(--bg-secondary, #1f2937); border-color: var(--border-color, #374151); box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+[data-theme="dark"] .nav-menu-item { color: var(--text-primary, #f3f4f6); }
+[data-theme="dark"] .nav-menu-item small { color: var(--text-secondary, #9ca3af); }
 .nav-icon-btn svg { width: 24px; height: 24px; }
 
 /* Narrower windows: icons only (the label stays as the tooltip and accessible name) */
-@media (max-width: 1280px) {
-    .nav-tabs .nav-tab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (max-width: 900px) {
+    .nav-tabs > .nav-tab > span, .nav-menu-btn > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     .nav-tabs .nav-tab { padding: 0 10px; }
 }
 /* Phones: the bar scrolls sideways rather than wrapping */
 @media (max-width: 768px) {
-    .global-nav-controls { width: 100vw; padding: 0 12px; gap: 8px; overflow-x: auto; scrollbar-width: none; justify-content: flex-start; }
-    .global-nav-controls::-webkit-scrollbar { display: none; }
+    .global-nav-controls { width: 100vw; padding: 0 10px; gap: 4px; }
+    .nav-tabs, .nav-tools { gap: 4px; }
+    .nav-tab { padding: 0 7px !important; height: 38px; }
+    .nav-icon-btn { width: 36px; height: 38px; padding: 8px; }
+    .nav-menu-btn .nav-caret { display: none; }
     .nav-auth span { display: none; }
+    /* The list spans the bar rather than running off the screen */
+    .nav-menu { position: static; }
+    .nav-menu-list { left: 10px; right: 10px; top: calc(100% - 14px); min-width: 0; }
 }
 
 /* ========== Page Width ========== */
