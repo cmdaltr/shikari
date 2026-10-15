@@ -10201,7 +10201,7 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
         # these routes used "key_name", so no key was ever saved (each save raised and
         # the page still said "saved"). Shodan/SecurityTrails/GitHub had fields but
         # weren't in the list; "local" is the optional key of a local model endpoint.
-        platforms = ("splunk", "mde", "elastic", "shodan", "securitytrails", "github",
+        platforms = ("secops", "splunk", "mde", "elastic", "shodan", "securitytrails", "github",
                      "openai", "anthropic", "google", "deepseek", "qwen", "grok", "local")
         # A cleared field removes its key, but only when the page had loaded the saved
         # keys first: a page that failed to load must not wipe them
