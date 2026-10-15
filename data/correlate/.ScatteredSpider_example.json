@@ -1,0 +1,92 @@
+{
+  "group_name": "Scattered Spider",
+  "vendor_correlations": [
+    {
+      "correlation_id": "CORR-SS-AZURE-001",
+      "name": "Scattered Spider Tor Sign-in and MFA Fatigue",
+      "summary": "Correlates Azure AD sign-ins from Tor exit nodes with MFA fatigue attempts, indicating Scattered Spider's social engineering tactics.",
+      "platform": "azure",
+      "threat_groups": ["Scattered Spider", "UNC3944"],
+      "tactics": ["Initial Access", "Credential Access", "Persistence"],
+      "technique_ids": ["T1078.004", "T1621"],
+      "query_count": 2,
+      "queries_included": [
+        {
+          "technique": "T1078.004",
+          "name": "Azure AD Sign-in from Tor Exit Node",
+          "file": "AzureADTorSignIn_SigninLogs.yaml"
+        },
+        {
+          "technique": "T1621",
+          "name": "MFA Fatigue Attack",
+          "file": "MFAFatigue_SigninLogs.yaml"
+        }
+      ],
+      "combined_query": "// Scattered Spider Identity Attack Correlation (92% semantic overlap)\nlet suspicious_signins = (\n    SigninLogs\n    | where TimeGenerated > ago(24h)\n    | where ResultType == \"0\"\n    | where RiskLevelDuringSignIn in (\"high\", \"medium\")\n    | where IPAddress has_any (\"tor-exit\", \"proxy\")\n    | project TimeGenerated, UserPrincipalName, IPAddress, Location, AppDisplayName\n);\nlet mfa_attempts = (\n    SigninLogs\n    | where TimeGenerated > ago(24h)\n    | where AuthenticationRequirement == \"multiFactorAuthentication\"\n    | where ResultType in (\"50074\", \"50076\")\n    | summarize MFAAttempts = count(), FirstMFA = min(TimeGenerated), LastMFA = max(TimeGenerated) by UserPrincipalName\n    | where MFAAttempts > 5\n);\nsuspicious_signins\n| join kind=inner mfa_attempts on UserPrincipalName\n| extend TimeBetween = datetime_diff('minute', TimeGenerated, FirstMFA)\n| where TimeBetween between (-30 .. 30)\n| project TimeGenerated, UserPrincipalName, IPAddress, Location, MFAAttempts, ThreatIndicator = \"Scattered Spider Pattern\"",
+      "relevance_score": 0.92,
+      "generated_at": "2025-10-05T19:00:00Z"
+    },
+    {
+      "correlation_id": "CORR-SS-AZURE-002",
+      "name": "Scattered Spider Sign-in and Privilege Escalation",
+      "summary": "Correlates suspicious Azure AD sign-ins with rapid privilege escalation via role assignments.",
+      "platform": "azure",
+      "threat_groups": ["Scattered Spider", "UNC3944"],
+      "tactics": ["Initial Access", "Privilege Escalation"],
+      "technique_ids": ["T1078.004", "T1098"],
+      "query_count": 2,
+      "queries_included": [
+        {
+          "technique": "T1078.004",
+          "name": "Azure AD Sign-in from Tor Exit Node",
+          "file": "AzureADTorSignIn_SigninLogs.yaml"
+        },
+        {
+          "technique": "T1098",
+          "name": "Azure AD Role Assignment",
+          "file": "AzureADRoleAssignment_AuditLogs.yaml"
+        }
+      ],
+      "combined_query": "// Scattered Spider Privilege Escalation Correlation (87% semantic overlap)\nlet suspicious_signins = (\n    SigninLogs\n    | where TimeGenerated > ago(24h)\n    | where ResultType == \"0\"\n    | where RiskLevelDuringSignIn in (\"high\", \"medium\")\n    | project TimeGenerated, UserPrincipalName, IPAddress\n);\nlet role_changes = (\n    AuditLogs\n    | where TimeGenerated > ago(24h)\n    | where OperationName == \"Add member to role\"\n    | extend InitiatedBy = tostring(InitiatedBy.user.userPrincipalName)\n    | project TimeGenerated, InitiatedBy, TargetResources\n);\nsuspicious_signins\n| join kind=inner role_changes on $left.UserPrincipalName == $right.InitiatedBy\n| extend TimeBetween = datetime_diff('minute', TimeGenerated, TimeGenerated1)\n| where TimeBetween <= 60\n| project TimeGenerated, UserPrincipalName, IPAddress, TargetResources, ThreatIndicator = \"Privilege Escalation After Suspicious Login\"",
+      "relevance_score": 0.87,
+      "generated_at": "2025-10-05T19:00:00Z"
+    },
+    {
+      "correlation_id": "CORR-SS-AZURE-003",
+      "name": "Scattered Spider Complete Identity Attack Chain",
+      "summary": "Correlates all three stages: suspicious authentication, MFA manipulation, and privilege escalation.",
+      "platform": "azure",
+      "threat_groups": ["Scattered Spider", "UNC3944"],
+      "tactics": ["Initial Access", "Credential Access", "Privilege Escalation", "Persistence"],
+      "technique_ids": ["T1078.004", "T1621", "T1098"],
+      "query_count": 3,
+      "queries_included": [
+        {
+          "technique": "T1078.004",
+          "name": "Azure AD Sign-in from Tor Exit Node",
+          "file": "AzureADTorSignIn_SigninLogs.yaml"
+        },
+        {
+          "technique": "T1621",
+          "name": "MFA Fatigue Attack",
+          "file": "MFAFatigue_SigninLogs.yaml"
+        },
+        {
+          "technique": "T1098",
+          "name": "Azure AD Role Assignment",
+          "file": "AzureADRoleAssignment_AuditLogs.yaml"
+        }
+      ],
+      "combined_query": "// Scattered Spider Full Attack Chain Correlation (90% semantic overlap)\nlet suspicious_signins = (\n    SigninLogs\n    | where TimeGenerated > ago(24h)\n    | where ResultType == \"0\"\n    | where RiskLevelDuringSignIn in (\"high\", \"medium\")\n    | project SignInTime = TimeGenerated, UserPrincipalName, IPAddress\n);\nlet mfa_attempts = (\n    SigninLogs\n    | where TimeGenerated > ago(24h)\n    | where AuthenticationRequirement == \"multiFactorAuthentication\"\n    | where ResultType in (\"50074\", \"50076\")\n    | summarize MFAAttempts = count(), MFATime = min(TimeGenerated) by UserPrincipalName\n    | where MFAAttempts > 5\n);\nlet role_changes = (\n    AuditLogs\n    | where TimeGenerated > ago(24h)\n    | where OperationName == \"Add member to role\"\n    | extend InitiatedBy = tostring(InitiatedBy.user.userPrincipalName)\n    | project RoleTime = TimeGenerated, InitiatedBy, TargetResources\n);\nsuspicious_signins\n| join kind=inner mfa_attempts on UserPrincipalName\n| join kind=inner role_changes on $left.UserPrincipalName == $right.InitiatedBy\n| extend \n    SignInToMFA = datetime_diff('minute', MFATime, SignInTime),\n    MFAToRole = datetime_diff('minute', RoleTime, MFATime)\n| where SignInToMFA <= 30 and MFAToRole <= 60\n| project SignInTime, UserPrincipalName, IPAddress, MFAAttempts, TargetResources, AttackChainDetected = \"Complete Scattered Spider Pattern\"",
+      "relevance_score": 0.90,
+      "generated_at": "2025-10-05T19:00:00Z"
+    }
+  ],
+  "cross_vendor_correlations": [],
+  "metadata": {
+    "total_correlations": 3,
+    "platforms": ["azure"],
+    "techniques_covered": ["T1078.004", "T1621", "T1098"],
+    "generated_at": "2025-10-05T19:00:00Z"
+  }
+}

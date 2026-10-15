@@ -1,0 +1,92 @@
+{
+  "group_name": "APT29",
+  "vendor_correlations": [
+    {
+      "correlation_id": "CORR-APT29-MDE-001",
+      "name": "APT29 PowerShell and Network Reconnaissance",
+      "summary": "Correlates encoded PowerShell execution with suspicious network connections, indicating initial access and C2 communication.",
+      "platform": "mde",
+      "threat_groups": ["APT29", "Cozy Bear"],
+      "tactics": ["Execution", "Defense Evasion", "Command and Control"],
+      "technique_ids": ["T1059.001", "T1071.001"],
+      "query_count": 2,
+      "queries_included": [
+        {
+          "technique": "T1059.001",
+          "name": "PowerShell Encoded Command Execution",
+          "file": "PowerShellEncodedCommand_DeviceProcessEvents.yaml"
+        },
+        {
+          "technique": "T1071.001",
+          "name": "Suspicious Network Connection",
+          "file": "SuspiciousNetwork_DeviceNetworkEvents.yaml"
+        }
+      ],
+      "combined_query": "// APT29 PowerShell + Network Correlation (88% semantic overlap)\nlet powershell_events = (\n    DeviceProcessEvents\n    | where Timestamp > ago(1d)\n    | where FileName =~ \"powershell.exe\"\n    | where ProcessCommandLine has_any (\"-enc\", \"-encodedcommand\")\n    | project Timestamp, DeviceId, DeviceName, AccountName, ProcessId\n);\nlet network_events = (\n    DeviceNetworkEvents\n    | where Timestamp > ago(1d)\n    | where RemoteIPType == \"Public\"\n    | where RemotePort in (443, 8443, 4443)\n    | project Timestamp, DeviceId, DeviceName, RemoteIP, RemotePort\n);\nunion powershell_events, network_events\n| summarize EventCount = count(), FirstSeen = min(Timestamp), LastSeen = max(Timestamp) by DeviceId, DeviceName\n| where EventCount >= 2\n| extend TimeSpan = datetime_diff('minute', LastSeen, FirstSeen)\n| where TimeSpan <= 60",
+      "relevance_score": 0.88,
+      "generated_at": "2025-10-05T19:00:00Z"
+    },
+    {
+      "correlation_id": "CORR-APT29-MDE-002",
+      "name": "APT29 PowerShell and Credential Access",
+      "summary": "Correlates PowerShell execution with credential dumping attempts, indicating post-exploitation credential harvesting.",
+      "platform": "mde",
+      "threat_groups": ["APT29", "Cozy Bear"],
+      "tactics": ["Execution", "Credential Access"],
+      "technique_ids": ["T1059.001", "T1003.001"],
+      "query_count": 2,
+      "queries_included": [
+        {
+          "technique": "T1059.001",
+          "name": "PowerShell Encoded Command Execution",
+          "file": "PowerShellEncodedCommand_DeviceProcessEvents.yaml"
+        },
+        {
+          "technique": "T1003.001",
+          "name": "LSASS Memory Credential Dumping",
+          "file": "CredentialDumping_DeviceProcessEvents.yaml"
+        }
+      ],
+      "combined_query": "// APT29 PowerShell + Credential Access Correlation (82% semantic overlap)\nlet powershell_events = (\n    DeviceProcessEvents\n    | where Timestamp > ago(1d)\n    | where FileName =~ \"powershell.exe\"\n    | where ProcessCommandLine has_any (\"-enc\", \"-encodedcommand\")\n    | project Timestamp, DeviceId, DeviceName, AccountName\n);\nlet cred_events = (\n    DeviceProcessEvents\n    | where Timestamp > ago(1d)\n    | where ProcessCommandLine has_any (\"lsass\", \"mimikatz\", \"procdump\")\n    | project Timestamp, DeviceId, DeviceName, FileName\n);\nunion powershell_events, cred_events\n| summarize EventCount = count(), FirstSeen = min(Timestamp), LastSeen = max(Timestamp) by DeviceId, DeviceName\n| where EventCount >= 2\n| extend TimeSpan = datetime_diff('minute', LastSeen, FirstSeen)\n| where TimeSpan <= 120",
+      "relevance_score": 0.82,
+      "generated_at": "2025-10-05T19:00:00Z"
+    },
+    {
+      "correlation_id": "CORR-APT29-MDE-003",
+      "name": "APT29 Multi-Stage Attack Chain",
+      "summary": "Correlates PowerShell execution, network activity, and credential access indicating a complete APT29 attack chain.",
+      "platform": "mde",
+      "threat_groups": ["APT29", "Cozy Bear"],
+      "tactics": ["Execution", "Defense Evasion", "Credential Access", "Command and Control"],
+      "technique_ids": ["T1059.001", "T1071.001", "T1003.001"],
+      "query_count": 3,
+      "queries_included": [
+        {
+          "technique": "T1059.001",
+          "name": "PowerShell Encoded Command Execution",
+          "file": "PowerShellEncodedCommand_DeviceProcessEvents.yaml"
+        },
+        {
+          "technique": "T1071.001",
+          "name": "Suspicious Network Connection",
+          "file": "SuspiciousNetwork_DeviceNetworkEvents.yaml"
+        },
+        {
+          "technique": "T1003.001",
+          "name": "LSASS Memory Credential Dumping",
+          "file": "CredentialDumping_DeviceProcessEvents.yaml"
+        }
+      ],
+      "combined_query": "// APT29 Complete Attack Chain Correlation (85% semantic overlap)\nlet powershell_events = (\n    DeviceProcessEvents\n    | where Timestamp > ago(1d)\n    | where FileName =~ \"powershell.exe\"\n    | where ProcessCommandLine has_any (\"-enc\", \"-encodedcommand\")\n    | project Timestamp, DeviceId, DeviceName, AccountName, ProcessId\n);\nlet network_events = (\n    DeviceNetworkEvents\n    | where Timestamp > ago(1d)\n    | where RemoteIPType == \"Public\"\n    | where RemotePort in (443, 8443, 4443)\n    | project Timestamp, DeviceId, DeviceName, RemoteIP\n);\nlet cred_events = (\n    DeviceProcessEvents\n    | where Timestamp > ago(1d)\n    | where ProcessCommandLine has_any (\"lsass\", \"mimikatz\", \"procdump\")\n    | project Timestamp, DeviceId, DeviceName, FileName\n);\nunion powershell_events, network_events, cred_events\n| summarize EventCount = count(), EventTypes = make_set(FileName), FirstSeen = min(Timestamp), LastSeen = max(Timestamp) by DeviceId, DeviceName\n| where EventCount >= 3\n| extend TimeSpan = datetime_diff('minute', LastSeen, FirstSeen)\n| where TimeSpan <= 180",
+      "relevance_score": 0.85,
+      "generated_at": "2025-10-05T19:00:00Z"
+    }
+  ],
+  "cross_vendor_correlations": [],
+  "metadata": {
+    "total_correlations": 3,
+    "platforms": ["mde"],
+    "techniques_covered": ["T1059.001", "T1071.001", "T1003.001"],
+    "generated_at": "2025-10-05T19:00:00Z"
+  }
+}
