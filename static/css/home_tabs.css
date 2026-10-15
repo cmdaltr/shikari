@@ -123,15 +123,16 @@
 [data-theme="dark"] .home-tabs .hp-explain-grid p { color: var(--text-secondary); }
 [data-theme="dark"] .home-tabs .hp-explain-grid strong { color: var(--tab-accent); }
 
-/* Upload: a one-row drop zone the height of an input */
+/* Upload: a drop zone tall enough that Additional Options line up with the Hunt tab's */
 .home-tabs .hp-drop {
-  display: flex; align-items: center; gap: 14px; height: 50px; box-sizing: border-box; padding: 0 8px 0 14px;
-  border: 2px dashed #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; text-align: left;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  height: 137px; box-sizing: border-box; padding: 10px 14px;
+  border: 2px dashed #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; text-align: center;
   transition: border-color .2s, background .2s;
 }
 .home-tabs .hp-drop:hover, .home-tabs .hp-drop.dragover { border-color: var(--tab-accent); background: rgba(var(--tab-accent-rgb), 0.05); }
-.home-tabs .hp-drop .upload-icon { width: 24px; height: 24px; margin: 0; color: var(--tab-accent); flex-shrink: 0; }
-.home-tabs .hp-drop .upload-text { flex: 1; min-width: 0; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.home-tabs .hp-drop .upload-icon { width: 28px; height: 28px; margin: 0; color: var(--tab-accent); flex-shrink: 0; }
+.home-tabs .hp-drop .upload-text { flex: 0 0 auto; min-width: 0; margin: 0; display: flex; align-items: baseline; gap: 10px; }
 .home-tabs .hp-drop .upload-text strong { display: inline; font-size: 0.98rem; color: #374151; white-space: nowrap; }
 .home-tabs .hp-drop .upload-text p { margin: 0; font-size: 0.85rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-tabs .hp-drop .btn-secondary { flex: 0 0 auto; width: auto; margin: 0; padding: 0 16px; height: 34px; font-size: 0.92rem; }

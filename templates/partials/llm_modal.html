@@ -1,0 +1,220 @@
+{# Local LLM dialog and the nav's LLM button: every page with the nav includes this #}
+    <div id="llm-modal" role="dialog" aria-modal="true" aria-labelledby="llm-modal-title" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10003; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); max-width: 550px; width: 90%; padding: 0; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white; position: relative;">
+                <button type="button" id="llm-close-btn" aria-label="Close" title="Close (keeps your current setting)"
+                        style="position: absolute; top: 12px; right: 14px; background: none; border: none; color: white; font-size: 1.6em; line-height: 1; cursor: pointer; opacity: .85;">&times;</button>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 2em;">🤖</div>
+                    <h2 id="llm-modal-title" style="margin: 0; font-size: 1.5em; font-weight: 600;">Local LLM Detected</h2>
+                </div>
+            </div>
+
+            <div style="padding: 24px;">
+                <p style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">
+                    Archer detected a local LLM running at:
+                </p>
+                <div id="llm-details" style="background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 6px; padding: 12px; margin-bottom: 20px;">
+                    <strong id="llm-name" style="color: #1f2937;"></strong>
+                    <br>
+                    <span id="llm-url" style="color: #6b7280; font-size: 0.9em; font-family: monospace;"></span>
+                </div>
+
+                <div id="llm-model-selector" style="display: none; margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 0.9em; font-family: 'Inter', sans-serif; letter-spacing: 0.01em;">Select model:</label>
+                    <select id="llm-model-select" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95em; font-family: 'Inter', sans-serif; color: #1f2937; background: white; cursor: pointer; outline: none;">
+                    </select>
+                </div>
+
+                <p style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">
+                    Would you like to use it for AI-powered detection generation?
+                </p>
+
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+                    <p style="margin: 0; font-weight: 600; color: #1e40af; font-size: 0.95em; margin-bottom: 6px;">Benefits:</p>
+                    <ul style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 0.9em; line-height: 1.5;">
+                        <li>Enhanced query quality and accuracy</li>
+                        <li>Better indicator extraction from threat intel</li>
+                        <li>Privacy: all data stays local</li>
+                    </ul>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <button id="llm-yes-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                        Yes, Use Local LLM
+                    </button>
+                    <button id="llm-no-btn" style="flex: 1; background: #6b7280; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                        No, Use Heuristic
+                    </button>
+                </div>
+
+                <label style="display: flex; align-items: center; gap: 8px; color: #666; font-size: 0.9em; cursor: pointer;">
+                    <input type="checkbox" id="llm-dont-ask" style="width: 16px; height: 16px; cursor: pointer;">
+                    Don't ask me again
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Local LLM Detection Script -->
+    <script>
+        // Wire up LLM navbar button to open modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const llmStatusBtn = document.getElementById('llm-status-btn');
+            if (llmStatusBtn) {
+                llmStatusBtn.addEventListener('click', function() {
+                    openLLMModal(true); // force show
+                });
+            }
+        });
+
+        // Global LLM modal state (populated once on page load)
+        let _llmModalData = null;
+        let _llmModalListenersAdded = false;
+        window._llmChoicePending = false;  // true while modal is awaiting user choice
+
+        function openLLMModal(forceShow) {
+            fetch('/api/llm/detect')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.available) return;
+                    _llmModalData = data;
+
+                    const modal = document.getElementById('llm-modal');
+                    const llmName = document.getElementById('llm-name');
+                    const llmUrl = document.getElementById('llm-url');
+                    const yesBtn = document.getElementById('llm-yes-btn');
+                    const noBtn = document.getElementById('llm-no-btn');
+                    const dontAskCheckbox = document.getElementById('llm-dont-ask');
+                    const modelSelector = document.getElementById('llm-model-selector');
+                    const modelSelect = document.getElementById('llm-model-select');
+
+                    llmName.textContent = data.name;
+                    llmUrl.textContent = data.url;
+
+                    // Populate model selector
+                    if (data.models && data.models.length > 0) {
+                        modelSelect.innerHTML = '';
+                        data.models.forEach(function(m) {
+                            const opt = document.createElement('option');
+                            opt.value = m;
+                            opt.textContent = m;
+                            if (m === data.model) opt.selected = true;
+                            modelSelect.appendChild(opt);
+                        });
+                        // Restore previously selected model
+                        const savedModel = localStorage.getItem('llm_model');
+                        if (savedModel && data.models.includes(savedModel)) {
+                            modelSelect.value = savedModel;
+                        }
+                        modelSelector.style.display = 'block';
+                    }
+
+                    window._llmChoicePending = true;
+                    modal.style.display = 'flex';
+
+                    // Add button handlers once
+                    if (!_llmModalListenersAdded) {
+                        _llmModalListenersAdded = true;
+
+                        yesBtn.addEventListener('click', function() {
+                            const selectedModel = modelSelect ? modelSelect.value : null;
+                            saveLLMPreference(true, dontAskCheckbox.checked, selectedModel);
+                            window._llmChoicePending = false;
+                            modal.style.display = 'none';
+                            // Submit any form that was held waiting for this choice
+                            if (window._llmPendingSubmit) {
+                                window._llmPendingSubmit();
+                                window._llmPendingSubmit = null;
+                            }
+                        });
+
+                        noBtn.addEventListener('click', function() {
+                            saveLLMPreference(false, dontAskCheckbox.checked, null);
+                            window._llmChoicePending = false;
+                            modal.style.display = 'none';
+                            if (window._llmPendingSubmit) {
+                                window._llmPendingSubmit();
+                                window._llmPendingSubmit = null;
+                            }
+                        });
+
+                        // Closing keeps the current setting; a form held for the choice goes ahead with it
+                        const dismiss = function() {
+                            if (modal.style.display === 'none') return;
+                            window._llmChoicePending = false;
+                            modal.style.display = 'none';
+                            if (window._llmPendingSubmit) {
+                                window._llmPendingSubmit();
+                                window._llmPendingSubmit = null;
+                            }
+                        };
+                        document.getElementById('llm-close-btn').addEventListener('click', dismiss);
+                        modal.addEventListener('click', function(e) { if (e.target === modal) dismiss(); });
+                        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') dismiss(); });
+
+                        yesBtn.addEventListener('mouseover', () => yesBtn.style.background = '#059669');
+                        yesBtn.addEventListener('mouseout', () => yesBtn.style.background = '#10b981');
+                        noBtn.addEventListener('mouseover', () => noBtn.style.background = '#4b5563');
+                        noBtn.addEventListener('mouseout', () => noBtn.style.background = '#6b7280');
+                    }
+                })
+                .catch(err => console.log('LLM detection check failed:', err));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Always fetch LLM status to show/hide navbar button
+            fetch('/api/llm/detect')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.available) {
+                        // Show the navbar LLM button with green dot
+                        const btn = document.getElementById('llm-status-btn');
+                        const dot = document.getElementById('llm-status-dot');
+                        if (btn) btn.style.display = 'inline-flex';
+                        if (dot) dot.style.display = 'block';
+
+                        // Do NOT auto-show on pages extending base.html (progress/results/library).
+                        // The modal auto-shows only on index.html (standalone).
+                        // The navbar button below still lets users change their preference.
+                    }
+                })
+                .catch(err => console.log('LLM detection check failed:', err));
+        });
+
+        function saveLLMPreference(useLocalLLM, dontAskAgain, selectedModel) {
+            // Save to localStorage
+            if (dontAskAgain) {
+                localStorage.setItem('llm_preference', useLocalLLM ? 'true' : 'false');
+            }
+            if (selectedModel) {
+                localStorage.setItem('llm_model', selectedModel);
+            }
+
+            // Notify server of selected model
+            if (useLocalLLM && selectedModel) {
+                fetch('/api/llm/model', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({model: selectedModel})
+                }).catch(err => console.error('Failed to set LLM model:', err));
+            }
+
+            // Save preference to server
+            const formData = new FormData();
+            formData.append('use_local_llm', useLocalLLM);
+            formData.append('dont_ask_again', dontAskAgain);
+
+            fetch('/api/llm/preference', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log('LLM preference saved:', data);
+            })
+            .catch(err => {
+                console.error('Failed to save LLM preference:', err);
+            });
+        }
+    </script>

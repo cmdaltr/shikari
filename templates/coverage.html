@@ -57,37 +57,26 @@
   color: white;
 }
 
-/* Filter */
-.tactic-filter { display: flex; flex-direction: column; gap: 14px; margin: 0 0 30px; padding: 18px 20px;
-  background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; }
-.tactic-filter-label { font-weight: 600; font-size: 1.32rem; }
-.filter-groups { display: flex; flex-direction: column; gap: 14px; }
-.filter-row { display: flex; gap: 14px 40px; }
-.filter-row > .filter-group { flex: 1 1 0; min-width: 0; }
-/* Query counts and SIEMs: each half of the row, chips sharing it evenly */
-.filter-row:first-child .tactic-filter-chips > .ui-pill { flex: 1 1 0; justify-content: center; white-space: nowrap; }
-/* Filter and Coverage by Tactic: title, then body (collapsible, static/js/card_collapse.js) */
-.card-head { display: flex; align-items: center; gap: 12px; }
-#filter-body { display: flex; flex-direction: column; gap: 14px; }
+/* Filters: the Library's filter card (search, dropdowns, action buttons) */
+.cv-filters { padding: 16px; margin-bottom: 30px; }
+.cv-filters .detection-header { display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid var(--border-color); }
+.cv-filters .detection-header h2 { gap: 12px; }
+.cv-filters .card-icon.filters svg { stroke: #92400e; width: 28px; height: 28px; }
+.cv-filters .expand-btn { color: var(--accent); font-size: 16px; font-weight: 600; cursor: pointer; user-select: none;
+  padding: 6px 12px; border-radius: 4px; transition: background 0.2s; }
+.cv-filters .expand-btn:hover { background: rgba(197, 48, 48, 0.1); }
+.cv-filters-body { padding: 8px 24px 24px; }
+.cv-filters-body[hidden] { display: none; }
+.cv-filters:has(.cv-filters-body[hidden]) .detection-header { margin-bottom: 0; }
+.cv-filters .search-row { display: flex; margin-bottom: 16px; }
+.cv-filters .search-row #search-input { flex: 1; }
+.cv-filters .filters-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.cv-filters .filters-row select { min-width: 170px; }
 .filter-active { color: var(--accent); font-weight: 600; font-size: 1rem; }
 .filter-active[hidden] { display: none; }
-/* Tactics: 7 | 6, centred in the card */
-.tactic-filter-chips.chip-lines { flex-direction: column; }
-.chip-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
-.filter-group { display: flex; flex-direction: column; gap: 8px; }
-.filter-row:last-child .filter-group { flex: 1; }
-.filter-group-label { font-size: 1.02rem; font-weight: 600; color: var(--text-secondary); }
-.filter-foot { display: flex; align-items: center; gap: 12px; }
-.tactic-filter-chips .key-color { width: 17px; height: 17px; }
-.tactic-filter-chips .table-vendor-icon { width: 19px; height: 19px; }
-.tactic-filter-chips { display: flex; flex-wrap: wrap; gap: 9px; }
-.tactic-filter-chips .ui-pill { min-height: 36px; padding: 0 14px !important; gap: 6px; font-size: .984rem !important; }
-.tactic-filter-chips .ui-pill.is-excluded { border-style: dashed !important; color: var(--text-secondary) !important; text-decoration: line-through; }
-.tactic-filter-chips .ui-pill .chip-mark { font-weight: 700; }
-.tactic-filter .btn-ghost.tactic-filter-clear { padding: 5px 14px; min-height: 0; font-size: .984rem; }
-.tactic-filter .tactic-filter-clear[hidden] { display: none !important; }
-.tactic-filter-hint { margin-left: auto; color: var(--text-secondary); font-size: .984rem; }
-.nav-tech[hidden], .nav-cell.is-out, .technique-card.is-out, #technique-tbody tr.is-out { display: none !important; }
+.cv-shown { margin-left: auto; color: #6b7280; font-weight: 600; white-space: nowrap; }
+.nav-tech[hidden], .nav-cell.is-out, .technique-card.is-out, .coverage-table tr.is-out { display: none !important; }
 /* Filtered: hidden tactics leave gaps, so drop the 4 | 5 | 4 placement */
 .tactic-cards.is-filtered > .tactic-card { grid-column: span 4 !important; }
 .tactic-cards > .tactic-card[hidden] { display: none; }
@@ -195,6 +184,8 @@
   padding: 20px;
   margin-bottom: 30px;
 }
+.table-section .section-title select { margin-left: 4px; min-width: 160px; font-size: 1rem; }
+.coverage-table[hidden] { display: none; }
 
 .coverage-table {
   width: 100%;
@@ -206,14 +197,13 @@
 
 .coverage-table th,
 .coverage-table td {
-  padding: 16px 20px;
+  padding: 10px 16px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
 }
-/* Twice the old text size: the rows were mostly empty space */
-.coverage-table td { font-size: 2rem; }
+.coverage-table td { font-size: 1rem; }
 .coverage-table td code { font-size: inherit; }
-.coverage-table th { font-size: 1.5rem; }
+.coverage-table th { font-size: 1rem; }
 
 .coverage-table th {
   background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
@@ -235,8 +225,8 @@
 }
 
 .table-vendor-icon {
-  width: 40px;
-  height: 40px;
+  width: 22px;
+  height: 22px;
 }
 
 .platform-list {
@@ -251,7 +241,7 @@
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  font-size: 1.5rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
@@ -438,17 +428,39 @@
       </div>
     </div>
 
-    <!-- Tactic filter: each chip cycles include → exclude → off -->
-    <div class="tactic-filter" role="group" aria-label="Filter">
-      <div class="card-head">
-        <span class="tactic-filter-label">Filter</span>
-        <span class="filter-active" id="filter-active" hidden></span>
+    <!-- Filters: the Library's filter card. Tactics pick tactic cards and matrix columns;
+         the rest pick techniques (technique cards, matrix cells, table rows). -->
+    <div class="ui-card cv-filters">
+      <div class="detection-header">
+        <h2>
+          <div class="card-icon filters">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </div>
+          Filters
+          <span class="filter-active" id="filter-active" hidden></span>
+        </h2>
+        <span id="cv-filters-toggle" class="expand-btn" role="button" tabindex="0">Collapse</span>
       </div>
-      <div class="card-body" id="filter-body">
-        <div class="filter-groups" id="coverage-filter"></div>
-        <div class="filter-foot">
-          <button type="button" class="btn-ghost tactic-filter-clear" id="tactic-filter-clear" hidden>Clear</button>
-          <span class="tactic-filter-hint">Click to include, again to exclude, again to clear</span>
+      <div class="cv-filters-body">
+        <div class="search-row">
+          <input type="text" id="search-input" placeholder="Search techniques by ID or name..." autocomplete="off">
+        </div>
+        <div class="filters-row">
+          <select id="filter-count" class="dropdown-styled" aria-label="No. of queries">
+            <option value="">No. of queries</option>
+            <option value="0">0 queries</option><option value="1">1 query</option>
+            <option value="2">2 queries</option><option value="3">3+ queries</option>
+          </select>
+          <select id="filter-siem" class="dropdown-styled" aria-label="Vendors"><option value="">Vendors</option></select>
+          <select id="filter-tactic" class="dropdown-styled" aria-label="Tactics"><option value="">Tactics</option></select>
+          <select id="filter-platform" class="dropdown-styled" aria-label="Platforms"><option value="">Platforms</option></select>
+          <button type="button" id="clear-filters-btn" title="Clear Filters">
+            <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </button>
+          <button type="button" id="export-btn" class="action-btn" title="Export the filtered table (CSV)">
+            <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <span class="cv-shown" id="cv-shown"></span>
         </div>
       </div>
     </div>
@@ -503,7 +515,7 @@
       </div>
     </div>
 
-    <!-- Coverage by Technique Table -->
+    <!-- Coverage by Technique or Platform: one table at a time -->
     <div class="table-section">
       <h2 class="section-title">
         <div class="icon">
@@ -511,7 +523,11 @@
             <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
           </svg>
         </div>
-        Coverage by Technique
+        Coverage by
+        <select id="table-view" class="dropdown-styled" aria-label="Coverage by">
+          <option value="technique">Technique</option>
+          <option value="platform">Platform</option>
+        </select>
       </h2>
       <table class="coverage-table" id="technique-table">
         <thead>
@@ -524,21 +540,7 @@
         <tbody id="technique-tbody">
         </tbody>
       </table>
-    </div>
-
-    <!-- Coverage by Platform Table -->
-    <div class="table-section">
-      <h2 class="section-title platform">
-        <div class="icon">
-          <svg viewBox="0 0 24 24" stroke-width="2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-            <line x1="12" y1="22.08" x2="12" y2="12"/>
-          </svg>
-        </div>
-        Coverage by Platform
-      </h2>
-      <table class="coverage-table" id="platform-table">
+      <table class="coverage-table" id="platform-table" hidden>
         <thead>
           <tr>
             <th>Platform / Data Source</th>
@@ -589,6 +591,8 @@ function getVendorIcons(vendors, forTable = false) {
 }
 
 let activeTactic = null;
+// JSON for a single-quoted data attribute
+const attr = v => JSON.stringify(v).replace(/&/g, '&amp;').replace(/'/g, '&#39;');
 
 function switchTactic(tactic) {
   // Update cards
@@ -611,83 +615,102 @@ function switchTactic(tactic) {
 // mapping in force, so a technique moved to another tactic by hand shows there).
 const navState = { matrix: [], byTech: {}, layer: 'reference', det: null, legacy: {} };
 
-// Filter: query counts, SIEMs and tactics. Each chip cycles include → exclude → off.
-// With any included, only those pass; excluded ones never do. Tactics pick the tactic
-// cards and matrix columns; counts and SIEMs pick techniques (cards, cells, table rows).
-const FILTER_GROUPS = [
-  { key: 'count', row: 0, label: 'No. of queries', options: () => [['0', '0 queries', 'grey'], ['1', '1 query', 'red'],
-                                                   ['2', '2 queries', 'yellow'], ['3', '3+ queries', 'green']] },
-  { key: 'siem', row: 0, label: 'SIEM Vendor', options: () => Object.keys(VENDOR_LOGOS).map(v => [v, v]) },
-  { key: 'tactic', row: 1, label: 'Tactics', options: () => navState.matrix.map(c => [c.tactic, c.tactic]) },
-];
-const filters = Object.fromEntries(FILTER_GROUPS.map(g => [g.key, { include: new Set(), exclude: new Set() }]));
-const filterActive = key => filters[key].include.size || filters[key].exclude.size;
-const passes = (key, v) => !filters[key].exclude.has(v) && (!filters[key].include.size || filters[key].include.has(v));
-const tacticShown = t => passes('tactic', t);
+// Filters: one value each (the Library's dropdowns) plus a search. Tactics pick the tactic
+// cards and matrix columns; the rest pick techniques (cards, matrix cells, table rows).
+const filters = { count: '', siem: '', tactic: '', platform: '', q: '' };
+const FILTER_IDS = { count: 'filter-count', siem: 'filter-siem', tactic: 'filter-tactic', platform: 'filter-platform' };
+const tacticShown = t => !filters.tactic || filters.tactic === t;
 const countLevel = n => String(Math.min(n || 0, 3));
-function techShown(st) {
-  const vendors = st.vendors || [], f = filters.siem;
-  if (vendors.some(v => f.exclude.has(v))) return false;
-  if (f.include.size && !vendors.some(v => f.include.has(v))) return false;
-  return passes('count', countLevel(st.count));
+// The platforms reference queries cover for these technique IDs
+const platformsOf = ids => [...new Set(ids.flatMap(id => (navState.byTech[id] || {}).platforms || []))];
+// st: {count, vendors}; ids: the technique IDs it stands for; text: what the search matches
+function techShown(st, ids = [], text = '') {
+  const vendors = st.vendors || [];
+  if (filters.siem && !vendors.includes(filters.siem)) return false;
+  if (filters.count && countLevel(st.count) !== filters.count) return false;
+  if (filters.platform && !platformsOf(ids).includes(filters.platform)) return false;
+  if (filters.q && !text.toLowerCase().includes(filters.q)) return false;
+  return true;
 }
 
-function renderFilter() {
-  const box = document.getElementById('coverage-filter');
-  box.innerHTML = '';
-  const rows = [];
-  for (const g of FILTER_GROUPS) {
-    if (!rows[g.row]) {
-      rows[g.row] = document.createElement('div');
-      rows[g.row].className = 'filter-row';
-      box.appendChild(rows[g.row]);
-    }
-    const row = document.createElement('div');
-    row.className = 'filter-group';
-    row.innerHTML = `<span class="filter-group-label">${g.label}</span><div class="tactic-filter-chips"></div>`;
-    const chips = row.lastChild;
-    for (const [value, label, swatch] of g.options()) {
-      const f = filters[g.key], inc = f.include.has(value), exc = f.exclude.has(value);
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'ui-pill' + (inc ? ' is-active' : '') + (exc ? ' is-excluded' : '');
-      chip.setAttribute('aria-label', `${g.label} ${label}: ${inc ? 'included' : exc ? 'excluded' : 'not filtered'}`);
-      const icon = g.key === 'count' ? `<span class="key-color ${swatch}"></span>`
-        : g.key === 'siem' ? vendorLogo(VENDOR_LOGOS[value], 'table-vendor-icon', value) : '';
-      chip.innerHTML = (inc ? '<span class="chip-mark">+</span>' : exc ? '<span class="chip-mark">−</span>' : '') + icon + label;
-      chip.onclick = () => {
-        if (inc) { f.include.delete(value); f.exclude.add(value); }
-        else if (exc) f.exclude.delete(value);
-        else f.include.add(value);
-        applyFilters();
-      };
-      chips.appendChild(chip);
-    }
-    if (g.key === 'tactic') {
-      const all = [...chips.children];
-      chips.classList.add('chip-lines');
-      const half = Math.ceil(all.length / 2);
-      for (const part of [all.slice(0, half), all.slice(half)]) {
-        const line = document.createElement('div');
-        line.className = 'chip-line';
-        line.append(...part);
-        chips.appendChild(line);
-      }
-    }
-    rows[g.row].appendChild(row);
+function fillFilterOptions(data) {
+  const add = (id, values, label = v => v) => {
+    const sel = document.getElementById(id);
+    sel.length = 1;
+    values.forEach(v => sel.add(new Option(label(v), v)));
+  };
+  add('filter-siem', Object.keys(VENDOR_LOGOS));
+  add('filter-tactic', navState.matrix.map(c => c.tactic));
+  add('filter-platform', Object.keys(data.by_platform || {}).sort((a, b) => a.localeCompare(b)));
+}
+
+function wireFilters() {
+  for (const [key, id] of Object.entries(FILTER_IDS)) {
+    document.getElementById(id).addEventListener('change', e => { filters[key] = e.target.value; applyFilters(); });
   }
-  const active = FILTER_GROUPS.reduce((n, g) => n + filters[g.key].include.size + filters[g.key].exclude.size, 0);
-  document.getElementById('tactic-filter-clear').hidden = !active;
-  // A collapsed Filter still applies, so say so
-  const summary = document.getElementById('filter-active');
-  summary.hidden = !active;
-  summary.textContent = `${active} active`;
+  let timer;
+  document.getElementById('search-input').addEventListener('input', e => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { filters.q = e.target.value.trim().toLowerCase(); applyFilters(); }, 150);
+  });
+  document.getElementById('clear-filters-btn').addEventListener('click', () => {
+    Object.keys(filters).forEach(k => { filters[k] = ''; });
+    Object.values(FILTER_IDS).forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('search-input').value = '';
+    applyFilters();
+  });
+  document.getElementById('export-btn').addEventListener('click', exportTable);
+  const toggle = document.getElementById('cv-filters-toggle');
+  toggle.addEventListener('click', () => setFiltersCollapsed(!document.querySelector('.cv-filters-body').hidden));
+  let collapsed = false;
+  try { collapsed = localStorage.getItem('coverageFiltersCollapsed') === '1'; } catch (e) {}
+  setFiltersCollapsed(collapsed);
+  document.getElementById('table-view').addEventListener('change', e => showTable(e.target.value));
+}
+
+// The title and the Collapse/Expand link both work it (static/js/card_collapse.js defers to the link)
+function setFiltersCollapsed(on) {
+  document.querySelector('.cv-filters-body').hidden = on;
+  document.getElementById('cv-filters-toggle').textContent = on ? 'Expand' : 'Collapse';
+  try { on ? localStorage.setItem('coverageFiltersCollapsed', '1') : localStorage.removeItem('coverageFiltersCollapsed'); } catch (e) {}
+}
+
+function showTable(view) {
+  document.getElementById('technique-table').hidden = view !== 'technique';
+  document.getElementById('platform-table').hidden = view !== 'platform';
+  document.getElementById('table-view').value = view;
+  updateShown();
+}
+
+const visibleRows = table => [...table.querySelectorAll('tbody tr[data-row]')].filter(r => !r.classList.contains('is-out'));
+function updateShown() {
+  const table = document.querySelector('.coverage-table:not([hidden])');
+  const rows = table ? table.querySelectorAll('tbody tr[data-row]').length : 0;
+  const shown = table ? visibleRows(table).length : 0;
+  document.getElementById('cv-shown').textContent = shown === rows ? `${rows} rows` : `${shown} of ${rows} rows`;
+}
+
+// The table on show, as filtered, as CSV
+function exportTable() {
+  const table = document.querySelector('.coverage-table:not([hidden])');
+  const cell = v => /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  const head = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+  const lines = [head, ...visibleRows(table).map(r => JSON.parse(r.dataset.row))].map(r => r.map(v => cell(String(v))).join(','));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }));
+  a.download = `coverage-by-${document.getElementById('table-view').value}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 function applyFilters() {
-  renderFilter();
+  const active = Object.values(filters).filter(Boolean).length;
+  // A collapsed Filters card still applies, so say so
+  const summary = document.getElementById('filter-active');
+  summary.hidden = !active;
+  summary.textContent = `${active} active`;
   const cards = document.getElementById('tactic-tabs');
-  cards.classList.toggle('is-filtered', !!filterActive('tactic'));
+  cards.classList.toggle('is-filtered', !!filters.tactic);
   cards.querySelectorAll('.tactic-card').forEach(c => { c.hidden = !tacticShown(c.dataset.tactic); });
   if (activeTactic && !tacticShown(activeTactic)) {
     const next = [...cards.querySelectorAll('.tactic-card')].find(c => !c.hidden);
@@ -696,10 +719,21 @@ function applyFilters() {
   } else if (activeTactic) {
     switchTactic(activeTactic);
   }
-  // Technique cards and table rows carry their count and SIEMs
+  // Technique cards and technique rows carry their count, SIEMs and ID
   document.querySelectorAll('.technique-grid .technique-card[data-count], #technique-tbody tr[data-count]').forEach(el => {
-    el.classList.toggle('is-out', !techShown({ count: +el.dataset.count, vendors: JSON.parse(el.dataset.vendors || '[]') }));
+    const id = el.dataset.id;
+    el.classList.toggle('is-out', !techShown({ count: +el.dataset.count, vendors: JSON.parse(el.dataset.vendors || '[]') },
+                                             [id], `${id} ${(navState.byTech[id] || {}).name || ''}`));
   });
+  // Platform rows: the SIEM, the platform and the search (platform or a technique ID)
+  document.querySelectorAll('#platform-tbody tr[data-platform]').forEach(el => {
+    const vendors = JSON.parse(el.dataset.vendors || '[]'), techs = JSON.parse(el.dataset.techniques || '[]');
+    const out = (filters.siem && !vendors.includes(filters.siem)) ||
+                (filters.platform && el.dataset.platform !== filters.platform) ||
+                (filters.q && !`${el.dataset.platform} ${techs.join(' ')}`.toLowerCase().includes(filters.q));
+    el.classList.toggle('is-out', !!out);
+  });
+  updateShown();
   renderMatrix();
 }
 const NAV_HINTS = {
@@ -739,17 +773,18 @@ function renderMatrix() {
                      vendors: [...new Set(parts.flatMap(p => p.vendors))], changed: parts.some(p => p.changed) };
       // Shown when it or one of its sub-techniques passes the count/SIEM filter
       const subStats = subs.map(s => stat(col.tactic, s.id));
-      const shown = techShown(roll) || subStats.some(techShown);
+      const shown = techShown(roll, ids, [t.id, t.name, ...subs.flatMap(x => [x.id, x.name])].join(' ')) ||
+                    subs.some((x, i) => techShown(subStats[i], [x.id], `${x.id} ${x.name}`));
       // Covered when a part that passes the filter has queries
-      if (shown && parts.some(p => p.count && techShown(p))) hits++;
+      if (shown && parts.some((p, i) => p.count && techShown(p, [ids[i]], `${ids[i]} ${names[ids[i]] || ''}`))) hits++;
       const toggle = subs.length ? `<button type="button" class="nav-toggle" aria-expanded="false" title="Sub-techniques">▸ ${subs.length}</button>` : '';
-      const subRows = subs.map((s, i) => cell(s.id, s.name, subStats[i], ' is-sub' + (techShown(subStats[i]) ? '' : ' is-out')) + '</div>').join('');
+      const subRows = subs.map((s, i) => cell(s.id, s.name, subStats[i], ' is-sub' + (techShown(subStats[i], [s.id], `${s.id} ${s.name}`) ? '' : ' is-out')) + '</div>').join('');
       return `<div class="nav-tech"${shown ? '' : ' hidden'}>${cell(t.id, t.name, roll)}${toggle}</div>` +
              (subs.length ? `<div class="nav-subs" hidden>${subRows}</div>` : '') + '</div>';
     }).join('');
     // Detections a mapping change put under a tactic ATT&CK doesn't file them under
     const extra = layer === 'detections'
-      ? Object.keys((det || {})[col.tactic] || {}).filter(id => !seen.has(id) && techShown(stat(col.tactic, id))).sort() : [];
+      ? Object.keys((det || {})[col.tactic] || {}).filter(id => !seen.has(id) && techShown(stat(col.tactic, id), [id], `${id} ${names[id] || (legacy[id] || {}).name || ''}`)).sort() : [];
     // Moved by a mapping change, revoked/deprecated by ATT&CK since, or tactics that disagree with ATT&CK
     const label = id => legacy[id]
       ? `${id} ${legacy[id].name} (${legacy[id].status}${legacy[id].by ? ', now ' + legacy[id].by : ''})`
@@ -905,6 +940,7 @@ async function loadCoverage() {
         const cell = document.createElement('div');
         cell.className = `technique-card ${getColorLevel(tech.count)}`;
         cell.dataset.count = tech.count || 0;
+        cell.dataset.id = id;
         cell.dataset.vendors = JSON.stringify(tech.vendors || []);
         cell.innerHTML = `
           <div class="technique-id">${id}</div>
@@ -919,14 +955,8 @@ async function loadCoverage() {
     // Activate the first tactic with coverage
     switchTactic(firstTactic || (matrix[0] && matrix[0].tactic));
     navState.matrix = matrix;
-    renderFilter();
-    document.getElementById('tactic-filter-clear').onclick = () => {
-      Object.values(filters).forEach(f => { f.include.clear(); f.exclude.clear(); });
-      applyFilters();
-    };
-
-    navState.matrix = matrix;
     navState.byTech = byTech;
+    fillFilterOptions(data);
     if (location.hash === '#my-detections') setLayer('detections'); else renderMatrix();
 
     // Populate technique table
@@ -946,7 +976,8 @@ async function loadCoverage() {
         ).join('');
 
         techTbody.innerHTML += `
-          <tr data-count="${info.count || 0}" data-vendors='${JSON.stringify(info.vendors || []).replace(/'/g, "&#39;")}'>
+          <tr data-id="${techId}" data-count="${info.count || 0}" data-vendors='${attr(info.vendors || [])}'
+              data-row='${attr([techId, (info.vendors || []).join('; '), (info.platforms || []).join('; ')])}'>
             <td><code>${techId}</code></td>
             <td><div class="vendor-icons">${vendorIcons}</div></td>
             <td><div class="platform-list">${platforms}</div></td>
@@ -974,7 +1005,8 @@ async function loadCoverage() {
           `<span class="platform-tag">+${info.techniques.length - 5} more</span>` : '';
 
         platTbody.innerHTML += `
-          <tr>
+          <tr data-platform="${platform}" data-vendors='${attr(info.vendors || [])}' data-techniques='${attr(info.techniques || [])}'
+              data-row='${attr([platform, (info.vendors || []).join('; '), (info.techniques || []).join('; ')])}'>
             <td>${platform}</td>
             <td><div class="vendor-icons">${vendorIcons}</div></td>
             <td><div class="platform-list">${techList}${more}</div></td>
@@ -982,6 +1014,8 @@ async function loadCoverage() {
         `;
       }
     }
+
+    applyFilters();
 
     // Show gaps if any
     const splunkGaps = data.gaps?.techniques_without_splunk || [];
@@ -1011,7 +1045,7 @@ async function loadCoverage() {
 }
 
 // Load on page ready
-document.addEventListener('DOMContentLoaded', loadCoverage);
+document.addEventListener('DOMContentLoaded', () => { wireFilters(); loadCoverage(); });
 </script>
 {{ am.dialog() }}
 <script src="{{ url_for('static', path='js/attack_mapping.js') }}?v={{ request.app.state.asset_version }}"></script>

@@ -143,9 +143,10 @@
 }
 
 #selected-count-wrapper {
-  flex: 1;
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
   text-align: right;
-  padding: 12px 0;
   color: #6b7280;
   font-weight: 600;
 }
