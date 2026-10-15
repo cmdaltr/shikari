@@ -9,8 +9,12 @@
 .ms-osint-repo.is-ready { border-left-color: #16a34a; }
 .ms-osint-repo.is-failed, .ms-osint-repo.is-missing { border-left-color: #dc2626; }
 .ms-osint-repo.is-cloning { border-left-color: #ca8a04; }
+/* Living-off-the-land datasets: teal rather than green, so they read apart from the rule repos */
+.ms-osint-repo.is-lol.is-ready { border-left-color: #0d9488; }
+.ms-osint-repo.is-lol.is-ready .ms-osint-state { color: #0d9488; }
 .ms-osint-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.ms-osint-head strong { color: var(--text-primary); }
+.ms-osint-head strong { color: var(--text-primary); display: inline-flex; align-items: center; gap: 8px; }
+.ms-osint-head .siem-logo { width: 20px; height: 20px; }
 .ms-osint-state { font-size: .8em; font-weight: 600; color: var(--text-secondary); }
 .ms-osint-repo.is-ready .ms-osint-state { color: #16a34a; }
 .ms-osint-repo.is-failed .ms-osint-state, .ms-osint-repo.is-missing .ms-osint-state { color: #dc2626; }

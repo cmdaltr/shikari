@@ -451,3 +451,6 @@ body > footer:last-of-type {
 .text-right {
     text-align: right;
 }
+
+/* SIEM vendor logos (static/images/siem): Splunk's is a square tile, so soften its corners */
+img.siem-logo, img.af-logo, img.vendor-icon, img.table-vendor-icon { object-fit: contain; border-radius: 4px; }

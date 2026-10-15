@@ -1,34 +1,6 @@
 {# Kill-chain attack flow. Context: attack_flow (archer.visualization.flow_view.build_flow_view) #}
 {% set vendor_names = {'googlesecops': 'Google SecOps', 'mde': 'MDE', 'splunk': 'Splunk', 'elastic': 'Elastic'} %}
 
-{# Logo sprite: gradients defined once, every badge is a <use> #}
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <defs>
-    <linearGradient id="af-g-gblue" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4285F4"/><stop offset="100%" stop-color="#1967D2"/></linearGradient>
-    <linearGradient id="af-g-gred" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#EA4335"/><stop offset="100%" stop-color="#C5221F"/></linearGradient>
-    <linearGradient id="af-g-gyellow" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FBBC04"/><stop offset="100%" stop-color="#F29900"/></linearGradient>
-    <linearGradient id="af-g-ggreen" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34A853"/><stop offset="100%" stop-color="#1E8E3E"/></linearGradient>
-    <linearGradient id="af-g-mde" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5AC4F0"/><stop offset="50%" stop-color="#0078D4"/><stop offset="100%" stop-color="#004E8C"/></linearGradient>
-    <radialGradient id="af-g-splunk" cx="30%" cy="30%"><stop offset="0%" stop-color="#FF6B9D"/><stop offset="50%" stop-color="#E91E8C"/><stop offset="100%" stop-color="#C4166C"/></radialGradient>
-    <linearGradient id="af-g-eyellow"><stop offset="0%" stop-color="#FED10A"/><stop offset="100%" stop-color="#FDB42F"/></linearGradient>
-    <linearGradient id="af-g-eteal"><stop offset="0%" stop-color="#00BFB3"/><stop offset="100%" stop-color="#00A9A5"/></linearGradient>
-    <linearGradient id="af-g-eblue"><stop offset="0%" stop-color="#24BBB1"/><stop offset="100%" stop-color="#0077CC"/></linearGradient>
-  </defs>
-  <symbol id="af-logo-googlesecops" viewBox="0 0 100 100">
-    <circle cx="30" cy="48" r="16" fill="url(#af-g-gblue)"/><circle cx="50" cy="38" r="20" fill="url(#af-g-gred)"/>
-    <circle cx="70" cy="48" r="16" fill="url(#af-g-gyellow)"/><rect x="22" y="52" width="56" height="20" rx="8" fill="url(#af-g-ggreen)"/>
-  </symbol>
-  <symbol id="af-logo-mde" viewBox="0 0 100 100">
-    <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#af-g-mde)"/>
-  </symbol>
-  <symbol id="af-logo-splunk" viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="48" fill="url(#af-g-splunk)"/><path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  </symbol>
-  <symbol id="af-logo-elastic" viewBox="0 0 100 100">
-    <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#af-g-eyellow)"/><rect x="15" y="44" width="70" height="12" rx="6" fill="url(#af-g-eteal)"/><rect x="20" y="68" width="70" height="12" rx="6" fill="url(#af-g-eblue)"/>
-  </symbol>
-</svg>
-
 <div id="attack-flow" class="detection-section af-section">
   <div class="detection-header">
     <h2>
@@ -44,7 +16,7 @@
       {% for v in attack_flow.vendors %}
       <button type="button" class="af-vendor-toggle is-on" data-vendor="{{ v.key }}" aria-pressed="true"
               title="{{ v.name }}: show its coverage and correlations" aria-label="{{ v.name }}">
-        <svg class="af-logo" aria-hidden="true"><use href="#af-logo-{{ v.key }}"/></svg>
+        <img class="af-logo" src="/static/images/siem/{{ {'googlesecops': 'secops'}.get(v.key, v.key) }}.png" alt="">
       </button>
       {% endfor %}
       <span class="af-toolbar-sep" aria-hidden="true"></span>
@@ -106,7 +78,7 @@
             <span class="af-node-name">{{ n.name }}</span>
             <span class="af-node-cov">
               {% for v in ['googlesecops', 'mde', 'splunk', 'elastic'] if v in n.vendors %}
-              <svg class="af-logo" data-vendor="{{ v }}" aria-hidden="true"><title>{{ vendor_names[v] }}: {{ n.vendors[v] }} detection{{ 's' if n.vendors[v] != 1 }}</title><use href="#af-logo-{{ v }}"/></svg>
+              <img class="af-logo" data-vendor="{{ v }}" src="/static/images/siem/{{ {'googlesecops': 'secops'}.get(v, v) }}.png" alt="{{ vendor_names[v] }}" title="{{ vendor_names[v] }}: {{ n.vendors[v] }} detection{{ 's' if n.vendors[v] != 1 }}">
               {% endfor %}
               {% if not n.detected %}<span class="af-gap-mark" title="No detection">No detection</span>{% endif %}
             </span>
@@ -124,7 +96,7 @@
   </div>
 
   <div class="af-legend">
-    <span><svg class="af-logo" aria-hidden="true"><use href="#af-logo-googlesecops"/></svg><svg class="af-logo" aria-hidden="true"><use href="#af-logo-mde"/></svg> detection on that SIEM</span>
+    <span><img class="af-logo" src="/static/images/siem/secops.png" alt=""><img class="af-logo" src="/static/images/siem/mde.png" alt=""> detection on that SIEM</span>
     <span><span class="af-legend-gap"></span> attributed to the group, no detection</span>
     {% if attack_flow.stats.intel_only %}<span><span class="af-legend-intel"></span> intel only: Reconnaissance or Resource Development no log source sees</span>{% endif %}
     <span><span class="af-legend-edge"></span> correlation: first technique seen before the second on the same host</span>

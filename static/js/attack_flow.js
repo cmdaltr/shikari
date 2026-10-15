@@ -124,7 +124,7 @@
   });
 
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const logo = v => `<svg class="af-logo" aria-hidden="true"><use href="#af-logo-${v}"/></svg>`;
+  const logo = v => `<img class="af-logo" src="/static/images/siem/${v === 'googlesecops' ? 'secops' : v}.png" alt="">`;
 
   // An edge is shown when one of its correlation vendors is selected
   const edgeVendors = e => e.vendors.filter(v => state.vendors.has(v));

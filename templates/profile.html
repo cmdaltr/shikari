@@ -572,17 +572,7 @@
 
                 <div class="apikey-item">
                   <label class="apikey-label">
-                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
-                      <defs>
-                        <radialGradient id="splunkGradient" cx="30%" cy="30%">
-                          <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
-                          <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
-                        </radialGradient>
-                      </defs>
-                      <circle cx="50" cy="50" r="48" fill="url(#splunkGradient)"/>
-                      <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                    </svg>
+                    <img class="siem-logo" src="/static/images/siem/splunk.png" alt="Splunk" width="28" height="28" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                     Splunk API Key
                   </label>
                   <div class="apikey-input-group">
@@ -595,16 +585,7 @@
 
                 <div class="apikey-item">
                   <label class="apikey-label">
-                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
-                      <defs>
-                        <linearGradient id="defenderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
-                          <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient)"/>
-                    </svg>
+                    <img class="siem-logo" src="/static/images/siem/mde.png" alt="Microsoft Defender" width="28" height="28" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                     Microsoft Defender API Key
                   </label>
                   <div class="apikey-input-group">
@@ -617,25 +598,7 @@
 
                 <div class="apikey-item">
                   <label class="apikey-label">
-                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
-                      <defs>
-                        <linearGradient id="elasticYellow" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" style="stop-color:#FED10A;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#FDB42F;stop-opacity:1" />
-                        </linearGradient>
-                        <linearGradient id="elasticTeal" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" style="stop-color:#00BFB3;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#00A9A5;stop-opacity:1" />
-                        </linearGradient>
-                        <linearGradient id="elasticBlue" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" style="stop-color:#24BBB1;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#0077CC;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#elasticYellow)"/>
-                      <rect x="15" y="44" width="70" height="12" rx="6" fill="url(#elasticTeal)"/>
-                      <rect x="20" y="68" width="70" height="12" rx="6" fill="url(#elasticBlue)"/>
-                    </svg>
+                    <img class="siem-logo" src="/static/images/siem/elastic.png" alt="Elastic" width="28" height="28" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                     Elastic API Key
                   </label>
                   <div class="apikey-input-group">
@@ -1838,28 +1801,9 @@
                 const platform = metadata.platform.toLowerCase();
 
                 if (platform === 'splunk') {
-                  platformIcon = `<svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                    <defs>
-                      <radialGradient id="splunkGradient-${metadata.detection_count}" cx="30%" cy="30%">
-                        <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
-                        <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#C4166C;stop-opacity:1" />
-                      </radialGradient>
-                    </defs>
-                    <circle cx="50" cy="50" r="48" fill="url(#splunkGradient-${metadata.detection_count})"/>
-                    <path d="M55 35 L70 50 L55 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                  </svg>`;
+                  platformIcon = `<img class="siem-logo" src="/static/images/siem/splunk.png" alt="Splunk" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;">`;
                 } else if (platform === 'microsoft defender' || platform === 'mde') {
-                  platformIcon = `<svg width="16" height="16" viewBox="0 0 100 100" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                    <defs>
-                      <linearGradient id="defenderGradient-${metadata.detection_count}" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#5AC4F0;stop-opacity:1" />
-                        <stop offset="50%" style="stop-color:#0078D4;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#004E8C;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#defenderGradient-${metadata.detection_count})"/>
-                  </svg>`;
+                  platformIcon = `<img class="siem-logo" src="/static/images/siem/mde.png" alt="Microsoft Defender" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;">`;
                 } else {
                   platformIcon = '🖥️  ';
                 }

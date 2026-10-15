@@ -362,33 +362,6 @@
 
 {% import "partials/attack_mapping.html" as am with context %}
 {% block content %}
-<!-- Vendor logos, the same as the attack flow and the home page options -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <defs>
-    <linearGradient id="cv-g-gblue" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4285F4"/><stop offset="100%" stop-color="#1967D2"/></linearGradient>
-    <linearGradient id="cv-g-gred" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#EA4335"/><stop offset="100%" stop-color="#C5221F"/></linearGradient>
-    <linearGradient id="cv-g-gyellow" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FBBC04"/><stop offset="100%" stop-color="#F29900"/></linearGradient>
-    <linearGradient id="cv-g-ggreen" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34A853"/><stop offset="100%" stop-color="#1E8E3E"/></linearGradient>
-    <linearGradient id="cv-g-mde" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5AC4F0"/><stop offset="50%" stop-color="#0078D4"/><stop offset="100%" stop-color="#004E8C"/></linearGradient>
-    <radialGradient id="cv-g-splunk" cx="30%" cy="30%"><stop offset="0%" stop-color="#FF6B9D"/><stop offset="50%" stop-color="#E91E8C"/><stop offset="100%" stop-color="#C4166C"/></radialGradient>
-    <linearGradient id="cv-g-eyellow"><stop offset="0%" stop-color="#FED10A"/><stop offset="100%" stop-color="#FDB42F"/></linearGradient>
-    <linearGradient id="cv-g-eteal"><stop offset="0%" stop-color="#00BFB3"/><stop offset="100%" stop-color="#00A9A5"/></linearGradient>
-    <linearGradient id="cv-g-eblue"><stop offset="0%" stop-color="#24BBB1"/><stop offset="100%" stop-color="#0077CC"/></linearGradient>
-  </defs>
-  <symbol id="cv-logo-googlesecops" viewBox="0 0 100 100">
-    <circle cx="30" cy="48" r="16" fill="url(#cv-g-gblue)"/><circle cx="50" cy="38" r="20" fill="url(#cv-g-gred)"/>
-    <circle cx="70" cy="48" r="16" fill="url(#cv-g-gyellow)"/><rect x="22" y="52" width="56" height="20" rx="8" fill="url(#cv-g-ggreen)"/>
-  </symbol>
-  <symbol id="cv-logo-mde" viewBox="0 0 100 100">
-    <path d="M50 15 C65 20, 75 22, 85 25 L85 50 C85 68, 72 82, 50 92 C28 82, 15 68, 15 50 L15 25 C25 22, 35 20, 50 15 Z" fill="url(#cv-g-mde)"/>
-  </symbol>
-  <symbol id="cv-logo-splunk" viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="48" fill="url(#cv-g-splunk)"/><path d="M45 35 L60 50 L45 65" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  </symbol>
-  <symbol id="cv-logo-elastic" viewBox="0 0 100 100">
-    <rect x="10" y="20" width="70" height="12" rx="6" fill="url(#cv-g-eyellow)"/><rect x="15" y="44" width="70" height="12" rx="6" fill="url(#cv-g-eteal)"/><rect x="20" y="68" width="70" height="12" rx="6" fill="url(#cv-g-eblue)"/>
-  </symbol>
-</svg>
 <div class="coverage-container">
   <a href="/" class="back-link">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -574,7 +547,7 @@
 <script>
 // Vendor logos (the sprite above): the same marks as the attack flow and home page
 const VENDOR_LOGOS = {'Google SecOps': 'googlesecops', 'MDE': 'mde', 'Splunk': 'splunk', 'Elastic': 'elastic'};
-const vendorLogo = (key, cls, name) => `<svg class="${cls}" role="img" aria-label="${name}"><title>${name}</title><use href="#cv-logo-${key}"/></svg>`;
+const vendorLogo = (key, cls, name) => `<img class="${cls}" src="/static/images/siem/${key === 'googlesecops' ? 'secops' : key}.png" alt="${name}" title="${name}">`;
 
 function getColorLevel(count) {
   if (count === 0) return 'level-0';

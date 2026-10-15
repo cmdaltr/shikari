@@ -16,10 +16,10 @@
 
   // ---------- OSINT repositories (what generation searches per technique) ----------
   const OSINT = [
-    ['splunk', 'Splunk', 'splunk/security_content'],
-    ['azure_sentinel', 'Sentinel', 'Azure/Azure-Sentinel'],
-    ['elastic', 'Elastic', 'elastic/detection-rules'],
-    ['chronicle', 'Google SecOps', 'chronicle/detection-rules'],
+    ['chronicle', 'Google SecOps', 'chronicle/detection-rules', '', 'secops'],
+    ['azure_sentinel', 'Sentinel', 'Azure/Azure-Sentinel', '', 'mde'],
+    ['splunk', 'Splunk', 'splunk/security_content', '', 'splunk'],
+    ['elastic', 'Elastic', 'elastic/detection-rules', '', 'elastic'],
     // Living-off-the-land datasets: indicators for the tools a group is seen using
     ['lolbas', 'LOLBAS', 'lolbas-project.github.io', 'Fetched'],
     ['loldrivers', 'LOLDrivers', 'www.loldrivers.io', 'Fetched'],
@@ -34,12 +34,12 @@
     const cloning = OSINT.some(([k]) => (repos[k] || {}).status === 'cloning');
     overall.textContent = cloning ? 'Updating…' : ready === OSINT.length ? 'All ready' : `${ready} of ${OSINT.length} ready`;
     overall.className = 'ms-osint-overall ' + (cloning ? 'is-busy' : ready === OSINT.length ? 'is-ok' : ready ? 'is-part' : 'is-bad');
-    box.innerHTML = OSINT.map(([k, name, upstream, when]) => {
+    box.innerHTML = OSINT.map(([k, name, upstream, when, logo]) => {
       const r = repos[k] || { status: 'missing' };
       const label = { ready: 'Ready', cloning: 'Updating…', failed: 'Failed', missing: 'Not cloned' }[r.status] || r.status;
       const detail = r.status === 'failed' && r.error ? esc(r.error) : r.updated ? `${when || 'Last upstream commit'} ${esc(r.updated)}` : '';
-      return `<div class="ms-osint-repo is-${esc(r.status)}">
-        <div class="ms-osint-head"><strong>${esc(name)}</strong><span class="ms-osint-state">${esc(label)}</span></div>
+      return `<div class="ms-osint-repo is-${esc(r.status)}${logo ? '' : ' is-lol'}">
+        <div class="ms-osint-head"><strong>${logo ? `<img class="siem-logo" src="/static/images/siem/${logo}.png" alt="">` : ''}${esc(name)}</strong><span class="ms-osint-state">${esc(label)}</span></div>
         <a href="https://${upstream.includes('.') ? '' : 'github.com/'}${upstream}" target="_blank" rel="noopener">${upstream}</a>
         <small>${detail}</small></div>`;
     }).join('');
