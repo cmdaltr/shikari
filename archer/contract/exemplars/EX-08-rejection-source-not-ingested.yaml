@@ -14,10 +14,10 @@ archer_output:
       - R09.2
     evidence:
       - check: Declared source PROCESS_LAUNCH from Microsoft Defender for Endpoint is listed as ingested in environment profile ENVPROFILE-B-secops-observed-2026-10-09
-        observed: Profile lists DeviceEvents, DeviceFileEvents and DeviceRegistryEvents as streamed; DeviceProcessEvents and DeviceNetworkEvents are not exported. PROCESS_LAUNCH in SecOps totals about 2.6k events from 59 hosts in 24 hours, all via DeviceEvents, against about 683M process events per day across about 82k devices in Defender.
+        observed: Profile lists DeviceEvents, DeviceFileEvents and DeviceRegistryEvents as streamed; DeviceProcessEvents and DeviceNetworkEvents are not exported. PROCESS_LAUNCH in SecOps comes from a small minority of hosts, all via DeviceEvents, against full process telemetry in Defender.
         expected: PROCESS_LAUNCH present estate-wide for the target OS list (macos, linux, windows)
       - check: An alternative ingested event type carries the required fields (target.process.file.full_path, target.process.command_line) for the behaviour
-        observed: FILE_CREATION and REGISTRY_* events do not carry the launched process image or command line; DeviceEvents-derived PROCESS_LAUNCH covers 59 hosts only
+        observed: FILE_CREATION and REGISTRY_* events do not carry the launched process image or command line; DeviceEvents-derived PROCESS_LAUNCH covers a small minority of hosts only
         expected: An ingested event type with the process image and command line on every target host
     remediation:
       - Enable export of DeviceProcessEvents (and DeviceNetworkEvents for the sibling network rules) from the Defender streaming API to the SecOps feed, then re-submit under a profile that lists them; the rule logic in REQ-2026-10-10-001 is ready.

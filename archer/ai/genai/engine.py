@@ -2375,7 +2375,7 @@ def _basic_combine_queries(
         index_b = index_b_match.group(1) if index_b_match else None
 
         # Use the same index if possible
-        index = index_a or index_b or "edr_events"
+        index = index_a or index_b or _default_splunk_index()
 
         # Extract search terms (everything after the index and before | table)
         search_a = ""
@@ -2971,11 +2971,18 @@ let Query{idx} = materialize(
     return combined
 
 
+def _default_splunk_index() -> str:
+    """The organisation's first Windows index (bespoke/mappings/sources/platforms.json), or a
+    wildcard when there's no mapping: index names aren't written into the code."""
+    from archer.build.index_platforms import indexes_for
+    return sorted(indexes_for("Windows"))[0] if indexes_for("Windows") else "*"
+
+
 def _combine_splunk_queries_simple(query_list: List[str]) -> str:
     """Combine multiple Splunk queries into a proper correlation search using transaction."""
     # Extract index from first query
     index_match = re.search(r"index\s*=\s*(\w+)", query_list[0])
-    index = index_match.group(1) if index_match else "edr_events"
+    index = index_match.group(1) if index_match else _default_splunk_index()
 
     search_conditions = []
     eval_statements = []

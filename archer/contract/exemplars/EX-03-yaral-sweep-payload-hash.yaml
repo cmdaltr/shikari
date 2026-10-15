@@ -120,7 +120,7 @@ archer_output:
         after_tuning: 0
         alerts_per_day_after_aggregation: null
         measured_on: "2026-10-09"
-        measurement_procedure: Run the rule as a retrohunt over the lookback and count distinct devices; revision 2 returned 0 results over the tenant on 2026-10-09 with file events ingested (FILE_CREATION on ~54k of ~82k devices).
+        measurement_procedure: Run the rule as a retrohunt over the lookback and count distinct devices; revision 2 returned 0 results over the tenant on 2026-10-09 with file events ingested.
       suppressions: []
       dependencies:
         - type: reference_list
@@ -197,7 +197,7 @@ archer_output:
         status: checked
       field_population:
         status: known_populated
-        evidence: FILE_CREATION from MDE observed on ~54k of ~82k devices in the tenant on 2026-10-09 (workbook Q050 Notes); target.file.sha256 is the standard hash field for DeviceFileEvents-derived events.
+        evidence: FILE_CREATION from MDE observed on most devices in the tenant on 2026-10-09 (workbook Q050 Notes); target.file.sha256 is the standard hash field for DeviceFileEvents-derived events.
       ingestion:
         status: confirmed
         profile_ref: ENVPROFILE-B-secops-observed-2026-10-09

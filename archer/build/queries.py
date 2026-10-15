@@ -3,6 +3,7 @@ import json
 import re
 from pathlib import Path
 from collections import defaultdict
+from archer.build.index_platforms import is_cloud_native, platforms_of
 from archer.build.malware_iocs import enrich_indicators_with_iocs, log_ioc_enrichment
 
 
@@ -1090,33 +1091,20 @@ def get_platforms_for_index(index_name):
 
 
 def is_query_applicable(procedure_platforms, software_platforms, index_name):
-    # Special case: Cloud-native log sources (CloudTrail, Azure Activity Log, GCP Audit)
-    # These should ALWAYS be applicable when their cloud platform is involved
-    # They log API calls that happen regardless of the underlying OS (Windows/Linux/macOS)
-    cloud_native_indices = {
-        "aws_cloudtrail": "AWS",
-        "aws_guardduty": "AWS",
-        "aws_waf": "AWS",
-        "aws_directory": "AWS",
-        "azure_activity": "Azure",
-        "azure_signin": "Azure AD",
-        "gcp_audit": "GCP"
-    }
-
-    if index_name in cloud_native_indices:
-        # Cloud-native logs are always applicable - they capture cloud API activity
-        # regardless of the OS platform of the MITRE technique
+    # Cloud-native log sources (CloudTrail, Activity Log, Entra ID, GCP audit) log API calls
+    # whatever the OS of the technique, so they always apply. Which indexes those are comes
+    # from bespoke/mappings/sources/platforms.json (archer.build.index_platforms).
+    if is_cloud_native(index_name):
         return True
 
-    # Special case: Windows Event Logs (windows_events) should NEVER be used for non-Windows platforms
-    if index_name == "windows_events":
-        # Only allow if procedure is explicitly for Windows
+    serves = platforms_of(index_name)
+    # Windows event logs never serve non-Windows procedures
+    if serves and "Windows" in serves and not serves & {"Linux", "macOS"}:
         if "Windows" not in procedure_platforms:
             return False
 
-    # Special case: Unix logs (linux_syslog) should NEVER be used for Windows-only procedures
-    if index_name == "linux_syslog":
-        # Block if procedure is Windows-only
+    # Unix logs never serve Windows-only procedures
+    if serves and serves & {"Linux", "macOS"} and "Windows" not in serves:
         if procedure_platforms == ["Windows"]:
             return False
 

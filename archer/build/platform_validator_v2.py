@@ -18,50 +18,18 @@ Examples:
 import re
 from typing import Set, Optional, Dict, Tuple
 
+from archer.build.index_platforms import platforms_of
+
 
 # ============================================================================
 # Platform/Index Classification
 # ============================================================================
 
-WINDOWS_INDEXES = {
-    "edr_events",
-    "windows_events",
-    "windows_events",
-    "windows_events",
-    "av_console",
-}
-
-LINUX_UNIX_INDEXES = {
-    "linux_syslog",
-    "linux_syslog",
-    "linux_syslog",
-}
-
-MACOS_INDEXES = {
-    "macos_logs",
-    "macos_logs",
-}
-
-CLOUD_INDEXES = {
-    "azure_signin",
-    "azure_activity",
-    "aws_cloudtrail",
-    "aws_directory",
-    "m365_audit",
-    "m365_audit",
-}
-
-AZURE_INDEXES = {
-    "azure_signin",
-    "azure_activity",
-    "azure_sentinel",
-}
-
-AWS_INDEXES = {
-    "aws_cloudtrail",
-    "aws_directory",
-    "aws_securityhub",
-}
+# Splunk indexes come from bespoke/mappings/sources/platforms.json (archer.build.index_platforms):
+# index names are organisation-specific. Only the operating systems are taken from it, since
+# it also files Windows and Unix indexes under the IaaS clouds that host them; cloud sources
+# are recognised by name below.
+_OS_PLATFORMS = {"Windows": {"Windows"}, "Linux": {"Linux", "Unix"}, "macOS": {"macOS"}}
 
 # MDE tables
 MDE_WINDOWS_TABLES = {
@@ -372,26 +340,29 @@ def get_index_platforms(index_name: str) -> Set[str]:
     index_lower = index_name.lower()
     platforms = set()
 
-    # Check Splunk indexes
-    if index_name in WINDOWS_INDEXES or "windows" in index_lower or "microsoft" in index_lower:
+    # Check Splunk indexes: the organisation's own list, then the name
+    for platform in platforms_of(index_name) & set(_OS_PLATFORMS):
+        platforms |= _OS_PLATFORMS[platform]
+
+    if "windows" in index_lower or "microsoft" in index_lower:
         platforms.add("Windows")
 
-    if index_name in LINUX_UNIX_INDEXES or "unix" in index_lower or "linux" in index_lower:
+    if "unix" in index_lower or "linux" in index_lower or "syslog" in index_lower:
         platforms.add("Linux")
         platforms.add("Unix")
 
-    if index_name in MACOS_INDEXES or "mac" in index_lower or "osx" in index_lower:
+    if "mac" in index_lower or "osx" in index_lower:
         platforms.add("macOS")
 
-    if index_name in AZURE_INDEXES or "azure" in index_lower:
+    if "azure" in index_lower:
         platforms.add("Azure")
         platforms.add("Cloud")
 
-    if index_name in AWS_INDEXES or "aws" in index_lower:
+    if "aws" in index_lower:
         platforms.add("AWS")
         platforms.add("Cloud")
 
-    if index_name in CLOUD_INDEXES or "o365" in index_lower or "office" in index_lower:
+    if "o365" in index_lower or "office" in index_lower:
         platforms.add("Cloud")
 
     # Check MDE tables

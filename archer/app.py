@@ -87,10 +87,6 @@ DATA_SOURCE_DISPLAY_NAMES = {
     "aws_waf": "AWS WAF",
     "azure activedirectory": "Entra ID",
     "azure activitylog": "Azure",
-    "checkpoint_ips": "CheckPoint IPS",
-    "cisco_umbrella": "Cisco Umbrella",
-    "citrix_netscaler": "Citrix NetScaler",
-    "cloudflare_waf": "Cloudflare WAF",
     "deviceevents": "DeviceEvents",
     "devicefileevents": "DeviceFileEvents",
     "deviceimageloadevents": "DeviceImageLoadEvents",
@@ -102,22 +98,23 @@ DATA_SOURCE_DISPLAY_NAMES = {
     "device_network_events": "DeviceNetworkEvents",
     "device_process_events": "DeviceProcessEvents",
     "gcp_audit": "GCP Audit Logs",
-    "imperva_waf": "Imperva WAF",
-    "incapsula_waf": "Incapsula WAF",
-    "mcafee epo": "McAfee ePO",
-    "mcafee_ips": "MacAfee IPS",
-    "mcafee_proxy": "McAfee Proxy",
     "microsoft defender": "MDE",
     "microsoft_defender": "MDE",
     "edr_events": "MDE",
     "mde": "MDE",
     "googlesecops": "Google SecOps",
     "microsoft windows": "Windows Event Logs",
-    "microsoft_cloudappsecurity": "MCAS",
     "microsoft_o365": "M365",
     "splunk": "Splunk",
     "unix": "Unix",
 }
+# Names for the organisation's own products (WAFs, proxies, IPS) stay out of the code:
+# bespoke/mappings/sources/display_names.json (gitignored) adds or overrides entries
+try:
+    with open(os.path.join(os.path.dirname(__file__), "..", "bespoke", "mappings", "sources", "display_names.json")) as _fh:
+        DATA_SOURCE_DISPLAY_NAMES.update({k.lower(): v for k, v in json.load(_fh).items()})
+except (OSError, ValueError):
+    pass
 
 
 def load_yaml_file(file_path: str) -> Optional[dict]:

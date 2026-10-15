@@ -81,7 +81,7 @@ archer_output:
               - linux
               - windows
         coverage_gaps:
-          - In the tenant observed on 2026-10-09 (ENVPROFILE-B) MDE DeviceProcessEvents are not exported to SecOps; PROCESS_LAUNCH arrives only from DeviceEvents on 59 hosts. This rule is valid only under a profile that streams DeviceProcessEvents.
+          - In the tenant observed on 2026-10-09 (ENVPROFILE-B) MDE DeviceProcessEvents are not exported to SecOps; PROCESS_LAUNCH arrives only from DeviceEvents on a small minority of hosts. This rule is valid only under a profile that streams DeviceProcessEvents.
           - node setup.mjs executed from inside the .vscode directory carries no hook path in the command line and is not matched.
     attack:
       attack_version: "19.2"
@@ -96,7 +96,7 @@ archer_output:
       mode: live
     confidence:
       rating: High
-      rationale: Two ordered stages on one device within 30 minutes, each with a campaign-specific filename and path regex (setup.mjs under .claude or .vscode; math_init.js or math_symbol.js run by bun). Estate-wide two-day baseline (82k devices) returned only the positive-control host.
+      rationale: Two ordered stages on one device within 30 minutes, each with a campaign-specific filename and path regex (setup.mjs under .claude or .vscode; math_init.js or math_symbol.js run by bun). Estate-wide two-day baseline across the estate returned only the positive-control host.
     severity:
       rating: High
       rationale: Stage two is the credential-harvesting payload of the Mini Shai-Hulud campaign; successful execution exposes developer tokens (npm, GitHub, cloud CLI) on the device. Credential exposure at execution stage, before exfiltration is confirmed, is High rather than Critical.

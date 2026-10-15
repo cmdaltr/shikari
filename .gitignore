@@ -187,3 +187,13 @@ data/feed/
 
 # Private working files (bespoke sets, workbooks, query methodologies); never committed
 .local/
+
+# Organisation-derived content: kept on disk, never in git
+/Detection Generation/
+/preview.txt
+/data/generate/
+bespoke/llm_references/*
+!bespoke/llm_references/.gitkeep
+!bespoke/llm_references/README.md
+archer/contract/docs/01-diagnosis.md
+archer/contract/docs/05-exemplars.md

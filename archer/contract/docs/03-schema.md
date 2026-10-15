@@ -326,7 +326,7 @@ request:
       - product: Microsoft Defender for Endpoint
         tables: [DeviceEvents, DeviceFileEvents, DeviceRegistryEvents]
         udm_event_types: [FILE_CREATION, FILE_MODIFICATION, FILE_MOVE, FILE_DELETION, REGISTRY_CREATION, ...]
-        notes: "PROCESS_LAUNCH present from DeviceEvents on 59 hosts only"
+        notes: "PROCESS_LAUNCH present from DeviceEvents on a small minority of hosts only"
     not_ingested: [DeviceProcessEvents, DeviceNetworkEvents]
     reference_lists_available: [...]
     known_coverage_gaps: [...]
