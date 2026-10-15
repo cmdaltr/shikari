@@ -10,13 +10,11 @@ REQUIREMENTS:
    - If found: Create detection marked "Needs Review - compared with additional OSINT sources" (orange badge)
    - If NOT found: DO NOT create the detection at all
 
-2. OSINT Sources to Search:
-   - Threat intelligence blogs (Mandiant, CrowdStrike, Microsoft, etc.)
-   - GitHub repositories (detection-as-code repos)
+2. OSINT Sources Searched (local clones, archer/build/osint_repos.py):
    - Elastic Detection Rules
    - Splunk Security Content
-   - Atomic Red Team test cases
-   - LOLBAs, GTFOBins for technique execution methods
+   - Azure Sentinel analytic rules
+   - Google SecOps YARA-L rules (chronicle/detection-rules)
 
 3. Metadata to Track:
    - osint_compared: bool (True if enriched with OSINT)
