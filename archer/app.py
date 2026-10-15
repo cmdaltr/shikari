@@ -1770,7 +1770,7 @@ async def initialize_osint_repos():
     """
     Initialize OSINT detection repositories on startup.
 
-    Clones or updates Elastic, Splunk and Azure Sentinel detection
+    Clones or updates Elastic, Splunk, Azure Sentinel and Google SecOps detection
     rule repositories locally for fast, offline searching without API rate
     limits. Repos are updated
     every hour automatically when searches are performed.

@@ -3,7 +3,7 @@ OSINT Technique Index
 
 Builds and serves a prebuilt reverse index mapping MITRE ATT&CK technique IDs
 to matching detection rules across every cloned OSINT repository (Elastic,
-Splunk, Azure Sentinel).
+Splunk, Azure Sentinel, Google SecOps).
 
 Without this index, osint_comparison.py searches live on every request: a
 `grep -r` subprocess per technique per repo. Building the index walks each
@@ -37,6 +37,7 @@ _GITHUB_BASE = {
     "elastic": ("https://github.com/elastic/detection-rules/blob", "main"),
     "splunk": ("https://github.com/splunk/security_content/blob", "develop"),
     "azure_sentinel": ("https://github.com/Azure/Azure-Sentinel/blob", "master"),
+    "chronicle": ("https://github.com/chronicle/detection-rules/blob", "main"),
 }
 
 
@@ -145,10 +146,48 @@ def _index_azure_sentinel(repo_path: Path) -> Dict[str, List[Dict]]:
     return index
 
 
+_YARAL_RULE_RE = re.compile(r'^\s*rule\s+(\w+)\s*\{', re.M)
+_YARAL_SECTION_RE = re.compile(r'^\s*(meta|events|match|outcome|condition|options)\s*:', re.M)
+_YARAL_DESC_RE = re.compile(r'^\s*description\s*=\s*"([^"]*)"', re.M)
+
+
+def _index_chronicle(repo_path: Path) -> Dict[str, List[Dict]]:
+    """YARA-L rules: technique IDs from each rule's meta block (technique = "T1098",
+    mitre_attack_technique = ...), the events section onwards as the snippet."""
+    index: Dict[str, List[Dict]] = {}
+    for search_dir in search_paths("chronicle"):
+        for file_path in search_dir.rglob("*.yaral"):
+            try:
+                raw = file_path.read_text(errors="ignore")
+            except Exception:
+                continue
+            sections = list(_YARAL_SECTION_RE.finditer(raw))
+            meta = next((m for m in sections if m.group(1) == "meta"), None)
+            events = next((m for m in sections if m.group(1) == "events"), None)
+            if not meta or not events:
+                continue
+            technique_ids = set(TECHNIQUE_ID_RE.findall(raw[meta.end():events.start()]))
+            if not technique_ids:
+                continue
+            name = _YARAL_RULE_RE.search(raw)
+            desc = _YARAL_DESC_RE.search(raw[meta.end():events.start()])
+            entry = {
+                "name": name.group(1) if name else file_path.stem,
+                "source_url": _github_url("chronicle", repo_path, file_path),
+                "query_snippet": raw[events.start():].strip()[:500],
+            }
+            if desc:
+                entry["description"] = desc.group(1)[:300]
+            for tid in technique_ids:
+                index.setdefault(tid, []).append(entry)
+    return index
+
+
 _BUILDERS = {
     "elastic": _index_elastic,
     "splunk": _index_splunk,
     "azure_sentinel": _index_azure_sentinel,
+    "chronicle": _index_chronicle,
 }
 
 

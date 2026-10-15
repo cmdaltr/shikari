@@ -144,7 +144,7 @@
 
   <rect x="60" y="628" width="200" height="80" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
   <text x="78" y="652" class="box-title">RAG Fidelity</text>
-  <text x="78" y="666" class="box-detail">4,800+ community examples</text>
+  <text x="78" y="666" class="box-detail">3,400+ community examples</text>
   <text x="78" y="680" class="box-detail">Embedding retrieval · enrichment</text>
 
   <rect x="280" y="628" width="200" height="80" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>

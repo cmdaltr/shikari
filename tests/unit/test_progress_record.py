@@ -109,7 +109,7 @@ def test_osint_snippets_do_not_hide_a_broken_detection_query(tmp_path):
 
     path = tmp_path / "X_DeviceEvents.yaml"
     osint = {"osint_compared": True, "comparison_date": "2026-10-11",
-             "osint_indicators": {"query_snippets": ["[Sigma] ProcessCommandLine has 'x'|||https://example.org"]}}
+             "osint_indicators": {"query_snippets": ["[Elastic] ProcessCommandLine has 'x'|||https://example.org"]}}
     write_yaml(str(path), "X", "T1098.001", "desc", "MicrosoftThreatProtection", ["Persistence"], "FIN13",
                'DeviceEvents\n| where ())))) or (ActionType has "a")', datatype="DeviceEvents", osint_data=osint)
     assert not path.exists()

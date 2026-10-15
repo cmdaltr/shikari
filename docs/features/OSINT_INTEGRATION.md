@@ -40,7 +40,7 @@ This comprehensive approach ensures all detections benefit from the latest commu
 ### Key Features
 
 - ✅ **Automatic Enhancement** - Runs during detection generation
-- ✅ **3 OSINT Sources** - Elastic, Splunk, Azure Sentinel
+- ✅ **4 OSINT Sources** - Elastic, Splunk, Azure Sentinel, Google SecOps
 - ✅ **Local Repositories** - No API rate limits, fast searches (<1s)
 - ✅ **Platform-Aware** - Extracts Azure operations and AWS API calls
 - ✅ **Query Snippets** - Provides actionable detection patterns for cloud platforms
@@ -334,7 +334,8 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 | **elastic/detection-rules** | 106MB | 1,504 | ~10s | <1s | Hourly |
 | **splunk/security_content** | 58MB | 1,800+ | ~5s | ~1s | Hourly |
 | **Azure/Azure-Sentinel** | 256MB | 1,000+ | ~60s | ~2s | Hourly |
-| **Total** | **~420MB** | **4,300+** | **~75s** | **<5s** | **Hourly** |
+| **chronicle/detection-rules** | 2.4MB | 379 (309 with ATT&CK IDs) | ~2s | <1s | Hourly |
+| **Total** | **~420MB** | **4,600+** | **~77s** | **<5s** | **Hourly** |
 
 ### Benefits Over API Method
 
@@ -361,6 +362,11 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 - **Extracts:** KQL queries, Azure-specific field names, hunting queries
 - **Best For:** Azure AD, Office 365, Azure Security Center detections
 
+#### 4. Google SecOps (chronicle/detection-rules)
+- **Focus:** YARA-L 2.0 rules for Google SecOps, by Google and the community (`rules/community/` only; `rules/_deprecated/` is left out)
+- **Extracts:** technique IDs from each rule's `meta:` block, and the rule from `events:` onwards as its snippet
+- **Best For:** SecOps (UDM) detections: AWS, GCP, Okta, Workspace, GitHub, SAP
+
 ---
 
 ## Repository Management
@@ -368,10 +374,11 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 ### Storage Location
 
 ```
-data/osint_repos/
+data/repos/
 ├── elastic/         # 106MB, 1,504 rules
 ├── splunk/          # 58MB, 1,800+ detections
-└── azure_sentinel/  # 256MB, 1,000+ rules
+├── azure_sentinel/  # 256MB, 1,000+ rules
+└── chronicle/       # 2.4MB, YARA-L rules
 Total: ~425MB
 ```
 
@@ -775,11 +782,12 @@ The local repository approach **does not require a GitHub token** or any environ
 
 ```bash
 # OSINT repository clones (updated hourly)
-data/osint_repos/
+data/repos/
   ├── elastic/         # 106MB, 1,504 rules
   ├── splunk/          # 58MB, 1,800+ detections
-  └── azure_sentinel/  # 256MB, 1,000+ rules
-  Total: ~425MB
+  ├── azure_sentinel/  # 256MB, 1,000+ rules
+  └── chronicle/       # 2.4MB, YARA-L rules
+  Total: ~420MB
 
 # OSINT search result cache (24 hours)
 data/osint_cache/
@@ -788,7 +796,7 @@ data/osint_cache/
 ### Add to .gitignore
 
 ```
-data/osint_repos/
+data/repos/
 data/osint_cache/
 ```
 
@@ -813,7 +821,7 @@ python scripts/update_osint_repos.py --force
 
 ### Permission Denied Errors
 
-**Problem:** Cannot create `data/osint_repos/` directory
+**Problem:** Cannot create `data/repos/` directory
 
 **Solution:**
 ```bash
@@ -862,7 +870,7 @@ rm -rf data/osint_cache/*
 **Problem:** Detections generated but no OSINT enrichment applied
 
 **Checklist:**
-1. Verify repositories are cloned: `ls -lh data/osint_repos/`
+1. Verify repositories are cloned: `ls -lh data/repos/`
 2. Check repository sizes are reasonable (not empty)
 3. Test OSINT functionality: `python scripts/test_osint.py`
 4. Check logs for errors during detection generation
@@ -871,7 +879,7 @@ rm -rf data/osint_cache/*
 **Force re-clone:**
 ```bash
 # Remove existing repos
-rm -rf data/osint_repos/
+rm -rf data/repos/
 
 # Re-clone fresh
 python scripts/update_osint_repos.py --force

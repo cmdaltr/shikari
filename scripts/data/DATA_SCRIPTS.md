@@ -12,18 +12,21 @@ Clone/update the OSINT detection rule repositories.
 python scripts/data/update_osint.py
 ```
 
-**What it updates**:
-- **Elastic Detection Rules**
-- **Splunk Security Content**
-- **Azure Sentinel** detection rules
+**What it updates** (the list lives in `archer/build/osint_repos.py`, `REPOS`):
+- **Elastic Detection Rules** (`elastic/detection-rules`)
+- **Splunk Security Content** (`splunk/security_content`)
+- **Azure Sentinel** analytic rules (`Azure/Azure-Sentinel`, sparse: `Detections/` and each solution's `Analytic Rules/`)
+- **Google SecOps** YARA-L rules (`chronicle/detection-rules`, sparse: `rules/community/`)
 
 **Process**:
-1. Clones each repo (shallow, `--depth 1`) or pulls if already cloned
+1. Clones each repo (shallow, `--depth 1`, sparse where set) or pulls if already cloned
 2. Writes a `.last_update` timestamp per repo
+3. Rebuilds the technique index (`--no-index` skips it)
 
-This script only fetches the repos — it doesn't build the technique index (see
-`build_osint_index.py` below). Standalone/stdlib-only by design so it can run
-in air-gapped environments (see the script's own docstring).
+`--elastic`, `--splunk`, `--azure-sentinel` and `--chronicle` pick repos; `--force` ignores the
+hourly check. Fetching needs only the standard library (Python 3.9+), so it runs on a
+connected machine without Archer's dependencies for air-gapped installs; there it skips the
+index, which `build_osint_index.py` builds where Archer is installed.
 
 **Frequency**:
 - Initial setup: Automatic (via Docker entrypoint)

@@ -19,6 +19,7 @@
     ['splunk', 'Splunk', 'splunk/security_content'],
     ['azure_sentinel', 'Sentinel', 'Azure/Azure-Sentinel'],
     ['elastic', 'Elastic', 'elastic/detection-rules'],
+    ['chronicle', 'Google SecOps', 'chronicle/detection-rules'],
   ];
   async function osint() {
     const box = $('ms-osint'), overall = $('ms-osint-overall');

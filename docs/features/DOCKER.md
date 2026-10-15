@@ -27,6 +27,7 @@ On **first run**, Archer will clone 4 OSINT detection repositories (~425MB total
 - Elastic Security (106MB)
 - Splunk Security Content (58MB)
 - Azure Sentinel (256MB) ⚠️ **Takes 10-15 minutes**
+- Google SecOps / chronicle detection-rules (2.4MB)
 
 **Total time:** 15-20 minutes
 
@@ -83,7 +84,7 @@ volumes:
 
 ### What's Persisted:
 
-- ✅ OSINT repositories (`data/osint_repos/`)
+- ✅ OSINT repositories (`data/repos/`)
 - ✅ User database (`data/archer.db`)
 - ✅ Draft detections (`data/drafts/`)
 - ✅ Generated YAML files (`data/build/`)
@@ -91,7 +92,7 @@ volumes:
 
 ### Important:
 
-**Do NOT delete** `data/osint_repos/` unless you want to re-clone (15-20 minutes)
+**Do NOT delete** `data/repos/` unless you want to re-clone (15-20 minutes)
 
 ## Accessing the Application
 
@@ -170,7 +171,7 @@ volumes:
 **Speed it up:**
 - Use fast internet connection
 - Pre-clone repos on host: `python scripts/update_osint_repos.py`
-- Repos in `./data/osint_repos/` will be used by container
+- Repos in `./data/repos/` will be used by container
 
 ### Out of Disk Space
 

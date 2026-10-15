@@ -47,7 +47,7 @@ archer stop
 - 🖥️ **Interactive Console (`adfconsole`)** - Metasploit-style interactive shell with module selection, options, tab-completion
 - 🤖 **Agents** - Detection repair, Ask Archer with tools, and intel triage: a model in a loop with Archer's tools, with approval for anything that changes something ([docs](docs/agents/README.md))
 - 🔌 **MCP Server (`archer-mcp`)** - Archer's tools and agent prompts for Claude Code, Claude Desktop or any MCP client
-- 🎯 **RAG Fidelity Enhancement** - Improve query quality using 4,800+ community detection examples ([docs](docs/rag/README.md))
+- 🎯 **RAG Fidelity Enhancement** - Improve query quality using 3,400+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
 
 ### Additional Features

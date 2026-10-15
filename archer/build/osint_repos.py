@@ -6,13 +6,18 @@ offline searching without API rate limits.
 
 Repositories:
 - elastic/detection-rules: Elastic Security detection rules
+- splunk/security_content: Splunk Security Content
+- Azure/Azure-Sentinel: Microsoft Sentinel analytic rules
+- chronicle/detection-rules: Google SecOps YARA-L rules
 
 Strategy:
-- Clone repos to data/osint_repos/
+- Clone repos to data/repos/
 - Use --depth 1 for shallow clones (faster, smaller)
 - Update once per day (check .last_update timestamp)
 - Search locally using grep/file scanning
 """
+
+from __future__ import annotations
 
 import os
 import shutil
@@ -52,7 +57,16 @@ REPOS = {
         "search_dirs": ["Detections", "Solutions"],
         "sparse": ["/Detections/", "/Solutions/*/Analytic Rules/"],
         "timeout": 600,
-    }
+    },
+    # Google's YARA-L rules for SecOps. Only rules/community is checked out:
+    # rules/_deprecated (most of the repo's .yaral files) and the tooling are left out
+    "chronicle": {
+        "url": "https://github.com/chronicle/detection-rules.git",
+        "path": os.path.join(OSINT_REPOS_DIR, "chronicle"),
+        "search_dir": "rules/community",
+        "sparse": ["/rules/community/"],
+        "timeout": DEFAULT_TIMEOUT,
+    },
 }
 
 REPOS_BASE_DIR = Path(OSINT_REPOS_DIR)
@@ -121,7 +135,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
     Clone or update a repository.
 
     Args:
-        repo_name: Name of the repo (elastic, splunk, azure_sentinel)
+        repo_name: Name of the repo (elastic, splunk, azure_sentinel, chronicle)
         force: Force update even if not needed
 
     Returns:

@@ -21,8 +21,8 @@ def print_banner():
 
 def check_osint_repos():
     """Check if OSINT repositories are initialized."""
-    elastic_path = Path("data/osint_repos/elastic")
-    splunk_path = Path("data/osint_repos/splunk")
+    elastic_path = Path("data/repos/elastic")
+    splunk_path = Path("data/repos/splunk")
 
     return elastic_path.exists() and splunk_path.exists()
 

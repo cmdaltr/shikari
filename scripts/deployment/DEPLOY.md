@@ -48,7 +48,7 @@ services:
     command: ["uvicorn", "archer.app:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-**Note**: First run may take 15-20 minutes to download OSINT repositories. The Azure Sentinel clone in particular needs a long timeout — if a run is killed mid-clone, delete the partial `data/osint_repos/azure_sentinel/` directory before retrying rather than leaving a corrupted `.git` dir in place.
+**Note**: First run may take 15-20 minutes to download OSINT repositories. The Azure Sentinel clone in particular needs a long timeout — if a run is killed mid-clone, delete the partial `data/repos/azure_sentinel/` directory before retrying rather than leaving a corrupted `.git` dir in place.
 
 ---
 

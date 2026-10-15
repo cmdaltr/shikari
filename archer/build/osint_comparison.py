@@ -343,6 +343,45 @@ def _live_search_azure_sentinel(technique_id: str) -> Tuple[List[str], List[Dict
     return sources, indicators
 
 
+def search_chronicle_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
+    """
+    Look up Google SecOps YARA-L rules (chronicle/detection-rules) for a technique.
+
+    Uses the prebuilt OSINT technique index when available; falls back to a live
+    grep of the cloned repo's rules/community.
+
+    Returns: (sources: List[str], indicators: List[Dict])
+    """
+    from .osint_index import load_index, lookup as index_lookup
+
+    if load_index() is not None:
+        entries = index_lookup(technique_id, "chronicle")
+        if entries:
+            print(f"  \u2713 Found {len(entries)} Google SecOps rule(s) for {technique_id} (from index)")
+        return _entries_to_sources_and_indicators(entries, "Google SecOps")
+
+    from archer.build.osint_repos import search_repo_for_technique
+
+    sources, indicators = [], []
+    try:
+        for file_path in [f for f in search_repo_for_technique("chronicle", technique_id) if f.endswith(".yaral")][:15]:
+            with open(file_path, "r", errors="ignore") as f:
+                content = f.read()
+            relative = file_path.replace(str(Path(OSINT_REPOS_DIR) / "chronicle"), "").replace("\\", "/")
+            url = f"https://github.com/chronicle/detection-rules/blob/main{relative}"
+            sources.append(url)
+            start = content.find("events:")
+            indicators.append({
+                "source": "Google SecOps",
+                "rule_name": Path(file_path).stem,
+                "query_snippet": content[start if start >= 0 else 0:][:500],
+                "source_url": url,
+            })
+    except Exception as e:
+        print(f"  ⚠ Error searching Google SecOps rules: {e}")
+    return sources, indicators
+
+
 def extract_indicators_from_sources(indicators_data: List[Dict]) -> Dict[str, List[str]]:
     """
     Extract actual IOCs/patterns from the found sources.
@@ -466,6 +505,14 @@ def search_osint_for_technique(
         all_sources.extend(sentinel_sources)
         all_indicators_data.extend(sentinel_indicators)
         notes.append(f"Found {len(sentinel_sources)} Azure Sentinel rule(s)")
+
+    # 4. Search Google SecOps (YARA-L)
+    print(f"  Searching Google SecOps rules...")
+    secops_sources, secops_indicators = search_chronicle_rules(technique_id)
+    if secops_sources:
+        all_sources.extend(secops_sources)
+        all_indicators_data.extend(secops_indicators)
+        notes.append(f"Found {len(secops_sources)} Google SecOps rule(s)")
 
     # Extract actual indicators from found sources
     if all_indicators_data:
@@ -593,7 +640,7 @@ def score_osint_indicator_relevance(
         indicator_type: Type (cmd, evt, sw, api, operation)
         technique_id: MITRE ATT&CK technique ID
         platform: Target platform
-        osint_source: Source of the indicator (Elastic, Splunk, Sentinel)
+        osint_source: Source of the indicator (Elastic, Splunk, Sentinel, Google SecOps)
 
     Returns:
         Relevance score (0.0-1.0)

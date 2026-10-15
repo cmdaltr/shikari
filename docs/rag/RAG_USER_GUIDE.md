@@ -6,7 +6,7 @@
 
 ## What is This?
 
-The RAG fidelity enhancement system improves your detection queries by learning from **4,800+ real-world, production-quality detection examples** from:
+The RAG fidelity enhancement system improves your detection queries by learning from **3,400+ real-world, production-quality detection examples** from:
 - Splunk Security Content
 - Elastic Detection Rules
 
@@ -25,14 +25,14 @@ cd /path/to/archer
 python3 scripts/config/build_embeddings.py
 ```
 
-**What it does:** Creates a searchable index of ~4,800 detection examples
+**What it does:** Creates a searchable index of ~3,400 detection examples
 **How long:** ~7-10 minutes
 **Disk space:** ~50MB
 
 You'll see output like:
 ```
 Building embeddings for knowledge base...
-Loaded 4,768 detections
+Loaded 3,469 detections
 Generating embeddings... ━━━━━━━━━━━━━━━━━━ 100%
 ✓ Embeddings built successfully
 ```
@@ -48,7 +48,7 @@ python3 scripts/config/search_similar_detections.py --technique T1003.001 --plat
 You should see:
 ```
 Knowledge Base Statistics:
-  Total detections: 4,768
+  Total detections: 3,469
   Platforms: Splunk, Elastic
 
 Similar detections found: 5
@@ -213,12 +213,12 @@ Output:
 ======================================================================
 Running Validation Tests
 ======================================================================
-Found 4,768 detection files to validate
+Found 3,469 detection files to validate
 
 ======================================================================
 Validation Results
 ======================================================================
-Total Detections: 4,768
+Total Detections: 3,469
 Passed: 4,523 (94.9%)
 Failed: 245 (5.1%)
 With Warnings: 892 (18.7%)
@@ -230,7 +230,7 @@ With Warnings: 892 (18.7%)
 
 ### Import More Detections
 
-Already have ~4,800 examples, but want more?
+Already have ~3,400 examples, but want more?
 
 ```bash
 # Import additional Splunk detections
@@ -410,7 +410,7 @@ for example in examples:
 ❌ Poor: `T1003` (too broad)
 
 ### 2. Trust the System
-The RAG system has learned from 4,800+ production detections. If it suggests changes, they're based on real-world experience.
+The RAG system has learned from 3,400+ production detections. If it suggests changes, they're based on real-world experience.
 
 ### 3. Start with High Fidelity
 For critical detections, use higher fidelity thresholds:
@@ -460,7 +460,7 @@ A: You can disable RAG with `export ENABLE_RAG=false` or review and manually adj
 ## Summary
 
 ### What You Get:
-- ✅ 4,800+ production-quality detection examples
+- ✅ 3,400+ production-quality detection examples
 - ✅ Automatic query enhancement based on real-world experience
 - ✅ Validation module to ensure quality
 - ✅ Works with local (free) or cloud LLMs
