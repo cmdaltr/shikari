@@ -171,12 +171,17 @@
     Object.values(nodes).forEach(n => {
       const el = nodeEls[n.id];
       const detected = nodeDetected(n);
-      el.classList.toggle('is-gap', !detected);
+      // Adversary-side Reconnaissance/Resource Development: known, not a gap
+      const intel = !detected && n.intel_only;
+      el.classList.toggle('is-gap', !detected && !intel);
+      el.classList.toggle('is-intel', intel);
       el.hidden = (!detected && !state.gaps) || state.removed.has(n.id);
       el.querySelectorAll('.af-node-cov .af-logo').forEach(l => { l.style.display = state.vendors.has(l.dataset.vendor) ? '' : 'none'; });
       const mark = el.querySelector('.af-gap-mark');
-      if (!detected && !mark) el.querySelector('.af-node-cov').insertAdjacentHTML('beforeend', '<span class="af-gap-mark" title="No detection">No detection</span>');
       if (detected && mark) mark.remove();
+      if (!detected && !mark) el.querySelector('.af-node-cov').insertAdjacentHTML('beforeend', intel
+        ? '<span class="af-gap-mark is-intel" title="Happens on the adversary\'s side: no log source on the estate sees it">Intel only</span>'
+        : '<span class="af-gap-mark" title="No detection">No detection</span>');
       el.classList.toggle('is-match', !!q && (n.id.toLowerCase().includes(q) || n.name.toLowerCase().includes(q)));
     });
     section.classList.toggle('af-searching', !!q);
@@ -329,7 +334,9 @@
       <p class="af-detail-id"><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.id)} ↗</a></p>
       <h3>${esc(n.name)}</h3>
       <p class="af-detail-tactics">${n.tactics.map(esc).join(' · ')}</p>
-      ${coverage ? `<ul class="af-detail-cov">${coverage}</ul>` : `<p class="af-detail-gap">No detection${n.attributed ? '. ATT&amp;CK attributes this technique to the group.' : ''}</p>`}
+      ${coverage ? `<ul class="af-detail-cov">${coverage}</ul>` : n.intel_only
+        ? `<p class="af-detail-gap is-intel">Intel only: this happens on the adversary's side, before the estate, so no log source sees it and it isn't counted as a gap.</p>`
+        : `<p class="af-detail-gap">No detection${n.attributed ? '. ATT&amp;CK attributes this technique to the group.' : ''}</p>`}
       ${cards.length ? `<button type="button" class="af-chip af-show-detections">Show detection${cards.length === 1 ? '' : 's'} (${cards.length})</button>` : ''}
       ${linkList(inc, 'from', 'Preceded by')}
       ${linkList(out, 'to', 'Followed by')}`;

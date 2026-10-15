@@ -61,7 +61,7 @@
       <button type="button" class="af-chip" id="af-order" title="Tactic order: kill chain forwards or backwards">Forward</button>
       <button type="button" class="af-chip" id="af-undo" disabled title="Undo (⌘/Ctrl-Z)">Undo</button>
       <button type="button" class="af-chip" id="af-reset" title="Restore the default view">Reset</button>
-      <input type="search" id="af-search" class="af-search" placeholder="Find technique…" aria-label="Find technique">
+      <input type="search" id="af-search" class="af-search" placeholder="Find…" aria-label="Find technique">
       {% if attack_flow.stix_file %}
       <a class="af-chip" id="af-stix" href="/api/download/flow/{{ attack_flow.stix_file|urlencode }}" download
          data-group="{{ group_name }}"
@@ -78,6 +78,7 @@
     <strong>{{ attack_flow.stats.techniques }}</strong> techniques across {{ attack_flow.stats.tactics }} tactics ·
     <strong>{{ attack_flow.stats.detected }}</strong> detected ·
     <strong class="af-stats-gap">{{ attack_flow.stats.gaps }}</strong> gaps ·
+    {% if attack_flow.stats.intel_only %}<strong>{{ attack_flow.stats.intel_only }}</strong> intel only ·{% endif %}
     <strong id="af-stat-edges">{{ attack_flow.stats.edges }}</strong> correlation links
   </p>
 
@@ -125,6 +126,7 @@
   <div class="af-legend">
     <span><svg class="af-logo" aria-hidden="true"><use href="#af-logo-googlesecops"/></svg><svg class="af-logo" aria-hidden="true"><use href="#af-logo-mde"/></svg> detection on that SIEM</span>
     <span><span class="af-legend-gap"></span> attributed to the group, no detection</span>
+    {% if attack_flow.stats.intel_only %}<span><span class="af-legend-intel"></span> intel only: Reconnaissance or Resource Development no log source sees</span>{% endif %}
     <span><span class="af-legend-edge"></span> correlation: first technique seen before the second on the same host</span>
     <span><span class="af-legend-edge is-back"></span> the second technique sits in an earlier tactic</span>
     <span class="af-legend-hint">Hover or select a technique to trace its links · drag to move · ⌘/Ctrl-click to select several · click a link to remove it</span>

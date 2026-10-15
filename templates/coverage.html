@@ -128,14 +128,13 @@
 .tactic-card.active { outline: 3px solid var(--text-primary); outline-offset: 2px; }
 .tactic-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
-/* Technique Grid: five to a row. The 13 tactic cards fall 4 | 5 | 4 across the full
-   width: on 20 columns a card spans 5 in the rows of four and 4 in the row of five.
-   The columns have no gap; each card's 6px side margins make the 12px between cards,
-   and the grid's -6px margins put the outer cards flush with the section's edges. */
+/* Technique Grid: five to a row. The 15 tactic cards fall 5 | 5 | 5 across the full
+   width (each spans 4 of 20 columns). The columns have no gap; each card's 6px side
+   margins make the 12px between cards, and the grid's -6px margins put the outer cards
+   flush with the section's edges. */
 .technique-grid { gap: 12px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .tactic-cards { grid-template-columns: repeat(20, minmax(0, 1fr)); column-gap: 0; row-gap: 12px; margin-left: -6px; margin-right: -6px; }
-.tactic-cards > .tactic-card { grid-column: span 5; margin: 0 6px; }
-.tactic-cards > .tactic-card:nth-child(n+5):nth-child(-n+9) { grid-column: span 4; }
+.tactic-cards > .tactic-card { grid-column: span 4; margin: 0 6px; }
 @media (max-width: 760px) {
   .technique-grid, .tactic-cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
   .tactic-cards > .tactic-card,
@@ -667,7 +666,8 @@ function renderFilter() {
     if (g.key === 'tactic') {
       const all = [...chips.children];
       chips.classList.add('chip-lines');
-      for (const part of [all.slice(0, 7), all.slice(7)]) {
+      const half = Math.ceil(all.length / 2);
+      for (const part of [all.slice(0, half), all.slice(half)]) {
         const line = document.createElement('div');
         line.className = 'chip-line';
         line.append(...part);

@@ -1,23 +1,12 @@
 /* Manual page (templates/manual.html): the page shell and title every page uses
-   (.results-container, .page-header in common.css), with the entry form and report
-   analysis as cards side by side */
+   (.results-container, .page-header in common.css), with the entry form as one card */
 
 .mn-page { padding-top: 80px; padding-bottom: 120px; }
 
 .mn-group { color: var(--accent); font-size: 1.2em; font-weight: 600; margin: -14px 0 20px; }
 
-.mn-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); column-gap: 20px; row-gap: 0; align-items: start; }
+.mn-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
 
-/* Technique entry: one card in two parts joined into an L. The top sits beside report
-   analysis; the rest spans both columns, its top edge drawn only where nothing sits on it */
-.mn-card.mn-entry-top { grid-column: 1; grid-row: 1; align-self: stretch; padding-bottom: 0; }
-.mn-card.mn-report { grid-column: 2; grid-row: 1; margin-bottom: 20px; }
-.mn-card.mn-entry-rest { grid-column: 1 / -1; grid-row: 2; position: relative; }
-.mn-entry-rest::before {
-  content: ''; position: absolute; top: 0; right: -1px; left: calc((100% - 20px) * 2 / 3 - 1px); height: 12px;
-  border-top: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-top-right-radius: 12px;
-  pointer-events: none;
-}
 .mn-card {
   padding: 18px 22px;
   min-width: 0;
@@ -53,7 +42,6 @@
   display: none; margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-weight: 500;
   background: #d4edda; color: #155724; border: 1px solid #c3e6cb;
 }
-#blog-analysis-status { margin-top: 10px; font-size: .9rem; }
 
 /* Techniques appended so far (manual.js) */
 .mn-list:not(:empty) {
@@ -76,10 +64,6 @@
 
 @media (max-width: 900px) {
   .mn-grid { grid-template-columns: 1fr; }
-  .mn-card.mn-entry-top { grid-row: 1; }
-  .mn-card.mn-entry-rest { grid-column: 1; grid-row: 2; }
-  .mn-entry-rest::before { display: none; }
-  .mn-card.mn-report { grid-column: 1; grid-row: 3; margin: 20px 0 0; }
   .mn-tactics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 480px) {

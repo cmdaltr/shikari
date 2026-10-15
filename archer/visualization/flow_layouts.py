@@ -84,7 +84,6 @@ def library_flows(db, user_id: int, bundle=None) -> list:
 
     from archer.build.progress import read_progress
     from archer.config import ATTACK_FLOWS_DIR
-    from archer.visualization.flow_view import without_pre_compromise
 
     attack_groups = set()
     for obj in getattr(bundle, "objects", None) or []:
@@ -97,7 +96,7 @@ def library_flows(db, user_id: int, bundle=None) -> list:
         if os.path.dirname(os.path.abspath(path)) == os.path.abspath(ATTACK_FLOWS_DIR) and os.path.exists(path):
             try:
                 with open(path, encoding="utf-8") as fh:
-                    view = without_pre_compromise(json.load(fh).get("view"))
+                    view = json.load(fh).get("view")
                 saved = datetime.fromtimestamp(os.path.getmtime(path))
             except (OSError, ValueError):
                 view = None

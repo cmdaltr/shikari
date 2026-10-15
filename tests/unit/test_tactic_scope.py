@@ -1,7 +1,7 @@
 """
-Reconnaissance and Resource Development are out of Archer's scope everywhere
-(archer.tactic_scope): never written into a detection, never offered in the matrix or a
-mapping.
+Reconnaissance and Resource Development are shown everywhere (archer.tactic_scope); only
+the adversary-side techniques ("intel only") are never written as a detection or counted
+as a gap. Those the estate's logs see (T1595, T1598, T1594, T1589) are written.
 """
 import os
 
@@ -21,28 +21,46 @@ def env(tmp_path, monkeypatch):
     yield tmp_path
 
 
-def test_excluded_names_and_ids():
+def test_pre_compromise_names_and_ids():
     for t in ("Reconnaissance", "resource-development", "Resource Development", "TA0043", "TA0042"):
-        assert tactic_scope.excluded(t)
-    assert tactic_scope.keep(["Reconnaissance", "Initial Access"]) == ["Initial Access"]
+        assert tactic_scope.pre_compromise(t)
+    assert not tactic_scope.pre_compromise("Initial Access")
 
 
-def _write(path, tactics):
-    writer.write_yaml(str(path), "Spearphishing Link", "T1566.002", "d", "MicrosoftThreatProtection",
+def test_intel_only():
+    assert tactic_scope.intel_only("T1583.001", ["Resource Development"])
+    assert tactic_scope.intel_only("T1593", ["reconnaissance"])
+    # The estate's logs see these: scanning, phishing for information
+    assert not tactic_scope.intel_only("T1595.002", ["Reconnaissance"])
+    assert not tactic_scope.intel_only("T1598", ["Reconnaissance"])
+    # A later tactic as well: detectable like any other technique
+    assert not tactic_scope.intel_only("T1583", ["Resource Development", "Initial Access"])
+    assert not tactic_scope.intel_only("T1566", [])
+
+
+def _write(path, tactics, tid="T1566.002"):
+    writer.write_yaml(str(path), "Spearphishing Link", tid, "d", "MicrosoftThreatProtection",
                       tactics, "APT1", "DeviceEvents\n| where 1", datatype="DeviceEvents")
 
 
-def test_pre_compromise_only_detection_is_not_written(env):
+def test_intel_only_detection_is_not_written(env):
     path = env / "d.yaml"
-    _write(path, ["Reconnaissance"])
+    _write(path, ["Resource Development"], tid="T1583.001")
     assert not path.exists()
 
 
-def test_mixed_tactics_drop_the_excluded(env):
+def test_detectable_pre_compromise_detection_is_written(env):
+    path = env / "d.yaml"
+    _write(path, ["Reconnaissance"], tid="T1595.002")
+    doc = yaml.safe_load(path.read_text().split("\n", 1)[1])
+    assert doc["tactics"] == ["Reconnaissance"]
+
+
+def test_mixed_tactics_keep_every_tactic(env):
     path = env / "d.yaml"
     _write(path, ["Resource Development", "Initial Access"])
     doc = yaml.safe_load(path.read_text().split("\n", 1)[1])
-    assert doc["tactics"] == ["Initial Access"] and doc["severity"] == "Medium"
+    assert doc["tactics"] == ["Resource Development", "Initial Access"]
 
 
 def _bundle():
@@ -60,10 +78,10 @@ def _bundle():
     ]}
 
 
-def test_matrix_and_index_leave_them_out():
+def test_matrix_and_index_include_them():
     b = _bundle()
-    assert [c["tactic"] for c in navigator.matrix(b)] == ["Initial Access"]
-    assert set(navigator.technique_index(b)) == {"T1566"}
+    assert [c["tactic"] for c in navigator.matrix(b)] == ["Reconnaissance", "Initial Access"]
+    assert set(navigator.technique_index(b)) == {"T1566", "T1598"}
 
 
 def test_detection_layer_uses_the_mapping_in_force(env, tmp_path):
@@ -76,7 +94,6 @@ def test_detection_layer_uses_the_mapping_in_force(env, tmp_path):
     layer = navigator.detections_by_tactic(str(d))
     assert layer["Initial Access"]["T1566.002"] == {"count": 1, "vendors": ["MDE"], "changed": False}
     assert layer["Execution"]["T1566.002"]["changed"] is True
-    assert not any(tactic_scope.excluded(t) for t in layer)
 
 
 def test_legacy_techniques_name_their_replacement():

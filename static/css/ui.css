@@ -87,11 +87,7 @@
 }
 .ui-card { padding: 16px 20px; margin-bottom: 20px; }
 /* The Manual page's L-shaped card draws its own seam */
-.mn-card.mn-entry-top { border-bottom: none !important; border-radius: 12px 12px 0 0 !important; }
-.mn-card.mn-entry-rest { border-top: none !important; border-radius: 0 12px 12px 12px !important; }
-@media (max-width: 900px) { .mn-card.mn-entry-rest { border-radius: 0 0 12px 12px !important; } }
 /* Collapsed, the L's top is the whole card */
-.mn-card.mn-entry-top.is-card-collapsed { align-self: start; padding-bottom: 18px; border-bottom: 1px solid var(--border-color) !important; border-radius: 12px !important; }
 
 /* ---------- Buttons ---------- */
 .btn-primary,
@@ -158,7 +154,6 @@
 .run-view-opt,
 .filter-btn,
 .tactic-tab,
-.af-chip,
 .key-tab {
   display: inline-flex !important;
   align-items: center;
@@ -185,24 +180,22 @@
 .run-view-opt:hover:not(.is-active),
 .filter-btn:hover:not(.active),
 .tactic-tab:hover:not(.active),
-.af-chip:hover:not(:disabled):not(.is-on),
 .key-tab:hover:not(.active) { border-color: var(--accent) !important; background: var(--bg-secondary) !important; }
 .ui-pill.is-active,
 .fd-filter.is-active,
 .run-view-opt.is-active,
 .filter-btn.active,
 .tactic-tab.active,
-.af-chip.is-on,
 .key-tab.active {
   background: var(--accent) !important;
   border-color: var(--accent) !important;
   color: #fff !important;
 }
-.af-chip:disabled { color: var(--text-secondary) !important; border-style: dashed !important; opacity: .7; cursor: not-allowed; }
-.af-chip[hidden] { display: none !important; }
 .filter-btn svg { width: 16px; height: 16px; }
-/* API Keys sub-tabs: a row of pills, not a folder tab strip */
-.key-tabs { gap: 8px !important; border-bottom: none !important; margin-bottom: 0 !important; flex-wrap: wrap; }
+/* API Keys sub-tabs: a row of pills, not a folder tab strip, sharing the card's width evenly */
+.key-tabs { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px !important; border-bottom: none !important; margin-bottom: 0 !important; }
+.key-tab { justify-content: center; text-align: center; width: 100%; }
+@media (max-width: 600px) { .key-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---------- Form controls ---------- */
 .form-input,
@@ -250,7 +243,7 @@ select.dropdown-styled {
 /* Fields that can't be edited look it */
 .form-input[readonly], .form-input:disabled { background-color: transparent !important; color: var(--text-secondary); cursor: not-allowed; }
 /* The attack flow's search box keeps the toolbar's height */
-.af-search { height: 36px !important; border: 1px solid var(--border-color) !important; border-radius: 6px !important; background: var(--bg-primary) !important; }
+.af-search { height: 44px !important; border: 1px solid var(--border-color) !important; border-radius: 6px !important; background: var(--bg-primary) !important; }
 
 /* ---------- Checkboxes ---------- */
 input[type="checkbox"] {
@@ -437,3 +430,20 @@ input[type="checkbox"] {
 .is-card-collapsed .tactic-section-title,
 .is-card-collapsed .section-title,
 .is-card-collapsed .mn-card-title { margin-bottom: 0 !important; }
+
+/* ---------- Outlined action buttons: Library's filter row and the attack flow's toolbar ----------
+   2px accent outline, accent text; filled when on (a toggle) or destructive (Delete) */
+#clear-filters-btn, .action-btn, .af-chip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  box-sizing: border-box; padding: 12px 10px; margin: 0;
+  border: 2px solid var(--accent); border-radius: 6px;
+  background: transparent; color: var(--accent);
+  font: inherit; font-weight: 600; white-space: nowrap; text-decoration: none; cursor: pointer;
+  transition: background .15s, color .15s, filter .15s;
+}
+#clear-filters-btn:hover, .action-btn:hover, .af-chip:hover:not(:disabled):not(.is-on) { background: var(--accent); color: #fff; }
+#delete-btn, .af-chip.is-on { background: var(--accent); color: #fff; }
+#delete-btn:hover, .af-chip.is-on:hover { filter: brightness(1.08); }
+.af-chip { height: 44px; padding: 0 10px; font-size: .9rem; }  /* Library's height */
+.af-chip:disabled { border-style: dashed; opacity: .45; cursor: not-allowed; }
+.af-chip[hidden] { display: none !important; }

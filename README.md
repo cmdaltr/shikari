@@ -74,7 +74,7 @@ archer stop
 
 ### Threat Feed
 
-The Threat Feed (the RSS icon in the header, or `intel/feed` in the console) is a wall of the last seven days of research, one card per post: title, a two-to-three sentence description, and tags. The search box matches titles and descriptions; the filters show posts relevant to you (your industries, plus anything opportunistic or financially motivated), your industries only, opportunistic or financial only, or everything. Set your industries in Profile → Threat Feed industries. **Analyse in Archer** opens a post on the Hunt page's Upload tab.
+The Threat Feed (the RSS icon in the header, or `intel/feed` in the console) is a wall of the last seven days of research, one card per post: title, a two-to-three sentence description, and tags. The search box matches titles and descriptions; the filters show posts relevant to you (your industries, plus anything opportunistic or financially motivated), your industries only, opportunistic or financial only, or everything. Set your industries in Profile → Threat Feed industries. **Analyse in Archer** opens a post on the Home page's Analyse tab.
 
 The feed is collected in the background every time Archer starts and whenever you press **Refresh now**. Only posts it hasn't seen are fetched and analysed, so a refresh with nothing new takes about ten seconds. No AI is involved: tags come from regular expressions over the text and ATT&CK's own group data.
 

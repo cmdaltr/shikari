@@ -188,3 +188,23 @@
   .option-info-tooltip { position: fixed; top: 30vh; bottom: auto; left: 16px; right: 16px; width: auto !important; transform: none; }
   .option-info-tooltip::after { display: none; }
 }
+
+/* Analyse: the URL and the file side by side, split by a vertical OR; each has its
+   note (Merge by Parent Technique, the file types) underneath */
+.home-tabs .hp-split { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 0 20px; align-items: stretch; }
+.home-tabs .hp-split .hp-primary, .home-tabs .hp-split .hp-secondary { display: flex; flex-direction: column; min-width: 0; }
+.home-tabs .hp-split .hp-primary .form-label, .home-tabs .hp-split .hp-secondary .form-label { margin-bottom: 6px; }
+.home-tabs .hp-split .form-input { height: 50px; box-sizing: border-box; }
+.home-tabs .hp-under { margin: 10px 0 0; }
+.home-tabs .hp-under .option-item { display: inline-flex; padding: 0.5em 0.75em; }
+.home-tabs .hp-formats { color: #6b7280; font-size: 0.85rem; padding: 0.5em 0; }
+.home-tabs .form-separator.is-vertical { flex-direction: column; margin: 0; gap: 0.6em; }
+.home-tabs .form-separator.is-vertical .separator-line { width: 1px; height: auto; flex: 1; background: linear-gradient(to bottom, transparent, #ddd, transparent); }
+.home-tabs .form-separator.is-vertical .separator-text { padding: 0; }
+[data-theme="dark"] .home-tabs .form-separator.is-vertical .separator-line { background: linear-gradient(to bottom, transparent, var(--border-color), transparent); }
+[data-theme="dark"] .home-tabs .hp-formats { color: var(--text-secondary); }
+@media (max-width: 768px) {
+  .home-tabs .hp-split { grid-template-columns: 1fr; }
+  .home-tabs .form-separator.is-vertical { flex-direction: row; margin: 1.1em 0 0.9em; }
+  .home-tabs .form-separator.is-vertical .separator-line { width: auto; height: 1px; background: linear-gradient(to right, transparent, #ddd, transparent); }
+}

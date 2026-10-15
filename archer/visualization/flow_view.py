@@ -20,6 +20,8 @@ from typing import Dict, Iterable, List, Optional
 
 import yaml
 
+from archer.tactic_scope import intel_only
+
 # ATT&CK enterprise kill-chain order. v18 split Defense Evasion into Stealth and
 # Defense Impairment; older detections still carry Defense Evasion.
 TACTIC_ORDER = [
@@ -28,7 +30,6 @@ TACTIC_ORDER = [
     "Discovery", "Lateral Movement", "Collection", "Command and Control", "Exfiltration", "Impact",
 ]
 _TACTIC_KEY = {t.lower(): t for t in TACTIC_ORDER}
-PRE_COMPROMISE = {"Reconnaissance", "Resource Development"}
 
 # Display order and names; SecOps is the primary platform
 VENDORS = [("googlesecops", "Google SecOps"), ("mde", "MDE"), ("splunk", "Splunk"), ("elastic", "Elastic")]
@@ -142,7 +143,6 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
                      procedures CSV, which can predate the loaded ATT&CK version
     """
     nodes: Dict[str, Dict] = {}
-    omitted: set = set()
 
     def node(tid: str, name: str, tactics: List[str]) -> Dict:
         n = nodes.get(tid)
@@ -151,7 +151,7 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
                               "attributed": False, "url": "https://attack.mitre.org/techniques/"
                               + tid.replace(".", "/") + "/"}
         for t in tactics:
-            if t not in n["tactics"] and t not in PRE_COMPROMISE:
+            if t not in n["tactics"]:
                 n["tactics"].append(t)
         return n
 
@@ -159,9 +159,6 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
         for path in paths:
             det = read_detection(path)
             if not det:
-                continue
-            if _pre_compromise_only(det["tactics"]):
-                omitted.add(det["id"])
                 continue
             n = node(det["id"], det["name"], det["tactics"])
             v = det["vendor"] or vendor
@@ -171,9 +168,6 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
         if tactic_lookup and tech["id"] not in tactic_lookup:
             continue  # revoked or deprecated since the CSV was generated
         tactics = (tactic_lookup or {}).get(tech["id"]) or tech["tactics"]
-        if _pre_compromise_only(tactics):
-            omitted.add(tech["id"])
-            continue
         node(tech["id"], tech["name"], tactics)["attributed"] = True
 
     # Edges: correlation A -> B. Merged correlations chain A to every technique involved.
@@ -202,6 +196,8 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
         # Primary tactic: the detection's first tactic; it decides the lane
         n["tactic"] = n["tactics"][0] if n["tactics"] else "Unknown"
         n["detected"] = bool(n["vendors"])
+        # Adversary-side Reconnaissance/Resource Development: not a gap (archer.tactic_scope)
+        n["intel_only"] = not n["detected"] and intel_only(n["id"], n["tactics"])
         n["degree"] = sum(1 for e in edges.values() if n["id"] in (e["from"], e["to"]))
 
     lanes = []
@@ -219,42 +215,12 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
         "stats": {
             "techniques": len(nodes),
             "detected": sum(1 for n in nodes.values() if n["detected"]),
-            "gaps": sum(1 for n in nodes.values() if n["attributed"] and not n["detected"]),
+            "gaps": sum(1 for n in nodes.values() if n["attributed"] and not n["detected"] and not n["intel_only"]),
+            "intel_only": sum(1 for n in nodes.values() if n["intel_only"]),
             "edges": len(edges),
             "tactics": len(lanes),
-            "pre_compromise": len(omitted),
         },
     }
-
-
-def _pre_compromise_only(tactics: Iterable[str]) -> bool:
-    tactics = {canonical_tactic(t) for t in tactics or [] if t}
-    return bool(tactics) and tactics <= PRE_COMPROMISE
-
-
-def without_pre_compromise(view: Dict) -> Dict:
-    """A saved view (from before pre-compromise was left out) with it left out."""
-    if not view or not view.get("lanes"):
-        return view
-    kept, dropped = [], set()
-    for lane in view["lanes"]:
-        for n in lane["nodes"]:
-            later = [t for t in n.get("tactics", []) if t not in PRE_COMPROMISE]
-            if not later:
-                dropped.add(n["id"])
-                continue
-            kept.append({**n, "tactics": later, "tactic": later[0] if n.get("tactic") in PRE_COMPROMISE else n["tactic"]})
-    if not dropped and all(lane["tactic"] not in PRE_COMPROMISE for lane in view["lanes"]):
-        return view
-    lanes = []
-    for tactic in sorted({n["tactic"] for n in kept}, key=lambda t: (_lane_index(t), t)):
-        lanes.append({"tactic": tactic, "nodes": [n for n in kept if n["tactic"] == tactic]})
-    edges = [e for e in view.get("edges", []) if e["from"] not in dropped and e["to"] not in dropped]
-    stats = {**view.get("stats", {}), "techniques": len(kept), "detected": sum(1 for n in kept if n.get("detected")),
-             "gaps": sum(1 for n in kept if n.get("attributed") and not n.get("detected")),
-             "edges": len(edges), "tactics": len(lanes),
-             "pre_compromise": view.get("stats", {}).get("pre_compromise", 0) + len(dropped)}
-    return {**view, "lanes": lanes, "edges": edges, "stats": stats}
 
 
 def apply_edits(view: Dict, state: Dict) -> Dict:

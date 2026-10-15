@@ -877,16 +877,8 @@ def get_group_coverage(group: str, generate_dir) -> Optional[Dict]:
             if gid == group.upper() or gname == group_lower:
                 rows.append(row)
 
-    group_found = bool(rows)
-    # Reconnaissance and Resource Development are outside Archer's scope (archer.tactic_scope)
-    from archer.tactic_scope import excluded
-    rows = [r for r in rows if not excluded(r.get("tactic", ""))]
-
-    if not group_found:
-        return None
     if not rows:
-        return {"group_name": group, "group_id": "", "total": 0, "covered_count": 0, "gap_count": 0,
-                "covered": [], "gaps": []}
+        return None
 
     group_name = rows[0].get("group_sw_name") or rows[0].get("group_name")
     group_id = rows[0].get("group_sw_id") or rows[0].get("group_id")
@@ -911,9 +903,13 @@ def get_group_coverage(group: str, generate_dir) -> Optional[Dict]:
     for tid, data in seen.items():
         data["covered"] = tid in covered_ids
 
+    # Adversary-side Reconnaissance/Resource Development: known, but not a gap (archer.tactic_scope)
+    from archer.tactic_scope import intel_only
     techniques = list(seen.values())
+    intel = [t for t in techniques if not t["covered"]
+             and intel_only(t["technique_id"], (t["tactic"] or "").split(","))]
     covered = [t for t in techniques if t["covered"]]
-    gaps = [t for t in techniques if not t["covered"]]
+    gaps = [t for t in techniques if not t["covered"] and t not in intel]
 
     return {
         "group_name": group_name,
@@ -921,8 +917,10 @@ def get_group_coverage(group: str, generate_dir) -> Optional[Dict]:
         "total": len(techniques),
         "covered_count": len(covered),
         "gap_count": len(gaps),
+        "intel_only_count": len(intel),
         "covered": covered,
         "gaps": gaps,
+        "intel_only": intel,
     }
 
 

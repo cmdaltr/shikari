@@ -39,7 +39,7 @@ def test_lanes_coverage_gaps_and_edges(tmp_path):
     assert {(e["from"], e["to"], tuple(e["vendors"])) for e in view["edges"]} == {
         ("T1566", "T1059.001", ("googlesecops",)), ("T1059.001", "T1071.001", ("mde",))}
     assert [v["key"] for v in view["vendors"]] == ["googlesecops", "mde"]
-    assert view["stats"] == {"techniques": 4, "detected": 3, "gaps": 1, "edges": 2, "tactics": 4, "pre_compromise": 0}
+    assert view["stats"] == {"techniques": 4, "detected": 3, "gaps": 1, "edges": 2, "tactics": 4, "intel_only": 0}
 
 
 def test_attack_flow_bundle_follows_correlations(tmp_path):
@@ -113,22 +113,17 @@ def test_edited_bundle_drops_unlinked_techniques(tmp_path):
     assert flow["name"] == "G: correlated techniques (edited)"
 
 
-def test_pre_compromise_techniques_are_left_out_of_the_flow():
-    from archer.visualization.flow_view import build_flow_view, without_pre_compromise
+def test_pre_compromise_techniques_are_shown_intel_only_ones_are_not_gaps():
+    from archer.visualization.flow_view import build_flow_view
 
     attributed = [{"id": "T1595", "name": "Active Scanning", "tactics": ["Reconnaissance"]},
                   {"id": "T1583", "name": "Acquire Infrastructure", "tactics": ["Resource Development"]},
                   {"id": "T1566", "name": "Phishing", "tactics": ["Reconnaissance", "Initial Access"]},
                   {"id": "T1059", "name": "Interpreter", "tactics": ["Execution"]}]
     view = build_flow_view({}, [], attributed)
-    assert [lane["tactic"] for lane in view["lanes"]] == ["Initial Access", "Execution"]
-    assert view["stats"]["pre_compromise"] == 2 and view["stats"]["techniques"] == 2
-
-    old = {"lanes": [{"tactic": "Reconnaissance", "nodes": [
-               {"id": "T1595", "tactics": ["Reconnaissance"], "tactic": "Reconnaissance", "attributed": True},
-               {"id": "T1566", "tactics": ["Reconnaissance", "Initial Access"], "tactic": "Reconnaissance", "attributed": True}]},
-           {"tactic": "Execution", "nodes": [{"id": "T1059", "tactics": ["Execution"], "tactic": "Execution", "detected": True}]}],
-           "edges": [{"from": "T1595", "to": "T1059"}, {"from": "T1566", "to": "T1059"}], "stats": {}}
-    new = without_pre_compromise(old)
-    assert [lane["tactic"] for lane in new["lanes"]] == ["Initial Access", "Execution"]
-    assert new["edges"] == [{"from": "T1566", "to": "T1059"}] and new["stats"]["pre_compromise"] == 1
+    assert [lane["tactic"] for lane in view["lanes"]] == ["Reconnaissance", "Resource Development", "Execution"]
+    nodes = {n["id"]: n for lane in view["lanes"] for n in lane["nodes"]}
+    # Acquire Infrastructure happens on the adversary's side; scanning reaches the estate
+    assert nodes["T1583"]["intel_only"] and not nodes["T1595"]["intel_only"]
+    assert view["stats"]["techniques"] == 4
+    assert view["stats"]["intel_only"] == 1 and view["stats"]["gaps"] == 3

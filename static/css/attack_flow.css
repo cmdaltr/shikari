@@ -18,14 +18,14 @@
 .af-toolbar-sep { width: 1px; height: 28px; background: var(--af-border); margin: 0 4px; }
 .af-vendor-toggle {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; border-radius: 8px; cursor: pointer;
-  border: 1px solid var(--af-border); background: var(--af-node-bg);
+  width: 44px; height: 44px; box-sizing: border-box; border-radius: 6px; cursor: pointer;
+  border: 2px solid var(--af-border); background: var(--af-node-bg);
   opacity: 0.35; filter: grayscale(1); transition: opacity .15s, filter .15s, border-color .15s;
 }
-.af-vendor-toggle.is-on { opacity: 1; filter: none; border-color: var(--af-focus); }
+.af-vendor-toggle.is-on { opacity: 1; filter: none; border-color: var(--accent); }
 .af-vendor-toggle .af-logo { width: 22px; height: 22px; }
-/* Toolbar buttons are the shared pills, and the search box's height and border are shared too (static/css/ui.css) */
-.af-search { font: inherit; font-size: 0.95em; box-sizing: border-box; padding: 0 12px; width: 240px; color: var(--af-text); }
+/* Toolbar buttons are Library's outlined buttons, and the search box's height and border are shared too (static/css/ui.css) */
+.af-search { font: inherit; font-size: 0.95em; box-sizing: border-box; padding: 0 12px; flex: 1 1 120px; width: 120px; min-width: 120px; max-width: 240px; color: var(--af-text); }
 .af-vendor-toggle:focus-visible, .af-chip:focus-visible, .af-search:focus-visible, .af-node:focus-visible {
   outline: 2px solid var(--af-focus); outline-offset: 2px;
 }
@@ -81,6 +81,10 @@
 .af-logo { width: 16px; height: 16px; flex-shrink: 0; }
 .af-node.is-gap { border-style: dashed; border-color: var(--af-gap); background: var(--af-gap-bg); }
 .af-gap-mark { font-size: 0.68em; font-weight: 700; color: var(--af-gap); text-transform: uppercase; letter-spacing: .3px; }
+/* Intel only (archer.tactic_scope): known to the group, outside what logs can see; not a gap */
+.af-node.is-intel { border-style: dotted; background: var(--af-node-bg); }
+.af-gap-mark.is-intel, .af-detail-gap.is-intel { color: var(--af-muted); }
+.af-legend-intel { width: 22px; height: 14px; border: 1.5px dotted var(--af-border); border-radius: 3px; }
 
 .af-edge { fill: none; stroke-width: 1.6; opacity: .45; transition: opacity .12s, stroke-width .12s; }
 .af-edge.is-back { stroke-dasharray: 5 4; opacity: .3; }

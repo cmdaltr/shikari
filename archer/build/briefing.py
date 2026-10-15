@@ -33,8 +33,13 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
 
     why = {m.get("technique"): m.get("text") or m.get("reason") or "" for m in no_detection or []}
     tactics, gaps, total, detected = [], [], 0, 0
+    # Intel-only techniques (adversary-side Reconnaissance/Resource Development,
+    # archer.tactic_scope) are neither coverage nor gaps
+    intel = {n["id"] for lane in lanes for n in lane.get("nodes") or [] if n.get("intel_only")}
     for lane in lanes:
-        nodes = lane.get("nodes") or []
+        nodes = [n for n in lane.get("nodes") or [] if n["id"] not in intel]
+        if not nodes:
+            continue
         hit = sum(1 for n in nodes if n.get("detected"))
         total += len(nodes)
         detected += hit
@@ -47,7 +52,7 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
     # Techniques the run built nothing for that never reached the flow
     in_flow = {n["id"] for lane in lanes for n in lane.get("nodes") or []}
     for tid, text in why.items():
-        if tid and tid not in in_flow:
+        if tid and tid not in in_flow and tid not in intel:
             gaps.append({"id": tid, "name": tid, "tactic": "", "url": "https://attack.mitre.org/techniques/"
                          + tid.replace(".", "/") + "/", "why": text, "order": (99, 0, tid)})
     gaps.sort(key=lambda g: g["order"])

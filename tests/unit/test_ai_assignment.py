@@ -135,16 +135,18 @@ def test_run_stops_calling_the_llm_at_the_cap(capsys):
 
 
 @pytest.mark.unit
-def test_pre_compromise_techniques_spend_no_llm_call():
+def test_intel_only_techniques_spend_no_llm_call():
     from archer.build import detections
 
     config = {"max_calls": 5, "label": "X"}
     with patch("archer.build.llm_queries.generate_llm_queries", return_value=[]) as gen:
+        # Phishing for Information: email and web logs see it, so it's worth a call
         detections._run_bespoke_generation({"technique_id": "T1598", "tactic": "Reconnaissance"}, [], "llm", config)
+        # Acquire Infrastructure: adversary-side, intel only
         detections._run_bespoke_generation({"technique_id": "T1583", "tactic": "resource-development"}, [], "llm", config)
         detections._run_bespoke_generation({"technique_id": "T1566", "tactic": "Reconnaissance, Initial Access"}, [], "llm", config)
-    assert gen.call_count == 1
-    assert config["_calls"] == 1
+    assert gen.call_count == 2
+    assert config["_calls"] == 2
 
 
 @pytest.mark.unit

@@ -638,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function () {
     blogUrlInput.addEventListener('input', validateUpload);
   }
 
-  // /?report=<url> (the Threat Feed's "Analyse in Archer"): open the Upload tab with the URL filled in
+  // /?report=<url> (the Threat Feed's "Analyse in Archer"): open the Analyse tab with the URL filled in
   var reportParam = new URLSearchParams(window.location.search).get('report');
   if (blogUrlInput && reportParam && /^https?:\/\//.test(reportParam)) {
     var uploadTab = document.querySelector('.tab-button[data-tab="upload"]');

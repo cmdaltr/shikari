@@ -125,31 +125,7 @@
   min-width: 150px;
 }
 
-/* Filter-row actions: clear, tag and export are outlined; delete is the one filled
-   button, since it's the one that can't be undone */
-#clear-filters-btn, .action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px 10px;
-  border: 2px solid var(--accent);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--accent);
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background .15s, color .15s, filter .15s;
-}
-
-#clear-filters-btn:hover, .action-btn:hover {
-  background: var(--accent);
-  color: #fff;
-}
-
-#delete-btn { background: var(--accent); color: #fff; }
-#delete-btn:hover { filter: brightness(1.08); }
+/* Filter-row actions (#clear-filters-btn, .action-btn, #delete-btn): static/css/ui.css */
 
 #select-all-btn, #deselect-all-btn {
   padding: 12px 10px;

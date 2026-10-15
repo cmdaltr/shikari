@@ -592,6 +592,8 @@ _ATTACK_PROGRESSIONS = [
     ("command-and-control", "collection"),
     ("command-and-control", "lateral-movement"),
     ("impact", "exfiltration"),
+    ("resource-development", "initial-access"),
+    ("reconnaissance", "initial-access"),
 ]
 
 # Tactic priority weights (higher = more critical to detect)
@@ -612,6 +614,8 @@ _TACTIC_PRIORITY = {
     # Lower priority tactics (still important but more common/noisy)
     "execution": 4,
     "discovery": 4,
+    "resource-development": 3,
+    "reconnaissance": 3,
 }
 
 

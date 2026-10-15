@@ -3,16 +3,13 @@ The ATT&CK Enterprise matrix, for the Coverage page's Navigator-style view: ever
 in the matrix's own order, each with every technique ATT&CK files under it and their
 sub-techniques. Built from the STIX bundle Archer loads at startup, so it follows
 ATT&CK's own changes (v18 split Defense Evasion into Stealth and Defense Impairment).
-Revoked and deprecated techniques are left out, and so are Reconnaissance and
-Resource Development (archer.tactic_scope). No coverage here: the page colours
+Revoked and deprecated techniques are left out. No coverage here: the page colours
 each cell from the reference coverage map (archer.build.references).
 """
 
 import os
 import re
 from typing import Dict, List
-
-from archer.tactic_scope import excluded, keep
 
 _cache: Dict[int, List[Dict]] = {}
 _index_cache: Dict[int, Dict[str, Dict]] = {}
@@ -68,8 +65,6 @@ def matrix(bundle) -> List[Dict]:
     result = []
     for t in order:
         short = _get(t, "x_mitre_shortname")
-        if excluded(short):
-            continue
         techniques = sorted(
             ({**parents[tid], "subs": sorted(subs.get(tid, []), key=lambda s: s["id"])}
              for tid in parents if short in phases[tid]),
@@ -100,7 +95,7 @@ def technique_index(bundle) -> Dict[str, Dict]:
         phases = [_get(p, "phase_name") for p in _get(o, "kill_chain_phases", []) or []
                   if _get(p, "kill_chain_name") == "mitre-attack"]
         tactics = [names[s] for s in sorted(set(phases) & set(order), key=order.index)]
-        if tactics:  # a technique only in excluded tactics isn't one Archer maps to
+        if tactics:
             index[tid] = {"name": _get(o, "name", tid), "tactics": tactics}
     _index_cache.clear()
     _index_cache[key] = index
@@ -160,7 +155,7 @@ def detections_by_tactic(directory: str) -> Dict[str, Dict[str, Dict]]:
         connector = (_CONNECTOR.search(text) or [None, ""])[1]
         vendor = next((name for key, name in _VENDORS if key.lower() in connector.lower()), None)
         changed = bool(re.search(r"^attack_override:", text, re.M))
-        for tactic in keep([t[4:].strip() for t in tactics.group(1).splitlines() if t.strip()]):
+        for tactic in [t[4:].strip() for t in tactics.group(1).splitlines() if t.strip()]:
             stat = result.setdefault(tactic, {}).setdefault(tid.group(1), {"count": 0, "vendors": [], "changed": False})
             stat["count"] += 1
             stat["changed"] = stat["changed"] or changed

@@ -35,6 +35,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // A link to a tab (/profile#apikeys) opens it
+    const openLinkedTab = () => {
+        const linked = location.hash && document.querySelector(`.tab-button[data-tab="${CSS.escape(location.hash.slice(1))}"]`);
+        if (linked) linked.click();
+    };
+    openLinkedTab();
+    window.addEventListener('hashchange', openLinkedTab);
+
     // File upload handling
     setupFileUpload();
 

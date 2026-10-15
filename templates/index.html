@@ -232,7 +232,7 @@
               <polyline points="9 15 12 12 15 15" stroke="#3b82f6"/>
               <path d="M12 12v9" stroke="#3b82f6"/>
             </svg>
-            <span>Upload</span>
+            <span>Analyse</span>
           </button>
           <button class="tab-button" data-tab="profile">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
@@ -1078,6 +1078,8 @@
 
               /* ---- tactic badge colours (kill-chain order) ---- */
               var TACTIC_COLORS = {
+                'Reconnaissance':        { bg: '#fef3c7', color: '#92400e' },
+                'Resource Development':  { bg: '#ffedd5', color: '#9a3412' },
                 'Initial Access':        { bg: '#fee2e2', color: '#991b1b' },
                 'Execution':             { bg: '#fce7f3', color: '#9d174d' },
                 'Persistence':           { bg: '#f3e8ff', color: '#6b21a8' },
@@ -1099,7 +1101,7 @@
 
               /* MITRE ATT&CK tactic kill-chain order */
               var TACTIC_ORDER = [
-                'Initial Access','Execution',
+                'Reconnaissance','Resource Development','Initial Access','Execution',
                 'Persistence','Privilege Escalation','Defense Evasion','Credential Access',
                 'Discovery','Lateral Movement','Collection','Command And Control',
                 'Exfiltration','Impact'
@@ -1535,7 +1537,7 @@
               <div class="hp-secondary">
               <div class="form-separator">
                 <span class="separator-line"></span>
-                <span class="separator-text">PLUS</span>
+                <span class="separator-text">PLUS (OPTIONAL)</span>
                 <span class="separator-line"></span>
               </div>
               <label for="actor-text-input" class="form-label">Add Threat Groups by name</label>
@@ -1685,31 +1687,32 @@
           <!-- UPLOAD TAB -->
           <div class="tab-pane" id="tab-upload">
             <form id="upload-form" class="hp-form" method="post" enctype="multipart/form-data" onsubmit="return false;">
+              <!-- A URL or a file, side by side; each with its note underneath -->
+              <div class="hp-split">
               <div class="hp-primary">
                 <label for="blog_url_input" class="form-label">Analyse a threat report or blog post</label>
-                <div class="hp-row">
-                  <input type="text" id="blog_url_input" class="form-input"
-                         placeholder="e.g., https://thedfirreport.com/2024/..." maxlength="500">
-                  <div class="hp-slot">
-                    <label class="option-item">
-                      <input type="checkbox" name="merge_by_parent" value="true">
-                      <span class="option-label">
-                        Merge by Parent Technique
-                        <span class="option-info-icon">i
-                          <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
-                        </span>
+                <input type="text" id="blog_url_input" class="form-input"
+                       placeholder="e.g., https://thedfirreport.com/2024/..." maxlength="500">
+                <div class="hp-under">
+                  <label class="option-item">
+                    <input type="checkbox" name="merge_by_parent" value="true">
+                    <span class="option-label">
+                      Merge by Parent Technique
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">Merge subtechniques under their parent technique (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlate parent techniques. Provides mid-level granularity between tactic-level and subtechnique-level correlations.</span>
                       </span>
-                    </label>
-                  </div>
+                    </span>
+                  </label>
                 </div>
               </div>
 
-              <div class="hp-secondary">
-              <div class="form-separator">
+              <div class="form-separator is-vertical" aria-hidden="true">
                 <span class="separator-line"></span>
                 <span class="separator-text">OR</span>
                 <span class="separator-line"></span>
               </div>
+
+              <div class="hp-secondary">
               <label for="file-input" class="form-label">Upload a file</label>
               <div class="hp-drop" id="upload-dropzone">
                 <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1719,7 +1722,6 @@
                 </svg>
                 <div class="upload-text">
                   <strong>Choose a file or drag it here</strong>
-                  <p>PDF, TXT, MD, JSON, CSV, XLSX, DOCX, YARA</p>
                 </div>
                 <div id="file-selected" class="hp-file" style="display: none;">
                   <span id="file-name-text"></span>
@@ -1729,6 +1731,8 @@
                 <button type="button" class="btn-secondary" onclick="document.getElementById('file-input').click();">
                   Select File
                 </button>
+              </div>
+              <p class="hp-under hp-formats">PDF, TXT, MD, JSON, CSV, XLSX, DOCX, YARA</p>
               </div>
               </div>
 
@@ -1791,7 +1795,7 @@
                 <!-- AI choice, set by the prompt before reading (archerAskAi) -->
                 <input type="hidden" name="ai_provider" id="upload_ai_provider" value="">
                 <input type="hidden" name="ai_model" id="upload_ai_model" value="">
-                <button type="button" class="hp-btn" id="upload_btn" disabled>Upload &amp; Process</button>
+                <button type="button" class="hp-btn" id="upload_btn" disabled>Analyse</button>
               </div>
               <div id="upload-error" class="error-message" role="alert" style="display:none;"></div>
             </form>
@@ -1847,7 +1851,7 @@
                     </label>
                     {% endfor %}
                   </div>
-                  <p class="hp-keys-how">Set them in <a href="/profile">Profile → API Keys</a>, or in <code>.env</code> in the project root.</p>
+                  <p class="hp-keys-how">Set them in <a href="/profile#apikeys" target="_blank" rel="noopener">Profile → API Keys</a>, or in <code>.env</code> in the project root.</p>
                 </div>
               </details>
               </div>

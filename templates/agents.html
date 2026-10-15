@@ -58,9 +58,9 @@
         {% endif %}
       </label>
       {% endfor %}
+      <label class="ag-approve"><input type="checkbox" name="approve" checked> Ask before actions that change something</label>
     </div>
     <div class="ag-actions">
-      <label class="ag-approve"><input type="checkbox" name="approve" checked> Ask before actions that change something</label>
       <button type="submit" class="ag-start" {% if not providers and not model %}disabled{% endif %}>Start</button>
     </div>
     <details class="ag-built">

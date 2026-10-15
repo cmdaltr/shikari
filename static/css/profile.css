@@ -586,3 +586,14 @@
 .siem-soon { font-size: .72em; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 1px 8px; border-radius: 999px; background: var(--border-color); color: var(--text-secondary); white-space: nowrap; }
 .industries-status.is-ok { color: #15803d; }
 .industries-status.is-error { color: #b91c1c; }
+
+/* Profile: Full Name with Save Changes on the input's row, the same height */
+.pf-name-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); column-gap: 16px; margin-top: 16px; }
+.pf-name-label { grid-column: 1 / -1; }
+.pf-name-input { grid-column: 1; width: 100%; margin: 0; }
+.pf-name-save { grid-column: 2; align-self: stretch; width: 100%; margin: 0; white-space: nowrap; justify-content: center; }
+.pf-name-counter { grid-column: 1; }
+@media (max-width: 600px) {
+  .pf-name-row { grid-template-columns: 1fr; row-gap: 10px; }
+  .pf-name-save, .pf-name-counter { grid-column: 1; }
+}

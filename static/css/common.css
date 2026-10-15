@@ -132,7 +132,7 @@ a.nav-auth:hover { background: var(--accent); }
 
 /* ========== Page Title ========== */
 /* Every page's title and its one-line description (Coverage's style) */
-.page-header { margin: 0 0 30px; text-align: left; }
+.page-header { margin: 0 0 30px; padding-top: 16px; text-align: left; }  /* as much space above the title as below the description */
 .page-header h1 { margin: 0 0 8px; font-size: 28px; font-weight: 400; line-height: 1.2; color: #666666; letter-spacing: normal; text-transform: none; }
 .page-header p { margin: 0; color: var(--text-secondary); font-size: 0.95rem; }
 [data-theme="dark"] .page-header h1 { color: var(--text-secondary); }

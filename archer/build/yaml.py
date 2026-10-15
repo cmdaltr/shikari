@@ -2,7 +2,7 @@ from archer.build import attack_mapping, run_files
 from archer.build.collate import collate_data
 from archer.build.severity import rate as rate_severity
 from archer.config import GENERATE_DIR
-from archer.tactic_scope import keep as keep_tactics
+from archer.tactic_scope import intel_only
 from archer.validation.mde_field_validator import format_mde_query
 
 import getpass
@@ -241,10 +241,10 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
     """Write a detection. tags, version and a hand-made ATT&CK mapping carry over from the
     file it replaces (detection_action)."""
     if isinstance(tactic, (list, tuple)):
-        tactic = keep_tactics(tactic)
-        if not tactic:
-            # Only Reconnaissance/Resource Development: nothing on the estate sees it
-            print(f"  ⏭️  Not written: {os.path.basename(query_file)} is pre-compromise only")
+        tactic = list(tactic)
+        if intel_only(tid, tactic):
+            # Adversary-side Reconnaissance/Resource Development: the estate's logs don't see it
+            print(f"  ⏭️  Not written: {os.path.basename(query_file)} is intel only (pre-compromise)")
             return
     run_files.note(query_file, tag)
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:

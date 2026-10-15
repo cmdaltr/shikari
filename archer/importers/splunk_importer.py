@@ -12,6 +12,8 @@ from typing import Dict, List, Optional
 
 # MITRE ATT&CK tactic mapping
 TACTIC_MAPPING = {
+    'reconnaissance': 'reconnaissance',
+    'resource_development': 'resource_development',
     'initial_access': 'initial_access',
     'execution': 'execution',
     'persistence': 'persistence',

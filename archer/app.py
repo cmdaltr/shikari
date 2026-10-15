@@ -4,7 +4,6 @@ from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 from archer.security import sanitize_filename, validate_safe_path, sanitize_group_name
 from archer.build.group_files import group_yaml_files
-from archer.tactic_scope import keep as keep_tactics
 from archer.build.attack_mapping import rule_name as attack_rule_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -1645,8 +1644,7 @@ def get_mitre_lists():
     """
     from .visualization.navigator import matrix
 
-    # The Enterprise matrix's own order and names (v18: Stealth, Defense Impairment),
-    # without Reconnaissance and Resource Development
+    # The Enterprise matrix's own order and names (v18: Stealth, Defense Impairment)
     tactics = [c["tactic"] for c in matrix(getattr(app.state, "bundle", None))]
     techniques = getattr(app.state, "techniques_to_choose", [])
     return tactics, techniques
@@ -2239,150 +2237,6 @@ async def set_llm_preference(
         "message": "LLM preference saved",
         "use_local_llm": use_local_llm,
     }
-
-
-@app.post("/api/mappings/save")
-async def save_mapping_config(
-    request: Request,
-    platform: str = Form(...),
-    cmd: str = Form(""),
-    file: str = Form(""),
-    reg: str = Form(""),
-    network: str = Form(""),
-    archer_session: Optional[str] = Cookie(None),
-):
-    """Save custom mapping configuration for a platform."""
-    import json
-
-    # Check authentication
-    auth_result = require_auth(request, archer_session)
-    if isinstance(auth_result, RedirectResponse):
-        return JSONResponse({"error": "Not authenticated"}, status_code=401)
-
-    user, db = auth_result
-    db.close()
-
-    try:
-        # Build mapping configuration
-        mappings = {}
-        if cmd:
-            for idx in cmd.split(","):
-                idx = idx.strip()
-                if idx:
-                    mappings[idx] = "| summarize by relevant_fields"
-
-        # Save to custom mapping file (in bespoke directory)
-        mapping_file = Path(f"bespoke/mappings/schemas/schema{platform.capitalize()}_custom.json")
-
-        # Read existing template if available
-        template_file = Path(f"bespoke/mappings/schemas/schema{platform.capitalize()}.json")
-        if template_file.exists():
-            with open(template_file, "r") as f:
-                template = json.load(f)
-        else:
-            template = {}
-
-        # Create simplified mapping structure
-        custom_mappings = {
-            "cmd": cmd.split(",") if cmd else [],
-            "file": file.split(",") if file else [],
-            "reg": reg.split(",") if reg else [],
-            "network": network.split(",") if network else [],
-        }
-
-        # Write custom mappings
-        with open(mapping_file, "w") as f:
-            json.dump(custom_mappings, f, indent=2)
-
-        return {
-            "success": True,
-            "message": f"Mapping configuration saved for {platform}",
-            "file": str(mapping_file),
-        }
-
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
-@app.get("/api/mappings/load")
-async def load_mapping_config(
-    request: Request,
-    platform: str,
-    archer_session: Optional[str] = Cookie(None),
-):
-    """Load current mapping configuration for a platform."""
-    import json
-
-    # Check authentication
-    auth_result = require_auth(request, archer_session)
-    if isinstance(auth_result, RedirectResponse):
-        return JSONResponse({"error": "Not authenticated"}, status_code=401)
-
-    user, db = auth_result
-    db.close()
-
-    try:
-        # Try to load custom mapping file first (from bespoke directory)
-        mapping_file = Path(f"bespoke/mappings/schemas/schema{platform.capitalize()}_custom.json")
-
-        if mapping_file.exists():
-            with open(mapping_file, "r") as f:
-                custom_mappings = json.load(f)
-
-            # Convert arrays back to comma-separated strings
-            return {
-                "success": True,
-                "mappings": {
-                    "cmd": ", ".join(custom_mappings.get("cmd", [])),
-                    "file": ", ".join(custom_mappings.get("file", [])),
-                    "reg": ", ".join(custom_mappings.get("reg", [])),
-                    "network": ", ".join(custom_mappings.get("network", [])),
-                },
-            }
-        else:
-            return {"success": False, "message": "No custom configuration found"}
-
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
-@app.post("/api/mappings/test")
-async def test_mapping_config(
-    request: Request,
-    platform: str = Form(...),
-    cmd: str = Form(""),
-    file: str = Form(""),
-    reg: str = Form(""),
-    network: str = Form(""),
-    archer_session: Optional[str] = Cookie(None),
-):
-    """Test/validate mapping configuration."""
-    # Check authentication
-    auth_result = require_auth(request, archer_session)
-    if isinstance(auth_result, RedirectResponse):
-        return JSONResponse({"error": "Not authenticated"}, status_code=401)
-
-    user, db = auth_result
-    db.close()
-
-    try:
-        # Basic validation: check that index names don't contain invalid characters
-        import re
-
-        valid_pattern = re.compile(r"^[a-zA-Z0-9_\-,\s]+$")
-
-        all_values = [cmd, file, reg, network]
-        for value in all_values:
-            if value and not valid_pattern.match(value):
-                return {
-                    "success": False,
-                    "error": "Index names can only contain letters, numbers, underscores, hyphens, commas, and spaces",
-                }
-
-        return {"success": True, "message": "Configuration is valid"}
-
-    except Exception as e:
-        return {"success": False, "error": str(e)}
 
 
 @app.get("/api/status/osint")
@@ -6415,9 +6269,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
 
             # Extract the query and tactics from YAML for preview (use already-loaded yaml_data)
             query_text = yaml_data.get("query", "")
-            tactics_list = keep_tactics(yaml_data.get("tactics") or [])
-            if yaml_data.get("tactics") and not tactics_list:
-                continue  # Reconnaissance/Resource Development only: out of Archer's scope
+            tactics_list = yaml_data.get("tactics") or []
             # Get primary tactic (first in list)
             primary_tactic = tactics_list[0] if tactics_list else "Unknown"
 
@@ -6728,7 +6580,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                                     severities.append(severity)
 
                                     # Get tactics
-                                    tactics = keep_tactics(yaml_data.get("tactics") or [])
+                                    tactics = yaml_data.get("tactics") or []
                                     primary_tactic = "Unknown"
                                     if isinstance(tactics, list):
                                         tactics_set.update(tactics)
@@ -7208,7 +7060,6 @@ async def briefing_summary(request: Request, archer_session: Optional[str] = Coo
     """
     from archer.build import briefing as briefing_lib
     from archer.chat import _generate, _provider_candidates
-    from archer.visualization.flow_view import without_pre_compromise
 
     auth_result = require_auth(request, archer_session)
     if isinstance(auth_result, RedirectResponse):
@@ -7218,7 +7069,7 @@ async def briefing_summary(request: Request, archer_session: Optional[str] = Coo
         group = sanitize_group_name(str((await request.json()).get("group_name") or ""))
         try:
             with open(os.path.join(ATTACK_FLOWS_DIR, f"{group}_flow_view.json"), encoding="utf-8") as fh:
-                flow = without_pre_compromise(json.load(fh).get("view"))
+                flow = json.load(fh).get("view")
         except (OSError, ValueError):
             return JSONResponse({"error": "Open the run's results first: the briefing comes from its attack flow"},
                                 status_code=404)
@@ -8610,7 +8461,6 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             else:
                 formatted_title = data_source or det.platform or "Unknown"
 
-            tactics = keep_tactics(tactics)
             # ATT&CK mapping as the copy holds it (archer.build.attack_mapping); none for correlations
             mapping_state = (attack_mapping.content_state(content_data, tech_index)
                              if isinstance(content_data, dict) and "combined_query" not in content_data else None)
@@ -9531,6 +9381,19 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
         db.close()
 
 
+def _looks_like_query(content) -> bool:
+    """A saved detection's query: a string of a real query's length with more than one token."""
+    if isinstance(content, str):
+        try:
+            content = json.loads(content)
+        except ValueError:
+            return False
+    query = content.get("query") if isinstance(content, dict) else None
+    if isinstance(query, dict):
+        query = query.get("query")
+    return isinstance(query, str) and len(query.strip()) >= 20 and len(query.split()) > 1
+
+
 @app.post("/api/library/save")
 async def save_to_library(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
@@ -9566,6 +9429,10 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
 
         if not title or not detection_type or not content:
             raise HTTPException(status_code=400, detail="Missing required fields")
+        # A detection must carry a query: a placeholder ({"query": "x"}, saved by a test
+        # run) showed in the Library as an Unknown rule with no ATT&CK mapping
+        if "correlation" not in detection_type.lower() and not _looks_like_query(content):
+            raise HTTPException(status_code=400, detail="The detection has no query to save")
 
         # Auto-tag with Group and CVE if provided
         auto_tags = []
