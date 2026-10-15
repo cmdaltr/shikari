@@ -487,7 +487,7 @@ flowchart TD
 
     subgraph "Enrichment Decisions<br/><i>All optional, user-selected</i>"
         D12{"OSINT enabled?"}
-        D12 -- "Yes" --> D12A["Cross-check queries against<br/>public detection repos<br/><i>MITRE CAR, Elastic rules</i>"]
+        D12 -- "Yes" --> D12A["Cross-check queries against<br/>public detection repos<br/><i>Elastic, Splunk, Sentinel rules</i>"]
         D12 -- "No" --> D12B["Skip"]
 
         D13{"Validation enabled?"}

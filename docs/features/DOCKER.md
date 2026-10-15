@@ -25,7 +25,6 @@ docker-compose down
 On **first run**, Archer will clone 4 OSINT detection repositories (~425MB total):
 
 - Elastic Security (106MB)
-- MITRE CAR (5MB)
 - Splunk Security Content (58MB)
 - Azure Sentinel (256MB) ⚠️ **Takes 10-15 minutes**
 

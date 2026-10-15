@@ -246,7 +246,7 @@ def score_osint_indicator_relevance(
     Score 0.0-1.0 based on:
     - Platform match
     - Indicator type match
-    - Source quality (Elastic, Splunk, MITRE CAR)
+    - Source quality (Elastic, Splunk, Sentinel)
     """
 ```
 

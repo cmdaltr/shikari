@@ -40,7 +40,7 @@ This comprehensive approach ensures all detections benefit from the latest commu
 ### Key Features
 
 - ✅ **Automatic Enhancement** - Runs during detection generation
-- ✅ **4 OSINT Sources** - Elastic, MITRE CAR, Splunk, Azure Sentinel
+- ✅ **3 OSINT Sources** - Elastic, Splunk, Azure Sentinel
 - ✅ **Local Repositories** - No API rate limits, fast searches (<1s)
 - ✅ **Platform-Aware** - Extracts Azure operations and AWS API calls
 - ✅ **Query Snippets** - Provides actionable detection patterns for cloud platforms
@@ -88,7 +88,6 @@ Has Real IOCs            No Real IOCs
         ▼                        ▼
 ┌──────────────────┐    ┌──────────────────┐
 │ Search Sources:  │    │ Search Sources:  │
-│ • MITRE CAR      │    │ • MITRE CAR      │
 │ • Elastic Rules  │    │ • Elastic Rules  │
 │ • Splunk Content │    │ • Splunk Content │
 │ • Azure Sentinel │    │ • Azure Sentinel │
@@ -333,10 +332,9 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 | Repository | Size | Rules | Clone Time | Search Time | Update Frequency |
 |-----------|------|-------|------------|-------------|------------------|
 | **elastic/detection-rules** | 106MB | 1,504 | ~10s | <1s | Hourly |
-| **mitre-attack/car** | 5MB | 200+ | ~1s | <1s | Hourly |
 | **splunk/security_content** | 58MB | 1,800+ | ~5s | ~1s | Hourly |
 | **Azure/Azure-Sentinel** | 256MB | 1,000+ | ~60s | ~2s | Hourly |
-| **Total** | **~425MB** | **4,504+** | **~76s** | **<5s** | **Hourly** |
+| **Total** | **~420MB** | **4,300+** | **~75s** | **<5s** | **Hourly** |
 
 ### Benefits Over API Method
 
@@ -353,17 +351,12 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 - **Extracts:** EQL queries, KQL queries, field names, specific values
 - **Best For:** Cloud detections (Azure, AWS, GCP), SIEM queries
 
-#### 2. MITRE CAR (Cyber Analytics Repository)
-- **Focus:** Behavioral analytics and pseudocode implementations
-- **Extracts:** Analytics descriptions, data requirements, implementations
-- **Best For:** Detection analytics, correlation rules
-
-#### 3. Splunk Security Content
+#### 2. Splunk Security Content
 - **Focus:** Splunk SPL detection searches
 - **Extracts:** SPL queries, field names, lookup tables, detection logic
 - **Best For:** Splunk-specific detections, SPL query patterns
 
-#### 4. Azure Sentinel
+#### 3. Azure Sentinel
 - **Focus:** Azure Sentinel KQL detection rules
 - **Extracts:** KQL queries, Azure-specific field names, hunting queries
 - **Best For:** Azure AD, Office 365, Azure Security Center detections
@@ -377,7 +370,6 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 ```
 data/osint_repos/
 ├── elastic/         # 106MB, 1,504 rules
-├── mitre_car/       # 5MB, 200+ analytics
 ├── splunk/          # 58MB, 1,800+ detections
 └── azure_sentinel/  # 256MB, 1,000+ rules
 Total: ~425MB
@@ -411,8 +403,7 @@ python scripts/data/update_osint.py --force
 
 Repos updating doesn't, by itself, make comparisons any faster — without a
 prebuilt index, every OSINT comparison call still does a live `grep -r`
-subprocess per technique per repo (and, for MITRE CAR, a live network fetch
-of `analytics.json`). `build_osint_index.py` walks each repo once and writes
+subprocess per technique per repo. `build_osint_index.py` walks each repo once and writes
 a technique → rule index that turns those into a single dict lookup:
 
 ```bash
@@ -579,7 +570,7 @@ Generated reports (Word, PDF, HTML) now display OSINT enrichment information:
 
 #### Detection-Level OSINT Information
 - **Enrichment Status**: Visual indicator showing if query was enhanced with OSINT
-- **OSINT Sources**: List of OSINT repositories used (Elastic, Splunk, MITRE CAR, etc.)
+- **OSINT Sources**: List of OSINT repositories used (Elastic, Splunk, Sentinel)
 - **Color Coding**:
   - Green ✓ for queries enriched with OSINT indicators
   - Blue ℹ for queries compared but not enhanced
@@ -635,7 +626,6 @@ This may take 15-20 minutes on first run. Subsequent starts will be much faster.
 │ 🔄 Elastic Security Rules                               │
 │    Cloning...                                            │
 ├─────────────────────────────────────────────────────────┤
-│ ✅ MITRE CAR Analytics                                  │
 │    Ready                                                 │
 ├─────────────────────────────────────────────────────────┤
 │ ✅ Splunk Security Content                              │
@@ -660,7 +650,6 @@ If repositories fail to clone, failed repos show a red cross with error message 
 │ ✅ Elastic Security Rules                               │
 │    Ready                                                 │
 ├─────────────────────────────────────────────────────────┤
-│ ✅ MITRE CAR Analytics                                  │
 │    Ready                                                 │
 ├─────────────────────────────────────────────────────────┤
 │ ✅ Splunk Security Content                              │
@@ -788,7 +777,6 @@ The local repository approach **does not require a GitHub token** or any environ
 # OSINT repository clones (updated hourly)
 data/osint_repos/
   ├── elastic/         # 106MB, 1,504 rules
-  ├── mitre_car/       # 5MB, 200+ analytics
   ├── splunk/          # 58MB, 1,800+ detections
   └── azure_sentinel/  # 256MB, 1,000+ rules
   Total: ~425MB

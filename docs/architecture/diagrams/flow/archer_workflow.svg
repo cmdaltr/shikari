@@ -149,7 +149,7 @@
 
   <rect x="280" y="628" width="200" height="80" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
   <text x="298" y="652" class="box-title">OSINT Comparison</text>
-  <text x="298" y="666" class="box-detail">Splunk · Elastic · MITRE CAR rules</text>
+  <text x="298" y="666" class="box-detail">Splunk · Elastic · Sentinel rules</text>
   <text x="298" y="680" class="box-detail">Gap analysis · deduplication</text>
 
   <rect x="500" y="628" width="200" height="80" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>

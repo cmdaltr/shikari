@@ -19,7 +19,6 @@
     ['splunk', 'Splunk', 'splunk/security_content'],
     ['azure_sentinel', 'Sentinel', 'Azure/Azure-Sentinel'],
     ['elastic', 'Elastic', 'elastic/detection-rules'],
-    ['mitre_car', 'MITRE CAR', 'mitre-attack/car'],
   ];
   async function osint() {
     const box = $('ms-osint'), overall = $('ms-osint-overall');

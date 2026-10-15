@@ -13,7 +13,6 @@ REQUIREMENTS:
 2. OSINT Sources to Search:
    - Threat intelligence blogs (Mandiant, CrowdStrike, Microsoft, etc.)
    - GitHub repositories (detection-as-code repos)
-   - MITRE CAR (Cyber Analytics Repository)
    - Elastic Detection Rules
    - Splunk Security Content
    - Atomic Red Team test cases
@@ -112,79 +111,12 @@ def _entries_to_sources_and_indicators(entries: List[Dict], source_label: str) -
     return sources, indicators
 
 
-def search_mitre_car(technique_id: str) -> Tuple[List[str], List[Dict]]:
-    """
-    Look up MITRE CAR analytics for a technique.
-
-    Uses the prebuilt OSINT technique index (archer.build.osint_index) when
-    available -- an O(1) lookup instead of a live network fetch of
-    analytics.json on every call. Falls back to the live fetch only if the
-    index hasn't been built yet (run scripts/data/build_osint_index.py).
-
-    Returns: (sources: List[str], indicators: List[Dict])
-    """
-    from .osint_index import load_index, lookup as index_lookup
-
-    if load_index() is not None:
-        entries = index_lookup(technique_id, "mitre_car")
-        if entries:
-            print(f"  \u2713 Found {len(entries)} MITRE CAR analytic(s) for {technique_id} (from index)")
-        return _entries_to_sources_and_indicators(entries, "MITRE CAR")
-
-    return _live_search_mitre_car(technique_id)
-
-
-def _live_search_mitre_car(technique_id: str) -> Tuple[List[str], List[Dict]]:
-    """
-    Search MITRE CAR (Cyber Analytics Repository) for analytics.
-
-    Returns: (sources: List[str], indicators: List[Dict])
-    """
-    sources = []
-    indicators = []
-
-    try:
-        # MITRE CAR analytics API
-        url = f"https://raw.githubusercontent.com/mitre-attack/car/master/analytics.json"
-
-        response = requests.get(url, timeout=10)
-
-        if response.status_code == 200:
-            analytics = response.json()
-
-            # Search for technique ID in analytics
-            for analytic_id, analytic_data in analytics.items():
-                coverage = analytic_data.get("coverage", [])
-                for cov in coverage:
-                    if isinstance(cov, dict) and cov.get("technique") == technique_id:
-                        print(f"  ✓ Found MITRE CAR analytic: {analytic_id}")
-                        sources.append(f"https://car.mitre.org/analytics/{analytic_id}")
-
-                        # Extract pseudocode/implementations
-                        implementations = analytic_data.get("implementations", [])
-                        if implementations:
-                            indicators.append({
-                                "source": "MITRE CAR",
-                                "analytic_id": analytic_id,
-                                "name": analytic_data.get("title", ""),
-                                "implementations": len(implementations)
-                            })
-                        break
-
-        time.sleep(0.5)  # Rate limiting
-
-    except Exception as e:
-        print(f"  ⚠ Error searching MITRE CAR: {e}")
-
-    return sources, indicators
-
-
 def search_elastic_rules(technique_id: str) -> Tuple[List[str], List[Dict]]:
     """
     Look up Elastic Detection Rules for a technique.
 
-    Uses the prebuilt OSINT technique index when available (see
-    search_mitre_car's docstring). Falls back to a live grep across the
+    Uses the prebuilt OSINT technique index (archer.build.osint_index) when
+    available, an O(1) lookup (build it with scripts/data/build_osint_index.py). Falls back to a live grep across the
     cloned repo if the index hasn't been built yet.
 
     Returns: (sources: List[str], indicators: List[Dict])
@@ -263,8 +195,8 @@ def search_splunk_content(technique_id: str) -> Tuple[List[str], List[Dict]]:
     """
     Look up Splunk Security Content detections for a technique.
 
-    Uses the prebuilt OSINT technique index when available (see
-    search_mitre_car's docstring). Falls back to a live grep across the
+    Uses the prebuilt OSINT technique index (archer.build.osint_index) when
+    available, an O(1) lookup (build it with scripts/data/build_osint_index.py). Falls back to a live grep across the
     cloned repo if the index hasn't been built yet.
 
     Returns: (sources: List[str], indicators: List[Dict])
@@ -336,8 +268,8 @@ def search_azure_sentinel(technique_id: str) -> Tuple[List[str], List[Dict]]:
     """
     Look up Azure Sentinel rules for a technique.
 
-    Uses the prebuilt OSINT technique index when available (see
-    search_mitre_car's docstring). Falls back to a live grep across the
+    Uses the prebuilt OSINT technique index (archer.build.osint_index) when
+    available, an O(1) lookup (build it with scripts/data/build_osint_index.py). Falls back to a live grep across the
     cloned repo if the index hasn't been built yet.
 
     Returns: (sources: List[str], indicators: List[Dict])
@@ -511,15 +443,7 @@ def search_osint_for_technique(
     all_indicators_data = []
     notes = []
 
-    # 1. Search MITRE CAR
-    print(f"  Searching MITRE CAR...")
-    car_sources, car_indicators = search_mitre_car(technique_id)
-    if car_sources:
-        all_sources.extend(car_sources)
-        all_indicators_data.extend(car_indicators)
-        notes.append(f"Found {len(car_sources)} MITRE CAR analytic(s)")
-
-    # 2. Search Elastic Detection Rules
+    # 1. Search Elastic Detection Rules
     print(f"  Searching Elastic Detection Rules...")
     elastic_sources, elastic_indicators = search_elastic_rules(technique_id)
     if elastic_sources:
@@ -527,7 +451,7 @@ def search_osint_for_technique(
         all_indicators_data.extend(elastic_indicators)
         notes.append(f"Found {len(elastic_sources)} Elastic rule(s)")
 
-    # 3. Search Splunk Security Content
+    # 2. Search Splunk Security Content
     print(f"  Searching Splunk Security Content...")
     splunk_sources, splunk_indicators = search_splunk_content(technique_id)
     if splunk_sources:
@@ -535,7 +459,7 @@ def search_osint_for_technique(
         all_indicators_data.extend(splunk_indicators)
         notes.append(f"Found {len(splunk_sources)} Splunk detection(s)")
 
-    # 4. Search Azure Sentinel
+    # 3. Search Azure Sentinel
     print(f"  Searching Azure Sentinel...")
     sentinel_sources, sentinel_indicators = search_azure_sentinel(technique_id)
     if sentinel_sources:
@@ -669,7 +593,7 @@ def score_osint_indicator_relevance(
         indicator_type: Type (cmd, evt, sw, api, operation)
         technique_id: MITRE ATT&CK technique ID
         platform: Target platform
-        osint_source: Source of the indicator (Elastic, MITRE CAR, etc.)
+        osint_source: Source of the indicator (Elastic, Splunk, Sentinel)
 
     Returns:
         Relevance score (0.0-1.0)
@@ -695,8 +619,6 @@ def score_osint_indicator_relevance(
         # Boost score for specific sources
         if "Elastic" in osint_source:
             score += 0.1  # Elastic rules are well-tested
-        if "MITRE CAR" in osint_source:
-            score += 0.15  # MITRE CAR is authoritative
 
         # Cap at 1.0
         return min(score, 1.0)

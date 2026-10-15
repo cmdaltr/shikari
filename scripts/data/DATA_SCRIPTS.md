@@ -14,7 +14,6 @@ python scripts/data/update_osint.py
 
 **What it updates**:
 - **Elastic Detection Rules**
-- **MITRE CAR** (Cyber Analytics Repository)
 - **Splunk Security Content**
 - **Azure Sentinel** detection rules
 
@@ -50,13 +49,12 @@ python scripts/data/build_osint_index.py --skip-clone   # build from what's alre
 ```
 
 **What it does**:
-- Walks every cloned OSINT repo (Elastic, Splunk, Azure Sentinel, MITRE CAR)
+- Walks every cloned OSINT repo (Elastic, Splunk, Azure Sentinel)
   once, extracting every technique ID mentioned in every rule file
 - Writes `data/cache/osint_technique_index.json`: `{technique_id: {source: [{name, source_url, query_snippet}, ...]}}`
 
 Without this index, `archer/build/osint_comparison.py` searches live on every
-OSINT comparison call — a `grep -r` subprocess per technique per repo, plus a
-network fetch of `analytics.json` for MITRE CAR every single time. With the
+OSINT comparison call — a `grep -r` subprocess per technique per repo. With the
 index built, those same lookups become a single dict access. The comparison
 functions fall back to the old live search automatically if the index hasn't
 been built yet, so this is optional but strongly recommended.

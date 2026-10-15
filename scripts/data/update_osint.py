@@ -14,7 +14,6 @@ Usage:
 Options:
     --force             Force update even if repos were recently updated
     --elastic           Update only Elastic repository
-    --mitre-car         Update only MITRE CAR repository
     --splunk            Update only Splunk repository
     --azure-sentinel    Update only Azure Sentinel repository
 
@@ -43,13 +42,6 @@ REPOS = {
         "path": "data/osint_repos/elastic",
         "search_dir": "rules",
         "description": "Elastic Security Detection Rules",
-        "timeout": 60,
-    },
-    "mitre_car": {
-        "url": "https://github.com/mitre-attack/car.git",
-        "path": "data/osint_repos/mitre_car",
-        "search_dir": "analytics",
-        "description": "MITRE Cyber Analytics Repository",
         "timeout": 60,
     },
     "splunk": {
@@ -320,12 +312,6 @@ Examples:
         help="Update only Elastic repository"
     )
     parser.add_argument(
-        "--mitre-car",
-        action="store_true",
-        dest="mitre_car",
-        help="Update only MITRE CAR repository"
-    )
-    parser.add_argument(
         "--splunk",
         action="store_true",
         help="Update only Splunk repository"
@@ -344,11 +330,9 @@ Examples:
     repos_to_update = []
 
     # Check if any specific repo flags were set
-    if args.elastic or args.mitre_car or args.splunk or args.azure_sentinel:
+    if args.elastic or args.splunk or args.azure_sentinel:
         if args.elastic:
             repos_to_update.append("elastic")
-        if args.mitre_car:
-            repos_to_update.append("mitre_car")
         if args.splunk:
             repos_to_update.append("splunk")
         if args.azure_sentinel:

@@ -60,7 +60,7 @@ class OSINTQueryEnhancer:
         Maps: source_vendor -> {source_field: target_field}
 
         For OSINT-to-KQL (MDE) mappings:
-        - Maps source field names (Splunk/Elastic/CAR) to their KQL equivalents
+        - Maps source field names (Splunk/Elastic) to their KQL equivalents
         - Uses None for fields that should be skipped (no KQL equivalent)
         """
         return {
@@ -146,37 +146,6 @@ class OSINTQueryEnhancer:
                 "Endpoint.Processes": None,  # Splunk data model
                 "signature": None,  # Splunk ES field, context-dependent
             },
-            "CAR": {
-                # MITRE CAR-to-KQL (MDE) field mappings
-                # CAR uses a data model similar to CIM/Splunk
-
-                # Process fields
-                "exe": "FolderPath",  # CAR 'exe' -> full executable path
-                "command_line": "ProcessCommandLine",
-                "parent_exe": "InitiatingProcessFolderPath",
-                "parent_command_line": "InitiatingProcessCommandLine",
-                "pid": "ProcessId",
-                "ppid": "InitiatingProcessId",
-
-                # User fields
-                "user": "AccountName",
-                "uid": None,  # Unix UID, not applicable to Windows MDE
-
-                # File fields
-                "file_name": "FileName",
-                "file_path": "FolderPath",
-
-                # Network fields
-                "src_ip": "LocalIP",
-                "dest_ip": "RemoteIP",
-                "src_port": "LocalPort",
-                "dest_port": "RemotePort",
-                "hostname": "DeviceName",
-
-                # Fields to SKIP
-                "sysmon_event_id": None,  # Sysmon-specific
-                "event_type": None,  # Generic field
-            }
         }
 
     def extract_patterns_from_query(self, query_snippet: str, source_vendor: str) -> List[Dict[str, Any]]:

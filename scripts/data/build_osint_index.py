@@ -2,12 +2,10 @@
 """
 build_osint_index.py - Build the MITRE ATT&CK technique -> OSINT rule index
 
-Walks the locally-cloned OSINT repos (Elastic, Splunk, Azure Sentinel, MITRE
-CAR) once and writes a reverse index (data/cache/osint_technique_index.json)
+Walks the locally-cloned OSINT repos (Elastic, Splunk, Azure Sentinel) once and writes a reverse index (data/cache/osint_technique_index.json)
 mapping technique IDs to matching rules in each repo. Once this exists,
 archer/build/osint_comparison.py looks up techniques in it instead of
-grepping each repo (and, for MITRE CAR, fetching analytics.json over the
-network) on every single OSINT comparison call.
+grepping each repo on every single OSINT comparison call.
 
 Run this after updating the OSINT repos (update_osint.py), or on a schedule
 (cron/launchd) alongside it -- the index doesn't update itself.

@@ -3,11 +3,10 @@ OSINT Technique Index
 
 Builds and serves a prebuilt reverse index mapping MITRE ATT&CK technique IDs
 to matching detection rules across every cloned OSINT repository (Elastic,
-Splunk, Azure Sentinel, MITRE CAR).
+Splunk, Azure Sentinel).
 
 Without this index, osint_comparison.py searches live on every request: a
-`grep -r` subprocess per technique per repo, plus (for MITRE CAR) a network
-fetch of analytics.json every single call. Building the index walks each
+`grep -r` subprocess per technique per repo. Building the index walks each
 repo exactly once, extracting every technique ID mentioned in every rule
 file in a single pass, so query generation becomes a dict lookup instead.
 
@@ -38,7 +37,6 @@ _GITHUB_BASE = {
     "elastic": ("https://github.com/elastic/detection-rules/blob", "main"),
     "splunk": ("https://github.com/splunk/security_content/blob", "develop"),
     "azure_sentinel": ("https://github.com/Azure/Azure-Sentinel/blob", "master"),
-    "mitre_car": ("https://github.com/mitre-attack/car/blob", "master"),
 }
 
 
@@ -147,55 +145,10 @@ def _index_azure_sentinel(repo_path: Path) -> Dict[str, List[Dict]]:
     return index
 
 
-def _index_mitre_car(repo_path: Path) -> Dict[str, List[Dict]]:
-    index: Dict[str, List[Dict]] = {}
-    search_dir = repo_path / REPOS["mitre_car"]["search_dir"]
-    if not search_dir.exists():
-        return index
-
-    for file_path in search_dir.rglob("*.yaml"):
-        try:
-            raw = file_path.read_text(errors="ignore")
-        except Exception:
-            continue
-        technique_ids = set(TECHNIQUE_ID_RE.findall(raw))
-        if not technique_ids:
-            continue
-        try:
-            analytic_data = yaml_lib.safe_load(raw)
-        except Exception:
-            continue
-        if not isinstance(analytic_data, dict):
-            continue
-
-        # CAR analytics don't have a single "query" field -- pseudocode (when
-        # present) lives under implementations[].code. Fall back to the
-        # description so the entry is still useful for review even without code.
-        code_snippet = ""
-        for impl in (analytic_data.get("implementations") or []):
-            if isinstance(impl, dict) and impl.get("code"):
-                code_snippet = impl["code"]
-                break
-
-        snippet = code_snippet or analytic_data.get("description", "")
-        if not snippet:
-            continue
-
-        entry = {
-            "name": analytic_data.get("title", file_path.name),
-            "source_url": _github_url("mitre_car", repo_path, file_path),
-            "query_snippet": snippet[:500],
-        }
-        for tid in technique_ids:
-            index.setdefault(tid, []).append(entry)
-    return index
-
-
 _BUILDERS = {
     "elastic": _index_elastic,
     "splunk": _index_splunk,
     "azure_sentinel": _index_azure_sentinel,
-    "mitre_car": _index_mitre_car,
 }
 
 

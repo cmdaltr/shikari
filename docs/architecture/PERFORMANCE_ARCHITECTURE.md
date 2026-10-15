@@ -306,7 +306,7 @@ app.state.groups = obtain_all_groups()       # 140+ threat actors
 |-------|------------|------|
 | Elastic | 10 | 20-30s |
 | Elastic + Splunk | 10 | 40-60s |
-| Elastic + Splunk + MITRE CAR | 10 | 60-90s |
+| Elastic + Splunk + Sentinel | 10 | 60-90s |
 
 **Note:** OSINT comparison clones GitHub repos (one-time network overhead)
 

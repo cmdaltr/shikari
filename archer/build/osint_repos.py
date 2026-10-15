@@ -35,12 +35,6 @@ REPOS = {
         "search_dir": "rules",
         "timeout": DEFAULT_TIMEOUT,
     },
-    "mitre_car": {
-        "url": "https://github.com/mitre-attack/car.git",
-        "path": os.path.join(OSINT_REPOS_DIR, "mitre_car"),
-        "search_dir": "analytics",
-        "timeout": DEFAULT_TIMEOUT,
-    },
     "splunk": {
         "url": "https://github.com/splunk/security_content.git",
         "path": os.path.join(OSINT_REPOS_DIR, "splunk"),
@@ -127,7 +121,7 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
     Clone or update a repository.
 
     Args:
-        repo_name: Name of the repo (elastic, mitre_car, splunk, azure_sentinel)
+        repo_name: Name of the repo (elastic, splunk, azure_sentinel)
         force: Force update even if not needed
 
     Returns:
