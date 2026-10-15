@@ -59,7 +59,8 @@ body::before {
     z-index: 10001;
     font-family: 'Inter', sans-serif;
 }
-.nav-tabs, .nav-tools { display: flex; align-items: center; gap: 10px; }
+.nav-tabs { display: flex; align-items: center; gap: 22px; }
+.nav-tools { display: flex; align-items: center; gap: 14px; }
 .nav-tab, .nav-icon-btn { flex-shrink: 0; position: relative; }
 
 .nav-tab {
@@ -138,9 +139,19 @@ a.nav-menu-item:hover, a.nav-menu-item:focus-visible { background: rgba(197, 48,
 [data-theme="dark"] .nav-menu-item { color: var(--text-primary, #f3f4f6); }
 [data-theme="dark"] .nav-menu-item small { color: var(--text-secondary, #9ca3af); }
 .nav-icon-btn svg { width: 24px; height: 24px; }
+/* Local LLM, Profile and Help: icon and word, like the tabs */
+.nav-icon-btn.has-label { width: auto; gap: 7px; padding: 0 13px; font-size: 16px; font-weight: 600; white-space: nowrap; font-family: inherit; }
+.nav-icon-btn.has-label svg { width: 20px; height: 20px; flex-shrink: 0; }
 
-/* Narrower windows: icons only (the label stays as the tooltip and accessible name) */
-@media (max-width: 900px) {
+/* Narrower windows: icons only (the label stays as the tooltip and accessible name). */
+/* First Local LLM, Profile and Help, then the menus too */
+@media (max-width: 1240px) {
+    .nav-tools { gap: 8px; }
+    .nav-icon-btn.has-label { width: 44px; padding: 10px; }
+    .nav-icon-btn .nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+@media (max-width: 1040px) {
+    .nav-tabs { gap: 10px; }
     .nav-tabs > .nav-tab > span, .nav-menu-btn > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     .nav-tabs .nav-tab { padding: 0 10px; }
 }

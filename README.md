@@ -6,7 +6,7 @@
 
 <br>
 
-Archer is a modular Python service for automated threat hunting with optional adversary emulation and hunt tracking integrations. Generate detection queries, validate with real attack execution, and track hunts with VECTR integration.
+Archer automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L) and Microsoft Defender (KQL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
 
 ## 🛠️ Setup and Usage
 
@@ -38,7 +38,7 @@ archer stop
 - 🌐 **Blog Analysis** - Paste a threat intel blog URL and extract TTPs/IOCs automatically
 - 📰 **Threat Feed** - A searchable wall of the last 7 days of vendor and government research (20 sources), each post tagged with targeted industries, the attacker's nation, and opportunistic or financial motive; collected on start-up and on demand, no AI involved ([details](#threat-feed))
 - 🗺️ **Attack Flows** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow
-- 🔍 **Multi-Platform Support** - Splunk (SPL), KQL (Microsoft Defender/Sentinel), Google SecOps (YARA-L) and Elastic (DSL) queries
+- 🔍 **Multi-Platform Support** - Google SecOps (YARA-L) and Microsoft Defender (KQL); Splunk and Elastic are switched off for now ([onboarding](docs/SIEM_ONBOARDING.md))
 - 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries
 - 🛡️ **Threat Briefing** - Grounded ATT&CK prioritisation grounded in real MITRE data and your detection coverage gaps
 - 🔬 **Research Tab** - Actor technique consolidation with keyword/country filtering, tactic filtering, and professional XLSX export
@@ -54,11 +54,10 @@ archer stop
 
 - **Detection Validation** - Test queries against containerized SIEMs with sample events ([docs](docs/features/RUNTIME_VALIDATION.md))
 - **Detection Library** - Save, search, tag, share, and export your generated detections
-- **Adversary Emulation** - Atomic Red Team integration for simulate/execute modes
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - MDE/Splunk API integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
-- **VECTR, CALDERA, MACAT** - Planned integrations (see [FUTURE.md](docs/other/FUTURE.md))
+- **Adversary emulation, VECTR, CALDERA, MACAT** - Planned (see [FUTURE.md](docs/other/FUTURE.md) and #11)
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)

@@ -1,6 +1,6 @@
 {#
   The one navigation bar, on every page: Home, then three menus (Detections, Intel, Build),
-  then Profile, Help and the tools as icons. Pages that need an account are greyed out for
+  then Local LLM, Profile, Help, the theme toggle and Log out. Pages that need an account are greyed out for
   guests. A menu opens on hover or click (keyboard: Enter, arrows, Escape); the one holding
   the current page is highlighted. The bar spans the page's main content (common.css).
 #}
@@ -63,20 +63,21 @@
         {% endfor %}
     </div>
     <div class="nav-tools">
-        <button class="nav-icon-btn" id="llm-status-btn" aria-label="LLM Settings" title="LLM Settings" style="display: none; position: relative;">
+        <button class="nav-icon-btn has-label" id="llm-status-btn" title="Local LLM settings" style="display: none; position: relative;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
                 <line x1="8" y1="21" x2="16" y2="21"/>
                 <line x1="12" y1="17" x2="12" y2="21"/>
             </svg>
+            <span class="nav-label">Local LLM</span>
             <span id="llm-status-dot" style="position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: none;"></span>
         </button>
         {% if user %}
-        <a href="/profile" class="nav-icon-btn{% if is_here('/profile') %} is-active{% endif %}"{% if is_here('/profile') %} aria-current="page"{% endif %} aria-label="Profile" title="Profile">{{ svg('profile') }}</a>
+        <a href="/profile" class="nav-icon-btn has-label{% if is_here('/profile') %} is-active{% endif %}"{% if is_here('/profile') %} aria-current="page"{% endif %} title="Profile">{{ svg('profile') }}<span class="nav-label">Profile</span></a>
         {% else %}
-        <span class="nav-icon-btn is-disabled" aria-disabled="true" title="Log in to use Profile">{{ svg('profile') }}</span>
+        <span class="nav-icon-btn has-label is-disabled" aria-disabled="true" title="Log in to use Profile">{{ svg('profile') }}<span class="nav-label">Profile</span></span>
         {% endif %}
-        <a href="/how-it-works" class="nav-icon-btn{% if is_here('/how-it-works') %} is-active{% endif %}"{% if is_here('/how-it-works') %} aria-current="page"{% endif %} aria-label="Help" title="Help">{{ svg('help') }}</a>
+        <a href="/how-it-works" class="nav-icon-btn has-label{% if is_here('/how-it-works') %} is-active{% endif %}"{% if is_here('/how-it-works') %} aria-current="page"{% endif %} title="Help">{{ svg('help') }}<span class="nav-label">Help</span></a>
         <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
             <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"/>
