@@ -569,6 +569,109 @@ def strip_excluded_fields(query: str) -> str:
     return result
 
 
+_KQL_STRING = re.compile(r'@"(?:[^"]|"")*"|"(?:[^"\\\n]|\\.)*"|\'(?:[^\'\\\n]|\\.)*\'')
+
+
+def verbatim_backslash_literals(query: str) -> str:
+    """An ordinary "..." literal holding a backslash becomes verbatim @"...", so a path reads
+    as written (output contract KQL-5). The value is unchanged."""
+    def fix(m):
+        lit = m.group(0)
+        if lit.startswith('@') or lit.startswith("'") or "\\" not in lit:
+            return lit
+        value = re.sub(r'\\(.)', r'\1', lit[1:-1])
+        return '@"' + value.replace('"', '""') + '"'
+    return _KQL_STRING.sub(fix, query)
+
+
+def _mask_strings(text: str) -> str:
+    """The text with every string literal's contents blanked to spaces (same length)."""
+    return _KQL_STRING.sub(lambda m: m.group(0)[0] + " " * (len(m.group(0)) - 2) + m.group(0)[-1], text)
+
+
+def bracket_and_runs(expr: str) -> str:
+    """
+    Where 'and' and 'or' meet at one bracket level, bracket each run of 'and'. KQL binds
+    'and' tighter than 'or', so the meaning is unchanged; the reader no longer has to know
+    that (output contract LOGIC-andor). Works inside every bracket level; strings untouched.
+    """
+    masked = _mask_strings(expr)
+    # Innermost groups first, by recursing into each top-level bracket pair
+    depth, start = 0, None
+    pieces, last = [], 0
+    for i, ch in enumerate(masked):
+        if ch == "(":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == ")" and depth:
+            depth -= 1
+            if depth == 0 and start is not None:
+                pieces.append(expr[last:start + 1])
+                pieces.append(bracket_and_runs(expr[start + 1:i]))
+                last = i
+    pieces.append(expr[last:])
+    expr = "".join(pieces)
+    masked = _mask_strings(expr)
+    # Top-level 'or' / 'and' positions (outside brackets and strings)
+    depth, ors, has_and = 0, [], False
+    for m in re.finditer(r"[()]|\b(?:and|or)\b", masked):
+        t = m.group(0)
+        if t == "(":
+            depth += 1
+        elif t == ")":
+            depth = max(0, depth - 1)
+        elif depth == 0:
+            if t == "or":
+                ors.append(m.span())
+            else:
+                has_and = True
+    if not ors or not has_and:
+        return expr
+    segments, prev = [], 0
+    for a, b in ors:
+        segments.append((expr[prev:a], expr[a:b]))
+        prev = b
+    segments.append((expr[prev:], ""))
+    result = []
+    for seg, sep in segments:
+        if re.search(r"\band\b", _top_level(seg)):
+            lead = seg[:len(seg) - len(seg.lstrip())]
+            trail = seg[len(seg.rstrip()):]
+            seg = f"{lead}({seg.strip()}){trail}"
+        result.append(seg + sep)
+    return "".join(result)
+
+
+def _top_level(text: str) -> str:
+    """The text with bracketed parts and strings blanked: what sits at the top level."""
+    masked, out, depth = _mask_strings(text), [], 0
+    for ch in masked:
+        if ch == "(":
+            depth += 1
+        out.append(ch if depth == 0 else " ")
+        if ch == ")" and depth:
+            depth -= 1
+    return "".join(out)
+
+
+def normalise_where_logic(query: str) -> str:
+    """bracket_and_runs on every '| where' clause (a clause runs to the next '|' line)."""
+    lines = query.split("\n")
+    out, i = [], 0
+    while i < len(lines):
+        m = re.match(r"^(\s*\|\s*where\s+)(.*)$", lines[i])
+        if not m:
+            out.append(lines[i]); i += 1
+            continue
+        block = [m.group(2)]
+        i += 1
+        while i < len(lines) and not re.match(r"^\s*\|", lines[i]) and lines[i].strip():
+            block.append(lines[i]); i += 1
+        out.extend((m.group(1) + bracket_and_runs("\n".join(block))).split("\n"))
+    return "\n".join(out)
+
+
 def format_mde_query(query: str) -> str:
     """
     Format an MDE/KQL query for readability with proper line breaks and indentation.
@@ -585,6 +688,8 @@ def format_mde_query(query: str) -> str:
 
     # First, strip excluded fields
     query = strip_excluded_fields(query)
+    # Contract KQL-5 and LOGIC-andor, whichever path wrote the query (template, OSINT, LLM)
+    query = normalise_where_logic(verbatim_backslash_literals(query))
 
     # Split into lines and process
     lines = query.split('\n')
@@ -629,6 +734,12 @@ def format_mde_query(query: str) -> str:
                     formatted_lines.append(prefix + ' or '.join(unique_conditions))
             else:
                 formatted_lines.append(line)
+        # The schema's "summarize by Timestamp, <fields>" is a per-event distinct: every raw
+        # event alerts (output contract KQL-15). Aggregate per finding instead.
+        elif re.match(r'^\|\s*summarize\s+by\s+Timestamp\s*,', line):
+            fields = [f.strip() for f in line.split('by', 1)[1].split(',') if f.strip()]
+            fields = [f for f in fields if f not in EXCLUDED_MDE_FIELDS and _should_include_field(f, query)]
+            formatted_lines.extend(_aggregate_summarize(fields))
         # Check if this is a summarize clause with many fields
         elif '| summarize' in line and line.count(',') > 5:
             # Format summarize with line breaks every few fields
@@ -664,6 +775,37 @@ def format_mde_query(query: str) -> str:
             formatted_lines.append(line)
 
     return '\n'.join(formatted_lines)
+
+
+# What makes two events the same finding, in order of preference. At most eight are used
+# (output contract KQL-14); the rest are carried from the latest event by arg_max.
+SUMMARIZE_KEYS = (
+    "DeviceName", "AccountName", "InitiatingProcessAccountName", "ActionType", "LogonType",
+    "FileName", "FolderPath", "RegistryKey", "RegistryValueName", "RemoteIP", "RemotePort",
+    "RemoteUrl", "ProcessCommandLine", "InitiatingProcessFileName", "InitiatingProcessCommandLine",
+)
+MAX_SUMMARIZE_KEYS = 8
+
+
+def _aggregate_summarize(fields: List[str]) -> List[str]:
+    """
+    One row per finding rather than per event: how many events, first and last seen, the
+    latest event's other columns (arg_max keeps Timestamp, which custom detection rules
+    need, and every column the entity mappings name), grouped by up to eight keys.
+    """
+    fields = [f for f in dict.fromkeys(fields) if f != "Timestamp"]
+    keys = [k for k in SUMMARIZE_KEYS if k in fields][:MAX_SUMMARIZE_KEYS] or fields[:1]
+    rest = [f for f in fields if f not in keys]
+    lines = ["| summarize Events = count(), FirstSeen = min(Timestamp),"]
+    if rest:
+        chunks = [", ".join(rest[i:i + 5]) for i in range(0, len(rest), 5)]
+        lines.append("    arg_max(Timestamp, " + chunks[0] + ("," if len(chunks) > 1 else ")"))
+        for i, chunk in enumerate(chunks[1:], 1):
+            lines.append("        " + chunk + ("," if i < len(chunks) - 1 else ")"))
+    else:
+        lines[0] = "| summarize Events = count(), FirstSeen = min(Timestamp), LastSeen = max(Timestamp)"
+    lines.append("    by " + ", ".join(keys))
+    return lines
 
 
 def _split_conditions(text: str, separator: str) -> List[str]:

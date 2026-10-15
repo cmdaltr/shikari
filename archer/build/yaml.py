@@ -18,7 +18,7 @@ import yaml as yaml_lib
 # Detections written by an older generator are rewritten on the next run that reaches
 # them. Bump this whenever generated detections change (fields, query shape, naming), so
 # the fix reaches files already on disk without anyone deleting them.
-GENERATOR_VERSION = 2
+GENERATOR_VERSION = 3  # 3: KQL aggregates per finding, verbatim paths, bracketed and/or
 
 # BeautifulSoup and requests only needed for OLD slow additional_tactics function
 # This function is replaced by yaml_patch.py, so these imports are optional

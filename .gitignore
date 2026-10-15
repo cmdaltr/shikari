@@ -184,3 +184,6 @@ logs/
 data/blog_analysis/
 data/technique_yield_llm.json
 data/feed/
+
+# Private working files (bespoke sets, workbooks, query methodologies); never committed
+.local/

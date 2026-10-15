@@ -285,6 +285,24 @@ def _q(value) -> str:
     return str(value).replace("\\", "\\\\").replace('"', '\\"')
 
 
+def _kql(value) -> str:
+    """A KQL string literal. Verbatim (@"...") when it holds a backslash, so a Windows path
+    reads as written instead of doubled escapes (output contract KQL-5)."""
+    s = str(value)
+    if "\\" in s:
+        return '@"' + s.replace('"', '""') + '"'
+    return '"' + s.replace('"', '\\"') + '"'
+
+
+def _kql_list(values) -> str:
+    return ", ".join(_kql(v) for v in values)
+
+
+def _grouped(clause: str) -> str:
+    """A clause joined to others with 'or' keeps its own 'and' in brackets (contract LOGIC-andor)."""
+    return f"({clause})" if " and " in clause else clause
+
+
 def compile_search_clause(field_value_pairs):
     """
     Compiles field-value pairs into proper | search syntax
@@ -405,11 +423,13 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
         azure_operation_indicators = []  # For Azure operations with has_all + boolean logic
 
         for indicator in indicators_to_use:
-            escaped_indicator = _q(indicator)
+            escaped_indicator = str(indicator)  # quoted by _kql when the query is built
 
             # Detect Azure operations (e.g., Microsoft.Authorization/elevateAccess/action)
-            # Pattern: Contains dots or slashes (but not backslashes) indicating hierarchical operations
-            if ('.' in escaped_indicator or '/' in escaped_indicator) and not escaped_indicator.startswith('\\'):
+            # Pattern: dots or slashes indicating hierarchical operations. A backslash means a
+            # Windows path (C:\Windows\System32\sethc.exe), which the split would break into
+            # has_all("C:\Windows\System32\sethc") and has_all("exe")
+            if ('.' in escaped_indicator or '/' in escaped_indicator) and '\\' not in escaped_indicator:
                 # Azure API operation or similar hierarchical identifier
                 # Split on dots and slashes to extract components
                 parts = []
@@ -438,8 +458,7 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
 
         # Handle regular has_all indicators (space-separated)
         for parts in has_all_indicators:
-            all_str = '", "'.join(parts)
-            indicator_clauses.append(f'has_all("{all_str}")')
+            indicator_clauses.append(f'has_all({_kql_list(parts)})')
 
         # Handle Azure operations with has_all + boolean logic
         # Group Azure operations by common namespace prefix for optimal queries
@@ -462,33 +481,32 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
             # Build queries with grouped operations
             # Use {FIELD} placeholder that will be replaced with actual field name later
             for namespace_parts, operation_groups in namespace_groups.items():
-                namespace_str = '", "'.join(namespace_parts)
+                namespace_str = _kql_list(namespace_parts)
 
                 if len(operation_groups) == 1:
                     # Single operation for this namespace
-                    operation_str = '", "'.join(operation_groups[0])
-                    clause = f'{{FIELD}} has_all("{namespace_str}") and {{FIELD}} has_all("{operation_str}")'
+                    operation_str = _kql_list(operation_groups[0])
+                    clause = f'{{FIELD}} has_all({namespace_str}) and {{FIELD}} has_all({operation_str})'
                     indicator_clauses.append(clause)
                 else:
                     # Multiple operations for same namespace - use OR logic
                     # Example: {FIELD} has_all("Microsoft", "Authorization") and ({FIELD} has_all("elevateAccess", "action") or {FIELD} has_all("roleAssignments", "write"))
                     operation_clauses = []
                     for op_parts in operation_groups:
-                        operation_str = '", "'.join(op_parts)
-                        operation_clauses.append(f'{{FIELD}} has_all("{operation_str}")')
+                        operation_str = _kql_list(op_parts)
+                        operation_clauses.append(f'{{FIELD}} has_all({operation_str})')
 
                     operations_or = ' or '.join(operation_clauses)
-                    clause = f'{{FIELD}} has_all("{namespace_str}") and ({operations_or})'
+                    clause = f'{{FIELD}} has_all({namespace_str}) and ({operations_or})'
                     indicator_clauses.append(clause)
 
         # Handle regular has_any/contains indicators
         if has_any_indicators:
             # Term match like has_any; 'contains' is a substring scan the contract lint rejects (KQL-7)
             if len(has_any_indicators) == 1:
-                indicator_clauses.append(f'has "{has_any_indicators[0]}"')
+                indicator_clauses.append(f'has {_kql(has_any_indicators[0])}')
             else:
-                any_str = '", "'.join(has_any_indicators)
-                indicator_clauses.append(f'has_any("{any_str}")')
+                indicator_clauses.append(f'has_any({_kql_list(has_any_indicators)})')
 
         # Only generate query if there are indicators
         if not indicator_clauses:
@@ -506,7 +524,7 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
                     # Replace placeholder with field names
                     proc_clause = clause.replace("{FIELD}", "ProcessCommandLine")
                     init_proc_clause = clause.replace("{FIELD}", "InitiatingProcessCommandLine")
-                    dual_conditions.append(f"({proc_clause} or {init_proc_clause})")
+                    dual_conditions.append(f"({_grouped(proc_clause)} or {_grouped(init_proc_clause)})")
                 else:
                     # Standard clause without placeholder
                     dual_conditions.append(f"(ProcessCommandLine {clause} or InitiatingProcessCommandLine {clause})")
@@ -516,7 +534,7 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
                 for clause in indicator_clauses:
                     if "{FIELD}" in clause:
                         additional_clause = clause.replace("{FIELD}", "AdditionalFields")
-                        dual_conditions.append(additional_clause)
+                        dual_conditions.append(_grouped(additional_clause))
                     else:
                         dual_conditions.append(f"AdditionalFields {clause}")
             condition = " or ".join(dual_conditions)
@@ -527,7 +545,7 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
                 for clause in indicator_clauses:
                     if "{FIELD}" in clause:
                         # Replace placeholder with actual field name
-                        formatted_conditions.append(clause.replace("{FIELD}", field))
+                        formatted_conditions.append(_grouped(clause.replace("{FIELD}", field)))
                     else:
                         formatted_conditions.append(f"{field} {clause}")
             condition = " or ".join(formatted_conditions)
