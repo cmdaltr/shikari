@@ -25,10 +25,7 @@ import time
 # Repository configurations
 from ..config import OSINT_REPOS_DIR
 
-# Per-repo clone/pull timeout in seconds. Azure-Sentinel is far larger than the
-# other repos (solutions, workbooks, notebooks) and routinely needs several
-# minutes even with --depth 1 — a shared 30s timeout killed the clone mid-fetch
-# every time, leaving a corrupted .git dir that then failed every retry too.
+# Per-repo clone/pull timeout in seconds.
 DEFAULT_TIMEOUT = 60
 
 REPOS = {
@@ -54,7 +51,13 @@ REPOS = {
         "url": "https://github.com/Azure/Azure-Sentinel.git",
         "path": os.path.join(OSINT_REPOS_DIR, "azure_sentinel"),
         "search_dir": "Detections",
-        "timeout": 1200,
+        # Rules live in Detections/ and, since Microsoft moved most of them, in each
+        # solution's Analytic Rules/ (about 2,300 rules against 480). The whole repo
+        # (workbooks, notebooks, data) is several GB and timed out even at 1200s, so only
+        # those folders are checked out, blobless: about 20 MB in seconds
+        "search_dirs": ["Detections", "Solutions"],
+        "sparse": ["/Detections/", "/Solutions/*/Analytic Rules/"],
+        "timeout": 600,
     }
 }
 
@@ -168,12 +171,23 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
             print(f"📥 Cloning {repo_name} repository (timeout {timeout}s)...")
             start_time = time.time()
 
+            sparse = repo_config.get("sparse")
+            cmd = ["git", "clone", "--depth", "1"]
+            if sparse:
+                cmd += ["--filter=blob:none", "--sparse"]
             result = subprocess.run(
-                ["git", "clone", "--depth", "1", repo_config["url"], str(repo_path)],
+                cmd + [repo_config["url"], str(repo_path)],
                 capture_output=True,
                 text=True,
                 timeout=timeout
             )
+            if result.returncode == 0 and sparse:
+                result = subprocess.run(
+                    ["git", "-C", str(repo_path), "sparse-checkout", "set", "--no-cone", *sparse],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout
+                )
 
             elapsed = time.time() - start_time
             print(f"✓ Cloned {repo_name} in {elapsed:.1f} seconds")
@@ -218,6 +232,14 @@ def ensure_repos_ready() -> bool:
     return all_ready
 
 
+def search_paths(repo_name: str) -> list[Path]:
+    """The folders of a repo that hold its rules (those that exist)."""
+    repo_config = REPOS[repo_name]
+    repo_path = Path(repo_config["path"])
+    dirs = repo_config.get("search_dirs") or [repo_config["search_dir"]]
+    return [repo_path / d for d in dirs if (repo_path / d).exists()]
+
+
 def search_repo_for_technique(repo_name: str, technique_id: str) -> list[str]:
     """
     Search a repository for files mentioning a technique ID.
@@ -232,17 +254,14 @@ def search_repo_for_technique(repo_name: str, technique_id: str) -> list[str]:
     if repo_name not in REPOS:
         return []
 
-    repo_config = REPOS[repo_name]
-    repo_path = Path(repo_config["path"])
-    search_dir = repo_path / repo_config["search_dir"]
-
-    if not search_dir.exists():
+    dirs = search_paths(repo_name)
+    if not dirs:
         return []
 
     try:
         # Use grep for fast searching
         result = subprocess.run(
-            ["grep", "-r", "-l", technique_id, str(search_dir)],
+            ["grep", "-r", "-l", technique_id, *map(str, dirs)],
             capture_output=True,
             text=True,
             timeout=30

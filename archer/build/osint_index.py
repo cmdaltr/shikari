@@ -29,7 +29,7 @@ import toml
 import yaml as yaml_lib
 
 from ..config import DATA_DIR
-from .osint_repos import REPOS
+from .osint_repos import REPOS, search_paths
 
 INDEX_PATH = Path(DATA_DIR) / "cache" / "osint_technique_index.json"
 TECHNIQUE_ID_RE = re.compile(r'\bT\d{4}(?:\.\d{3})?\b')
@@ -115,11 +115,8 @@ def _index_splunk(repo_path: Path) -> Dict[str, List[Dict]]:
 
 def _index_azure_sentinel(repo_path: Path) -> Dict[str, List[Dict]]:
     index: Dict[str, List[Dict]] = {}
-    search_dir = repo_path / REPOS["azure_sentinel"]["search_dir"]
-    if not search_dir.exists():
-        return index
-
-    files = list(search_dir.rglob("*.yaml")) + list(search_dir.rglob("*.json"))
+    files = [f for d in search_paths("azure_sentinel") for pattern in ("*.yaml", "*.yml", "*.json")
+             for f in d.rglob(pattern)]
     for file_path in files:
         try:
             raw = file_path.read_text(errors="ignore")
