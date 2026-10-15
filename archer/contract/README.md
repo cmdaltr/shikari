@@ -11,7 +11,7 @@ the legacy YAML corpus, the LLM pipeline hook and the prompt material (checklist
 | `pipeline.py` | `handle_contract_response`: validates and persists LLM contract documents |
 | `prompt.py` | `contract_prompt_block`: checklist + schema + exemplars for the LLM prompt |
 | `exemplars/` | Nine validated few-shot anchors (five YARA-L rules, two KQL rules, two rejections) |
-| `docs/` | Diagnosis, rubric, schema, checklist and rationale |
+| `docs/` | Diagnosis, rubric, schema, checklist, exemplars with commentary, and rationale |
 
 ## Environment switches
 
