@@ -24,6 +24,38 @@ A full build downloads about 1.2 GB. Splunk's logs are read up to 3 MB each: the
 
 The **Indicator check** tile says whether detections can be checked: green **Ready**, orange **Starting…** while an update runs, red **Unavailable** when the field values aren't on this machine, blue **Error** when the last update failed.
 
+## Defender XDR's own alerting (Microsoft GUIDE)
+
+[GUIDE](https://www.kaggle.com/datasets/Microsoft/microsoft-security-incident-prediction) (CDLA-Permissive-2.0) is Microsoft's set of 13.7 million Defender XDR alerts and evidence rows from 5,216 organisations over two weeks, each alert with its ATT&CK techniques and the customer's triage grade. Its values are anonymised, so it says nothing about what an attack looks like in the logs; it says whether Defender XDR alerts on a technique out of the box, how widely, and how often rightly. With Defender XDR as the SIEM, the technique view gets a **Defender XDR alerts** column (alerts, organisations, share graded true positive) and filter, and a technique's detail gives its detectors, grades, alert categories and evidence types. A technique Defender seldom alerts on, or mostly gets wrong, is where a custom detection earns its keep.
+
+The summary ships with Archer (`archer/data/telemetry_guide.json`). To rebuild it, download the zip from Kaggle (a free account; the API token in `~/.kaggle/access_token` works too) and:
+
+```
+python -m archer.telemetry --guide ~/Downloads/microsoft-security-incident-prediction.zip
+```
+
+## Recording your own lab
+
+No public set of attacks recorded by Defender for Endpoint, or by macOS's unified log, exists that Archer has found, so the gaps are filled by recording your own. `scripts/telemetry/record-atomics.ps1` runs Atomic Red Team tests on a **disposable** test machine (PowerShell 7, elevated) and saves each test's logs:
+
+| Platform | Recorded |
+|---|---|
+| Windows | Security, System, PowerShell, Sysmon if installed, Task Scheduler, WMI, Defender and BITS events |
+| Linux | auditd (`/var/log/audit`) and the systemd journal |
+| macOS | Endpoint Security events (eslogger; the terminal needs Full Disk Access), the unified log, and launch agents, daemons and login hooks added, changed or removed |
+
+```
+sudo pwsh ./record-atomics.ps1 -Techniques T1053.003,T1543.001,T1059.004
+```
+
+If the machine is onboarded to Defender for Endpoint, fetch Defender's own rows for each test once they've arrived (usually within the hour), through Microsoft Graph's Advanced Hunting. It needs an app registration with `ThreatHunting.Read.All` (application, admin consented) in `ARCHER_MDE_TENANT_ID`, `ARCHER_MDE_CLIENT_ID` and `ARCHER_MDE_CLIENT_SECRET`:
+
+```
+python -m archer.telemetry --mde-export data/telemetry/lab/<run>
+```
+
+Copy the run's folder to `data/telemetry/lab/` and press **Update**. Your recordings appear as **Your lab**; they hold your hosts' and tenant's names, so `data/telemetry/` is gitignored and they never leave the machine.
+
 ## Filters
 
 The filter card applies to whichever view is open below it, and shows only the filters that view uses.
@@ -37,6 +69,7 @@ The filter card applies to whichever view is open below it, and shows only the f
 | Data sources | The SIEM's tables or UDM event types |
 | Logs | Recorded event types: Sysmon 1, Security 4688 |
 | Collection | Which kinds of logging count: Native OS logs, Sysmon, EDR, osquery, Cloud and SaaS. For Google SecOps the default leaves out Sysmon, which is deployed far less than native logging. For Defender XDR it's kept: Sysmon's recordings stand in for the MDE sensor, which records the same process, file, network, registry and image-load activity without Sysmon installed |
+| Defender XDR alerts | With Defender XDR as the SIEM: techniques it alerts on mostly rightly (half or more true positives), mostly not, or not at all (GUIDE) |
 | Platforms | Windows, Linux, macOS, ESXi, Cloud and SaaS: only the logs from these platforms count, so Linux shows what Linux logging records of each technique |
 | Seen | By group only: Seen, Not seen, No recordings, No indicators, or any noisy indicator |
 
@@ -66,7 +99,7 @@ Each table or UDM event type for the chosen SIEM, with how many techniques it re
 ## Limits
 
 - Four labs, each with their own logging policy: an event type missing from the recordings may just not have been collected.
-- No public set of attacks recorded by Microsoft Defender for Endpoint itself exists that Archer has found; Defender XDR tables are mapped from the Windows, Linux and macOS events that record the same activity.
-- macOS is thin: osquery and Elastic Endpoint recordings, no unified log.
+- Until you record your own, Defender XDR tables are mapped from the Windows, Linux and macOS events that record the same activity, and macOS has no unified log recordings.
+- GUIDE's grades are its customers' triage, two weeks of it; a technique's sub-techniques without figures of their own show their parent's.
 - The Windows event ID, auditd and cloud log mappings are in `archer/mappings/telemetry_map.json`; an event type not listed there shows without a table.
 - Running Atomic Red Team in your own lab (a Linux container, then a Windows VM) is the next stage of [#22](https://github.com/cmdaltr/archer/issues/22).

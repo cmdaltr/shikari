@@ -1,0 +1,9419 @@
+{
+ "source": {
+  "name": "Microsoft GUIDE",
+  "licence": "CDLA-Permissive-2.0",
+  "url": "https://www.kaggle.com/datasets/Microsoft/microsoft-security-incident-prediction",
+  "note": "Defender XDR alerts over two weeks, with customers' triage grades, from 5,216 organisations",
+  "built": "2026-10-16",
+  "rows": 13674809,
+  "orgs": 5216
+ },
+ "techniques": {
+  "T0807": {
+   "alerts": 204,
+   "orgs": 7,
+   "detectors": 10,
+   "grades": {
+    "fp": 52,
+    "tp": 38,
+    "bp": 114
+   },
+   "tp_rate": 0.186,
+   "categories": [
+    "Execution",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Machine",
+    "File",
+    "Process",
+    "User",
+    "Ip",
+    "CloudApplication"
+   ]
+  },
+  "T0814": {
+   "alerts": 11,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "tp": 8,
+    "bp": 3
+   },
+   "tp_rate": 0.727,
+   "categories": [
+    "SuspiciousActivity",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Ip",
+    "Nic",
+    "AzureResource",
+    "IoTDevice",
+    "Url"
+   ]
+  },
+  "T0816": {
+   "alerts": 189,
+   "orgs": 2,
+   "detectors": 3,
+   "grades": {
+    "bp": 186,
+    "tp": 3
+   },
+   "tp_rate": 0.016,
+   "categories": [
+    "DefenseEvasion",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Url",
+    "Machine",
+    "Ip"
+   ]
+  },
+  "T0817": {
+   "alerts": 16,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 8,
+    "tp": 8
+   },
+   "tp_rate": 0.5,
+   "categories": [
+    "Collection",
+    "InitialAccess"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T0820": {
+   "alerts": 196,
+   "orgs": 1,
+   "detectors": 5,
+   "grades": {
+    "bp": 196
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion",
+    "Execution",
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Url",
+    "Machine",
+    "User",
+    "Process"
+   ]
+  },
+  "T0823": {
+   "alerts": 9,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 9
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "User",
+    "Url",
+    "Ip",
+    "Malware"
+   ]
+  },
+  "T0826": {
+   "alerts": 11,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 11
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T0827": {
+   "alerts": 41,
+   "orgs": 2,
+   "detectors": 3,
+   "grades": {
+    "bp": 20,
+    "fp": 16,
+    "tp": 5
+   },
+   "tp_rate": 0.122,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T0828": {
+   "alerts": 4,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 4
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "CloudApplication",
+    "User"
+   ]
+  },
+  "T0829": {
+   "alerts": 41,
+   "orgs": 2,
+   "detectors": 3,
+   "grades": {
+    "bp": 20,
+    "fp": 16,
+    "tp": 5
+   },
+   "tp_rate": 0.122,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T0831": {
+   "alerts": 3,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 2,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "User"
+   ]
+  },
+  "T0836": {
+   "alerts": 6,
+   "orgs": 1,
+   "detectors": 2,
+   "grades": {
+    "bp": 4,
+    "tp": 2
+   },
+   "tp_rate": 0.333,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "AzureResource",
+    "User",
+    "Machine"
+   ]
+  },
+  "T0837": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "User"
+   ]
+  },
+  "T0838": {
+   "alerts": 88,
+   "orgs": 1,
+   "detectors": 2,
+   "grades": {
+    "bp": 88
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T0840": {
+   "alerts": 12,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 12
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Process"
+   ]
+  },
+  "T0843": {
+   "alerts": 5,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 5
+   },
+   "tp_rate": 1.0,
+   "categories": [
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Ip",
+    "Nic",
+    "AzureResource",
+    "IoTDevice"
+   ]
+  },
+  "T0849": {
+   "alerts": 141,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "tp": 130,
+    "fp": 8,
+    "bp": 3
+   },
+   "tp_rate": 0.922,
+   "categories": [
+    "Discovery",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "MailMessage",
+    "Ip",
+    "User"
+   ]
+  },
+  "T0852": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "File",
+    "Process"
+   ]
+  },
+  "T0853": {
+   "alerts": 25,
+   "orgs": 5,
+   "detectors": 7,
+   "grades": {
+    "bp": 23,
+    "tp": 1,
+    "fp": 1
+   },
+   "tp_rate": 0.04,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "User",
+    "Url",
+    "Ip",
+    "Malware",
+    "Machine",
+    "Process"
+   ]
+  },
+  "T0855": {
+   "alerts": 21,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 21
+   },
+   "tp_rate": 1.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "Nic",
+    "AzureResource",
+    "IoTDevice"
+   ]
+  },
+  "T0857": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 1
+   },
+   "tp_rate": 1.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Ip",
+    "Nic",
+    "AzureResource",
+    "IoTDevice"
+   ]
+  },
+  "T0858": {
+   "alerts": 21,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "tp": 20,
+    "fp": 1
+   },
+   "tp_rate": 0.952,
+   "categories": [
+    "Execution",
+    "LateralMovement",
+    "Impact"
+   ],
+   "evidence": [
+    "Ip",
+    "Nic",
+    "AzureResource",
+    "IoTDevice",
+    "User"
+   ]
+  },
+  "T0859": {
+   "alerts": 162,
+   "orgs": 9,
+   "detectors": 15,
+   "grades": {
+    "bp": 148,
+    "fp": 12,
+    "tp": 2
+   },
+   "tp_rate": 0.012,
+   "categories": [
+    "Persistence",
+    "LateralMovement",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "Machine",
+    "Url",
+    "SecurityGroup",
+    "Process"
+   ]
+  },
+  "T0860": {
+   "alerts": 15,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 7,
+    "tp": 8
+   },
+   "tp_rate": 0.533,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T0863": {
+   "alerts": 67,
+   "orgs": 8,
+   "detectors": 12,
+   "grades": {
+    "bp": 58,
+    "tp": 2,
+    "fp": 7
+   },
+   "tp_rate": 0.03,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "File",
+    "Url",
+    "Process",
+    "Ip"
+   ]
+  },
+  "T0865": {
+   "alerts": 38,
+   "orgs": 5,
+   "detectors": 6,
+   "grades": {
+    "bp": 26,
+    "tp": 10,
+    "fp": 2
+   },
+   "tp_rate": 0.263,
+   "categories": [
+    "InitialAccess",
+    "Persistence"
+   ],
+   "evidence": [
+    "MailMessage",
+    "File",
+    "Ip",
+    "GenericEntity",
+    "Mailbox",
+    "User"
+   ]
+  },
+  "T0866": {
+   "alerts": 20,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 12,
+    "tp": 8
+   },
+   "tp_rate": 0.4,
+   "categories": [
+    "Collection",
+    "Execution"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User"
+   ]
+  },
+  "T0871": {
+   "alerts": 9,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 9
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "User",
+    "Url",
+    "Ip",
+    "Malware"
+   ]
+  },
+  "T0872": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T0873": {
+   "alerts": 3,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 3
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "File",
+    "User"
+   ]
+  },
+  "T0878": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T0885": {
+   "alerts": 19,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 19
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "User"
+   ]
+  },
+  "T0886": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "InitialAccess"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip"
+   ]
+  },
+  "T0889": {
+   "alerts": 8,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 8
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine"
+   ]
+  },
+  "T0890": {
+   "alerts": 23,
+   "orgs": 6,
+   "detectors": 8,
+   "grades": {
+    "bp": 21,
+    "tp": 2
+   },
+   "tp_rate": 0.087,
+   "categories": [
+    "PrivilegeEscalation",
+    "Persistence",
+    "Execution"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1001": {
+   "alerts": 133,
+   "orgs": 8,
+   "detectors": 8,
+   "grades": {
+    "bp": 112,
+    "tp": 12,
+    "fp": 9
+   },
+   "tp_rate": 0.09,
+   "categories": [
+    "CommandAndControl",
+    "Malware",
+    "Exfiltration"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1001.002": {
+   "alerts": 3,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "fp": 3
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Exfiltration",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Url"
+   ]
+  },
+  "T1003": {
+   "alerts": 6695,
+   "orgs": 363,
+   "detectors": 126,
+   "grades": {
+    "fp": 4711,
+    "bp": 1739,
+    "tp": 185
+   },
+   "tp_rate": 0.028,
+   "categories": [
+    "CredentialAccess",
+    "Exploit",
+    "Discovery",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "RegistryKey",
+    "RegistryValue",
+    "File",
+    "User"
+   ]
+  },
+  "T1003.001": {
+   "alerts": 674,
+   "orgs": 59,
+   "detectors": 16,
+   "grades": {
+    "tp": 150,
+    "bp": 426,
+    "fp": 96
+   },
+   "tp_rate": 0.223,
+   "categories": [
+    "CredentialAccess",
+    "Malware",
+    "SuspiciousActivity",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1003.002": {
+   "alerts": 343,
+   "orgs": 39,
+   "detectors": 12,
+   "grades": {
+    "tp": 152,
+    "fp": 8,
+    "bp": 183
+   },
+   "tp_rate": 0.443,
+   "categories": [
+    "CredentialAccess",
+    "SuspiciousActivity",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "User",
+    "Machine",
+    "RegistryKey",
+    "RegistryValue"
+   ]
+  },
+  "T1003.003": {
+   "alerts": 141,
+   "orgs": 14,
+   "detectors": 7,
+   "grades": {
+    "bp": 125,
+    "tp": 9,
+    "fp": 7
+   },
+   "tp_rate": 0.064,
+   "categories": [
+    "CredentialAccess",
+    "Malware",
+    "Collection",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1003.004": {
+   "alerts": 208,
+   "orgs": 24,
+   "detectors": 9,
+   "grades": {
+    "tp": 88,
+    "fp": 2,
+    "bp": 118
+   },
+   "tp_rate": 0.423,
+   "categories": [
+    "CredentialAccess",
+    "LateralMovement",
+    "Malware",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "User",
+    "RegistryKey",
+    "Machine",
+    "Ip"
+   ]
+  },
+  "T1003.005": {
+   "alerts": 106,
+   "orgs": 22,
+   "detectors": 3,
+   "grades": {
+    "bp": 83,
+    "tp": 16,
+    "fp": 7
+   },
+   "tp_rate": 0.151,
+   "categories": [
+    "CredentialAccess",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "RegistryValue",
+    "User",
+    "File",
+    "RegistryKey"
+   ]
+  },
+  "T1003.006": {
+   "alerts": 577,
+   "orgs": 114,
+   "detectors": 1,
+   "grades": {
+    "bp": 493,
+    "tp": 9,
+    "fp": 72
+   },
+   "tp_rate": 0.016,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Machine",
+    "User"
+   ]
+  },
+  "T1003.008": {
+   "alerts": 10,
+   "orgs": 5,
+   "detectors": 3,
+   "grades": {
+    "bp": 6,
+    "tp": 1,
+    "fp": 3
+   },
+   "tp_rate": 0.1,
+   "categories": [
+    "CredentialAccess",
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine"
+   ]
+  },
+  "T1005": {
+   "alerts": 1004,
+   "orgs": 152,
+   "detectors": 18,
+   "grades": {
+    "fp": 536,
+    "bp": 354,
+    "tp": 61
+   },
+   "tp_rate": 0.064,
+   "categories": [
+    "CredentialAccess",
+    "Collection",
+    "Exfiltration",
+    "Discovery"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "User",
+    "Process",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1006": {
+   "alerts": 81,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 62,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.148,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1007": {
+   "alerts": 2798,
+   "orgs": 242,
+   "detectors": 9,
+   "grades": {
+    "bp": 1706,
+    "fp": 818,
+    "tp": 82
+   },
+   "tp_rate": 0.031,
+   "categories": [
+    "Discovery",
+    "Malware",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1008": {
+   "alerts": 4073,
+   "orgs": 15,
+   "detectors": 17,
+   "grades": {
+    "bp": 2318,
+    "fp": 1736,
+    "tp": 19
+   },
+   "tp_rate": 0.005,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "Machine",
+    "User",
+    "File"
+   ]
+  },
+  "T1010": {
+   "alerts": 117,
+   "orgs": 28,
+   "detectors": 3,
+   "grades": {
+    "fp": 18,
+    "bp": 41,
+    "tp": 6
+   },
+   "tp_rate": 0.092,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine",
+    "Ip",
+    "CloudApplication"
+   ]
+  },
+  "T1011": {
+   "alerts": 90,
+   "orgs": 7,
+   "detectors": 6,
+   "grades": {
+    "fp": 76,
+    "bp": 12,
+    "tp": 2
+   },
+   "tp_rate": 0.022,
+   "categories": [
+    "Exfiltration"
+   ],
+   "evidence": [
+    "File",
+    "MailMessage",
+    "Ip",
+    "User",
+    "MailCluster",
+    "Mailbox"
+   ]
+  },
+  "T1012": {
+   "alerts": 4313,
+   "orgs": 53,
+   "detectors": 13,
+   "grades": {
+    "fp": 3987,
+    "tp": 112,
+    "bp": 212
+   },
+   "tp_rate": 0.026,
+   "categories": [
+    "CredentialAccess",
+    "Discovery",
+    "LateralMovement",
+    "Collection"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "RegistryKey",
+    "RegistryValue",
+    "User",
+    "File"
+   ]
+  },
+  "T1014": {
+   "alerts": 6,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 5,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "User",
+    "Machine"
+   ]
+  },
+  "T1016": {
+   "alerts": 2916,
+   "orgs": 257,
+   "detectors": 27,
+   "grades": {
+    "bp": 1956,
+    "fp": 763,
+    "tp": 91
+   },
+   "tp_rate": 0.032,
+   "categories": [
+    "Discovery",
+    "Malware",
+    "Execution",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1016.001": {
+   "alerts": 146,
+   "orgs": 16,
+   "detectors": 2,
+   "grades": {
+    "bp": 97,
+    "fp": 47,
+    "tp": 2
+   },
+   "tp_rate": 0.014,
+   "categories": [
+    "Discovery",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "Ip",
+    "User"
+   ]
+  },
+  "T1018": {
+   "alerts": 3526,
+   "orgs": 396,
+   "detectors": 43,
+   "grades": {
+    "bp": 2427,
+    "fp": 815,
+    "tp": 119
+   },
+   "tp_rate": 0.035,
+   "categories": [
+    "Discovery",
+    "CommandAndControl",
+    "Execution",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1020": {
+   "alerts": 162,
+   "orgs": 38,
+   "detectors": 32,
+   "grades": {
+    "tp": 8,
+    "bp": 128,
+    "fp": 26
+   },
+   "tp_rate": 0.049,
+   "categories": [
+    "Exfiltration",
+    "Collection",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "User",
+    "File",
+    "Ip",
+    "Process",
+    "Machine",
+    "Url"
+   ]
+  },
+  "T1021": {
+   "alerts": 1691,
+   "orgs": 162,
+   "detectors": 103,
+   "grades": {
+    "bp": 1076,
+    "tp": 240,
+    "fp": 252
+   },
+   "tp_rate": 0.153,
+   "categories": [
+    "LateralMovement",
+    "CredentialAccess",
+    "Ransomware",
+    "Execution"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "Machine",
+    "Process",
+    "File",
+    "RegistryValue"
+   ]
+  },
+  "T1021.001": {
+   "alerts": 302,
+   "orgs": 42,
+   "detectors": 13,
+   "grades": {
+    "tp": 52,
+    "bp": 227,
+    "fp": 16
+   },
+   "tp_rate": 0.176,
+   "categories": [
+    "LateralMovement",
+    "Discovery",
+    "Execution",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1021.002": {
+   "alerts": 1459,
+   "orgs": 86,
+   "detectors": 41,
+   "grades": {
+    "bp": 427,
+    "tp": 209,
+    "fp": 375
+   },
+   "tp_rate": 0.207,
+   "categories": [
+    "LateralMovement",
+    "Ransomware",
+    "Persistence",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "User",
+    "Process",
+    "File",
+    "Machine",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1021.003": {
+   "alerts": 220,
+   "orgs": 47,
+   "detectors": 12,
+   "grades": {
+    "tp": 39,
+    "bp": 153,
+    "fp": 24
+   },
+   "tp_rate": 0.181,
+   "categories": [
+    "LateralMovement",
+    "Execution",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Ip",
+    "Machine",
+    "User",
+    "Url"
+   ]
+  },
+  "T1021.004": {
+   "alerts": 571,
+   "orgs": 75,
+   "detectors": 7,
+   "grades": {
+    "tp": 122,
+    "fp": 105,
+    "bp": 339
+   },
+   "tp_rate": 0.216,
+   "categories": [
+    "LateralMovement",
+    "Execution",
+    "DefenseEvasion",
+    "Ransomware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1021.006": {
+   "alerts": 273,
+   "orgs": 64,
+   "detectors": 15,
+   "grades": {
+    "tp": 51,
+    "bp": 137,
+    "fp": 62
+   },
+   "tp_rate": 0.204,
+   "categories": [
+    "LateralMovement",
+    "Execution",
+    "DefenseEvasion",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1027": {
+   "alerts": 3552,
+   "orgs": 208,
+   "detectors": 20,
+   "grades": {
+    "bp": 2923,
+    "fp": 417,
+    "tp": 175
+   },
+   "tp_rate": 0.05,
+   "categories": [
+    "Malware",
+    "CommandAndControl",
+    "DefenseEvasion",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1027.002": {
+   "alerts": 2401,
+   "orgs": 78,
+   "detectors": 15,
+   "grades": {
+    "bp": 2271,
+    "fp": 76,
+    "tp": 40
+   },
+   "tp_rate": 0.017,
+   "categories": [
+    "Malware",
+    "Execution",
+    "Discovery",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1027.003": {
+   "alerts": 47,
+   "orgs": 3,
+   "detectors": 1,
+   "grades": {
+    "tp": 30,
+    "bp": 17
+   },
+   "tp_rate": 0.638,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1027.004": {
+   "alerts": 20,
+   "orgs": 5,
+   "detectors": 1,
+   "grades": {
+    "bp": 2,
+    "fp": 18
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1027.005": {
+   "alerts": 2400,
+   "orgs": 78,
+   "detectors": 14,
+   "grades": {
+    "bp": 2270,
+    "fp": 76,
+    "tp": 40
+   },
+   "tp_rate": 0.017,
+   "categories": [
+    "Malware",
+    "Execution",
+    "Discovery",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1027.009": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 1
+   },
+   "tp_rate": 1.0,
+   "categories": [
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1028": {
+   "alerts": 8,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "fp": 7,
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "LateralMovement",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1029": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "Ip"
+   ]
+  },
+  "T1030": {
+   "alerts": 875,
+   "orgs": 82,
+   "detectors": 114,
+   "grades": {
+    "fp": 188,
+    "tp": 76,
+    "bp": 611
+   },
+   "tp_rate": 0.087,
+   "categories": [
+    "Exfiltration",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "User",
+    "File",
+    "Process",
+    "Malware"
+   ]
+  },
+  "T1033": {
+   "alerts": 1132,
+   "orgs": 197,
+   "detectors": 16,
+   "grades": {
+    "bp": 653,
+    "fp": 446,
+    "tp": 25
+   },
+   "tp_rate": 0.022,
+   "categories": [
+    "Discovery",
+    "Execution",
+    "Malware",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1035": {
+   "alerts": 11,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 9,
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1036": {
+   "alerts": 933,
+   "orgs": 132,
+   "detectors": 27,
+   "grades": {
+    "bp": 416,
+    "tp": 301,
+    "fp": 97
+   },
+   "tp_rate": 0.37,
+   "categories": [
+    "DefenseEvasion",
+    "Persistence",
+    "InitialAccess",
+    "Discovery"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "File",
+    "User",
+    "RegistryValue",
+    "Ip"
+   ]
+  },
+  "T1036.001": {
+   "alerts": 34,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 34
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File"
+   ]
+  },
+  "T1036.003": {
+   "alerts": 169,
+   "orgs": 35,
+   "detectors": 13,
+   "grades": {
+    "fp": 27,
+    "bp": 109,
+    "tp": 15
+   },
+   "tp_rate": 0.099,
+   "categories": [
+    "DefenseEvasion",
+    "SuspiciousActivity",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1036.004": {
+   "alerts": 701,
+   "orgs": 62,
+   "detectors": 18,
+   "grades": {
+    "tp": 89,
+    "bp": 564,
+    "fp": 39
+   },
+   "tp_rate": 0.129,
+   "categories": [
+    "DefenseEvasion",
+    "Persistence",
+    "LateralMovement",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "RegistryValue",
+    "Machine",
+    "User",
+    "File",
+    "Ip"
+   ]
+  },
+  "T1036.005": {
+   "alerts": 42,
+   "orgs": 12,
+   "detectors": 7,
+   "grades": {
+    "bp": 33,
+    "tp": 3,
+    "fp": 5
+   },
+   "tp_rate": 0.073,
+   "categories": [
+    "DefenseEvasion",
+    "Exploit",
+    "Persistence",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "RegistryValue"
+   ]
+  },
+  "T1036.008": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine",
+    "File",
+    "Process"
+   ]
+  },
+  "T1037": {
+   "alerts": 41,
+   "orgs": 8,
+   "detectors": 3,
+   "grades": {
+    "bp": 39,
+    "fp": 1,
+    "tp": 1
+   },
+   "tp_rate": 0.024,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "User",
+    "Url",
+    "File",
+    "Process",
+    "Machine",
+    "RegistryValue"
+   ]
+  },
+  "T1037.001": {
+   "alerts": 29,
+   "orgs": 6,
+   "detectors": 3,
+   "grades": {
+    "bp": 28,
+    "tp": 1
+   },
+   "tp_rate": 0.034,
+   "categories": [
+    "Persistence",
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "RegistryValue",
+    "Machine",
+    "File",
+    "User"
+   ]
+  },
+  "T1037.004": {
+   "alerts": 7,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 6,
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1037.005": {
+   "alerts": 8,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "fp": 7,
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1039": {
+   "alerts": 450,
+   "orgs": 11,
+   "detectors": 14,
+   "grades": {
+    "bp": 16,
+    "tp": 4,
+    "fp": 2
+   },
+   "tp_rate": 0.182,
+   "categories": [
+    "Ransomware",
+    "Collection",
+    "LateralMovement",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "User",
+    "File",
+    "Process",
+    "Ip",
+    "Machine",
+    "CloudApplication"
+   ]
+  },
+  "T1040": {
+   "alerts": 19,
+   "orgs": 6,
+   "detectors": 6,
+   "grades": {
+    "bp": 19
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery",
+    "CredentialAccess",
+    "Malware"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "Machine",
+    "User",
+    "Process",
+    "File"
+   ]
+  },
+  "T1041": {
+   "alerts": 603,
+   "orgs": 30,
+   "detectors": 22,
+   "grades": {
+    "bp": 452,
+    "tp": 119,
+    "fp": 32
+   },
+   "tp_rate": 0.197,
+   "categories": [
+    "Exfiltration",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "GenericEntity",
+    "User",
+    "Ip",
+    "Process"
+   ]
+  },
+  "T1043": {
+   "alerts": 568,
+   "orgs": 51,
+   "detectors": 3,
+   "grades": {
+    "tp": 138,
+    "bp": 406,
+    "fp": 15
+   },
+   "tp_rate": 0.247,
+   "categories": [
+    "LateralMovement",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "Process",
+    "User",
+    "Url",
+    "File"
+   ]
+  },
+  "T1046": {
+   "alerts": 3405,
+   "orgs": 239,
+   "detectors": 49,
+   "grades": {
+    "fp": 405,
+    "bp": 2920,
+    "tp": 78
+   },
+   "tp_rate": 0.023,
+   "categories": [
+    "Discovery",
+    "Malware",
+    "CommandAndControl",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "Machine",
+    "Process",
+    "User",
+    "File"
+   ]
+  },
+  "T1047": {
+   "alerts": 2788,
+   "orgs": 328,
+   "detectors": 37,
+   "grades": {
+    "bp": 1525,
+    "tp": 216,
+    "fp": 938
+   },
+   "tp_rate": 0.081,
+   "categories": [
+    "Discovery",
+    "Execution",
+    "LateralMovement",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1048": {
+   "alerts": 3158,
+   "orgs": 47,
+   "detectors": 20,
+   "grades": {
+    "bp": 2985,
+    "tp": 23,
+    "fp": 150
+   },
+   "tp_rate": 0.007,
+   "categories": [
+    "CommandAndControl",
+    "Exfiltration",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "Machine",
+    "File",
+    "MailMessage",
+    "User"
+   ]
+  },
+  "T1048.003": {
+   "alerts": 260,
+   "orgs": 24,
+   "detectors": 5,
+   "grades": {
+    "bp": 243,
+    "fp": 15,
+    "tp": 2
+   },
+   "tp_rate": 0.008,
+   "categories": [
+    "Exfiltration"
+   ],
+   "evidence": [
+    "Machine",
+    "Url",
+    "File",
+    "Process",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1049": {
+   "alerts": 2451,
+   "orgs": 234,
+   "detectors": 10,
+   "grades": {
+    "bp": 1728,
+    "fp": 537,
+    "tp": 89
+   },
+   "tp_rate": 0.038,
+   "categories": [
+    "Discovery",
+    "Collection",
+    "CredentialAccess",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1052": {
+   "alerts": 15,
+   "orgs": 5,
+   "detectors": 5,
+   "grades": {
+    "fp": 1,
+    "bp": 14
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Exfiltration",
+    "Execution"
+   ],
+   "evidence": [
+    "File",
+    "User",
+    "Machine",
+    "Ip",
+    "Process"
+   ]
+  },
+  "T1052.001": {
+   "alerts": 65,
+   "orgs": 8,
+   "detectors": 9,
+   "grades": {
+    "bp": 45,
+    "fp": 18,
+    "tp": 2
+   },
+   "tp_rate": 0.031,
+   "categories": [
+    "Exfiltration",
+    "Execution"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1053": {
+   "alerts": 1607,
+   "orgs": 129,
+   "detectors": 27,
+   "grades": {
+    "bp": 870,
+    "tp": 40,
+    "fp": 685
+   },
+   "tp_rate": 0.025,
+   "categories": [
+    "Execution",
+    "Persistence",
+    "CommandAndControl",
+    "Malware"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "File",
+    "User",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1053.002": {
+   "alerts": 784,
+   "orgs": 122,
+   "detectors": 9,
+   "grades": {
+    "fp": 328,
+    "tp": 29,
+    "bp": 412
+   },
+   "tp_rate": 0.038,
+   "categories": [
+    "Execution",
+    "LateralMovement",
+    "Persistence",
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User",
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1053.003": {
+   "alerts": 3,
+   "orgs": 2,
+   "detectors": 1,
+   "grades": {
+    "bp": 3
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1053.005": {
+   "alerts": 1529,
+   "orgs": 167,
+   "detectors": 31,
+   "grades": {
+    "bp": 822,
+    "tp": 44,
+    "fp": 638
+   },
+   "tp_rate": 0.029,
+   "categories": [
+    "Execution",
+    "DefenseEvasion",
+    "Persistence",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User",
+    "File",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1055": {
+   "alerts": 1970,
+   "orgs": 165,
+   "detectors": 38,
+   "grades": {
+    "bp": 1290,
+    "fp": 486,
+    "tp": 161
+   },
+   "tp_rate": 0.083,
+   "categories": [
+    "DefenseEvasion",
+    "CommandAndControl",
+    "Execution",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1055.001": {
+   "alerts": 1324,
+   "orgs": 126,
+   "detectors": 19,
+   "grades": {
+    "bp": 724,
+    "fp": 432,
+    "tp": 139
+   },
+   "tp_rate": 0.107,
+   "categories": [
+    "DefenseEvasion",
+    "SuspiciousActivity",
+    "CredentialAccess",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1055.002": {
+   "alerts": 1174,
+   "orgs": 105,
+   "detectors": 18,
+   "grades": {
+    "bp": 577,
+    "fp": 439,
+    "tp": 132
+   },
+   "tp_rate": 0.115,
+   "categories": [
+    "DefenseEvasion",
+    "CredentialAccess",
+    "SuspiciousActivity",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1055.003": {
+   "alerts": 1062,
+   "orgs": 97,
+   "detectors": 11,
+   "grades": {
+    "bp": 491,
+    "fp": 421,
+    "tp": 122
+   },
+   "tp_rate": 0.118,
+   "categories": [
+    "DefenseEvasion",
+    "CredentialAccess",
+    "CommandAndControl",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1055.004": {
+   "alerts": 930,
+   "orgs": 92,
+   "detectors": 4,
+   "grades": {
+    "bp": 401,
+    "fp": 414,
+    "tp": 94
+   },
+   "tp_rate": 0.103,
+   "categories": [
+    "DefenseEvasion",
+    "Ransomware",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1055.005": {
+   "alerts": 431,
+   "orgs": 30,
+   "detectors": 2,
+   "grades": {
+    "bp": 121,
+    "tp": 19,
+    "fp": 289
+   },
+   "tp_rate": 0.044,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip"
+   ]
+  },
+  "T1055.012": {
+   "alerts": 1219,
+   "orgs": 140,
+   "detectors": 21,
+   "grades": {
+    "bp": 577,
+    "fp": 466,
+    "tp": 143
+   },
+   "tp_rate": 0.121,
+   "categories": [
+    "DefenseEvasion",
+    "CredentialAccess",
+    "Execution",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1056": {
+   "alerts": 403,
+   "orgs": 61,
+   "detectors": 3,
+   "grades": {
+    "fp": 307,
+    "bp": 66,
+    "tp": 22
+   },
+   "tp_rate": 0.056,
+   "categories": [
+    "SuspiciousActivity",
+    "Malware"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1056.001": {
+   "alerts": 449,
+   "orgs": 62,
+   "detectors": 5,
+   "grades": {
+    "fp": 355,
+    "bp": 62,
+    "tp": 24
+   },
+   "tp_rate": 0.054,
+   "categories": [
+    "SuspiciousActivity",
+    "Collection",
+    "Malware",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1056.003": {
+   "alerts": 3,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "fp": 2,
+    "tp": 1
+   },
+   "tp_rate": 0.333,
+   "categories": [
+    "CredentialAccess",
+    "Collection"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1057": {
+   "alerts": 1909,
+   "orgs": 236,
+   "detectors": 20,
+   "grades": {
+    "fp": 638,
+    "bp": 999,
+    "tp": 90
+   },
+   "tp_rate": 0.052,
+   "categories": [
+    "Discovery",
+    "Malware",
+    "CredentialAccess",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1059": {
+   "alerts": 1533,
+   "orgs": 215,
+   "detectors": 102,
+   "grades": {
+    "bp": 1042,
+    "tp": 117,
+    "fp": 357
+   },
+   "tp_rate": 0.077,
+   "categories": [
+    "Execution",
+    "SuspiciousActivity",
+    "CommandAndControl",
+    "Discovery"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Process",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1059.001": {
+   "alerts": 6348,
+   "orgs": 423,
+   "detectors": 70,
+   "grades": {
+    "fp": 1941,
+    "bp": 3030,
+    "tp": 857
+   },
+   "tp_rate": 0.147,
+   "categories": [
+    "Execution",
+    "Discovery",
+    "DefenseEvasion",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1059.002": {
+   "alerts": 5,
+   "orgs": 5,
+   "detectors": 3,
+   "grades": {
+    "fp": 3,
+    "bp": 1,
+    "tp": 1
+   },
+   "tp_rate": 0.2,
+   "categories": [
+    "SuspiciousActivity",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "Url",
+    "User",
+    "File",
+    "Ip"
+   ]
+  },
+  "T1059.003": {
+   "alerts": 2188,
+   "orgs": 87,
+   "detectors": 11,
+   "grades": {
+    "bp": 1900,
+    "fp": 184,
+    "tp": 72
+   },
+   "tp_rate": 0.033,
+   "categories": [
+    "Execution",
+    "LateralMovement",
+    "Discovery",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1059.004": {
+   "alerts": 164,
+   "orgs": 13,
+   "detectors": 9,
+   "grades": {
+    "bp": 95,
+    "fp": 67,
+    "tp": 2
+   },
+   "tp_rate": 0.012,
+   "categories": [
+    "Execution",
+    "Discovery",
+    "InitialAccess",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Url",
+    "Ip",
+    "File"
+   ]
+  },
+  "T1059.005": {
+   "alerts": 5128,
+   "orgs": 78,
+   "detectors": 9,
+   "grades": {
+    "fp": 219,
+    "bp": 4804,
+    "tp": 84
+   },
+   "tp_rate": 0.016,
+   "categories": [
+    "Execution",
+    "Malware"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1059.006": {
+   "alerts": 16,
+   "orgs": 11,
+   "detectors": 3,
+   "grades": {
+    "fp": 6,
+    "bp": 7,
+    "tp": 2
+   },
+   "tp_rate": 0.133,
+   "categories": [
+    "Malware",
+    "Execution"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "Process",
+    "Ip",
+    "User",
+    "Url"
+   ]
+  },
+  "T1059.007": {
+   "alerts": 783,
+   "orgs": 89,
+   "detectors": 9,
+   "grades": {
+    "fp": 241,
+    "tp": 125,
+    "bp": 379
+   },
+   "tp_rate": 0.168,
+   "categories": [
+    "Execution",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1060": {
+   "alerts": 31,
+   "orgs": 3,
+   "detectors": 4,
+   "grades": {
+    "bp": 31
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "Machine",
+    "User",
+    "File"
+   ]
+  },
+  "T1061": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1064": {
+   "alerts": 220,
+   "orgs": 9,
+   "detectors": 11,
+   "grades": {
+    "bp": 212,
+    "fp": 8
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File"
+   ]
+  },
+  "T1068": {
+   "alerts": 142,
+   "orgs": 32,
+   "detectors": 32,
+   "grades": {
+    "bp": 132,
+    "fp": 8,
+    "tp": 1
+   },
+   "tp_rate": 0.007,
+   "categories": [
+    "PrivilegeEscalation",
+    "Persistence",
+    "DefenseEvasion",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "File",
+    "User",
+    "Machine",
+    "Ip",
+    "Process",
+    "CloudApplication"
+   ]
+  },
+  "T1069": {
+   "alerts": 1972,
+   "orgs": 380,
+   "detectors": 22,
+   "grades": {
+    "bp": 1244,
+    "tp": 71,
+    "fp": 585
+   },
+   "tp_rate": 0.037,
+   "categories": [
+    "Discovery",
+    "Execution",
+    "SuspiciousActivity",
+    "Malware"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Process",
+    "SecurityGroup",
+    "Ip",
+    "File"
+   ]
+  },
+  "T1069.001": {
+   "alerts": 591,
+   "orgs": 70,
+   "detectors": 14,
+   "grades": {
+    "bp": 389,
+    "fp": 179,
+    "tp": 16
+   },
+   "tp_rate": 0.027,
+   "categories": [
+    "Discovery",
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "File",
+    "CloudApplication"
+   ]
+  },
+  "T1069.002": {
+   "alerts": 1793,
+   "orgs": 361,
+   "detectors": 24,
+   "grades": {
+    "bp": 1311,
+    "tp": 62,
+    "fp": 415
+   },
+   "tp_rate": 0.035,
+   "categories": [
+    "Discovery",
+    "LateralMovement",
+    "Collection"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User",
+    "Ip",
+    "SecurityGroup",
+    "File"
+   ]
+  },
+  "T1070": {
+   "alerts": 347,
+   "orgs": 66,
+   "detectors": 31,
+   "grades": {
+    "bp": 245,
+    "tp": 26,
+    "fp": 75
+   },
+   "tp_rate": 0.075,
+   "categories": [
+    "DefenseEvasion",
+    "CommandAndControl",
+    "SuspiciousActivity",
+    "Execution"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Ip",
+    "CloudApplication",
+    "Process",
+    "File"
+   ]
+  },
+  "T1070.001": {
+   "alerts": 107,
+   "orgs": 23,
+   "detectors": 7,
+   "grades": {
+    "bp": 92,
+    "tp": 6,
+    "fp": 9
+   },
+   "tp_rate": 0.056,
+   "categories": [
+    "DefenseEvasion",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip"
+   ]
+  },
+  "T1070.002": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1070.003": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1070.004": {
+   "alerts": 43,
+   "orgs": 24,
+   "detectors": 11,
+   "grades": {
+    "bp": 29,
+    "fp": 5,
+    "tp": 6
+   },
+   "tp_rate": 0.15,
+   "categories": [
+    "DefenseEvasion",
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1070.006": {
+   "alerts": 4,
+   "orgs": 2,
+   "detectors": 1,
+   "grades": {
+    "bp": 4
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1070.008": {
+   "alerts": 13,
+   "orgs": 12,
+   "detectors": 2,
+   "grades": {
+    "tp": 9,
+    "fp": 2
+   },
+   "tp_rate": 0.818,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "User",
+    "CloudLogonSession",
+    "Ip"
+   ]
+  },
+  "T1071": {
+   "alerts": 5112,
+   "orgs": 121,
+   "detectors": 108,
+   "grades": {
+    "fp": 424,
+    "bp": 4574,
+    "tp": 108
+   },
+   "tp_rate": 0.021,
+   "categories": [
+    "CommandAndControl",
+    "Execution",
+    "Exfiltration",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "User",
+    "Machine",
+    "Process",
+    "File"
+   ]
+  },
+  "T1071.001": {
+   "alerts": 404,
+   "orgs": 68,
+   "detectors": 14,
+   "grades": {
+    "fp": 71,
+    "bp": 156,
+    "tp": 176
+   },
+   "tp_rate": 0.437,
+   "categories": [
+    "CommandAndControl",
+    "Exfiltration",
+    "Malware",
+    "Exploit"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "Url",
+    "CloudApplication",
+    "Process",
+    "File"
+   ]
+  },
+  "T1071.003": {
+   "alerts": 13,
+   "orgs": 5,
+   "detectors": 1,
+   "grades": {
+    "bp": 8,
+    "fp": 2,
+    "tp": 3
+   },
+   "tp_rate": 0.231,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "User",
+    "Machine"
+   ]
+  },
+  "T1071.004": {
+   "alerts": 13,
+   "orgs": 4,
+   "detectors": 3,
+   "grades": {
+    "bp": 13
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Exfiltration",
+    "CommandAndControl",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1072": {
+   "alerts": 114,
+   "orgs": 8,
+   "detectors": 9,
+   "grades": {
+    "bp": 68,
+    "fp": 34,
+    "tp": 12
+   },
+   "tp_rate": 0.105,
+   "categories": [
+    "CommandAndControl",
+    "Execution"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1074": {
+   "alerts": 179,
+   "orgs": 69,
+   "detectors": 10,
+   "grades": {
+    "tp": 61,
+    "bp": 62,
+    "fp": 51
+   },
+   "tp_rate": 0.351,
+   "categories": [
+    "Collection",
+    "Execution",
+    "CredentialAccess",
+    "Exfiltration"
+   ],
+   "evidence": [
+    "Ip",
+    "CloudApplication",
+    "User",
+    "Process",
+    "Machine",
+    "OAuthApplication"
+   ]
+  },
+  "T1074.001": {
+   "alerts": 108,
+   "orgs": 43,
+   "detectors": 6,
+   "grades": {
+    "fp": 40,
+    "bp": 58,
+    "tp": 7
+   },
+   "tp_rate": 0.067,
+   "categories": [
+    "Collection",
+    "CredentialAccess",
+    "Exfiltration",
+    "Discovery"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "RegistryKey",
+    "Ip"
+   ]
+  },
+  "T1074.002": {
+   "alerts": 639,
+   "orgs": 20,
+   "detectors": 14,
+   "grades": {
+    "fp": 120,
+    "bp": 60,
+    "tp": 24
+   },
+   "tp_rate": 0.118,
+   "categories": [
+    "Ransomware",
+    "Persistence",
+    "Malware",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "User",
+    "Process",
+    "File",
+    "Machine",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1078": {
+   "alerts": 389346,
+   "orgs": 3741,
+   "detectors": 1252,
+   "grades": {
+    "fp": 111970,
+    "tp": 260413,
+    "bp": 16053
+   },
+   "tp_rate": 0.67,
+   "categories": [
+    "InitialAccess",
+    "Persistence",
+    "CredentialAccess",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudLogonRequest",
+    "CloudLogonSession",
+    "CloudApplication",
+    "Machine"
+   ]
+  },
+  "T1078.001": {
+   "alerts": 7,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 6
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation",
+    "InitialAccess"
+   ],
+   "evidence": [
+    "User",
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1078.002": {
+   "alerts": 487,
+   "orgs": 45,
+   "detectors": 25,
+   "grades": {
+    "fp": 216,
+    "bp": 157,
+    "tp": 24
+   },
+   "tp_rate": 0.06,
+   "categories": [
+    "LateralMovement",
+    "Persistence",
+    "Ransomware",
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "User",
+    "Process",
+    "File",
+    "Machine",
+    "Ip",
+    "CloudApplication"
+   ]
+  },
+  "T1078.003": {
+   "alerts": 240,
+   "orgs": 24,
+   "detectors": 18,
+   "grades": {
+    "fp": 80,
+    "bp": 150,
+    "tp": 10
+   },
+   "tp_rate": 0.042,
+   "categories": [
+    "Persistence",
+    "Execution",
+    "PrivilegeEscalation",
+    "InitialAccess"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1078.004": {
+   "alerts": 378778,
+   "orgs": 3665,
+   "detectors": 314,
+   "grades": {
+    "fp": 108414,
+    "tp": 259748,
+    "bp": 10261
+   },
+   "tp_rate": 0.686,
+   "categories": [
+    "InitialAccess",
+    "DefenseEvasion",
+    "Persistence",
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "CloudLogonRequest",
+    "CloudLogonSession",
+    "CloudApplication",
+    "Mailbox"
+   ]
+  },
+  "T1080": {
+   "alerts": 1002,
+   "orgs": 50,
+   "detectors": 17,
+   "grades": {
+    "fp": 256,
+    "bp": 167,
+    "tp": 52
+   },
+   "tp_rate": 0.109,
+   "categories": [
+    "Ransomware",
+    "Execution",
+    "InitialAccess",
+    "Persistence"
+   ],
+   "evidence": [
+    "User",
+    "File",
+    "Process",
+    "Machine",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1081": {
+   "alerts": 10,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 3,
+    "fp": 2,
+    "bp": 5
+   },
+   "tp_rate": 0.3,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine"
+   ]
+  },
+  "T1082": {
+   "alerts": 1461,
+   "orgs": 193,
+   "detectors": 31,
+   "grades": {
+    "bp": 988,
+    "tp": 50,
+    "fp": 404
+   },
+   "tp_rate": 0.035,
+   "categories": [
+    "Discovery",
+    "CredentialAccess",
+    "Execution",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "AzureResource"
+   ]
+  },
+  "T1083": {
+   "alerts": 175,
+   "orgs": 61,
+   "detectors": 19,
+   "grades": {
+    "bp": 134,
+    "fp": 23,
+    "tp": 14
+   },
+   "tp_rate": 0.082,
+   "categories": [
+    "Discovery",
+    "Collection",
+    "CredentialAccess",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1084": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T1085": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 1,
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine"
+   ]
+  },
+  "T1086": {
+   "alerts": 264,
+   "orgs": 7,
+   "detectors": 9,
+   "grades": {
+    "bp": 257,
+    "fp": 7
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution",
+    "SuspiciousActivity",
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "Url",
+    "Ip",
+    "User",
+    "File"
+   ]
+  },
+  "T1087": {
+   "alerts": 6805,
+   "orgs": 692,
+   "detectors": 111,
+   "grades": {
+    "bp": 4934,
+    "fp": 1389,
+    "tp": 294
+   },
+   "tp_rate": 0.044,
+   "categories": [
+    "Discovery",
+    "CredentialAccess",
+    "SuspiciousActivity",
+    "Malware"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Process",
+    "Ip",
+    "File",
+    "SecurityGroup"
+   ]
+  },
+  "T1087.001": {
+   "alerts": 740,
+   "orgs": 140,
+   "detectors": 17,
+   "grades": {
+    "bp": 391,
+    "fp": 315,
+    "tp": 24
+   },
+   "tp_rate": 0.033,
+   "categories": [
+    "Discovery",
+    "CredentialAccess",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "CloudApplication"
+   ]
+  },
+  "T1087.002": {
+   "alerts": 4361,
+   "orgs": 544,
+   "detectors": 39,
+   "grades": {
+    "bp": 3126,
+    "fp": 949,
+    "tp": 203
+   },
+   "tp_rate": 0.047,
+   "categories": [
+    "Discovery",
+    "Exploit",
+    "CredentialAccess",
+    "Execution"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Process",
+    "Ip",
+    "File",
+    "SecurityGroup"
+   ]
+  },
+  "T1087.003": {
+   "alerts": 226,
+   "orgs": 61,
+   "detectors": 7,
+   "grades": {
+    "bp": 72,
+    "fp": 75,
+    "tp": 8
+   },
+   "tp_rate": 0.052,
+   "categories": [
+    "Discovery",
+    "Collection",
+    "Malware"
+   ],
+   "evidence": [
+    "User",
+    "Process",
+    "Machine",
+    "File",
+    "Ip",
+    "CloudLogonSession"
+   ]
+  },
+  "T1087.004": {
+   "alerts": 42,
+   "orgs": 13,
+   "detectors": 13,
+   "grades": {
+    "bp": 38,
+    "tp": 3,
+    "fp": 1
+   },
+   "tp_rate": 0.071,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "SecurityGroup",
+    "CloudLogonSession",
+    "OAuthApplication",
+    "CloudApplication"
+   ]
+  },
+  "T1090": {
+   "alerts": 120,
+   "orgs": 13,
+   "detectors": 12,
+   "grades": {
+    "bp": 86,
+    "tp": 18,
+    "fp": 15
+   },
+   "tp_rate": 0.151,
+   "categories": [
+    "CommandAndControl",
+    "SuspiciousActivity",
+    "Malware"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "Process",
+    "File",
+    "Url"
+   ]
+  },
+  "T1090.001": {
+   "alerts": 155,
+   "orgs": 19,
+   "detectors": 8,
+   "grades": {
+    "tp": 87,
+    "bp": 65,
+    "fp": 3
+   },
+   "tp_rate": 0.561,
+   "categories": [
+    "CredentialAccess",
+    "LateralMovement",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Ip",
+    "Machine",
+    "File",
+    "RegistryKey"
+   ]
+  },
+  "T1090.003": {
+   "alerts": 50,
+   "orgs": 16,
+   "detectors": 1,
+   "grades": {
+    "bp": 21,
+    "tp": 24,
+    "fp": 5
+   },
+   "tp_rate": 0.48,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "Url",
+    "Process",
+    "User"
+   ]
+  },
+  "T1090.004": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "Url",
+    "Ip",
+    "Process"
+   ]
+  },
+  "T1091": {
+   "alerts": 344,
+   "orgs": 42,
+   "detectors": 12,
+   "grades": {
+    "bp": 246,
+    "tp": 49,
+    "fp": 42
+   },
+   "tp_rate": 0.145,
+   "categories": [
+    "InitialAccess",
+    "CommandAndControl",
+    "LateralMovement",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Ip",
+    "Process",
+    "File",
+    "Url"
+   ]
+  },
+  "T1092": {
+   "alerts": 81,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 62,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.148,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1095": {
+   "alerts": 110,
+   "orgs": 17,
+   "detectors": 11,
+   "grades": {
+    "bp": 84,
+    "fp": 13,
+    "tp": 13
+   },
+   "tp_rate": 0.118,
+   "categories": [
+    "CommandAndControl",
+    "Execution",
+    "Discovery"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1098": {
+   "alerts": 3997,
+   "orgs": 381,
+   "detectors": 611,
+   "grades": {
+    "bp": 2939,
+    "fp": 756,
+    "tp": 287
+   },
+   "tp_rate": 0.072,
+   "categories": [
+    "Persistence",
+    "Collection",
+    "CredentialAccess",
+    "Execution"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "Machine",
+    "Process",
+    "CloudApplication",
+    "SecurityGroup"
+   ]
+  },
+  "T1098.001": {
+   "alerts": 107,
+   "orgs": 61,
+   "detectors": 2,
+   "grades": {
+    "tp": 22,
+    "bp": 48,
+    "fp": 37
+   },
+   "tp_rate": 0.206,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "OAuthApplication",
+    "CloudApplication",
+    "User",
+    "Ip",
+    "Machine"
+   ]
+  },
+  "T1102": {
+   "alerts": 383,
+   "orgs": 75,
+   "detectors": 14,
+   "grades": {
+    "bp": 285,
+    "tp": 81,
+    "fp": 16
+   },
+   "tp_rate": 0.212,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "Machine",
+    "User",
+    "Process",
+    "File"
+   ]
+  },
+  "T1104": {
+   "alerts": 109,
+   "orgs": 8,
+   "detectors": 8,
+   "grades": {
+    "bp": 90,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.11,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1105": {
+   "alerts": 4215,
+   "orgs": 205,
+   "detectors": 92,
+   "grades": {
+    "bp": 3632,
+    "fp": 363,
+    "tp": 199
+   },
+   "tp_rate": 0.047,
+   "categories": [
+    "Malware",
+    "CommandAndControl",
+    "Execution",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "User",
+    "Machine",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1106": {
+   "alerts": 5253,
+   "orgs": 115,
+   "detectors": 22,
+   "grades": {
+    "bp": 4957,
+    "fp": 212,
+    "tp": 51
+   },
+   "tp_rate": 0.01,
+   "categories": [
+    "Execution",
+    "Discovery",
+    "DefenseEvasion",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1110": {
+   "alerts": 43288,
+   "orgs": 1046,
+   "detectors": 517,
+   "grades": {
+    "tp": 31314,
+    "bp": 8526,
+    "fp": 3384
+   },
+   "tp_rate": 0.724,
+   "categories": [
+    "CredentialAccess",
+    "SuspiciousActivity",
+    "Persistence"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudLogonRequest",
+    "Machine",
+    "CloudApplication",
+    "Url"
+   ]
+  },
+  "T1110.001": {
+   "alerts": 32190,
+   "orgs": 800,
+   "detectors": 6,
+   "grades": {
+    "tp": 28953,
+    "bp": 1324,
+    "fp": 1891
+   },
+   "tp_rate": 0.9,
+   "categories": [
+    "CredentialAccess",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudLogonRequest",
+    "Machine",
+    "CloudApplication",
+    "Process"
+   ]
+  },
+  "T1110.002": {
+   "alerts": 43,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "tp": 28,
+    "fp": 15
+   },
+   "tp_rate": 0.651,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "OAuthApplication",
+    "CloudApplication"
+   ]
+  },
+  "T1110.003": {
+   "alerts": 32810,
+   "orgs": 809,
+   "detectors": 17,
+   "grades": {
+    "tp": 29475,
+    "bp": 1339,
+    "fp": 1944
+   },
+   "tp_rate": 0.9,
+   "categories": [
+    "CredentialAccess",
+    "Malware",
+    "InitialAccess"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudLogonRequest",
+    "Machine",
+    "CloudApplication",
+    "Process"
+   ]
+  },
+  "T1110.004": {
+   "alerts": 262,
+   "orgs": 39,
+   "detectors": 4,
+   "grades": {
+    "tp": 231,
+    "bp": 8,
+    "fp": 5
+   },
+   "tp_rate": 0.947,
+   "categories": [
+    "CredentialAccess",
+    "InitialAccess"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "CloudApplication",
+    "CloudLogonSession"
+   ]
+  },
+  "T1111": {
+   "alerts": 377,
+   "orgs": 184,
+   "detectors": 15,
+   "grades": {
+    "tp": 185,
+    "bp": 120,
+    "fp": 38
+   },
+   "tp_rate": 0.539,
+   "categories": [
+    "CredentialAccess",
+    "Malware"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "Machine",
+    "Process",
+    "Url",
+    "MailMessage"
+   ]
+  },
+  "T1112": {
+   "alerts": 931,
+   "orgs": 140,
+   "detectors": 29,
+   "grades": {
+    "bp": 510,
+    "tp": 163,
+    "fp": 240
+   },
+   "tp_rate": 0.179,
+   "categories": [
+    "Persistence",
+    "CredentialAccess",
+    "DefenseEvasion",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Process",
+    "RegistryValue",
+    "Machine",
+    "User",
+    "File",
+    "Ip"
+   ]
+  },
+  "T1113": {
+   "alerts": 223,
+   "orgs": 9,
+   "detectors": 6,
+   "grades": {
+    "tp": 23,
+    "bp": 13,
+    "fp": 5
+   },
+   "tp_rate": 0.561,
+   "categories": [
+    "Collection",
+    "Execution",
+    "Malware",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "File",
+    "Process",
+    "Ip"
+   ]
+  },
+  "T1114": {
+   "alerts": 699,
+   "orgs": 137,
+   "detectors": 110,
+   "grades": {
+    "tp": 142,
+    "bp": 459,
+    "fp": 97
+   },
+   "tp_rate": 0.203,
+   "categories": [
+    "Collection",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudApplication",
+    "File",
+    "Machine",
+    "Mailbox"
+   ]
+  },
+  "T1114.001": {
+   "alerts": 33,
+   "orgs": 13,
+   "detectors": 2,
+   "grades": {
+    "bp": 16,
+    "fp": 13,
+    "tp": 3
+   },
+   "tp_rate": 0.094,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Machine",
+    "Process",
+    "User",
+    "File"
+   ]
+  },
+  "T1114.002": {
+   "alerts": 58,
+   "orgs": 42,
+   "detectors": 6,
+   "grades": {
+    "fp": 6,
+    "tp": 24,
+    "bp": 15
+   },
+   "tp_rate": 0.533,
+   "categories": [
+    "Collection",
+    "Malware",
+    "Discovery"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudLogonSession",
+    "Process",
+    "Machine",
+    "File"
+   ]
+  },
+  "T1114.003": {
+   "alerts": 143,
+   "orgs": 33,
+   "detectors": 6,
+   "grades": {
+    "tp": 13,
+    "bp": 95,
+    "fp": 35
+   },
+   "tp_rate": 0.091,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "User",
+    "Mailbox",
+    "Ip",
+    "CloudApplication",
+    "MailMessage",
+    "MailboxConfiguration"
+   ]
+  },
+  "T1115": {
+   "alerts": 81,
+   "orgs": 5,
+   "detectors": 5,
+   "grades": {
+    "bp": 11,
+    "fp": 47,
+    "tp": 23
+   },
+   "tp_rate": 0.284,
+   "categories": [
+    "Collection",
+    "Malware"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "File",
+    "User"
+   ]
+  },
+  "T1119": {
+   "alerts": 930,
+   "orgs": 149,
+   "detectors": 11,
+   "grades": {
+    "fp": 518,
+    "bp": 330,
+    "tp": 32
+   },
+   "tp_rate": 0.036,
+   "categories": [
+    "CredentialAccess",
+    "Collection",
+    "Discovery",
+    "Exfiltration"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "User",
+    "Machine",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1120": {
+   "alerts": 74,
+   "orgs": 12,
+   "detectors": 4,
+   "grades": {
+    "fp": 3,
+    "bp": 7,
+    "tp": 2
+   },
+   "tp_rate": 0.167,
+   "categories": [
+    "Discovery",
+    "Malware"
+   ],
+   "evidence": [
+    "User",
+    "Process",
+    "Machine",
+    "File"
+   ]
+  },
+  "T1124": {
+   "alerts": 10,
+   "orgs": 3,
+   "detectors": 2,
+   "grades": {
+    "fp": 9,
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User"
+   ]
+  },
+  "T1125": {
+   "alerts": 6,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 3,
+    "fp": 3
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "User"
+   ]
+  },
+  "T1127": {
+   "alerts": 81,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 62,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.148,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1129": {
+   "alerts": 138,
+   "orgs": 15,
+   "detectors": 6,
+   "grades": {
+    "bp": 109,
+    "tp": 15,
+    "fp": 13
+   },
+   "tp_rate": 0.109,
+   "categories": [
+    "CommandAndControl",
+    "Execution"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "Process",
+    "File",
+    "Url"
+   ]
+  },
+  "T1132": {
+   "alerts": 93,
+   "orgs": 7,
+   "detectors": 6,
+   "grades": {
+    "bp": 74,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.129,
+   "categories": [
+    "CommandAndControl",
+    "Exfiltration"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1133": {
+   "alerts": 957,
+   "orgs": 13,
+   "detectors": 22,
+   "grades": {
+    "bp": 278,
+    "fp": 361,
+    "tp": 318
+   },
+   "tp_rate": 0.332,
+   "categories": [
+    "InitialAccess",
+    "Execution",
+    "CommandAndControl",
+    "Exfiltration"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "Url",
+    "File",
+    "Process",
+    "User"
+   ]
+  },
+  "T1134": {
+   "alerts": 116,
+   "orgs": 21,
+   "detectors": 16,
+   "grades": {
+    "bp": 87,
+    "fp": 16,
+    "tp": 13
+   },
+   "tp_rate": 0.112,
+   "categories": [
+    "CommandAndControl",
+    "PrivilegeEscalation",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1134.001": {
+   "alerts": 8,
+   "orgs": 6,
+   "detectors": 2,
+   "grades": {
+    "bp": 6,
+    "fp": 1,
+    "tp": 1
+   },
+   "tp_rate": 0.125,
+   "categories": [
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip"
+   ]
+  },
+  "T1134.002": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1134.004": {
+   "alerts": 28,
+   "orgs": 5,
+   "detectors": 3,
+   "grades": {
+    "bp": 22,
+    "fp": 5
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity",
+    "DefenseEvasion",
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1135": {
+   "alerts": 3018,
+   "orgs": 282,
+   "detectors": 18,
+   "grades": {
+    "bp": 2051,
+    "tp": 115,
+    "fp": 687
+   },
+   "tp_rate": 0.04,
+   "categories": [
+    "Discovery",
+    "CredentialAccess",
+    "LateralMovement",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1136": {
+   "alerts": 865,
+   "orgs": 176,
+   "detectors": 133,
+   "grades": {
+    "bp": 727,
+    "fp": 121,
+    "tp": 13
+   },
+   "tp_rate": 0.015,
+   "categories": [
+    "Persistence",
+    "Discovery",
+    "Collection",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "Process",
+    "Ip",
+    "SecurityGroup",
+    "CloudApplication"
+   ]
+  },
+  "T1136.001": {
+   "alerts": 323,
+   "orgs": 34,
+   "detectors": 12,
+   "grades": {
+    "bp": 302,
+    "fp": 16,
+    "tp": 5
+   },
+   "tp_rate": 0.015,
+   "categories": [
+    "Persistence",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine",
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1136.002": {
+   "alerts": 168,
+   "orgs": 104,
+   "detectors": 3,
+   "grades": {
+    "bp": 121,
+    "fp": 41,
+    "tp": 4
+   },
+   "tp_rate": 0.024,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Process",
+    "SecurityGroup",
+    "Ip"
+   ]
+  },
+  "T1136.003": {
+   "alerts": 113,
+   "orgs": 29,
+   "detectors": 37,
+   "grades": {
+    "bp": 100,
+    "fp": 11,
+    "tp": 1
+   },
+   "tp_rate": 0.009,
+   "categories": [
+    "Persistence",
+    "Discovery"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "SecurityGroup"
+   ]
+  },
+  "T1137": {
+   "alerts": 62,
+   "orgs": 14,
+   "detectors": 8,
+   "grades": {
+    "bp": 57,
+    "fp": 3,
+    "tp": 1
+   },
+   "tp_rate": 0.016,
+   "categories": [
+    "Persistence",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "Process",
+    "File",
+    "Url",
+    "User"
+   ]
+  },
+  "T1137.005": {
+   "alerts": 31,
+   "orgs": 17,
+   "detectors": 4,
+   "grades": {
+    "tp": 9,
+    "bp": 16,
+    "fp": 5
+   },
+   "tp_rate": 0.3,
+   "categories": [
+    "Collection",
+    "Persistence"
+   ],
+   "evidence": [
+    "User",
+    "Process",
+    "Ip",
+    "Machine",
+    "CloudApplication",
+    "CloudLogonSession"
+   ]
+  },
+  "T1137.006": {
+   "alerts": 3,
+   "orgs": 2,
+   "detectors": 1,
+   "grades": {
+    "bp": 2,
+    "tp": 1
+   },
+   "tp_rate": 0.333,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "RegistryValue"
+   ]
+  },
+  "T1140": {
+   "alerts": 613,
+   "orgs": 60,
+   "detectors": 10,
+   "grades": {
+    "bp": 421,
+    "tp": 34,
+    "fp": 157
+   },
+   "tp_rate": 0.056,
+   "categories": [
+    "DefenseEvasion",
+    "Execution",
+    "CommandAndControl",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1176": {
+   "alerts": 467,
+   "orgs": 5,
+   "detectors": 1,
+   "grades": {
+    "bp": 167,
+    "fp": 300
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User"
+   ]
+  },
+  "T1183": {
+   "alerts": 5,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 5
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1185": {
+   "alerts": 7,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "tp": 1,
+    "bp": 6
+   },
+   "tp_rate": 0.143,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine",
+    "File"
+   ]
+  },
+  "T1187": {
+   "alerts": 24,
+   "orgs": 4,
+   "detectors": 3,
+   "grades": {
+    "bp": 23,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CredentialAccess",
+    "InitialAccess"
+   ],
+   "evidence": [
+    "Machine",
+    "File",
+    "User",
+    "Process",
+    "Ip"
+   ]
+  },
+  "T1188": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "Ip",
+    "Url",
+    "User"
+   ]
+  },
+  "T1189": {
+   "alerts": 1097,
+   "orgs": 236,
+   "detectors": 58,
+   "grades": {
+    "tp": 452,
+    "bp": 498,
+    "fp": 141
+   },
+   "tp_rate": 0.414,
+   "categories": [
+    "InitialAccess",
+    "CommandAndControl",
+    "Malware",
+    "Execution"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "Url",
+    "Machine",
+    "Process",
+    "File"
+   ]
+  },
+  "T1190": {
+   "alerts": 1529,
+   "orgs": 91,
+   "detectors": 102,
+   "grades": {
+    "bp": 633,
+    "fp": 236,
+    "tp": 658
+   },
+   "tp_rate": 0.431,
+   "categories": [
+    "InitialAccess",
+    "Execution",
+    "Exploit",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "Url",
+    "Process",
+    "User",
+    "File"
+   ]
+  },
+  "T1191": {
+   "alerts": 6,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 6
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1192": {
+   "alerts": 443,
+   "orgs": 3,
+   "detectors": 3,
+   "grades": {
+    "bp": 417,
+    "tp": 17,
+    "fp": 9
+   },
+   "tp_rate": 0.038,
+   "categories": [
+    "InitialAccess"
+   ],
+   "evidence": [
+    "MailMessage",
+    "Mailbox",
+    "User",
+    "MailCluster",
+    "Ip",
+    "File"
+   ]
+  },
+  "T1193": {
+   "alerts": 576,
+   "orgs": 6,
+   "detectors": 7,
+   "grades": {
+    "bp": 550,
+    "tp": 17,
+    "fp": 9
+   },
+   "tp_rate": 0.03,
+   "categories": [
+    "InitialAccess"
+   ],
+   "evidence": [
+    "MailMessage",
+    "Mailbox",
+    "File",
+    "User",
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1194": {
+   "alerts": 430,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 411,
+    "tp": 9,
+    "fp": 9
+   },
+   "tp_rate": 0.021,
+   "categories": [
+    "InitialAccess"
+   ],
+   "evidence": [
+    "MailMessage",
+    "Mailbox",
+    "User",
+    "Machine"
+   ]
+  },
+  "T1195": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Ip",
+    "User"
+   ]
+  },
+  "T1197": {
+   "alerts": 83,
+   "orgs": 5,
+   "detectors": 5,
+   "grades": {
+    "bp": 64,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.145,
+   "categories": [
+    "CommandAndControl",
+    "Persistence"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1199": {
+   "alerts": 116,
+   "orgs": 19,
+   "detectors": 19,
+   "grades": {
+    "bp": 104,
+    "fp": 9,
+    "tp": 3
+   },
+   "tp_rate": 0.026,
+   "categories": [
+    "InitialAccess",
+    "Persistence",
+    "Execution"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "Mailbox",
+    "MailMessage",
+    "MailCluster",
+    "File"
+   ]
+  },
+  "T1200": {
+   "alerts": 184,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 165,
+    "tp": 13,
+    "fp": 6
+   },
+   "tp_rate": 0.071,
+   "categories": [
+    "InitialAccess",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "Machine",
+    "File"
+   ]
+  },
+  "T1201": {
+   "alerts": 153,
+   "orgs": 15,
+   "detectors": 8,
+   "grades": {
+    "bp": 109,
+    "tp": 3,
+    "fp": 41
+   },
+   "tp_rate": 0.02,
+   "categories": [
+    "Discovery",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Ip",
+    "CloudApplication"
+   ]
+  },
+  "T1202": {
+   "alerts": 148,
+   "orgs": 13,
+   "detectors": 14,
+   "grades": {
+    "bp": 125,
+    "tp": 12,
+    "fp": 11
+   },
+   "tp_rate": 0.081,
+   "categories": [
+    "CommandAndControl",
+    "DefenseEvasion",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1203": {
+   "alerts": 1100,
+   "orgs": 112,
+   "detectors": 78,
+   "grades": {
+    "bp": 705,
+    "tp": 123,
+    "fp": 270
+   },
+   "tp_rate": 0.112,
+   "categories": [
+    "Execution",
+    "CommandAndControl",
+    "Exploit",
+    "InitialAccess"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "Machine",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1204": {
+   "alerts": 1168,
+   "orgs": 95,
+   "detectors": 88,
+   "grades": {
+    "bp": 646,
+    "fp": 284,
+    "tp": 144
+   },
+   "tp_rate": 0.134,
+   "categories": [
+    "Execution",
+    "InitialAccess",
+    "CommandAndControl",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "Process",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1204.001": {
+   "alerts": 781,
+   "orgs": 246,
+   "detectors": 17,
+   "grades": {
+    "bp": 284,
+    "tp": 284,
+    "fp": 202
+   },
+   "tp_rate": 0.369,
+   "categories": [
+    "DefenseEvasion",
+    "Malware",
+    "Execution",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "Url",
+    "Process",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1204.002": {
+   "alerts": 4384,
+   "orgs": 404,
+   "detectors": 42,
+   "grades": {
+    "bp": 3251,
+    "fp": 804,
+    "tp": 284
+   },
+   "tp_rate": 0.065,
+   "categories": [
+    "Malware",
+    "Execution",
+    "InitialAccess",
+    "UnwantedSoftware"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Ip",
+    "CloudApplication"
+   ]
+  },
+  "T1205": {
+   "alerts": 99,
+   "orgs": 5,
+   "detectors": 5,
+   "grades": {
+    "bp": 80,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.121,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "Url",
+    "File"
+   ]
+  },
+  "T1207": {
+   "alerts": 85,
+   "orgs": 5,
+   "detectors": 5,
+   "grades": {
+    "bp": 66,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.141,
+   "categories": [
+    "CommandAndControl",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1208": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Url",
+    "Ip",
+    "Machine",
+    "Process",
+    "User"
+   ]
+  },
+  "T1210": {
+   "alerts": 3092,
+   "orgs": 223,
+   "detectors": 30,
+   "grades": {
+    "bp": 2493,
+    "fp": 528,
+    "tp": 71
+   },
+   "tp_rate": 0.023,
+   "categories": [
+    "LateralMovement",
+    "CommandAndControl",
+    "Collection",
+    "Execution"
+   ],
+   "evidence": [
+    "Url",
+    "Ip",
+    "Machine",
+    "User",
+    "Process",
+    "File"
+   ]
+  },
+  "T1211": {
+   "alerts": 103,
+   "orgs": 9,
+   "detectors": 12,
+   "grades": {
+    "bp": 82,
+    "tp": 13,
+    "fp": 8
+   },
+   "tp_rate": 0.126,
+   "categories": [
+    "CommandAndControl",
+    "Persistence",
+    "Malware",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1212": {
+   "alerts": 265,
+   "orgs": 44,
+   "detectors": 13,
+   "grades": {
+    "tp": 174,
+    "fp": 10,
+    "bp": 78
+   },
+   "tp_rate": 0.664,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "CloudLogonSession",
+    "Process",
+    "File",
+    "Machine"
+   ]
+  },
+  "T1213": {
+   "alerts": 56,
+   "orgs": 20,
+   "detectors": 10,
+   "grades": {
+    "bp": 36,
+    "tp": 11,
+    "fp": 6
+   },
+   "tp_rate": 0.208,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "File",
+    "User",
+    "Machine",
+    "Process",
+    "Ip",
+    "CloudApplication"
+   ]
+  },
+  "T1213.002": {
+   "alerts": 39,
+   "orgs": 27,
+   "detectors": 5,
+   "grades": {
+    "bp": 21,
+    "tp": 9,
+    "fp": 8
+   },
+   "tp_rate": 0.237,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "CloudApplication"
+   ]
+  },
+  "T1216": {
+   "alerts": 429,
+   "orgs": 47,
+   "detectors": 10,
+   "grades": {
+    "bp": 365,
+    "tp": 21,
+    "fp": 42
+   },
+   "tp_rate": 0.049,
+   "categories": [
+    "DefenseEvasion",
+    "CommandAndControl",
+    "Malware",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1217": {
+   "alerts": 2,
+   "orgs": 2,
+   "detectors": 1,
+   "grades": {
+    "bp": 1,
+    "tp": 1
+   },
+   "tp_rate": 0.5,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User"
+   ]
+  },
+  "T1218": {
+   "alerts": 846,
+   "orgs": 77,
+   "detectors": 21,
+   "grades": {
+    "bp": 510,
+    "tp": 69,
+    "fp": 174
+   },
+   "tp_rate": 0.092,
+   "categories": [
+    "DefenseEvasion",
+    "Execution",
+    "InitialAccess",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1218.001": {
+   "alerts": 53,
+   "orgs": 9,
+   "detectors": 1,
+   "grades": {
+    "bp": 46,
+    "fp": 3,
+    "tp": 3
+   },
+   "tp_rate": 0.058,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Process",
+    "File",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1218.002": {
+   "alerts": 170,
+   "orgs": 19,
+   "detectors": 2,
+   "grades": {
+    "bp": 125,
+    "tp": 28,
+    "fp": 17
+   },
+   "tp_rate": 0.165,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1218.003": {
+   "alerts": 422,
+   "orgs": 48,
+   "detectors": 4,
+   "grades": {
+    "bp": 382,
+    "fp": 28,
+    "tp": 10
+   },
+   "tp_rate": 0.024,
+   "categories": [
+    "DefenseEvasion",
+    "Execution",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1218.004": {
+   "alerts": 354,
+   "orgs": 42,
+   "detectors": 3,
+   "grades": {
+    "bp": 318,
+    "fp": 28,
+    "tp": 7
+   },
+   "tp_rate": 0.02,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1218.005": {
+   "alerts": 431,
+   "orgs": 40,
+   "detectors": 7,
+   "grades": {
+    "bp": 396,
+    "fp": 27,
+    "tp": 7
+   },
+   "tp_rate": 0.016,
+   "categories": [
+    "DefenseEvasion",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1218.007": {
+   "alerts": 4,
+   "orgs": 3,
+   "detectors": 3,
+   "grades": {
+    "tp": 2,
+    "bp": 1
+   },
+   "tp_rate": 0.667,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine"
+   ]
+  },
+  "T1218.008": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1218.009": {
+   "alerts": 24,
+   "orgs": 1,
+   "detectors": 2,
+   "grades": {
+    "bp": 6,
+    "fp": 18
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File"
+   ]
+  },
+  "T1218.010": {
+   "alerts": 445,
+   "orgs": 49,
+   "detectors": 6,
+   "grades": {
+    "tp": 18,
+    "bp": 386,
+    "fp": 37
+   },
+   "tp_rate": 0.041,
+   "categories": [
+    "DefenseEvasion",
+    "Execution",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1218.011": {
+   "alerts": 581,
+   "orgs": 77,
+   "detectors": 14,
+   "grades": {
+    "bp": 447,
+    "fp": 58,
+    "tp": 70
+   },
+   "tp_rate": 0.122,
+   "categories": [
+    "DefenseEvasion",
+    "Execution",
+    "SuspiciousActivity",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1218.013": {
+   "alerts": 3,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 3
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Url",
+    "Ip",
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1219": {
+   "alerts": 274,
+   "orgs": 47,
+   "detectors": 32,
+   "grades": {
+    "bp": 127,
+    "tp": 107,
+    "fp": 33
+   },
+   "tp_rate": 0.401,
+   "categories": [
+    "CommandAndControl",
+    "DefenseEvasion",
+    "SuspiciousActivity",
+    "Malware"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "Process",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1220": {
+   "alerts": 469,
+   "orgs": 59,
+   "detectors": 9,
+   "grades": {
+    "bp": 408,
+    "tp": 22,
+    "fp": 36
+   },
+   "tp_rate": 0.047,
+   "categories": [
+    "DefenseEvasion",
+    "CommandAndControl",
+    "Malware",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1221": {
+   "alerts": 105,
+   "orgs": 14,
+   "detectors": 6,
+   "grades": {
+    "bp": 82,
+    "tp": 12,
+    "fp": 10
+   },
+   "tp_rate": 0.115,
+   "categories": [
+    "CommandAndControl",
+    "Persistence"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1222": {
+   "alerts": 170,
+   "orgs": 7,
+   "detectors": 3,
+   "grades": {
+    "fp": 146,
+    "bp": 21
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion",
+    "Execution"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Ip",
+    "GenericEntity"
+   ]
+  },
+  "T1222.001": {
+   "alerts": 12,
+   "orgs": 7,
+   "detectors": 4,
+   "grades": {
+    "bp": 7,
+    "tp": 1
+   },
+   "tp_rate": 0.125,
+   "categories": [
+    "DefenseEvasion",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip"
+   ]
+  },
+  "T1222.002": {
+   "alerts": 160,
+   "orgs": 3,
+   "detectors": 1,
+   "grades": {
+    "fp": 146,
+    "bp": 14
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1418": {
+   "alerts": 8,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 8
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Ip"
+   ]
+  },
+  "T1421": {
+   "alerts": 8,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 8
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Ip"
+   ]
+  },
+  "T1456": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "InitialAccess"
+   ],
+   "evidence": [
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1464": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 1
+   },
+   "tp_rate": 1.0,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "Ip"
+   ]
+  },
+  "T1471": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "User"
+   ]
+  },
+  "T1481": {
+   "alerts": 8,
+   "orgs": 4,
+   "detectors": 2,
+   "grades": {
+    "fp": 1,
+    "bp": 5
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "Url",
+    "Process",
+    "User"
+   ]
+  },
+  "T1482": {
+   "alerts": 835,
+   "orgs": 262,
+   "detectors": 24,
+   "grades": {
+    "bp": 624,
+    "tp": 38,
+    "fp": 173
+   },
+   "tp_rate": 0.046,
+   "categories": [
+    "Discovery",
+    "LateralMovement",
+    "Collection"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User",
+    "SecurityGroup",
+    "File",
+    "GenericEntity"
+   ]
+  },
+  "T1484": {
+   "alerts": 131,
+   "orgs": 25,
+   "detectors": 16,
+   "grades": {
+    "bp": 96,
+    "tp": 19,
+    "fp": 16
+   },
+   "tp_rate": 0.145,
+   "categories": [
+    "CommandAndControl",
+    "PrivilegeEscalation",
+    "Execution",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1484.001": {
+   "alerts": 2,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Machine",
+    "User"
+   ]
+  },
+  "T1484.002": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Machine",
+    "User"
+   ]
+  },
+  "T1485": {
+   "alerts": 4366,
+   "orgs": 125,
+   "detectors": 44,
+   "grades": {
+    "bp": 4219,
+    "fp": 98,
+    "tp": 47
+   },
+   "tp_rate": 0.011,
+   "categories": [
+    "Impact",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "CloudApplication",
+    "Machine",
+    "AzureResource",
+    "GenericEntity"
+   ]
+  },
+  "T1486": {
+   "alerts": 581,
+   "orgs": 68,
+   "detectors": 16,
+   "grades": {
+    "fp": 80,
+    "bp": 136,
+    "tp": 16
+   },
+   "tp_rate": 0.069,
+   "categories": [
+    "Ransomware",
+    "Impact",
+    "Malware",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudApplication",
+    "Machine",
+    "File",
+    "Process"
+   ]
+  },
+  "T1489": {
+   "alerts": 379,
+   "orgs": 40,
+   "detectors": 28,
+   "grades": {
+    "tp": 76,
+    "bp": 196,
+    "fp": 104
+   },
+   "tp_rate": 0.202,
+   "categories": [
+    "CredentialAccess",
+    "Exploit",
+    "Execution",
+    "Impact"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine",
+    "File",
+    "RegistryValue",
+    "RegistryKey"
+   ]
+  },
+  "T1490": {
+   "alerts": 142,
+   "orgs": 14,
+   "detectors": 12,
+   "grades": {
+    "bp": 137,
+    "fp": 4,
+    "tp": 1
+   },
+   "tp_rate": 0.007,
+   "categories": [
+    "Ransomware",
+    "Malware",
+    "Impact",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "RegistryValue",
+    "Ip"
+   ]
+  },
+  "T1491": {
+   "alerts": 193,
+   "orgs": 3,
+   "detectors": 3,
+   "grades": {
+    "fp": 19,
+    "bp": 174
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "AzureResource",
+    "CloudApplication",
+    "User"
+   ]
+  },
+  "T1496": {
+   "alerts": 260,
+   "orgs": 60,
+   "detectors": 63,
+   "grades": {
+    "bp": 205,
+    "fp": 40,
+    "tp": 15
+   },
+   "tp_rate": 0.058,
+   "categories": [
+    "Impact",
+    "Execution",
+    "UnwantedSoftware",
+    "Persistence"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "Machine",
+    "Process",
+    "CloudApplication",
+    "File"
+   ]
+  },
+  "T1497": {
+   "alerts": 82,
+   "orgs": 5,
+   "detectors": 5,
+   "grades": {
+    "bp": 62,
+    "tp": 12,
+    "fp": 8
+   },
+   "tp_rate": 0.146,
+   "categories": [
+    "CommandAndControl",
+    "Malware"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url",
+    "Process"
+   ]
+  },
+  "T1497.001": {
+   "alerts": 988,
+   "orgs": 152,
+   "detectors": 6,
+   "grades": {
+    "bp": 337,
+    "tp": 52,
+    "fp": 521
+   },
+   "tp_rate": 0.057,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1497.002": {
+   "alerts": 342,
+   "orgs": 7,
+   "detectors": 2,
+   "grades": {
+    "bp": 330,
+    "fp": 11,
+    "tp": 1
+   },
+   "tp_rate": 0.003,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Url",
+    "Process",
+    "Machine",
+    "User",
+    "File"
+   ]
+  },
+  "T1498": {
+   "alerts": 103,
+   "orgs": 2,
+   "detectors": 3,
+   "grades": {
+    "bp": 72,
+    "tp": 31
+   },
+   "tp_rate": 0.301,
+   "categories": [
+    "Impact",
+    "Discovery"
+   ],
+   "evidence": [
+    "User",
+    "Url",
+    "Machine"
+   ]
+  },
+  "T1499": {
+   "alerts": 123,
+   "orgs": 10,
+   "detectors": 9,
+   "grades": {
+    "bp": 42,
+    "fp": 80,
+    "tp": 1
+   },
+   "tp_rate": 0.008,
+   "categories": [
+    "Impact",
+    "Ransomware"
+   ],
+   "evidence": [
+    "Ip",
+    "File",
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1499.003": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T1499.004": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T1505": {
+   "alerts": 24,
+   "orgs": 5,
+   "detectors": 2,
+   "grades": {
+    "bp": 20,
+    "fp": 3,
+    "tp": 1
+   },
+   "tp_rate": 0.042,
+   "categories": [
+    "InitialAccess",
+    "Persistence"
+   ],
+   "evidence": [
+    "Url",
+    "Process",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1505.002": {
+   "alerts": 6,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 6
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "Process",
+    "User"
+   ]
+  },
+  "T1505.003": {
+   "alerts": 47,
+   "orgs": 20,
+   "detectors": 7,
+   "grades": {
+    "bp": 33,
+    "tp": 4,
+    "fp": 9
+   },
+   "tp_rate": 0.087,
+   "categories": [
+    "InitialAccess",
+    "Persistence",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Url",
+    "File",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1505.004": {
+   "alerts": 5,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 5
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine"
+   ]
+  },
+  "T1516": {
+   "alerts": 8,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 8
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Ip"
+   ]
+  },
+  "T1517": {
+   "alerts": 7,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 7
+   },
+   "tp_rate": 1.0,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Ip",
+    "User"
+   ]
+  },
+  "T1518": {
+   "alerts": 136,
+   "orgs": 29,
+   "detectors": 3,
+   "grades": {
+    "fp": 16,
+    "bp": 63,
+    "tp": 5
+   },
+   "tp_rate": 0.06,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "User",
+    "Machine",
+    "Ip"
+   ]
+  },
+  "T1518.001": {
+   "alerts": 259,
+   "orgs": 46,
+   "detectors": 5,
+   "grades": {
+    "bp": 153,
+    "fp": 68,
+    "tp": 29
+   },
+   "tp_rate": 0.116,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip"
+   ]
+  },
+  "T1525": {
+   "alerts": 15,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 15
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1526": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 2
+   },
+   "tp_rate": 1.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Ip",
+    "CloudLogonSession",
+    "OAuthApplication",
+    "CloudApplication",
+    "User"
+   ]
+  },
+  "T1528": {
+   "alerts": 1682,
+   "orgs": 875,
+   "detectors": 18,
+   "grades": {
+    "fp": 705,
+    "bp": 662,
+    "tp": 315
+   },
+   "tp_rate": 0.187,
+   "categories": [
+    "CredentialAccess",
+    "Exploit",
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Ip",
+    "CloudApplication",
+    "OAuthApplication",
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1529": {
+   "alerts": 61,
+   "orgs": 5,
+   "detectors": 6,
+   "grades": {
+    "bp": 40,
+    "fp": 16,
+    "tp": 5
+   },
+   "tp_rate": 0.082,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "File",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1530": {
+   "alerts": 20,
+   "orgs": 7,
+   "detectors": 4,
+   "grades": {
+    "bp": 14,
+    "fp": 3,
+    "tp": 3
+   },
+   "tp_rate": 0.15,
+   "categories": [
+    "Collection"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudApplication",
+    "AzureResource",
+    "Mailbox"
+   ]
+  },
+  "T1531": {
+   "alerts": 736,
+   "orgs": 7,
+   "detectors": 10,
+   "grades": {
+    "bp": 733,
+    "fp": 3
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact",
+    "CredentialAccess",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1532": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 2,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Collection",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "File"
+   ]
+  },
+  "T1534": {
+   "alerts": 1010,
+   "orgs": 212,
+   "detectors": 18,
+   "grades": {
+    "tp": 518,
+    "fp": 194,
+    "bp": 151
+   },
+   "tp_rate": 0.6,
+   "categories": [
+    "LateralMovement",
+    "InitialAccess",
+    "Discovery",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Mailbox",
+    "MailCluster",
+    "User",
+    "MailMessage",
+    "Ip",
+    "File"
+   ]
+  },
+  "T1535": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "CloudApplication",
+    "Ip",
+    "User"
+   ]
+  },
+  "T1537": {
+   "alerts": 368,
+   "orgs": 13,
+   "detectors": 9,
+   "grades": {
+    "bp": 349,
+    "fp": 18,
+    "tp": 1
+   },
+   "tp_rate": 0.003,
+   "categories": [
+    "Exfiltration"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "Ip",
+    "File",
+    "AzureResource",
+    "CloudApplication"
+   ]
+  },
+  "T1539": {
+   "alerts": 1286,
+   "orgs": 234,
+   "detectors": 22,
+   "grades": {
+    "bp": 319,
+    "tp": 421,
+    "fp": 469
+   },
+   "tp_rate": 0.348,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "User",
+    "Machine",
+    "Ip",
+    "CloudLogonSession"
+   ]
+  },
+  "T1541": {
+   "alerts": 813,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 813
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "User",
+    "Url",
+    "Ip",
+    "Machine"
+   ]
+  },
+  "T1542": {
+   "alerts": 81,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 62,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.148,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1543": {
+   "alerts": 188,
+   "orgs": 8,
+   "detectors": 9,
+   "grades": {
+    "bp": 159,
+    "fp": 29
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation",
+    "Persistence",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "File",
+    "User",
+    "Url",
+    "GenericEntity"
+   ]
+  },
+  "T1543.002": {
+   "alerts": 133,
+   "orgs": 4,
+   "detectors": 2,
+   "grades": {
+    "bp": 117,
+    "fp": 16
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation",
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1543.003": {
+   "alerts": 1085,
+   "orgs": 117,
+   "detectors": 49,
+   "grades": {
+    "tp": 192,
+    "fp": 332,
+    "bp": 553
+   },
+   "tp_rate": 0.178,
+   "categories": [
+    "Persistence",
+    "LateralMovement",
+    "Execution",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User",
+    "File",
+    "RegistryValue",
+    "Ip"
+   ]
+  },
+  "T1546": {
+   "alerts": 864,
+   "orgs": 6,
+   "detectors": 10,
+   "grades": {
+    "bp": 860,
+    "tp": 2,
+    "fp": 2
+   },
+   "tp_rate": 0.002,
+   "categories": [
+    "Persistence",
+    "Execution"
+   ],
+   "evidence": [
+    "User",
+    "Url",
+    "Machine",
+    "Process",
+    "File",
+    "RegistryValue"
+   ]
+  },
+  "T1546.001": {
+   "alerts": 50,
+   "orgs": 9,
+   "detectors": 2,
+   "grades": {
+    "fp": 12,
+    "bp": 37,
+    "tp": 1
+   },
+   "tp_rate": 0.02,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "RegistryValue",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1546.002": {
+   "alerts": 7,
+   "orgs": 5,
+   "detectors": 3,
+   "grades": {
+    "fp": 3,
+    "bp": 3
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence",
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "RegistryValue",
+    "User",
+    "File"
+   ]
+  },
+  "T1546.003": {
+   "alerts": 36,
+   "orgs": 8,
+   "detectors": 3,
+   "grades": {
+    "bp": 36
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User"
+   ]
+  },
+  "T1546.005": {
+   "alerts": 5,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 5
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1546.007": {
+   "alerts": 29,
+   "orgs": 5,
+   "detectors": 2,
+   "grades": {
+    "fp": 4,
+    "bp": 25
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "RegistryValue",
+    "User"
+   ]
+  },
+  "T1546.008": {
+   "alerts": 298,
+   "orgs": 24,
+   "detectors": 5,
+   "grades": {
+    "bp": 268,
+    "fp": 16,
+    "tp": 13
+   },
+   "tp_rate": 0.044,
+   "categories": [
+    "Persistence",
+    "SuspiciousActivity",
+    "Discovery",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "RegistryValue",
+    "File",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1546.010": {
+   "alerts": 7,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 7
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence",
+    "Malware"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "RegistryValue",
+    "Ip"
+   ]
+  },
+  "T1546.011": {
+   "alerts": 53,
+   "orgs": 12,
+   "detectors": 3,
+   "grades": {
+    "bp": 47,
+    "fp": 5,
+    "tp": 1
+   },
+   "tp_rate": 0.019,
+   "categories": [
+    "Malware",
+    "Persistence"
+   ],
+   "evidence": [
+    "Machine",
+    "File",
+    "Process",
+    "User",
+    "RegistryValue",
+    "Ip"
+   ]
+  },
+  "T1546.012": {
+   "alerts": 343,
+   "orgs": 20,
+   "detectors": 7,
+   "grades": {
+    "bp": 305,
+    "fp": 29,
+    "tp": 9
+   },
+   "tp_rate": 0.026,
+   "categories": [
+    "Persistence",
+    "SuspiciousActivity",
+    "Discovery",
+    "Malware"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1546.013": {
+   "alerts": 9,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "tp": 2,
+    "bp": 2,
+    "fp": 5
+   },
+   "tp_rate": 0.222,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User"
+   ]
+  },
+  "T1546.015": {
+   "alerts": 101,
+   "orgs": 24,
+   "detectors": 5,
+   "grades": {
+    "fp": 22,
+    "tp": 25,
+    "bp": 53
+   },
+   "tp_rate": 0.25,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1547": {
+   "alerts": 140,
+   "orgs": 8,
+   "detectors": 9,
+   "grades": {
+    "fp": 105,
+    "bp": 35
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence",
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "RegistryKey",
+    "RegistryValue",
+    "File",
+    "User"
+   ]
+  },
+  "T1547.001": {
+   "alerts": 725,
+   "orgs": 123,
+   "detectors": 22,
+   "grades": {
+    "tp": 105,
+    "bp": 421,
+    "fp": 173
+   },
+   "tp_rate": 0.15,
+   "categories": [
+    "Persistence",
+    "Malware",
+    "Discovery",
+    "Ransomware"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1547.002": {
+   "alerts": 2,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation",
+    "Persistence"
+   ],
+   "evidence": [
+    "Machine",
+    "RegistryValue",
+    "Process"
+   ]
+  },
+  "T1547.003": {
+   "alerts": 8,
+   "orgs": 2,
+   "detectors": 1,
+   "grades": {
+    "bp": 8
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1547.004": {
+   "alerts": 23,
+   "orgs": 3,
+   "detectors": 3,
+   "grades": {
+    "bp": 12,
+    "fp": 11
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "RegistryValue",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1547.005": {
+   "alerts": 87,
+   "orgs": 6,
+   "detectors": 3,
+   "grades": {
+    "bp": 83,
+    "fp": 4
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CredentialAccess",
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1547.006": {
+   "alerts": 5,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "fp": 1,
+    "bp": 4
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Machine",
+    "Process",
+    "File",
+    "User"
+   ]
+  },
+  "T1547.008": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "User",
+    "Process"
+   ]
+  },
+  "T1547.009": {
+   "alerts": 75,
+   "orgs": 29,
+   "detectors": 4,
+   "grades": {
+    "bp": 36,
+    "tp": 10,
+    "fp": 26
+   },
+   "tp_rate": 0.139,
+   "categories": [
+    "InitialAccess",
+    "Persistence"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "Process",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1547.010": {
+   "alerts": 8,
+   "orgs": 7,
+   "detectors": 1,
+   "grades": {
+    "fp": 3,
+    "bp": 5
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "User",
+    "RegistryValue",
+    "Machine"
+   ]
+  },
+  "T1547.012": {
+   "alerts": 11,
+   "orgs": 3,
+   "detectors": 3,
+   "grades": {
+    "bp": 7,
+    "fp": 4
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation",
+    "Persistence",
+    "Exploit"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1547.014": {
+   "alerts": 9,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 7,
+    "fp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation",
+    "Persistence"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Machine",
+    "Process"
+   ]
+  },
+  "T1548": {
+   "alerts": 423,
+   "orgs": 51,
+   "detectors": 39,
+   "grades": {
+    "bp": 290,
+    "tp": 89,
+    "fp": 39
+   },
+   "tp_rate": 0.213,
+   "categories": [
+    "Persistence",
+    "CommandAndControl",
+    "DefenseEvasion",
+    "Execution"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "Machine",
+    "Url",
+    "File",
+    "Process"
+   ]
+  },
+  "T1548.001": {
+   "alerts": 3,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "fp": 2,
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File"
+   ]
+  },
+  "T1548.002": {
+   "alerts": 55,
+   "orgs": 12,
+   "detectors": 5,
+   "grades": {
+    "fp": 3,
+    "bp": 49,
+    "tp": 2
+   },
+   "tp_rate": 0.037,
+   "categories": [
+    "PrivilegeEscalation",
+    "SuspiciousActivity",
+    "Malware"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "RegistryValue",
+    "User",
+    "File",
+    "Ip"
+   ]
+  },
+  "T1548.003": {
+   "alerts": 44,
+   "orgs": 15,
+   "detectors": 3,
+   "grades": {
+    "tp": 2,
+    "fp": 21,
+    "bp": 20
+   },
+   "tp_rate": 0.047,
+   "categories": [
+    "PrivilegeEscalation",
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1548.004": {
+   "alerts": 17,
+   "orgs": 5,
+   "detectors": 3,
+   "grades": {
+    "bp": 14,
+    "fp": 3
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "User",
+    "Process",
+    "Machine",
+    "File",
+    "RegistryValue"
+   ]
+  },
+  "T1550": {
+   "alerts": 924,
+   "orgs": 167,
+   "detectors": 117,
+   "grades": {
+    "bp": 602,
+    "fp": 284,
+    "tp": 35
+   },
+   "tp_rate": 0.038,
+   "categories": [
+    "LateralMovement",
+    "DefenseEvasion",
+    "CommandAndControl",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Ip",
+    "CloudApplication",
+    "File",
+    "RegistryKey"
+   ]
+  },
+  "T1550.001": {
+   "alerts": 21,
+   "orgs": 9,
+   "detectors": 14,
+   "grades": {
+    "fp": 7,
+    "bp": 13,
+    "tp": 1
+   },
+   "tp_rate": 0.048,
+   "categories": [
+    "DefenseEvasion",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudApplication",
+    "File",
+    "Machine",
+    "Process"
+   ]
+  },
+  "T1550.002": {
+   "alerts": 565,
+   "orgs": 90,
+   "detectors": 13,
+   "grades": {
+    "tp": 156,
+    "fp": 121,
+    "bp": 285
+   },
+   "tp_rate": 0.278,
+   "categories": [
+    "CredentialAccess",
+    "LateralMovement",
+    "SuspiciousActivity",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1550.003": {
+   "alerts": 532,
+   "orgs": 94,
+   "detectors": 6,
+   "grades": {
+    "bp": 304,
+    "fp": 211,
+    "tp": 14
+   },
+   "tp_rate": 0.026,
+   "categories": [
+    "LateralMovement",
+    "CredentialAccess",
+    "Malware"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Ip",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1550.004": {
+   "alerts": 807,
+   "orgs": 115,
+   "detectors": 1,
+   "grades": {
+    "bp": 289,
+    "fp": 442,
+    "tp": 26
+   },
+   "tp_rate": 0.034,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1552": {
+   "alerts": 235,
+   "orgs": 38,
+   "detectors": 14,
+   "grades": {
+    "bp": 141,
+    "tp": 9,
+    "fp": 85
+   },
+   "tp_rate": 0.038,
+   "categories": [
+    "CredentialAccess",
+    "Discovery",
+    "Collection",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User",
+    "Ip",
+    "RegistryValue",
+    "File"
+   ]
+  },
+  "T1552.001": {
+   "alerts": 1019,
+   "orgs": 136,
+   "detectors": 13,
+   "grades": {
+    "fp": 579,
+    "bp": 347,
+    "tp": 37
+   },
+   "tp_rate": 0.038,
+   "categories": [
+    "CredentialAccess",
+    "Collection",
+    "SuspiciousActivity",
+    "Discovery"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "User",
+    "Machine",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1552.002": {
+   "alerts": 4004,
+   "orgs": 8,
+   "detectors": 3,
+   "grades": {
+    "fp": 3941,
+    "bp": 63
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CredentialAccess",
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "RegistryValue",
+    "RegistryKey",
+    "User",
+    "File"
+   ]
+  },
+  "T1552.003": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine"
+   ]
+  },
+  "T1552.004": {
+   "alerts": 63,
+   "orgs": 18,
+   "detectors": 2,
+   "grades": {
+    "bp": 36,
+    "fp": 26,
+    "tp": 1
+   },
+   "tp_rate": 0.016,
+   "categories": [
+    "CredentialAccess",
+    "Collection"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Process"
+   ]
+  },
+  "T1553": {
+   "alerts": 101,
+   "orgs": 8,
+   "detectors": 8,
+   "grades": {
+    "bp": 78,
+    "tp": 12,
+    "fp": 11
+   },
+   "tp_rate": 0.119,
+   "categories": [
+    "CommandAndControl",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1553.002": {
+   "alerts": 14,
+   "orgs": 9,
+   "detectors": 1,
+   "grades": {
+    "bp": 9,
+    "fp": 5
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Exploit"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T1554": {
+   "alerts": 29,
+   "orgs": 5,
+   "detectors": 5,
+   "grades": {
+    "bp": 15,
+    "fp": 12,
+    "tp": 2
+   },
+   "tp_rate": 0.069,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Machine",
+    "User"
+   ]
+  },
+  "T1555": {
+   "alerts": 376,
+   "orgs": 54,
+   "detectors": 19,
+   "grades": {
+    "bp": 274,
+    "fp": 77,
+    "tp": 20
+   },
+   "tp_rate": 0.054,
+   "categories": [
+    "SuspiciousActivity",
+    "CredentialAccess",
+    "Discovery",
+    "Execution"
+   ],
+   "evidence": [
+    "File",
+    "Machine",
+    "User",
+    "Process",
+    "Ip",
+    "RegistryValue"
+   ]
+  },
+  "T1555.003": {
+   "alerts": 1011,
+   "orgs": 123,
+   "detectors": 6,
+   "grades": {
+    "bp": 464,
+    "fp": 451,
+    "tp": 37
+   },
+   "tp_rate": 0.039,
+   "categories": [
+    "CredentialAccess",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1555.004": {
+   "alerts": 852,
+   "orgs": 119,
+   "detectors": 4,
+   "grades": {
+    "bp": 311,
+    "fp": 448,
+    "tp": 35
+   },
+   "tp_rate": 0.044,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1556": {
+   "alerts": 140,
+   "orgs": 18,
+   "detectors": 22,
+   "grades": {
+    "bp": 100,
+    "tp": 13,
+    "fp": 21
+   },
+   "tp_rate": 0.097,
+   "categories": [
+    "CommandAndControl",
+    "CredentialAccess",
+    "Persistence",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Ip",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1556.001": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Machine",
+    "User"
+   ]
+  },
+  "T1557": {
+   "alerts": 606,
+   "orgs": 250,
+   "detectors": 26,
+   "grades": {
+    "tp": 397,
+    "bp": 126,
+    "fp": 41
+   },
+   "tp_rate": 0.704,
+   "categories": [
+    "CredentialAccess",
+    "Collection",
+    "Malware"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "Machine",
+    "Url",
+    "Process",
+    "CloudLogonSession"
+   ]
+  },
+  "T1557.001": {
+   "alerts": 448,
+   "orgs": 32,
+   "detectors": 6,
+   "grades": {
+    "fp": 233,
+    "bp": 173,
+    "tp": 42
+   },
+   "tp_rate": 0.094,
+   "categories": [
+    "CredentialAccess",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "User",
+    "Process",
+    "Url",
+    "File"
+   ]
+  },
+  "T1558": {
+   "alerts": 299,
+   "orgs": 36,
+   "detectors": 18,
+   "grades": {
+    "bp": 211,
+    "tp": 14,
+    "fp": 74
+   },
+   "tp_rate": 0.047,
+   "categories": [
+    "CredentialAccess",
+    "PrivilegeEscalation",
+    "Discovery"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "Process",
+    "Ip",
+    "ActiveDirectoryDomain"
+   ]
+  },
+  "T1558.001": {
+   "alerts": 6,
+   "orgs": 3,
+   "detectors": 2,
+   "grades": {
+    "bp": 4,
+    "fp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "ActiveDirectoryDomain"
+   ]
+  },
+  "T1558.003": {
+   "alerts": 996,
+   "orgs": 131,
+   "detectors": 13,
+   "grades": {
+    "bp": 558,
+    "fp": 337,
+    "tp": 30
+   },
+   "tp_rate": 0.032,
+   "categories": [
+    "Discovery",
+    "CredentialAccess",
+    "SuspiciousActivity",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "Process",
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1559": {
+   "alerts": 4910,
+   "orgs": 41,
+   "detectors": 23,
+   "grades": {
+    "bp": 4791,
+    "tp": 106,
+    "fp": 13
+   },
+   "tp_rate": 0.022,
+   "categories": [
+    "Execution",
+    "CredentialAccess",
+    "LateralMovement",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "File",
+    "User",
+    "Process",
+    "Machine",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1559.001": {
+   "alerts": 87,
+   "orgs": 23,
+   "detectors": 2,
+   "grades": {
+    "fp": 22,
+    "tp": 25,
+    "bp": 39
+   },
+   "tp_rate": 0.291,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1559.002": {
+   "alerts": 3,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "tp": 1,
+    "fp": 2
+   },
+   "tp_rate": 0.333,
+   "categories": [
+    "Execution",
+    "Exploit"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "File",
+    "User"
+   ]
+  },
+  "T1560": {
+   "alerts": 98,
+   "orgs": 43,
+   "detectors": 8,
+   "grades": {
+    "fp": 36,
+    "bp": 52,
+    "tp": 7
+   },
+   "tp_rate": 0.074,
+   "categories": [
+    "Collection",
+    "SuspiciousActivity",
+    "Malware",
+    "Exfiltration"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1560.001": {
+   "alerts": 50,
+   "orgs": 10,
+   "detectors": 3,
+   "grades": {
+    "bp": 21,
+    "fp": 26,
+    "tp": 1
+   },
+   "tp_rate": 0.021,
+   "categories": [
+    "Collection",
+    "Exfiltration"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1561.002": {
+   "alerts": 35,
+   "orgs": 5,
+   "detectors": 2,
+   "grades": {
+    "bp": 34,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Ransomware",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User"
+   ]
+  },
+  "T1562": {
+   "alerts": 694,
+   "orgs": 64,
+   "detectors": 44,
+   "grades": {
+    "bp": 360,
+    "fp": 302,
+    "tp": 32
+   },
+   "tp_rate": 0.046,
+   "categories": [
+    "DefenseEvasion",
+    "CommandAndControl",
+    "Execution",
+    "Persistence"
+   ],
+   "evidence": [
+    "Machine",
+    "RegistryValue",
+    "Process",
+    "File",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1562.001": {
+   "alerts": 1475,
+   "orgs": 134,
+   "detectors": 36,
+   "grades": {
+    "bp": 1177,
+    "fp": 242,
+    "tp": 47
+   },
+   "tp_rate": 0.032,
+   "categories": [
+    "DefenseEvasion",
+    "Malware",
+    "LateralMovement",
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "RegistryValue",
+    "File",
+    "User",
+    "Url"
+   ]
+  },
+  "T1562.002": {
+   "alerts": 8,
+   "orgs": 4,
+   "detectors": 3,
+   "grades": {
+    "bp": 8
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User"
+   ]
+  },
+  "T1562.003": {
+   "alerts": 17,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 17
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1562.004": {
+   "alerts": 48,
+   "orgs": 10,
+   "detectors": 9,
+   "grades": {
+    "bp": 42,
+    "tp": 3,
+    "fp": 1
+   },
+   "tp_rate": 0.065,
+   "categories": [
+    "DefenseEvasion",
+    "Malware",
+    "SuspiciousActivity",
+    "Discovery"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "RegistryValue",
+    "File"
+   ]
+  },
+  "T1562.006": {
+   "alerts": 1337,
+   "orgs": 117,
+   "detectors": 13,
+   "grades": {
+    "bp": 1084,
+    "fp": 202,
+    "tp": 44
+   },
+   "tp_rate": 0.033,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "RegistryValue",
+    "Machine",
+    "File",
+    "User",
+    "Url"
+   ]
+  },
+  "T1562.007": {
+   "alerts": 4,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2,
+    "tp": 2
+   },
+   "tp_rate": 0.5,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine",
+    "AzureResource",
+    "User"
+   ]
+  },
+  "T1562.009": {
+   "alerts": 2,
+   "orgs": 2,
+   "detectors": 1,
+   "grades": {
+    "bp": 1,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "RegistryValue",
+    "Machine"
+   ]
+  },
+  "T1562.010": {
+   "alerts": 8,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 8
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1563": {
+   "alerts": 121,
+   "orgs": 10,
+   "detectors": 9,
+   "grades": {
+    "bp": 99,
+    "tp": 13,
+    "fp": 9
+   },
+   "tp_rate": 0.107,
+   "categories": [
+    "CommandAndControl",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1563.002": {
+   "alerts": 6,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 5,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User"
+   ]
+  },
+  "T1564": {
+   "alerts": 280,
+   "orgs": 127,
+   "detectors": 12,
+   "grades": {
+    "bp": 95,
+    "fp": 39,
+    "tp": 108
+   },
+   "tp_rate": 0.446,
+   "categories": [
+    "DefenseEvasion",
+    "CommandAndControl",
+    "SuspiciousActivity",
+    "Execution"
+   ],
+   "evidence": [
+    "Ip",
+    "User",
+    "CloudApplication",
+    "Machine",
+    "MailboxConfiguration",
+    "Mailbox"
+   ]
+  },
+  "T1564.001": {
+   "alerts": 5,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 5
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion",
+    "Exfiltration"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "Url"
+   ]
+  },
+  "T1564.003": {
+   "alerts": 49,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 43,
+    "tp": 6
+   },
+   "tp_rate": 0.122,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1564.004": {
+   "alerts": 30,
+   "orgs": 5,
+   "detectors": 3,
+   "grades": {
+    "bp": 30
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "File",
+    "User"
+   ]
+  },
+  "T1564.005": {
+   "alerts": 18,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 18
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "User",
+    "Machine"
+   ]
+  },
+  "T1564.006": {
+   "alerts": 4,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 4
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine"
+   ]
+  },
+  "T1564.008": {
+   "alerts": 343,
+   "orgs": 147,
+   "detectors": 6,
+   "grades": {
+    "bp": 41,
+    "fp": 49,
+    "tp": 177
+   },
+   "tp_rate": 0.663,
+   "categories": [
+    "DefenseEvasion",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "CloudApplication",
+    "MailboxConfiguration",
+    "Mailbox",
+    "CloudLogonSession"
+   ]
+  },
+  "T1565": {
+   "alerts": 229,
+   "orgs": 11,
+   "detectors": 11,
+   "grades": {
+    "fp": 27,
+    "bp": 202
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "AzureResource",
+    "User",
+    "CloudApplication",
+    "Process"
+   ]
+  },
+  "T1565.001": {
+   "alerts": 4,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 4
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1566": {
+   "alerts": 74449,
+   "orgs": 1478,
+   "detectors": 156,
+   "grades": {
+    "tp": 19925,
+    "bp": 40024,
+    "fp": 13832
+   },
+   "tp_rate": 0.27,
+   "categories": [
+    "InitialAccess",
+    "Execution",
+    "CredentialStealing",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "MailMessage",
+    "Mailbox",
+    "User",
+    "MailCluster",
+    "Ip",
+    "File"
+   ]
+  },
+  "T1566.001": {
+   "alerts": 14531,
+   "orgs": 649,
+   "detectors": 31,
+   "grades": {
+    "tp": 3844,
+    "bp": 9920,
+    "fp": 664
+   },
+   "tp_rate": 0.266,
+   "categories": [
+    "InitialAccess",
+    "Exploit",
+    "Malware"
+   ],
+   "evidence": [
+    "MailMessage",
+    "Mailbox",
+    "File",
+    "User",
+    "MailCluster",
+    "Machine"
+   ]
+  },
+  "T1566.002": {
+   "alerts": 53197,
+   "orgs": 1271,
+   "detectors": 29,
+   "grades": {
+    "tp": 18144,
+    "bp": 29182,
+    "fp": 5763
+   },
+   "tp_rate": 0.342,
+   "categories": [
+    "InitialAccess",
+    "Execution",
+    "Malware",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Url",
+    "MailMessage",
+    "Mailbox",
+    "User",
+    "MailCluster",
+    "File"
+   ]
+  },
+  "T1566.003": {
+   "alerts": 605,
+   "orgs": 23,
+   "detectors": 5,
+   "grades": {
+    "bp": 450,
+    "tp": 43,
+    "fp": 19
+   },
+   "tp_rate": 0.084,
+   "categories": [
+    "InitialAccess"
+   ],
+   "evidence": [
+    "MailMessage",
+    "Mailbox",
+    "Machine",
+    "User",
+    "File",
+    "Process"
+   ]
+  },
+  "T1567": {
+   "alerts": 356,
+   "orgs": 31,
+   "detectors": 19,
+   "grades": {
+    "bp": 243,
+    "fp": 108,
+    "tp": 5
+   },
+   "tp_rate": 0.014,
+   "categories": [
+    "Exfiltration",
+    "CommandAndControl",
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "AzureResource",
+    "CloudApplication",
+    "File"
+   ]
+  },
+  "T1567.002": {
+   "alerts": 418,
+   "orgs": 14,
+   "detectors": 11,
+   "grades": {
+    "bp": 325,
+    "tp": 6,
+    "fp": 87
+   },
+   "tp_rate": 0.014,
+   "categories": [
+    "Exfiltration",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "Mailbox",
+    "CloudApplication",
+    "File",
+    "MailMessage"
+   ]
+  },
+  "T1568": {
+   "alerts": 4136,
+   "orgs": 26,
+   "detectors": 27,
+   "grades": {
+    "bp": 2372,
+    "fp": 1738,
+    "tp": 26
+   },
+   "tp_rate": 0.006,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "Machine",
+    "User",
+    "File",
+    "Process"
+   ]
+  },
+  "T1569": {
+   "alerts": 619,
+   "orgs": 70,
+   "detectors": 10,
+   "grades": {
+    "bp": 509,
+    "fp": 89,
+    "tp": 21
+   },
+   "tp_rate": 0.034,
+   "categories": [
+    "Execution",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1569.002": {
+   "alerts": 2271,
+   "orgs": 336,
+   "detectors": 38,
+   "grades": {
+    "bp": 1198,
+    "tp": 283,
+    "fp": 751
+   },
+   "tp_rate": 0.127,
+   "categories": [
+    "Execution",
+    "Persistence",
+    "LateralMovement",
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "File",
+    "RegistryValue",
+    "Ip"
+   ]
+  },
+  "T1570": {
+   "alerts": 1769,
+   "orgs": 101,
+   "detectors": 67,
+   "grades": {
+    "bp": 767,
+    "tp": 178,
+    "fp": 372
+   },
+   "tp_rate": 0.135,
+   "categories": [
+    "LateralMovement",
+    "Ransomware",
+    "Persistence",
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "User",
+    "Process",
+    "File",
+    "Machine",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1571": {
+   "alerts": 315,
+   "orgs": 35,
+   "detectors": 37,
+   "grades": {
+    "bp": 240,
+    "fp": 55,
+    "tp": 20
+   },
+   "tp_rate": 0.063,
+   "categories": [
+    "CommandAndControl",
+    "Discovery"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1572": {
+   "alerts": 162,
+   "orgs": 20,
+   "detectors": 15,
+   "grades": {
+    "bp": 126,
+    "tp": 16,
+    "fp": 18
+   },
+   "tp_rate": 0.1,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "User",
+    "Process",
+    "File",
+    "Url"
+   ]
+  },
+  "T1573": {
+   "alerts": 1223,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "fp": 1201,
+    "bp": 22
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Url",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1574": {
+   "alerts": 109,
+   "orgs": 9,
+   "detectors": 10,
+   "grades": {
+    "bp": 88,
+    "tp": 12,
+    "fp": 9
+   },
+   "tp_rate": 0.11,
+   "categories": [
+    "CommandAndControl",
+    "Persistence",
+    "Discovery",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Process",
+    "Url"
+   ]
+  },
+  "T1574.001": {
+   "alerts": 49,
+   "orgs": 11,
+   "detectors": 8,
+   "grades": {
+    "bp": 40,
+    "fp": 3,
+    "tp": 3
+   },
+   "tp_rate": 0.065,
+   "categories": [
+    "Persistence",
+    "Exploit",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1574.002": {
+   "alerts": 111,
+   "orgs": 28,
+   "detectors": 14,
+   "grades": {
+    "bp": 87,
+    "tp": 7,
+    "fp": 10
+   },
+   "tp_rate": 0.067,
+   "categories": [
+    "DefenseEvasion",
+    "Persistence",
+    "Exploit",
+    "PrivilegeEscalation"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "Url"
+   ]
+  },
+  "T1574.006": {
+   "alerts": 5,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 5
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "File",
+    "Process",
+    "User",
+    "Machine"
+   ]
+  },
+  "T1574.007": {
+   "alerts": 73,
+   "orgs": 14,
+   "detectors": 2,
+   "grades": {
+    "bp": 56,
+    "fp": 12,
+    "tp": 4
+   },
+   "tp_rate": 0.056,
+   "categories": [
+    "Discovery",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1574.008": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "fp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1574.010": {
+   "alerts": 6,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "fp": 2,
+    "bp": 4
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "Process",
+    "File",
+    "Machine",
+    "Ip",
+    "RegistryValue",
+    "User"
+   ]
+  },
+  "T1574.011": {
+   "alerts": 307,
+   "orgs": 39,
+   "detectors": 17,
+   "grades": {
+    "tp": 81,
+    "bp": 203,
+    "fp": 22
+   },
+   "tp_rate": 0.265,
+   "categories": [
+    "Persistence",
+    "LateralMovement",
+    "DefenseEvasion",
+    "Execution"
+   ],
+   "evidence": [
+    "RegistryValue",
+    "Process",
+    "Machine",
+    "File",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1578": {
+   "alerts": 26,
+   "orgs": 4,
+   "detectors": 6,
+   "grades": {
+    "bp": 21,
+    "fp": 4,
+    "tp": 1
+   },
+   "tp_rate": 0.038,
+   "categories": [
+    "Persistence",
+    "DefenseEvasion",
+    "CredentialAccess",
+    "Execution"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "SecurityGroup"
+   ]
+  },
+  "T1580": {
+   "alerts": 3,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 3
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "Machine"
+   ]
+  },
+  "T1583": {
+   "alerts": 3,
+   "orgs": 2,
+   "detectors": 3,
+   "grades": {
+    "bp": 2,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Url",
+    "Process",
+    "Ip"
+   ]
+  },
+  "T1584": {
+   "alerts": 48,
+   "orgs": 5,
+   "detectors": 4,
+   "grades": {
+    "tp": 29,
+    "bp": 17,
+    "fp": 2
+   },
+   "tp_rate": 0.604,
+   "categories": [
+    "SuspiciousActivity",
+    "DefenseEvasion",
+    "Persistence"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "CloudApplication",
+    "User",
+    "OAuthApplication"
+   ]
+  },
+  "T1584.005": {
+   "alerts": 2,
+   "orgs": 2,
+   "detectors": 1,
+   "grades": {
+    "fp": 1,
+    "tp": 1
+   },
+   "tp_rate": 0.5,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "CloudApplication",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1584.007": {
+   "alerts": 13,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 13
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T1585": {
+   "alerts": 23,
+   "orgs": 7,
+   "detectors": 8,
+   "grades": {
+    "bp": 19,
+    "fp": 2,
+    "tp": 1
+   },
+   "tp_rate": 0.045,
+   "categories": [
+    "Impact",
+    "Collection",
+    "Persistence",
+    "Discovery"
+   ],
+   "evidence": [
+    "User",
+    "Ip"
+   ]
+  },
+  "T1586": {
+   "alerts": 119,
+   "orgs": 24,
+   "detectors": 11,
+   "grades": {
+    "tp": 56,
+    "bp": 47,
+    "fp": 1
+   },
+   "tp_rate": 0.538,
+   "categories": [
+    "SuspiciousActivity",
+    "Collection",
+    "Persistence",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "MailMessage",
+    "Mailbox",
+    "User",
+    "Ip",
+    "Machine",
+    "File"
+   ]
+  },
+  "T1587": {
+   "alerts": 135,
+   "orgs": 2,
+   "detectors": 2,
+   "grades": {
+    "bp": 134,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1587.001": {
+   "alerts": 134,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 134
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1588": {
+   "alerts": 138,
+   "orgs": 3,
+   "detectors": 4,
+   "grades": {
+    "bp": 134,
+    "fp": 3,
+    "tp": 1
+   },
+   "tp_rate": 0.007,
+   "categories": [
+    "SuspiciousActivity",
+    "Persistence"
+   ],
+   "evidence": [
+    "Ip",
+    "File",
+    "Url",
+    "User"
+   ]
+  },
+  "T1588.001": {
+   "alerts": 134,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 134
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1589": {
+   "alerts": 666,
+   "orgs": 63,
+   "detectors": 2,
+   "grades": {
+    "tp": 541,
+    "bp": 101,
+    "fp": 5
+   },
+   "tp_rate": 0.836,
+   "categories": [
+    "InitialAccess"
+   ],
+   "evidence": [
+    "User",
+    "Ip"
+   ]
+  },
+  "T1589.001": {
+   "alerts": 648,
+   "orgs": 62,
+   "detectors": 1,
+   "grades": {
+    "tp": 541,
+    "bp": 83,
+    "fp": 5
+   },
+   "tp_rate": 0.86,
+   "categories": [
+    "InitialAccess"
+   ],
+   "evidence": [
+    "User"
+   ]
+  },
+  "T1590": {
+   "alerts": 124,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "fp": 62,
+    "bp": 61,
+    "tp": 1
+   },
+   "tp_rate": 0.008,
+   "categories": [
+    "SuspiciousActivity",
+    "Discovery"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "Machine",
+    "Process"
+   ]
+  },
+  "T1592": {
+   "alerts": 2,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 2
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Malware"
+   ],
+   "evidence": [
+    "Machine",
+    "File"
+   ]
+  },
+  "T1595": {
+   "alerts": 2497,
+   "orgs": 75,
+   "detectors": 22,
+   "grades": {
+    "tp": 252,
+    "bp": 2190,
+    "fp": 55
+   },
+   "tp_rate": 0.101,
+   "categories": [
+    "SuspiciousActivity",
+    "InitialAccess",
+    "Discovery",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine",
+    "User",
+    "GenericEntity",
+    "AzureResource",
+    "Malware"
+   ]
+  },
+  "T1598": {
+   "alerts": 136,
+   "orgs": 39,
+   "detectors": 9,
+   "grades": {
+    "tp": 37,
+    "bp": 86,
+    "fp": 6
+   },
+   "tp_rate": 0.287,
+   "categories": [
+    "CredentialAccess",
+    "InitialAccess",
+    "Collection"
+   ],
+   "evidence": [
+    "User",
+    "Url",
+    "Ip",
+    "CloudLogonSession",
+    "Machine",
+    "Process"
+   ]
+  },
+  "T1600": {
+   "alerts": 81,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 62,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.148,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1601": {
+   "alerts": 81,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 62,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.148,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1603": {
+   "alerts": 18,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 17,
+    "tp": 1
+   },
+   "tp_rate": 0.056,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "User"
+   ]
+  },
+  "T1608": {
+   "alerts": 143,
+   "orgs": 3,
+   "detectors": 3,
+   "grades": {
+    "bp": 143
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity",
+    "Execution"
+   ],
+   "evidence": [
+    "Ip",
+    "Url",
+    "File",
+    "User",
+    "Machine",
+    "GenericEntity"
+   ]
+  },
+  "T1608.001": {
+   "alerts": 134,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 134
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "SuspiciousActivity"
+   ],
+   "evidence": [
+    "Ip",
+    "File",
+    "Url"
+   ]
+  },
+  "T1610": {
+   "alerts": 81,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 62,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.148,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1612": {
+   "alerts": 103,
+   "orgs": 6,
+   "detectors": 6,
+   "grades": {
+    "bp": 84,
+    "tp": 12,
+    "fp": 7
+   },
+   "tp_rate": 0.117,
+   "categories": [
+    "CommandAndControl",
+    "Execution",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine",
+    "Ip",
+    "User",
+    "File",
+    "Url"
+   ]
+  },
+  "T1613": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Machine",
+    "User",
+    "Process"
+   ]
+  },
+  "T1614": {
+   "alerts": 30,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 12,
+    "fp": 18
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Ip",
+    "Process",
+    "Machine",
+    "User",
+    "Url",
+    "File"
+   ]
+  },
+  "T1614.001": {
+   "alerts": 29,
+   "orgs": 8,
+   "detectors": 3,
+   "grades": {
+    "fp": 22,
+    "tp": 2,
+    "bp": 5
+   },
+   "tp_rate": 0.069,
+   "categories": [
+    "Discovery",
+    "LateralMovement"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip",
+    "File"
+   ]
+  },
+  "T1615": {
+   "alerts": 8,
+   "orgs": 6,
+   "detectors": 5,
+   "grades": {
+    "fp": 4,
+    "bp": 2,
+    "tp": 2
+   },
+   "tp_rate": 0.25,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "Ip",
+    "CloudApplication",
+    "User",
+    "Url"
+   ]
+  },
+  "T1616": {
+   "alerts": 4,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 4
+   },
+   "tp_rate": 1.0,
+   "categories": [
+    "CommandAndControl"
+   ],
+   "evidence": [
+    "Ip"
+   ]
+  },
+  "T1619": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Discovery"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T1620": {
+   "alerts": 57,
+   "orgs": 9,
+   "detectors": 2,
+   "grades": {
+    "bp": 50,
+    "fp": 3,
+    "tp": 3
+   },
+   "tp_rate": 0.054,
+   "categories": [
+    "Execution",
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine",
+    "Process",
+    "User",
+    "File",
+    "Url",
+    "Ip"
+   ]
+  },
+  "T1621": {
+   "alerts": 26,
+   "orgs": 5,
+   "detectors": 6,
+   "grades": {
+    "tp": 5,
+    "fp": 1,
+    "bp": 17
+   },
+   "tp_rate": 0.217,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "Mailbox"
+   ]
+  },
+  "T1626": {
+   "alerts": 3,
+   "orgs": 1,
+   "detectors": 2,
+   "grades": {
+    "fp": 2,
+    "tp": 1
+   },
+   "tp_rate": 0.333,
+   "categories": [
+    "Persistence"
+   ],
+   "evidence": [
+    "User",
+    "Ip"
+   ]
+  },
+  "T1629": {
+   "alerts": 10,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 10
+   },
+   "tp_rate": 1.0,
+   "categories": [
+    "DefenseEvasion"
+   ],
+   "evidence": [
+    "Machine"
+   ]
+  },
+  "T1639": {
+   "alerts": 156,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 14,
+    "bp": 91,
+    "fp": 51
+   },
+   "tp_rate": 0.09,
+   "categories": [
+    "Exfiltration"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine"
+   ]
+  },
+  "T1640": {
+   "alerts": 503,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 503
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "User",
+    "Ip",
+    "Machine"
+   ]
+  },
+  "T1643": {
+   "alerts": 11,
+   "orgs": 1,
+   "detectors": 2,
+   "grades": {
+    "bp": 11
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Impact"
+   ],
+   "evidence": [
+    "Url",
+    "Malware",
+    "Machine",
+    "User"
+   ]
+  },
+  "T1646": {
+   "alerts": 156,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "tp": 14,
+    "bp": 91,
+    "fp": 51
+   },
+   "tp_rate": 0.09,
+   "categories": [
+    "Exfiltration"
+   ],
+   "evidence": [
+    "Ip",
+    "Machine"
+   ]
+  },
+  "T1649": {
+   "alerts": 18,
+   "orgs": 9,
+   "detectors": 1,
+   "grades": {
+    "fp": 2,
+    "bp": 16
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "CredentialAccess"
+   ],
+   "evidence": [
+    "Process",
+    "Machine",
+    "User",
+    "Ip"
+   ]
+  },
+  "T1650": {
+   "alerts": 1,
+   "orgs": 1,
+   "detectors": 1,
+   "grades": {
+    "bp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "InitialAccess"
+   ],
+   "evidence": [
+    "MailMessage",
+    "User"
+   ]
+  },
+  "T1651": {
+   "alerts": 7,
+   "orgs": 4,
+   "detectors": 4,
+   "grades": {
+    "bp": 6,
+    "fp": 1
+   },
+   "tp_rate": 0.0,
+   "categories": [
+    "Execution"
+   ],
+   "evidence": [
+    "User",
+    "Machine",
+    "Ip",
+    "AzureResource"
+   ]
+  }
+ }
+}

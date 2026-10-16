@@ -17,6 +17,8 @@
     splunk: { name: 'Splunk attack_data', img: '/static/images/siem/splunk.png' },
     otrf: { name: 'Security-Datasets (OTRF)', img: '/static/images/brands/otrf.png' },
     evtx: { name: 'EVTX-to-MITRE-Attack', svg: EVTX_ICON },
+    guide: { name: 'Microsoft GUIDE', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>' },
+    lab: { name: 'Your lab', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v6L4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-6-10V3"/></svg>' },
     macos: { name: 'macOS-ATTACK-DATASET', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>' },
   };
   const logo = (src, cls = 'em-logo') => {
@@ -31,7 +33,7 @@
 
   const state = {
     view: 'technique', siem: page.dataset.siem || 'secops', q: '', page: 1, open: new Set(),
-    sel: { technique: new Set(), group: new Set(), source: new Set(), log: new Set(), collection: new Set(), platform: new Set(), seen: new Set() },
+    sel: { technique: new Set(), group: new Set(), source: new Set(), log: new Set(), collection: new Set(), platform: new Set(), defender: new Set(), seen: new Set() },
     collectionTouched: false,
   };
   // What a SIEM sees by default: SecOps gets the logs forwarded to it, and Sysmon is deployed far
@@ -65,11 +67,20 @@
     else if (r.job.state === 'failed') setCheck('is-error', 'Error', r.job.error || '');
     else if (r.values) setCheck('is-ready', 'Ready', "Detections' indicators can be checked against the recordings");
     else setCheck('is-unavailable', 'Unavailable', "The recordings' field values aren't on this machine");
-    const order = ['splunk', 'otrf', 'evtx', 'macos'];
+    const order = ['lab', 'splunk', 'otrf', 'evtx', 'macos'];
     $('em-sources').innerHTML = Object.entries(r.sources).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([k, s]) => `<li>
       ${logo(k, 'em-source-logo')}
       <div><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>
       <span>${esc((s.datasets || 0).toLocaleString())} recordings · ${esc(s.licence)} · built ${esc(s.built)}</span><small>${esc(s.note)}</small></div></li>`).join('');
+    const hadGuide = data.guide;
+    data.guide = !!r.guide;
+    $('em-sources').insertAdjacentHTML('beforeend', r.guide
+      ? `<li class="is-guide">${logo('guide', 'em-source-logo')}<div><a href="${esc(r.guide.url)}" target="_blank" rel="noopener">${esc(r.guide.name)}</a>
+          <span>${r.guide.techniques.toLocaleString()} techniques Defender XDR alerts on · ${esc(r.guide.licence)} · built ${esc(r.guide.built)}</span>
+          <small>${esc(r.guide.note)}. Alerts, not logs: shown with Defender XDR as the SIEM</small></div></li>`
+      : `<li class="is-guide is-missing">${logo('guide', 'em-source-logo')}<div><a href="https://www.kaggle.com/datasets/Microsoft/microsoft-security-incident-prediction" target="_blank" rel="noopener">Microsoft GUIDE</a>
+          <span>Not loaded</span><small>Which techniques Defender XDR alerts on, and how often rightly. Download it from Kaggle, then <code>python -m archer.telemetry --guide &lt;zip&gt;</code></small></div></li>`);
+    if (hadGuide !== data.guide) render();
     const btn = $('em-build');
     btn.hidden = page.dataset.admin !== 'true';
     btn.disabled = running;
@@ -96,6 +107,7 @@
   const options = {
     technique: [], group: [], source: [], log: [], seen: Object.entries(STATUS).map(([v, l]) => ({ value: v, label: l })),
     collection: [['native', 'Native OS logs'], ['sysmon', 'Sysmon'], ['edr', 'EDR'], ['osquery', 'osquery'], ['cloud', 'Cloud and SaaS']].map(([v, l]) => ({ value: v, label: l })),
+    defender: [['tp', 'Alerts, mostly true positives'], ['fp', 'Alerts, mostly not'], ['none', 'No alerts']].map(([v, l]) => ({ value: v, label: l })),
     platform: [['windows', 'Windows'], ['linux', 'Linux'], ['macos', 'macOS'], ['esxi', 'ESXi'], ['cloud', 'Cloud and SaaS']].map(([v, l]) => ({ value: v, label: l })),
   };
 
@@ -273,6 +285,7 @@
     const v = state.view;
     document.querySelectorAll('[data-for]').forEach(el => { el.hidden = !el.dataset.for.split(' ').includes(v); });
     if (!signedIn) multis.group.el.hidden = true;  // groups are your hunts
+    if (state.siem !== 'mde' || !data.guide) multis.defender.el.hidden = true;  // GUIDE is Defender's alerting
     const active = Object.entries(state.sel).filter(([k, s]) => s.size && multis[k].el.dataset.for.split(' ').includes(v)).length + (state.q && v !== 'source' ? 1 : 0);
     $('em-filter-active').hidden = !active;
     $('em-filter-active').textContent = active ? `(${active} active)` : '';
@@ -282,6 +295,11 @@
   }
 
   // By technique: every recorded technique, the logs most of its recordings hold, and their tables or event types
+  // GUIDE: Defender XDR's own alerting on a technique, in 6,100+ organisations
+  const defenderBand = d => (!d ? 'none' : d.tp_rate !== null && d.tp_rate >= 0.5 ? 'tp' : 'fp');
+  const defenderCell = d => !d ? '<small>No alerts</small>'
+    : `${d.alerts.toLocaleString()} alert${d.alerts === 1 ? '' : 's'}<br><small>${d.orgs.toLocaleString()} orgs${d.tp_rate !== null ? ` · ${Math.round(d.tp_rate * 100)}% true positive` : ''}${d.family ? ' · its parent\'s' : ''}</small>`;
+
   function renderTechniques() {
     $('em-view-note').innerHTML = `Every technique the labs recorded. <strong>Logs</strong> and <strong>${esc(siemName())}</strong> are what at least half its recordings hold, counting only the logs chosen under <strong>Collection</strong>.
       ${state.siem === 'mde' ? 'With Defender XDR, Sysmon\'s recordings stand in for the MDE sensor, which records the same activity without Sysmon installed.' : ''}
@@ -289,6 +307,7 @@
     if (!data.techniques) return message('Loading…');
     const groupT = groupTechniques();
     const hits = searched();
+    const showDefender = state.siem === 'mde' && data.guide;
     if (groupT === undefined || hits === undefined) return message('Loading…');
     if (hits && hits.error) return message(esc(hits.error));
     const s = state.sel;
@@ -297,11 +316,13 @@
       && (!s.source.size || anyIn(t[siemKey()], s.source))
       && (!s.log.size || anyIn(t.logs, s.log))
       && (!s.platform.size || anyIn(t.platforms, s.platform))
+      && (!showDefender || !s.defender.size || s.defender.has(defenderBand(t.defender)))
       && (!hits || hits[t.technique]));
     shown(rows.length, data.techniques.length, 'technique');
     if (!rows.length) return message('No recorded technique matches the filters.');
+    const cols = showDefender ? 5 : 4;
     $('em-results').innerHTML = `<div class="ms-table-wrap"><table class="ms-table em-table em-rows">
-      <thead><tr><th>Technique</th><th>Recordings</th><th>Logs</th><th>${esc(siemName())}</th></tr></thead>
+      <thead><tr><th>Technique</th><th>Recordings</th><th>Logs</th><th>${esc(siemName())}</th>${showDefender ? '<th title="Microsoft GUIDE: Defender XDR alerts mapped to the technique, and how often customers graded them true positive">Defender XDR alerts</th>' : ''}</tr></thead>
       <tbody>${pageOf(rows).map(t => {
         const info = data.names[t.technique] || {};
         const open = state.open.has(t.technique);
@@ -312,8 +333,9 @@
           <td class="em-nowrap">${t.recordings}${t.visible !== t.recordings ? ` <small>· ${t.visible} in these logs</small>` : ''}
             <div class="em-logos">${Object.entries(t.sources).map(([k, n]) => `${logo(k)}<small>${n}</small>`).join('')}</div>
             <small>${esc(t.platforms.map(p => PLATFORM[p] || p).join(', '))}</small></td>
-          ${gap ? '<td colspan="2"><span class="em-gap">No recording holds the chosen logs</span></td>' : `<td>${chips(t.logs, 4)}</td><td>${chips(t[siemKey()], 4)}</td>`}</tr>
-          ${open ? `<tr class="em-detail"><td colspan="4">${detail(t.technique)}</td></tr>` : ''}`;
+          ${gap ? '<td colspan="2"><span class="em-gap">No recording holds the chosen logs</span></td>' : `<td>${chips(t.logs, 4)}</td><td>${chips(t[siemKey()], 4)}</td>`}
+          ${showDefender ? `<td>${defenderCell(t.defender)}</td>` : ''}</tr>
+          ${open ? `<tr class="em-detail"><td colspan="${cols}">${detail(t.technique)}</td></tr>` : ''}`;
       }).join('')}</tbody></table></div>`;
   }
 
@@ -329,7 +351,12 @@
     }
     if (r.error) return `<p class="ms-note">${esc(r.error)}</p>`;
     const key = siemKey();
-    return `<table class="ms-table em-table em-sub">
+    const g = r.defender;
+    const guideNote = state.siem === 'mde' && data.guide ? (g
+      ? `<p class="em-guide">${logo('guide')} <strong>Defender XDR</strong>${g.family ? ' (for its parent technique)' : ''}: ${g.alerts.toLocaleString()} alerts from ${g.detectors.toLocaleString()} detectors in ${g.orgs.toLocaleString()} organisations;
+          graded ${g.grades.tp || 0} true, ${g.grades.bp || 0} benign and ${g.grades.fp || 0} false positive. Categories: ${esc(g.categories.join(', '))}. Evidence: ${esc(g.evidence.join(', '))}.</p>`
+      : `<p class="em-guide">${logo('guide')} No Defender XDR alert in GUIDE maps to this technique: a custom detection is where coverage comes from.</p>`) : '';
+    return `${guideNote}<table class="ms-table em-table em-sub">
         <thead><tr><th>Log</th><th>Recordings</th><th>Events</th><th>${esc(siemName())}</th></tr></thead>
         <tbody>${r.event_types.map(e => `<tr${e.common ? ' class="is-common" title="In 40% or more of a source\'s recordings, whatever the technique: lab background as much as the attack"' : ''}>
           <td>${esc(e.label)} <span class="em-coll is-${esc(e.collection)}">${esc(COLLECTION[e.collection] || e.collection)}</span>${e.common ? ' <span class="em-common">common</span>' : ''}</td><td>${e.recordings} of ${r.visible}</td>

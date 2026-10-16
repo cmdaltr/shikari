@@ -141,3 +141,66 @@ def test_platform_counts_only_its_own_logs():
         esxi = {t["technique"]: t for t in check.overview(platforms=["esxi"])}
     assert linux["T1021.004"]["logs"] == ["Linux auditd: EXECVE (command line)"] and linux["T1021.004"]["recordings"] == 1
     assert esxi["T1021.004"]["platforms"] == ["esxi"]
+
+
+def test_a_lab_run(tmp_path):
+    """record-atomics.ps1's output, read by the lab source: native logs, eslogger, plists and Defender's rows."""
+    import json
+
+    from archer.telemetry import lab
+
+    run = tmp_path / "mac01-20261016-1900"
+    test = run / "T1543.001-1"
+    test.mkdir(parents=True)
+    (run / "manifest.json").write_text(json.dumps({"run": run.name, "host": "mac01", "platform": "macos", "tests": [
+        {"technique": "T1543.001", "test": 1, "name": "Launch Agent", "folder": "T1543.001-1",
+         "start": "2026-10-16T19:00:00Z", "end": "2026-10-16T19:01:00Z"}]}))
+    (test / "es.ndjson").write_text(json.dumps({"event_type": 9, "process": {"executable": {"path": "/bin/zsh"}},
+        "event": {"exec": {"target": {"executable": {"path": "/bin/launchctl"}}, "args": ["launchctl", "load", "-w", "evil.plist"]}}}) + "\n"
+        + json.dumps({"event_type": 140, "process": {"executable": {"path": "/usr/libexec/smd"}},
+        "event": {"btm_launch_item_add": {"item": {"item_url": "file:///Users/bob/Library/LaunchAgents/evil.plist"}, "executable_path": "/tmp/evil"}}}) + "\n")
+    (test / "plists.ndjson").write_text('{"plist":"added","path":"/Users/bob/Library/LaunchAgents/evil.plist","Label":"com.evil","ProgramArguments":"/tmp/evil"}\n')
+    (test / "unified.ndjson").write_text('{"eventMessage":"Loaded com.evil","subsystem":"com.apple.xpc.launchd","processImagePath":"/sbin/launchd"}\n')
+    (test / "mde.json").write_text(json.dumps({"Table": "DeviceProcessEvents", "ActionType": "ProcessCreated",
+        "ProcessCommandLine": "launchctl load -w evil.plist", "FolderPath": "/bin/launchctl"}) + "\n")
+    with patch.object(lab, "LAB_DIR", str(tmp_path)):
+        [(summary, values, key)] = list(lab.datasets({}, log=lambda m: None))
+    assert summary["id"] == "lab:mac01-20261016-1900/T1543.001-1" and summary["platform"] == ["macos"]
+    assert set(summary["events"]) == {"ESF exec", "ESF btm_launch_item_add", "plist added",
+                                      "Unified log com.apple.xpc.launchd", "MDE DeviceProcessEvents ProcessCreated"}
+    assert values["ESF btm_launch_item_add"]["Image"] == ["/tmp/evil"]
+    assert ds.collection("ESF exec") == "edr" and ds.collection("plist added") == "native"
+    assert ds.describe("MDE DeviceProcessEvents ProcessCreated")["mde"] == "DeviceProcessEvents"
+
+
+def test_guide_summary(tmp_path):
+    """GUIDE's Kaggle zip summarised per technique: alerts once each, organisations, triage grades."""
+    import csv
+    import io
+    import zipfile
+
+    from archer.telemetry import guide
+
+    cols = ["Id", "OrgId", "IncidentId", "AlertId", "Timestamp", "DetectorId", "AlertTitle", "Category",
+            "MitreTechniques", "IncidentGrade", "EntityType", "EvidenceRole"]
+    rows = [  # one alert with two evidence rows, a second org's alert, one without techniques
+        ["1", "10", "100", "1000", "", "7", "5", "CredentialAccess", "T1003;T1003.001", "TruePositive", "Process", "Related"],
+        ["2", "10", "100", "1000", "", "7", "5", "CredentialAccess", "T1003;T1003.001", "TruePositive", "File", "Impacted"],
+        ["3", "11", "101", "2000", "", "8", "6", "CredentialAccess", "T1003.001", "FalsePositive", "Process", "Related"],
+        ["4", "12", "102", "3000", "", "9", "7", "InitialAccess", "", "BenignPositive", "Ip", "Related"],
+    ]
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(cols)
+    w.writerows(rows)
+    path = tmp_path / "microsoft-security-incident-prediction.zip"
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("GUIDE_Train.csv", buf.getvalue())
+    with patch.object(guide, "SUMMARY_PATH", str(tmp_path / "guide.json")):
+        s = guide.build(str(path), log=lambda m: None)
+        lsass = s["techniques"]["T1003.001"]
+        assert (lsass["alerts"], lsass["orgs"], lsass["tp_rate"]) == (2, 2, 0.5)
+        assert lsass["evidence"][0] == "Process" and s["source"]["rows"] == 4
+        assert guide.for_technique("T1003.002")["family"]  # its parent's figures
+        assert guide.for_technique("T1490") is None
+    guide._cache.clear()

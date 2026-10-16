@@ -1,4 +1,6 @@
-"""python -m archer.telemetry --build [--source splunk|otrf|evtx|macos]   (see archer.telemetry.datasets)"""
+"""python -m archer.telemetry --build [--source splunk|otrf|evtx|macos|lab]
+   python -m archer.telemetry --guide <GUIDE zip, folder or CSV>
+   python -m archer.telemetry --mde-export data/telemetry/lab/<run>   (see archer.telemetry.datasets)"""
 
 import argparse
 import json
@@ -8,7 +10,7 @@ import time
 
 from archer.telemetry import datasets as ds
 
-SOURCES = ("splunk", "otrf", "evtx", "macos")
+SOURCES = ("splunk", "otrf", "evtx", "macos", "lab")
 
 
 def _module(name):
@@ -18,6 +20,8 @@ def _module(name):
         from archer.telemetry import evtx_attack as m
     elif name == "macos":
         from archer.telemetry import macos_attack as m
+    elif name == "lab":
+        from archer.telemetry import lab as m
     else:
         from archer.telemetry import security_datasets as m
     return m
@@ -64,8 +68,18 @@ def main(argv=None):
     p = argparse.ArgumentParser(description="Recorded attack telemetry (Splunk attack_data, Security-Datasets, EVTX-to-MITRE-Attack, macOS-ATTACK-DATASET)")
     p.add_argument("--build", action="store_true", help="download what changed and rebuild")
     p.add_argument("--source", choices=SOURCES, action="append", help="only this source (repeatable)")
+    p.add_argument("--guide", metavar="PATH", help="summarise Microsoft's GUIDE dataset (the Kaggle zip, a folder or a CSV)")
+    p.add_argument("--mde-export", metavar="RUN_DIR", help="fetch a lab run's Defender XDR rows through Graph")
     args = p.parse_args(argv)
-    if args.build:
+    if args.guide:
+        from archer.telemetry import guide
+
+        guide.build(os.path.expanduser(args.guide))
+    elif args.mde_export:
+        from archer.telemetry import mde
+
+        mde.export(args.mde_export)
+    elif args.build:
         build(tuple(args.source or SOURCES))
     else:
         s = ds.load()

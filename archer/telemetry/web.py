@@ -37,8 +37,12 @@ def _user(archer_session: Optional[str]):
 
 @router.get("/status")
 def status():
+    from archer.telemetry import guide
+
     s = ds.load()
+    g = guide.load()
     return {"sources": s.get("sources", {}), "datasets": len(s["datasets"]), "techniques": len(ds.covered()),
+            "guide": {**g["source"], "techniques": len(g["techniques"])} if g else None,
             "values": ds.values() is not None, "job": dict(_job), "log": list(_log)[-40:]}
 
 
@@ -87,13 +91,21 @@ def _platforms(platforms: str) -> Optional[list]:
 
 @router.get("/technique/{tid}")
 def technique(tid: str, collections: str = "", platforms: str = ""):
-    return check.technique(tid, _collections(collections), _platforms(platforms))
+    from archer.telemetry import guide
+
+    return {**check.technique(tid, _collections(collections), _platforms(platforms)), "defender": guide.for_technique(tid)}
 
 
 @router.get("/techniques")
 def techniques(collections: str = "", platforms: str = ""):
     """Every recorded technique with its recordings per source, logs and data sources."""
-    return {"techniques": check.overview(_collections(collections), _platforms(platforms)),
+    from archer.telemetry import guide
+
+    rows = check.overview(_collections(collections), _platforms(platforms))
+    for r in rows:
+        g = guide.for_technique(r["technique"])
+        r["defender"] = {k: g.get(k) for k in ("alerts", "orgs", "tp_rate", "family")} if g else None
+    return {"techniques": rows, "guide": guide.load() is not None,
             "collections": ds.COLLECTIONS, "platforms": ds.PLATFORMS}
 
 

@@ -76,7 +76,8 @@ _CLOUD = ("CloudTrail ", "Office 365 ", "Azure ", "Entra ID ", "GCP ", "Google W
 def collection(etype: str) -> str:
     if etype.startswith(("Microsoft-Windows-Sysmon/", "Linux-Sysmon/")):
         return "sysmon"
-    if etype.startswith(("CrowdStrike ", "Elastic Endpoint ")):
+    # macOS Endpoint Security is what an EDR on a Mac sees; eslogger shows the same events
+    if etype.startswith(("CrowdStrike ", "Elastic Endpoint ", "MDE ", "ESF ")):
         return "edr"
     if etype.startswith("osquery "):
         return "osquery"
@@ -100,11 +101,11 @@ def event_platform(etype: str, d: Dict) -> Optional[str]:
         return "esxi"
     if etype.startswith(("auditd ", "syslog ", "Linux-Sysmon/")):
         return "linux"
-    if etype.startswith(_MAC_TYPES) or ("macos" in d["id"].lower() and etype.startswith("osquery ")):
+    if etype.startswith(_MAC_TYPES + ("ESF ", "Unified log ", "plist ")) or ("macos" in d["id"].lower() and etype.startswith("osquery ")):
         return "macos"
     if etype.startswith(_CLOUD):
         return "cloud"
-    if etype.startswith(("osquery ", "Elastic Endpoint ", "CrowdStrike ")):
+    if etype.startswith(("osquery ", "Elastic Endpoint ", "CrowdStrike ", "MDE ")):
         return None
     return "windows"
 
@@ -252,6 +253,15 @@ def _json_events(text: str, default_channel: str = "") -> Iterable[Tuple[str, Di
             yield cloud[0], _keep({}, {"Operation": cloud[1], "UserAgent": e.get("userAgent"),
                                        "Parameters": json.dumps(e.get("requestParameters") or e.get("Parameters")
                                                                 or e.get("properties"))[:MAX_LEN]})
+        elif str(e.get("Table") or "").startswith(("Device", "Identity", "Email", "Cloud", "Alert")):
+            yield _mde(e)
+        elif isinstance(e.get("event"), dict) and "event_type" in e and isinstance(e.get("process"), dict):
+            yield _eslogger(e)
+        elif "eventMessage" in e and ("subsystem" in e or "processImagePath" in e):
+            yield _unified_log(e)
+        elif e.get("plist") in ("added", "changed", "removed"):
+            yield f"plist {e['plist']}", _keep({}, {"TargetFilename": e.get("path"), "TaskName": e.get("Label"),
+                                                   "CommandLine": e.get("ProgramArguments") or e.get("Program")})
         elif isinstance(e.get("columns"), dict) and e.get("name"):
             yield _osquery(e)
         elif isinstance(e.get("_source"), dict) or "endpoint.events" in json.dumps(e.get("data_stream") or e.get("event") or {}):
@@ -277,6 +287,50 @@ def _pretty_records(text: str) -> Iterable[Dict]:
         except ValueError:
             return
         yield obj
+
+
+def _mde(e: Dict) -> Tuple[str, Dict]:
+    """An Advanced Hunting row, as archer.telemetry.mde exports them: "MDE DeviceProcessEvents ProcessCreated"."""
+    table = e["Table"]
+    path = e.get("FolderPath")
+    return f"MDE {table} {e.get('ActionType') or ''}".strip(), _keep({}, {
+        "CommandLine": e.get("ProcessCommandLine"), "ParentCommandLine": e.get("InitiatingProcessCommandLine"),
+        "Image": path if table == "DeviceProcessEvents" else None,
+        "TargetFilename": path if table in ("DeviceFileEvents", "DeviceEvents") else None,
+        "ImageLoaded": path if table == "DeviceImageLoadEvents" else None,
+        "ParentImage": e.get("InitiatingProcessFolderPath"), "TargetObject": e.get("RegistryKey"),
+        "Details": e.get("RegistryValueData"), "DestinationHostname": e.get("RemoteUrl"),
+        "DestinationIp": e.get("RemoteIP"), "DestinationPort": e.get("RemotePort"),
+        "TargetUserName": e.get("AccountName"),
+        "Parameters": e.get("AdditionalFields") if isinstance(e.get("AdditionalFields"), str) else
+        (json.dumps(e["AdditionalFields"])[:MAX_LEN] if e.get("AdditionalFields") else None)})
+
+
+def _eslogger(e: Dict) -> Tuple[str, Dict]:
+    """A macOS Endpoint Security event from eslogger: "ESF exec", "ESF btm_launch_item_add"."""
+    name, body = next(iter(e["event"].items()), ("unknown", {}))
+    body = body if isinstance(body, dict) else {}
+    path = lambda f: (f or {}).get("path") if isinstance(f, dict) else None
+    target = body.get("target") or {}
+    dest = body.get("destination") or {}
+    item = body.get("item") or {}
+    args = body.get("args")
+    return f"ESF {name}", _keep({}, {
+        "CommandLine": " ".join(map(str, args)) if isinstance(args, list) else None,
+        "Image": body.get("executable_path") or path((target.get("executable") if isinstance(target, dict) else None))
+        or path(e["process"].get("executable")),
+        "ParentImage": path(e["process"].get("executable")) if name == "exec" else None,
+        "TargetFilename": path(target) or path(dest.get("existing_file")) or path(body.get("source"))
+        or path(dest.get("new_path", {}).get("dir") if isinstance(dest.get("new_path"), dict) else None)
+        or item.get("item_url") or path(body.get("file")),
+        "TaskName": item.get("app_url") or body.get("type"),
+        "TargetUserName": body.get("username") or body.get("to_username")})
+
+
+def _unified_log(e: Dict) -> Tuple[str, Dict]:
+    """A unified log entry (log stream/show --style ndjson): "Unified log com.apple.xprotect"."""
+    source = e.get("subsystem") or os.path.basename(str(e.get("processImagePath") or "")) or "unknown"
+    return f"Unified log {source}", _keep({}, {"Payload": e.get("eventMessage"), "Image": e.get("processImagePath")})
 
 
 def _osquery(e: Dict) -> Tuple[str, Dict]:

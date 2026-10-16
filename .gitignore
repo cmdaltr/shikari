@@ -51,6 +51,8 @@ data/*.sqlite3
 
 # Attack flows (dynamically generated)
 data/attack_flows/*
+# Lab recordings (#22): your tenant's and hosts' telemetry, never committed
+data/telemetry/
 !data/attack_flows/.gitkeep
 
 # Correlations (dynamically generated)

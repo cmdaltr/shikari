@@ -129,3 +129,7 @@
 [data-theme="dark"] .em-coll { color: #93c5fd; }
 [data-theme="dark"] .em-coll.is-native { color: #4ade80; }
 [data-theme="dark"] .em-coll.is-sysmon { color: #fb923c; }
+.em-guide { display: flex; gap: 8px; align-items: baseline; margin: 6px 0 10px; font-size: .92em; }
+.em-sources li.is-missing { border-left-color: var(--border-color); opacity: .85; }
+.em-source-logo.is-guide, .em-logo.is-guide { color: #2563eb; }
+.em-source-logo.is-lab, .em-logo.is-lab { color: #0d9488; }

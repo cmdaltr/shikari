@@ -8,6 +8,7 @@ archer.telemetry.datasets.
 
 import os
 import re
+from collections import Counter
 from typing import Dict, Iterable, Optional, Tuple
 
 import yaml
@@ -28,6 +29,7 @@ def datasets(previous: Dict[str, Dict], log=print) -> Iterable[Tuple[Dict, Optio
     blobs = {t["path"]: t["sha"] for t in tree if t["type"] == "blob"}
     ymls = sorted(p for p in blobs if p.startswith("datasets/attack_techniques/") and p.endswith((".yml", ".yaml")))
     log(f"Splunk attack_data: {len(ymls)} datasets")
+    per_folder = Counter(os.path.dirname(p) for p in ymls)
 
     def one(path):
         meta = yaml.safe_load(fetch.raw(REPO, path)) or {}
@@ -41,6 +43,8 @@ def datasets(previous: Dict[str, Dict], log=print) -> Iterable[Tuple[Dict, Optio
             logs = [(p, "") for p in blobs if os.path.dirname(p) == folder and not p.endswith((".yml", ".yaml", ".md"))]
         key = f"{PARSER_VERSION}:{blobs[path]}:" + ",".join(blobs[p] for p, _ in logs)
         did = f"splunk:{folder.split('attack_techniques/', 1)[1]}"
+        if per_folder[folder] > 1:  # two datasets in one folder (T1499/splunk)
+            did += "/" + os.path.splitext(os.path.basename(path))[0]
         if previous.get(did, {}).get("key") == key:
             return previous[did]["summary"], None, key
         events = []

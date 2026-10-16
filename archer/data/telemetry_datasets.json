@@ -1,13 +1,5 @@
 {
  "sources": {
-  "splunk": {
-   "name": "Splunk attack_data",
-   "url": "https://github.com/splunk/attack_data",
-   "licence": "Apache-2.0",
-   "note": "Maintained; Atomic Red Team and tool runs in Splunk's Attack Range. Each log read up to 3 MB",
-   "built": "2026-10-16",
-   "datasets": 1249
-  },
   "otrf": {
    "name": "Security-Datasets (OTRF)",
    "url": "https://github.com/OTRF/Security-Datasets",
@@ -23,6 +15,14 @@
    "note": "Maintained; Windows event log samples of attacks, mostly Security auditing, one file each",
    "built": "2026-10-16",
    "datasets": 279
+  },
+  "splunk": {
+   "name": "Splunk attack_data",
+   "url": "https://github.com/splunk/attack_data",
+   "licence": "Apache-2.0",
+   "note": "Maintained; Atomic Red Team and tool runs in Splunk's Attack Range. Each log read up to 3 MB",
+   "built": "2026-10-16",
+   "datasets": 1249
   }
  },
  "datasets": [
@@ -30326,7 +30326,7 @@
    "background": []
   },
   {
-   "id": "splunk:T1499/splunk",
+   "id": "splunk:T1499/splunk/splunk_vulns_jan_2024_old",
    "source": "splunk",
    "title": "splunk (T1499)",
    "techniques": [
@@ -30343,7 +30343,7 @@
    "background": []
   },
   {
-   "id": "splunk:T1499/splunk",
+   "id": "splunk:T1499/splunk/splunk_zip_bomb_vulnerability_old",
    "source": "splunk",
    "title": "splunk (T1499)",
    "techniques": [
