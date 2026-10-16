@@ -75,7 +75,7 @@ The filter card applies to whichever view is open below it, and shows only the f
 
 ## Telemetry by technique
 
-Every recorded technique, 20 to a page, with its recordings per source, the **logs** at least half its recordings hold, and those logs' tables or UDM event types for the chosen SIEM: the logs you have to ingest to see it. Only the kinds of logging chosen under Collection count, so with Sysmon left out a technique shows what native logging alone records; one none of whose recordings hold the chosen logs is marked **No recording holds the chosen logs**, a gap for that kind of logging. Select a row for every event type its recordings hold and the recordings themselves. An event type marked **common** turns up in 40% or more of a source's recordings (Security 4688, Sysmon 1), so it's a hint that the event is lab background as much as the attack; it's never taken out.
+Every recorded technique, 20 to a page, with its recordings per source, the **logs** at least half its recordings hold, and, beneath them, those logs' tables or UDM event types for the chosen SIEM: the logs you have to ingest to see it. Only the kinds of logging chosen under Collection count, so with Sysmon left out a technique shows what native logging alone records; one none of whose recordings hold the chosen logs is marked **No recording holds the chosen logs**, a gap for that kind of logging. Select a row for every event type its recordings hold and the recordings themselves. An event type marked **common** turns up in 40% or more of a source's recordings (Security 4688, Sysmon 1), so it's a hint that the event is lab background as much as the attack; it's never taken out.
 
 ## Telemetry by group
 

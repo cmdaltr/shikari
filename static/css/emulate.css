@@ -96,8 +96,16 @@
 .em-detail > td { padding: 4px 16px 14px !important; background: rgba(13, 148, 136, .03); }
 .em-sub { margin-top: 6px; font-size: .92em; }
 .em-hit { color: #0f766e !important; }
-.em-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
-.em-chips code { font-size: .82em; }
+.em-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.em-chips code { font-size: .82em; background: var(--bg-secondary, #f3f4f6); border: 1px solid var(--border-color); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+table.em-rows { table-layout: fixed; width: 100%; }
+.em-rows .em-col-tech { width: 27%; }
+.em-rows .em-col-rec { width: 14%; }
+.em-rows .em-col-def { width: 15%; }
+.em-rows td { overflow-wrap: anywhere; }
+.em-ds { margin-top: 8px; font-size: .82em; color: var(--text-secondary); line-height: 1.7; }
+.em-ds > span:first-child { font-weight: 600; margin-right: 4px; }
+.em-ds code { color: var(--text-secondary); margin-right: 6px; }
 .em-more { font-size: .82em; color: var(--text-secondary); cursor: help; align-self: center; }
 .em-tid { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
 .em-tids { line-height: 1.8; }
