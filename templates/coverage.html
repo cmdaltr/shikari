@@ -186,6 +186,23 @@
 }
 .table-section .section-title select { margin-left: 4px; min-width: 160px; font-size: 1rem; }
 .coverage-table[hidden] { display: none; }
+/* By technique: a grid of compact cards rather than a tall table (still a table, so the
+   filters, row count and CSV export work on its rows) */
+#technique-table:not([hidden]), #technique-table tbody { display: block; background: none; }
+#technique-table thead { display: none; }
+#technique-table tbody { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+#technique-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "id vendors" "name name" "plat plat";
+  gap: 4px 10px; align-items: center; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; }
+#technique-table td { padding: 0; border: 0; min-width: 0; }
+#technique-table .tc-id { grid-area: id; font-weight: 700; }
+#technique-table .tc-vendors { grid-area: vendors; }
+#technique-table .tc-name { grid-area: name; font-size: .88rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#technique-table .tc-plat { grid-area: plat; }
+#technique-table .tc-plat .platform-list { gap: 4px; }
+#technique-table .tc-plat .platform-tag { font-size: .75rem; padding: 1px 6px; }
+#technique-table .vendor-icons { gap: 4px; }
+#technique-table .table-vendor-icon { width: 18px; height: 18px; }
+#technique-table td.no-data { grid-column: 1 / -1; }
 
 .coverage-table {
   width: 100%;
@@ -932,7 +949,12 @@ async function loadCoverage() {
     fillFilterOptions(data);
     if (location.hash === '#my-detections') setLayer('detections'); else renderMatrix();
 
-    // Populate technique table
+    // Populate technique table; names from the ATT&CK matrix (sub-techniques "Parent: Sub")
+    const names = {};
+    for (const col of matrix) for (const t of col.techniques || []) {
+      names[t.id] = t.name;
+      for (const sub of t.subs || []) names[sub.id] = `${t.name}: ${sub.name}`;
+    }
     const techTbody = document.getElementById('technique-tbody');
     techTbody.innerHTML = '';
 
@@ -943,6 +965,7 @@ async function loadCoverage() {
     } else {
       for (const [techId, info] of techniques) {
         const vendorIcons = getVendorIcons(info.vendors || [], true);
+        const techName = String(names[techId] || '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 
         const platforms = (info.platforms || []).map(p =>
           `<span class="platform-tag">${p}</span>`
@@ -951,9 +974,10 @@ async function loadCoverage() {
         techTbody.innerHTML += `
           <tr data-id="${techId}" data-count="${info.count || 0}" data-vendors='${attr(info.vendors || [])}'
               data-row='${attr([techId, (info.vendors || []).join('; '), (info.platforms || []).join('; ')])}'>
-            <td><code>${techId}</code></td>
-            <td><div class="vendor-icons">${vendorIcons}</div></td>
-            <td><div class="platform-list">${platforms}</div></td>
+            <td class="tc-id"><code>${techId}</code></td>
+            <td class="tc-vendors"><div class="vendor-icons">${vendorIcons}</div></td>
+            <td class="tc-name" title="${techName}">${techName}</td>
+            <td class="tc-plat"><div class="platform-list">${platforms}</div></td>
           </tr>
         `;
       }
