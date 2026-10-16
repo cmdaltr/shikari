@@ -122,3 +122,12 @@ def test_tech_stack_refuses_internal_domain():
 
     safe_http.assert_not_called()
     assert not any("metadata.internal" in str(c) for c in direct_http.call_args_list)
+
+
+def test_first_label_wins_a_tie():
+    from archer.intelligence.company_identity import sectors_from_labels
+    # Rolls-Royce on Wikidata: aerospace first, so defence, with energy behind it
+    assert sectors_from_labels(["aerospace industry", "energy industry", "weapons industry",
+                                "public company"]) == ["defense", "energy"]
+    assert sectors_from_labels(["energy industry", "aerospace industry"]) == ["energy", "defense"]
+    assert sector_from_labels(["public company"]) is None

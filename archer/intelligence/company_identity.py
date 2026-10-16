@@ -36,7 +36,7 @@ SECTOR_TERMS: Dict[str, List[str]] = {
     "technology": ["software", "information technology", "technology company", "cloud computing",
                    "semiconductor", "internet company"],
     "energy": ["energy", "oil and gas", "petroleum", "electric utility", "electricity", "natural gas", "utility"],
-    "defense": ["defence", "defense", "arms industry", "aerospace", "military"],
+    "defense": ["defence", "defense", "arms industry", "weapon", "aerospace", "military"],
     "government": ["government", "government agency", "ministry", "public body", "local authority"],
     "manufacturing": ["manufacturing", "manufacturer", "automotive", "industrial"],
     "telecommunications": ["telecommunications", "telecom", "mobile network operator", "internet service provider"],
@@ -69,11 +69,28 @@ def _norm_country(name: Optional[str]) -> Optional[str]:
     return COUNTRY_ALIASES.get(name, name) if name else None
 
 
+def sectors_from_labels(labels: List[str]) -> List[str]:
+    """
+    Sectors the labels name, strongest first. Each label counts once for each sector it
+    names, earlier labels a little more (Wikidata lists a company's main industry first),
+    and a tie goes to the sector named first: Rolls-Royce's "aerospace industry, energy
+    industry, weapons industry" is defence, then energy.
+    """
+    scores: Dict[str, float] = {}
+    first: Dict[str, int] = {}
+    for i, label in enumerate(labels):
+        text = label.lower()
+        for sector, terms in SECTOR_TERMS.items():
+            n = sum(text.count(term) for term in terms)
+            if n:
+                scores[sector] = scores.get(sector, 0) + n * (1 + 0.1 / (i + 1))
+                first.setdefault(sector, i)
+    return sorted(scores, key=lambda k: (-scores[k], first[k]))
+
+
 def sector_from_labels(labels: List[str]) -> Optional[str]:
-    text = " | ".join(labels).lower()
-    scores = {sector: sum(text.count(term) for term in terms) for sector, terms in SECTOR_TERMS.items()}
-    best = max(scores, key=scores.get)
-    return best if scores[best] else None
+    found = sectors_from_labels(labels)
+    return found[0] if found else None
 
 
 def _site_variants(domain: str) -> List[str]:
@@ -188,7 +205,7 @@ def resolve_identity(domain: str) -> Dict[str, Any]:
     """
     domain = domain.lower().strip().removeprefix("www.")
     identity: Dict[str, Any] = {
-        "company_name": None, "country": None, "headquarters": None, "sector": None,
+        "company_name": None, "country": None, "headquarters": None, "sector": None, "sectors": [],
         "industry_labels": [], "organisation_types": [], "evidence": [], "confidence": "none",
     }
 
@@ -196,7 +213,8 @@ def resolve_identity(domain: str) -> Dict[str, Any]:
     if wd:
         identity.update(company_name=wd["name"], country=wd["country"], headquarters=wd["headquarters"],
                         industry_labels=wd["industries"], organisation_types=wd["types"])
-        identity["sector"] = sector_from_labels(wd["industries"] + wd["types"])
+        identity["sectors"] = sectors_from_labels(wd["industries"] + wd["types"])
+        identity["sector"] = identity["sectors"][0] if identity["sectors"] else None
         if identity["sector"]:
             # "supermarket chain" before "public company" / "brick and mortar"
             terms = SECTOR_TERMS[identity["sector"]]

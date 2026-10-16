@@ -5,6 +5,7 @@
 ## How it works
 
 1. **Look the company up.** Archer reads Wikidata, the company's homepage and OSINT sources to establish its name, sector, where it operates and where its site is hosted. It also looks at its technology stack for relevant CVEs.
+   Wikidata lists a company's industries with its main one first, and the sector follows that order: Rolls-Royce's "aerospace industry, energy industry, weapons industry" is defence. The other sectors are noted in the profile's evidence ("Also in: energy") but don't choose the groups.
 2. **Recommend threat groups.** Groups whose ATT&CK descriptions say they target that sector or region are ranked, and the profile gets a risk score.
 3. **Choose.** A window shows the profile summary (company, industry, location, hosting, source, risk score) and the recommended groups, all ticked. Untick any you don't want.
 4. **Generate.** Archer runs a [Hunt](02-hunt.md) for each ticked group. Each gets its own [Results](06-results.md) page.

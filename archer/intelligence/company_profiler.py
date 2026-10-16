@@ -775,7 +775,11 @@ class CompanyProfiler:
             industry_data['sector'] = identity['sector']
             industry_data['subsector'] = ", ".join(identity.get('organisation_types', [])[:3]) or None
             industry_data['confidence'] = identity.get('confidence', 'medium')
-            industry_data['evidence'] = identity.get('evidence', [])
+            industry_data['evidence'] = list(identity.get('evidence', []))
+            # The groups follow the main sector; the others are noted, not mixed in
+            industry_data['other_sectors'] = (identity.get('sectors') or [])[1:]
+            if industry_data['other_sectors']:
+                industry_data['evidence'].append("Also in: " + ", ".join(industry_data['other_sectors']))
             print(f"  ✓ Detected sector: {industry_data['sector']} (confidence: {industry_data['confidence']})")
             sector_threats = self._map_sector_to_threats(industry_data['sector'])
             industry_data['threat_groups'] = sector_threats['groups']
