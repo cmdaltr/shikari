@@ -682,7 +682,7 @@
             <div class="tab-pane active" id="tab-overview">
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                 Archer is an <strong>automated threat detection generator</strong> that transforms MITRE ATT&CK threat intelligence
-                into production-ready detection queries for Splunk and Microsoft Defender for Endpoint (MDE). It combines <strong>machine learning from community queries</strong>, <strong>MITRE ATT&CK intelligence</strong>,
+                into production-ready detection queries for Splunk and Microsoft Defender XDR. It combines <strong>machine learning from community queries</strong>, <strong>MITRE ATT&CK intelligence</strong>,
                 and <strong>optional AI enhancement</strong> to automatically generate comprehensive, correlated detection coverage in minutes.
                 Its architecture prioritizes speed through caching, parallel processing, and async operations, while maintaining
                 high accuracy through intelligent validation and correlation.
@@ -1175,7 +1175,7 @@ AI recognizes this as:
                 <thead><tr><th>Agent</th><th>Pattern</th><th>What it does</th></tr></thead>
                 <tbody>
                     <tr><td><strong>Detection repair</strong></td><td>Check, fix, check again</td>
-                        <td>Static checks over a run's queries (MDE schema, YARA-L and SPL structure); fixes what fails, re-checks, saves with a reason. A query that still has errors can't be saved.</td></tr>
+                        <td>Static checks over a run's queries (Defender XDR schema, YARA-L and SPL structure); fixes what fails, re-checks, saves with a reason. A query that still has errors can't be saved.</td></tr>
                     <tr><td><strong>Ask Archer (agent)</strong></td><td>Look it up</td>
                         <td>Answers from coverage, results, ATT&amp;CK and the library instead of memory; checks any query it writes; can start hunts.</td></tr>
                     <tr><td><strong>Intel triage</strong></td><td>Plan across steps</td>
@@ -1239,7 +1239,7 @@ SPL: index=wineventlog EventCode=4688
     1. Load relevant templates
     2. Apply technique-specific values
     3. Generate Splunk query (SPL)
-    4. Generate MDE query (KQL)
+    4. Generate Defender XDR query (KQL)
     5. Validate syntax
     6. Write to YAML file
 
@@ -1400,7 +1400,7 @@ data/APT29/
             <details class="faq-item">
                 <summary class="faq-question">What is Archer and what does it do?</summary>
                 <div class="faq-answer">
-                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Archer is an automated threat detection generator that transforms MITRE ATT&CK threat intelligence into production-ready detection queries for Splunk and Microsoft Defender for Endpoint (MDE). It combines machine learning from community queries, MITRE ATT&CK intelligence, and optional AI enhancement to automatically generate comprehensive, correlated detection coverage in minutes.</p>
+                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Archer is an automated threat detection generator that transforms MITRE ATT&CK threat intelligence into production-ready detection queries for Splunk and Microsoft Defender XDR. It combines machine learning from community queries, MITRE ATT&CK intelligence, and optional AI enhancement to automatically generate comprehensive, correlated detection coverage in minutes.</p>
                 </div>
             </details>
 
@@ -1519,7 +1519,7 @@ data/APT29/
             <details class="faq-item">
                 <summary class="faq-question">How do correlations work?</summary>
                 <div class="faq-answer">
-                    <p><strong>Correlations:</strong> Combines queries for the same SIEM (Google SecOps, MDE, Splunk or Elastic) into multi-stage detections. This is enabled by default and helps create detection chains that track attack progressions within a single SIEM platform.</p>
+                    <p><strong>Correlations:</strong> Combines queries for the same SIEM (Google SecOps, Defender XDR, Splunk or Elastic) into multi-stage detections. This is enabled by default and helps create detection chains that track attack progressions within a single SIEM platform.</p>
                     <p>The results page shows each technique in a correlation as an <strong>individual query block</strong>, stacked with "chained with" connectors. The combined JOIN query is available via "Show Combined Query" below the stack.</p>
                 </div>
             </details>
@@ -1626,7 +1626,7 @@ data/APT29/
                     <ul>
                         <li><strong>indicatorMapping.json:</strong> Maps indicator types (cmd, file, ip, domain, etc.) to data sources and fields</li>
                         <li><strong>platformMapping.json:</strong> Defines which platforms (Windows, Linux, AWS, Azure) are supported by each data source</li>
-                        <li><strong>fieldMapping.json:</strong> Maps generic field names to vendor-specific field names (e.g., process_name → ProcessName for MDE)</li>
+                        <li><strong>fieldMapping.json:</strong> Maps generic field names to vendor-specific field names (e.g., process_name → ProcessName for Defender XDR)</li>
                     </ul>
                     <p><strong>Common customization scenarios:</strong></p>
                     <ul>
@@ -1729,7 +1729,7 @@ data/APT29/
                     <p>Archer includes sophisticated <strong>cloud platform separation</strong> to prevent mixing AWS, Azure, and GCP indicators incorrectly:</p>
                     <ul>
                         <li><strong>Cloud-native logs:</strong> AWS CloudTrail, Azure Activity Log, and GCP Audit logs are only used for their respective cloud platforms</li>
-                        <li><strong>Endpoint detection:</strong> Endpoint logs (Windows, Linux, MDE tables) can detect cloud CLI tools running on endpoints (e.g., <code>aws</code>, <code>az</code>, <code>gcloud</code> commands)</li>
+                        <li><strong>Endpoint detection:</strong> Endpoint logs (Windows, Linux, Defender XDR tables) can detect cloud CLI tools running on endpoints (e.g., <code>aws</code>, <code>az</code>, <code>gcloud</code> commands)</li>
                         <li><strong>Automatic filtering:</strong> Detection queries automatically select appropriate log sources based on cloud platform context</li>
                         <li><strong>No cross-contamination:</strong> AWS API calls won't generate Azure AD detections, and vice versa</li>
                     </ul>

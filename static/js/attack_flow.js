@@ -10,7 +10,7 @@
   const detailBody = document.getElementById('af-detail-body');
   const $ = id => document.getElementById(id);
 
-  const VENDOR_NAMES = { googlesecops: 'Google SecOps', mde: 'MDE', splunk: 'Splunk', elastic: 'Elastic' };
+  const VENDOR_NAMES = { googlesecops: 'Google SecOps', mde: 'Defender XDR', splunk: 'Splunk', elastic: 'Elastic' };
   const EDGE_COLOURS = { googlesecops: '#4285F4', mde: '#00A2AD', splunk: '#E91E8C', elastic: '#F0A500', mixed: '#64748B' };
   const SVG_NS = 'http://www.w3.org/2000/svg';
 

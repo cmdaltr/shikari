@@ -18,7 +18,7 @@ ALL_SIEMS = frozenset({"mde", "secops"})  # splunk disabled -- Stage 1 soft-disa
 
 # Display labels for each SIEM key
 _SIEM_LABELS = {
-    "mde": "MDE",
+    "mde": "Defender XDR",
     "splunk": "Splunk",
     "elastic": "Elastic",
     "secops": "Google SecOps",

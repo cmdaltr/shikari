@@ -64,9 +64,9 @@
   <span class="vendor-logo-icon">
     <img class="siem-logo" src="/static/images/siem/splunk.png" alt="Splunk" width="28" height="28">
   </span>
-  {% elif vendor_name == 'MDE' or vendor_name == 'Microsoft' %}
+  {% elif vendor_name in ('MDE', 'Defender XDR', 'Microsoft') %}
   <span class="vendor-logo-icon">
-    <img class="siem-logo" src="/static/images/siem/mde.png" alt="Microsoft Defender" width="28" height="28">
+    <img class="siem-logo" src="/static/images/siem/mde.png" alt="Defender XDR" width="28" height="28">
   </span>
   {% elif vendor_name == 'Google SecOps' or vendor_name == 'google_secops' %}
   <span class="vendor-logo-icon">

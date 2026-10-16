@@ -32,7 +32,7 @@ TACTIC_ORDER = [
 _TACTIC_KEY = {t.lower(): t for t in TACTIC_ORDER}
 
 # Display order and names; SecOps is the primary platform
-VENDORS = [("googlesecops", "Google SecOps"), ("mde", "MDE"), ("splunk", "Splunk"), ("elastic", "Elastic")]
+VENDORS = [("googlesecops", "Google SecOps"), ("mde", "Defender XDR"), ("splunk", "Splunk"), ("elastic", "Elastic")]
 _CONNECTOR_VENDOR = {"GoogleSecOps": "googlesecops", "MicrosoftThreatProtection": "mde",
                      "Splunk": "splunk", "Elastic": "elastic", "ElasticSecurity": "elastic"}
 

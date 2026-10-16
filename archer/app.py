@@ -97,10 +97,10 @@ DATA_SOURCE_DISPLAY_NAMES = {
     "device_network_events": "DeviceNetworkEvents",
     "device_process_events": "DeviceProcessEvents",
     "gcp_audit": "GCP Audit Logs",
-    "microsoft defender": "MDE",
-    "microsoft_defender": "MDE",
-    "edr_events": "MDE",
-    "mde": "MDE",
+    "microsoft defender": "Defender XDR",
+    "microsoft_defender": "Defender XDR",
+    "edr_events": "Defender XDR",
+    "mde": "Defender XDR",
     "googlesecops": "Google SecOps",
     "microsoft windows": "Windows Event Logs",
     "microsoft_o365": "M365",
@@ -932,7 +932,7 @@ def get_platform_from_data_source(data_source: str) -> str:
     Map a data source to its platform/vendor.
 
     Examples:
-        "microsoft_defender" -> "MDE"
+        "microsoft_defender" -> "Defender XDR"
         "azure_activitylog" -> "Azure"
         "aws_cloudtrail" -> "AWS"
         "microsoft_windows" -> "Windows"
@@ -947,7 +947,7 @@ def get_platform_from_data_source(data_source: str) -> str:
 
     # Check for specific platform patterns
     if "microsoft_defender" in data_source_lower or "device" in data_source_lower:
-        return "MDE"
+        return "Defender XDR"
     elif "azure" in data_source_lower:
         return "Azure"
     elif "aws" in data_source_lower:
@@ -2088,7 +2088,7 @@ def _hunt_llm_args(archer_session: Optional[str], ai_provider: Optional[str], ai
 
 # SIEMs a user can choose in Profile, and the vendor key process_group excludes them by
 SIEM_PLATFORMS = {"secops": "googlesecops", "mde": "mde", "splunk": "splunk"}
-SIEM_LABELS = {"secops": "Google SecOps", "mde": "Microsoft Defender (MDE)", "splunk": "Splunk"}
+SIEM_LABELS = {"secops": "Google SecOps", "mde": "Defender XDR", "splunk": "Splunk"}
 # Listed in Profile but not choosable: build.yaml doesn't generate Elastic queries yet
 SIEM_COMING_SOON = {"elastic": "Elastic"}
 
@@ -6115,8 +6115,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
 
     vendor_display_names = {
         "splunk": "Splunk",
-        "mde": "MDE",
-        "microsoft": "MDE",
+        "mde": "Defender XDR",
+        "microsoft": "Defender XDR",
         "elastic": "Elastic",
         "googlesecops": "Google SecOps",
     }
@@ -6898,7 +6898,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
         )
 
     # Vendor priority (SecOps first), not volume
-    correlation_order = {"Google SecOps": 0, "MDE": 1, "Splunk": 2, "Elastic": 3}
+    correlation_order = {"Google SecOps": 0, "Defender XDR": 1, "MDE": 1, "Splunk": 2, "Elastic": 3}
     grouped_correlations.sort(key=lambda x: (correlation_order.get(x["name"], 99), -x["count"]))
 
     # Check if attack flow exists
@@ -8100,18 +8100,18 @@ def flows_page(request: Request, group: str = "", archer_session: Optional[str] 
     })
 
 
-LIBRARY_VENDORS = (("googlesecops", "Google SecOps"), ("mde", "MDE"), ("splunk", "Splunk"), ("elastic", "Elastic"))
+LIBRARY_VENDORS = (("googlesecops", "Google SecOps"), ("mde", "Defender XDR"), ("splunk", "Splunk"), ("elastic", "Elastic"))
 # Not generated yet: shown, marked Coming Soon (as on the Profile page)
 LIBRARY_COMING_SOON = {"elastic"}
 
 
 def _library_vendor_key(name: str) -> str:
     key = re.sub(r"[\s_-]+", "", str(name or "")).lower()
-    return {"microsoft": "mde", "google": "googlesecops", "secops": "googlesecops"}.get(key, key)
+    return {"microsoft": "mde", "defenderxdr": "mde", "google": "googlesecops", "secops": "googlesecops"}.get(key, key)
 
 
 def _library_vendor_slots(items: list, kind: str) -> list:
-    """The Library's vendor sections: one per SIEM in Archer's order (Google SecOps, MDE,
+    """The Library's vendor sections: one per SIEM in Archer's order (Google SecOps, Defender XDR,
     Splunk, Elastic), empty ones included, then anything else by name."""
     by_key = {}
     for v in items:
@@ -8152,8 +8152,8 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         # Vendor display names mapping
         VENDOR_DISPLAY_NAMES = {
             "splunk": "Splunk",
-            "mde": "MDE",
-            "microsoft": "MDE",
+            "mde": "Defender XDR",
+            "microsoft": "Defender XDR",
             "elastic": "Elastic",
             "googlesecops": "Google SecOps",
         }

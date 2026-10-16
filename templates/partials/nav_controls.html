@@ -42,6 +42,7 @@
 {% macro svg(name) %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ICON[name] | safe }}</svg>{% endmacro %}
 {% macro is_here(href) %}{{ 'y' if path == href or (href != '/' and path.startswith(href ~ '/')) else '' }}{% endmacro %}
 <nav class="global-nav-controls" aria-label="Archer">
+    {% if path != '/' %}<a href="/" class="nav-brand" title="Home"><img src="/static/images/archer_banner.png" alt="Archer" width="110" height="46"></a>{% endif %}
     <div class="nav-tabs">
         <a href="/" class="nav-tab{% if is_here('/') %} is-active{% endif %}"{% if is_here('/') %} aria-current="page"{% endif %} title="Home">{{ svg('home') }}<span>Home</span></a>
         {% for label, icon, items in menus %}

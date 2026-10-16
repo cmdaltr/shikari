@@ -56,7 +56,7 @@ archer stop
 - **Detection Library** - Save, search, tag, share, and export your generated detections
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
-- **Query Execution** - MDE/Splunk API integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
+- **Query Execution** - Defender XDR/Splunk API integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
 - **Adversary emulation, VECTR, CALDERA, MACAT** - Planned (see [FUTURE.md](docs/other/FUTURE.md) and #11)
 
 ### Security & User Management

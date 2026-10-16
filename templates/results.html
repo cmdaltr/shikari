@@ -603,7 +603,7 @@
                 <li><strong>MITRE ATT&CK Extraction</strong> - Retrieves technique descriptions, procedure examples, and software/malware behaviors from the MITRE ATT&CK framework</li>
                 <li><strong>Indicator Parsing</strong> - Extracts specific indicators including file paths, registry keys, command-line patterns, process names, network indicators, and behavioral signatures</li>
                 <li><strong>Generic Filtering</strong> - Removes overly broad terms (e.g., "file", "process", "command") that would generate excessive false positives</li>
-                <li><strong>Vendor Translation</strong> - Converts indicators into platform-specific query languages (Splunk SPL, Microsoft Defender KQL, etc.) using custom mapping files</li>
+                <li><strong>Vendor Translation</strong> - Converts indicators into platform-specific query languages (Splunk SPL, Defender XDR KQL, etc.) using custom mapping files</li>
                 <li><strong>OSINT Enrichment (Optional)</strong> - When MITRE indicators are insufficient, searches additional threat intelligence sources to enhance detection coverage</li>
                 <li><strong>YAML Construction</strong> - Packages the detection as a standardized YAML file with metadata, tags, references, and query logic</li>
               </ol>
@@ -619,7 +619,7 @@
                 <li><strong>Direct Procedure Examples</strong> - Extracts indicators from techniques explicitly used by the threat actor in documented campaigns</li>
                 <li><strong>Software/Malware Attribution</strong> - Identifies software and malware families associated with the actor, then retrieves indicators from those software pages even when direct actor-to-indicator links aren't documented</li>
                 <li><strong>Transitive Relationships</strong> - Maps relationships like Actor → Uses Software → Implements Technique → Has Indicators, building detections from the complete chain</li>
-                <li><strong>Multi-SIEM Coverage</strong> - Generates detections for Google SecOps, Microsoft Defender, Splunk and Elastic to ensure broad deployment options</li>
+                <li><strong>Multi-SIEM Coverage</strong> - Generates detections for Google SecOps, Defender XDR, Splunk and Elastic to ensure broad deployment options</li>
                 <li><strong>Deduplication & Merging</strong> - Combines similar detections targeting the same technique to reduce noise and improve query efficiency</li>
                 <li><strong>Confidence Scoring</strong> - Assigns likelihood scores based on indicator quality and the strength of attribution between actor, software, and technique</li>
               </ol>
@@ -1010,9 +1010,9 @@
               <span class="vendor-logo-icon">
                 <img class="siem-logo" src="/static/images/siem/splunk.png" alt="Splunk" width="28" height="28">
               </span>
-              {% elif vendor.name == 'MDE' or vendor.name == 'Microsoft' %}
+              {% elif vendor.name in ('MDE', 'Defender XDR', 'Microsoft') %}
               <span class="vendor-logo-icon">
-                <img class="siem-logo" src="/static/images/siem/mde.png" alt="Microsoft Defender" width="28" height="28">
+                <img class="siem-logo" src="/static/images/siem/mde.png" alt="Defender XDR" width="28" height="28">
               </span>
               {% elif vendor.name == 'Google SecOps' %}
               <span class="vendor-logo-icon">
@@ -1232,7 +1232,7 @@
               <!-- Tables/Indexes Display (if available) -->
               {% if correlation.tables_indexes %}
               <div style="margin-top: 8px; margin-bottom: 12px; font-size: 0.85em;">
-                <strong style="color: #555;">{% if vendor.name == 'MDE' %}Tables:{% elif vendor.name == 'Google SecOps' %}Event types:{% else %}Indexes:{% endif %}</strong>
+                <strong style="color: #555;">{% if vendor.name in ('MDE', 'Defender XDR') %}Tables:{% elif vendor.name == 'Google SecOps' %}Event types:{% else %}Indexes:{% endif %}</strong>
                 {% for table_idx in correlation.tables_indexes %}
                 <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
                 {% endfor %}

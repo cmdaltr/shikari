@@ -397,7 +397,7 @@
       </div>
       <div class="summary-card">
         <div class="number" id="mde-count">-</div>
-        <div class="label">MDE Queries</div>
+        <div class="label">Defender XDR Queries</div>
       </div>
     </div>
 
@@ -537,7 +537,7 @@
       </div>
 
       <div id="mde-gaps" style="display: none; margin-top: 15px;">
-        <strong>Missing MDE coverage:</strong>
+        <strong>Missing Defender XDR coverage:</strong>
         <div class="gap-list" id="mde-gaps-list"></div>
       </div>
     </div>
@@ -547,6 +547,8 @@
 <script>
 // Vendor logos (the sprite above): the same marks as the attack flow and home page
 const VENDOR_LOGOS = {'Google SecOps': 'googlesecops', 'MDE': 'mde', 'Splunk': 'splunk', 'Elastic': 'elastic'};
+// The data says MDE; the page says Defender XDR
+const vendorLabel = name => name === 'MDE' ? 'Defender XDR' : name;
 const vendorLogo = (key, cls, name) => `<img class="${cls}" src="/static/images/siem/${key === 'googlesecops' ? 'secops' : key}.png" alt="${name}" title="${name}">`;
 
 function getColorLevel(count) {
@@ -559,7 +561,7 @@ function getColorLevel(count) {
 function getVendorIcons(vendors, forTable = false) {
   return Object.entries(VENDOR_LOGOS)
     .filter(([name]) => vendors.includes(name))
-    .map(([name, key]) => vendorLogo(key, forTable ? 'table-vendor-icon' : 'vendor-icon', name))
+    .map(([name, key]) => vendorLogo(key, forTable ? 'table-vendor-icon' : 'vendor-icon', vendorLabel(name)))
     .join('');
 }
 
@@ -612,7 +614,7 @@ function fillFilterOptions(data) {
     sel.length = 1;
     values.forEach(v => sel.add(new Option(label(v), v)));
   };
-  add('filter-siem', Object.keys(VENDOR_LOGOS));
+  add('filter-siem', Object.keys(VENDOR_LOGOS), vendorLabel);
   add('filter-tactic', navState.matrix.map(c => c.tactic));
   add('filter-platform', Object.keys(data.by_platform || {}).sort((a, b) => a.localeCompare(b)));
 }

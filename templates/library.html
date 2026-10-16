@@ -278,7 +278,7 @@
                 <select id="filter-vendor" class="dropdown-styled">
                     <option value="">Vendors</option>
                     <option value="googlesecops">Google SecOps</option>
-                    <option value="mde">MDE</option>
+                    <option value="mde">Defender XDR</option>
                     <option value="splunk">Splunk</option>
                     <option value="elastic">Elastic</option>
                 </select>
@@ -387,7 +387,7 @@
               </span>
               {% elif vendor.name == 'mde' or vendor.name == 'microsoft' %}
               <span class="vendor-logo-icon">
-                <img class="siem-logo" src="/static/images/siem/mde.png" alt="Microsoft Defender" width="28" height="28">
+                <img class="siem-logo" src="/static/images/siem/mde.png" alt="Defender XDR" width="28" height="28">
               </span>
               {% elif vendor.name in ('googlesecops', 'google_secops', 'Google SecOps') %}
               <span class="vendor-logo-icon">
@@ -720,9 +720,9 @@
               <span class="vendor-logo-icon">
                 <img class="siem-logo" src="/static/images/siem/splunk.png" alt="Splunk" width="28" height="28">
               </span>
-              {% elif vendor.name == 'mde' or vendor.name == 'MDE' or vendor.name == 'Microsoft' or vendor.name == 'microsoft' %}
+              {% elif vendor.name in ('mde', 'MDE', 'Defender XDR', 'Microsoft', 'microsoft') %}
               <span class="vendor-logo-icon">
-                <img class="siem-logo" src="/static/images/siem/mde.png" alt="Microsoft Defender" width="28" height="28">
+                <img class="siem-logo" src="/static/images/siem/mde.png" alt="Defender XDR" width="28" height="28">
               </span>
               {% elif vendor.name in ('googlesecops', 'google_secops', 'Google SecOps') %}
               <span class="vendor-logo-icon">
@@ -947,7 +947,7 @@
               <!-- Tables/Indexes Display (if available) -->
               {% if correlation.tables_indexes %}
               <div style="margin-top: 8px; margin-bottom: 12px; font-size: 0.85em;">
-                <strong style="color: #555;">{% if vendor.name == 'MDE' %}Tables:{% else %}Indexes:{% endif %}</strong>
+                <strong style="color: #555;">{% if vendor.name in ('mde', 'MDE', 'Defender XDR') %}Tables:{% else %}Indexes:{% endif %}</strong>
                 {% for table_idx in correlation.tables_indexes %}
                 <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
                 {% endfor %}

@@ -72,6 +72,6 @@ def test_library_lists_every_siem_in_order():
     slots = _library_vendor_slots([{"name": "splunk", "display_name": "Splunk", "count": 1, "detections": ["x"]},
                                    {"name": "microsoft", "display_name": "MDE", "count": 2, "detections": ["a", "b"]}],
                                   "detections")
-    assert [s["display_name"] for s in slots] == ["Google SecOps", "MDE", "Splunk", "Elastic"]
+    assert [s["display_name"] for s in slots] == ["Google SecOps", "Defender XDR", "Splunk", "Elastic"]
     assert slots[0].get("empty_state") and not slots[0].get("coming_soon")
     assert slots[1]["count"] == 2 and slots[3].get("coming_soon")

@@ -126,6 +126,11 @@ a.nav-auth:hover { background: var(--accent); }
 .nav-menu-list::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; height: 8px; }
 .nav-menu.is-open .nav-menu-list { display: block; }
 @media (hover: hover) { .nav-menu:hover .nav-menu-list { display: block; } }
+/* Archer banner, centred in the bar on every page but Home; absolutely placed so it never
+   moves the menus or the bar's height. Transparent, with a faint light edge so the dark
+   archer doesn't vanish into the navy */
+.nav-brand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: block; line-height: 0; }
+.nav-brand img { height: 46px; width: auto; filter: drop-shadow(0 0 1px rgba(255,255,255,.7)) drop-shadow(0 0 5px rgba(255,255,255,.2)); }
 .nav-menu-item {
     display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 8px;
     color: #1f2937; text-decoration: none; border: 1px solid transparent;
@@ -154,6 +159,7 @@ a.nav-menu-item:hover, a.nav-menu-item:focus-visible { background: rgba(197, 48,
     .nav-icon-btn.has-label { width: 44px; padding: 10px; }
     .nav-icon-btn .nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 }
+@media (max-width: 1340px) { .nav-brand { display: none; } }
 @media (max-width: 1040px) {
     .nav-tabs { gap: 10px; }
     .nav-tabs > .nav-tab > span, .nav-menu-btn > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

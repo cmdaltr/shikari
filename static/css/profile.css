@@ -597,3 +597,5 @@
   .pf-name-row { grid-template-columns: 1fr; row-gap: 10px; }
   .pf-name-save, .pf-name-counter { grid-column: 1; }
 }
+/* SIEM logos in the "Generate for" picker: the height of the text beside them */
+.siem-pick-logo { width: 1.15em; height: 1.15em; flex: none; }
