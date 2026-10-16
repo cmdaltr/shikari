@@ -313,8 +313,6 @@
   // By technique: every recorded technique, the logs most of its recordings hold, and their tables or event types
   // GUIDE: Defender XDR's own alerting on a technique, in 6,100+ organisations
   const defenderBand = d => (!d ? 'none' : d.tp_rate !== null && d.tp_rate >= 0.5 ? 'tp' : 'fp');
-  const defenderCell = d => !d ? '<small>No alerts</small>'
-    : `${d.alerts.toLocaleString()} alert${d.alerts === 1 ? '' : 's'}<br><small>${d.orgs.toLocaleString()} orgs${d.tp_rate !== null ? ` · ${Math.round(d.tp_rate * 100)}% true positive` : ''}${d.family ? ' · its parent\'s' : ''}</small>`;
 
   // The SIEM's tables or event types those logs land in, under the logs
   const dataSources = list => list && list.length
@@ -341,9 +339,8 @@
       && (!hits || hits[t.technique]));
     shown(rows.length, data.techniques.length, 'technique');
     if (!rows.length) return message('No recorded technique matches the filters.');
-    const cols = showDefender ? 4 : 3;
     $('em-results').innerHTML = `<div class="ms-table-wrap"><table class="ms-table em-table em-rows">
-      <thead><tr><th class="em-col-tech">Technique</th><th class="em-col-rec">Recordings</th><th>Logs</th>${showDefender ? '<th class="em-col-def" title="Microsoft GUIDE: Defender XDR alerts mapped to the technique, and how often customers graded them true positive">Defender XDR alerts</th>' : ''}</tr></thead>
+      <thead><tr><th class="em-col-tech">Technique</th><th class="em-col-rec">Recordings</th><th>Logs</th></tr></thead>
       <tbody>${pageOf(rows).map(t => {
         const info = data.names[t.technique] || {};
         const open = state.open.has(t.technique);
@@ -355,8 +352,8 @@
             <div class="em-logos">${Object.entries(t.sources).map(([k, n]) => `${logo(k)}<small>${n}</small>`).join('')}</div>
             <small>${esc(t.platforms.map(p => PLATFORM[p] || p).join(', '))}</small></td>
           ${gap ? '<td><span class="em-gap">No recording holds the chosen logs</span></td>' : `<td>${chips(t.logs, 6)}${dataSources(t[siemKey()])}</td>`}
-          ${showDefender ? `<td>${defenderCell(t.defender)}</td>` : ''}</tr>
-          ${open ? `<tr class="em-detail"><td colspan="${cols}">${detail(t.technique)}</td></tr>` : ''}`;
+          </tr>
+          ${open ? `<tr class="em-detail"><td colspan="3">${detail(t.technique)}</td></tr>` : ''}`;
       }).join('')}</tbody></table></div>`;
   }
 
@@ -374,9 +371,9 @@
     const key = siemKey();
     const g = r.defender;
     const guideNote = state.siem === 'mde' && data.guide ? (g
-      ? `<p class="em-guide">${logo('guide')} <strong>Defender XDR</strong>${g.family ? ' (for its parent technique)' : ''}: ${g.alerts.toLocaleString()} alerts from ${g.detectors.toLocaleString()} detectors in ${g.orgs.toLocaleString()} organisations;
-          graded ${g.grades.tp || 0} true, ${g.grades.bp || 0} benign and ${g.grades.fp || 0} false positive. Categories: ${esc(g.categories.join(', '))}. Evidence: ${esc(g.evidence.join(', '))}.</p>`
-      : `<p class="em-guide">${logo('guide')} No Defender XDR alert in GUIDE maps to this technique: a custom detection is where coverage comes from.</p>`) : '';
+      ? `<p class="em-guide">${logo('guide')} <span><strong>Defender XDR</strong>${g.family ? ' (for its parent technique)' : ''}: ${g.alerts.toLocaleString()} alerts from ${g.detectors.toLocaleString()} detectors in ${g.orgs.toLocaleString()} organisations;
+          graded ${g.grades.tp || 0} true, ${g.grades.bp || 0} benign and ${g.grades.fp || 0} false positive. Categories: ${esc(g.categories.join(', '))}. Evidence: ${esc(g.evidence.join(', '))}.</span></p>`
+      : `<p class="em-guide">${logo('guide')} <span>No Defender XDR alert in GUIDE maps to this technique: a custom detection is where coverage comes from.</span></p>`) : '';
     return `${guideNote}<table class="ms-table em-table em-sub">
         <thead><tr><th>Log</th><th>Recordings</th><th>Events</th><th>${esc(siemName())}</th></tr></thead>
         <tbody>${r.event_types.map(e => `<tr${e.common ? ' class="is-common" title="In 40% or more of a source\'s recordings, whatever the technique: lab background as much as the attack"' : ''}>
