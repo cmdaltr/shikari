@@ -12,8 +12,8 @@
 .em-filters-body { padding: 8px 24px 24px; }
 .em-filters-body[hidden] { display: none; }
 .em-filters:has(.em-filters-body[hidden]) .detection-header { margin-bottom: 0; }
-.em-filters .search-row { display: flex; margin-bottom: 16px; }
-.em-filters .search-row[hidden] { display: none; }
+.em-filters .search-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.em-filters .search-row input[hidden] { display: none; }
 .em-filters .search-row input { flex: 1; margin: 0; }
 .em-filters .filters-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .em-filters .filters-row select { min-width: 170px; }

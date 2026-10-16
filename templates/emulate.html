@@ -50,9 +50,10 @@
       <span id="em-filters-toggle" class="expand-btn" role="button" tabindex="0">Collapse</span>
     </div>
     <div class="em-filters-body" id="em-filters-body">
-      <div class="search-row" data-for="technique group">
-        <input type="search" class="form-input" id="em-q" autocomplete="off" maxlength="200"
+      <div class="search-row">
+        <input type="search" class="form-input" id="em-q" data-for="technique group" autocomplete="off" maxlength="200"
                placeholder="Search indicators: a value in the recorded events (comsvcs, lsass.dmp, vssadmin…)" aria-label="Indicators">
+        <span class="cv-shown" id="em-shown"></span>
       </div>
       <div class="filters-row">
         <select id="em-siem" class="dropdown-styled" aria-label="SIEM platform" title="The SIEM whose tables or event types are shown">
@@ -70,7 +71,6 @@
         <button type="button" id="em-clear" title="Clear filters">
           <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         </button>
-        <span class="cv-shown" id="em-shown"></span>
       </div>
     </div>
   </div>
