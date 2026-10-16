@@ -151,3 +151,10 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-source-logo.is-guide, .em-logo.is-guide { color: #2563eb; }
 .em-source-logo.is-lab, .em-logo.is-lab { color: #0d9488; }
 .em-rows tr.em-detail > td { white-space: normal; }  /* mitresaw.css keeps table cells on one line */
+.em-guide-box { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; margin: 6px 0 12px; background: var(--bg-primary); }
+.em-guide-box .em-guide { margin: 0 0 8px; }
+.em-guide-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 16px; margin: 0; }
+.em-guide-facts > div.is-wide { grid-column: span 2; }
+.em-guide-facts dt { font-size: .72em; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); }
+.em-guide-facts dd { margin: 2px 0 0; font-size: .92em; }
+@media (max-width: 760px) { .em-guide-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

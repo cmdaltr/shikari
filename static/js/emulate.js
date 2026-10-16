@@ -371,8 +371,15 @@
     const key = siemKey();
     const g = r.defender;
     const guideNote = state.siem === 'mde' && data.guide ? (g
-      ? `<p class="em-guide">${logo('guide')} <span><strong>Defender XDR</strong>${g.family ? ' (for its parent technique)' : ''}: ${g.alerts.toLocaleString()} alerts from ${g.detectors.toLocaleString()} detectors in ${g.orgs.toLocaleString()} organisations;
-          graded ${g.grades.tp || 0} true, ${g.grades.bp || 0} benign and ${g.grades.fp || 0} false positive. Categories: ${esc(g.categories.join(', '))}. Evidence: ${esc(g.evidence.join(', '))}.</span></p>`
+      ? `<div class="em-guide-box"><p class="em-guide">${logo('guide')} <span><strong>Defender XDR alerting</strong>${g.family ? ' (its parent technique\'s)' : ''}, from Microsoft GUIDE</span></p>
+        <dl class="em-guide-facts">
+          <div><dt>Alerts</dt><dd>${g.alerts.toLocaleString()}</dd></div>
+          <div><dt>Detectors</dt><dd>${g.detectors.toLocaleString()}</dd></div>
+          <div><dt>Organisations</dt><dd>${g.orgs.toLocaleString()}</dd></div>
+          <div><dt>Graded</dt><dd>${(g.grades.tp || 0).toLocaleString()} true · ${(g.grades.bp || 0).toLocaleString()} benign · ${(g.grades.fp || 0).toLocaleString()} false positive</dd></div>
+          <div class="is-wide"><dt>Categories</dt><dd>${esc(g.categories.join(', '))}</dd></div>
+          <div class="is-wide"><dt>Evidence</dt><dd>${esc(g.evidence.join(', '))}</dd></div>
+        </dl></div>`
       : `<p class="em-guide">${logo('guide')} <span>No Defender XDR alert in GUIDE maps to this technique: a custom detection is where coverage comes from.</span></p>`) : '';
     return `${guideNote}<table class="ms-table em-table em-sub">
         <thead><tr><th>Log</th><th>Recordings</th><th>Events</th><th>${esc(siemName())}</th></tr></thead>
