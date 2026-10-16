@@ -85,6 +85,8 @@ data/progress/*
 # Each group's latest run: which detection files it produced
 data/runs/*
 data/ioc_flows/*
+# IOC first-seen dates for sweep expiry (archer/build/ioc_sweep.py)
+data/ioc_dates/
 data/llm_responses/*
 
 # Uploads (user-uploaded files)

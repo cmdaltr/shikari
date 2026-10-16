@@ -19,7 +19,21 @@ If the report is about a threat group, the run is linked to it under its ATT&CK 
 
 Commands come from the report's code blocks and its text. A sentence that starts with a program's name ("the flaws remain unpatched", "net group occurring near…") isn't taken as a command. Where a report shows commands but no technique IDs, Archer maps each command to the technique ATT&CK's procedures cite it under most (`whoami /priv` to **T1033**, `nltest /domain_trusts` to **T1482**), without AI.
 
-The IOC sweep treats a path segment the report blanked out (`c:\users\[redacted]\downloads\z.exe`, `<user>`, `%username%`) as any one folder. It leaves out files in Windows' system folders and binaries LOLBAS lists (`comsvcs.dll`): their names match every host, and the report's hashes find a malicious copy.
+### What the IOC sweep leaves out or narrows
+
+| Indicator | In the sweep |
+|---|---|
+| A path with a blanked-out folder: `c:\users\[redacted]\downloads\z.exe`, `<user>`, `%username%` | Any one folder there |
+| A file in a system folder: `C:\Windows\System32\…`, `/usr/bin/…`, `/System/…` | Only when it's written (created, modified or renamed). The genuine file runs on every host; a malicious copy has to be put there |
+| A Windows binary LOLBAS lists, by name alone: `comsvcs.dll` | Left out: it matches every host that loads it. The report's hashes still find a malicious copy |
+| A domain only the platform itself can create: `login.microsoftonline.com`, `github.com` | Left out |
+| A shared-hosting platform's bare domain: `s3.amazonaws.com`, `pages.dev` | Left out. Subdomains stay (`evil.s3.amazonaws.com` is whoever registered it) |
+| Public DNS resolvers (`8.8.8.8`, `1.1.1.1`) and the empty file's hashes | Left out |
+| Cloud provider IP ranges | Kept: a lot of C2 runs on rented cloud servers |
+
+The known-good list is `archer/mappings/known_good.json`. To add your own, such as internal domains, put a file with the same keys at `bespoke/mappings/known_good.json`.
+
+IPs and domains expire 90 days after Archer first saw them in that run; the sweep's description gives the first expiry date. **Regenerate** drops the expired ones. Hashes and files don't expire.
 
 ## Options
 

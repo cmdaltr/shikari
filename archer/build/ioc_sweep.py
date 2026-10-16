@@ -6,8 +6,11 @@ swept for together rather than stamped onto every technique's detection.
 """
 
 import ipaddress
+import json
 import os
 import re
+from datetime import date, timedelta
+from functools import lru_cache
 from typing import Dict, List, Optional
 
 from archer.build.indicator_hygiene import clean_indicator
@@ -25,24 +28,55 @@ _PLACEHOLDER_LABEL = re.compile(r"(?:target|victim|your|client|company|org)s?(?:
 # A path segment a report blanked out or generalised: c:\users\[redacted]\downloads\z.exe
 _REDACTED_SEGMENT = re.compile(
     r"^(?:\[[^\]]*\]|<[^>]*>|\{[^}]*\}|%[a-z_]+%|\*|x{3,}|redacted|username|user)$", re.I)
-# Windows' own folders: a file named there is a system file, and a sweep for its name or
-# path matches every host. A malicious copy dropped there is found by its hash instead
+# The operating system's own folders. A file named there is usually a system file that runs
+# on every host, but malware lands there too (a copy of RedSun as System32\TieringEngineService.exe):
+# these paths are swept for being written, not for running (kind "system_file")
 _SYSTEM_DIR = re.compile(r"^(?:[a-z]:|%(?:windir|systemroot)%)\\windows\\(?:system32|syswow64|winsxs|servicing)\\|"
-                         r"^%(?:windir|systemroot)%\\(?:system32|syswow64)\\", re.I)
+                         r"^%(?:windir|systemroot)%\\(?:system32|syswow64)\\|"
+                         r"^/(?:system|usr/(?:s?bin|lib|libexec)|s?bin|lib|lib64|library/apple)/", re.I)
+KNOWN_GOOD_FILES = (os.path.join(os.path.dirname(__file__), "..", "mappings", "known_good.json"),
+                    os.path.join("bespoke", "mappings", "known_good.json"))
+# Days an IP or domain stays in a sweep after Archer first saw it; hashes don't expire
+IOC_EXPIRY_DAYS = {"ip": 90, "domain": 90, "domain_pattern": 90}
+from archer.config import DATA_DIR  # noqa: E402
+
+IOC_DATES_DIR = os.path.join(DATA_DIR, "ioc_dates")
 
 
-def _is_system_file(path: str) -> bool:
-    """A Windows system file: in a system folder, or a binary LOLBAS lists (comsvcs.dll)."""
-    if _SYSTEM_DIR.match(path):
+@lru_cache(maxsize=1)
+def known_good() -> Dict[str, set]:
+    """Shipped known-good values, plus bespoke/mappings/known_good.json if it exists."""
+    out: Dict[str, set] = {"first_party_domains": set(), "shared_hosting": set(), "ips": set(), "hashes": set()}
+    for path in KNOWN_GOOD_FILES:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        for key in out:
+            entry = data.get(key) or {}
+            out[key] |= {str(v).lower() for v in (entry.get("values") if isinstance(entry, dict) else entry) or []}
+    return out
+
+
+def _known_good_domain(d: str) -> bool:
+    kg = known_good()
+    if d in kg["shared_hosting"]:
         return True
-    if "\\" in path or "/" in path:
+    labels = d.split(".")
+    return any(".".join(labels[i:]) in kg["first_party_domains"] for i in range(len(labels) - 1))
+
+
+def _bare_system_binary(name: str) -> bool:
+    """A file name alone that LOLBAS lists (comsvcs.dll): it matches every host that loads it."""
+    if "\\" in name or "/" in name:
         return False
     try:
         from archer.build.lol import load_index
         lolbas = (load_index() or {}).get("lolbas") or {}
     except Exception:
         return False
-    return path.lower() in lolbas
+    return name.lower() in lolbas
 
 
 def _file_pattern(path: str) -> Optional[str]:
@@ -62,7 +96,8 @@ def _refang(value: str) -> str:
 def clean_report_iocs(iocs: Dict) -> Dict[str, List[str]]:
     """Refanged, validated atomic IOCs: domain, ip (public only), sha256/sha1/md5, file."""
     out: Dict[str, List[str]] = {"domain": [], "domain_pattern": [], "ip": [], "sha256": [], "sha1": [], "md5": [],
-                                 "file": [], "file_pattern": []}
+                                 "file": [], "file_pattern": [], "system_file": []}
+    kg = known_good()
 
     def add(kind, value):
         if value and value not in out[kind]:
@@ -84,31 +119,32 @@ def clean_report_iocs(iocs: Dict) -> Dict[str, List[str]]:
                          for part in lab.split("-"))
                 for lab in labels)
             add("domain_pattern", pattern)
-        else:
+        elif not _known_good_domain(d):
             add("domain", d)
     for raw in (iocs or {}).get("ip", []) or []:
         try:
             ip = ipaddress.ip_address(_refang(raw))
         except ValueError:
             continue
-        if ip.is_global:
+        if ip.is_global and str(ip) not in kg["ips"]:
             add("ip", str(ip))
     for raw in (iocs or {}).get("hash", []) or []:
         h = str(raw).strip().lower()
-        if re.fullmatch(r"[0-9a-f]+", h) and len(h) in _HASH_KIND:
+        if re.fullmatch(r"[0-9a-f]+", h) and len(h) in _HASH_KIND and h not in kg["hashes"]:
             add(_HASH_KIND[len(h)], h)
     for raw in (iocs or {}).get("file", []) or []:
         # Before cleaning, which strips a <user> placeholder as markup
         pattern = _file_pattern(str(raw).strip())
         if pattern:
-            if not _is_system_file(str(raw)):
-                add("file_pattern", pattern)
+            add("file_pattern", pattern)
             continue
         f = clean_indicator(raw)
         # URL fragments picked up as files ("//www.example.com/page.html")
         if not f or f.startswith("//") or "://" in f or f.lower().startswith("www."):
             continue
-        if not _is_system_file(f):
+        if _SYSTEM_DIR.match(f):
+            add("system_file", f)
+        elif not _bare_system_binary(f):
             add("file", f)
     return {k: v for k, v in out.items() if v}
 
@@ -119,7 +155,7 @@ def _kql_list(values: List[str]) -> str:
 
 def mde_sweep(iocs: Dict[str, List[str]]) -> Optional[str]:
     lets, parts = [], []
-    for kind in ("domain", "ip", "sha256", "sha1", "md5", "file"):  # the *_pattern kinds are inlined as regex
+    for kind in ("domain", "ip", "sha256", "sha1", "md5", "file", "system_file"):  # *_pattern kinds are inlined
         if iocs.get(kind):
             lets.append(f"let ioc_{kind} = {_kql_list(iocs[kind])};")
     network = []
@@ -140,6 +176,10 @@ def mde_sweep(iocs: Dict[str, List[str]]) -> Optional[str]:
         cond = " or ".join(hashes)
         parts.append(f"(DeviceFileEvents | where {cond})")
         parts.append(f"(DeviceProcessEvents | where {cond})")
+    # A system file is in the sweep for being written: the genuine one runs everywhere
+    if iocs.get("system_file"):
+        parts.append('(DeviceFileEvents | where ActionType in ("FileCreated", "FileModified", "FileRenamed")'
+                     ' and FolderPath in~ (ioc_system_file))')
     if not parts:
         return None
     union = parts[0] if len(parts) == 1 else "union\n    " + ",\n    ".join(parts)
@@ -148,7 +188,7 @@ def mde_sweep(iocs: Dict[str, List[str]]) -> Optional[str]:
     columns = ["Timestamp", "DeviceName", "ActionType"]
     if network:
         columns += ["RemoteUrl", "RemoteIP"]
-    if hashes:
+    if hashes or iocs.get("system_file"):
         columns += ["FileName", "FolderPath", "SHA256"]
     columns.append("InitiatingProcessAccountName")
     return "\n".join(lets + [union, "| project " + ", ".join(columns)])
@@ -176,6 +216,12 @@ def secops_sweep(iocs: Dict[str, List[str]], label: str) -> Optional[str]:
         if "`" not in p:
             alts.append(f"re.regex($e.target.file.full_path, `{p}`) nocase")
             alts.append(f"re.regex($e.target.process.file.full_path, `{p}`) nocase")
+    # Written, not run: the genuine system file runs everywhere
+    for f in iocs.get("system_file", []):
+        lit = _re_literal(f)
+        if lit:
+            alts.append(f'(($e.metadata.event_type = "FILE_CREATION" or $e.metadata.event_type = "FILE_MODIFICATION")'
+                        f" and re.regex($e.target.file.full_path, `^{lit}$`) nocase)")
     if not alts:
         return None
     name = "archer_ioc_sweep_" + re.sub(r"\W+", "_", label).strip("_").lower()
@@ -201,6 +247,40 @@ def secops_sweep(iocs: Dict[str, List[str]], label: str) -> Optional[str]:
 }}"""
 
 
+def apply_expiry(group_name: str, clean: Dict[str, List[str]], regenerate: bool,
+                 today: Optional[date] = None) -> Optional[date]:
+    """
+    Record when each IP and domain was first seen for this run (data/ioc_dates), and on
+    Regenerate drop those past IOC_EXPIRY_DAYS. Changes clean in place; returns the
+    earliest expiry left, or None.
+    """
+    today = today or date.today()
+    path = os.path.join(IOC_DATES_DIR, re.sub(r"[^A-Za-z0-9]+", "", group_name) + ".json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            first_seen = json.load(fh)
+    except (OSError, ValueError):
+        first_seen = {}
+    earliest = None
+    for kind, days in IOC_EXPIRY_DAYS.items():
+        kept = []
+        for v in clean.get(kind, []):
+            seen = date.fromisoformat(first_seen.setdefault(f"{kind}:{v}", today.isoformat()))
+            expires = seen + timedelta(days=days)
+            if regenerate and expires < today:
+                continue
+            kept.append(v)
+            earliest = min(earliest, expires) if earliest else expires
+        if kind in clean:
+            clean[kind] = kept
+    for kind in [k for k, v in clean.items() if not v]:
+        del clean[kind]
+    os.makedirs(IOC_DATES_DIR, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(first_seen, fh, indent=1, sort_keys=True)
+    return earliest
+
+
 def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str,
                      siems=("secops", "mde"), excluded_vendors=None, mentions=None) -> List[str]:
     """
@@ -214,12 +294,18 @@ def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str
     from archer.build.yaml import file_state, write_yaml
 
     clean = clean_report_iocs(iocs)
+    expires = apply_expiry(group_name, clean, regenerate=run_files.regenerating(group_name)) if clean else None
     if not clean:
         return []
     save_ioc_flow(group_name, build_ioc_flow(clean, mentions, source))
     excluded = {v.lower() for v in excluded_vendors or []}
     safe = re.sub(r"[^A-Za-z0-9]+", "", group_name)
     desc = f"Atomic indicators from {source}: " + "; ".join(f"{len(v)} {k}" for k, v in clean.items())
+    if expires:
+        desc += (f". IPs and domains expire {IOC_EXPIRY_DAYS['ip']} days after Archer first saw them, the first on"
+                 f" {expires.isoformat()}; Regenerate drops expired ones. Hashes and files don't expire")
+    if clean.get("system_file"):
+        desc += ". Files in system folders are swept for being written, not run"
     written = []
     builders = {
         "secops": ("GoogleSecOps", "NETWORK_DNS", "googlesecops", lambda: secops_sweep(clean, group_name)),

@@ -266,6 +266,9 @@ def _ioc_flows_in_tmp(tmp_path, monkeypatch):
     from archer.build import ioc_flow
 
     monkeypatch.setattr(ioc_flow, "IOC_FLOWS_DIR", str(tmp_path / "ioc_flows"))
+    # ...and the IOC first-seen dates out of data/ioc_dates
+    from archer.build import ioc_sweep
+    monkeypatch.setattr(ioc_sweep, "IOC_DATES_DIR", str(tmp_path / "ioc_dates"))
 
 
 @pytest.fixture(autouse=True)

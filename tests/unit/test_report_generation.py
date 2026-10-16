@@ -48,13 +48,13 @@ def test_report_iocs_are_refanged_validated_and_patterned():
     clean = clean_report_iocs({
         "domain": ["fleetdeck[.]io", "targetsname-sso[.]com", "oktalogin-targetcompany[.]com", "not a domain"],
         "ip": ["10.0.0.5", "45.153.240[.]1"],
-        "hash": ["d41d8cd98f00b204e9800998ecf8427e", "xyz"],
+        "hash": ["44d88612fea8a8f36de82e1278abb02f", "d41d8cd98f00b204e9800998ecf8427e", "xyz"],
         "file": ["//www.trellix.com/page.html", "C:\\Users\\Public\\rclone.exe"],
     })
     assert clean["domain"] == ["fleetdeck.io"]
     assert clean["domain_pattern"] == [r"[a-z0-9-]+-sso\.com", r"oktalogin-[a-z0-9-]+\.com"]
     assert clean["ip"] == ["45.153.240.1"]  # private 10.0.0.5 dropped
-    assert clean["md5"] == ["d41d8cd98f00b204e9800998ecf8427e"]
+    assert clean["md5"] == ["44d88612fea8a8f36de82e1278abb02f"]  # the empty file's hash is known good
     assert clean["file"] == ["C:\\Users\\Public\\rclone.exe"]
 
     kql = mde_sweep(clean)
