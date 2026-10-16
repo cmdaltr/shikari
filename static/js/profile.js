@@ -94,6 +94,7 @@ document.getElementById('profile-form')?.addEventListener('submit', async functi
   const teamInput = document.getElementById('team');
   const fullName = fullNameInput?.value;
   const team = teamInput?.value || '';
+  const country = document.getElementById('country')?.value || '';
 
   // Validate full name using validation.js
   const validation = validateFullName(fullName);
@@ -108,7 +109,8 @@ document.getElementById('profile-form')?.addEventListener('submit', async functi
 
   const formData = {
     full_name: validation.value,  // Use the sanitized value
-    team: team.trim()  // Include team field
+    team: team.trim(),  // Include team field
+    country
   };
 
   try {

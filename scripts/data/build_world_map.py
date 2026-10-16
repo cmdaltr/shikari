@@ -20,10 +20,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "static" / "images" / "world_equal_earth.svg"
 SOURCE = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
+# ISO 3166-1 alpha-2 by numeric code (i18n-iso-countries, MIT), for each country's flag
+CODES = "https://cdn.jsdelivr.net/npm/i18n-iso-countries@7/codes.json"
+# No numeric code in Natural Earth: Kosovo's is the user-assigned XK; N. Cyprus and Somaliland have none
+ISO_BY_NAME = {"Kosovo": "XK"}
 WIDTH = 1000
 DROP = {"Antarctica"}
 # Too small for 1:110m: drawn as a dot at (lon, lat)
-POINTS = {"Singapore": (103.82, 1.35)}
+POINTS = {"Singapore": (103.82, 1.35, "SG")}
 
 # Equal Earth (Šavrič, Patterson and Jenny, 2018)
 A1, A2, A3, A4 = 1.340264, -0.081106, 0.000893, 0.003796
@@ -108,16 +112,19 @@ def path_d(geometry, arcs) -> str:
 def main() -> int:
     with urllib.request.urlopen(SOURCE, timeout=60) as res:
         topo = json.load(res)
+    with urllib.request.urlopen(CODES, timeout=60) as res:
+        iso2 = {numeric: alpha2 for alpha2, _, numeric, *_ in json.load(res)}
     arcs = decode_arcs(topo)
     paths = []
     for g in sorted(topo["objects"]["countries"]["geometries"], key=lambda g: g["properties"]["name"]):
         name = g["properties"]["name"]
         if name in DROP or g.get("type") not in ("Polygon", "MultiPolygon"):
             continue
-        paths.append(f'<path class="country" data-name="{name}" d="{path_d(g, arcs)}"><title>{name}</title></path>')
-    for name, (lon, lat) in POINTS.items():
+        iso = ISO_BY_NAME.get(name) or iso2.get(str(g.get("id") or ""), "")
+        paths.append(f'<path class="country" data-name="{name}" data-iso="{iso}" d="{path_d(g, arcs)}"><title>{name}</title></path>')
+    for name, (lon, lat, iso) in POINTS.items():
         x, y = to_svg(lon, lat)
-        paths.append(f'<circle class="country is-point" data-name="{name}" cx="{x:.1f}" cy="{y:.1f}" r="4">'
+        paths.append(f'<circle class="country is-point" data-name="{name}" data-iso="{iso}" cx="{x:.1f}" cy="{y:.1f}" r="4">'
                      f'<title>{name}</title></circle>')
     outline = [to_svg(180, lat) for lat in range(-90, 91, 2)] + [to_svg(-180, lat) for lat in range(90, -91, -2)]
     sphere = "M" + "L".join(f"{x:.1f},{y:.1f}" for x, y in outline) + "Z"

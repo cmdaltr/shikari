@@ -4,11 +4,6 @@
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/cyber_powers.css') }}?v={{ request.app.state.asset_version }}">
-<style>
-{%- for g in powers.groups %}{% for s in g.states %}
-.cp-map [data-name="{{ s.map }}"] { fill: var(--cp-{{ g.key }}); }
-{%- endfor %}{% endfor %}
-</style>
 {% endblock %}
 
 {% block main_class %}page-shell{% endblock %}
@@ -17,39 +12,32 @@
 <div class="results-container cp-page">
   <div class="page-header">
     <h1>Cyber Powers</h1>
-    <p>National cyber capability as the IISS assesses it, and the other states threat reporting names</p>
+    <p>Who has cyber capability, who the groups work for, and who they target</p>
   </div>
 
   <section class="cp-card">
-    <div class="cp-map" id="cp-map">{{ map_svg | safe }}</div>
-    <ul class="cp-key" aria-label="Key">
-      {% for g in powers.groups %}
-      <li><button type="button" class="cp-key-item" data-group="{{ g.key }}" aria-pressed="false">
-        <span class="cp-swatch" style="background: var(--cp-{{ g.key }})"></span>
-        <strong>{{ g.label }}</strong><span class="cp-count">{{ g.states | length }}</span>
-      </button></li>
-      {% endfor %}
-    </ul>
-  </section>
-
-  <section class="cp-groups">
-    {% for g in powers.groups %}
-    <div class="cp-group" data-group="{{ g.key }}">
-      <h2><span class="cp-swatch" style="background: var(--cp-{{ g.key }})"></span>{{ g.label }}</h2>
-      <p class="cp-summary">{{ g.summary }}</p>
-      <ul class="cp-states">
-        {% for s in g.states %}
-        <li data-map="{{ s.map }}"{% if s.volume == 2 %} title="Assessed in volume 2 (2023)"{% endif %}>{{ s.name }}{% if s.volume == 2 %}<sup>2</sup>{% endif %}</li>
-        {% endfor %}
-      </ul>
+    <div class="cp-views" role="radiogroup" aria-label="Map view">
+      <button type="button" class="cp-view is-active" data-view="nations" role="radio" aria-checked="true">Nations</button>
+      <button type="button" class="cp-view" data-view="groups" role="radio" aria-checked="false">Groups</button>
+      <button type="button" class="cp-view" data-view="targets" role="radio" aria-checked="false">Targets</button>
     </div>
-    {% endfor %}
+    <p class="cp-view-hint" id="cp-hint"></p>
+    <div class="cp-map" id="cp-map">{{ map_svg | safe }}</div>
+    <ul class="cp-key" id="cp-key" aria-label="Key"></ul>
+    {% if not data.home %}<p class="cp-home-hint">{% if user %}Set your country in <a href="/profile">Profile</a> to see it in green.{% else %}<a href="/login?next_url=/cyber-powers">Log in</a> and set your country in Profile to see it in green.{% endif %}</p>{% endif %}
   </section>
 
-  <p class="cp-source">Tiers: IISS, <em>Cyber Capabilities and National Power</em>
+  <section class="cp-groups" id="cp-lists"></section>
+
+  <p class="cp-source">Nations: IISS, <em>Cyber Capabilities and National Power</em>
     {%- for name, url in powers.sources %} <a href="{{ url }}" target="_blank" rel="noopener">{{ name }}</a>{{ ',' if not loop.last }}{% endfor %}
-    (<sup>2</sup> assessed in volume 2). The Threat Feed tags attribution to every state shown.
+    (<sup>2</sup> assessed in volume 2). Groups and Targets: MITRE ATT&amp;CK's group descriptions, read for attribution
+    and targeting (no AI): High names a government body or unit, or an indictment; Moderate states it plainly; Low hedges
+    ("suspected", "likely"). Motivation: the objectives of those groups. ATT&amp;CK reflects what western vendors and
+    governments publish, so it under-counts some attackers and over-counts some targets.
     Map: Natural Earth, Equal Earth projection.</p>
 </div>
+<div class="cp-tip" id="cp-tip" role="tooltip" hidden></div>
+<script id="cp-data" type="application/json">{{ data | tojson }}</script>
 <script src="{{ url_for('static', path='js/cyber_powers.js') }}?v={{ request.app.state.asset_version }}" defer></script>
 {% endblock %}

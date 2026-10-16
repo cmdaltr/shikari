@@ -2448,9 +2448,12 @@ async def cyber_powers_page(request: Request, archer_session: Optional[str] = Co
             user = get_user_from_session_id(archer_session, db)
         finally:
             db.close()
-    map_svg = (Path(__file__).resolve().parent.parent / "static" / "images" / "world_equal_earth.svg").read_text(encoding="utf-8")
-    return templates.TemplateResponse("cyber_powers.html", {"request": request, "user": user,
-                                                            "powers": powers(), "map_svg": map_svg})
+    from archer.intelligence.cyber_powers import MAP_PATH, page_data
+
+    data = page_data(getattr(request.app.state, "bundle", None), getattr(request.app.state, "group_metadata", {}) or {},
+                     getattr(user, "country", None))
+    return templates.TemplateResponse("cyber_powers.html", {"request": request, "user": user, "powers": powers(),
+                                                            "map_svg": MAP_PATH.read_text(encoding="utf-8"), "data": data})
 
 
 @app.get("/api/correlation/params")
@@ -8084,7 +8087,8 @@ async def profile_page(request: Request, archer_session: Optional[str] = Cookie(
 
     try:
         return templates.TemplateResponse(
-            "profile.html", {"request": request, "user": user, "profile_picture_url": None}
+            "profile.html", {"request": request, "user": user, "profile_picture_url": None,
+                             "countries": __import__("archer.intelligence.cyber_powers", fromlist=["countries"]).countries()}
         )
     finally:
         db.close()
@@ -9926,13 +9930,19 @@ async def update_profile(request: Request, archer_session: Optional[str] = Cooki
         data = await request.json()
         full_name = data.get("full_name", "").strip()
         team = data.get("team", "").strip()
+        country = (data.get("country") or "").strip()
 
         if not full_name:
             return {"success": False, "error": "Full name is required"}
+        from archer.intelligence.cyber_powers import is_country
+        if country and not is_country(country):
+            return {"success": False, "error": "Unknown country"}
 
         # Update user's full name and team
         user.full_name = full_name
         user.team = team if team else None
+        if "country" in data:
+            user.country = country or None
         db.commit()
         db.refresh(user)
 

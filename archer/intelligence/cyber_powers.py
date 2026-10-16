@@ -4,7 +4,12 @@ and volume 2, 2023), and the other states threat reporting attributes activity t
 feed's NATIONS that the IISS hasn't assessed). Drawn on the Cyber Powers page.
 """
 
-from typing import Dict, List
+import re
+from functools import lru_cache
+from pathlib import Path
+from typing import Dict, List, Optional
+
+MAP_PATH = Path(__file__).resolve().parents[2] / "static" / "images" / "world_equal_earth.svg"
 
 IISS_SOURCES = [
     ("Volume 1 (2021)", "https://www.iiss.org/research-paper/2021/06/cyber-power---tier-one/"),
@@ -28,6 +33,30 @@ VOLUME_2 = {"Brazil", "Estonia", "Germany", "Netherlands", "Nigeria", "Saudi Ara
 
 # Names the map (Natural Earth) uses where they differ from Archer's
 MAP_NAMES = {"United States": "United States of America"}
+# Natural Earth's abbreviations, in full, for people to read
+DISPLAY = {"United States of America": "United States", "Bosnia and Herz.": "Bosnia and Herzegovina",
+           "Central African Rep.": "Central African Republic", "Dem. Rep. Congo": "Democratic Republic of the Congo",
+           "Congo": "Republic of the Congo", "Dominican Rep.": "Dominican Republic", "Eq. Guinea": "Equatorial Guinea",
+           "Falkland Is.": "Falkland Islands", "Fr. S. Antarctic Lands": "French Southern and Antarctic Lands",
+           "Macedonia": "North Macedonia", "N. Cyprus": "Northern Cyprus", "S. Sudan": "South Sudan",
+           "Solomon Is.": "Solomon Islands", "W. Sahara": "Western Sahara", "eSwatini": "Eswatini", "Turkey": "Türkiye"}
+
+
+def flag(iso: str) -> str:
+    """The flag emoji for an ISO 3166-1 alpha-2 code ("" without one). Windows shows the letters."""
+    return "".join(chr(0x1F1E6 + ord(ch) - ord("A")) for ch in iso) if len(iso or "") == 2 else ""
+
+
+@lru_cache(maxsize=1)
+def countries() -> List[Dict]:
+    """Every country on the map, as {map, name, iso, flag}, by name: the Profile country choices."""
+    found = dict(re.findall(r'data-name="([^"]+)" data-iso="([A-Z]*)"', MAP_PATH.read_text(encoding="utf-8")))
+    return sorted(({"map": n, "name": DISPLAY.get(n, n), "iso": iso, "flag": flag(iso)} for n, iso in found.items()),
+                  key=lambda c: c["name"])
+
+
+def is_country(map_name: Optional[str]) -> bool:
+    return any(c["map"] == map_name for c in countries())
 
 
 def powers() -> Dict:
@@ -44,3 +73,30 @@ def powers() -> Dict:
                    "summary": "Not assessed by the IISS; threat reporting and ATT&CK attribute activity to them",
                    "states": [{"name": s, "map": MAP_NAMES.get(s, s), "volume": None} for s in others]})
     return {"groups": groups, "sources": IISS_SOURCES}
+
+
+def page_data(bundle, group_meta: Dict, home: Optional[str] = None, sample: int = 8) -> Dict:
+    """Everything the map draws and its tooltips say, per country (map names)."""
+    from archer.intelligence.country_profiles import cached_profiles
+
+    profiles = cached_profiles(bundle, group_meta)
+    tier_of = {s["map"]: (g["tier"], g["label"], s["volume"]) for g in powers()["groups"] if g["tier"]
+               for s in g["states"]}
+    data = {}
+    for c in countries():
+        p = profiles.get(c["map"], {})
+        tier = tier_of.get(c["map"])
+        entry = {"name": c["name"], "flag": c["flag"]}
+        if tier:
+            entry.update(tier=tier[0], tier_label=tier[1], volume=tier[2])
+        if p.get("groups"):
+            entry.update(confidence=p["confidence"], attributed=p["attributed"], motivation=p["motivation"],
+                         groups=[f"{g['name']} ({g['confidence'][0]})" for g in p["groups"][:sample]],
+                         group_count=len(p["groups"]))
+        if p.get("targeted_by"):
+            entry.update(targeted=len(p["targeted_by"]), targeted_by=p["targeted_by"][:sample],
+                         target_motivation=p["target_motivation"],
+                         attackers=[DISPLAY.get(a, a) for a in p["attackers"]])
+        data[c["map"]] = entry
+    return {"countries": data, "home": home if is_country(home) else None,
+            "tiers": [{"key": g["key"], "label": g["label"], "summary": g["summary"]} for g in powers()["groups"] if g["tier"]]}
