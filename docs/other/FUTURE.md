@@ -340,6 +340,20 @@ Have an idea for a new feature? We'd love to hear it!
 
 ---
 
+## Open feature requests
+
+| Issue | Feature |
+|---|---|
+| [#15](https://github.com/cmdaltr/archer/issues/15) | Precision checks: flag queries that parse but can't mean anything |
+| [#16](https://github.com/cmdaltr/archer/issues/16) | Hit counts: run a detection read-only against the SIEM to measure false positives |
+| [#17](https://github.com/cmdaltr/archer/issues/17) | IOC sweeps: known-good lists, `[redacted]` wildcards and IOC expiry |
+| [#18](https://github.com/cmdaltr/archer/issues/18) | Threat Feed watchlists |
+| [#19](https://github.com/cmdaltr/archer/issues/19) | STIX/TAXII and MISP import and export |
+| [#20](https://github.com/cmdaltr/archer/issues/20) | Detections as code: export to git, push to the SIEM, diff between runs |
+| [#21](https://github.com/cmdaltr/archer/issues/21) | Technology stack: only hunt what applies to the products the organisation runs |
+
+---
+
 ## Regex tester: real engines
 
 **Status**: Feature request [#14](https://github.com/cmdaltr/archer/issues/14)
