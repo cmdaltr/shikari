@@ -15,7 +15,11 @@
 2. **Review.** A window lists every TTP and IOC found, each with a tick box. Untick anything you don't want hunted, such as a vendor's own domain or a technique that was only mentioned in passing.
 3. **Generate.** Archer builds detections for the ticked techniques and sweeps for the ticked IOCs, then opens the [Results](06-results.md) page.
 
-If the report names a threat group, the run is linked to it. Otherwise it gets a name made from the report.
+If the report is about a threat group, the run is linked to it under its ATT&CK name. Archer recognises every ATT&CK group by its name or any alias (a report on Midnight Blizzard is APT29), as whole words, and goes by the group the report mentions most, a mention in the title counting most. Otherwise the run is named after the article: `Report_Nightmare-Eclipse_Tooling_Seen_in_Real-World_Intrusion`.
+
+Commands come from the report's code blocks and its text. A sentence that starts with a program's name ("the flaws remain unpatched", "net group occurring near…") isn't taken as a command. Where a report shows commands but no technique IDs, Archer maps each command to the technique ATT&CK's procedures cite it under most (`whoami /priv` to **T1033**, `nltest /domain_trusts` to **T1482**), without AI.
+
+The IOC sweep treats a path segment the report blanked out (`c:\users\[redacted]\downloads\z.exe`, `<user>`, `%username%`) as any one folder. It leaves out files in Windows' system folders and binaries LOLBAS lists (`comsvcs.dll`): their names match every host, and the report's hashes find a malicious copy.
 
 ## Options
 
@@ -23,6 +27,6 @@ The options are the same as on the Hunt tab: Merge by Parent Technique, Auto-val
 
 ## Limits
 
-- A report that names behaviour but no technique IDs gives fewer TTPs without AI. The extraction looks for technique IDs and known behaviour patterns, not every way a report can describe an attack.
+- A report that names behaviour but no technique IDs or commands gives fewer TTPs without AI. A command maps to a technique only when ATT&CK's procedures cite it at least three times, mostly under one technique.
 - Some sites block automated fetches or load their text with JavaScript. If a URL gives nothing, save the page as PDF or text and upload it.
 - IOCs are taken as written. Check the review list for benign infrastructure the report mentions (vendor domains, sinkholes, public DNS resolvers).

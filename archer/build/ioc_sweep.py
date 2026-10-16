@@ -22,6 +22,38 @@ _FANG = re.compile(r"\s*(?:\[\.\]|\(\.\)|\[dot\]|\(dot\))\s*", re.I)
 _PLACEHOLDER_LABEL = re.compile(r"(?:target|victim|your|client|company|org)s?(?:name|company|org|domain)?", re.I)
 
 
+# A path segment a report blanked out or generalised: c:\users\[redacted]\downloads\z.exe
+_REDACTED_SEGMENT = re.compile(
+    r"^(?:\[[^\]]*\]|<[^>]*>|\{[^}]*\}|%[a-z_]+%|\*|x{3,}|redacted|username|user)$", re.I)
+# Windows' own folders: a file named there is a system file, and a sweep for its name or
+# path matches every host. A malicious copy dropped there is found by its hash instead
+_SYSTEM_DIR = re.compile(r"^(?:[a-z]:|%(?:windir|systemroot)%)\\windows\\(?:system32|syswow64|winsxs|servicing)\\|"
+                         r"^%(?:windir|systemroot)%\\(?:system32|syswow64)\\", re.I)
+
+
+def _is_system_file(path: str) -> bool:
+    """A Windows system file: in a system folder, or a binary LOLBAS lists (comsvcs.dll)."""
+    if _SYSTEM_DIR.match(path):
+        return True
+    if "\\" in path or "/" in path:
+        return False
+    try:
+        from archer.build.lol import load_index
+        lolbas = (load_index() or {}).get("lolbas") or {}
+    except Exception:
+        return False
+    return path.lower() in lolbas
+
+
+def _file_pattern(path: str) -> Optional[str]:
+    """A regex for a path with redacted segments (any one segment there), or None."""
+    parts = re.split(r"[\\/]", path)
+    if not any(_REDACTED_SEGMENT.match(p) for p in parts):
+        return None
+    sep = r"[\\/]"
+    return "^" + sep.join(r"[^\\/]+" if _REDACTED_SEGMENT.match(p) else re.escape(p) for p in parts) + "$"
+
+
 def _refang(value: str) -> str:
     v = _FANG.sub(".", str(value).strip())
     return re.sub(r"^hxxp", "http", v, flags=re.I).replace("[:]", ":")
@@ -29,7 +61,8 @@ def _refang(value: str) -> str:
 
 def clean_report_iocs(iocs: Dict) -> Dict[str, List[str]]:
     """Refanged, validated atomic IOCs: domain, ip (public only), sha256/sha1/md5, file."""
-    out: Dict[str, List[str]] = {"domain": [], "domain_pattern": [], "ip": [], "sha256": [], "sha1": [], "md5": [], "file": []}
+    out: Dict[str, List[str]] = {"domain": [], "domain_pattern": [], "ip": [], "sha256": [], "sha1": [], "md5": [],
+                                 "file": [], "file_pattern": []}
 
     def add(kind, value):
         if value and value not in out[kind]:
@@ -65,9 +98,17 @@ def clean_report_iocs(iocs: Dict) -> Dict[str, List[str]]:
         if re.fullmatch(r"[0-9a-f]+", h) and len(h) in _HASH_KIND:
             add(_HASH_KIND[len(h)], h)
     for raw in (iocs or {}).get("file", []) or []:
+        # Before cleaning, which strips a <user> placeholder as markup
+        pattern = _file_pattern(str(raw).strip())
+        if pattern:
+            if not _is_system_file(str(raw)):
+                add("file_pattern", pattern)
+            continue
         f = clean_indicator(raw)
         # URL fragments picked up as files ("//www.example.com/page.html")
-        if f and not f.startswith("//") and "://" not in f and not f.lower().startswith("www."):
+        if not f or f.startswith("//") or "://" in f or f.lower().startswith("www."):
+            continue
+        if not _is_system_file(f):
             add("file", f)
     return {k: v for k, v in out.items() if v}
 
@@ -78,7 +119,7 @@ def _kql_list(values: List[str]) -> str:
 
 def mde_sweep(iocs: Dict[str, List[str]]) -> Optional[str]:
     lets, parts = [], []
-    for kind in ("domain", "ip", "sha256", "sha1", "md5", "file"):  # domain_pattern is inlined as regex
+    for kind in ("domain", "ip", "sha256", "sha1", "md5", "file"):  # the *_pattern kinds are inlined as regex
         if iocs.get(kind):
             lets.append(f"let ioc_{kind} = {_kql_list(iocs[kind])};")
     network = []
@@ -93,6 +134,8 @@ def mde_sweep(iocs: Dict[str, List[str]]) -> Optional[str]:
     hashes = [f"{k.upper()} in (ioc_{k})" for k in ("sha256", "sha1", "md5") if iocs.get(k)]
     if iocs.get("file"):
         hashes.append("FileName in~ (ioc_file) or FolderPath has_any (ioc_file)")
+    # FolderPath holds the file name too in DeviceFileEvents and DeviceProcessEvents
+    hashes += [f'FolderPath matches regex @"(?i){p.replace(chr(34), chr(34) * 2)}"' for p in iocs.get("file_pattern", [])]
     if hashes:
         cond = " or ".join(hashes)
         parts.append(f"(DeviceFileEvents | where {cond})")
@@ -129,6 +172,10 @@ def secops_sweep(iocs: Dict[str, List[str]], label: str) -> Optional[str]:
         lit = _re_literal(f)
         if lit:
             alts.append(f"re.regex($e.target.file.full_path, `{lit}`) nocase")
+    for p in iocs.get("file_pattern", []):
+        if "`" not in p:
+            alts.append(f"re.regex($e.target.file.full_path, `{p}`) nocase")
+            alts.append(f"re.regex($e.target.process.file.full_path, `{p}`) nocase")
     if not alts:
         return None
     name = "archer_ioc_sweep_" + re.sub(r"\W+", "_", label).strip("_").lower()

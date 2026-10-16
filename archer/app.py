@@ -4852,7 +4852,8 @@ async def analyze_blog(
         # Analyze the blog post
         print(f"\nAnalyzing blog post: {url}")
         llm_config = _hunt_llm_args(archer_session, ai_provider, ai_model).get("llm_config")
-        result = analyze_blog_post(url, include_text=bool(llm_config))
+        result = analyze_blog_post(url, include_text=bool(llm_config),
+                                   bundle=getattr(request.app.state, "bundle", None))
 
         if not result.get("success"):
             error_msg = result.get("error", "Failed to analyze blog post")
@@ -4901,7 +4902,9 @@ async def analyze_blog(
 
         url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
         # SECURITY: Sanitize group name
-        raw_group_name = group_name or f"BlogAnalysis_{url_hash}"
+        # No group named: the run is called after the article ("Report_Nightmare-Eclipse_Tooling…")
+        title_words = re.sub(r"[^\w-]+", "_", result.get("title") or "").strip("_")[:60].rstrip("_")
+        raw_group_name = group_name or (f"Report_{title_words}" if title_words else f"BlogAnalysis_{url_hash}")
         synthetic_group_name = sanitize_group_name(raw_group_name)
 
         # Save extraction results to file for later use (like file upload)

@@ -23,6 +23,45 @@ from pathlib import Path
 import mimetypes
 
 
+# Sentence words that never belong to a command line; two of them after its last
+# argument mean the match ran on into prose
+_PROSE_WORDS = {"a", "an", "the", "and", "or", "of", "to", "in", "on", "near", "against", "with",
+                "for", "from", "is", "are", "was", "were", "be", "been", "remain", "occurring",
+                "that", "this", "which", "as", "by", "it", "its", "their", "user's", "was", "spawned",
+                "command", "commands", "despite", "process", "tool", "tools", "such"}
+_ARGUMENT = re.compile(r"^[-/]|[\\\"=%$:]|\.\w|\d|^'|'$")
+
+
+def command_or_none(cmd: str):
+    """
+    The command line in a match, or None for prose that starts with a binary's name
+    ("aws remain unpatched", "net group occurring near suspicious binary execution").
+    A command has at least one argument that looks like one (a switch, path, quote,
+    number or file name); words trailing after its last argument are cut when they read
+    as a sentence.
+    """
+    # A list in a sentence ("whoami /priv , cmdkey /list , and net group"): a command's
+    # own commas have no space before them (comsvcs.dll, MiniDump)
+    tokens = re.split(r"\s*[,;]\s+(?=\S+\s+[/-])|\s+[,;]\s+|\s{2,}", cmd.strip())[0].split()
+    # The sentence resumes at its first prose word ("whoami /priv was spawned from…")
+    for i, t in enumerate(tokens[1:], 1):
+        if t.lower().strip(".,;()") in _PROSE_WORDS:
+            tokens = tokens[:i]
+            break
+    tokens[-1:] = [tokens[-1].rstrip(",;")] if tokens else []
+    if len(tokens) < 2:
+        return None
+    args = [i for i, t in enumerate(tokens[1:], 1) if _ARGUMENT.search(t) and not re.search(r"'s$", t)]
+    if not args:
+        # A bare subcommand ("net group", "whoami /priv" counted above) is still a command
+        # when nothing follows it
+        return " ".join(tokens) if len(tokens) == 2 else None
+    tail = tokens[args[-1] + 1:]
+    if sum(t.lower().strip(".,;") in _PROSE_WORDS for t in tail) >= 1 and len(tail) >= 2:
+        tokens = tokens[:args[-1] + 1]
+    return " ".join(tokens)
+
+
 class FileIntelligenceParser:
     """
     Parse threat intelligence files and extract TTPs and IOCs using GenAI.
@@ -640,26 +679,26 @@ class FileIntelligenceParser:
         # Extract command-line indicators
         command_patterns = [
             # FTP commands
-            r'ftp(?:\.[a-z]+)?\s+[^\s]+',
+            r'\bftp(?:\.[a-z]+)?\s+[^\s]+',
             # SSH commands with keys
-            r'ssh\s+-i\s+[^\s]+\s+[^\s]+@[^\s]+',
+            r'\bssh\s+-i\s+[^\s]+\s+[^\s]+@[^\s]+',
             # AWS CLI commands
-            r'aws\s+[a-z0-9-]+\s+[^\n]+',
+            r'\baws\s+[a-z0-9-]+\s+[^\n]+',
             # Azure CLI commands
-            r'az\s+[a-z0-9-]+\s+[^\n]+',
+            r'\baz\s+[a-z0-9-]+\s+[^\n]+',
             # Docker commands
-            r'docker\s+(?:run|exec|build|pull|push)[^\n]+',
+            r'\bdocker\s+(?:run|exec|build|pull|push)[^\n]+',
             # gcloud commands
-            r'gcloud\s+[a-z0-9-]+\s+[^\n]+',
+            r'\bgcloud\s+[a-z0-9-]+\s+[^\n]+',
             # PowerShell commands
-            r'powershell(?:\.exe)?\s+-[^\n]+',
-            r'Invoke-[A-Za-z]+[^\n]*',
+            r'\bpowershell(?:\.exe)?\s+-[^\n]+',
+            r'\bInvoke-[A-Za-z]+[^\n]*',
             # CMD commands
-            r'cmd(?:\.exe)?\s+/[c|k][^\n]+',
+            r'\bcmd(?:\.exe)?\s+/[ck][^\n]+',
             # Curl/wget
-            r'(?:curl|wget)\s+[^\n]+',
+            r'\b(?:curl|wget)\s+[^\n]+',
             # General command line with common executables
-            r'\b(?:rundll32|regsvr32|mshta|certutil|bitsadmin|wmic|net|sc)(?:\.exe)?\s+[^\n]+'
+            r'\b(?:rundll32|regsvr32|mshta|certutil|bitsadmin|wmic|net|sc|whoami|cmdkey|nltest|vssadmin|schtasks|reg)(?:\.exe)?\s+[^\n]+'
         ]
 
         for pattern in command_patterns:
@@ -700,7 +739,7 @@ class FileIntelligenceParser:
                 cleaned = re.sub(r'\bhttps://', 'hxxps://', cleaned, flags=re.IGNORECASE)
 
                 # Truncate if too long
-                cleaned = cleaned[:200]
+                cleaned = command_or_none(cleaned[:200])
 
                 if cleaned:
                     iocs["cmd"].append(cleaned)

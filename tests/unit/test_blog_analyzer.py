@@ -599,3 +599,43 @@ class TestAutoSearchBlogs:
 
             assert result["success"] is False
             assert "no blog posts found" in result["error"].lower()
+
+
+class TestGroupNameWholeWords:
+    """Names match as whole words, and through any ATT&CK alias."""
+
+    BUNDLE = {"objects": [
+        {"type": "intrusion-set", "name": "Wizard Spider", "aliases": ["Wizard Spider", "UNC1878", "Grim Spider"]},
+        {"type": "intrusion-set", "name": "APT29", "aliases": ["APT29", "Cozy Bear", "Midnight Blizzard"]},
+        {"type": "intrusion-set", "name": "Old Group", "aliases": ["Old Group"], "revoked": True},
+    ]}
+
+    def _soup(self, title=""):
+        return BeautifulSoup(f"<html><head><title>{title}</title></head></html>", "html.parser")
+
+    def test_word_inside_another_word_is_not_a_group(self):
+        from archer.parsers.blog_analyzer import _extract_group_name
+        assert _extract_group_name("Continuous hardening. Defender continues.", self._soup()) == ""
+
+    def test_alias_resolves_to_attack_name(self):
+        from archer.parsers.blog_analyzer import _extract_group_name, attack_group_names
+        names = attack_group_names(self.BUNDLE)
+        assert "Old Group" not in names
+        assert _extract_group_name("Midnight Blizzard phished staff.", self._soup(), names) == "APT29"
+
+    def test_aliases_of_one_group_add_up(self):
+        from archer.parsers.blog_analyzer import _extract_group_name, attack_group_names
+        names = attack_group_names(self.BUNDLE)
+        text = "Grim Spider deployed Ryuk. UNC1878 used Cobalt Strike. Cozy Bear was mentioned once."
+        assert _extract_group_name(text, self._soup(), names) == "Wizard Spider"
+
+    def test_title_outweighs_passing_mentions(self):
+        from archer.parsers.blog_analyzer import _extract_group_name, attack_group_names
+        names = attack_group_names(self.BUNDLE)
+        text = "Like UNC1878 before them, the actor. Midnight Blizzard did X."
+        assert _extract_group_name(text, self._soup("Midnight Blizzard targets diplomats | Vendor"), names) == "APT29"
+
+    def test_article_title_drops_site_name(self):
+        from archer.parsers.blog_analyzer import _article_title
+        assert _article_title("Nightmare-Eclipse Tooling Seen in Real-World Intrusion | Huntress") == \
+            "Nightmare-Eclipse Tooling Seen in Real-World Intrusion"

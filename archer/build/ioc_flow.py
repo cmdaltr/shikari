@@ -129,7 +129,7 @@ def build_ioc_flow(clean_iocs: Dict[str, List[str]], mentions: Optional[Dict[str
     mentions = mentions or {}
     nodes = []
     for kind, values in (clean_iocs or {}).items():
-        if kind == "domain_pattern":  # a regex, not an indicator to place
+        if kind in ("domain_pattern", "file_pattern"):  # a regex, not an indicator to place
             continue
         for value in values:
             evidence = mentions.get(value.lower(), [])

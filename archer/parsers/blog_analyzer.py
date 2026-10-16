@@ -67,7 +67,7 @@ def _fetch_public_url(url: str, max_redirects: int = 3, timeout: int = 30) -> re
     raise ValueError(f"Too many redirects (max {max_redirects}).")
 
 
-def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30) -> Dict:
+def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30, bundle=None) -> Dict:
     """
     Analyze a blog post URL and extract threat intelligence.
 
@@ -82,8 +82,13 @@ def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30) -
         - techniques: List[str] (T-codes)
         - tactics: List[str]
         - procedures: List[str]
-        - text, title: the article's text and page title (include_text=True)
+        - title: the page title
+        - text: the article's text (include_text=True)
         - error: str (if failed)
+
+    With the ATT&CK bundle, the group is found by any ATT&CK group's name or alias and
+    returned under its ATT&CK name, and techniques the post doesn't cite by ID are
+    inferred from its commands (archer.parsers.command_techniques).
     """
     try:
         # SECURITY: every hop (the URL and each redirect) must resolve only to public addresses
@@ -110,6 +115,9 @@ def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30) -
         # Untouched parse for publisher metadata (og: tags, JSON-LD scripts), all of
         # which the stripping below removes
         page_meta = BeautifulSoup(response.content, "html.parser")
+
+        # Commands sit in code blocks, which the stripping below removes with the rest
+        code_text = "\n".join(b.get_text("\n") for b in soup.find_all(["pre", "code"]))
 
         # Extract text content - remove ALL non-content elements
         # This ensures we only analyze the blog post content, not HTML/CSS/JS/navigation
@@ -157,17 +165,26 @@ def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30) -
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = '\n'.join(chunk for chunk in chunks if chunk)
 
+        title = (page_meta.title.string or "").strip() if page_meta.title else ""
+        iocs = _extract_iocs(text + "\n" + code_text)
+        techniques = _extract_techniques(text)
+        if bundle is not None and iocs.get("cmd"):
+            from archer.parsers.command_techniques import techniques_for_commands
+
+            techniques = sorted(set(techniques) | set(techniques_for_commands(iocs["cmd"])))
+
         # Extract intelligence
         result = {
             "success": True,
-            "group_name": _extract_group_name(text, soup),
+            "group_name": _extract_group_name(text, soup, attack_group_names(bundle) if bundle is not None else None),
             "group_desc": _extract_description(text)[:500],  # Limit to 500 chars
-            "techniques": _extract_techniques(text),
+            "techniques": techniques,
             "tactics": _extract_tactics(text),
             "procedures": _extract_procedures(text),
+            "title": _article_title(title),
             "iocs": _drop_citation_links(
                 _drop_publisher_domains(
-                    _extract_iocs(text),
+                    iocs,
                     # Judge the publisher by where we landed, not the link we were given
                     response.url if isinstance(response.url, str) else url,
                     # Full page text: contact addresses usually sit in the stripped footer
@@ -183,7 +200,6 @@ def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30) -
         result["ioc_mentions"] = ioc_mentions(text, result["iocs"])
         if include_text:
             result["text"] = text
-            result["title"] = (page_meta.title.string or "").strip() if page_meta.title else ""
 
         return result
 
@@ -202,46 +218,60 @@ def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30) -
         }
 
 
-def _extract_group_name(text: str, soup: BeautifulSoup) -> str:
-    """Extract threat group name from text."""
-    # Common threat group patterns
-    patterns = [
-        r'(APT\d+)',
-        r'(UNC\d+)',
-        r'(FIN\d+)',
-        r'(Lazarus Group)',
-        r'(Scattered Spider)',
-        r'(BlackCat|ALPHV)',
-        r'(LockBit)',
-        r'(Conti)',
-        r'(REvil)',
-        r'(DarkSide)',
-        r'(Wizard Spider)',
-        r'(Sandworm)',
-        r'(Fancy Bear|APT28)',
-        r'(Cozy Bear|APT29)',
-        r'(Kimsuky)',
-        r'(Carbanak)',
-        r'(Turla)',
-        r'(OilRig)',
-        r'(MuddyWater)',
-    ]
+# Without the ATT&CK bundle: well-known names, matched as whole words
+_KNOWN_GROUPS = [
+    r'APT\d+', r'UNC\d+', r'FIN\d+', 'Lazarus Group', 'Scattered Spider', 'BlackCat', 'ALPHV',
+    'LockBit', 'Conti', 'REvil', 'DarkSide', 'Wizard Spider', 'Sandworm', 'Fancy Bear',
+    'Cozy Bear', 'Kimsuky', 'Carbanak', 'Turla', 'OilRig', 'MuddyWater',
+]
 
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            return match.group(1)
 
-    # Try to extract from title
-    title = soup.find('title')
-    if title:
-        title_text = title.get_text()
-        for pattern in patterns:
-            match = re.search(pattern, title_text, re.IGNORECASE)
-            if match:
-                return match.group(1)
+def attack_group_names(bundle) -> Dict[str, str]:
+    """Every ATT&CK group name and alias → the group's ATT&CK name."""
+    objects = bundle.get("objects", []) if isinstance(bundle, dict) else getattr(bundle, "objects", []) or []
+    names: Dict[str, str] = {}
+    for obj in objects:
+        get = obj.get if isinstance(obj, dict) else (lambda k, d=None, o=obj: getattr(o, k, d))
+        if get("type") != "intrusion-set" or get("revoked") or get("x_mitre_deprecated"):
+            continue
+        name = get("name") or ""
+        for alias in [name] + list(get("aliases") or []):
+            if len(alias) >= 3:
+                names.setdefault(alias, name)
+    return names
 
-    return ""
+
+def _mentions(name: str, text: str) -> int:
+    # Case-sensitive whole words: actor names are proper nouns, and "Conti" is in "Continuous"
+    return len(re.findall(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])", text))
+
+
+def _extract_group_name(text: str, soup: BeautifulSoup, groups: Optional[Dict[str, str]] = None) -> str:
+    """
+    The group the post is about: the most-mentioned group name or alias, a mention in the
+    title counting for five. Among several groups, one passing mention isn't enough.
+    """
+    title = soup.find("title")
+    title_text = title.get_text() if title else ""
+    scores: Dict[str, int] = {}
+    if groups:
+        for alias, canonical in groups.items():
+            n = _mentions(alias, text) + 5 * _mentions(alias, title_text)
+            if n:
+                scores[canonical] = scores.get(canonical, 0) + n
+    else:
+        for pattern in _KNOWN_GROUPS:
+            for m in re.findall(r"(?<![\w-])" + pattern + r"(?![\w-])", text + "\n" + title_text * 5):
+                scores[m] = scores.get(m, 0) + 1
+    if not scores:
+        return ""
+    best, n = max(scores.items(), key=lambda kv: kv[1])
+    return best if n >= 2 or len(scores) == 1 else ""
+
+
+def _article_title(title: str) -> str:
+    """The page title without the site's name ("Nightmare-Eclipse Tooling … | Huntress")."""
+    return re.split(r"\s+[|\u2013\u2014]\s+|\s+-\s+(?=[^-]*$)", title)[0].strip() if title else ""
 
 
 def _extract_description(text: str) -> str:
