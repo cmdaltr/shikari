@@ -10056,6 +10056,20 @@ def api_feed(request: Request, archer_session: Optional[str] = Cookie(None)):
     return {**feed.view(_user_industries(user)), "can_edit_sources": user.role == UserRole.ADMIN}
 
 
+@app.get("/api/feed/search")
+def api_feed_search(request: Request, q: str = "", web: bool = True, archer_session: Optional[str] = Cookie(None)):
+    """Research by keyword: Archer's source archive, ATT&CK, and (web=true) Google News and Bing News."""
+    from archer.intelligence import research_search
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    _, db = auth_result
+    db.close()
+    result = research_search.search(q, getattr(request.app.state, "bundle", None), web=web)
+    return JSONResponse(result, status_code=400 if result.get("error") else 200)
+
+
 @app.post("/api/feed/refresh")
 def api_feed_refresh(request: Request, archer_session: Optional[str] = Cookie(None)):
     from archer.intelligence import feed

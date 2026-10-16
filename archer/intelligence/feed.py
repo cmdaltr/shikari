@@ -67,7 +67,6 @@ SOURCES = [
     ("The DFIR Report", "https://thedfirreport.com/feed/"),
     ("Red Canary", "https://redcanary.com/blog/feed/"),
     ("Huntress", "https://www.huntress.com/blog/rss.xml"),
-    ("Check Point Research", "https://research.checkpoint.com/feed/"),
     ("Elastic Security Labs", "https://www.elastic.co/security-labs/rss/feed.xml"),
     ("CISA", "https://www.cisa.gov/cybersecurity-advisories/all.xml"),
     ("NCSC (UK)", "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml"),
@@ -427,14 +426,16 @@ def fetch_sources(days: int = FEED_DAYS, sources=None) -> List[Dict]:
     import requests
 
     since = datetime.now(timezone.utc) - timedelta(days=days)
+    everything: List[Dict] = []  # the whole of each feed, for the research archive
 
     def one(src):
         name, url = src
         try:
             r = requests.get(url, timeout=FETCH_TIMEOUT, headers=HEADERS)
             r.raise_for_status()
-            recent = [p for p in parse_feed(r.content, name)
-                      if p["published"] and datetime.fromisoformat(p["published"]) >= since]
+            items = parse_feed(r.content, name)
+            everything.extend(items)
+            recent = [p for p in items if p["published"] and datetime.fromisoformat(p["published"]) >= since]
             _source_status[name] = {"ok": True, "posts": len(recent), "checked": time.time()}
             return recent
         except Exception as e:
@@ -444,6 +445,12 @@ def fetch_sources(days: int = FEED_DAYS, sources=None) -> List[Dict]:
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         posts = [p for batch in pool.map(one, sources if sources is not None else all_sources()) for p in batch]
+    try:
+        from archer.intelligence.research_search import archive
+
+        archive(everything)
+    except Exception as e:
+        print(f"Research archive not updated: {e}")
     seen, unique = set(), []
     for p in sorted(posts, key=lambda p: p["published"], reverse=True):
         if p["url"] not in seen:
@@ -676,6 +683,12 @@ def refresh(bundle, group_meta: Dict, days: int = FEED_DAYS, workers: int = 10) 
                 posts[post["url"]] = post
         data = {"posts": posts, "last_refresh": time.time(), "sources": dict(_source_status)}
         _save(data)
+        try:
+            from archer.intelligence.research_search import archive
+
+            archive([], posts)  # the analysed descriptions, so searches reach the article text
+        except Exception as e:
+            print(f"Research archive not updated: {e}")
         _status["last_refresh"] = data["last_refresh"]
         return data
     except Exception as e:

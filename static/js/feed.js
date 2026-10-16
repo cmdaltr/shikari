@@ -129,6 +129,44 @@
     load();
   });
 
+  // Search all research: the source archive, ATT&CK and (optionally) web news
+  $('fd-research-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const q = $('fd-research-q').value.trim(), out = $('fd-research-results'), btn = $('fd-research-go');
+    btn.disabled = true;
+    out.innerHTML = `<p class="fd-empty">Searching${$('fd-research-web').checked ? ' (the web takes a few seconds)' : ''}…</p>`;
+    let r;
+    try {
+      const res = await fetch(`/api/feed/search?q=${encodeURIComponent(q)}&web=${$('fd-research-web').checked}`);
+      r = await res.json();
+      if (!res.ok) throw new Error(r.error || res.status);
+    } catch (err) {
+      out.innerHTML = `<p class="fd-empty">${esc(err.message)}</p>`;
+      return;
+    } finally {
+      btn.disabled = false;
+    }
+    const words = r.query.toLowerCase().split(/\s+/);
+    const day = d => d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const story = (src, p) => `<li><span class="fd-r-meta">${esc(src)}${p.published ? ` · ${esc(day(p.published))}` : ''}</span>
+        <a href="${esc(p.url)}" target="_blank" rel="noopener">${mark(p.title, words)}</a>
+        ${p.summary ? `<p>${mark(p.summary, words)}</p>` : ''}
+        <a class="fd-analyse" href="/?report=${encodeURIComponent(p.url)}">Analyse in Archer →</a></li>`;
+    const groups = [
+      ["Archer's sources", `${r.archive_size.toLocaleString()} posts collected so far`, r.sources.map(p => story(p.source, p))],
+      ['MITRE ATT&amp;CK', '', r.attack.map(a => `<li><span class="fd-r-meta">${esc(a.kind)} · ${esc(a.id || '')}${a.named ? '' : ' · mentioned in its description'}</span>
+        <a href="${esc(a.url || '#')}" target="_blank" rel="noopener">${mark(a.name, words)}</a>
+        ${a.aliases.length ? `<p>Also: ${mark(a.aliases.join(', '), words)}</p>` : ''}</li>`)],
+      ...(r.web ? [['Web news', 'Google News and Bing News, security stories only', r.web.map(p => story(`${p.outlet} (${p.via})`, p))]] : []),
+    ];
+    // Groups with results get a column each; the empty ones share one line
+    const empty = groups.filter(g => !g[2].length).map(g => g[0] + (g[0] === "Archer's sources" ? ` (${g[1]})` : ''));
+    out.innerHTML = groups.filter(g => g[2].length).map(([title, note, items]) => `<div class="fd-r-group">
+        <h3 class="ui-subtitle">${title} <span class="fd-count">${items.length}</span></h3>
+        ${note ? `<p class="fd-r-note">${note}</p>` : ''}<ul>${items.join('')}</ul></div>`).join('')
+      + (empty.length ? `<p class="fd-empty">Nothing in ${empty.join(empty.length > 2 ? ', ' : ' or ')}.</p>` : '');
+  });
+
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }

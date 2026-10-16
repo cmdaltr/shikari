@@ -24,6 +24,19 @@
       <button type="button" class="fd-refresh" id="fd-refresh">Refresh now</button></p>
   </section>
 
+  <section class="fd-research" aria-labelledby="fd-research-title">
+    <h2 id="fd-research-title">Search all research</h2>
+    <p class="fd-research-note">Any time, not just this week: a campaign, tool or actor name ("GhostAction", "RedSun", "Salt Typhoon").
+      Searches every post Archer's sources have published that it has collected, ATT&amp;CK's groups, software and campaigns,
+      and optionally the web's security news.</p>
+    <form class="fd-research-form" id="fd-research-form" role="search">
+      <input type="search" id="fd-research-q" placeholder="Keyword, e.g. GhostAction" minlength="3" maxlength="100" required aria-label="Research keyword">
+      <label class="fd-research-web"><input type="checkbox" id="fd-research-web" checked> Include web news <span>(sends the keyword to Google and Bing)</span></label>
+      <button type="submit" class="btn-primary" id="fd-research-go">Search</button>
+    </form>
+    <div class="fd-research-results" id="fd-research-results" aria-live="polite"></div>
+  </section>
+
   <section class="fd-controls" aria-label="Search and filter">
     <input type="search" id="fd-search" class="fd-search" placeholder="Search titles and descriptions…" aria-label="Search titles and descriptions">
     <div class="fd-filters" role="radiogroup" aria-label="Which posts">

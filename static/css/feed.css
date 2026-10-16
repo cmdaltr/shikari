@@ -54,3 +54,23 @@ mark { background: rgba(250, 204, 21, .45); color: inherit; border-radius: 2px; 
 .fd-source-msg { flex-basis: 100%; font-size: .88em; color: var(--text-secondary); }
 .fd-source-msg.is-ok { color: #16a34a; }
 .fd-source-msg.is-bad { color: #dc2626; }
+/* Search all research */
+.fd-research { padding: 16px 20px; margin-bottom: 20px; color: var(--text-primary); }
+.fd-research h2 { font-size: 1.15em; margin: 0 0 6px; }
+.fd-research-note, .fd-r-note { color: var(--text-secondary); font-size: .9em; margin: 0 0 10px; }
+.fd-research-form { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.fd-research-form input[type="search"] { flex: 1 1 280px; min-width: 0; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font: inherit; }
+.fd-research-web { display: inline-flex; align-items: center; gap: 6px; font-size: .9em; }
+.fd-research-web span { color: var(--text-secondary); }
+.fd-research-results { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
+.fd-research-results > .fd-empty { flex-basis: 100%; margin: 0; order: -1; }
+.fd-r-group { flex: 1 1 300px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.fd-r-group h3 { font-size: 1em; margin: 0 0 4px; display: flex; gap: 8px; align-items: baseline; }
+.fd-r-group ul { list-style: none; margin: 0; padding: 0; max-height: 520px; overflow-y: auto; }
+.fd-r-group li { padding: 8px 0; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.fd-r-group li:first-child { border-top: 0; }
+.fd-r-group li > a:not(.fd-analyse) { font-weight: 600; color: var(--text-primary); text-decoration: none; }
+.fd-r-group li > a:not(.fd-analyse):hover { color: var(--fd-accent); }
+.fd-r-group li p { margin: 0; font-size: .85em; color: var(--text-secondary); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.fd-r-meta { font-size: .75em; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--text-secondary); }
+.fd-r-group .fd-analyse { padding-top: 2px; font-size: .82em; }

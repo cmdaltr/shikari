@@ -77,7 +77,7 @@
 .briefing,
 .table-section,
 .legend-bar,
-.fd-intro, .fd-section, .fd-sources,
+.fd-intro, .fd-section, .fd-sources, .fd-research,
 .ag-intro, .ag-form, .ag-history,
 .mn-card {
   background: var(--bg-secondary) !important;
