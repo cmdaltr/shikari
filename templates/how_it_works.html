@@ -786,7 +786,8 @@ python archer.py run_emulation "APT29" --mode simulate</code></pre>
                 <ol>
                     <li><strong>Input:</strong> User provides threat group name or technique ID</li>
                     <li><strong>MITRE Lookup:</strong> Fetches techniques from STIX 2.0 bundle</li>
-                    <li><strong>OSINT Enhancement:</strong> Searches local repos (Elastic, Splunk, Azure Sentinel, Google SecOps), plus LOLBAS, LOLRMM and LOLDrivers for tools the group is seen using</li>
+                    <li><strong>LOL datasets:</strong> LOLBAS, LOLRMM and LOLDrivers, for tools the group is seen using (ticked by default)</li>
+                    <li><strong>OSINT Enhancement:</strong> Searches local repos (Google SecOps, Azure Sentinel, Splunk, Elastic)</li>
                     <li><strong>Generation:</strong> Extracts indicators, validates schemas, generates platform queries</li>
                     <li><strong>Correlation:</strong> Analyzes attack paths, scores relationships (0-140 points)</li>
                     <li><strong>Validation:</strong> Calculates detection likelihood (0-100), syntax checking</li>
@@ -1511,7 +1512,7 @@ data/APT29/
             <details class="faq-item">
                 <summary class="faq-question">What's the difference between OSINT Enhancement and OSINT Comparison?</summary>
                 <div class="faq-answer">
-                    <p><strong>OSINT Enhancement:</strong> Automatically incorporates battle-tested detection patterns from OSINT sources (Elastic, Splunk community rules) directly into your queries. It also adds what LOLBAS, LOLRMM and LOLDrivers document about binaries, RMM tools and drivers the group is seen using, for the same technique. This is enabled by default on the Generate tab.</p>
+                    <p><strong>OSINT Enhancement:</strong> Automatically incorporates battle-tested detection patterns from OSINT sources (Elastic, Splunk community rules) directly into your queries. This is enabled by default on the Hunt and Analyse tabs. What LOLBAS, LOLRMM and LOLDrivers document about binaries, RMM tools and drivers the group is seen using is a separate option, <strong>LOL datasets</strong>, also ticked by default.</p>
                     <p><strong>OSINT Comparison:</strong> Compares techniques against OSINT databases and adds metadata to YAML files (visible in the "Show Details" button). This is reference-only and doesn't modify the queries themselves. Either option adds the known false positives that Elastic and Splunk rules document for the technique (LoFP-style).</p>
                 </div>
             </details>

@@ -383,7 +383,7 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 
 ### Living-off-the-Land Datasets
 
-Three of the [lolol.farm](https://lolol.farm) projects, fetched as JSON over HTTPS at most daily into `data/repos/lol/` and compacted into `data/cache/lol_index.json` (`archer/build/lol.py`). They're used only with **OSINT Enhancement**, and only for a tool the technique's own indicators or procedure already name, and (for LOLBAS) only when the project documents that binary under the same technique family. A group seen using `certutil.exe` for **T1105** gets certutil's T1105 switches; a group never seen using it gets nothing from LOLBAS.
+Three of the [lolol.farm](https://lolol.farm) projects, fetched as JSON over HTTPS at most daily into `data/repos/lol/` and compacted into `data/cache/lol_index.json` (`archer/build/lol.py`). They're used with **LOL datasets** (its own option on the Hunt and Analyse tabs, ticked by default; `lol_datasets=false` turns it off), and only for a tool the technique's own indicators or procedure already name, and (for LOLBAS) only when the project documents that binary under the same technique family. A group seen using `certutil.exe` for **T1105** gets certutil's T1105 switches; a group never seen using it gets nothing from LOLBAS.
 
 | Dataset | Licence | Added when a procedure or indicator names… | Adds |
 |---|---|---|---|

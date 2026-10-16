@@ -2922,6 +2922,7 @@ async def generate(
     run_emulation: str = Form(None),
     emulation_mode: str = Form("simulate"),
     osint_enhancement: str = Form(None),
+    lol_datasets: str = Form(None),
     osint_comparison: str = Form(None),
     merge_by_tactic: str = Form(None),
     merge_by_parent: str = Form(None),
@@ -2973,6 +2974,7 @@ async def generate(
                     # The Hunt tab's OSINT Enhancement box (ticked by default); a request without it keeps it on
                     osint_enhancement=(osint_enhancement != "false"),
                     osint_comparison=(osint_comparison == "true"),
+                    lol_datasets=(lol_datasets != "false"),  # ticked by default
                     merge_by_tactic=(merge_by_tactic == "true"),
                     merge_by_parent=(merge_by_parent == "true"),
                     **siem_args,
@@ -3155,6 +3157,7 @@ async def generate_cve(
     request: Request,
     cve_id: str = Form(...),
     osint_enhancement: str = Form(None),
+    lol_datasets: str = Form(None),
     run_correlation: str = Form(None),
     semantic: str = Form(None),
     advanced_parsing: str = Form(None),
@@ -3463,6 +3466,7 @@ async def generate_cve(
                 run_correlation=True,  # Always enabled by default
                 osint_enhancement=(osint_enhancement != "false"),  # The Hunt tab's box, ticked by default
                 osint_comparison=False,  # Default to false for CVE hunting
+                lol_datasets=(lol_datasets != "false"),
                 **siem_args,
                 **llm_args,
             )
@@ -3508,6 +3512,7 @@ async def hunt_technique(
     merge_by_tactic: str = Form(None),
     merge_by_parent: str = Form(None),
     osint_enhancement: str = Form(None),
+    lol_datasets: str = Form(None),
     osint_comparison: str = Form(None),
     ai_generators: str = Form(None),
     local_llm: str = Form(None),
@@ -3640,6 +3645,7 @@ async def hunt_technique(
                 run_correlation=True,
                 osint_enhancement=osint_enh,
                 osint_comparison=osint_comp,
+                lol_datasets=(lol_datasets != "false"),
                 merge_by_tactic=merge_tactic,
                 merge_by_parent=merge_parent,
                 correlation_min_relevance=correlation_threshold,
@@ -4347,6 +4353,7 @@ def modified_process_group_wrapper(
     run_correlation=False,
     osint_enhancement=False,
     osint_comparison=False,
+    lol_datasets=True,
     merge_by_tactic=False,
     merge_by_parent=False,
     excluded_vendors=None,
@@ -4402,6 +4409,7 @@ def modified_process_group_wrapper(
             run_correlation=run_correlation,
             osint_enhancement=osint_enhancement,
             osint_comparison=osint_comparison,
+            lol_datasets=lol_datasets,
             excluded_vendors=excluded_vendors,
             use_llm=use_llm,
             llm_config=llm_config,
@@ -4687,7 +4695,10 @@ async def generate_from_upload(
     synthetic_group_name: str = Form(...),
     selected_ttps: str = Form(None),
     selected_iocs: str = Form(None),
-    osint_enhancement: str = Form(None),    archer_session: Optional[str] = Cookie(None),
+    osint_enhancement: str = Form(None),
+    osint_comparison: str = Form(None),
+    lol_datasets: str = Form(None),
+    archer_session: Optional[str] = Cookie(None),
 ):
     """
     Generate detections from previously uploaded and extracted file.
@@ -4747,8 +4758,10 @@ async def generate_from_upload(
                 f"Generated from uploaded file: {filename}",
                 mentions=extraction_data.get("ioc_mentions"),
                 run_correlation=True,  # Always enabled by default
-                osint_enhancement=(osint_enhancement == "true"),  # The Analyse tab's box (ticked by default)
-                osint_comparison=False,  # Default to false for uploads
+                # The Analyse tab's boxes; a request without them keeps the defaults
+                osint_enhancement=(osint_enhancement != "false"),
+                osint_comparison=(osint_comparison == "true"),
+                lol_datasets=(lol_datasets != "false"),
                 **report_ai,
                 **_siem_args(archer_session),
             )
@@ -4916,7 +4929,11 @@ async def generate_from_blog(
     request: Request,
     synthetic_group_name: str = Form(...),
     selected_ttps: str = Form(None),
-    selected_iocs: str = Form(None),    archer_session: Optional[str] = Cookie(None),
+    selected_iocs: str = Form(None),
+    osint_enhancement: str = Form(None),
+    osint_comparison: str = Form(None),
+    lol_datasets: str = Form(None),
+    archer_session: Optional[str] = Cookie(None),
 ):
     """
     Generate detections from previously analyzed blog post.
@@ -4976,6 +4993,9 @@ async def generate_from_blog(
                 f"Generated from blog post: {url}",
                 mentions=extraction_data.get("ioc_mentions"),
                 run_correlation=run_correlation,
+                osint_enhancement=(osint_enhancement != "false"),
+                osint_comparison=(osint_comparison == "true"),
+                lol_datasets=(lol_datasets != "false"),
                 **report_ai,
                 **_siem_args(archer_session),
             )

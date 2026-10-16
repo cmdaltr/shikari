@@ -488,6 +488,11 @@ document.addEventListener('DOMContentLoaded', function () {
         // Add explicit true/false value
         formData.append('osint_enhancement', osintEnhancementCheckbox.checked ? 'true' : 'false');
       }
+      var lolCheckbox = document.getElementById('lol-datasets-checkbox');
+      if (lolCheckbox) {
+        formData.delete('lol_datasets');
+        formData.append('lol_datasets', lolCheckbox.checked ? 'true' : 'false');
+      }
 
       fetch(endpoint, {
         method: 'POST',
@@ -1062,6 +1067,12 @@ function showExtractionResults(data) {
     formData.append('synthetic_group_name', data.synthetic_group_name);
     formData.append('selected_ttps', JSON.stringify(selectedTtps));
     formData.append('selected_iocs', JSON.stringify(selectedIocs));
+    // The Analyse tab's options (unchecked boxes send nothing, so send each one)
+    [['lol_datasets', 'upload_lol_datasets'], ['osint_enhancement', 'upload_osint_enhancement'],
+     ['osint_comparison', 'upload_osint_comparison']].forEach(function (pair) {
+      var box = document.getElementById(pair[1]);
+      if (box) formData.append(pair[0], box.checked ? 'true' : 'false');
+    });
 
     // Determine endpoint based on whether filename starts with "Blog:"
     var endpoint = (data.filename && data.filename.startsWith('Blog:')) ? '/blog/generate' : '/upload/generate';

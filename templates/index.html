@@ -337,13 +337,24 @@
                       </div>
                     </label>
 
+                  <!-- LOLBAS / LOLDrivers / LOLRMM -->
+                  <label class="option-item">
+                    <input type="checkbox" name="lol_datasets" value="true" id="lol-datasets-checkbox" checked>
+                    <span class="option-label">
+                      LOL datasets
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">What LOLBAS, LOLDrivers and LOLRMM document about the binaries, drivers and RMM tools a group is seen using: their command lines, hashes and paths go into the queries, and each detection links to the entries. No AI; fetched at most daily.</span>
+                      </span>
+                    </span>
+                  </label>
+
                   <!-- Column 1: OSINT Enhancement -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_enhancement" value="true" id="osint-enhancement-checkbox" checked>
                     <span class="option-label">
                       OSINT Enhancement
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge indicators from public rules (Elastic, Splunk, Sentinel, Google SecOps), and from LOLBAS, LOLRMM and LOLDrivers for the tools a group is seen using. Adds known false positives to each detection.</span>
+                        <span class="option-info-tooltip">Merge indicators from public rules (Google SecOps, Sentinel, Splunk, Elastic). Adds known false positives to each detection.</span>
                       </span>
                     </span>
                   </label>
@@ -1757,13 +1768,24 @@
                       </div>
                     </label>
 
+                  <!-- LOLBAS / LOLDrivers / LOLRMM -->
+                  <label class="option-item">
+                    <input type="checkbox" name="lol_datasets" value="true" id="upload_lol_datasets" checked>
+                    <span class="option-label">
+                      LOL datasets
+                      <span class="option-info-icon">i
+                        <span class="option-info-tooltip">What LOLBAS, LOLDrivers and LOLRMM document about the binaries, drivers and RMM tools a group is seen using: their command lines, hashes and paths go into the queries, and each detection links to the entries. No AI; fetched at most daily.</span>
+                      </span>
+                    </span>
+                  </label>
+
                   <!-- Row 1 Column 1: OSINT Enhancement -->
                   <label class="option-item">
                     <input type="checkbox" name="osint_enhancement" id="upload_osint_enhancement" value="true" checked>
                     <span class="option-label">
                       OSINT Enhancement
                       <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge indicators from public rules (Elastic, Splunk, Sentinel, Google SecOps), and from LOLBAS, LOLRMM and LOLDrivers for the tools a group is seen using. Adds known false positives to each detection.</span>
+                        <span class="option-info-tooltip">Merge indicators from public rules (Google SecOps, Sentinel, Splunk, Elastic). Adds known false positives to each detection.</span>
                       </span>
                     </span>
                   </label>

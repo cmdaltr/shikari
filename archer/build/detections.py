@@ -266,7 +266,7 @@ def create_indicatorMappings():
     return indicatorMappings
 
 
-def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None):
+def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, lol_datasets=True, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None):
     from archer.build.queries import is_query_applicable
     from archer.build.platform_validator_v2 import validate_procedure_for_index
     from archer.build.platform_indicator_validator import (
@@ -389,10 +389,10 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
         return
 
     # LOLBAS / LOLRMM / LOLDrivers: what they document about the tools this technique's
-    # indicators and procedure already name (lol.py). Part of OSINT Enhancement; may give a
-    # technique with no indicators its first ones, from a tool the group is seen using
+    # indicators and procedure already name (lol.py). Its own option (LOL datasets); may give
+    # a technique with no indicators its first ones, from a tool the group is seen using
     lol_refs, known_fps = [], []
-    if osint_enhancement:
+    if lol_datasets:
         from archer.build import lol
         lol_added, lol_refs = lol.enrich(identifiers, tid, procedure_text)
         identifiers = dict(identifiers)  # don't add to the retrieved data's own dict

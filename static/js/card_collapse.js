@@ -4,6 +4,7 @@
 // The choice is remembered per page and title. A card that already has its own
 // Collapse/Expand control (an .expand-btn with "toggle" in its id) keeps it: the title works it.
 // A card drawn in more than one box names the others: data-collapse-with="<selector>".
+// A card that starts collapsed until opened says so: data-collapsed-default.
 (function () {
   const TITLES = 'h2, h3, .section-title, .tactic-section-title, .tactic-filter-label, .mn-card-title, .hiw-section-title';
   // Page titles, dialogs, sub-headings and lanes aren't card titles
@@ -47,8 +48,10 @@
   }
 
   const keyOf = title => `archer.collapsed:${location.pathname}:${title.textContent.trim().replace(/\s+/g, ' ').slice(0, 60)}`;
-  const remembered = key => { try { return localStorage.getItem(key) === '1'; } catch (e) { return false; } };
-  const remember = (key, on) => { try { on ? localStorage.setItem(key, '1') : localStorage.removeItem(key); } catch (e) {} };
+  // '1' collapsed, '0' opened (only kept for cards collapsed by default), nothing: the card's default
+  const remembered = (key, dflt) => { try { const v = localStorage.getItem(key); return v === null ? dflt : v === '1'; } catch (e) { return dflt; } };
+  const remember = (key, on, dflt) => { try { on ? localStorage.setItem(key, '1') : dflt ? localStorage.setItem(key, '0') : localStorage.removeItem(key); } catch (e) {} };
+  const collapsedByDefault = card => card.hasAttribute('data-collapsed-default');
 
   function set(title, card, on) {
     card.classList.toggle('is-card-collapsed', on);
@@ -69,7 +72,7 @@
         title.classList.add('card-title-toggle');
         title.setAttribute('role', 'button');
         title.tabIndex = 0;
-        if (!own) set(title, card, remembered(keyOf(title)));
+        if (!own) set(title, card, remembered(keyOf(title), collapsedByDefault(card)));
       }
       if (own) title.setAttribute('aria-expanded', String(ownExpanded(own)));
       else if (card.classList.contains('is-card-collapsed')) {
@@ -90,7 +93,7 @@
     }
     const on = !card.classList.contains('is-card-collapsed');
     set(title, card, on);
-    remember(keyOf(title), on);
+    remember(keyOf(title), on, collapsedByDefault(card));
   }
 
   document.addEventListener('click', e => {

@@ -59,7 +59,7 @@ def _produced(group_name, before):
     return before is None or after is None or after > before
 
 
-def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None):
+def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, lol_datasets=True, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None):
     global _dry_run_active
     _dry_run_active = dry_run
 
@@ -189,7 +189,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 _report_technique(group_name, technique, retrieved_data["technique"])
                 try:
                     before = run_files.touches(group_name)
-                    reason = compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
+                    reason = compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, lol_datasets=lol_datasets, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
                     produced = dry_run or _produced(group_name, before)
                     run_files.outcome(group_name, technique, retrieved_data["technique"], produced, reason)
                     if produced:
@@ -254,7 +254,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             _report_technique(group_name, procedure[0], procedure[1])
             try:
                 before = run_files.touches(group_name)
-                reason = compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
+                reason = compile_query(retrieved_data, osint_enhancement=osint_enhancement, osint_comparison=osint_comparison, lol_datasets=lol_datasets, excluded_vendors=excluded_vendors, use_llm=use_llm, llm_config=llm_config, dry_run=dry_run, siem_filter=siem_filter, index_filter=index_filter)
                 produced = dry_run or _produced(group_name, before)
                 run_files.outcome(group_name, procedure[0], procedure[1], produced, reason)
                 if produced:
