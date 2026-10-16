@@ -16,14 +16,16 @@
     <p>Which logs record each technique, from attacks emulated and recorded in labs, and whether your detections' indicators appear in them</p>
   </div>
 
+  <!-- Summary cards: the Coverage page's; the indicator check's colour is its state -->
+  <div class="em-tiles" id="em-stats">
+    <div class="em-tile is-recordings"><div class="number" id="em-datasets">–</div><div class="label">Recordings</div></div>
+    <div class="em-tile is-techniques"><div class="number" id="em-techniques">–</div><div class="label">Techniques</div></div>
+    <div class="em-tile em-check is-starting" id="em-check"><div class="number" id="em-values">Initialising…</div><div class="label">Indicator check</div></div>
+  </div>
+
   <!-- archer.telemetry: the recordings and where they come from -->
   <section class="ui-card ms-card">
     <h2>Recorded telemetry</h2>
-    <dl class="ms-stats em-stats" id="em-stats">
-      <div><dt>Recordings</dt><dd id="em-datasets">–</dd></div>
-      <div><dt>Techniques</dt><dd id="em-techniques">–</dd></div>
-      <div class="em-check is-starting" id="em-check"><dt>Indicator check</dt><dd id="em-values">Initialising…</dd></div>
-    </dl>
     <ul class="em-sources" id="em-sources"></ul>
     <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
       It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.

@@ -50,7 +50,7 @@
   // ---------- Recorded telemetry ----------
   let timer = null;
   function setCheck(cls, text, title = '') {
-    $('em-check').className = `em-check ${cls}`;
+    $('em-check').className = `em-tile em-check ${cls}`;
     $('em-values').textContent = text;
     $('em-check').title = title;
   }
