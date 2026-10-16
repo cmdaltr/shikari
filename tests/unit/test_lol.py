@@ -89,3 +89,23 @@ def test_known_false_positives_only_for_the_named_tools(monkeypatch):
     fps = osint_index.known_false_positives("T1003.001", terms=["procdump.exe"])
     assert [f["rule"] for f in fps] == ["Procdump LSASS"]
     assert len(osint_index.known_false_positives("T1003.001")) == 3
+
+
+def test_lol_enrichment_off_skips_the_lookup(monkeypatch):
+    from archer.build import detections, lol
+
+    monkeypatch.setattr(lol, "enrich", lambda *a: (_ for _ in ()).throw(AssertionError("looked up")))
+    ids = {"sw": ["certutil.exe"]}
+    assert detections.lol_enrichment(ids, "T1105", "", enabled=False) == (ids, [])
+
+
+def test_lol_enrichment_on_adds_without_touching_the_original(monkeypatch):
+    from archer.build import detections, lol
+
+    ref = {"source": "LOLBAS", "name": "Certutil.exe"}
+    monkeypatch.setattr(lol, "enrich", lambda ids, tid, text: ({"cmd": ["Certutil.exe -urlcache"], "hash": ["abc"]}, [ref]))
+    ids = {"sw": ["certutil.exe"], "cmd": ["certutil -f"]}
+    out, refs = detections.lol_enrichment(ids, "T1105", "used certutil")
+    assert out == {"sw": ["certutil.exe"], "cmd": ["certutil -f", "Certutil.exe -urlcache"], "hash": ["abc"]}
+    assert refs == [ref]
+    assert ids == {"sw": ["certutil.exe"], "cmd": ["certutil -f"]}

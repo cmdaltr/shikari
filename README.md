@@ -212,6 +212,7 @@ adfconsole (generate) > show options
   MODE                 llm                       no         Query generation mode
   CORRELATE            True                      no         Run correlation after generation
   HYPOTHESIS                                     no         Optional hypothesis
+  LOL                  True                      no         LOLBAS, LOLDrivers and LOLRMM for tools the group is seen using
   OSINT                False                     no         Enable OSINT enhancement
   OSINT_COMPARE        False                     no         Enable OSINT comparison
 

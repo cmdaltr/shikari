@@ -115,6 +115,11 @@ class ArcherClient:
         return {k: "true" for k, v in flags.items() if v}
 
     @staticmethod
+    def _on_off(**flags) -> Dict[str, str]:
+        """Boxes the web form ticks by default: the routes take them as on unless sent "false"."""
+        return {k: "true" if v else "false" for k, v in flags.items()}
+
+    @staticmethod
     def _run_name(data: Dict) -> str:
         target = data.get("redirect_url") or data.get("redirect") or ""
         if "/manual" in target:
@@ -159,17 +164,18 @@ class ArcherClient:
     # ------------------------------------------------------------------
 
     def hunt_group(self, group: str, *, provider: Optional[str] = None, model: Optional[str] = None,
-                   correlate: bool = True, osint: bool = False, osint_compare: bool = False,
+                   correlate: bool = True, lol: bool = True, osint: bool = False, osint_compare: bool = False,
                    merge_by_tactic: bool = False, merge_by_parent: bool = False,
                    exclude: Optional[List[str]] = None, validate: bool = False,
                    emulation: Optional[str] = None) -> str:
         """emulation: "simulate" or "live" runs Atomic Red Team after generation."""
         exclude = {s.lower() for s in exclude or []}
         data = {"group_name": group, **self._ai_fields(provider, model), **self._flags(
-            run_correlation=correlate, osint_enhancement=osint, osint_comparison=osint_compare,
+            run_correlation=correlate, osint_comparison=osint_compare,
             merge_by_tactic=merge_by_tactic, merge_by_parent=merge_by_parent, auto_validate=validate,
             run_emulation=bool(emulation), exclude_splunk="splunk" in exclude, exclude_mde="mde" in exclude,
-            exclude_secops="secops" in exclude, exclude_elastic="elastic" in exclude)}
+            exclude_secops="secops" in exclude, exclude_elastic="elastic" in exclude), **self._on_off(
+            osint_enhancement=osint, lol_datasets=lol)}
         if emulation:
             data["emulation_mode"] = emulation
         return self._run_name(self._json("POST", "/generate", data=data))
@@ -181,11 +187,11 @@ class ArcherClient:
 
     def hunt_techniques(self, technique_ids: List[str], *, provider: Optional[str] = None,
                         model: Optional[str] = None, merge_by_tactic: bool = False,
-                        merge_by_parent: bool = False, osint: bool = False, osint_compare: bool = False,
-                        min_relevance: Optional[float] = None) -> str:
+                        merge_by_parent: bool = False, lol: bool = True, osint: bool = False,
+                        osint_compare: bool = False, min_relevance: Optional[float] = None) -> str:
         data = {"technique_ids": ",".join(technique_ids), **self._ai_fields(provider, model), **self._flags(
-            merge_by_tactic=merge_by_tactic, merge_by_parent=merge_by_parent,
-            osint_enhancement=osint, osint_comparison=osint_compare)}
+            merge_by_tactic=merge_by_tactic, merge_by_parent=merge_by_parent, osint_comparison=osint_compare),
+            **self._on_off(osint_enhancement=osint, lol_datasets=lol)}
         if min_relevance is not None:
             data["correlation_min_relevance"] = str(min_relevance)
         return self._run_name(self._json("POST", "/hunt/technique", data=data))

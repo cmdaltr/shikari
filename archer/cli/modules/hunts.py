@@ -14,6 +14,7 @@ class GroupHuntModule(ServerModule):
             "GROUP": ModuleOption(name="GROUP", description="ATT&CK group name or alias (e.g. APT29, Scattered Spider)", required=True),
             **ai_options(),
             "CORRELATE": ModuleOption(name="CORRELATE", description="Build correlation queries", default=True),
+            "LOL": ModuleOption(name="LOL", description="LOLBAS, LOLDrivers and LOLRMM for tools the group is seen using", default=True),
             "OSINT": ModuleOption(name="OSINT", description="OSINT enhancement", default=False),
             "OSINT_COMPARE": ModuleOption(name="OSINT_COMPARE", description="OSINT comparison (reference only)", default=False),
             "MERGE_BY_TACTIC": ModuleOption(name="MERGE_BY_TACTIC", description="Merge detections by tactic", default=False),
@@ -33,7 +34,7 @@ class GroupHuntModule(ServerModule):
             print_briefing(client().threat_briefing(o["GROUP"]))
         provider, model = self.ai_choice()
         run = client().hunt_group(
-            o["GROUP"], provider=provider, model=model, correlate=o["CORRELATE"], osint=o["OSINT"],
+            o["GROUP"], provider=provider, model=model, correlate=o["CORRELATE"], lol=o["LOL"], osint=o["OSINT"],
             osint_compare=o["OSINT_COMPARE"], merge_by_tactic=o["MERGE_BY_TACTIC"],
             merge_by_parent=o["MERGE_BY_PARENT"], validate=o["VALIDATE"],
             exclude=[s.strip() for s in (o["EXCLUDE"] or "").split(",") if s.strip()],
@@ -72,6 +73,7 @@ class TechniqueHuntModule(ServerModule):
             **ai_options(),
             "MERGE_BY_TACTIC": ModuleOption(name="MERGE_BY_TACTIC", description="Merge detections by tactic", default=False),
             "MERGE_BY_PARENT": ModuleOption(name="MERGE_BY_PARENT", description="Merge sub-techniques into their parent", default=False),
+            "LOL": ModuleOption(name="LOL", description="LOLBAS, LOLDrivers and LOLRMM for tools the group is seen using", default=True),
             "OSINT": ModuleOption(name="OSINT", description="OSINT enhancement", default=False),
             "OSINT_COMPARE": ModuleOption(name="OSINT_COMPARE", description="OSINT comparison (reference only)", default=False),
             "MIN_RELEVANCE": ModuleOption(name="MIN_RELEVANCE", description="Minimum correlation relevance, 0-1 (blank = configured)"),
@@ -90,6 +92,6 @@ class TechniqueHuntModule(ServerModule):
             return
         run = client().hunt_techniques(
             ids, provider=provider, model=model,
-            merge_by_tactic=o["MERGE_BY_TACTIC"], merge_by_parent=o["MERGE_BY_PARENT"], osint=o["OSINT"],
+            merge_by_tactic=o["MERGE_BY_TACTIC"], merge_by_parent=o["MERGE_BY_PARENT"], lol=o["LOL"], osint=o["OSINT"],
             osint_compare=o["OSINT_COMPARE"], min_relevance=float(o["MIN_RELEVANCE"]) if o["MIN_RELEVANCE"] else None)
         self.follow(run)

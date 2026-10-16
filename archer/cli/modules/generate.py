@@ -44,6 +44,11 @@ class GenerateModule(BaseModule):
                 name="HYPOTHESIS",
                 description="Optional hypothesis for the group",
             ),
+            "LOL": ModuleOption(
+                name="LOL",
+                description="LOLBAS, LOLDrivers and LOLRMM for tools the group is seen using",
+                default=True,
+            ),
             "OSINT": ModuleOption(
                 name="OSINT",
                 description="Enable OSINT enhancement",
@@ -116,6 +121,7 @@ class GenerateModule(BaseModule):
             run_correlation=bool(self.options["CORRELATE"].effective_value),
             osint_enhancement=bool(self.options["OSINT"].effective_value),
             osint_comparison=bool(self.options["OSINT_COMPARE"].effective_value),
+            lol_datasets=bool(self.options["LOL"].effective_value),
             use_llm=use_llm,
             llm_config=llm_config,
             dry_run=dry_run,

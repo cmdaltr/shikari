@@ -83,3 +83,16 @@ def test_server_errors_carry_the_route_message():
     c.session.request.return_value = r
     with pytest.raises(ArcherError, match="Group 'X' not found"):
         c.threat_briefing("X")
+
+
+@pytest.mark.unit
+def test_default_on_boxes_sent_explicitly():
+    """OSINT Enhancement and LOL datasets are ticked by default on the web form, so the
+    routes treat them as on unless told "false"; the client always says which."""
+    sent = {}
+    c = _client({("POST", "/generate"): lambda kw: sent.update(kw["data"]) or
+                 {"redirect_url": "/progress?group_name=FIN7"}})
+    c.hunt_group("FIN7", provider="")
+    assert sent["osint_enhancement"] == "false" and sent["lol_datasets"] == "true"
+    c.hunt_group("FIN7", provider="", osint=True, lol=False)
+    assert sent["osint_enhancement"] == "true" and sent["lol_datasets"] == "false"
