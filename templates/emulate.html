@@ -16,6 +16,25 @@
     <p>Which logs record each technique, from attacks emulated and recorded in labs, and whether your detections' indicators appear in them</p>
   </div>
 
+  <!-- archer.telemetry: the recordings and where they come from -->
+  <section class="ui-card ms-card">
+    <h2>Recorded telemetry</h2>
+    <dl class="ms-stats em-stats" id="em-stats">
+      <div><dt>Recordings</dt><dd id="em-datasets">–</dd></div>
+      <div><dt>Techniques</dt><dd id="em-techniques">–</dd></div>
+      <div class="em-check is-starting" id="em-check"><dt>Indicator check</dt><dd id="em-values">Initialising…</dd></div>
+    </dl>
+    <ul class="em-sources" id="em-sources"></ul>
+    <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
+      It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.
+      The recordings ship with Archer; <strong>Update</strong> (or <code>python -m archer.telemetry --build</code>) fetches what the sources have changed since. No AI is involved.</p>
+    <div class="ui-actions ms-actions">
+      <span class="ms-state" id="em-state" aria-live="polite"></span>
+      <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
+    </div>
+    <pre class="ms-log" id="em-log" hidden></pre>
+  </section>
+
   <!-- Filters: the Coverage page's filter card. Which apply depends on the view below. -->
   <div class="ui-card em-filters">
     <div class="detection-header">
@@ -53,25 +72,6 @@
       </div>
     </div>
   </div>
-
-  <!-- archer.telemetry: the recordings and where they come from -->
-  <section class="ui-card ms-card">
-    <h2>Recorded telemetry</h2>
-    <dl class="ms-stats em-stats" id="em-stats">
-      <div><dt>Recordings</dt><dd id="em-datasets">–</dd></div>
-      <div><dt>Techniques</dt><dd id="em-techniques">–</dd></div>
-      <div class="em-check is-starting" id="em-check"><dt>Indicator check</dt><dd id="em-values">Initialising…</dd></div>
-    </dl>
-    <ul class="em-sources" id="em-sources"></ul>
-    <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
-      It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.
-      The recordings ship with Archer; <strong>Update</strong> (or <code>python -m archer.telemetry --build</code>) fetches what the sources have changed since. No AI is involved.</p>
-    <div class="ui-actions ms-actions">
-      <span class="ms-state" id="em-state" aria-live="polite"></span>
-      <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
-    </div>
-    <pre class="ms-log" id="em-log" hidden></pre>
-  </section>
 
   <section class="ui-card ms-card" id="em-view-card">
     <h2 class="em-view-title">Telemetry by
