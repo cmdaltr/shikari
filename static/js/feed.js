@@ -1,7 +1,7 @@
 // Threat Feed page (templates/feed.html): a searchable wall of tagged posts, refreshed in the background.
 (function () {
   const $ = id => document.getElementById(id);
-  let timer = null, posts = [], show = 'relevant';
+  let timer = null, posts = [], show = 'both';
 
   async function load() {
     clearTimeout(timer);
@@ -28,7 +28,7 @@
   }
 
   function visible(p, words) {
-    if (show === 'relevant' && !p.relevant) return false;
+    if (show === 'both' && !p.relevant) return false;
     if (show === 'yours' && !Object.keys(p.yours).length) return false;
     if (show === 'motive' && !p.tags.motives.length) return false;
     const hay = `${p.title} ${p.description || ''}`.toLowerCase();

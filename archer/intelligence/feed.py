@@ -15,6 +15,8 @@ those too), and the paragraph either side. A passing mention in a policy piece o
   activity is attributed to that nation ("China-nexus", "DPRK", "Russian GRU"); and
   industries the post itself names twice or in its title.
 - Nations: those attributed in that text, and the nexus of each named group.
+- Actors ATT&CK doesn't have yet (Storm-2603, UNC6040, "… Typhoon", "… Spider"): the
+  vendors' naming schemes give their nation or financial motive (ACTOR_NAMES).
 - Opportunistic: supply-chain and package-registry compromise, reported exploitation,
   ransomware-as-a-service, infostealers, botnets, malvertising, initial access brokers.
 - Financially motivated: ransomware, extortion, BEC, crypto theft or mining, banking
@@ -44,7 +46,7 @@ from typing import Dict, Iterable, List, Optional
 from archer.config import DATA_DIR
 
 FEED_DAYS = 7
-ANALYSIS_VERSION = 7        # bump when the matchers change: cached posts are analysed again
+ANALYSIS_VERSION = 9        # bump when the matchers change: cached posts are analysed again
 REFRESH_EVERY = 6 * 3600
 FEED_DIR = os.path.join(DATA_DIR, "feed")
 CACHE_PATH = os.path.join(FEED_DIR, "posts.json")
@@ -71,7 +73,7 @@ SOURCES = [
     ("NCSC (UK)", "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml"),
     ("Recorded Future", "https://www.recordedfuture.com/feed"),
     ("Trend Micro Research", "http://feeds.trendmicro.com/TrendMicroResearch"),
-    ("Rapid7", "https://www.rapid7.com/blog/rss/"),
+    ("Rapid7", "https://www.rapid7.com/rss.xml"),
     ("FortiGuard Labs", "https://feeds.fortinet.com/fortinet/blog/threat-research"),
 ]
 
@@ -136,23 +138,115 @@ _INDICATOR = re.compile(
 _CVE = re.compile(r"\bCVE-\d{4}-\d{4,7}\b")
 
 # Attribution to a nation: "China-nexus", "Chinese state-sponsored", "DPRK hackers"; a bare
-# country name is usually geography (the victim), not the attacker
+# country name is usually geography (the victim), not the attacker. In scope: every state the
+# IISS assesses in Cyber Capabilities and National Power (2021; tier one: United States; tier
+# two: Australia, Canada, China, France, Israel, Russia, United Kingdom; tier three: India,
+# Indonesia, Iran, Japan, Malaysia, North Korea, Vietnam) and its volume 2 (2023: Brazil,
+# Estonia, Germany, Netherlands, Nigeria, Saudi Arabia, Singapore, South Africa, Türkiye,
+# UAE); those ATT&CK attributes groups to; and the origins vendors' actor names encode
+# (ACTOR_NAMES). Acronyms are case-sensitive, so "us" isn't the US.
 NATIONS = {
-    "China": r"China|Chinese|PRC",
-    "Russia": r"Russia|Russian|GRU|FSB|SVR",
-    "Iran": r"Iran|Iranian|IRGC|MOIS",
-    "North Korea": r"North Korea|North Korean|DPRK",
+    "China": r"China|Chinese|(?-i:PRC)",
+    "Russia": r"Russia|Russian|(?-i:GRU|FSB|SVR)",
+    "Iran": r"Iran|Iranian|(?-i:IRGC|MOIS)",
+    "North Korea": r"North Korea|North Korean|(?-i:DPRK)",
+    "United States": r"United States|American|(?-i:US|U\.S\.|USA|NSA|CIA)",
+    "United Kingdom": r"United Kingdom|British|(?-i:UK|U\.K\.|GCHQ)",
+    "Australia": r"Australia|Australian", "Canada": r"Canada|Canadian", "France": r"France|French",
+    "Israel": r"Israel|Israeli", "India": r"India|Indian", "Indonesia": r"Indonesia|Indonesian",
+    "Japan": r"Japan|Japanese", "Malaysia": r"Malaysia|Malaysian", "Vietnam": r"Vietnam|Vietnamese|Viet Nam",
+    # IISS volume 2 (2023)
+    "Brazil": r"Brazil|Brazilian", "Estonia": r"Estonia|Estonian", "Germany": r"Germany|German",
+    "Netherlands": r"Netherlands|Dutch", "Nigeria": r"Nigeria|Nigerian", "Saudi Arabia": r"Saudi Arabia|Saudi",
+    "Singapore": r"Singapore|Singaporean", "South Africa": r"South Africa|South African",
+    "Turkey": r"Turkey|Turkish|Türkiye|Turkiye", "United Arab Emirates": r"United Arab Emirates|Emirati|(?-i:UAE)",
+    # Not assessed by the IISS, but ATT&CK attributes groups to them, or vendors' names do
+    "Pakistan": r"Pakistan|Pakistani", "Belarus": r"Belarus|Belarusian", "Lebanon": r"Lebanon|Lebanese",
+    "South Korea": r"South Korea|South Korean",
 }
+# The four with long ATT&CK records keep the broad wording ("Chinese operators", "Iran-based
+# cluster"). Elsewhere it must be unmistakable attribution: "US-based", "UK groups", "French
+# intelligence" and "American operators" are usually victims, vendors or the advisory's
+# co-signers (a joint CISA/NCSC advisory names both)
+_BROAD = {"China", "Russia", "Iran", "North Korea"}
 _ATTRIBUTED = (r"(?:-|\s)(?:nexus|linked|based|backed|sponsored|state[- ]sponsored|affiliated|aligned|government[- ]linked"
                r"|nation[- ]state|APT|threat actors?|hackers|actors?|operators|groups?|cluster|intelligence)")
-NATION_PATTERNS = {n: re.compile(rf"\b(?:{alt}){_ATTRIBUTED}\b|\b(?:state[- ]sponsored|nation[- ]state)\s+(?:{alt})\b", re.I)
-                   for n, alt in NATIONS.items()}
-# A nation's industries: those at least this share of its ATT&CK groups target
+_ATTRIBUTED_STRICT = (r"(?:-|\s)(?:nexus|backed|(?:state|government)[- ]sponsored|sponsored|government[- ]linked"
+                      r"|nation[- ]state|APT|threat actors?|hackers|espionage (?:group|actor|campaign)s?)")
+NATION_PATTERNS = {
+    n: re.compile(rf"\b(?:{alt}){_ATTRIBUTED if n in _BROAD else _ATTRIBUTED_STRICT}\b"
+                  rf"|\b(?:state[- ]sponsored|nation[- ]state)\s+(?:{alt})\b", re.I)
+    for n, alt in NATIONS.items()}
+# "-nexus" is only ever attribution, so any country before it counts ("Kazakhstan-nexus")
+_ANY_NEXUS = re.compile(r"\b([A-Z][a-z]+(?: [A-Z][a-z]+)?)-nexus\b")
+_NEXUS_ALIASES = {"PRC": "China", "DPRK": "North Korea", "US": "United States", "UK": "United Kingdom",
+                  "UAE": "United Arab Emirates", "Turkiye": "Turkey", "Türkiye": "Turkey"}
+
+
+def nations_in(text: str) -> List[str]:
+    """Nations the text attributes activity to: NATION_PATTERNS, and any "<Country>-nexus"."""
+    found = {n for n, pattern in NATION_PATTERNS.items() if pattern.search(text)}
+    for m in _ANY_NEXUS.finditer(text):
+        name = m.group(1)
+        name = _NEXUS_ALIASES.get(name, name)
+        # Demonyms: "Chinese-nexus" is China's, already found above
+        if not any(re.fullmatch(alt, name, re.I) for alt in NATIONS.values()):
+            found.add(name)
+    return sorted(found)
+
+
+# A nation's industries: those at least this share of its ATT&CK groups target, when it has
+# enough groups for a share to mean anything
+MIN_PROFILE_GROUPS = 5
 NATION_SECTOR_SHARE = 0.3
 
 FINANCIAL = re.compile(r"financially[- ]motivated|\bransomware\b|\bextortion\b|business email compromise|\bBEC\b"
                        r"|crypto(?:currency)?[- ](?:theft|heist|drain)|cryptomin(?:er|ing)|\bXMRig\b|banking trojan"
                        r"|\bcarding\b|payment card (?:theft|skimm)", re.I)
+
+# Threat actors ATT&CK doesn't (yet) have: vendors name new clusters months or years before
+# ATT&CK adds a group, and their naming schemes say the nation or motive. (pattern, nation,
+# financial)
+_CAP = r"[A-Z][a-z]{2,}"
+ACTOR_NAMES = [
+    # Microsoft: <weather> family by origin; Storm-#### unattributed
+    (rf"\b{_CAP} Typhoon\b", "China", False), (rf"\b{_CAP} Blizzard\b", "Russia", False),
+    (rf"\b{_CAP} Sandstorm\b", "Iran", False), (rf"\b{_CAP} Sleet\b", "North Korea", False),
+    (rf"\b{_CAP} Hail\b", "South Korea", False), (rf"\b{_CAP} Dust\b", "Turkey", False),
+    (rf"\b{_CAP} Cyclone\b", "Vietnam", False), (rf"\b{_CAP} Tempest\b", None, True),
+    (r"\bStorm-\d{4}\b", None, False),
+    # CrowdStrike: <animal> by origin; Spider is eCrime
+    (rf"\b{_CAP} Panda\b", "China", False), (rf"\b{_CAP} Bear\b", "Russia", False),
+    (rf"\b{_CAP} Kitten\b", "Iran", False), (rf"\b{_CAP} Chollima\b", "North Korea", False),
+    (rf"\b{_CAP} Spider\b", None, True),
+    # Unit 42: <constellation> by origin or motive; CL-STA (state), CL-CRI (criminal)
+    (rf"\b{_CAP} Taurus\b", "China", False), (rf"\b{_CAP} Ursa\b", "Russia", False),
+    (rf"\b{_CAP} Serpens\b", "Iran", False), (rf"\b{_CAP} Pisces\b", "North Korea", False),
+    (rf"\b{_CAP} (?:Libra|Scorpius)\b", None, True),
+    (r"\b(?:CL|TGR)-STA-\d{3,}\b", None, False), (r"\b(?:CL|TGR)-CRI-\d{3,}\b", None, True),
+    # Numbered clusters: Mandiant UNC/FIN, Proofpoint TA, Talos UAT, Recorded Future TAG
+    (r"\bUNC\d{3,5}\b", None, False), (r"\bFIN\d{1,3}\b", None, True), (r"\bTA\d{3,4}\b", None, False),
+    (r"\bUAT-?\d{3,5}\b", None, False), (r"\bTAG-\d{2,4}\b", None, False),
+]
+ACTOR_PATTERNS = [(re.compile(p), nation, financial) for p, nation, financial in ACTOR_NAMES]
+# "Teddy Bear", "Red Panda" and the like aren't actors
+_NOT_ACTORS = {"Teddy Bear", "Red Panda", "Giant Panda", "Polar Bear", "Brown Bear", "Black Bear", "Grizzly Bear",
+               "Sand Storm", "Dust Storm"}
+
+
+def actors(context: str, known: Iterable[str] = ()) -> List[Dict]:
+    """Vendor-named actors in the technical text, ATT&CK groups (`known` names) excluded."""
+    known = {k.lower() for k in known}
+    out, seen = [], set()
+    for pattern, nation, financial in ACTOR_PATTERNS:
+        for m in pattern.finditer(context):
+            name = m.group(0)
+            if name in _NOT_ACTORS or name.lower() in known or name in seen:
+                continue
+            seen.add(name)
+            out.append({"name": name, "nation": nation, "financial": financial})
+    return out[:15]
+
 
 _lock = threading.Lock()
 _refreshing = False
@@ -192,7 +286,13 @@ def _date(value: str) -> Optional[datetime]:
 
 def parse_feed(xml: bytes, source: str) -> List[Dict]:
     """RSS 2.0 items or Atom entries as {title, url, source, published, summary}."""
-    root = ET.fromstring(xml)
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        # One bad character (Rapid7's feed has some) shouldn't lose the whole feed: lxml's
+        # recovering parser keeps every item it can read
+        from lxml import etree
+        root = ET.fromstring(etree.tostring(etree.fromstring(xml, etree.XMLParser(recover=True, huge_tree=True))))
     atom = "{http://www.w3.org/2005/Atom}"
     items = root.findall(".//item") or root.findall(f".//{atom}entry")
     posts = []
@@ -244,7 +344,7 @@ def fetch_sources(days: int = FEED_DAYS, sources=SOURCES) -> List[Dict]:
 # ---------------------------------------------------------------- analysis
 
 def group_index(bundle, group_meta: Dict) -> List[Dict]:
-    """ATT&CK groups as {id, name, pattern, sectors, nexus, financial} for matching in prose."""
+    """ATT&CK groups as {id, name, aliases, pattern, sectors, nexus, financial} for matching in prose."""
     groups = []
     for obj in getattr(bundle, "objects", None) or []:
         if obj.get("type") != "intrusion-set" or obj.get("revoked") or obj.get("x_mitre_deprecated"):
@@ -259,7 +359,7 @@ def group_index(bundle, group_meta: Dict) -> List[Dict]:
         sectors = [s.strip() for s in (meta.get("target_sectors") or "").split(";") if s.strip()]
         objectives = meta.get("primary_objectives") or ""
         groups.append({
-            "id": gid, "name": obj.get("name"),
+            "id": gid, "name": obj.get("name"), "aliases": sorted(names),
             # Case-sensitive: aliases are proper nouns, and lower-case matches are usually words
             "pattern": re.compile(r"(?<![\w-])(?:" + "|".join(map(re.escape, sorted(names, key=len, reverse=True)))
                                   + r")(?![\w-])"),
@@ -271,7 +371,7 @@ def group_index(bundle, group_meta: Dict) -> List[Dict]:
 
 
 def nation_profiles(group_meta: Dict, share: float = NATION_SECTOR_SHARE) -> Dict[str, List[str]]:
-    """Industries most of each nation's ATT&CK groups target (NATIONS only: the rest are too few)."""
+    """Industries most of each nation's ATT&CK groups target (none for a nation with too few groups)."""
     profiles = {}
     groups = [v for k, v in group_meta.items() if k.startswith("G")]
     for nation in NATIONS:
@@ -280,7 +380,8 @@ def nation_profiles(group_meta: Dict, share: float = NATION_SECTOR_SHARE) -> Dic
         for g in members:
             for sector in {s.strip() for s in (g.get("target_sectors") or "").split(";") if s.strip()}:
                 counts[sector] = counts.get(sector, 0) + 1
-        profiles[nation] = sorted(s for s, n in counts.items() if members and n / len(members) >= share)
+        profiles[nation] = (sorted(s for s, n in counts.items() if n / len(members) >= share)
+                            if len(members) >= MIN_PROFILE_GROUPS else [])
     return profiles
 
 
@@ -360,6 +461,9 @@ def analyse_post(post: Dict, groups: List[Dict], profiles: Optional[Dict[str, Li
     text = result.get("text") or ""
     context = technical_context(post["title"], text)
     named = [g for g in groups if g["pattern"].search(context)]
+    # Every name and alias of the ATT&CK groups found, so a vendor name that is an alias isn't counted twice
+    known = [n for g in named for n in [g["name"]] + g.get("aliases", [])]
+    others = actors(context, known)
     iocs = result.get("iocs") or {}
 
     reasons: Dict[str, List[str]] = {}
@@ -372,17 +476,21 @@ def analyse_post(post: Dict, groups: List[Dict], profiles: Optional[Dict[str, Li
     for g in named:
         for sector in g["sectors"]:
             because(sector, f"{g['name']} ({g['id']})")
-    nations = sorted({n for n, pattern in NATION_PATTERNS.items() if pattern.search(context)})
+    nations = nations_in(context)
     for nation in nations:
         for sector in (profiles or {}).get(nation, []):
             because(sector, f"{nation}-nexus activity")
     for label, n in _sector_mentions(technical_context("", text), post["title"]).items():
         if n >= 2:
             because(label, "named in the post")
-    nations = sorted(set(nations) | {g["nexus"] for g in named if g["nexus"]})
+    for a in others:
+        for sector in (profiles or {}).get(a["nation"], []):
+            because(sector, f"{a['name']} ({a['nation']}-nexus)")
+    nations = sorted(set(nations) | {g["nexus"] for g in named if g["nexus"]} | {a["nation"] for a in others if a["nation"]})
     opportunistic = sorted({reason for pattern, reason in OPPORTUNISTIC if pattern.search(context)})
     financial = sorted({m.group(0).lower() for m in FINANCIAL.finditer(context)}
-                       | {f"{g['name']} (financial)" for g in named if g["financial"]})
+                       | {f"{g['name']} (financial)" for g in named if g["financial"]}
+                       | {f"{a['name']} (financial)" for a in others if a["financial"]})
     return {
         **post,
         "description": describe(post.get("summary") or "", text, post["title"]),
@@ -391,6 +499,7 @@ def analyse_post(post: Dict, groups: List[Dict], profiles: Optional[Dict[str, Li
         "cves": sorted(set(_CVE.findall(f"{post['title']}\n{text}")))[:20],
         "indicators": has_indicators(post["title"], text),
         "groups": [{"id": g["id"], "name": g["name"], "nexus": g["nexus"]} for g in named][:15],
+        "actors": others,
         "industries": reasons,
         "nations": nations,
         "opportunistic": opportunistic,
@@ -401,11 +510,12 @@ def analyse_post(post: Dict, groups: List[Dict], profiles: Optional[Dict[str, Li
 
 def technical(post: Dict) -> bool:
     """
-    Whether the post has anything to hunt with: technique IDs, IOCs, a named group, or CVEs
+    Whether the post has anything to hunt with: technique IDs, IOCs, a named group or actor, or CVEs
     alongside other indicators (a CVE on its own is usually a passing citation).
     """
     return not post.get("error") and bool(post.get("techniques") or post.get("iocs", 0) >= 3
-                                          or post.get("groups") or (post.get("cves") and post.get("indicators")))
+                                          or post.get("groups") or post.get("actors")
+                                          or (post.get("cves") and post.get("indicators")))
 
 
 def tags(post: Dict) -> Dict:
@@ -500,7 +610,7 @@ def view(industries: Iterable[str], days: int = FEED_DAYS) -> Dict:
         yours = {i: post["industries"][i] for i in industries if i in post.get("industries", {})}
         posts.append({
             **{k: post.get(k) for k in ("title", "url", "source", "published", "description", "techniques", "cves", "iocs")},
-            "groups": [g["name"] for g in post.get("groups", [])],
+            "groups": [g["name"] for g in post.get("groups", [])] + [a["name"] for a in post.get("actors", [])],
             "tags": tags(post),
             "yours": yours,
             "opportunistic": post.get("opportunistic", []),

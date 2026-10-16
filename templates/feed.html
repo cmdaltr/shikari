@@ -19,7 +19,7 @@
     <p>The last <span id="fd-days">7</span> days of research from vendor and government sources. Each post is tagged with
       the industries it targets, the attacker's nation, and whether it's opportunistic or financially motivated.
       Your industries (<strong id="fd-industries">none set</strong>) are set in <a href="/profile#industries">Profile</a>.
-      Tags come from the post's title and technical paragraphs, matched against ATT&amp;CK's group data; no AI is used.</p>
+      Tags come from the post's title and technical paragraphs: ATT&amp;CK's groups, and the actor names vendors use before ATT&amp;CK has them (Storm-2603, UNC6040, … Typhoon, … Spider); no AI is used.</p>
     <p class="fd-meta"><span id="fd-status">Loading…</span>
       <button type="button" class="fd-refresh" id="fd-refresh">Refresh now</button></p>
   </section>
@@ -27,9 +27,9 @@
   <section class="fd-controls" aria-label="Search and filter">
     <input type="search" id="fd-search" class="fd-search" placeholder="Search titles and descriptions…" aria-label="Search titles and descriptions">
     <div class="fd-filters" role="radiogroup" aria-label="Which posts">
-      <button type="button" class="fd-filter is-active" data-show="relevant" role="radio" aria-checked="true">Relevant to you</button>
       <button type="button" class="fd-filter" data-show="yours" role="radio" aria-checked="false">Your industries</button>
       <button type="button" class="fd-filter" data-show="motive" role="radio" aria-checked="false">Opportunistic / financial</button>
+      <button type="button" class="fd-filter is-active" data-show="both" role="radio" aria-checked="true" title="Your industries, or opportunistic or financially motivated">Both</button>
       <button type="button" class="fd-filter" data-show="all" role="radio" aria-checked="false">All</button>
     </div>
     <span class="fd-count" id="fd-count" aria-live="polite"></span>

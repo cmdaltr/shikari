@@ -113,7 +113,8 @@ def test_nation_profiles_keep_the_industries_most_of_its_groups_target():
     meta = {"G1": {"nexus": "Iran", "target_sectors": "Government; Energy / Utilities"},
             "G2": {"nexus": "Iran", "target_sectors": "Government"},
             "G3": {"nexus": "Iran", "target_sectors": "Technology"},
-            "G4": {"nexus": "Iran", "target_sectors": "Government"}}
+            "G4": {"nexus": "Iran", "target_sectors": "Government"},
+            "G5": {"nexus": "Iran", "target_sectors": "Technology"}}
     assert feed.nation_profiles(meta, share=0.5)["Iran"] == ["Government"]
 
 
@@ -127,3 +128,52 @@ def test_a_cve_counts_only_alongside_other_indicators():
     assert "CVE-2026-1234" in feed.technical_context("Report", report)
     assert feed.technical({"techniques": [], "iocs": 0, "groups": [], "cves": ["CVE-2026-1234"],
                            "indicators": feed.has_indicators("Report", report)})
+
+
+def test_vendor_actor_names_give_nation_and_motive_without_attack():
+    found = {a["name"]: a for a in feed.actors(
+        "Storm-2603 and Linen Typhoon exploited SharePoint; Scattered Spider and UNC6040 phished helpdesks; "
+        "CL-CRI-1032 ran extortion; a Teddy Bear lure and a Red Panda image were used")}
+    assert set(found) == {"Storm-2603", "Linen Typhoon", "Scattered Spider", "UNC6040", "CL-CRI-1032"}
+    assert found["Linen Typhoon"]["nation"] == "China"
+    assert found["Scattered Spider"]["financial"] and found["CL-CRI-1032"]["financial"]
+    assert found["Storm-2603"]["nation"] is None and not found["Storm-2603"]["financial"]
+
+
+def test_actor_names_that_are_attack_aliases_are_not_counted_twice():
+    assert feed.actors("Volt Typhoon and Silk Typhoon", known=["Volt Typhoon"]) == [
+        {"name": "Silk Typhoon", "nation": "China", "financial": False}]
+
+
+def test_a_named_actor_alone_makes_a_post_technical():
+    assert feed.technical({"actors": [{"name": "UNC6040"}]})
+    assert not feed.technical({})
+
+
+def test_a_bad_character_does_not_lose_the_whole_feed():
+    broken = RSS.replace(b"Lazarus  targets banks", b"Lazarus \x01 targets banks")
+    assert [p["url"] for p in feed.parse_feed(broken, "s")] == ["https://example.com/a"]
+
+
+def test_every_iiss_state_is_in_scope():
+    for nation in ("United States", "United Kingdom", "Australia", "Canada", "China", "France", "Israel", "Russia",
+                   "India", "Indonesia", "Iran", "Japan", "Malaysia", "North Korea", "Vietnam",
+                   "Brazil", "Estonia", "Germany", "Netherlands", "Nigeria", "Saudi Arabia", "Singapore",
+                   "South Africa", "Turkey", "United Arab Emirates"):
+        assert nation in feed.NATIONS
+
+
+def test_western_names_need_real_attribution():
+    assert feed.nations_in("US-based companies and the UK's NCSC with US intelligence partners") == []
+    assert feed.nations_in("help us hackers") == []
+    assert feed.nations_in("US state-sponsored actors and a British government-linked espionage group") == [
+        "United Kingdom", "United States"]
+
+
+def test_any_country_before_nexus_counts():
+    assert feed.nations_in("Kazakhstan-nexus UAT-6275 and DPRK-nexus activity") == ["Kazakhstan", "North Korea"]
+
+
+def test_nations_with_few_attack_groups_get_no_industry_profile():
+    meta = {f"G{i:04d}": {"nexus": "Vietnam", "target_sectors": "Government"} for i in range(2)}
+    assert feed.nation_profiles(meta)["Vietnam"] == []
