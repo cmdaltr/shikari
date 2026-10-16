@@ -67,23 +67,35 @@
     else if (r.job.state === 'failed') setCheck('is-error', 'Error', r.job.error || '');
     else if (r.values) setCheck('is-ready', 'Ready', "Detections' indicators can be checked against the recordings");
     else setCheck('is-unavailable', 'Unavailable', "The recordings' field values aren't on this machine");
+    // One tag, one count line and one short line per source; the full note and build date on hover
+    const CARD = {
+      lab: ['Coming soon', "Atomic Red Team on your own VMs, with Defender for Endpoint's rows"],
+      splunk: ['Maintained', "Atomic Red Team and tool runs in Splunk's Attack Range"],
+      otrf: ['Updated Mar 2024', "Empire, Covenant and tool runs in OTRF's lab"],
+      evtx: ['Maintained', 'Windows event logs of attacks, mostly Security auditing'],
+      macos: ['Local only', 'macOS attacks recorded with Elastic Endpoint, 2021'],
+      guide: ['Alerts, not logs', "Defender XDR alerts with customers' triage grades"],
+    };
+    const card = (k, name, url, meta, tip, cls = '') => {
+      const [tag, line] = CARD[k] || ['', ''];
+      return `<li class="${cls}" title="${esc(tip)}">${logo(k, 'em-source-logo')}<div>
+        <div class="em-source-head">${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(name)}</a>` : `<strong>${esc(name)}</strong>`}
+          ${tag ? `<em class="em-source-tag${k === 'lab' && cls ? ' is-soon' : ''}">${esc(tag)}</em>` : ''}</div>
+        <span>${meta}</span><small>${esc(line)}</small></div></li>`;
+    };
     const order = ['lab', 'splunk', 'otrf', 'evtx', 'macos'];
     $('em-sources').innerHTML = Object.entries(r.sources).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([k, s]) =>
       k === 'lab' && !s.datasets
         // Nothing recorded yet: docs/guide/20-recording-a-lab.md
-        ? `<li class="is-missing">${logo(k, 'em-source-logo')}<div><strong>${esc(s.name)} <em class="nav-soon">Coming soon</em></strong>
-            <span>No runs yet</span><small>Atomic Red Team on your own Windows, Linux and macOS VMs, with Defender for Endpoint's rows: see the user guide's <em>Recording a lab</em></small></div></li>`
-        : `<li>${logo(k, 'em-source-logo')}
-      <div>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>` : `<strong>${esc(s.name)}</strong>`}
-      <span>${esc((s.datasets || 0).toLocaleString())} recordings · ${esc(s.licence)} · built ${esc(s.built)}</span><small>${esc(s.note)}</small></div></li>`).join('');
+        ? card(k, s.name, '', 'No runs yet', "See the user guide's Recording a lab", 'is-missing')
+        : card(k, s.name, s.url, `${esc((s.datasets || 0).toLocaleString())} recordings · ${esc(s.licence)}`, `${s.note}. Built ${s.built}`)).join('');
     const hadGuide = data.guide;
     data.guide = !!r.guide;
     $('em-sources').insertAdjacentHTML('beforeend', r.guide
-      ? `<li class="is-guide">${logo('guide', 'em-source-logo')}<div><a href="${esc(r.guide.url)}" target="_blank" rel="noopener">${esc(r.guide.name)}</a>
-          <span>${r.guide.techniques.toLocaleString()} techniques Defender XDR alerts on · ${esc(r.guide.licence)} · built ${esc(r.guide.built)}</span>
-          <small>${esc(r.guide.note)}. Alerts, not logs: shown with Defender XDR as the SIEM</small></div></li>`
-      : `<li class="is-guide is-missing">${logo('guide', 'em-source-logo')}<div><a href="https://www.kaggle.com/datasets/Microsoft/microsoft-security-incident-prediction" target="_blank" rel="noopener">Microsoft GUIDE</a>
-          <span>Not loaded</span><small>Which techniques Defender XDR alerts on, and how often rightly. Download it from Kaggle, then <code>python -m archer.telemetry --guide &lt;zip&gt;</code></small></div></li>`);
+      ? card('guide', r.guide.name, r.guide.url, `${r.guide.techniques.toLocaleString()} techniques · ${esc(r.guide.licence)}`,
+          `${r.guide.note}. Shown with Defender XDR as the SIEM. Built ${r.guide.built}`, 'is-guide')
+      : card('guide', 'Microsoft GUIDE', 'https://www.kaggle.com/datasets/Microsoft/microsoft-security-incident-prediction', 'Not loaded',
+          'Download it from Kaggle, then python -m archer.telemetry --guide <zip>', 'is-guide is-missing'));
     if (hadGuide !== data.guide) render();
     const btn = $('em-build');
     btn.hidden = page.dataset.admin !== 'true';

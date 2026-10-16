@@ -15,7 +15,9 @@
 .em-filters .search-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
 .em-filters .search-row input[hidden] { display: none; }
 .em-filters .search-row input { flex: 1; margin: 0; }
-.em-filters .filters-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.em-filters .search-row .cv-shown { margin-left: 0; }
+.em-filters .search-row input[hidden] ~ #em-clear { margin-left: auto; }
+.em-filters .filters-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; overflow: visible; }  /* results.css scrolls it, which clips the dropdowns */
 .em-filters .filters-row select { min-width: 170px; }
 .em-filters .filter-active { color: var(--accent); font-weight: 600; font-size: 1rem; }
 .em-filters .filter-active[hidden] { display: none; }
@@ -58,6 +60,14 @@
   border-radius: 10px; padding: 12px 14px; background: var(--bg-primary); min-width: 0; }
 .em-sources li > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .em-sources li a { font-weight: 700; font-size: 1.08em; color: var(--text-primary); }
+.em-source-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.em-source-head a, .em-source-head strong { min-width: 0; overflow-wrap: anywhere; }
+.em-source-head .em-source-tag { margin-top: 3px; }
+.em-source-tag { flex: none; font-style: normal; font-size: .72em; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: 2px 7px; border-radius: 4px; background: rgba(13, 148, 136, .12); color: #0f766e; white-space: nowrap; }
+.em-source-tag.is-soon { background: #9ca3af; color: #fff; }
+[data-theme="dark"] .em-source-tag { background: rgba(94, 234, 212, .14); color: #5eead4; }
+[data-theme="dark"] .em-source-tag.is-soon { background: #6b7280; color: #fff; }
 .em-sources li span { color: var(--text-secondary); font-size: .95em; }
 .em-sources li small { color: var(--text-secondary); font-size: .88em; line-height: 1.4; }
 .em-source-logo { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 8px; overflow: hidden; display: inline-flex; align-items: center; justify-content: center;

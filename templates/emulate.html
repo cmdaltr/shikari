@@ -53,6 +53,9 @@
       <div class="search-row">
         <input type="search" class="form-input" id="em-q" data-for="technique group" autocomplete="off" maxlength="200"
                placeholder="Search indicators: a value in the recorded events (comsvcs, lsass.dmp, vssadmin…)" aria-label="Indicators">
+        <button type="button" id="em-clear" title="Clear filters">
+          <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
         <span class="cv-shown" id="em-shown"></span>
       </div>
       <div class="filters-row">
@@ -68,9 +71,6 @@
         <div class="em-ms" data-key="platform" data-label="Platforms" data-for="technique group source"></div>
         <div class="em-ms" data-key="defender" data-label="Defender XDR alerts" data-for="technique" title="Microsoft GUIDE: whether Defender XDR alerts on the technique, and how often rightly"></div>
         <div class="em-ms" data-key="seen" data-label="Seen" data-for="group"></div>
-        <button type="button" id="em-clear" title="Clear filters">
-          <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        </button>
       </div>
     </div>
   </div>
