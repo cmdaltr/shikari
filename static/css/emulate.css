@@ -17,8 +17,8 @@
 .em-filters .search-row input { flex: 1; margin: 0; }
 .em-filters .search-row .cv-shown { margin-left: 0; }
 .em-filters .search-row input[hidden] ~ #em-clear { margin-left: auto; }
-.em-filters .filters-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; overflow: visible; }  /* results.css scrolls it, which clips the dropdowns */
-.em-filters .filters-row select { min-width: 170px; }
+.em-filters .filters-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; overflow: visible; }  /* results.css scrolls it, which clips the dropdowns */
+.em-filters .filters-row select { min-width: 0; }
 .em-filters .filter-active { color: var(--accent); font-weight: 600; font-size: 1rem; }
 .em-filters .filter-active[hidden] { display: none; }
 .em-filters .cv-shown { margin-left: auto; color: #6b7280; font-weight: 600; white-space: nowrap; }
@@ -27,9 +27,9 @@
 /* Multiselects: a dropdown-styled button opening a searchable checklist */
 .em-ms { position: relative; }
 .em-ms[hidden] { display: none; }
-.em-ms-btn { min-width: 150px; text-align: left; padding-right: 2.5em !important; cursor: pointer;
+.em-ms-btn { min-width: 0; white-space: nowrap; text-align: left; padding-right: 2.1em !important; cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat !important; background-position: right 1em center !important; }
+  background-repeat: no-repeat !important; background-position: right .8em center !important; }
 .em-ms-btn.is-active { border-color: var(--accent) !important; color: var(--accent); font-weight: 600; }
 .em-ms-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; width: 340px; max-width: 80vw; padding: 10px;
   background: var(--bg-secondary, var(--bg-primary)); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 24px rgba(0, 0, 0, .15); }

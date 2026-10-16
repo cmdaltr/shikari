@@ -69,7 +69,7 @@ The filter card applies to whichever view is open below it, and shows only the f
 | Data sources | The SIEM's tables or UDM event types |
 | Logs | Recorded event types: Sysmon 1, Security 4688 |
 | Collection | Which kinds of logging count: Native OS logs, Sysmon, EDR, osquery, Cloud and SaaS. For Google SecOps the default leaves out Sysmon, which is deployed far less than native logging. For Defender XDR it's kept: Sysmon's recordings stand in for the MDE sensor, which records the same process, file, network, registry and image-load activity without Sysmon installed |
-| Defender XDR alerts | With Defender XDR as the SIEM: techniques it alerts on mostly rightly (half or more true positives), mostly not, or not at all (GUIDE) |
+| Defender alerts | With Defender XDR as the SIEM: techniques it alerts on mostly rightly (half or more true positives), mostly not, or not at all (GUIDE) |
 | Platforms | Windows, Linux, macOS, ESXi, Cloud and SaaS: only the logs from these platforms count, so Linux shows what Linux logging records of each technique |
 | Seen | By group only: Seen, Not seen, No recordings, No indicators, or any noisy indicator |
 
