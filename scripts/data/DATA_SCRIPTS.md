@@ -82,6 +82,18 @@ python3 scripts/data/build_world_map.py
 
 Run it again only to change the map itself; the tiers live in `archer/intelligence/cyber_powers.py`.
 
+### vendor_flags.py
+Vendor the flag of every country on that map from [flag-icons](https://github.com/lipis/flag-icons)
+(MIT, pinned version, 4x3 SVGs) into `static/vendor/flag-icons/`, with its licence. Images rather
+than flag emoji, which Windows shows as letters. Somaliland and Northern Cyprus have no ISO code,
+so the script draws theirs on the same 640x480 canvas.
+
+```bash
+python3 scripts/data/vendor_flags.py
+```
+
+Run it after `build_world_map.py` whenever the map's countries change.
+
 ---
 
 ### extract_mitre_procedures.py

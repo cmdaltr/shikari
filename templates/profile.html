@@ -271,10 +271,14 @@
                   <!-- Country: green on the Cyber Powers map -->
                   <div class="form-section" style="flex: 2 1 0; min-width: 0; margin: 0;">
                     <label for="country" class="form-label">Country</label>
-                    <select name="country" id="country" class="form-input" title="Shown in green on the Cyber Powers map">
-                      <option value="">Not set</option>
-                      {% for c in countries %}<option value="{{ c.map }}"{% if user and user.country == c.map %} selected{% endif %}>{{ c.flag ~ ' ' if c.flag }}{{ c.name }}</option>{% endfor %}
-                    </select>
+                    <!-- Options can't hold images, so the chosen country's flag sits in the field -->
+                    <div class="pf-country">
+                      <img class="pf-country-flag" id="country-flag" alt="" width="20" height="15" hidden>
+                      <select name="country" id="country" class="form-input" title="Shown in green on the Cyber Powers map">
+                        <option value="" data-flag="">Not set</option>
+                        {% for c in countries %}<option value="{{ c.map }}" data-flag="{{ c.flag }}"{% if user and user.country == c.map %} selected{% endif %}>{{ c.name }}</option>{% endfor %}
+                      </select>
+                    </div>
                   </div>
 
                   <div class="form-section" style="flex: 1 1 0; min-width: 0; margin: 0;">

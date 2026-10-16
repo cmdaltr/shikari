@@ -42,16 +42,22 @@ DISPLAY = {"United States of America": "United States", "Bosnia and Herz.": "Bos
            "Solomon Is.": "Solomon Islands", "W. Sahara": "Western Sahara", "eSwatini": "Eswatini", "Turkey": "Türkiye"}
 
 
-def flag(iso: str) -> str:
-    """The flag emoji for an ISO 3166-1 alpha-2 code ("" without one). Windows shows the letters."""
-    return "".join(chr(0x1F1E6 + ord(ch) - ord("A")) for ch in iso) if len(iso or "") == 2 else ""
+FLAGS_URL = "/static/vendor/flag-icons/4x3"
+# No ISO code, so no flag-icons file: drawn by scripts/data/vendor_flags.py
+OWN_FLAGS = {"Somaliland": "somaliland", "N. Cyprus": "northern-cyprus"}
+
+
+def flag(map_name: str, iso: str) -> str:
+    """The country's flag image (static/vendor/flag-icons, 4x3 SVG), or "" if it has none."""
+    name = OWN_FLAGS.get(map_name) or (iso.lower() if len(iso or "") == 2 else "")
+    return f"{FLAGS_URL}/{name}.svg" if name else ""
 
 
 @lru_cache(maxsize=1)
 def countries() -> List[Dict]:
     """Every country on the map, as {map, name, iso, flag}, by name: the Profile country choices."""
     found = dict(re.findall(r'data-name="([^"]+)" data-iso="([A-Z]*)"', MAP_PATH.read_text(encoding="utf-8")))
-    return sorted(({"map": n, "name": DISPLAY.get(n, n), "iso": iso, "flag": flag(iso)} for n, iso in found.items()),
+    return sorted(({"map": n, "name": DISPLAY.get(n, n), "iso": iso, "flag": flag(n, iso)} for n, iso in found.items()),
                   key=lambda c: c["name"])
 
 

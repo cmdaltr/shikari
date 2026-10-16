@@ -863,3 +863,17 @@ document.head.appendChild(style);
     status.className = 'industries-status ' + (res.ok ? 'is-ok' : 'is-error');
   });
 })();
+
+// Country (Profile tab): the chosen country's flag in the field (options can't show images)
+(function () {
+  const select = document.getElementById('country'), img = document.getElementById('country-flag');
+  if (!select || !img) return;
+  const show = () => {
+    const url = select.selectedOptions[0]?.dataset.flag || '';
+    img.hidden = !url;
+    if (url) img.src = url;
+    select.classList.toggle('has-flag', !!url);
+  };
+  select.addEventListener('change', show);
+  show();
+})();

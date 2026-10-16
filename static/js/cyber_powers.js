@@ -11,7 +11,7 @@
   const shapes = [...map.querySelectorAll('.country')];
   shapes.forEach(s => s.querySelector('title')?.remove());  // our tooltip instead
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-  const flag = n => C[n] && C[n].flag ? `<span class="cp-flag" aria-hidden="true">${C[n].flag}</span>` : '';
+  const flag = n => C[n] && C[n].flag ? `<img class="cp-flag" src="${esc(C[n].flag)}" alt="" width="20" height="15">` : '';
   const BUCKETS = [[11, '11+'], [7, '7–10'], [4, '4–6'], [2, '2–3'], [1, '1']];
   const bucket = n => BUCKETS.find(([min]) => n >= min);
 

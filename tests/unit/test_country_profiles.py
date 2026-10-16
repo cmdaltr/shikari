@@ -42,6 +42,9 @@ def test_motivation_shares_count_each_group_once():
         {"motive": "Financial", "share": 100}, {"motive": "Espionage", "share": 50}]
 
 
-def test_every_country_has_a_flag_but_the_unrecognised():
-    assert flag("GB") == "🇬🇧"
-    assert {c["map"] for c in countries() if not c["flag"]} == {"N. Cyprus", "Somaliland"}
+def test_every_country_has_a_vendored_flag():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2]
+    assert flag("United Kingdom", "GB") == "/static/vendor/flag-icons/4x3/gb.svg"
+    for c in countries():
+        assert c["flag"] and (root / c["flag"].lstrip("/")).is_file(), c["name"]

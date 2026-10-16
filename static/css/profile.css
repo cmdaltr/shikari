@@ -599,3 +599,7 @@
 }
 /* SIEM logos in the "Generate for" picker: the height of the text beside them */
 .siem-pick-logo { width: 1.15em; height: 1.15em; flex: none; }
+/* Country field: the chosen country's flag inside the select, on the left */
+.pf-country { position: relative; }
+.pf-country-flag { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 15px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.12); object-fit: cover; pointer-events: none; }
+.pf-country select.has-flag { padding-left: 40px; }
