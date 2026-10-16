@@ -212,21 +212,165 @@ _AWS_API_TO_CLI = {
     # CloudFormation / infra
     "DescribeStacks":             ("aws cloudformation", "describe-stacks"),
     "ListStackResources":         ("aws cloudformation", "list-stack-resources"),
+    # IAM: the calls ATT&CK's cloud procedures cite
+    "AttachUserPolicy":           ("aws iam", "attach-user-policy"),
+    "AttachRolePolicy":           ("aws iam", "attach-role-policy"),
+    "AttachGroupPolicy":          ("aws iam", "attach-group-policy"),
+    "PutUserPolicy":              ("aws iam", "put-user-policy"),
+    "PutRolePolicy":              ("aws iam", "put-role-policy"),
+    "CreateUser":                 ("aws iam", "create-user"),
+    "CreateAccessKey":            ("aws iam", "create-access-key"),
+    "CreateLoginProfile":         ("aws iam", "create-login-profile"),
+    "UpdateLoginProfile":         ("aws iam", "update-login-profile"),
+    "CreatePolicyVersion":        ("aws iam", "create-policy-version"),
+    "SetDefaultPolicyVersion":    ("aws iam", "set-default-policy-version"),
+    "UpdateAssumeRolePolicy":     ("aws iam", "update-assume-role-policy"),
+    "AddUserToGroup":             ("aws iam", "add-user-to-group"),
+    "GetAccountPasswordPolicy":   ("aws iam", "get-account-password-policy"),
+    "GetAccountAuthorizationDetails": ("aws iam", "get-account-authorization-details"),
+    "ListAccessKeys":             ("aws iam", "list-access-keys"),
+    "ListRolePolicies":           ("aws iam", "list-role-policies"),
+    "ListUserPolicies":           ("aws iam", "list-user-policies"),
+    "ListAttachedUserPolicies":   ("aws iam", "list-attached-user-policies"),
+    "DeleteAccessKey":            ("aws iam", "delete-access-key"),
+    # STS
+    "AssumeRole":                 ("aws sts", "assume-role"),
+    "GetSessionToken":            ("aws sts", "get-session-token"),
+    "GetFederationToken":         ("aws sts", "get-federation-token"),
+    # EC2
+    "CreateKeyPair":              ("aws ec2", "create-key-pair"),
+    "ImportKeyPair":              ("aws ec2", "import-key-pair"),
+    "RunInstances":               ("aws ec2", "run-instances"),
+    "ModifyInstanceAttribute":    ("aws ec2", "modify-instance-attribute"),
+    "CreateSnapshot":             ("aws ec2", "create-snapshot"),
+    "ModifySnapshotAttribute":    ("aws ec2", "modify-snapshot-attribute"),
+    "ModifyImageAttribute":       ("aws ec2", "modify-image-attribute"),
+    "AuthorizeSecurityGroupIngress": ("aws ec2", "authorize-security-group-ingress"),
+    "GetPasswordData":            ("aws ec2", "get-password-data"),
+    "DescribeRegions":            ("aws ec2", "describe-regions"),
+    "DescribeAccountAttributes":  ("aws ec2", "describe-account-attributes"),
+    "DeleteFlowLogs":             ("aws ec2", "delete-flow-logs"),
+    # S3
+    "GetObject":                  ("aws s3api", "get-object"),
+    "PutBucketPolicy":            ("aws s3api", "put-bucket-policy"),
+    "DeleteBucketPolicy":         ("aws s3api", "delete-bucket-policy"),
+    "PutBucketAcl":               ("aws s3api", "put-bucket-acl"),
+    "PutBucketLifecycleConfiguration": ("aws s3api", "put-bucket-lifecycle-configuration"),
+    "DeleteObjects":              ("aws s3api", "delete-objects"),
+    # Logging and defences
+    "StopLogging":                ("aws cloudtrail", "stop-logging"),
+    "DeleteTrail":                ("aws cloudtrail", "delete-trail"),
+    "UpdateTrail":                ("aws cloudtrail", "update-trail"),
+    "PutEventSelectors":          ("aws cloudtrail", "put-event-selectors"),
+    "DeleteDetector":             ("aws guardduty", "delete-detector"),
+    "UpdateDetector":             ("aws guardduty", "update-detector"),
+    "DeleteConfigurationRecorder": ("aws configservice", "delete-configuration-recorder"),
+    "StopConfigurationRecorder":  ("aws configservice", "stop-configuration-recorder"),
+    # Secrets, parameters, keys
+    "GetSecretValue":             ("aws secretsmanager", "get-secret-value"),
+    "ListSecrets":                ("aws secretsmanager", "list-secrets"),
+    "GetParameter":               ("aws ssm", "get-parameter"),
+    "GetParameters":              ("aws ssm", "get-parameters"),
+    "SendCommand":                ("aws ssm", "send-command"),
+    "StartSession":               ("aws ssm", "start-session"),
+    "Decrypt":                    ("aws kms", "decrypt"),
+    "ScheduleKeyDeletion":        ("aws kms", "schedule-key-deletion"),
+    "DisableKey":                 ("aws kms", "disable-key"),
+    "ListKeys":                   ("aws kms", "list-keys"),
+    # Organizations, Lambda
+    "ListAccounts":               ("aws organizations", "list-accounts"),
+    "DescribeOrganization":       ("aws organizations", "describe-organization"),
+    "LeaveOrganization":          ("aws organizations", "leave-organization"),
+    "CreateFunction":             ("aws lambda", "create-function"),
+    "UpdateFunctionCode":         ("aws lambda", "update-function-code"),
+    "AddPermission":              ("aws lambda", "add-permission"),
 }
 
+# Windows API functions ATT&CK's procedures name. They never appear in a command line;
+# Defender XDR records some of them as DeviceEvents ActionTypes, and those become
+# "api_event" indicators. The rest are left out of queries.
+_WINAPI_TO_MDE_ACTION = {
+    "CreateRemoteThread":         "CreateRemoteThreadApiCall",
+    "CreateRemoteThreadEx":       "CreateRemoteThreadApiCall",
+    "NtCreateThreadEx":           "CreateRemoteThreadApiCall",
+    "RtlCreateUserThread":        "CreateRemoteThreadApiCall",
+    "GetAsyncKeyState":           "GetAsyncKeyStateApiCall",
+    "VirtualAllocEx":             "NtAllocateVirtualMemoryRemoteApiCall",
+    "VirtualAlloc":               "NtAllocateVirtualMemoryApiCall",
+    "NtAllocateVirtualMemory":    "NtAllocateVirtualMemoryApiCall",
+    "VirtualProtectEx":           "MemoryRemoteProtect",
+    "VirtualProtect":             "NtProtectVirtualMemoryApiCall",
+    "NtProtectVirtualMemory":     "NtProtectVirtualMemoryApiCall",
+    "NtMapViewOfSection":         "NtMapViewOfSectionRemoteApiCall",
+    "ZwMapViewOfSection":         "NtMapViewOfSectionRemoteApiCall",
+    "MapViewOfFile2":             "NtMapViewOfSectionRemoteApiCall",
+    "OpenProcess":                "OpenProcessApiCall",
+    "QueueUserAPC":               "QueueUserApcRemoteApiCall",
+    "NtQueueApcThread":           "QueueUserApcRemoteApiCall",
+    "NtQueueApcThreadEx":         "QueueUserApcRemoteApiCall",
+    "ReadProcessMemory":          "ReadProcessMemoryApiCall",
+    "NtReadVirtualMemory":        "ReadProcessMemoryApiCall",
+    "SetThreadContext":           "SetThreadContextRemoteApiCall",
+    "NtSetContextThread":         "SetThreadContextRemoteApiCall",
+    "WriteProcessMemory":         "WriteProcessMemoryApiCall",
+    "NtWriteVirtualMemory":       "WriteProcessMemoryApiCall",
+}
+_WINAPI_NAMES = set(_WINAPI_TO_MDE_ACTION) | {
+    "AdjustTokenPrivileges", "CheckRemoteDebuggerPresent", "CopyFromScreen", "CreateFileMapping", "CreateProcess",
+    "CreateProcessA", "CreateProcessW", "CreateProcessAsUser", "CreateProcessAsUserA", "CreateProcessAsUserW",
+    "CreateProcessWithLogonW", "CreateProcessWithTokenW", "CreateService", "CreateToolhelp32Snapshot", "CredEnumerate",
+    "CredEnumerateA", "CredEnumerateW", "CryptUnprotectData", "DuplicateToken", "DuplicateTokenEx", "EnumProcesses",
+    "EnumSystemLocalesW", "EnumWindows", "FindWindow", "FindWindowA", "FindWindowW", "GetComputerName", "GetDriveType",
+    "GetForegroundWindow", "GetKeyboardLayoutList", "GetKeyState", "GetLocaleInfoW", "GetModuleHandle", "GetProcAddress",
+    "GetSystemDefaultUILanguage", "GetSystemTimeAsFileTime", "GetTickCount", "GetUserDefaultLangID",
+    "GetUserDefaultUILanguage", "GetUserName", "GetWindowText", "ImpersonateLoggedOnUser", "IsDebuggerPresent",
+    "LoadLibrary", "LoadLibraryA", "LoadLibraryW", "LoadLibraryEx", "LogonUser", "LogonUserA", "LogonUserW",
+    "LookupPrivilegeValue", "MiniDumpWriteDump", "NtCreateProcess", "NtCreateProcessEx", "NtQueryInformationProcess",
+    "NtQuerySystemInformation", "NtResumeThread", "NtUnmapViewOfSection", "OpenThread", "PostMessage", "ResumeThread",
+    "RegisterHotKey", "SendMessage", "SetThreadToken", "SetWindowsHookEx", "SetWindowsHookExA", "SetWindowsHookExW",
+    "ShellExecute", "ShowWindow", "SuspendThread", "URLDownloadToFile", "WinExec", "ZwUnmapViewOfSection",
+}
+# Shape of a Windows API name the lists above don't have: a native-API prefix, or the
+# A/W/Ex suffix of the Win32 ANSI, wide and extended variants
+_WINAPI_SHAPE = re.compile(r"^(?:Nt|Zw|Rtl|Ldr)[A-Z][A-Za-z]+$|^[A-Z][a-z]+(?:[A-Z][a-z0-9]+)+(?:Ex)?[AW]$|^[A-Z][a-z]+(?:[A-Z][a-z0-9]+)+Ex$")
+# Placeholder names from documentation ("ExampleFunctionA")
+_PLACEHOLDER_NAME = re.compile(r"^(?:Example|Sample|Foo|Bar|Test)[A-Z]")
+# Words that mark a procedure as being about a cloud platform, so an unknown
+# PascalCase operation can be treated as a cloud API call
+_CLOUD_CONTEXT = re.compile(r"\b(?:AWS|Amazon|CloudTrail|S3|EC2|IAM|Azure|Entra|GCP|Google Cloud|Kubernetes|Okta|"
+                            r"Graph API|Microsoft 365|Office 365|M365|O365|CloudWatch|Lambda)\b")
+_CLOUD_VERB = re.compile(r"^(?:Describe|List|Get|Create|Delete|Put|Attach|Detach|Update|Modify|Run|Start|Stop|"
+                         r"Import|Export|Assume|Set|Add|Remove|Enable|Disable|Invoke|Send|Copy|Restore|Authorize)[A-Z]")
 
-def _api_to_cli(api_name: str) -> str:
-    """Convert a cloud API name to its AWS CLI form for endpoint detection.
 
-    Uses the explicit mapping table for known APIs. Falls back to a heuristic
-    kebab-case conversion prefixed with 'aws' for unknowns.
-    """
+def _api_to_cli(api_name: str):
+    """The AWS CLI form of a cloud API call ("aws ec2 describe-instances"), which is what
+    a process command line shows when someone runs it from a shell. None for a name the
+    table doesn't have: the CLI needs the service, and guessing it gives a command
+    nobody ever ran."""
     if api_name in _AWS_API_TO_CLI:
         prefix, sub = _AWS_API_TO_CLI[api_name]
         return f"{prefix} {sub}"
-    # Heuristic: PascalCase → kebab-case, prefix 'aws'
-    kebab = re.sub(r'(?<=[a-z0-9])(?=[A-Z])', '-', api_name).lower()
-    return f"aws {kebab}"
+    return None
+
+
+def classify_name(name: str, context: str = "") -> str:
+    """What a bare PascalCase name from a procedure is: "cloud" (a cloud API call),
+    "winapi" (a Windows API function), "placeholder" or "word" (left out), or "term"
+    (a literal worth matching as written, such as MSExchangeIS or AnyDesk)."""
+    if name in _AWS_API_TO_CLI:
+        return "cloud"
+    if name in _WINAPI_NAMES:
+        return "winapi"
+    if _PLACEHOLDER_NAME.match(name):
+        return "placeholder"
+    if re.fullmatch(r"[A-Z][a-z]+", name):
+        return "word"  # one capitalised word ("Index", "Data"): matches everything
+    if _CLOUD_VERB.match(name) and _CLOUD_CONTEXT.search(context):
+        return "cloud"
+    if _WINAPI_SHAPE.match(name):
+        return "winapi"
+    return "term"
 
 
 def extract_commands(combined_desc):
@@ -240,9 +384,11 @@ def extract_commands(combined_desc):
     normalised_cmds = [cmd.strip() for cmd in cmds]
 
     # Classify indicators as API calls vs. commands
-    # API calls are AWS/Azure/GCP API operations, not CLI commands
+    # API calls are AWS/Azure/GCP API operations (also run from a shell, as the CLI), not
+    # Windows API functions, which go to Defender's API-call events instead
     api_calls = []
     commands = []
+    api_events = []
 
     # Patterns that indicate API calls (not CLI commands)
     api_patterns = [
@@ -289,11 +435,18 @@ def extract_commands(combined_desc):
         is_api = any(re.match(pattern, cmd) for pattern in api_patterns)
 
         if is_api and not is_cli:
-            api_calls.append(cmd)
-            # Also add the AWS CLI equivalent so endpoint telemetry (ProcessCommandLine)
-            # picks up the actual command the adversary ran (e.g. "aws ec2 describe-instances")
-            cli_form = _api_to_cli(cmd)
-            commands.append(cli_form)
+            kind = classify_name(cmd, cleaned_desc)
+            if kind == "cloud":
+                api_calls.append(cmd)
+                # The same call run from a shell shows in the process command line
+                cli_form = _api_to_cli(cmd)
+                if cli_form:
+                    commands.append(cli_form)
+            elif kind == "winapi":
+                if cmd in _WINAPI_TO_MDE_ACTION:
+                    api_events.append(_WINAPI_TO_MDE_ACTION[cmd])
+            elif kind == "term":
+                commands.append(cmd)
         else:
             commands.append(cmd)
 
@@ -306,6 +459,8 @@ def extract_commands(combined_desc):
         result["cmd"] = commands
     if api_calls:
         result["api"] = api_calls
+    if api_events:
+        result["api_event"] = list(dict.fromkeys(api_events))
 
     # Also extract network indicators from the full description
     network_indicators = extract_network_indicators(cleaned_desc)

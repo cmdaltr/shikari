@@ -242,6 +242,10 @@ def create_indicatorMappings():
             },
             "MDE": {"DeviceEvents": ["ActionType"]},
         },
+        "api_event": {
+            # Windows API calls Defender XDR records as ActionTypes (WriteProcessMemoryApiCall...)
+            "MDE": {"DeviceEvents": ["ActionType"]},
+        },
         "sw": {
             "Splunk": {
                 "index=windows_events": [
