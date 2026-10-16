@@ -70,6 +70,20 @@ index doesn't regenerate itself when the repos change.
 
 ---
 
+### build_world_map.py
+Build `static/images/world_equal_earth.svg`, the Cyber Powers page's map: every country
+(Natural Earth 1:110m, via `world-atlas`) on the Equal Earth projection, one `<path>` per
+country named in `data-name`. Standard library only; the SVG is committed, so Archer needs no
+map library or network at runtime.
+
+```bash
+python3 scripts/data/build_world_map.py
+```
+
+Run it again only to change the map itself; the tiers live in `archer/intelligence/cyber_powers.py`.
+
+---
+
 ### extract_mitre_procedures.py
 Extract and process MITRE ATT&CK procedures.
 

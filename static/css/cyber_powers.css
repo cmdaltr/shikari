@@ -1,0 +1,45 @@
+/* Cyber Powers page (templates/cyber_powers.html) */
+.cp-page {
+  --cp-tier-1: #7f1d1d;
+  --cp-tier-2: #dc2626;
+  --cp-tier-3: #f59e0b;
+  --cp-attributed: #64748b;
+  --cp-land: #e5e7eb;
+  --cp-sea: #f8fafc;
+  --cp-border: #ffffff;
+}
+[data-theme="dark"] .cp-page {
+  --cp-tier-1: #fca5a5;
+  --cp-tier-2: #ef4444;
+  --cp-tier-3: #f59e0b;
+  --cp-attributed: #94a3b8;
+  --cp-land: #374151;
+  --cp-sea: #111827;
+  --cp-border: #1f2937;
+}
+
+.cp-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+.cp-map svg { display: block; width: 100%; height: auto; }
+.cp-map .sphere { fill: var(--cp-sea); stroke: var(--border-color); stroke-width: 1; }
+.cp-map .country { fill: var(--cp-land); stroke: var(--cp-border); stroke-width: .5; transition: opacity .15s, fill .15s; }
+.cp-map .country.is-point { stroke-width: 1; }
+/* A key item or state hovered: the rest fade */
+.cp-map.has-focus .country:not(.is-focus) { opacity: .25; }
+
+.cp-key { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 14px 0 0; padding: 0; }
+.cp-key-item { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--bg-secondary, transparent); color: var(--text-primary); font: inherit; cursor: pointer; }
+.cp-key-item[aria-pressed="true"] { border-color: var(--text-primary); }
+.cp-count { font-size: .8em; color: var(--text-secondary); font-weight: 600; }
+.cp-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; flex: none; }
+
+.cp-groups { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.cp-group { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 16px; }
+.cp-group h2 { display: flex; align-items: center; gap: 8px; font-size: 1.05em; margin: 0 0 4px; }
+.cp-summary { font-size: .82em; color: var(--text-secondary); margin: 0 0 10px; }
+.cp-states { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.cp-states li { font-size: .85em; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border-color); color: var(--text-primary); cursor: default; }
+.cp-states li sup { font-size: .7em; margin-left: 1px; color: var(--text-secondary); }
+.cp-source { font-size: .8em; color: var(--text-secondary); margin-top: 16px; }
+
+@media (max-width: 1100px) { .cp-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .cp-groups { grid-template-columns: 1fr; } }

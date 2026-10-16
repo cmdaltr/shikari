@@ -2436,6 +2436,23 @@ async def mitresaw_page(request: Request, archer_session: Optional[str] = Cookie
     return templates.TemplateResponse("mitresaw.html", {"request": request, "user": user})
 
 
+@app.get("/cyber-powers", response_class=HTMLResponse)
+async def cyber_powers_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """World map of national cyber power: the IISS tiers and the states threat reporting names."""
+    from archer.intelligence.cyber_powers import powers
+
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+    map_svg = (Path(__file__).resolve().parent.parent / "static" / "images" / "world_equal_earth.svg").read_text(encoding="utf-8")
+    return templates.TemplateResponse("cyber_powers.html", {"request": request, "user": user,
+                                                            "powers": powers(), "map_svg": map_svg})
+
+
 @app.get("/api/correlation/params")
 async def get_correlation_params():
     """Get current correlation parameters from config files."""

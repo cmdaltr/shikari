@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Archer - Cyber Powers{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/cyber_powers.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+{%- for g in powers.groups %}{% for s in g.states %}
+.cp-map [data-name="{{ s.map }}"] { fill: var(--cp-{{ g.key }}); }
+{%- endfor %}{% endfor %}
+</style>
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container cp-page">
+  <div class="page-header">
+    <h1>Cyber Powers</h1>
+    <p>National cyber capability as the IISS assesses it, and the other states threat reporting names</p>
+  </div>
+
+  <section class="cp-card">
+    <div class="cp-map" id="cp-map">{{ map_svg | safe }}</div>
+    <ul class="cp-key" aria-label="Key">
+      {% for g in powers.groups %}
+      <li><button type="button" class="cp-key-item" data-group="{{ g.key }}" aria-pressed="false">
+        <span class="cp-swatch" style="background: var(--cp-{{ g.key }})"></span>
+        <strong>{{ g.label }}</strong><span class="cp-count">{{ g.states | length }}</span>
+      </button></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="cp-groups">
+    {% for g in powers.groups %}
+    <div class="cp-group" data-group="{{ g.key }}">
+      <h2><span class="cp-swatch" style="background: var(--cp-{{ g.key }})"></span>{{ g.label }}</h2>
+      <p class="cp-summary">{{ g.summary }}</p>
+      <ul class="cp-states">
+        {% for s in g.states %}
+        <li data-map="{{ s.map }}"{% if s.volume == 2 %} title="Assessed in volume 2 (2023)"{% endif %}>{{ s.name }}{% if s.volume == 2 %}<sup>2</sup>{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </section>
+
+  <p class="cp-source">Tiers: IISS, <em>Cyber Capabilities and National Power</em>
+    {%- for name, url in powers.sources %} <a href="{{ url }}" target="_blank" rel="noopener">{{ name }}</a>{{ ',' if not loop.last }}{% endfor %}
+    (<sup>2</sup> assessed in volume 2). The Threat Feed tags attribution to every state shown.
+    Map: Natural Earth, Equal Earth projection.</p>
+</div>
+<script src="{{ url_for('static', path='js/cyber_powers.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+{% endblock %}
