@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response, HTTPException
+from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response, HTTPException, Body
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
@@ -1757,6 +1757,11 @@ def load_mitre_data():
         from archer.intelligence.feed import refresh_in_background as refresh_feed
 
         refresh_feed(bundle, group_meta, force=True)
+
+        # Watchlists need collections nobody asks for: every REFRESH_EVERY while any exist
+        from archer.intelligence.watchlists import keep_collecting
+
+        keep_collecting(lambda: (getattr(app.state, "bundle", None), getattr(app.state, "group_metadata", {}) or {}))
 
     except Exception as _e:
         import traceback
@@ -10193,7 +10198,10 @@ def api_feed(request: Request, archer_session: Optional[str] = Cookie(None)):
     db.close()
     feed.refresh_in_background(getattr(request.app.state, "bundle", None),
                                getattr(request.app.state, "group_metadata", {}) or {})
-    return {**feed.view(_user_industries(user), stack=_user_stack(user)), "can_edit_sources": user.role == UserRole.ADMIN}
+    from archer.intelligence.watchlists import watched
+
+    return {**feed.view(_user_industries(user), stack=_user_stack(user)), "watched": watched(user.id),
+            "can_edit_sources": user.role == UserRole.ADMIN}
 
 
 @app.get("/api/feed/search")
@@ -10208,6 +10216,89 @@ def api_feed_search(request: Request, q: str = "", web: bool = True, archer_sess
     db.close()
     result = research_search.search(q, getattr(request.app.state, "bundle", None), web=web)
     return JSONResponse(result, status_code=400 if result.get("error") else 200)
+
+
+def _watch_user(request: Request, archer_session: Optional[str]):
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    return user
+
+
+@app.get("/api/feed/watchlists")
+def api_watchlists(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """The user's Threat Feed watchlists with their new matches (archer.intelligence.watchlists)."""
+    from archer.intelligence import watchlists
+
+    user = _watch_user(request, archer_session)
+    if isinstance(user, JSONResponse):
+        return user
+    lists = watchlists.list_for(user.id)
+    return {"watchlists": lists, "new_count": sum(w["new_count"] for w in lists),
+            "email_available": watchlists.email_available()}
+
+
+@app.get("/api/feed/watchlists/count")
+def api_watchlists_count(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """New watchlist matches, for the menu bar's badge."""
+    from archer.intelligence import watchlists
+
+    user = _watch_user(request, archer_session)
+    if isinstance(user, JSONResponse):
+        return {"new": 0}
+    return {"new": watchlists.new_count(user.id)}
+
+
+@app.post("/api/feed/watchlists")
+def api_watchlists_add(request: Request, body: dict = Body(...), archer_session: Optional[str] = Cookie(None)):
+    """Body: {"query": "RedSun", "web": false, "email": false}. What matches already is the baseline."""
+    from archer.intelligence import watchlists
+
+    user = _watch_user(request, archer_session)
+    if isinstance(user, JSONResponse):
+        return user
+    try:
+        w = watchlists.add(user.id, user.email, body.get("query", ""), web=bool(body.get("web")),
+                           want_email=bool(body.get("email")), bundle=getattr(request.app.state, "bundle", None))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {"watchlist": w}
+
+
+@app.patch("/api/feed/watchlists/{watch_id}")
+def api_watchlists_update(watch_id: str, request: Request, body: dict = Body(...),
+                          archer_session: Optional[str] = Cookie(None)):
+    from archer.intelligence import watchlists
+
+    user = _watch_user(request, archer_session)
+    if isinstance(user, JSONResponse):
+        return user
+    w = watchlists.update(user.id, watch_id, web=body.get("web"), email=body.get("email"))
+    return {"watchlist": w} if w else JSONResponse({"error": "No such watchlist"}, status_code=404)
+
+
+@app.delete("/api/feed/watchlists/{watch_id}")
+def api_watchlists_remove(watch_id: str, request: Request, archer_session: Optional[str] = Cookie(None)):
+    from archer.intelligence import watchlists
+
+    user = _watch_user(request, archer_session)
+    if isinstance(user, JSONResponse):
+        return user
+    return {"removed": True} if watchlists.remove(user.id, watch_id) else JSONResponse(
+        {"error": "No such watchlist"}, status_code=404)
+
+
+@app.post("/api/feed/watchlists/seen")
+def api_watchlists_seen(request: Request, body: dict = Body(default={}), archer_session: Optional[str] = Cookie(None)):
+    """Body: {"id": "<watchlist>"} marks that one's new matches seen; no id marks them all."""
+    from archer.intelligence import watchlists
+
+    user = _watch_user(request, archer_session)
+    if isinstance(user, JSONResponse):
+        return user
+    return {"marked": watchlists.mark_seen(user.id, (body or {}).get("id"))}
 
 
 @app.post("/api/feed/refresh")

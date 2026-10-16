@@ -75,3 +75,20 @@ mark { background: rgba(250, 204, 21, .45); color: inherit; border-radius: 2px; 
 .fd-r-group li p { margin: 0; font-size: .85em; color: var(--text-secondary); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .fd-r-meta { font-size: .75em; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--text-secondary); }
 .fd-r-group .fd-analyse { padding-top: 2px; font-size: .82em; }
+
+/* Watchlists */
+.fd-watch-badge { display: inline-block; font-size: .7em; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--accent); color: #fff; vertical-align: middle; }
+.fd-watch-badge[hidden] { display: none; }
+.fd-watch-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fd-watch-item { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; }
+.fd-watch-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.fd-watch-flags { color: var(--text-secondary); font-size: .85em; }
+.fd-watch-new { font-size: .85em; color: var(--text-secondary); margin-left: auto; }
+.fd-watch-new.has-new { color: var(--accent); font-weight: 700; }
+.fd-watch-btn { font: inherit; font-size: .85em; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--accent); cursor: pointer; }
+.fd-watch-btn.is-remove { color: #dc2626; }
+.fd-watch-matches { list-style: none; margin: 8px 0 0; padding: 0; }
+.fd-watch-matches li { padding: 6px 0; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.fd-watch-matches li > a:not(.fd-analyse) { font-weight: 600; color: var(--text-primary); text-decoration: none; }
+.fd-tag.is-watch { background: rgba(14, 165, 233, .14); color: #0369a1; }
+[data-theme="dark"] .fd-tag.is-watch { color: #7dd3fc; }

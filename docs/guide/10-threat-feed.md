@@ -46,6 +46,16 @@ Every word of the search must appear, as a whole word or the start of one. Resul
 
 **Include web news** sends your keyword to Google and Bing. Untick it for a search that stays on your machine.
 
+## Watchlists
+
+The **Watchlists** card saves a search, for example `Scattered Spider`, `RedSun`, a CVE or a vendor. Each collection then flags posts that match it. The search is the same as Search all research's: Archer's sources, plus web news if you tick **Include web news**, which sends the keyword to Google and Bing at every collection. No AI is involved.
+
+When you save a watchlist, everything it matches already counts as seen, so only posts that arrive afterwards are new. The number of new matches shows on the card, and on **Intel** and **Feed** in the menu bar. **Mark seen** clears a watchlist's new matches. A **Watch** button under each Search all research result saves that search.
+
+While any watchlist exists, Archer collects every six hours by itself, so new matches don't wait for someone to open the Feed. **Email me** sends one email per collection listing the new matches. It needs email configured (`EMAIL_ENABLED=true` and the `SMTP_*` settings in `.env`); without that, the box is greyed out.
+
+Watchlists are per user, in `data/feed/watchlists/` (not in git).
+
 ## Sources
 
 The **Sources** section at the foot of the page lists each source and the result of its last collection: posts this week, or why it failed.
@@ -56,6 +66,6 @@ An administrator can add any RSS or Atom feed (name and URL) and remove ones the
 
 ## Limits
 
-- Collection happens on start-up, on **Refresh now**, and when the page is opened six hours or more after the last collection.
+- Collection happens on start-up, on **Refresh now**, and when the page is opened six hours or more after the last collection. While any watchlist exists, Archer also collects every six hours by itself.
 - Tags are pattern matches, not reading comprehension. A post that discusses a group without naming it, or attributes in unusual wording, can go untagged.
 - The research archive only holds what the feeds carried. Some feeds carry ten posts, some hundreds, so older coverage varies by source.

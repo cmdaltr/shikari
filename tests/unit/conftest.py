@@ -272,6 +272,14 @@ def _ioc_flows_in_tmp(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _watchlists_in_tmp(tmp_path, monkeypatch):
+    """Feed refreshes check watchlists; keep them out of the real data/feed/watchlists."""
+    from archer.intelligence import watchlists
+
+    monkeypatch.setattr(watchlists, "WATCH_DIR", str(tmp_path / "watchlists"))
+
+
+@pytest.fixture(autouse=True)
 def _isolated_technique_yield_ledger(tmp_path, monkeypatch):
     """LLM calls in tests record empty results; keep them out of data/technique_yield_llm.json."""
     from archer.build import technique_yield

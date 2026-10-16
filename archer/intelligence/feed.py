@@ -691,6 +691,14 @@ def refresh(bundle, group_meta: Dict, days: int = FEED_DAYS, workers: int = 10) 
             archive([], posts)  # the analysed descriptions, so searches reach the article text
         except Exception as e:
             print(f"Research archive not updated: {e}")
+        try:
+            from archer.intelligence.watchlists import check_all
+
+            found = check_all(bundle)
+            if found:
+                print(f"Watchlists: {found} new match(es)")
+        except Exception as e:
+            print(f"Watchlists not checked: {e}")
         _status["last_refresh"] = data["last_refresh"]
         return data
     except Exception as e:

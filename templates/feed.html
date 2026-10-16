@@ -38,6 +38,22 @@
     <div class="fd-research-results" id="fd-research-results" aria-live="polite"></div>
   </section>
 
+  <!-- Saved searches that flag new posts (archer.intelligence.watchlists) -->
+  <section class="fd-research fd-watch" id="fd-watch" aria-labelledby="fd-watch-title">
+    <h2 id="fd-watch-title">Watchlists <span class="fd-watch-badge" id="fd-watch-total" hidden></span></h2>
+    <p class="fd-research-note">Save a search, and each collection (every six hours while you have a watchlist, or <strong>Refresh now</strong>) flags posts that match it.
+      What matches when you save it counts as seen, so only later posts are new. Matching is Search all research's: Archer's sources,
+      and the web's security news if you tick it (the keyword then goes to Google and Bing at every collection).</p>
+    <form class="fd-research-form" id="fd-watch-form">
+      <input type="search" id="fd-watch-q" placeholder="Watch for, e.g. Scattered Spider, CVE-2025-53770" minlength="3" maxlength="100" required aria-label="Watch for">
+      <label class="fd-research-web"><input type="checkbox" id="fd-watch-web"> Include web news</label>
+      <label class="fd-research-web" id="fd-watch-email-label"><input type="checkbox" id="fd-watch-email"> Email me</label>
+      <button type="submit" class="btn-primary" id="fd-watch-add">Watch</button>
+      <span class="fd-source-msg" id="fd-watch-msg" role="status"></span>
+    </form>
+    <ul class="fd-watch-list" id="fd-watch-list"></ul>
+  </section>
+
   <section class="fd-controls" aria-label="Search and filter">
     <input type="search" id="fd-search" class="fd-search" placeholder="Search titles and descriptions…" aria-label="Search titles and descriptions">
     <div class="fd-filters" role="radiogroup" aria-label="Which posts">

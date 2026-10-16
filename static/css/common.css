@@ -143,6 +143,8 @@ a.nav-menu-item:hover, a.nav-menu-item:focus-visible { background: rgba(197, 48,
 .nav-menu-item.is-active { background: rgba(197, 48, 48, 0.09); border-color: rgba(197, 48, 48, 0.35); }
 .nav-menu-item.is-disabled { opacity: .45; cursor: not-allowed; }
 .nav-menu-item.is-soon { opacity: .6; cursor: default; }
+/* Threat Feed watchlists: new matches (partials/nav_controls.html) */
+.nav-watch-badge { display: inline-block; min-width: 18px; text-align: center; font-size: 10.5px; font-weight: 700; line-height: 16px; padding: 0 5px; border-radius: 999px; background: var(--accent, #C53030); color: #fff; vertical-align: 1px; }
 .nav-soon { font-style: normal; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 1px 6px; margin-left: 6px; border-radius: 4px; background: #9ca3af; color: #fff; vertical-align: 1px; }
 [data-theme="dark"] .nav-menu-list { background: var(--bg-secondary, #1f2937); border-color: var(--border-color, #374151); box-shadow: 0 12px 32px rgba(0,0,0,.5); }
 [data-theme="dark"] .nav-menu-item { color: var(--text-primary, #f3f4f6); }

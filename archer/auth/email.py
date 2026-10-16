@@ -221,7 +221,7 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str) -> b
 
             server.sendmail(SMTP_FROM_EMAIL, to_email, msg.as_string())
 
-        logger.info(f"Password reset email sent successfully to {to_email}")
+        logger.info(f"Email sent to {to_email}: {subject}")
         return True
 
     except Exception as e:

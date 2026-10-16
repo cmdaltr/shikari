@@ -1,7 +1,7 @@
 // Threat Feed page (templates/feed.html): a searchable wall of tagged posts, refreshed in the background.
 (function () {
   const $ = id => document.getElementById(id);
-  let timer = null, posts = [], show = 'both';
+  let timer = null, posts = [], show = 'both', watchedUrls = {};
 
   async function load() {
     clearTimeout(timer);
@@ -15,6 +15,7 @@
       return;
     }
     posts = data.posts;
+    watchedUrls = data.watched || {};
     $('fd-days').textContent = data.days;
     $('fd-industries').textContent = data.labels.length ? data.labels.join(', ') : 'none set';
     $('fd-stack').textContent = data.stack && data.stack.length ? `${data.stack.length} product${data.stack.length === 1 ? '' : 's'}` : 'none set';
@@ -93,6 +94,7 @@
       const tag = (cls, text, title) => `<li class="fd-tag ${cls}"${title ? ` title="${esc(title)}"` : ''}>${esc(text)}</li>`;
       const tags = [
         ...p.tags.industries.map(i => tag(yours.has(i) ? 'is-yours' : 'is-industry', i, yours.has(i) ? `Your industry: ${p.yours[i].join(', ')}` : '')),
+        ...(watchedUrls[p.url] || []).map(q => tag('is-watch', `Watching: ${q}`, 'Matches your watchlist')),
         ...(p.stack || []).map(s => tag('is-yours', s, 'In your technology stack')),
         ...((p.off_stack || []).length ? [tag('is-off-stack', 'Not your stack', `Aimed at ${p.off_stack.join(', ')}, which your technology stack doesn't have`)] : []),
         ...p.tags.nations.map(n => tag('is-nation', n)),
@@ -168,7 +170,86 @@
     out.innerHTML = groups.filter(g => g[2].length).map(([title, note, items]) => `<div class="fd-r-group">
         <h3 class="ui-subtitle">${title} <span class="fd-count">${items.length}</span></h3>
         ${note ? `<p class="fd-r-note">${note}</p>` : ''}<ul>${items.join('')}</ul></div>`).join('')
-      + (empty.length ? `<p class="fd-empty">Nothing in ${empty.join(empty.length > 2 ? ', ' : ' or ')}.</p>` : '');
+      + (empty.length ? `<p class="fd-empty">Nothing in ${empty.join(empty.length > 2 ? ', ' : ' or ')}.</p>` : '')
+      + `<p class="fd-empty"><button type="button" class="fd-watch-btn fd-watch-this" data-q="${esc(r.query)}">Watch “${esc(r.query)}” for new posts</button></p>`;
+  });
+
+  // Watchlists: saved searches flagging new posts at each collection
+  async function watchLoad() {
+    let r;
+    try {
+      const res = await fetch('/api/feed/watchlists');
+      r = await res.json();
+      if (!res.ok) throw new Error(r.error || res.status);
+    } catch (err) {
+      $('fd-watch-list').innerHTML = `<li class="fd-empty">${esc(err.message)}</li>`;
+      return;
+    }
+    const email = $('fd-watch-email');
+    email.disabled = !r.email_available;
+    $('fd-watch-email-label').title = r.email_available ? 'One email per collection with new matches' : 'Email needs SMTP configured (EMAIL_ENABLED and SMTP_* in .env)';
+    $('fd-watch-total').hidden = !r.new_count;
+    $('fd-watch-total').textContent = `${r.new_count} new`;
+    const day = d => d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    $('fd-watch-list').innerHTML = r.watchlists.length ? r.watchlists.map(w => `<li class="fd-watch-item" data-id="${esc(w.id)}">
+        <div class="fd-watch-row">
+          <strong>${esc(w.query)}</strong>
+          <span class="fd-watch-flags">${w.web ? 'Sources and web' : 'Sources'}${w.email ? ' · email' : ''}${w.checked ? ` · checked ${esc(new Date(w.checked * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))}` : ''}</span>
+          <span class="fd-watch-new${w.new_count ? ' has-new' : ''}">${w.new_count ? `${w.new_count} new` : 'Nothing new'}</span>
+          ${w.new_count ? '<button type="button" class="fd-watch-btn" data-act="seen">Mark seen</button>' : ''}
+          <button type="button" class="fd-watch-btn is-remove" data-act="remove">Remove</button>
+        </div>
+        ${w.new_count ? `<ul class="fd-watch-matches">${w.new.map(m => `<li><span class="fd-r-meta">${esc(m.source || m.via || '')}${m.published ? ` · ${esc(day(m.published))}` : ''}</span>
+          <a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a>
+          <a class="fd-analyse" href="/?report=${encodeURIComponent(m.url)}">Analyse in Archer →</a></li>`).join('')}</ul>` : ''}
+      </li>`).join('') : '<li class="fd-empty">No watchlists yet.</li>';
+  }
+
+  $('fd-watch-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = $('fd-watch-msg'), btn = $('fd-watch-add');
+    btn.disabled = true;
+    msg.className = 'fd-source-msg';
+    msg.textContent = 'Saving (finding what already matches)…';
+    try {
+      const res = await fetch('/api/feed/watchlists', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: $('fd-watch-q').value, web: $('fd-watch-web').checked, email: $('fd-watch-email').checked }) });
+      const r = await res.json();
+      if (!res.ok) throw new Error(r.error || res.status);
+      msg.classList.add('is-ok');
+      msg.textContent = `Watching “${r.watchlist.query}”. New posts appear here after each collection.`;
+      $('fd-watch-q').value = '';
+      watchLoad();
+    } catch (err) {
+      msg.classList.add('is-bad');
+      msg.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('fd-watch-list').addEventListener('click', async e => {
+    const btn = e.target.closest('.fd-watch-btn');
+    if (!btn) return;
+    const id = btn.closest('.fd-watch-item').dataset.id;
+    btn.disabled = true;
+    if (btn.dataset.act === 'seen') {
+      await fetch('/api/feed/watchlists/seen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    } else {
+      await fetch(`/api/feed/watchlists/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    }
+    watchLoad();
+    window.dispatchEvent(new Event('archer:watch-changed'));
+  });
+
+  // A research search can become a watchlist
+  $('fd-research-results').addEventListener('click', e => {
+    const btn = e.target.closest('.fd-watch-this');
+    if (!btn) return;
+    $('fd-watch-q').value = btn.dataset.q;
+    $('fd-watch-web').checked = $('fd-research-web').checked;
+    $('fd-watch').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('fd-watch-q').focus();
   });
 
   function esc(s) {
@@ -176,4 +257,5 @@
   }
 
   load();
+  watchLoad();
 })();
