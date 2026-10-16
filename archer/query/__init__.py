@@ -1,10 +1,11 @@
 """
-Query execution module for MDE and Splunk APIs.
+Query execution module for the Splunk API.
 
-Allows running generated queries against live data sources.
+Allows running generated queries against live data sources. Defender XDR
+execution is planned (#16) on Microsoft Graph's runHuntingQuery, as
+archer/telemetry/mde.py uses.
 """
 
-from .mde import MDEClient
 from .splunk import SplunkClient
 
-__all__ = ["MDEClient", "SplunkClient"]
+__all__ = ["SplunkClient"]

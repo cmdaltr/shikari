@@ -24,87 +24,23 @@ Setup, step by step: [Recording a lab](../guide/20-recording-a-lab.md).
 
 ## Query Execution
 
-**Status**: Code implemented but not validated against live MDE/Splunk environments
+**Status**: Splunk client implemented but not validated against a live Splunk; Defender XDR not implemented
 
-> `archer/query/mde.py` uses the MDE Advanced Hunting API (`api.securitycenter.microsoft.com`), which Microsoft is retiring in favour of Microsoft Graph's `runHuntingQuery`. Before validating it, move it to Graph as `archer/telemetry/mde.py` already does (application permission `ThreatHunting.Read.All`).
-
-### Overview
-
-Execute generated detection queries directly against your SIEM platform via API. Validate detection quality and tune queries based on real results.
-
-### Capabilities
-
-- 🌐 **MDE Advanced Hunting** - KQL query execution with OAuth2 authentication
-- 📊 **Splunk Search API** - SPL query execution with job management
-- 🔒 **Secure Authentication** - OAuth2 for MDE, token-based for Splunk
-- 📈 **Result Analysis** - View query results and tune detections
+Running a generated query against the SIEM and reading the results back. `archer/query/splunk.py` (`SplunkClient`) runs SPL through Splunk's search jobs API. Defender XDR execution will be built with hit counts ([#16](https://github.com/cmdaltr/archer/issues/16)) on Microsoft Graph's `runHuntingQuery` (application permission `ThreatHunting.Read.All`), reusing the token and query code in `archer/telemetry/mde.py`. The older client for the retiring `api.securitycenter.microsoft.com` API was removed unused.
 
 ### Configuration
 
-#### Microsoft Defender (MDE)
-
-Set up credentials via environment variables:
-```bash
-export MDE_TENANT_ID=your-tenant-id
-export MDE_CLIENT_ID=your-client-id
-export MDE_CLIENT_SECRET=your-client-secret
-```
-
-Or configure via Web UI: **Profile → API Keys → SIEM Platforms**
-
-#### Splunk
-
-Set up credentials via environment variables:
 ```bash
 export SPLUNK_HOST=splunk.example.com
 export SPLUNK_USERNAME=admin
 export SPLUNK_PASSWORD=your-password
 ```
 
-Or configure via Web UI: **Settings → Query Execution → Splunk Configuration**
-
-### Prerequisites
-
-- **MDE**: Azure AD app registration with SecurityEvents.Read.All permission
-- **Splunk**: Splunk Enterprise/Cloud instance with API access
-- **API Credentials**: Valid authentication credentials
-- **Network Access**: Connectivity to SIEM APIs
-
-### Usage
-
-**Web UI** (Recommended):
-1. Navigate to **Settings → Query Execution**
-2. Configure API credentials
-3. Select generated detection to test
-4. Click **Execute Query**
-5. Review results and tune query
-
-**CLI**:
-```bash
-# CLI integration for query execution is planned for future release
-# Currently available via web UI only
-```
-
-### Authentication
-
-**MDE OAuth2 Flow**:
-1. Register Azure AD application
-2. Grant SecurityEvents.Read.All permission
-3. Generate client secret
-4. Configure credentials in Archer
-
-**Splunk Token Authentication**:
-1. Create Splunk user with search permissions
-2. Generate authentication token (or use username/password)
-3. Configure credentials in Archer
-
-### Documentation
-
-**📚 [API Integration Guide](../features/API_INTEGRATION_GUIDE.md)** - API integration documentation
+Needs a Splunk Enterprise or Cloud instance with API access and a user allowed to search. There's no page or CLI command that runs it yet.
 
 ### Known Limitations
 
-- Not validated against live MDE/Splunk deployments
+- Not validated against a live Splunk deployment
 - API rate limits not fully tested
 - Large result sets may require pagination tuning
 - Error handling may need environment-specific adjustments
@@ -128,8 +64,6 @@ If you test any of these features, please help the community by:
 - [ ] A run appearing as Your lab, and a group's detections checked against it
 
 **Query Execution**:
-- [ ] MDE OAuth2 authentication
-- [ ] MDE query execution and results
 - [ ] Splunk token authentication
 - [ ] Splunk query execution and results
 - [ ] API error handling

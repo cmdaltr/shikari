@@ -64,7 +64,7 @@ archer stop
 - **Detection Library** - Save, search, tag, share, and export your generated detections
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
-- **Query Execution** - Defender XDR/Splunk API integration (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md))
+- **Query Execution** - Splunk API client (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md)); Defender XDR planned with hit counts (#16)
 - **Running atomics from Archer** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
 - **Threat library with red and blue outcomes (VECTR-style), CALDERA, MACAT** - Planned (see [FUTURE.md](docs/other/FUTURE.md) and #24)
 
