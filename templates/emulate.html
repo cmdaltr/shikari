@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Archer - Emulate{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/mitresaw.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/emulate.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container ms-page em-page" data-signed-in="{{ 'true' if user else 'false' }}" data-admin="{{ 'true' if user and user.role.value == 'admin' else 'false' }}" data-siem="{{ siem }}">
+  <div class="page-header">
+    <h1>Emulate</h1>
+    <p>Which logs record each technique, from attacks emulated and recorded in labs, and whether your detections' indicators appear in them</p>
+  </div>
+
+  <!-- Filters: the Coverage page's filter card. Which apply depends on the view below. -->
+  <div class="ui-card em-filters">
+    <div class="detection-header">
+      <h2>
+        <div class="card-icon filters">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </div>
+        Filters
+        <span class="filter-active" id="em-filter-active" hidden></span>
+      </h2>
+      <span id="em-filters-toggle" class="expand-btn" role="button" tabindex="0">Collapse</span>
+    </div>
+    <div class="em-filters-body" id="em-filters-body">
+      <div class="search-row" data-for="technique group">
+        <input type="search" class="form-input" id="em-q" autocomplete="off" maxlength="200"
+               placeholder="Search indicators: a value in the recorded events (comsvcs, lsass.dmp, vssadmin…)" aria-label="Indicators">
+      </div>
+      <div class="filters-row">
+        <select id="em-siem" class="dropdown-styled" aria-label="SIEM platform" title="The SIEM whose tables or event types are shown">
+          <option value="secops">Google SecOps</option>
+          <option value="mde">Defender XDR</option>
+        </select>
+        <div class="em-ms" data-key="technique" data-label="Techniques" data-search="ID or name" data-for="technique group source"></div>
+        <div class="em-ms" data-key="group" data-label="Groups" data-search="Group" data-for="technique group source"></div>
+        <div class="em-ms" data-key="source" data-label="Data sources" data-search="Table or event type" data-for="technique group source"></div>
+        <div class="em-ms" data-key="log" data-label="Logs" data-search="Sysmon 1, Security 4688…" data-for="technique group source"></div>
+        <div class="em-ms" data-key="seen" data-label="Seen" data-for="group"></div>
+        <button type="button" id="em-clear" title="Clear filters">
+          <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
+        <span class="cv-shown" id="em-shown"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- archer.telemetry: the recordings and where they come from -->
+  <section class="ui-card ms-card">
+    <h2>Recorded telemetry</h2>
+    <dl class="ms-stats em-stats" id="em-stats">
+      <div><dt>Recordings</dt><dd id="em-datasets">–</dd></div>
+      <div><dt>Techniques</dt><dd id="em-techniques">–</dd></div>
+      <div class="em-check is-starting" id="em-check"><dt>Indicator check</dt><dd id="em-values">Initialising…</dd></div>
+    </dl>
+    <ul class="em-sources" id="em-sources"></ul>
+    <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
+      It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.
+      The recordings ship with Archer; <strong>Update</strong> (or <code>python -m archer.telemetry --build</code>) fetches what the sources have changed since. No AI is involved.</p>
+    <div class="ui-actions ms-actions">
+      <span class="ms-state" id="em-state" aria-live="polite"></span>
+      <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
+    </div>
+    <pre class="ms-log" id="em-log" hidden></pre>
+  </section>
+
+  <section class="ui-card ms-card" id="em-view-card">
+    <h2 class="em-view-title">Telemetry by
+      <select id="em-view" class="dropdown-styled" aria-label="Telemetry by">
+        <option value="technique">technique</option>
+        <option value="group">group</option>
+        <option value="source">data source</option>
+      </select>
+    </h2>
+    <p class="ms-note em-view-note" id="em-view-note"></p>
+    <div id="em-results" aria-live="polite"></div>
+    <div class="ms-pager" id="em-pager" hidden>
+      <button type="button" class="ui-pill" id="em-prev">Previous</button>
+      <span id="em-page"></span>
+      <button type="button" class="ui-pill" id="em-next">Next</button>
+    </div>
+  </section>
+</div>
+<script src="{{ url_for('static', path='js/emulate.js') }}?v={{ request.app.state.asset_version }}"></script>
+{% endblock %}

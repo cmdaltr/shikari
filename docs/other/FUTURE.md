@@ -352,7 +352,7 @@ Have an idea for a new feature? We'd love to hear it!
 | [#20](https://github.com/cmdaltr/archer/issues/20) | Detections as code: export to git, push to the SIEM, diff between runs |
 | ~~[#21](https://github.com/cmdaltr/archer/issues/21)~~ | Technology stack: only hunt what applies to the products the organisation runs (done) |
 | ~~[#23](https://github.com/cmdaltr/archer/issues/23)~~ | Correlations: include OSINT enrichment (done) |
-| [#22](https://github.com/cmdaltr/archer/issues/22) | Emulate: which logs record each technique (Security-Datasets, then Atomic Red Team labs in Docker and a Windows VM) |
+| [#22](https://github.com/cmdaltr/archer/issues/22) | Emulate: which logs record each technique. Stage 1 (Splunk attack_data, Security-Datasets, EVTX-to-MITRE-Attack) done; Atomic Red Team labs in Docker and a Windows VM to come |
 
 ---
 

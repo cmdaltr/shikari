@@ -12,6 +12,7 @@ Archer downloads public data, keeps it up to date by itself, and stores everythi
 | LOLBAS, LOLDrivers, LOLRMM | lolol.farm projects | At most once a day | `data/repos/lol/`, `data/cache/lol_index.json` |
 | CVE records | NVD | When a CVE is first hunted, then cached | `data/cache/cve/` |
 | Threat Feed | The feed sources' RSS and Atom feeds | On every start, on Refresh now, and when the Feed is opened six hours after the last collection | `data/feed/` |
+| Recorded attack telemetry | Splunk attack_data, OTRF Security-Datasets, EVTX-to-MITRE-Attack | Committed; changed recordings fetched from the [Emulate](19-emulate.md) page or `python -m archer.telemetry --build` | `archer/data/telemetry_*` |
 | World map, flags | Natural Earth; flag-icons (MIT) | Committed; rebuilt only by `scripts/data/` | `static/images/`, `static/vendor/flag-icons/` |
 
 Starting with `archer start --skip-index` skips rebuilding the OSINT technique index, for a faster start.

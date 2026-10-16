@@ -1513,8 +1513,10 @@ from archer.visualization.flow_layouts import router as flow_layout_router
 app.include_router(flow_layout_router)
 
 from archer.mitre.web import router as mitresaw_router
+from archer.telemetry.web import router as telemetry_router
 
 app.include_router(mitresaw_router)
+app.include_router(telemetry_router)
 
 
 # Favicon route - ensure favicon is served from root with no-cache headers
@@ -2480,6 +2482,22 @@ async def mitresaw_page(request: Request, archer_session: Optional[str] = Cookie
         finally:
             db.close()
     return templates.TemplateResponse("mitresaw.html", {"request": request, "user": user})
+
+
+@app.get("/emulate", response_class=HTMLResponse)
+async def emulate_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Recorded attack telemetry per technique and data source, and detections checked against it (archer.telemetry)."""
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+    # The SIEM the page shows tables or event types for: the first of the user's, SecOps first
+    chosen = _user_siems(user)
+    siem = next((s for s in ("secops", "mde") if s in chosen), "secops")
+    return templates.TemplateResponse("emulate.html", {"request": request, "user": user, "siem": siem})
 
 
 @app.get("/cyber-powers", response_class=HTMLResponse)

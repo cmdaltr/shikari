@@ -1,0 +1,67 @@
+# Emulate
+
+**Build → Emulate** shows which logs record each ATT&CK technique, taken from attacks emulated and recorded in public labs, and checks your detections' indicators against those recordings. No AI is involved and nothing is sent to your SIEM.
+
+## Where the recordings come from
+
+| Source | Licence | What it is |
+|---|---|---|
+| [Splunk attack_data](https://github.com/splunk/attack_data) | Apache-2.0 | Atomic Red Team and tool runs in Splunk's Attack Range. Maintained |
+| [Security-Datasets (OTRF)](https://github.com/OTRF/Security-Datasets) | MIT | Empire, Covenant and tool runs in OTRF's lab. Last updated March 2024 |
+| [EVTX-to-MITRE-Attack](https://github.com/mdecrevoisier/EVTX-to-MITRE-Attack) | CC0-1.0 | Windows event log samples of attacks, one .evtx per attack, filed by technique. Maintained |
+
+Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs, auditd, syslog), mapped to ATT&CK by the people who recorded it. It shows that a technique can be recorded and by which log, for that tool in that lab, not every way the technique can be done.
+
+All three ship with Archer: `archer/data/telemetry_datasets.json` (each recording's techniques and event types) and `archer/data/telemetry_values.json.gz` (the distinct values of the fields detections match on). **Update** on the page (admins) or the command below fetches only the recordings the sources have changed since:
+
+```
+python -m archer.telemetry --build                  # all three
+python -m archer.telemetry --build --source evtx    # or splunk, otrf
+```
+
+A full build downloads about 1.2 GB. Splunk's logs are read up to 3 MB each: the median is 10 KB, but a few captures run to hundreds of MB of lab background.
+
+The **Indicator check** tile says whether detections can be checked: green **Ready**, orange **Starting…** while an update runs, red **Unavailable** when the field values aren't on this machine, blue **Error** when the last update failed.
+
+## Filters
+
+The filter card applies to whichever view is open below it, and shows only the filters that view uses.
+
+| Filter | What it picks |
+|---|---|
+| SIEM | Google SecOps or Defender XDR: whose UDM event types or tables are shown, and in the group view, whose detections. Defaults to your first SIEM under Profile → SIEM platforms |
+| Indicators | Free text. By technique: techniques whose recorded events hold a field value containing it (`…` gaps match their parts in order). By group: detections with an indicator containing it |
+| Techniques | Search by ID or name |
+| Groups | Groups you've hunted. By technique or data source: the techniques their detections are for |
+| Data sources | The SIEM's tables or UDM event types |
+| Logs | Recorded event types: Sysmon 1, Security 4688 |
+| Seen | By group only: Seen, Not seen, No recordings, No indicators, or any noisy indicator |
+
+## Telemetry by technique
+
+Every recorded technique, 20 to a page, with its recordings per source, the **logs** at least half its recordings hold, and those logs' tables or UDM event types for the chosen SIEM: the logs you have to ingest to see it. Select a row for every event type its recordings hold and the recordings themselves. An event type marked **common** turns up in 40% or more of a source's recordings (Security 4688, Sysmon 1), so it's a hint that the event is lab background as much as the attack; it's never taken out.
+
+## Telemetry by group
+
+Your detections for the chosen SIEM, for the groups picked in Filters (your latest hunt when none are). Each detection's indicators are matched against the field values of its technique's recordings:
+
+| Status | Meaning |
+|---|---|
+| Seen | A recorded event of the attack contains at least one indicator; the tag names the log and shows the source's logo |
+| Not seen | The technique has recordings, but none contain the detection's indicators |
+| No recordings | No source recorded the technique |
+| No indicators | The detection has no literal indicators to look for |
+
+An indicator is **noisy** when recordings of five or more other techniques contain it too: it matches the lab's ordinary activity as well as the attack.
+
+Not seen isn't proof a detection is wrong: the recording may have used another tool or procedure. It's a cheap first look before testing against your own SIEM.
+
+## Telemetry by data source
+
+Each table or UDM event type for the chosen SIEM, with how many techniques it records (counting it for a technique when at least half the technique's recordings hold it), the recorded logs it comes from, and the techniques. A technique opens in the technique view.
+
+## Limits
+
+- Three labs, each with their own logging policy: an event type missing from the recordings may just not have been collected.
+- The Windows event ID, auditd and cloud log mappings are in `archer/mappings/telemetry_map.json`; an event type not listed there shows without a table.
+- Running Atomic Red Team in your own lab (a Linux container, then a Windows VM) is the next stage of [#22](https://github.com/cmdaltr/archer/issues/22).
