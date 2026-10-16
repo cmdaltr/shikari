@@ -32,7 +32,7 @@ adfconsole (hunt/group) > run
 | `research/actors` | Find groups by keyword and consolidate their techniques |
 | `results` | Show a run's detections, correlations and IOC flow; save them as a zip |
 | `ai/ask`, `ai/briefing`, `ai/settings` | Ask Archer, a threat briefing, and the AI assignment |
-| `agent/repair`, `agent/ask`, `agent/triage`, `agent/history` | The [agents](14-agents-and-ask-archer.md) |
+| `agent/repair`, `agent/ask`, `agent/triage`, `agent/history` | The [agents](15-agents-and-ask-archer.md) |
 | `generate`, `correlate`, `hunt` | Run the pipeline locally, without the server |
 | `emulate` | Adversary emulation (not available yet) |
 

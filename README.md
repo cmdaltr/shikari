@@ -40,6 +40,7 @@ archer stop
 - 🌐 **Blog Analysis** - Paste a threat intel blog URL and extract TTPs/IOCs automatically
 - 📰 **Threat Feed** - A searchable wall of the last 7 days of vendor and government research (26 sources, and admins can add their own), each post tagged with targeted industries, the attacker's nation, and opportunistic or financial motive; plus a keyword search of all research at any date. No AI involved ([details](#threat-feed))
 - 🌍 **Cyber Powers** - IISS cyber power tiers, ATT&CK attribution confidence and targeting on an Equal Earth world map ([guide](docs/guide/11-cyber-powers.md))
+- 🧪 **Regex tester** - Test a pattern on your own text and check it for Defender XDR and SecOps (RE2), Splunk (PCRE) or Elastic (Lucene), with per-SIEM escaping ([guide](docs/guide/14-regex.md))
 - 🪚 **MITRESaw** - Every group's ATT&CK procedures and the indicators in them, rebuilt as ATT&CK changes ([guide](docs/guide/12-mitresaw.md))
 - 🗺️ **Attack Flows** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow
 - 🔍 **Multi-Platform Support** - Google SecOps (YARA-L) and Microsoft Defender (KQL); Splunk and Elastic are switched off for now ([onboarding](docs/SIEM_ONBOARDING.md))

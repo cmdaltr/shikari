@@ -1,0 +1,109 @@
+/* Regex page (templates/regex.html) */
+.rx-page { --rx-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --rx-match: rgba(250, 204, 21, .45); --rx-g0: rgba(59, 130, 246, .35); --rx-g1: rgba(16, 185, 129, .35);
+  --rx-g2: rgba(236, 72, 153, .35); --rx-g3: rgba(139, 92, 246, .35);
+  --rx-ok: #15803d; --rx-bad: #b91c1c; --rx-warn: #b45309; --rx-info: #2563eb; }
+[data-theme="dark"] .rx-page { --rx-match: rgba(250, 204, 21, .3); --rx-ok: #4ade80; --rx-bad: #f87171; --rx-warn: #fbbf24; --rx-info: #93c5fd; }
+.rx-card { padding: 16px 18px; margin-bottom: 16px; min-width: 0; }
+.rx-card .section-title { margin-bottom: 10px !important; }
+.rx-count { font-size: .8rem; font-weight: 600; color: var(--text-secondary); margin-left: auto; }
+.rx-note, .rx-empty { color: var(--text-secondary); font-size: .88rem; margin: 0 0 8px; }
+.rx-note:empty { display: none; }
+.rx-note code { font-family: var(--rx-mono); font-size: .9em; }
+
+.rx-flavours { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.rx-flavour span { font-weight: 400; opacity: .75; margin-left: 4px; font-size: .85em; }
+.rx-pattern-row { display: flex; align-items: center; gap: 6px; border: 1px solid var(--border-color); border-radius: 8px;
+  background: var(--bg-primary); padding: 4px 10px; }
+.rx-pattern-row:focus-within { border-color: var(--accent); }
+.rx-delim { font-family: var(--rx-mono); color: var(--text-secondary); font-size: 1.1rem; }
+.rx-pattern { flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary);
+  font-family: var(--rx-mono); font-size: 1rem; padding: 8px 2px; }
+.rx-replace { width: 100%; box-sizing: border-box; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; background: var(--bg-primary); }
+.rx-flags { display: flex; gap: 10px; font-family: var(--rx-mono); font-size: .9rem; color: var(--text-secondary); }
+.rx-flags label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.rx-status { margin: 10px 0 0; font-size: .9rem; color: var(--text-secondary); }
+.rx-status.is-ok { color: var(--rx-ok); }
+.rx-status.is-bad { color: var(--rx-bad); }
+
+.rx-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.rx-col { min-width: 0; }
+
+/* The test string: a transparent textarea over a backdrop that carries the highlights */
+.rx-editor { position: relative; }
+.rx-backdrop, .rx-text { font-family: var(--rx-mono); font-size: .9rem; line-height: 1.55; padding: 10px 12px; margin: 0;
+  border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; width: 100%;
+  white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; tab-size: 4; letter-spacing: 0; }
+.rx-backdrop { position: absolute; inset: 0; overflow: hidden; color: transparent; background: var(--bg-primary); pointer-events: none; }
+.rx-text { position: relative; display: block; min-height: 220px; resize: vertical; background: transparent; color: var(--text-primary);
+  caret-color: var(--text-primary); outline: 0; }
+.rx-text:focus { border-color: var(--accent); }
+.rx-backdrop mark { background: var(--rx-match); color: transparent; border-radius: 2px; }
+.rx-backdrop .rx-g0 { background: var(--rx-g0); } .rx-backdrop .rx-g1 { background: var(--rx-g1); }
+.rx-backdrop .rx-g2 { background: var(--rx-g2); } .rx-backdrop .rx-g3 { background: var(--rx-g3); }
+.rx-backdrop .rx-zero { display: inline-block; width: 2px; margin: 0 -1px; background: var(--rx-bad); }
+.rx-output { font-family: var(--rx-mono); font-size: .85rem; white-space: pre-wrap; overflow-wrap: anywhere; margin: 10px 0 0;
+  padding: 10px 12px; border-radius: 8px; background: var(--bg-primary); border: 1px solid var(--border-color); max-height: 240px; overflow: auto; }
+.rx-output:empty { display: none; }
+
+.rx-findings { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.rx-f { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
+.rx-f-icon { flex: none; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 700; color: #fff; margin-top: 1px; }
+.rx-f.is-error .rx-f-icon { background: var(--rx-bad); }
+.rx-f.is-warn .rx-f-icon { background: var(--rx-warn); }
+.rx-f.is-info .rx-f-icon { background: var(--rx-info); font-style: italic; font-family: Georgia, serif; }
+.rx-f.is-ok .rx-f-icon { background: var(--rx-ok); }
+
+.rx-matches { display: grid; gap: 8px; max-height: 420px; overflow-y: auto; }
+.rx-match { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; background: var(--bg-primary); min-width: 0; }
+.rx-match-head { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--text-secondary); display: flex; justify-content: space-between; }
+.rx-match-head span { font-family: var(--rx-mono); font-weight: 400; text-transform: none; }
+.rx-match-text { display: block; font-family: var(--rx-mono); font-size: .85rem; margin: 4px 0; overflow-wrap: anywhere; }
+.rx-match dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; margin: 4px 0 0; font-size: .82rem; }
+.rx-match dt { color: var(--text-secondary); }
+.rx-match dd { margin: 0; overflow-wrap: anywhere; }
+.rx-match code { font-family: var(--rx-mono); }
+
+.rx-explain { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; max-height: 420px; overflow-y: auto; }
+.rx-tok { display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); gap: 10px; align-items: baseline;
+  padding: 3px 6px 3px calc(6px + var(--depth) * 16px); border-radius: 4px; font-size: .88rem; }
+.rx-tok code { font-family: var(--rx-mono); font-size: .85rem; padding: 1px 6px; border-radius: 4px; background: var(--bg-primary); border: 1px solid var(--border-color); justify-self: start; overflow-wrap: anywhere; }
+.rx-tok span { color: var(--text-secondary); }
+.rx-tok.rx-open code, .rx-tok.rx-close code { color: var(--rx-info); }
+.rx-tok.rx-quant code { color: var(--rx-warn); }
+.rx-tok.rx-error, .rx-tok.is-unsupported { background: rgba(185, 28, 28, .08); }
+.rx-tok.rx-error span, .rx-tok.is-unsupported span { color: var(--rx-bad); }
+
+.rx-copy { display: grid; gap: 10px; }
+.rx-snip { border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); min-width: 0; }
+.rx-snip-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--border-color); font-size: .85rem; }
+.rx-snip pre { margin: 0; padding: 8px 10px; overflow-x: auto; }
+.rx-snip code { font-family: var(--rx-mono); font-size: .82rem; white-space: pre; }
+.rx-copy-btn { font: inherit; font-size: .8rem; font-weight: 600; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 0; }
+
+.rx-table-wrap { overflow-x: auto; }
+.rx-support { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.rx-support th, .rx-support td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; vertical-align: top; }
+.rx-support th span { display: block; font-weight: 400; color: var(--text-secondary); font-size: .85em; }
+.rx-support td.is-yes { color: var(--rx-ok); }
+.rx-support td.is-no { color: var(--rx-bad); }
+.rx-support td.is-part { color: var(--rx-warn); }
+
+@media (max-width: 900px) { .rx-grid { grid-template-columns: 1fr; } }
+.rx-flavour { white-space: nowrap; }
+@media (max-width: 600px) {
+  .rx-page { width: 100%; max-width: 100%; padding-left: 16px; padding-right: 16px; box-sizing: border-box; }
+  .rx-card { padding: 14px; }
+  .rx-flavours { gap: 6px; }
+  .rx-flavour { padding: 5px 10px; font-size: .85rem; }
+  .rx-pattern-row { flex-wrap: wrap; }
+  .rx-delim { display: none; }
+  .rx-pattern-row .rx-pattern { flex: 1 1 100%; }
+  .rx-flags { width: 100%; justify-content: flex-end; padding-bottom: 4px; }
+}
+/* The global dark-mode field style would cover the highlights and the pattern row */
+[data-theme="dark"] .rx-page .rx-text, [data-theme="dark"] .rx-page .rx-text:focus,
+[data-theme="dark"] .rx-page .rx-pattern-row .rx-pattern { background: transparent !important; border-color: var(--border-color); color: var(--text-primary) !important; box-shadow: none !important; }
+[data-theme="dark"] .rx-page .rx-pattern-row .rx-pattern { border: 0 !important; }
+[data-theme="dark"] .rx-page .rx-text:focus { border-color: var(--accent) !important; }

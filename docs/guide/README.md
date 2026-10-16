@@ -25,10 +25,11 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Cyber Powers | Intel → Cyber Powers | National cyber capability, attribution and targeting on a map | [Cyber Powers](11-cyber-powers.md) |
 | MITRESaw | Intel → MITRESaw | ATT&CK procedures and their indicators; OSINT repository status | [MITRESaw](12-mitresaw.md) |
 | Manual | Build → Manual | Write detections from your own TTPs, one technique at a time | [Manual](13-manual.md) |
-| Agents and Ask Archer | Build → Agents; the chat button | AI that repairs queries, answers questions, triages reports | [Agents and Ask Archer](14-agents-and-ask-archer.md) |
-| Profile (settings) | Profile | Your account, SIEMs, industries, country, API keys, MFA, users | [Profile and settings](15-profile-and-settings.md) |
-| Console, API and MCP | Terminal | Everything above without the browser | [Console, API and MCP](16-console-api-mcp.md) |
-| Data and updates | — | What Archer downloads, when, and where it keeps it | [Data and updates](17-data-and-updates.md) |
+| Regex | Build → Regex | Test a regex and check it for the SIEM it will run in | [Regex](14-regex.md) |
+| Agents and Ask Archer | Build → Agents; the chat button | AI that repairs queries, answers questions, triages reports | [Agents and Ask Archer](15-agents-and-ask-archer.md) |
+| Profile (settings) | Profile | Your account, SIEMs, industries, country, API keys, MFA, users | [Profile and settings](16-profile-and-settings.md) |
+| Console, API and MCP | Terminal | Everything above without the browser | [Console, API and MCP](17-console-api-mcp.md) |
+| Data and updates | — | What Archer downloads, when, and where it keeps it | [Data and updates](18-data-and-updates.md) |
 | Terms | — | ATT&CK, IOC, correlation, OSINT and the rest | [Glossary](glossary.md) |
 
 Emulate (Build → Emulate) is marked **Soon**: adversary emulation isn't available yet.

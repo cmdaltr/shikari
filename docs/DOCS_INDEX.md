@@ -24,10 +24,11 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [Cyber Powers](guide/11-cyber-powers.md) | The map's three views and how attribution is read |
 | [MITRESaw](guide/12-mitresaw.md) | Procedures, rebuilds, OSINT repositories, exclusions |
 | [Manual](guide/13-manual.md) | Detections from your own TTPs |
-| [Agents and Ask Archer](guide/14-agents-and-ask-archer.md) | The AI features |
-| [Profile and settings](guide/15-profile-and-settings.md) | Account, SIEMs, industries, keys, MFA, tokens, users |
-| [Console, API and MCP](guide/16-console-api-mcp.md) | `adfconsole`, the Python client, REST, `archer-mcp` |
-| [Data and updates](guide/17-data-and-updates.md) | What's downloaded, when, and where everything is kept |
+| [Regex](guide/14-regex.md) | Regex tester and per-SIEM checks (RE2, PCRE, Lucene) |
+| [Agents and Ask Archer](guide/15-agents-and-ask-archer.md) | The AI features |
+| [Profile and settings](guide/16-profile-and-settings.md) | Account, SIEMs, industries, keys, MFA, tokens, users |
+| [Console, API and MCP](guide/17-console-api-mcp.md) | `adfconsole`, the Python client, REST, `archer-mcp` |
+| [Data and updates](guide/18-data-and-updates.md) | What's downloaded, when, and where everything is kept |
 | [Glossary](guide/glossary.md) | The terms used throughout |
 
 ---

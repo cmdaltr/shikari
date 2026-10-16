@@ -17,7 +17,7 @@ Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. 
 
 ## ATT&CK techniques
 
-Marked **Coming soon** in the page. The same hunt is available now from the console (`hunt/technique`) and the API: see [Console, API and MCP](16-console-api-mcp.md). It hunts the techniques across every group that uses them.
+Marked **Coming soon** in the page. The same hunt is available now from the console (`hunt/technique`) and the API: see [Console, API and MCP](17-console-api-mcp.md). It hunts the techniques across every group that uses them.
 
 ## Options
 

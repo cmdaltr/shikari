@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Archer - Regex{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/regex.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container rx-page">
+  <div class="page-header">
+    <h1>Regex</h1>
+    <p>Test a regular expression, and check it for the SIEM it will run in</p>
+  </div>
+
+  <section class="ui-card rx-card">
+    <h2 class="section-title">Expression</h2>
+    <div class="rx-flavours" role="radiogroup" aria-label="Regex flavour">
+      {% for key, label, engine in [('kql', 'Defender XDR', 'KQL · RE2'), ('yaral', 'Google SecOps', 'YARA-L · RE2'),
+                                    ('spl', 'Splunk', 'SPL · PCRE'), ('elastic', 'Elastic', 'Lucene regexp'),
+                                    ('python', 'Python', 're'), ('js', 'JavaScript', 'ECMAScript')] %}
+      <button type="button" class="ui-pill rx-flavour{{ ' is-active' if loop.first }}" data-flavour="{{ key }}" role="radio"
+              aria-checked="{{ 'true' if loop.first else 'false' }}">{{ label }} <span>{{ engine }}</span></button>
+      {% endfor %}
+    </div>
+    <div class="rx-pattern-row">
+      <span class="rx-delim" aria-hidden="true">/</span>
+      <input type="text" id="rx-pattern" class="rx-pattern" spellcheck="false" autocomplete="off"
+             placeholder="e.g. (?i)\\(?:psexec|paexec)(?:64)?\.exe" aria-label="Regular expression">
+      <span class="rx-delim" aria-hidden="true">/</span>
+      <div class="rx-flags" aria-label="Flags">
+        <label title="Case-insensitive"><input type="checkbox" data-flag="i"> i</label>
+        <label title="Multi-line: ^ and $ match at each line"><input type="checkbox" data-flag="m"> m</label>
+        <label title="Dot matches new lines too"><input type="checkbox" data-flag="s"> s</label>
+      </div>
+    </div>
+    <p class="rx-status" id="rx-status" role="status">Type a pattern.</p>
+  </section>
+
+  <div class="rx-grid">
+    <div class="rx-col">
+      <section class="ui-card rx-card">
+        <h2 class="section-title">Test string <span class="rx-count" id="rx-count"></span></h2>
+        <p class="rx-note" id="rx-test-note"></p>
+        <div class="rx-editor">
+          <pre class="rx-backdrop" id="rx-backdrop" aria-hidden="true"></pre>
+          <textarea id="rx-text" class="rx-text" spellcheck="false" rows="12" aria-label="Test string"
+                    placeholder="Paste command lines, paths or log lines, one per line"></textarea>
+        </div>
+      </section>
+
+      <section class="ui-card rx-card">
+        <h2 class="section-title">Substitution</h2>
+        <input type="text" id="rx-replace" class="rx-pattern rx-replace" spellcheck="false" autocomplete="off"
+               placeholder="Replacement: $1 or \1, $&lt;name&gt;" aria-label="Replacement">
+        <pre class="rx-output" id="rx-replaced"></pre>
+      </section>
+
+      <section class="ui-card rx-card">
+        <h2 class="section-title">Use it in a query</h2>
+        <p class="rx-note">The pattern, escaped for each SIEM's string syntax, with the flags turned into that SIEM's own spelling.</p>
+        <div id="rx-copy" class="rx-copy"></div>
+      </section>
+    </div>
+
+    <div class="rx-col">
+      <section class="ui-card rx-card">
+        <h2 class="section-title">Checks <span class="rx-count" id="rx-check-count"></span></h2>
+        <ul class="rx-findings" id="rx-findings"></ul>
+      </section>
+
+      <section class="ui-card rx-card">
+        <h2 class="section-title">Match information</h2>
+        <div id="rx-matches" class="rx-matches"></div>
+      </section>
+
+      <section class="ui-card rx-card">
+        <h2 class="section-title">Explanation</h2>
+        <ol class="rx-explain" id="rx-explain"></ol>
+      </section>
+    </div>
+  </div>
+
+  <section class="ui-card rx-card" data-collapsed-default>
+    <h2 class="section-title">What each flavour supports</h2>
+    <div class="rx-table-wrap"><table class="rx-support" id="rx-support"></table></div>
+    <p class="rx-note">Matching on this page runs in your browser's engine (JavaScript), with the pattern translated where the
+      flavour spells something differently (<code>(?P&lt;name&gt;)</code>, <code>(?i)</code>, <code>\A</code>, <code>\z</code>,
+      <code>\Q…\E</code>). Constructs JavaScript has no equivalent for, such as possessive quantifiers and atomic groups,
+      are checked but can't be run here. RE2 (Defender XDR, Google SecOps) never backtracks, so it can't hang on a pattern;
+      PCRE, Python and JavaScript can. Nothing you type leaves your browser.</p>
+  </section>
+</div>
+<script src="{{ url_for('static', path='js/regex.js') }}?v={{ request.app.state.asset_version }}" defer></script>
+{% endblock %}

@@ -33,7 +33,7 @@ Open `http://localhost:8000`. The default administrator is set in the configurat
 
 **Continue as Guest** lets someone try Archer without an account. A guest's work isn't saved once the browser closes.
 
-Accounts are created by an administrator (Profile → Users) or by registering at `/register`. Each account can turn on two-factor authentication: see [Profile and settings](15-profile-and-settings.md#security).
+Accounts are created by an administrator (Profile → Users) or by registering at `/register`. Each account can turn on two-factor authentication: see [Profile and settings](16-profile-and-settings.md#security).
 
 ## What happens at start-up
 
@@ -47,4 +47,4 @@ Archer brings its data up to date in the background each time it starts. Pages w
 | LOLBAS, LOLDrivers, LOLRMM | Fetched, at most once a day |
 | Threat Feed | Collected on every start (only posts it hasn't seen are fetched); opening the Feed collects again when the last collection is more than six hours old |
 
-Details are in [Data and updates](17-data-and-updates.md).
+Details are in [Data and updates](18-data-and-updates.md).

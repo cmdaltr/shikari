@@ -3726,6 +3726,19 @@ async def progress(
     )
 
 
+@app.get("/regex", response_class=HTMLResponse)
+def regex_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Regex tester (Build): matching and the flavour checks run in the browser; nothing is sent here."""
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+    return templates.TemplateResponse("regex.html", {"request": request, "user": user})
+
+
 @app.get("/manual", response_class=HTMLResponse)
 def manual(request: Request, group_name: str = "", archer_session: Optional[str] = Cookie(None)):
     tactics, techniques = get_mitre_lists()
