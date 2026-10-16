@@ -51,6 +51,6 @@ RE2 never backtracks, so a pattern can't hang a Defender XDR or Google SecOps se
 
 ## Limits
 
-- Matching uses your browser's engine, with the pattern translated where the flavour only spells something differently (`(?P<name>)`, a leading `(?i)`, `\A`, `\z`, `\Q…\E`, POSIX classes). Constructs JavaScript has no equivalent for, such as possessive quantifiers, atomic groups and conditionals, are checked but not run: the status line says so.
+- Matching uses your browser's engine, with the pattern translated where the flavour only spells something differently (`(?P<name>)`, a leading `(?i)`, `\A`, `\z`, `\Q…\E`, POSIX classes). Constructs JavaScript has no equivalent for, such as possessive quantifiers, atomic groups and conditionals, are checked but not run: the status line says so. Running each flavour in its real engine (RE2 and PCRE2 in WebAssembly) is feature request [#14](https://github.com/cmdaltr/archer/issues/14).
 - Matching stops after 1.5 seconds, and reports that the pattern backtracks without end on that text.
 - The checks cover common mistakes. They don't prove a pattern is right for your data: test it on real events in your SIEM before you deploy it.
