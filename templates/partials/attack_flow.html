@@ -58,7 +58,7 @@
     <div class="af-canvas" id="af-canvas" tabindex="-1">
       <svg class="af-edges" id="af-edges" aria-hidden="true">
         <defs>
-          {% for key, colour in [('googlesecops', '#4285F4'), ('mde', '#00A2AD'), ('splunk', '#E91E8C'), ('elastic', '#F0A500'), ('mixed', '#64748B')] %}
+          {% for key, colour in [('googlesecops', '#4285F4'), ('mde', '#00A2AD'), ('splunk', '#E91E8C'), ('elastic', '#F0A500'), ('mixed', '#64748B'), ('manual', '#7C3AED')] %}
           <marker id="af-arrow-{{ key }}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="{{ colour }}"/>
           </marker>
@@ -67,7 +67,7 @@
       </svg>
       <div class="af-lanes">
         {% for lane in attack_flow.lanes %}
-        <section class="af-lane" aria-label="{{ lane.tactic }}">
+        <section class="af-lane" aria-label="{{ lane.tactic }}" data-tactic="{{ lane.tactic }}">
           <h3 class="af-lane-head">{{ lane.tactic }} <span class="af-lane-count">{{ lane.nodes|length }}</span></h3>
           {% for n in lane.nodes %}
           <button type="button" class="af-node{% if not n.detected %} is-gap{% endif %}"
@@ -82,6 +82,7 @@
               {% endfor %}
               {% if not n.detected %}<span class="af-gap-mark" title="No detection">No detection</span>{% endif %}
             </span>
+            <span class="af-link-handle" title="Drag to another technique to link them" aria-hidden="true"></span>
           </button>
           {% endfor %}
         </section>
@@ -101,7 +102,8 @@
     {% if attack_flow.stats.intel_only %}<span><span class="af-legend-intel"></span> intel only: Reconnaissance or Resource Development no log source sees</span>{% endif %}
     <span><span class="af-legend-edge"></span> correlation: first technique seen before the second on the same host</span>
     <span><span class="af-legend-edge is-back"></span> the second technique sits in an earlier tactic</span>
-    <span class="af-legend-hint">Hover or select a technique to trace its links · drag to move · ⌘/Ctrl-click to select several · click a link to remove it</span>
+    <span><span class="af-legend-edge is-manual"></span> a link you drew</span>
+    <span class="af-legend-hint">Drag a technique onto a tactic to move it there, or along its tactic to reorder · drag a tactic's name to reorder tactics · drag a card's dot onto another to link them · Option/Alt-drag to place freely · Alt+arrow keys do the same from the keyboard · ⌘/Ctrl-click to select several · click a link to remove it</span>
   </div>
 
   <details class="af-notes">
@@ -113,11 +115,13 @@
     <ul>
       <li>Removing the group's last item from your library (or its Group/CVE tag) deletes the saved layout too;
           saving the group again starts from the default view.</li>
-      <li>Dragged positions are offsets from each card's default place. After regenerating a group,
-          techniques that change tactic, or lanes that gain or lose techniques, can shift dragged cards.</li>
-      <li>The STIX download follows the SIEM filters, Hide Undetected, hidden techniques and removed links.
-          Attack Flow has no layout, so positions, orientation and order aren't exported, and the Links toggle
-          only affects the display.</li>
+      <li>A technique moved to another tactic is marked when that tactic isn't one ATT&amp;CK gives it;
+          its detections keep their own ATT&amp;CK mapping (change that on the detection).</li>
+      <li>Freely placed cards (Option/Alt-drag) are offsets from their place in the lane. After regenerating a group,
+          techniques that change tactic, or lanes that gain or lose techniques, can shift them.</li>
+      <li>The STIX download follows the SIEM filters, Hide Undetected, hidden techniques, removed and drawn links,
+          and techniques moved to another tactic. Attack Flow has no layout, so free positions, orientation and
+          order aren't exported, and the Links toggle only affects the display.</li>
     </ul>
   </details>
 

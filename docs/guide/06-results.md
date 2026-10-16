@@ -46,6 +46,24 @@ A correlation joins several detections into one query that fires when the steps 
 
 **Show Combined Query** shows the single chained query.
 
+## Attack flow
+
+Each column is a tactic in kill-chain order; each card is a technique, with the SIEMs that detect it or **No detection**. Arrows are correlations: the first technique seen before the second on the same host. Hover or select a card to trace its links.
+
+You can rearrange the flow before saving or exporting it:
+
+| To | Do |
+|---|---|
+| Move a technique to another tactic | Drag its card onto that tactic. A card moved to a tactic ATT&CK doesn't give it is marked **moved**; its detections keep their own mapping |
+| Reorder techniques in a tactic | Drag the card up or down its column |
+| Reorder the tactics | Drag a tactic's name along the others |
+| Link two techniques | Drag the dot on a card's edge onto another card. Drawn links are purple and listed as **drawn** |
+| Remove a link | Click it, or × beside it in the card's details |
+| Place a card freely | Hold Option/Alt while dragging |
+| Do it from the keyboard | Focus a card and press Alt with the arrow keys: along its tactic, or to the next tactic. On a tactic's name, Alt+arrows move the tactic |
+
+The toolbar also filters by SIEM, hides undetected techniques, hides selected cards, and switches orientation and direction. **Undo** (⌘/Ctrl-Z) reverses any change and **Reset** restores the generated flow. Once the run is in your Library, edits are saved with it. **STIX** downloads the flow as shown, moved techniques and drawn links included, as an Attack Flow 2.x bundle for the CTID Attack Flow Builder.
+
 ## Buttons
 
 | Button | What it does |

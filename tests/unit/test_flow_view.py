@@ -127,3 +127,31 @@ def test_pre_compromise_techniques_are_shown_intel_only_ones_are_not_gaps():
     assert nodes["T1583"]["intel_only"] and not nodes["T1595"]["intel_only"]
     assert view["stats"]["techniques"] == 4
     assert view["stats"]["intel_only"] == 1 and view["stats"]["gaps"] == 3
+
+
+def test_drag_and_drop_edits_reach_the_view_and_bundle(tmp_path):
+    from archer.visualization.flow_layouts import clean_state
+    from archer.visualization.flow_view import apply_edits
+
+    view = _three_step_view(tmp_path)
+    state = clean_state({
+        # T1071.001 dragged into Execution, ahead of PowerShell; Impact moved first
+        "arrangement": {"Execution": ["T1071.001", "T1059.001"], "Bad<lane>": ["T1566"]},
+        "lane_order": ["Impact", "Nowhere"],
+        "linked": ["T1486>T1566", "T1566>T1566", "x>y"],
+    })
+    assert "Bad<lane>" not in state["arrangement"] and state["linked"] == ["T1486>T1566"]
+    edited = apply_edits(view, state)
+    lanes = [(l["tactic"], [n["id"] for n in l["nodes"]]) for l in edited["lanes"]]
+    assert lanes == [("Impact", ["T1486"]), ("Initial Access", ["T1566"]), ("Execution", ["T1071.001", "T1059.001"])]
+    moved = next(n for l in edited["lanes"] for n in l["nodes"] if n["id"] == "T1071.001")
+    assert moved["tactic"] == "Execution" and moved["tactics"] == ["Command and Control"]
+    drawn = [e for e in edited["edges"] if e.get("manual")]
+    assert [(e["from"], e["to"]) for e in drawn] == [("T1486", "T1566")]
+
+    bundle = to_attack_flow_bundle(edited, "G")
+    actions = {o["technique_id"]: o for o in bundle["objects"] if o["type"] == "attack-action"}
+    assert actions["T1071.001"]["description"].startswith("Execution (moved; ATT&CK: Command and Control)")
+    assert actions["T1486"]["effect_refs"] == [actions["T1566"]["id"]]
+    flow = next(o for o in bundle["objects"] if o["type"] == "attack-flow")
+    assert "arrows the analyst drew" in flow["description"]

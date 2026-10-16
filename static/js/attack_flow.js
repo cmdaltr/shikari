@@ -11,7 +11,7 @@
   const $ = id => document.getElementById(id);
 
   const VENDOR_NAMES = { googlesecops: 'Google SecOps', mde: 'Defender XDR', splunk: 'Splunk', elastic: 'Elastic' };
-  const EDGE_COLOURS = { googlesecops: '#4285F4', mde: '#00A2AD', splunk: '#E91E8C', elastic: '#F0A500', mixed: '#64748B' };
+  const EDGE_COLOURS = { googlesecops: '#4285F4', mde: '#00A2AD', splunk: '#E91E8C', elastic: '#F0A500', mixed: '#64748B', manual: '#7C3AED' };
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   const nodes = {};
@@ -19,6 +19,11 @@
   flow.lanes.forEach((l, i) => l.nodes.forEach(n => { nodes[n.id] = n; laneOf[n.id] = i; }));
   const nodeEls = {};
   section.querySelectorAll('.af-node').forEach(el => { nodeEls[el.dataset.id] = el; });
+  const laneEls = {};
+  section.querySelectorAll('.af-lane').forEach(el => { laneEls[el.dataset.tactic] = el; });
+  const DEFAULT_LANES = flow.lanes.map(l => l.tactic);
+  const defaultLane = {};
+  flow.lanes.forEach(l => l.nodes.forEach(n => { defaultLane[n.id] = l.tactic; }));
   const edgeKey = e => `${e.from}>${e.to}`;
 
   const DEFAULTS = {
@@ -27,7 +32,10 @@
     edges: true,
     removed: [],   // techniques the user has hidden
     unlinked: [],  // edge keys the user has removed
-    offsets: {},   // id -> [dx, dy] from dragging
+    offsets: {},   // id -> [dx, dy] from Option/Alt-dragging (free placement)
+    arrangement: {},  // tactic -> technique ids in order, for lanes changed by drag and drop
+    laneOrder: [],    // tactics in the order the user dragged them
+    linked: [],       // edge keys the user drew
     vertical: false,
     reversed: false,
   };
@@ -48,6 +56,7 @@
       vendors: [...state.vendors], gaps: state.gaps, edges: state.edges,
       removed: [...state.removed], unlinked: [...state.unlinked],
       offsets: JSON.parse(JSON.stringify(state.offsets)),
+      arrangement: JSON.parse(JSON.stringify(state.arrangement)), lane_order: [...state.laneOrder], linked: [...state.linked],
       vertical: state.vertical, reversed: state.reversed,
     };
   }
@@ -59,6 +68,13 @@
     state.removed = new Set(s.removed);
     state.unlinked = new Set(s.unlinked);
     state.offsets = JSON.parse(JSON.stringify(s.offsets));
+    // Only techniques and lanes this view has: a regenerated run can drop some
+    state.arrangement = {};
+    Object.entries(s.arrangement || {}).forEach(([lane, ids]) => {
+      if (laneEls[lane]) state.arrangement[lane] = ids.filter(id => nodes[id]);
+    });
+    state.laneOrder = (s.lane_order || s.laneOrder || []).filter(l => laneEls[l]);
+    state.linked = new Set((s.linked || []).filter(k => k.split('>').every(id => nodes[id])));
     state.vertical = s.vertical;
     state.reversed = s.reversed;
   }
@@ -127,10 +143,13 @@
   const logo = v => `<img class="af-logo" src="/static/images/siem/${v === 'googlesecops' ? 'secops' : v}.png" alt="">`;
 
   // An edge is shown when one of its correlation vendors is selected
+  // Drawn links (manual) show whatever the SIEM filters
   const edgeVendors = e => e.vendors.filter(v => state.vendors.has(v));
-  const liveEdges = () => flow.edges.filter(e => !state.unlinked.has(edgeKey(e)));
+  const DEFAULT_KEYS = new Set(flow.edges.map(edgeKey));
+  const liveEdges = () => flow.edges.filter(e => !state.unlinked.has(edgeKey(e))).concat(
+    [...state.linked].filter(k => !DEFAULT_KEYS.has(k)).map(k => { const [from, to] = k.split('>'); return { from, to, vendors: [], manual: true }; }));
   const visibleEdges = () => (state.edges ? liveEdges().filter(e =>
-    edgeVendors(e).length && !nodeEls[e.from].hidden && !nodeEls[e.to].hidden) : []);
+    (e.manual || edgeVendors(e).length) && !nodeEls[e.from].hidden && !nodeEls[e.to].hidden) : []);
 
   function nodeDetected(n) {
     return Object.keys(n.vendors).some(v => state.vendors.has(v));
@@ -140,6 +159,39 @@
     const b = $(id);
     b.classList.toggle('is-on', on);
     b.setAttribute('aria-pressed', String(on));
+  }
+
+  // Lanes and cards where drag and drop put them: a card moved to another tactic sits in
+  // that lane (marked, its ATT&CK tactics unchanged), touched lanes keep the user's order
+  function laneMembers() {
+    const placed = {};
+    Object.entries(state.arrangement).forEach(([lane, ids]) => ids.forEach(id => { placed[id] = lane; }));
+    const out = {};
+    Object.keys(laneEls).forEach(lane => {
+      out[lane] = (state.arrangement[lane] || []).slice();
+      flow.lanes.find(l => l.tactic === lane)?.nodes.forEach(n => { if (!placed[n.id]) out[lane].push(n.id); });
+    });
+    return out;
+  }
+
+  function laneSequence() {
+    const rest = DEFAULT_LANES.filter(l => !state.laneOrder.includes(l));
+    return state.laneOrder.filter(l => laneEls[l]).concat(rest);
+  }
+
+  function arrange() {
+    const members = laneMembers();
+    laneSequence().forEach((lane, i) => {
+      const el = laneEls[lane];
+      el.style.order = i;
+      members[lane].forEach(id => {
+        el.appendChild(nodeEls[id]);
+        laneOf[id] = i;
+        const moved = lane !== defaultLane[id];
+        nodeEls[id].classList.toggle('is-retagged', moved && !nodes[id].tactics.includes(lane));
+        nodeEls[id].title = moved ? `Moved to ${lane}. ATT&CK: ${nodes[id].tactics.join(', ')}` : '';
+      });
+    });
   }
 
   // Full redraw after Undo/Reset/layout changes: controls, layout, positions, filters
@@ -155,6 +207,7 @@
     section.classList.toggle('af-reversed', state.reversed);
     $('af-orient').textContent = state.vertical ? 'Vertical' : 'Horizontal';
     $('af-order').textContent = state.reversed ? 'Reverse' : 'Forward';
+    arrange();
     Object.entries(nodeEls).forEach(([id, el]) => {
       const o = state.offsets[id];
       el.style.transform = o ? `translate(${o[0]}px, ${o[1]}px)` : '';
@@ -253,12 +306,12 @@
     svg.setAttribute('height', lanes.scrollHeight);
     visibleEdges().forEach(e => {
       const vs = edgeVendors(e);
-      const key = vs.length === 1 ? vs[0] : 'mixed';
+      const key = e.manual ? 'manual' : vs.length === 1 ? vs[0] : 'mixed';
       const d = path(nodeEls[e.from], nodeEls[e.to]);
       const back = laneOf[e.to] < laneOf[e.from];
       const p = document.createElementNS(SVG_NS, 'path');
       p.setAttribute('d', d);
-      p.setAttribute('class', back ? 'af-edge is-back' : 'af-edge');
+      p.setAttribute('class', 'af-edge' + (back ? ' is-back' : '') + (e.manual ? ' is-manual' : ''));
       p.setAttribute('stroke', EDGE_COLOURS[key]);
       p.setAttribute('marker-end', `url(#af-arrow-${key})`);
       p.dataset.from = e.from;
@@ -269,7 +322,7 @@
       hit.setAttribute('class', 'af-edge-hit');
       hit.dataset.key = edgeKey(e);
       const title = document.createElementNS(SVG_NS, 'title');
-      title.textContent = `${e.from} → ${e.to}: click to remove this link`;
+      title.textContent = `${e.from} → ${e.to}${e.manual ? ' (drawn)' : ''}: click to remove this link`;
       hit.appendChild(title);
       svg.append(p, hit);
     });
@@ -301,7 +354,8 @@
 
   function unlink(key) {
     record();
-    state.unlinked.add(key);
+    if (state.linked.has(key) && !DEFAULT_KEYS.has(key)) state.linked.delete(key);
+    else state.unlinked.add(key);
     $('af-stat-edges').textContent = liveEdges().length;
     applyFilters();
     if (state.selected) showDetail(state.selected);
@@ -324,7 +378,7 @@
       <h4>${label}</h4>
       <ul class="af-detail-links">${list.map(e => {
         const o = nodes[e[key]];
-        return `<li><button type="button" class="af-jump" data-id="${esc(o.id)}">${e.vendors.map(logo).join('')}<span><b>${esc(o.id)}</b> ${esc(o.name)}</span></button>` +
+        return `<li><button type="button" class="af-jump" data-id="${esc(o.id)}">${e.manual ? '<span class="af-drawn" title="A link you drew">drawn</span>' : e.vendors.map(logo).join('')}<span><b>${esc(o.id)}</b> ${esc(o.name)}</span></button>` +
           `<button type="button" class="af-unlink" data-key="${esc(edgeKey(e))}" title="Remove this link" aria-label="Remove link ${esc(e.from)} to ${esc(e.to)}">×</button></li>`;
       }).join('')}</ul>` : '';
     const coverage = Object.keys(VENDOR_NAMES).filter(v => n.vendors[v]).map(v =>
@@ -380,6 +434,189 @@
     requestAnimationFrame(draw);
   }
 
+  // ---- drag and drop: the lane and place under the pointer
+  const lanesVertical = () => state.vertical;  // lanes are rows, cards wrap along them
+
+  function laneAt(x, y) {
+    return Object.values(laneEls).find(el => {
+      if (el.hidden) return false;
+      const r = el.getBoundingClientRect();
+      return x >= r.left - 14 && x <= r.right + 14 && y >= r.top - 14 && y <= r.bottom + 14;
+    });
+  }
+
+  function dropTarget(x, y, ids) {
+    const laneEl = laneAt(x, y);
+    if (!laneEl) return null;
+    const cards = [...laneEl.querySelectorAll('.af-node:not([hidden])')].filter(c => !ids.includes(c.dataset.id));
+    const before = cards.find(c => {
+      const r = c.getBoundingClientRect();
+      return lanesVertical() ? (y < r.top || (y <= r.bottom && x < r.left + r.width / 2)) : y < r.top + r.height / 2;
+    });
+    return { lane: laneEl.dataset.tactic, before: before ? before.dataset.id : null, laneEl, beforeEl: before || null };
+  }
+
+  function showDrop(target) {
+    section.querySelectorAll('.af-lane.is-drop').forEach(l => l.classList.remove('is-drop'));
+    section.querySelectorAll('.af-node.is-drop-before').forEach(n => n.classList.remove('is-drop-before'));
+    section.querySelectorAll('.af-lane.is-drop-end').forEach(l => l.classList.remove('is-drop-end'));
+    if (!target) return;
+    target.laneEl.classList.add('is-drop');
+    if (target.beforeEl) target.beforeEl.classList.add('is-drop-before');
+    else target.laneEl.classList.add('is-drop-end');
+  }
+
+  // Put ids (in their current order) into lane before the card `before` (or at the end)
+  function placeCards(ids, lane, before) {
+    const was = laneMembers(), members = laneMembers();
+    const ordered = laneSequence().flatMap(l => was[l]).filter(id => ids.includes(id));
+    Object.keys(members).forEach(l => { members[l] = members[l].filter(id => !ids.includes(id)); });
+    const at = before ? members[lane].indexOf(before) : -1;
+    members[lane].splice(at < 0 ? members[lane].length : at, 0, ...ordered);
+    // Keep the order of every lane this changed
+    Object.keys(members).forEach(l => {
+      if (members[l].join() !== was[l].join()) state.arrangement[l] = members[l];
+    });
+    ids.forEach(id => { delete state.offsets[id]; });
+    render();
+  }
+
+  function moveLane(lane, beforeLane) {
+    const seq = laneSequence().filter(l => l !== lane);
+    const at = beforeLane ? seq.indexOf(beforeLane) : seq.length;
+    seq.splice(at < 0 ? seq.length : at, 0, lane);
+    state.laneOrder = seq;
+    render();
+  }
+
+  // Lane headers: drag one along the others to reorder the tactics
+  section.querySelectorAll('.af-lane-head').forEach(head => {
+    const laneEl = head.closest('.af-lane');
+    head.setAttribute('title', 'Drag to move this tactic; Alt+arrow keys too');
+    head.tabIndex = 0;
+    let ld = null;
+    head.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      ld = { x: e.clientX, y: e.clientY, moved: false };
+      head.setPointerCapture(e.pointerId);
+    });
+    head.addEventListener('pointermove', e => {
+      if (!ld) return;
+      if (!ld.moved && Math.hypot(e.clientX - ld.x, e.clientY - ld.y) < 4) return;
+      if (!ld.moved) { ld.moved = true; laneEl.classList.add('is-lifted'); section.classList.add('af-dragging'); }
+      const over = laneAt(e.clientX, e.clientY);
+      section.querySelectorAll('.af-lane.is-lane-drop').forEach(l => l.classList.remove('is-lane-drop', 'is-after'));
+      if (over && over !== laneEl) {
+        const r = over.getBoundingClientRect();
+        // Past the middle in the direction lanes advance: after it
+        const along = state.vertical ? (e.clientY - (r.top + r.height / 2)) : (e.clientX - (r.left + r.width / 2));
+        ld.over = over.dataset.tactic;
+        ld.after = state.reversed ? along < 0 : along > 0;
+        over.classList.add('is-lane-drop');
+        over.classList.toggle('is-after', ld.after);
+      } else ld.over = null;
+    });
+    const end = () => {
+      if (!ld) return;
+      section.querySelectorAll('.af-lane.is-lane-drop').forEach(l => l.classList.remove('is-lane-drop', 'is-after'));
+      laneEl.classList.remove('is-lifted');
+      section.classList.remove('af-dragging');
+      if (ld.moved && ld.over) {
+        record();
+        const seq = laneSequence().filter(l => l !== laneEl.dataset.tactic);
+        const i = seq.indexOf(ld.over);
+        moveLane(laneEl.dataset.tactic, ld.after ? seq[i + 1] || null : ld.over);
+        scheduleSave();
+      }
+      ld = null;
+    };
+    head.addEventListener('pointerup', end);
+    head.addEventListener('pointercancel', end);
+    head.addEventListener('keydown', e => {
+      if (!e.altKey || !/^Arrow/.test(e.key)) return;
+      e.preventDefault();
+      const seq = laneSequence(), i = seq.indexOf(laneEl.dataset.tactic);
+      const back = (e.key === 'ArrowLeft' || e.key === 'ArrowUp') !== state.reversed;
+      const j = back ? i - 1 : i + 1;
+      if (j < 0 || j >= seq.length) return;
+      record();
+      moveLane(laneEl.dataset.tactic, back ? seq[j] : seq[j + 1] || null);
+      scheduleSave();
+      head.focus();
+    });
+  });
+
+  // Link handles: drag from one card to another to draw a link
+  const ghost = document.createElementNS(SVG_NS, 'path');
+  ghost.setAttribute('class', 'af-edge af-edge-ghost is-manual');
+  section.querySelectorAll('.af-link-handle').forEach(handle => {
+    const from = handle.closest('.af-node').dataset.id;
+    let ln = null;
+    handle.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      ln = true;
+      handle.setPointerCapture(e.pointerId);
+      section.classList.add('af-linking');
+      svg.appendChild(ghost);
+    });
+    handle.addEventListener('pointermove', e => {
+      if (!ln) return;
+      const box = canvas.getBoundingClientRect(), r = nodeEls[from].getBoundingClientRect();
+      const ox = canvas.scrollLeft - box.left, oy = canvas.scrollTop - box.top;
+      ghost.setAttribute('d', `M${r.left + r.width / 2 + ox},${r.top + r.height / 2 + oy} L${e.clientX + ox},${e.clientY + oy}`);
+      section.querySelectorAll('.af-node.is-link-target').forEach(n => n.classList.remove('is-link-target'));
+      const over = cardAt(e.clientX, e.clientY);
+      if (over && over !== from) nodeEls[over].classList.add('is-link-target');
+    });
+    const end = e => {
+      if (!ln) return;
+      ln = null;
+      ghost.remove();
+      section.classList.remove('af-linking');
+      section.querySelectorAll('.af-node.is-link-target').forEach(n => n.classList.remove('is-link-target'));
+      const to = e.type === 'pointerup' ? cardAt(e.clientX, e.clientY) : null;
+      if (to && to !== from) addLink(from, to);
+    };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+    handle.addEventListener('click', e => e.stopPropagation());
+  });
+
+  function cardAt(x, y) {
+    const hit = document.elementsFromPoint(x, y).find(el => el.classList && el.classList.contains('af-node') && !el.hidden);
+    return hit ? hit.dataset.id : null;
+  }
+
+  function addLink(from, to) {
+    const key = `${from}>${to}`;
+    record();
+    if (DEFAULT_KEYS.has(key)) state.unlinked.delete(key);  // a removed correlation comes back
+    else state.linked.add(key);
+    $('af-stat-edges').textContent = liveEdges().length;
+    applyFilters();
+    if (state.selected) showDetail(state.selected);
+  }
+
+  // Keyboard: Alt+arrows move the focused card along its lane or to the next lane
+  function moveByKey(id, key) {
+    const seq = laneSequence(), members = laneMembers();
+    const lane = Object.keys(members).find(l => members[l].includes(id));
+    const list = members[lane], i = list.indexOf(id);
+    const along = state.vertical ? ['ArrowLeft', 'ArrowRight'] : ['ArrowUp', 'ArrowDown'];
+    if (along.includes(key)) {
+      const j = key === along[0] ? i - 1 : i + 1;
+      if (j < 0 || j >= list.length) return false;
+      placeCards([id], lane, key === along[0] ? list[j] : list[j + 1] || null);
+      return true;
+    }
+    const back = (key === 'ArrowLeft' || key === 'ArrowUp') !== state.reversed;
+    const next = seq[seq.indexOf(lane) + (back ? -1 : 1)];
+    if (!next) return false;
+    placeCards([id], next, null);
+    return true;
+  }
+
   // Dragging: a picked card carries the whole selection with it
   let drag = null;
   let swallowClick = false;
@@ -395,16 +632,24 @@
     el.addEventListener('mouseleave', () => { if (!drag) unfocus(); });
     el.addEventListener('focus', () => focus(el.dataset.id));
     el.addEventListener('blur', unfocus);
+    el.addEventListener('keydown', e => {
+      if (!e.altKey || !/^Arrow/.test(e.key)) return;
+      e.preventDefault();
+      record();
+      if (!moveByKey(el.dataset.id, e.key)) { history.pop(); $('af-undo').disabled = !history.length; return; }
+      scheduleSave();
+      el.focus();
+    });
     el.addEventListener('click', e => {
       if (swallowClick) { swallowClick = false; return; }
       if (state.picking || e.metaKey || e.ctrlKey || e.shiftKey) togglePick(el.dataset.id);
       else select(el.dataset.id);
     });
     el.addEventListener('pointerdown', e => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || e.target.closest('.af-link-handle')) return;
       const id = el.dataset.id;
       const ids = state.picked.has(id) ? [...state.picked] : [id];
-      drag = { x: e.clientX, y: e.clientY, moved: false, ids,
+      drag = { x: e.clientX, y: e.clientY, moved: false, ids, free: e.altKey,
                start: Object.fromEntries(ids.map(i => [i, state.offsets[i] || [0, 0]])) };
       el.setPointerCapture(e.pointerId);
     });
@@ -417,17 +662,27 @@
         record();
         section.classList.add('af-dragging');
       }
+      drag.free = e.altKey;
       drag.ids.forEach(i => {
         const [sx, sy] = drag.start[i];
         state.offsets[i] = [sx + dx, sy + dy];
         nodeEls[i].style.transform = `translate(${sx + dx}px, ${sy + dy}px)`;
         nodeEls[i].classList.add('is-moved');
       });
+      drag.target = drag.free ? null : dropTarget(e.clientX, e.clientY, drag.ids);
+      showDrop(drag.target);
       redraw();
     });
     const endDrag = () => {
       if (!drag) return;
-      if (drag.moved) { swallowClick = true; drag.moved = false; scheduleSave(); }
+      if (drag.moved) {
+        swallowClick = true;
+        // Dropped on a lane: the cards join it at that place; Option/Alt keeps the free position
+        if (drag.target) placeCards(drag.ids, drag.target.lane, drag.target.before);
+        drag.moved = false;
+        scheduleSave();
+      }
+      showDrop(null);
       drag = null;
       section.classList.remove('af-dragging');
     };
@@ -516,7 +771,8 @@
   const stix = $('af-stix');
   if (stix) stix.addEventListener('click', async e => {
     const edited = state.vendors.size !== DEFAULTS.vendors.length || !state.gaps
-      || state.removed.size || state.unlinked.size;
+      || state.removed.size || state.unlinked.size || state.linked.size
+      || Object.keys(state.arrangement).length || state.laneOrder.length;
     if (!edited) return;  // the unedited flow: the file written with the results
     e.preventDefault();
     try {

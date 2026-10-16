@@ -26,6 +26,8 @@ MAX_ITEMS = 5000
 MAX_OFFSET = 50000
 _TECHNIQUE = re.compile(r"^T\d{4}(?:\.\d{3})?$")
 _VENDORS = {"googlesecops", "mde", "splunk", "elastic"}
+# A lane's name: an ATT&CK tactic, or the view's own ("Unknown", "CVE Exploitation")
+_LANE = re.compile(r"^[A-Za-z][A-Za-z &-]{0,39}$")
 
 
 def library_tag(group_name: str) -> str:
@@ -152,11 +154,24 @@ def clean_state(raw) -> Dict:
         out["vendors"] = [v for v in raw["vendors"] if v in _VENDORS]
     if isinstance(raw.get("removed"), list):
         out["removed"] = [t for t in raw["removed"][:MAX_ITEMS] if isinstance(t, str) and _TECHNIQUE.match(t)]
-    if isinstance(raw.get("unlinked"), list):
-        out["unlinked"] = [
-            k for k in raw["unlinked"][:MAX_ITEMS]
-            if isinstance(k, str) and k.count(">") == 1 and all(_TECHNIQUE.match(p) for p in k.split(">"))
-        ]
+    for key in ("unlinked", "linked"):
+        if isinstance(raw.get(key), list):
+            out[key] = [
+                k for k in raw[key][:MAX_ITEMS]
+                if isinstance(k, str) and k.count(">") == 1 and all(_TECHNIQUE.match(p) for p in k.split(">"))
+                and len(set(k.split(">"))) == 2
+            ]
+    # Drag and drop: each touched lane's techniques in order, and the lanes' order
+    if isinstance(raw.get("arrangement"), dict):
+        arrangement, seen = {}, set()
+        for lane, tids in list(raw["arrangement"].items())[:64]:
+            if isinstance(lane, str) and _LANE.match(lane) and isinstance(tids, list):
+                kept = [t for t in tids[:MAX_ITEMS] if isinstance(t, str) and _TECHNIQUE.match(t) and t not in seen]
+                seen.update(kept)
+                arrangement[lane] = kept
+        out["arrangement"] = arrangement
+    if isinstance(raw.get("lane_order"), list):
+        out["lane_order"] = list(dict.fromkeys(l for l in raw["lane_order"][:64] if isinstance(l, str) and _LANE.match(l)))
     if isinstance(raw.get("offsets"), dict):
         offsets = {}
         for tid, xy in list(raw["offsets"].items())[:MAX_ITEMS]:

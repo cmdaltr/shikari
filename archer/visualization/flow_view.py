@@ -223,12 +223,33 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
     }
 
 
+def arrange(view: Dict, state: Dict) -> List[Dict]:
+    """
+    The view's lanes after drag and drop: a technique moved to another tactic's lane
+    sits there (its ATT&CK tactics stay in "tactics"), touched lanes keep the order
+    the user gave, and lanes follow lane_order, then the kill chain.
+    """
+    arrangement = state.get("arrangement") or {}
+    placed = {tid: lane for lane, tids in arrangement.items() for tid in tids}
+    nodes = {n["id"]: (lane["tactic"], n) for lane in view["lanes"] for n in lane["nodes"]}
+    names = list(dict.fromkeys([l["tactic"] for l in view["lanes"]] + list(arrangement)))
+    members: Dict[str, List[Dict]] = {name: [] for name in names}
+    for lane, tids in arrangement.items():
+        members[lane] = [dict(nodes[t][1], tactic=lane) for t in tids if t in nodes]
+    for lane in view["lanes"]:
+        members[lane["tactic"]] += [n for n in lane["nodes"] if n["id"] not in placed]
+    order = [l for l in state.get("lane_order") or [] if l in members]
+    order += sorted((l for l in names if l not in order), key=lambda t: (_lane_index(t), t))
+    return [{"tactic": name, "nodes": members[name]} for name in order if members[name]]
+
+
 def apply_edits(view: Dict, state: Dict) -> Dict:
     """
     The view as the results page shows it after the user's edits (state as
     flow_layouts.clean_state returns it): SIEM filters, Hide Undetected, hidden
-    techniques and removed links. Positions, orientation and order are layout only.
-    The Links toggle is display only too, so links are kept.
+    techniques, removed and drawn links, and techniques and lanes moved by drag and
+    drop. Free positions, orientation and direction are layout only. The Links toggle
+    is display only too, so links are kept.
     """
     present = [v["key"] for v in view["vendors"]]
     vendors = set(state["vendors"]) if "vendors" in state else set(present)
@@ -237,7 +258,7 @@ def apply_edits(view: Dict, state: Dict) -> Dict:
     show_gaps = state.get("gaps", True)
 
     lanes, kept = [], {}
-    for lane in view["lanes"]:
+    for lane in arrange(view, state):
         members = []
         for n in lane["nodes"]:
             cov = {v: c for v, c in n["vendors"].items() if v in vendors}
@@ -252,6 +273,12 @@ def apply_edits(view: Dict, state: Dict) -> Dict:
         evs = [v for v in e["vendors"] if v in vendors]
         if evs and e["from"] in kept and e["to"] in kept and f"{e['from']}>{e['to']}" not in unlinked:
             edges.append(dict(e, vendors=evs))
+    # Links the user drew: an analyst's sequence, not a detection correlation
+    existing = {(e["from"], e["to"]) for e in edges}
+    for key in state.get("linked", []):
+        a, b = key.split(">")
+        if a in kept and b in kept and (a, b) not in existing and key not in unlinked:
+            edges.append({"from": a, "to": b, "vendors": [], "relevance": 0.0, "manual": True})
     for n in kept.values():
         n["degree"] = sum(1 for e in edges if n["id"] in (e["from"], e["to"]))
     return dict(view, lanes=lanes, edges=edges,
@@ -290,7 +317,9 @@ def to_attack_flow_bundle(view: Dict, group_name: str) -> Dict:
             "type": "attack-action", "spec_version": "2.1", "id": action_id[tid],
             "created": now, "modified": now, "extensions": ext,
             "name": n["name"], "technique_id": tid,
-            "description": f"{' / '.join(n['tactics'])}. Archer detections: {coverage}.",
+            "description": (f"{n['tactic']} (moved; ATT&CK: {' / '.join(n['tactics'])})" if n.get("tactic") and n["tactics"]
+                            and n["tactic"] not in n["tactics"] else ' / '.join(n['tactics']))
+                           + f". Archer detections: {coverage}.",
             "effect_refs": [action_id[e["to"]] for e in view["edges"] if e["from"] == tid],
         })
 
@@ -304,7 +333,9 @@ def to_attack_flow_bundle(view: Dict, group_name: str) -> Dict:
         "created": now, "modified": now, "created_by_ref": author, "extensions": ext,
         "name": f"{group_name}: correlated techniques" + (" (edited)" if view.get("edited") else ""),
         "description": (f"Techniques Archer correlated for {group_name}: each arrow is a detection "
-                        "correlation (first technique seen before the second on the same host)."),
+                        "correlation (first technique seen before the second on the same host)"
+                        + ("; arrows the analyst drew are included." if any(e.get("manual") for e in view["edges"])
+                           else ".")),
         "scope": "threat-actor", "start_refs": starts,
     }
     return {

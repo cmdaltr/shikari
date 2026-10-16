@@ -164,3 +164,37 @@ body.af-noscroll { overflow: hidden; }
   .af-search { width: 100%; }
 }
 .af-stats-note { color: var(--text-secondary); font-size: .9em; }
+
+/* Drag and drop (#4): drop into a lane, reorder tactics, draw links */
+.af-lane-head { cursor: grab; touch-action: none; user-select: none; }
+.af-lane-head:focus-visible { outline: 2px solid var(--af-focus); outline-offset: 1px; }
+.af-lane.is-lifted { opacity: .55; }
+.af-lane.is-drop { background: color-mix(in srgb, var(--af-focus) 7%, transparent); border-radius: 6px; }
+.af-node.is-drop-before { box-shadow: 0 -3px 0 var(--af-focus); }
+.af-vertical .af-node.is-drop-before { box-shadow: -3px 0 0 var(--af-focus); }
+.af-lane.is-drop-end::after { content: ""; display: block; height: 3px; border-radius: 2px; background: var(--af-focus); }
+.af-vertical .af-lane.is-drop-end::after { width: 3px; height: auto; align-self: stretch; }
+.af-lane.is-lane-drop { box-shadow: inset 3px 0 0 var(--af-focus); }
+.af-lane.is-lane-drop.is-after { box-shadow: inset -3px 0 0 var(--af-focus); }
+.af-vertical .af-lane.is-lane-drop { box-shadow: inset 0 3px 0 var(--af-focus); }
+.af-vertical .af-lane.is-lane-drop.is-after { box-shadow: inset 0 -3px 0 var(--af-focus); }
+/* Moved to a tactic ATT&CK doesn't give it */
+.af-node.is-retagged { box-shadow: inset 0 3px 0 #7C3AED; }
+.af-node.is-retagged .af-node-id::after { content: " · moved"; color: #7C3AED; font-weight: 700; }
+
+.af-link-handle {
+  position: absolute; right: -6px; top: 50%; width: 11px; height: 11px; margin-top: -6px; border-radius: 50%;
+  background: var(--af-node-bg); border: 2px solid #7C3AED; cursor: crosshair; opacity: 0; transition: opacity .12s;
+  z-index: 5; touch-action: none;
+}
+.af-node:hover .af-link-handle, .af-node:focus-visible .af-link-handle, .af-linking .af-link-handle { opacity: 1; }
+.af-vertical .af-link-handle { right: 50%; top: auto; bottom: -6px; margin: 0 -6px 0 0; }
+.af-linking .af-node { cursor: crosshair; }
+.af-node.is-link-target { border-color: #7C3AED; box-shadow: 0 0 0 2px #7C3AED; }
+.af-edge.is-manual { stroke-dasharray: 1 0; opacity: .7; }
+.af-edge-ghost { stroke: #7C3AED; stroke-dasharray: 4 3; opacity: .9; pointer-events: none; }
+.af-legend-edge.is-manual { border-top-color: #7C3AED; }
+.af-drawn {
+  font-size: 0.68em; font-weight: 700; text-transform: uppercase; color: #7C3AED; border: 1px solid #7C3AED;
+  border-radius: 3px; padding: 0 3px; margin-right: 4px;
+}
