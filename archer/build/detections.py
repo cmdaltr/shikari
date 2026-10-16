@@ -359,6 +359,9 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
             )
 
             mde_queries = raw_mde if "mde" in active_siems else []
+            # As construct_yaml writes them: conditions that can't mean anything removed
+            from archer.validation.precision import prune_kql
+            mde_queries = [q for q in (prune_kql(q)[0] for q in mde_queries) if q]
             splunk_queries = raw_splunk if "splunk" in active_siems else []
 
             # Elastic preview

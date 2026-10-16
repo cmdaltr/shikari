@@ -46,6 +46,23 @@ A correlation joins several detections into one query that fires when the steps 
 
 **Show Combined Query** shows the single chained query.
 
+## Precision checks
+
+Before a detection is written, Archer removes conditions that parse but can't fire for the right reason, and keeps the rest of the query. A query left with no condition isn't written.
+
+| Check | Example | What happens |
+|---|---|---|
+| A protocol alone | `Protocol has "DNS"` for File and Directory Discovery | Removed: it matches every DNS lookup |
+| A string operator on a number | `RemotePort has "135"` | Removed; ports are compared as numbers (`RemotePort == 135`) |
+| A documentation stand-in | `mstsc.exe /v:{hostname}`, `C:\Users\[Username]\AppData` | The text around it is kept and the stand-in matches anything: `has_all("mstsc.exe", "/v:")`, or `.*?` in YARA-L. Real text such as bcdedit's `{default}` is left alone |
+| An ordinary word as a whole value | `has "copy"`, `has "dir"` | Removed from the list. Inside `has_all` it only narrows, so it stays |
+| The same condition twice | | Removed |
+| Only the event type | a YARA-L rule on every `PROCESS_LAUNCH` | Not written |
+| Only a port | `RemotePort == 3389` | Kept, reported: it matches all traffic on that port |
+| A table the technique can't reach | a Windows-only technique on `CloudAppEvents` | Reported |
+
+The same checks run in the agents' `check_query` tool, reported with the static checks as `PREC-*`, and a query the [repair agent](15-agents-and-ask-archer.md) saves must pass their errors.
+
 ## Attack flow
 
 Each column is a tactic in kill-chain order; each card is a technique, with the SIEMs that detect it or **No detection**. Arrows are correlations: the first technique seen before the second on the same host. Hover or select a card to trace its links.

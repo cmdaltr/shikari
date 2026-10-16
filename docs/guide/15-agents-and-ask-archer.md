@@ -14,7 +14,7 @@ It uses the provider assigned to Ask Archer in Profile → API Keys → AI Assig
 
 | Agent | Give it | It does |
 |---|---|---|
-| Detection repair | A run | Runs the static checks over the run's queries, fixes only what they flag, re-checks each fix, and saves it with a reason. A query that still fails the checks can't be saved |
+| Detection repair | A run | Runs the static and precision checks over the run's queries, fixes only what they flag, re-checks each fix, and saves it with a reason. A query that still fails the checks can't be saved |
 | Ask Archer with tools | A question | Answers from your Library, coverage, ATT&CK and hunts, not only the model's memory |
 | Intel triage | A threat report | Finds your coverage gaps for it, suggests hunts, and writes a briefing |
 

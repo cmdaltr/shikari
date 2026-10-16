@@ -38,7 +38,9 @@ UPDATE_INTERVAL = 24 * 3600
 
 # Bare names (no extension) that are ordinary words or too short to match safely in prose
 _STOP = {"change", "cipher", "control", "expand", "explorer", "finger", "logger", "outlook", "pester",
-         "remote", "replace", "squirrel", "tracker", "update"}
+         "remote", "replace", "squirrel", "tracker", "update",
+         # LOLRMM tools named after words: "integrity level", "executed remotely"
+         "level", "remotely", "roster", "synergy", "overlord", "centurion", "basecamp"}
 _PLACEHOLDER = re.compile(r"\{[^}]*\}")
 _SWITCH = re.compile(r"^[-/][A-Za-z][\w:-]{2,}$")
 
@@ -219,7 +221,7 @@ def enrich(identifiers: dict, technique_id: str, procedure_text: str = "") -> tu
                 have.add(item.lower())
 
     for key, rec in index.get("lolbas", {}).items():
-        if rec["name"] in seen or not _named(key, text):
+        if rec["name"] in seen or key in _STOP or not _named(key, text):
             continue
         matching = [tid for tid in rec["techniques"] if _same_technique(tid, technique_id)]
         if not matching:
@@ -232,7 +234,8 @@ def enrich(identifiers: dict, technique_id: str, procedure_text: str = "") -> tu
                      "detail": f"documented for {', '.join(sorted(matching))}"})
 
     for key, rec in index.get("lolrmm", {}).items():
-        if rec["name"] in seen or not _named(key, text):
+        # Checked here too: an index built before a word joined _STOP still has it
+        if rec["name"] in seen or key in _STOP or not _named(key, text):
             continue
         seen.add(rec["name"])
         add("sw", rec["processes"])

@@ -169,20 +169,28 @@ def _check_yaral(query: str, findings: List[Dict]) -> None:
 # Findings that mean the query won't parse or can never match. Everything else is the
 # contract's style rules (KQL-5 escaping, KQL-14/15 summarize shape, YL-1 naming...)
 ERROR_CHECKS = {"EMPTY", "PLACEHOLDER", "STRUCT-1", "STRUCT-2", "SPL-1", "SPL-3", "SPL-4", "MDE-FIELD",
-                "KQL-16", "YL-21"}
+                "KQL-16", "YL-21",
+                # archer.validation.precision: parses, but can't fire for the right reason
+                "PREC-CONTEXT", "PREC-NUMERIC", "PREC-PLACEHOLDER", "PREC-EMPTY"}
 
 
 def severity(check: str) -> str:
     return "error" if check in ERROR_CHECKS else "warning"
 
 
-def check_query(query: str, platform: Optional[str] = None) -> Dict:
+def check_query(query: str, platform: Optional[str] = None, technique_platforms=None) -> Dict:
     """
     {"platform", "ok", "errors", "warnings", "findings": [{"check", "severity", "message"}]}.
     ok is False when there are errors (warnings alone don't fail a query); None when the
-    platform isn't recognised.
+    platform isn't recognised. Precision findings (PREC-*) are included; technique_platforms
+    (ATT&CK's, for the query's technique) adds the table check.
     """
+    from archer.validation.precision import check as precision_check
+
     result = _check(query, platform)
+    if result["platform"] in ("kql", "yara_l") and (query or "").strip():
+        result["findings"] += [{"check": f["check"], "message": f["message"]}
+                               for f in precision_check(query, result["platform"], technique_platforms)]
     for f in result["findings"]:
         f["severity"] = severity(f["check"])
     result["errors"] = sum(f["severity"] == "error" for f in result["findings"])

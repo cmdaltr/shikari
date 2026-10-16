@@ -390,7 +390,21 @@ def compile_search_clause(field_value_pairs):
     return result
 
 
+# Integer columns: a string operator on them ("RemotePort has_all(...)") never means anything
+MDE_NUMERIC_COLUMNS = {"RemotePort", "LocalPort", "ProcessId", "InitiatingProcessId", "InitiatingProcessParentId",
+                       "FileSize", "InitiatingProcessFileSize", "LogonId", "InitiatingProcessLogonId", "ReportId",
+                       "DestinationPort", "SourcePort", "Port", "EventId"}
+# An operation path (Microsoft.Authorization/roleAssignments/write), as opposed to a
+# file name (mstsc.exe) or a command line with a dot in it
+_OPERATION_PATH = re.compile(r"^(?:Microsoft\.[\w.]+/[\w./*-]+|[A-Za-z][\w-]*(?:\.[A-Za-z][\w-]*){2,})$")
+# MDE indicator types that only describe the connection: on their own they match all such
+# traffic, so they never become a query (SecOps keeps them as rule context)
+_CONTEXT_ONLY_TYPES = {"protocol"}
+
+
 def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queries, detection_name="", platform=None):
+    if indicator_type in _CONTEXT_ONLY_TYPES:
+        return mde_queries
     # Enrich indicators with malware IOCs before building queries
     enriched_indicators, ioc_metadata = enrich_indicators_with_iocs(indicators, indicator_type)
 
@@ -430,7 +444,7 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
             # Pattern: dots or slashes indicating hierarchical operations. A backslash means a
             # Windows path (C:\Windows\System32\sethc.exe), which the split would break into
             # has_all("C:\Windows\System32\sethc") and has_all("exe")
-            if ('.' in escaped_indicator or '/' in escaped_indicator) and '\\' not in escaped_indicator:
+            if _OPERATION_PATH.match(escaped_indicator):
                 # Azure API operation or similar hierarchical identifier
                 # Split on dots and slashes to extract components
                 parts = []
@@ -447,9 +461,9 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
                 else:
                     # Single part after splitting, treat as regular indicator
                     has_any_indicators.append(escaped_indicator)
-            elif " " in escaped_indicator:
-                # Split into parts for has_all
-                parts = [part.strip() for part in escaped_indicator.split()]
+            elif " " in escaped_indicator or "\u2026" in escaped_indicator:
+                # Split into parts for has_all; a placeholder's gap splits too
+                parts = [part.strip() for part in re.split(r"\s+|\u2026", escaped_indicator) if part.strip()]
                 has_all_indicators.append(parts)
             else:
                 has_any_indicators.append(escaped_indicator)
@@ -514,6 +528,14 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
             # Skip silently - this is expected for some table/indicator combinations
             continue
 
+        # Ports and other integer columns compare as numbers; anything else on them is dropped
+        numeric = [f for f in fields if f in MDE_NUMERIC_COLUMNS]
+        if numeric:
+            values = sorted({int(v) for v in indicators_to_use if str(v).strip().isdigit()})
+            fields = [f for f in fields if f not in MDE_NUMERIC_COLUMNS]
+        else:
+            values = []
+
         # Build conditions with dual field checks where appropriate
         # For command-line fields, check both ProcessCommandLine and InitiatingProcessCommandLine together
         if "ProcessCommandLine" in fields and "InitiatingProcessCommandLine" in fields:
@@ -549,6 +571,11 @@ def compile_mde_queries(indicator_mapping, indicators, indicator_type, mde_queri
                         formatted_conditions.append(_grouped(clause.replace("{FIELD}", field)))
                     else:
                         formatted_conditions.append(f"{field} {clause}")
+            if values:
+                in_list = ", ".join(str(v) for v in values)
+                formatted_conditions += [f"{f} in ({in_list})" if len(values) > 1 else f"{f} == {values[0]}" for f in numeric]
+            if not formatted_conditions:
+                continue
             condition = " or ".join(formatted_conditions)
 
         # Add malware family name as comment if enrichment occurred

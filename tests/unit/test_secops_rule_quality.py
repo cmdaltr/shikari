@@ -87,10 +87,18 @@ def test_registry_paths_are_escaped_and_matched_on_registry_events():
 
 
 def test_every_pattern_is_a_literal():
-    r = _rule({"cmd": ["rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump (PID)"]})
+    r = _rule({"cmd": ["rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump 624 C:\\temp\\l.dmp full"]})
     pattern = re.search(r"`([^`]*)`", r["yaral_code"]).group(1)
-    assert pattern == r"rundll32\.exe\s+C:\\Windows\\System32\\comsvcs\.dll,\s+MiniDump\s+\(PID\)"
-    assert re.search(pattern, "rundll32.exe  C:\\Windows\\System32\\comsvcs.dll, MiniDump (PID)")
+    assert pattern == r"rundll32\.exe\s+C:\\Windows\\System32\\comsvcs\.dll,\s+MiniDump\s+624\s+C:\\temp\\l\.dmp\s+full"
+    assert re.search(pattern, "rundll32.exe  C:\\Windows\\System32\\comsvcs.dll, MiniDump 624 C:\\temp\\l.dmp full")
+
+
+def test_a_placeholder_matches_what_stood_there():
+    # "(PID)" is documentation: the event has the number
+    r = _rule({"cmd": ["rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump (PID) out.dmp full"]})
+    pattern = re.search(r"`([^`]*)`", r["yaral_code"]).group(1)
+    assert "PID" not in pattern and ".*?" in pattern
+    assert re.search(pattern, "rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump 624 out.dmp full")
 
 
 def test_meta_severity_matches_returned_severity():

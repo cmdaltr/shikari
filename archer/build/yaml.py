@@ -878,6 +878,16 @@ def construct_yaml(
         if not query_only.strip():
             print(f"  ⚠️  {name} ({table_name}): every condition was on an excluded field; not written")
             continue
+        # Conditions that parse but can't mean anything (archer.validation.precision)
+        from archer.validation.precision import prune_kql
+
+        pruned, dropped = prune_kql(query_only)
+        for f in dropped:
+            print(f"  ✂️  {name} ({table_name}): {f['check']}: {f['message']}")
+        if pruned is None:
+            print(f"  ⚠️  {name} ({table_name}): no condition left that can fire for the right reason; not written")
+            continue
+        query_only = pruned
 
         """if len(query_with_entities) > 10:
             print(

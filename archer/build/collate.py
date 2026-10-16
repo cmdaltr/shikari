@@ -144,13 +144,15 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                     # Use first procedure platform as the primary platform
                     platform = list(procedure_platforms)[0] if isinstance(procedure_platforms, set) else procedure_platforms[0] if isinstance(procedure_platforms, list) else procedure_platforms
 
-                # Mapping and building MDE queries
+                # Mapping and building MDE queries. compile_mde_queries appends to the list it's
+                # given: merge only this type's queries, or every earlier one is merged in again
+                prev_mde_count = len(mde_queries)
                 mde_queries = compile_mde_queries(
                     indicator_mapping, indicators, indicator_type, mde_queries, detection_name, platform=platform
                 )
 
                 # Group queries by table for potential merging
-                for query in mde_queries:
+                for query in mde_queries[prev_mde_count:]:
                     # Extract the table name from the query string (assumes first line is the table name)
                     table_name = query.split("\n")[0].strip()
 

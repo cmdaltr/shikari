@@ -94,7 +94,8 @@ class SecOpsGenerator:
         """
         branches, context = _indicator_branches(indicators)
         if not branches:
-            branches = [(["PROCESS_LAUNCH"], [])]
+            # Nothing to match on: a bare event type would fire on every process launch
+            return None, []
 
         event_types = list(dict.fromkeys(t for types, _ in branches for t in types))
         events = [_branch_expr(types, conds) for types, conds in branches]
@@ -169,10 +170,14 @@ _PROTOCOL_ALIASES = {"KERBEROS": "KRB5"}
 
 
 def _re_literal(value: str) -> Optional[str]:
-    """An indicator as an RE2 pattern matching it literally; runs of spaces match any whitespace."""
+    """
+    An indicator as an RE2 pattern matching it literally; runs of spaces match any
+    whitespace, and a placeholder's gap (indicator_hygiene.GAP) matches anything.
+    """
     if "`" in value:  # cannot appear inside a YARA-L regex literal
         return None
-    return r"\s+".join(_RE2_META.sub(r"\\\1", part) for part in value.split())
+    return ".*?".join(r"\s+".join(_RE2_META.sub(r"\\\1", part) for part in piece.split())
+                      for piece in value.split("\u2026"))
 
 
 def _regex_any(field: str, values: List[str]) -> List[str]:
@@ -195,9 +200,12 @@ def _meta_text(value: str) -> str:
 
 def _indicator_branches(indicators: Dict):
     """[(event_types, [conditions])] per indicator family, plus unused network context."""
-    cmds = list(indicators.get("cmd", []))
+    from archer.validation.precision import is_generic
+
+    # An ordinary word ("copy", "dir") as a whole value matches far more than the behaviour
+    cmds = [c for c in indicators.get("cmd", []) if not is_generic(str(c))]
     reg_keys = list(indicators.get("reg", [])) + [c for c in cmds if _REGISTRY_PATH.match(c)]
-    binaries = list(indicators.get("sw", []))
+    binaries = [b for b in indicators.get("sw", []) if not is_generic(str(b))]
 
     branches = []
     process = _regex_any("target.process.command_line", cmds) + _regex_any("target.process.file.full_path", binaries)
@@ -215,7 +223,8 @@ def _indicator_branches(indicators: Dict):
     services = list(indicators.get("service", []))
     context = {k: v for k, v in (("ports", ports), ("protocols", protocols + unknown), ("services", services)) if v}
 
-    if not branches and (ports or protocols or services):
+    # A protocol only narrows: alone it matches every SSH or DNS connection
+    if not branches and (ports or services):
         network = []
         if ports:
             network.append("(" + " or ".join(f"$e.target.port = {p}" for p in ports[:_PER_TYPE_LIMIT]) + ")")

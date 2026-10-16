@@ -19,7 +19,21 @@ _STOPWORDS = {
 }
 # Characters that mark a token as command syntax rather than English
 _SYNTAX = set("-/\\=:\"{}|$%<>*[]_@&;^~+#")
-_PLACEHOLDER = re.compile(r"<[A-Za-z][\w\s-]*>")
+_PLACEHOLDER = re.compile(r"<[A-Za-z][\w\s|-]*>")
+# Where a placeholder stood: "anything here". Builders split on it (KQL has_all fragments,
+# SecOps .*?), so the text around a placeholder still has to match, in order
+GAP = "\u2026"
+# Words that make a bracketed span a stand-in rather than a literal ({default} in bcdedit is real)
+_SLOT_WORD = (r"(?:user ?name|user|host ?name|host|ip(?: address)?|domain(?: name)?|computer ?name|computer|"
+              r"server|target|victim|attacker|password|pass|path|file ?name|file|dll ?name|dir(?:ectory)?|"
+              r"port|share|url|sid|guid|pid|payload|remote|local|name|vault|credentials|id)")
+_SLOTS = [
+    re.compile(r"\{\s*" + _SLOT_WORD + r"(?:\s*[|/,]\s*" + _SLOT_WORD + r")*\s*\}", re.I),
+    re.compile(r"\[\s*" + _SLOT_WORD + r"(?:\s*[|/,]\s*" + _SLOT_WORD + r")*\s*\]", re.I),
+    re.compile(r"\(\s*" + _SLOT_WORD + r"\s*\)", re.I),
+    # Halves of a split placeholder: "v:{hostname" and "ip}"
+    re.compile(r"\{" + _SLOT_WORD + r"\b(?![^{}]*\})|(?<![{\w])" + _SLOT_WORD + r"\}", re.I),
+]
 _SENTENCE_BREAK = re.compile(r"[a-z0-9][.)]\s+[A-Z][a-z]")
 
 
@@ -43,9 +57,14 @@ def clean_indicator(value) -> Optional[str]:
         return None
     if re.match(r"^[).,;:]\s|^\)", v) or _SENTENCE_BREAK.search(v) or _looks_like_prose(v):
         return None
-    # Documentation placeholders (<user-home>, <username>) aren't literal text: keep what's around them
-    if _PLACEHOLDER.search(v):
-        v = _PLACEHOLDER.sub("", v).strip()
+    # Documentation placeholders (<user-home>, {hostname}, [Username], (username)) aren't
+    # literal text: keep what's around them, with a gap where they stood
+    for rx in [_PLACEHOLDER] + _SLOTS:
+        v = rx.sub(GAP, v)
+    if GAP in v:
+        v = re.sub(re.escape(GAP) + r"+", GAP, v).strip(GAP + " ")
+        if len(re.sub(r"[\W_]", "", v.replace(GAP, ""))) < 3:
+            return None
     # Short values are noise, except numbers (ports such as 22)
     return v if len(v) >= 3 or v.isdigit() else None
 
