@@ -1,5 +1,7 @@
 # Correlation Engine Quick Reference
 
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/test_correlation_params.py`; try thresholds with `python archer.py correlate <group> --min-queries … --max-queries …` instead. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+
 ## TL;DR
 
 The correlation engine generates high-quality attack chain correlations by:
@@ -494,7 +496,7 @@ elif num_targets > 15:  # Change from 10 to be more aggressive
 | **Configuration** | `archer/config.py` |
 | **Detection Files** | `data/groups/*.yaml` |
 | **Correlation Output** | `data/correlate/{group_name}.json` |
-| **Full Documentation** | `docs/CORRELATION_ENGINE.md` |
+| **Full Documentation** | `docs/architecture/CORRELATION_ENGINE.md` |
 
 ---
 

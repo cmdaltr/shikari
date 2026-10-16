@@ -1,5 +1,7 @@
 # Detection Fidelity Improvement System - Implementation Guide
 
+> **Status (2026-10-16):** some of what this document names was never built: the knowledge-base maintenance and benchmarking scripts (`add_to_kb.py`, `batch_enhance.py`, `benchmark_fidelity.py`, `ab_test.py` and the rest under `scripts/`) and the test-sample files. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+
 **Version:** 1.0
 **Date:** 2024-11-28
 **Status:** 🚧 In Development
@@ -882,7 +884,7 @@ python scripts/archive_kb.py --older-than-days 365
 
 ## Support & Feedback
 
-- **Documentation:** See [docs/](docs/)
+- **Documentation:** See docs/
 - **Issues:** [GitHub Issues](https://github.com/cmdaltr/archer/issues)
 - **Feature Requests:** [GitHub Discussions](https://github.com/cmdaltr/archer/discussions)
 

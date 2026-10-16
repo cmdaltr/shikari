@@ -1,5 +1,7 @@
 # CVE Training Data
 
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/validate_training_data.py`; the files it shows are examples of output. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../../../../../docs/SCRIPTS.md).
+
 This directory contains CVE data enriched with technical analysis from security blogs, threat reports, and exploit POCs for training LLMs on ITW (In-The-Wild) exploit and POC detection generation.
 
 ## Directory Structure
@@ -25,13 +27,13 @@ cve_data/
 
 ```bash
 # Enrich specific CVEs
-python scripts/train_ai.py cve --cves CVE-2024-1234 CVE-2024-5678
+python scripts/ai/train_ai.py cve --cves CVE-2024-1234 CVE-2024-5678
 
 # Enrich high-severity CVEs from 2024
-python scripts/train_ai.py cve --year 2024 --min-cvss 7.0 --limit 50
+python scripts/ai/train_ai.py cve --year 2024 --min-cvss 7.0 --limit 50
 
 # Enrich only ITW exploits
-python scripts/train_ai.py cve --year 2024 --itw-only
+python scripts/ai/train_ai.py cve --year 2024 --itw-only
 ```
 
 ### Step 2: Review Enriched Data
@@ -319,25 +321,25 @@ For each CVE, the pipeline:
 
 ```bash
 # Log4Shell (most important)
-python scripts/train_ai.py cve --cves CVE-2021-44228
+python scripts/ai/train_ai.py cve --cves CVE-2021-44228
 
 # ProxyLogon/ProxyShell (Exchange)
-python scripts/train_ai.py cve --cves CVE-2021-26855 CVE-2021-34473 CVE-2021-34523
+python scripts/ai/train_ai.py cve --cves CVE-2021-26855 CVE-2021-34473 CVE-2021-34523
 
 # PrintNightmare
-python scripts/train_ai.py cve --cves CVE-2021-34527 CVE-2021-1675
+python scripts/ai/train_ai.py cve --cves CVE-2021-34527 CVE-2021-1675
 
 # Zerologon
-python scripts/train_ai.py cve --cves CVE-2020-1472
+python scripts/ai/train_ai.py cve --cves CVE-2020-1472
 
 # BlueKeep
-python scripts/train_ai.py cve --cves CVE-2019-0708
+python scripts/ai/train_ai.py cve --cves CVE-2019-0708
 
 # EternalBlue
-python scripts/train_ai.py cve --cves CVE-2017-0144
+python scripts/ai/train_ai.py cve --cves CVE-2017-0144
 
 # Recent critical vulnerabilities from 2024
-python scripts/train_ai.py cve --year 2024 --min-cvss 9.0 --limit 100
+python scripts/ai/train_ai.py cve --year 2024 --min-cvss 9.0 --limit 100
 ```
 
 ## Adding Blog Posts Manually
@@ -361,7 +363,7 @@ If automatic search doesn't find relevant blog posts, add them manually:
 2. Re-run enrichment:
 
 ```bash
-python scripts/train_ai.py cve --cves CVE-2024-1234
+python scripts/ai/train_ai.py cve --cves CVE-2024-1234
 ```
 
 The pipeline will automatically find and include the blog post in the enrichment.

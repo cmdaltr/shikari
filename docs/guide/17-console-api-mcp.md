@@ -34,7 +34,7 @@ adfconsole (hunt/group) > run
 | `ai/ask`, `ai/briefing`, `ai/settings` | Ask Archer, a threat briefing, and the AI assignment |
 | `agent/repair`, `agent/ask`, `agent/triage`, `agent/history` | The [agents](15-agents-and-ask-archer.md) |
 | `generate`, `correlate`, `hunt` | Run the pipeline locally, without the server |
-| `emulate` | Adversary emulation (not available yet) |
+| `emulate` | Adversary emulation (coming soon) |
 
 The hunt modules share options: `CORRELATE`, `LOL` (on), `OSINT`, `OSINT_COMPARE`, `MERGE_BY_TACTIC`, `MERGE_BY_PARENT`, `EXCLUDE` (SIEMs to leave out), `VALIDATE`, and `PROVIDER`/`MODEL` for AI. `show options` lists each module's own.
 
@@ -65,3 +65,17 @@ Gives any MCP client (Claude Code, Claude Desktop, your own agent) Archer's tool
 ```bash
 claude mcp add archer --env ARCHER_TOKEN=arch_... -- /path/to/archer/.venv/bin/python -m archer.mcp_server
 ```
+
+## Recorded telemetry
+
+The [Emulate](19-emulate.md) page's data from the command line:
+
+```bash
+python -m archer.telemetry                             # what's built
+python -m archer.telemetry --build                     # fetch what the sources changed
+python -m archer.telemetry --build --source lab        # only your lab's runs (or splunk, otrf, evtx, macos)
+python -m archer.telemetry --guide <GUIDE zip>         # Defender XDR alerting per technique
+python -m archer.telemetry --mde-export data/telemetry/lab/<run>   # Coming soon: a lab run's Defender rows
+```
+
+Its API is under `/api/telemetry` (`/status`, `/techniques`, `/technique/{id}`, `/data-sources`, `/search`, `/check?group=`), with `collections` and `platforms` parameters.

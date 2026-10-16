@@ -1,5 +1,7 @@
 # Detection Validation System Documentation
 
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/update_existing_detections.py` and the two older documents it links. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+
 **Last Updated:** 2026-02-08
 **Status:** Fully Operational
 
@@ -133,7 +135,7 @@ DeviceProcessEvents | where ProcessCommandLine contains "CreateUser"
 ### Core Components
 
 #### 1. Validation Matrix
-**File:** `archer/mappings/technique_platform_indicators.json` (1.98 MB)
+**File:** `bespoke/mappings/techniquePlatformIndicators.json` (1.98 MB)
 
 Defines valid and invalid indicators for each technique-platform combination:
 
@@ -309,7 +311,7 @@ splunk_queries = compile_splunk_queries(
 
 ### Validation Matrix Generation
 
-**Script:** `scripts/generate_validation_matrix.py`
+**Script:** `scripts/validation/generate_validation_matrix.py`
 
 Automatically generates validation rules from MITRE ATT&CK data:
 
@@ -562,15 +564,15 @@ This is handled automatically by `compile_search_clause()` in `queries.py`.
 
 | File | Purpose | Size | Status |
 |------|---------|------|--------|
-| `archer/mappings/technique_platform_indicators.json` | Validation matrix (314 techniques) | 1.98 MB | ✅ Complete |
-| `archer/mappings/indicatorMapping.json` | Indicator type to index mappings | ~15 KB | ✅ Updated |
-| `archer/mappings/schemaSplunk.json` | Transformation pipelines | ~500 KB | ✅ Updated |
+| `bespoke/mappings/techniquePlatformIndicators.json` | Validation matrix (314 techniques) | 1.98 MB | ✅ Complete |
+| `bespoke/mappings/indicatorMapping.json` | Indicator type to index mappings | ~15 KB | ✅ Updated |
+| `bespoke/mappings/schemas/schemaSplunk.json` | Transformation pipelines | ~500 KB | ✅ Updated |
 
 ### Scripts
 
 | File | Purpose | Usage |
 |------|---------|-------|
-| `scripts/generate_validation_matrix.py` | Auto-generate validation rules from MITRE | `python3 scripts/generate_validation_matrix.py` |
+| `scripts/validation/generate_validation_matrix.py` | Auto-generate validation rules from MITRE | `python3 scripts/validation/generate_validation_matrix.py` |
 | `scripts/update_existing_detections.py` | Scan existing detections for issues | `python3 scripts/update_existing_detections.py` |
 
 ### Documentation
@@ -612,7 +614,7 @@ This is handled automatically by `compile_search_clause()` in `queries.py`.
 
 Run the validation matrix generator:
 ```bash
-python3 scripts/generate_validation_matrix.py
+python3 scripts/validation/generate_validation_matrix.py
 ```
 
 This automatically pulls from MITRE ATT&CK and creates validation rules.

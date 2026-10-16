@@ -416,9 +416,9 @@ Planned improvements for future releases:
 
 ## Related Documentation
 
-- [Report Generation Guide](../reports/REPORT_GENERATION_COMPLETE.md)
-- [MITRE ATT&CK Integration](../architecture/MITRE_INTEGRATION.md)
-- [Detection Library](../library/DETECTION_LIBRARY.md)
+- [Report Generation Guide](REPORT_GENERATION.md)
+- [MITRE ATT&CK Integration](../guide/18-data-and-updates.md)
+- [Detection Library](../guide/07-library.md)
 
 ## Support
 

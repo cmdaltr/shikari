@@ -1,5 +1,5 @@
 %% Part A — Input, Intelligence & Build
-%% Part A of the master diagram. Shows the journey from user input (threat actor, CVE, blog, technique IDs, manual data) through the browser UI and web server, into the intelligence layer (MITRE ATT&CK, CVE research, blog analysis) and the build pipeline that generates detection queries for each technique.
+%% Part A of the master diagram. Shows the journey from user input (threat actor, CVE, report, technique IDs, manual data) through the browser and web server, into the intelligence layer (MITRE ATT&CK and MITRESaw, CVE research, report analysis) and the build pipeline that filters by the technology stack and generates detection queries for each technique.
 %%
 
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -8,22 +8,22 @@ flowchart TD
         direction LR
         IN_GROUP["Threat Actor"]
         IN_CVE["CVE"]
-        IN_BLOG["Blog / Report"]
+        IN_BLOG["Report<br/>URL or file"]
         IN_TECH["Technique IDs"]
         IN_MANUAL["Manual Data"]
     end
 
-    subgraph UI ["BROWSER — 6 Tabs"]
+    subgraph UI ["BROWSER — Home, Detections, Intel, Build"]
         direction LR
-        TAB_GEN["Generate"]
-        TAB_MANUAL["Manual"]
-        TAB_HUNT["Hunt"]
-        TAB_RESEARCH["Research"]
-        TAB_EMULATE["Emulate"]
-        TAB_LIBRARY["Library"]
+        TAB_GEN["Home → Hunt"]
+        TAB_MANUAL["Build → Manual"]
+        TAB_HUNT["Home → Analyse"]
+        TAB_RESEARCH["Home → Research"]
+        TAB_EMULATE["Build → Emulate"]
+        TAB_LIBRARY["Detections → Library"]
     end
 
-    subgraph SERVER ["WEB SERVER — 84 endpoints"]
+    subgraph SERVER ["WEB SERVER — FastAPI"]
         direction LR
         API["API Router"]
         AUTH["Auth"]
@@ -32,23 +32,23 @@ flowchart TD
 
     subgraph INTEL ["INTELLIGENCE"]
         direction LR
-        MITRE["MITRE ATT&CK<br/>3 attribution paths"]
+        MITRE["MITRE ATT&CK + MITRESaw<br/>3 attribution paths"]
         CVE_R["CVE Research<br/>NVD + PoC search"]
-        BLOG_A["Blog Analyser"]
+        BLOG_A["Report Analyser"]
         BRIEF["Threat Briefing"]
     end
 
     subgraph BUILD ["BUILD — For each technique"]
         direction LR
         ORCH["Orchestrator"]
-        COMPILE["Extract indicators<br/>→ Check platform<br/>→ Build queries"]
-        VENDORS["Splunk | MDE<br/>SecOps | Elastic"]
+        COMPILE["Technology stack filter<br/>→ Extract indicators<br/>→ Build queries<br/>→ Precision checks"]
+        VENDORS["SecOps | MDE<br/><i>Splunk, Elastic: off for now</i>"]
         YAML_OUT["Save YAML"]
         ORCH --> COMPILE --> VENDORS --> YAML_OUT
     end
 
-    IN_GROUP & IN_CVE & IN_BLOG --> TAB_GEN
-    IN_TECH --> TAB_HUNT
+    IN_GROUP & IN_CVE & IN_TECH --> TAB_GEN
+    IN_BLOG --> TAB_HUNT
     IN_MANUAL --> TAB_MANUAL
 
     UI --> SERVER

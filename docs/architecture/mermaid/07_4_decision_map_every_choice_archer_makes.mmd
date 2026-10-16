@@ -57,8 +57,8 @@ flowchart TD
         D13 -- "Yes" --> D13A["Spin up test SIEM in Docker<br/>→ Generate fake events<br/>→ Run query<br/>→ Measure accuracy<br/>→ Suggest improvements"]
         D13 -- "No" --> D13B["Skip"]
 
-        D14{"Emulation enabled?"}
-        D14 -- "Yes" --> D14A["Run Atomic Red Team tests<br/>to simulate the attack<br/>and verify detection fires"]
+        D14{"Check against recordings?"}
+        D14 -- "Yes" --> D14A["Emulate: which logs record<br/>the technique, and do the<br/>indicators appear in them?"]
         D14 -- "No" --> D14B["Skip"]
     end
 

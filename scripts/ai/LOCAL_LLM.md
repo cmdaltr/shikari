@@ -319,8 +319,8 @@ rm -rf ~/.ollama
 
 - [Ollama Documentation](https://ollama.com/docs)
 - [Ollama Model Library](https://ollama.com/library)
-- [Archer AI Configuration Guide](../docs/AI_MODEL_CONFIGURATION.md)
-- [Archer Training Data Guide](../docs/TRAIN_AI.md)
+- [Archer AI Configuration Guide](../../docs/ai/MODEL_CONFIGURATION.md)
+- [Archer Training Data Guide](../../docs/ai/TRAIN_AI.md)
 
 ## Support
 

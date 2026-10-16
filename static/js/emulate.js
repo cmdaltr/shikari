@@ -68,9 +68,13 @@
     else if (r.values) setCheck('is-ready', 'Ready', "Detections' indicators can be checked against the recordings");
     else setCheck('is-unavailable', 'Unavailable', "The recordings' field values aren't on this machine");
     const order = ['lab', 'splunk', 'otrf', 'evtx', 'macos'];
-    $('em-sources').innerHTML = Object.entries(r.sources).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([k, s]) => `<li>
-      ${logo(k, 'em-source-logo')}
-      <div><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>
+    $('em-sources').innerHTML = Object.entries(r.sources).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([k, s]) =>
+      k === 'lab' && !s.datasets
+        // Nothing recorded yet: docs/guide/20-recording-a-lab.md
+        ? `<li class="is-missing">${logo(k, 'em-source-logo')}<div><strong>${esc(s.name)} <em class="nav-soon">Coming soon</em></strong>
+            <span>No runs yet</span><small>Atomic Red Team on your own Windows, Linux and macOS VMs, with Defender for Endpoint's rows: see the user guide's <em>Recording a lab</em></small></div></li>`
+        : `<li>${logo(k, 'em-source-logo')}
+      <div>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>` : `<strong>${esc(s.name)}</strong>`}
       <span>${esc((s.datasets || 0).toLocaleString())} recordings · ${esc(s.licence)} · built ${esc(s.built)}</span><small>${esc(s.note)}</small></div></li>`).join('');
     const hadGuide = data.guide;
     data.guide = !!r.guide;

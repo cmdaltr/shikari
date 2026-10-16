@@ -1,5 +1,7 @@
 # Query Examples Repository
 
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/manage_query_examples.py` and `docs/QUERY_LEARNING_SYSTEM.md`; the examples are loaded by `archer/ai/genai/query_examples.py` from `data/query_examples.json`. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../../../docs/SCRIPTS.md).
+
 This directory contains downloaded query examples from open source security repositories, used to enhance detection query generation through few-shot learning.
 
 ## Contents
@@ -38,4 +40,4 @@ python scripts/manage_query_examples.py stats
 
 ## Documentation
 
-See [docs/QUERY_LEARNING_SYSTEM.md](../../../docs/QUERY_LEARNING_SYSTEM.md) for complete documentation.
+See docs/QUERY_LEARNING_SYSTEM.md for complete documentation.

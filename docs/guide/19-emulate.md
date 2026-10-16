@@ -34,7 +34,7 @@ The summary ships with Archer (`archer/data/telemetry_guide.json`). To rebuild i
 python -m archer.telemetry --guide ~/Downloads/microsoft-security-incident-prediction.zip
 ```
 
-## Recording your own lab
+## Recording your own lab (Coming soon)
 
 No public set of attacks recorded by Defender for Endpoint, or by macOS's unified log, exists that Archer has found, so the gaps are filled by recording your own. `scripts/telemetry/record-atomics.ps1` runs Atomic Red Team tests on a **disposable** test machine (PowerShell 7, elevated) and saves each test's logs:
 
@@ -54,7 +54,7 @@ If the machine is onboarded to Defender for Endpoint, fetch Defender's own rows 
 python -m archer.telemetry --mde-export data/telemetry/lab/<run>
 ```
 
-Copy the run's folder to `data/telemetry/lab/` and press **Update**. Your recordings appear as **Your lab**; they hold your hosts' and tenant's names, so `data/telemetry/` is gitignored and they never leave the machine.
+Copy the run's folder to `data/telemetry/lab/` and press **Update**. The step-by-step setup, from the Defender trial tenant to each VM, is [Recording a lab](20-recording-a-lab.md); until a run has been recorded, **Your lab** shows as Coming soon. Your recordings appear as **Your lab**; they hold your hosts' and tenant's names, so `data/telemetry/` is gitignored and they never leave the machine.
 
 ## Filters
 
@@ -102,4 +102,4 @@ Each table or UDM event type for the chosen SIEM, with how many techniques it re
 - Until you record your own, Defender XDR tables are mapped from the Windows, Linux and macOS events that record the same activity, and macOS has no unified log recordings.
 - GUIDE's grades are its customers' triage, two weeks of it; a technique's sub-techniques without figures of their own show their parent's.
 - The Windows event ID, auditd and cloud log mappings are in `archer/mappings/telemetry_map.json`; an event type not listed there shows without a table.
-- Running Atomic Red Team in your own lab (a Linux container, then a Windows VM) is the next stage of [#22](https://github.com/cmdaltr/archer/issues/22).
+- Recording Atomic Red Team in your own lab, with Defender for Endpoint's own rows and the macOS unified log, is coming soon: the tooling is in place and the steps are in [Recording a lab](20-recording-a-lab.md), but no run has been recorded yet.

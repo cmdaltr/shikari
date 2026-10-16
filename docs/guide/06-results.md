@@ -95,7 +95,7 @@ The toolbar also filters by SIEM, hides undetected techniques, hides selected ca
 | Download All | A zip of every detection (YAML) and correlation |
 | Save to Library | Saves the run's detections and correlations to your [Library](07-library.md), and its attack flow to [Flows](09-flows.md) |
 | Generate Report | A Word, PDF or HTML report of the run |
-| Run Emulation | Not available yet |
+| Run Emulation | Coming soon. [Emulate](19-emulate.md) shows which logs record each technique and checks this run's indicators against recorded attacks |
 | Regenerate | Runs it again and rewrites every detection, including ones edited by hand or by the repair agent |
 | New Analysis | Back to the Home page |
 

@@ -1,0 +1,59 @@
+# 7. User Interface — Menus and Pages
+
+The Home page's four tabs (Hunt, Analyse, Profile, Research) and the three menus (Detections, Intel, Build). Hunt, Analyse and the company Profile open the Results page; Results save to the Library and Flows. Run Emulation from Results is coming soon.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
+graph LR
+    subgraph HOME ["Home"]
+        direction TB
+        H1["<b>Hunt</b><br/>A group, a CVE or<br/>ATT&CK techniques"]
+        H2["<b>Analyse</b><br/>A report: URL or<br/>uploaded file"]
+        H3["<b>Profile</b><br/>The groups likely<br/>to target a company"]
+        H4["<b>Research</b><br/>Find groups by keyword,<br/>compare techniques"]
+    end
+
+    RESULT["<b>Results</b><br/>Briefing · detections per SIEM<br/>· correlations · attack flow<br/>· IOC flow · exports"]
+
+    subgraph DET ["Detections"]
+        direction TB
+        D1["<b>Library</b><br/>Saved detections<br/>and correlations"]
+        D2["<b>Coverage</b><br/>The ATT&CK matrix"]
+        D3["<b>Flows</b><br/>What you can and<br/>can't detect"]
+    end
+
+    subgraph INT ["Intel"]
+        direction TB
+        I1["<b>Feed</b><br/>The week's research,<br/>watchlists"]
+        I2["<b>Cyber Powers</b><br/>National capability map"]
+        I3["<b>MITRESaw</b><br/>Procedures, indicators"]
+    end
+
+    subgraph BLD ["Build"]
+        direction TB
+        B1["<b>Manual</b><br/>One technique at a time"]
+        B2["<b>Regex</b><br/>Test per SIEM engine"]
+        B3["<b>Agents</b><br/>Repair, triage — opt-in"]
+        B4["<b>Emulate</b><br/>Which logs record each<br/>technique; your detections<br/>against recorded attacks"]
+    end
+
+    H1 & H2 & H3 --> RESULT
+    H4 --> H1
+    I1 -.-> H2
+    RESULT --> D1
+    RESULT --> D3
+    B1 --> D1
+    D1 -.-> B4
+    RESULT -.->|"Run Emulation<br/>coming soon"| B4
+
+    style H1 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style H2 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style H3 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style H4 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style RESULT fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style D1 fill:#50e3c2,stroke:#2ca089,color:#333
+    style D2 fill:#50e3c2,stroke:#2ca089,color:#333
+    style D3 fill:#50e3c2,stroke:#2ca089,color:#333
+    style B4 fill:#f5a623,stroke:#c17d10,color:#fff
+    linkStyle default stroke:#ff6600,stroke-width:3px
+```

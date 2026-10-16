@@ -1,92 +1,102 @@
 # 3. Component Architecture — How the Parts Fit Together
 
-Shows how Archer's modules connect: browser UI → web server (API, auth, workers) → intelligence layer → build pipeline (orchestrator, compiler, YAML writer) → correlation engine → validation framework → external integrations → storage.
+Shows how Archer's parts connect: the interfaces (web UI, console, CLI, MCP) → the FastAPI server → intelligence (ATT&CK and MITRESaw, CVEs, reports, Threat Feed, OSINT) → the build pipeline (technology stack, query builders, precision checks, IOC sweeps) → correlation → storage, with recorded telemetry (Emulate) and the tools alongside. Your lab is coming soon.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
-graph TD
-    UI["Browser UI"]
+graph TB
+    subgraph IFACE ["Interfaces"]
+        direction LR
+        WEB["Web UI<br/>server-rendered"]
+        CON["adfconsole"]
+        CLI["archer.py · archer CLI"]
+        MCP["MCP server"]
+    end
 
-    subgraph SERVER ["Web Server"]
-        API["API Router<br/>84 endpoints"]
-        AUTH["Auth"]
-        BG["Background Workers"]
+    subgraph SERVER ["FastAPI Server"]
+        direction LR
+        API["Pages + REST API<br/>/docs"]
+        AUTH["Auth + roles"]
+        JOBS["Background jobs<br/>runs, Feed every 6 h"]
     end
 
     subgraph INTEL ["Intelligence"]
-        MITRE["MITRE ATT&CK"]
-        CVE_HUNT["CVE Researcher"]
-        BLOG["Blog Analyser"]
-        BRIEFING["Threat Briefing"]
+        direction LR
+        MITRE["ATT&CK + MITRESaw<br/>procedures, indicators"]
+        CVE["CVE Research<br/>NVD + PoCs"]
+        REPORT["Report Analyser<br/>URL, PDF, DOCX"]
+        FEED["Threat Feed<br/>+ watchlists"]
+        OSINT["OSINT rule index<br/>+ LOLBAS, LOLDrivers"]
     end
 
-    subgraph PIPELINE ["Build Pipeline"]
+    subgraph PIPE ["Build Pipeline"]
+        direction LR
+        STACK["Technology stack<br/>filter"]
         ORCH["Orchestrator"]
-        COMPILE["Query Compiler"]
-        YAML_W["YAML Writer"]
+        BUILD["Query builders<br/>SecOps · MDE"]
+        PREC["Precision checks"]
+        IOC["IOC sweeps<br/>known-good, expiry"]
     end
 
-    subgraph CORR_ENG ["Correlation Engine"]
+    subgraph CORR ["Correlation"]
+        direction LR
         HEUR["Heuristic"]
         SEM["Semantic"]
-        AIGEN["AI Generator"]
+        AIC["AI, opt-in"]
     end
 
-    subgraph VALID ["Validation · Optional"]
-        DOCKER["Docker SIEMs"]
-        TESTER["Test & Refine"]
+    subgraph TEL ["Recorded Telemetry — Emulate"]
+        direction LR
+        REC["Recordings<br/>Splunk · OTRF · EVTX · macOS"]
+        GUIDE["GUIDE<br/>Defender XDR alerting"]
+        LAB["Your lab<br/>Coming soon"]
     end
 
-    subgraph EXT ["External · Optional"]
-        LLM_P["LLM Providers"]
-        VECTR_I["VECTR"]
-        ATOMIC_I["Atomic Red Team"]
-        NVD["NVD / GitHub"]
+    subgraph TOOLS ["Tools"]
+        direction LR
+        REGEX["Regex<br/>RE2 · PCRE2"]
+        AGENTS["Agents, opt-in"]
+        VAL["Runtime validation<br/>Docker SIEMs"]
     end
 
     subgraph STORE ["Storage"]
-        YAMLS["Detection YAMLs"]
-        CORR_F["Correlations"]
-        DB["Database"]
+        direction LR
+        DB["archer.db<br/>Library, users, Feed"]
+        YAML["Detection YAMLs<br/>data/groups/"]
+        CJSON["Correlations<br/>data/correlate/"]
+        BESPOKE["bespoke/ mappings<br/>gitignored"]
     end
 
-    UI --> API
+    WEB & CON & CLI & MCP --> API
     API --> AUTH
-    API --> BG
+    API --> JOBS
+    JOBS --> MITRE & CVE & REPORT & FEED
+    MITRE & CVE & REPORT --> STACK --> ORCH --> BUILD --> PREC
+    BUILD --> IOC
+    BESPOKE -.-> BUILD
+    OSINT -.-> BUILD
+    PREC --> YAML
+    YAML --> HEUR & SEM & AIC
+    HEUR & SEM & AIC --> CJSON
+    OSINT -.->|"inherited"| CJSON
+    YAML -.->|"indicators checked"| REC
+    LAB -.-> REC
+    API --> REGEX & AGENTS & VAL
+    API --> DB
 
-    BG --> MITRE
-    BG --> CVE_HUNT
-    BG --> BLOG
-    BG --> BRIEFING
-
-    MITRE --> ORCH
-    CVE_HUNT --> ORCH
-    BLOG --> ORCH
-    ORCH --> COMPILE --> YAML_W
-
-    YAML_W --> HEUR
-    YAML_W --> SEM
-    YAML_W --> AIGEN
-
-    YAML_W --> YAMLS
-    HEUR --> CORR_F
-    SEM --> CORR_F
-    AUTH --> DB
-
-    AIGEN --> LLM_P
-    BRIEFING --> LLM_P
-    CVE_HUNT --> NVD
-    ORCH --> VECTR_I
-    ORCH --> ATOMIC_I
-    ORCH --> DOCKER --> TESTER
-
-    style UI fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style IFACE fill:#d4e8fc,stroke:#4a90d9
+    style SERVER fill:#e8d4f8,stroke:#9013fe
+    style INTEL fill:#fef3d4,stroke:#f5a623
+    style PIPE fill:#fef3d4,stroke:#f5a623
+    style CORR fill:#fde8d4,stroke:#e8752a
+    style TEL fill:#d4f8ef,stroke:#2ca089
+    style TOOLS fill:#f0d4f8,stroke:#bd10e0
+    style STORE fill:#e8e8e8,stroke:#666
     style API fill:#9013fe,stroke:#6b0fb8,color:#fff
     style ORCH fill:#f5a623,stroke:#c17d10,color:#fff
-    style COMPILE fill:#f5a623,stroke:#c17d10,color:#fff
-    style MITRE fill:#f5a623,stroke:#c17d10,color:#fff
-    style YAMLS fill:#7ed321,stroke:#4a8c0f,color:#fff
-    style CORR_F fill:#7ed321,stroke:#4a8c0f,color:#fff
-    style DB fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style BUILD fill:#f5a623,stroke:#c17d10,color:#fff
+    style REC fill:#50e3c2,stroke:#2ca089,color:#333
+    style GUIDE fill:#50e3c2,stroke:#2ca089,color:#333
+    style LAB fill:#f5f5f5,stroke:#999,stroke-dasharray:4 3,color:#777
     linkStyle default stroke:#ff6600,stroke-width:3px
 ```

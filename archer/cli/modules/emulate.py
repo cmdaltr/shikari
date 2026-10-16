@@ -5,7 +5,7 @@ from .base import BaseModule, ModuleOption
 
 class EmulateModule(BaseModule):
     name = "emulate"
-    description = "Execute adversary emulation tests against MITRE ATT&CK techniques"
+    description = "Execute adversary emulation tests (coming soon)"
     author = "Archer Team"
     references = ["https://github.com/redcanaryco/atomic-red-team"]
 
@@ -65,7 +65,7 @@ class EmulateModule(BaseModule):
         try:
             from archer.emulation import AtomicRedTeam
         except ImportError:
-            print("  Emulation module not available. Check dependencies.")
+            print("  Coming soon: running atomics from Archer. Record them on a test machine for now: docs/guide/20-recording-a-lab.md")
             return
 
         # Delegate to the existing emulation runner

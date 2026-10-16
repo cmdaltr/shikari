@@ -1,5 +1,7 @@
 # External Detections
 
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/add_to_kb.py` and `kb_stats.py`; import with `scripts/config/import_community_rules.py`. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../../../docs/SCRIPTS.md).
+
 This directory contains **community-sourced** detection examples for RAG-based query enhancement.
 
 These are external/public detections imported from community repositories (Splunk, Elastic, etc.).
@@ -107,4 +109,4 @@ python scripts/kb_stats.py
 
 ---
 
-For more information, see [FIDELITY_IMPLEMENTATION_GUIDE.md](../../FIDELITY_IMPLEMENTATION_GUIDE.md)
+For more information, see [FIDELITY_IMPLEMENTATION_GUIDE.md](../../../docs/rag/FIDELITY_IMPLEMENTATION_GUIDE.md)

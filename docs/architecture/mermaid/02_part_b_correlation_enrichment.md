@@ -1,6 +1,6 @@
 # Part B — Correlation & Enrichment
 
-Part B of the master diagram. Shows how completed detection files are correlated into attack chains (via heuristic, semantic, or AI modes), scored for relevance (0-100), and optionally enriched through OSINT cross-referencing, Docker-based validation, and Atomic Red Team emulation.
+Part B of the master diagram. Shows how completed detection files are correlated into attack chains (via heuristic, semantic, or AI modes), scored for relevance (0-100), and optionally enriched through OSINT cross-referencing (inherited from their detections) and Docker-based validation. Emulate checks the indicators against recorded attacks.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -31,17 +31,16 @@ flowchart TD
 
     subgraph ENRICH ["ENRICHMENT — All optional"]
         direction LR
-        OSINT["OSINT<br/>Cross-reference with<br/>public detection repos"]
+        OSINT["OSINT<br/>Inherited from each<br/>chain's detections"]
         VALID["Validation<br/>Test in Docker SIEM<br/>→ Measure accuracy<br/>→ AI refines query"]
-        EMUL["Emulation<br/>Atomic Red Team<br/>simulates attack"]
+        EMUL["Emulate<br/>Do the indicators appear<br/>in recorded attacks?"]
     end
 
     subgraph EXT ["EXTERNAL SYSTEMS"]
         direction LR
-        LLM["LLM Providers<br/>Claude · GPT-4o · Local"]
+        LLM["AI, opt-in<br/>Anthropic · OpenAI · Gemini · Local"]
         NVD_GH["NVD · GitHub"]
-        ART["Atomic Red Team"]
-        VECTR_E["VECTR"]
+        ART["Recorded attacks<br/>4 public sources + GUIDE"]
     end
 
     YAMLS_IN --> MODE
@@ -49,7 +48,6 @@ flowchart TD
 
     LLM -.-> AIGEN
     ART -.-> EMUL
-    VECTR_E -.-> ENRICH
 
     OSINT & VALID & EMUL ==>|"To Part C"| CONTINUE2((" "))
 

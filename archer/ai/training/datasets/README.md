@@ -1,5 +1,7 @@
 # Training Datasets
 
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/convert_pdf_to_jsonl.py` and `fetch_cve_data.py`. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../../../../docs/SCRIPTS.md).
+
 This directory contains training data for fine-tuning local LLMs for detection engineering.
 
 ## Directory Structure

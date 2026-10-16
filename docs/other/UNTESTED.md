@@ -8,112 +8,25 @@ These features may work as intended but require testing and validation before be
 
 ---
 
-## Adversary Emulation
+## Lab recording (Coming soon)
 
-**Status**: ✅ Tested locally but not validated with live Atomic Red Team deployment
+**Status**: Code written and unit-tested, not yet run on a real lab
 
-### Overview
+`scripts/telemetry/record-atomics.ps1` runs Atomic Red Team tests on a Windows, Linux or macOS test machine and saves each test's logs (Windows event logs; auditd and the journal; eslogger, the unified log and launch item plist changes on macOS). `python -m archer.telemetry --mde-export` fetches each test's Defender for Endpoint rows through Microsoft Graph's Advanced Hunting. Runs copied into `data/telemetry/lab/` appear on the Emulate page as **Your lab**.
 
-Atomic Red Team integration for evidence-based detection enrichment. Execute adversary techniques locally or remotely and use the generated evidence to enhance detection queries.
+Setup, step by step: [Recording a lab](../guide/20-recording-a-lab.md).
 
-### Capabilities
+### Known limitations
 
-- 💥 **Atomic Red Team Integration** - Execute atomic tests for MITRE ATT&CK techniques
-- 🖥️ **Remote Execution** - SSH/WinRM support for cross-platform testing (Linux, macOS, Windows)
-- 🔑 **SSH Key Authentication** - Secure passwordless authentication
-- 🔒 **WinRM HTTPS** - Encrypted Windows remote management (default)
-- 📊 **Evidence-Based Enrichment** - Enhance detections with real execution artifacts
-
-### Configuration
-
-Enable with environment variable:
-```bash
-ENABLE_EMULATION=true
-```
-
-### Prerequisites
-
-- **Atomic Red Team** - Clone the repository locally
-- **SSH Access** - For Linux/macOS remote execution
-- **WinRM Access** - For Windows remote execution
-- **Lab Environment** - Never run live execution in production!
-
-### Basic Usage
-
-```bash
-# Emulate specific technique locally (safe simulation)
-python3 archer.py emulate T1059.001 --enrich
-
-# Emulate entire threat group locally
-python3 archer.py emulate "APT29" --enrich --max-techniques 10
-
-# Live execution locally (LAB ONLY!)
-python3 archer.py emulate T1059.001 --execute --enrich
-```
-
-### Remote Execution
-
-**SSH (Linux/macOS)**:
-```bash
-python3 archer.py emulate T1059.001 \
-  --remote-host 192.168.1.100 \
-  --remote-user admin \
-  --ssh-key ~/.ssh/id_rsa \
-  --enrich
-```
-
-**WinRM (Windows) - HTTPS**:
-```bash
-python3 archer.py emulate T1059.001 \
-  --remote-host 192.168.1.101 \
-  --remote-user Administrator \
-  --remote-password 'P@ssw0rd' \
-  --remote-platform windows \
-  --enrich
-```
-
-**WinRM (Windows) - HTTP (lab only)**:
-```bash
-python3 archer.py emulate T1059.001 \
-  --remote-host 192.168.1.101 \
-  --remote-user Administrator \
-  --remote-password 'P@ssw0rd' \
-  --remote-platform windows \
-  --http \
-  --enrich
-```
-
-### Complete Workflow
-
-```bash
-# 1. Generate detections
-python3 archer.py generate "APT29"
-
-# 2. Run emulation and enrich (local or remote)
-python3 archer.py emulate "APT29" --enrich --max-techniques 10
-
-# 3. Build correlations
-python3 archer.py correlate "APT29"
-
-# 4. Review enriched detections with real execution evidence
-```
-
-### Documentation
-
-**📚 [Complete Emulation Guide](guides/EMULATION_GUIDE.md)** - Detailed documentation with advanced workflows
-
-### Known Limitations
-
-- Not validated with full Atomic Red Team installation
-- Remote execution relies on external SSH/WinRM connectivity
-- Evidence collection depends on log visibility
-- May require environment-specific tuning
-
----
+- The script parses in PowerShell 7 and its macOS plist functions were exercised; no atomic has been run with it
+- `--mde-export` matches devices by the manifest's host name (`DeviceName startswith`), and takes up to 5,000 rows per table per test
+- Running atomics from Archer itself (`archer.py emulate`, the console's `emulate`, **Run Emulation** on Results) depended on an `archer.emulation` package that has been removed; those entry points say Coming soon
 
 ## Query Execution
 
 **Status**: Code implemented but not validated against live MDE/Splunk environments
+
+> `archer/query/mde.py` uses the MDE Advanced Hunting API (`api.securitycenter.microsoft.com`), which Microsoft is retiring in favour of Microsoft Graph's `runHuntingQuery`. Before validating it, move it to Graph as `archer/telemetry/mde.py` already does (application permission `ThreatHunting.Read.All`).
 
 ### Overview
 
@@ -137,7 +50,7 @@ export MDE_CLIENT_ID=your-client-id
 export MDE_CLIENT_SECRET=your-client-secret
 ```
 
-Or configure via Web UI: **Settings → Query Execution → MDE Configuration**
+Or configure via Web UI: **Profile → API Keys → SIEM Platforms**
 
 #### Splunk
 
@@ -187,7 +100,7 @@ Or configure via Web UI: **Settings → Query Execution → Splunk Configuration
 
 ### Documentation
 
-**📚 [Complete Query API Guide](guides/QUERY_API_GUIDE.md)** - Detailed API integration documentation
+**📚 [API Integration Guide](../features/API_INTEGRATION_GUIDE.md)** - API integration documentation
 
 ### Known Limitations
 
@@ -209,12 +122,10 @@ If you test any of these features, please help the community by:
 
 ### What to Test
 
-**Adversary Emulation**:
-- [ ] Local Atomic Red Team execution
-- [ ] Remote SSH execution (Linux/macOS)
-- [ ] Remote WinRM execution (Windows)
-- [ ] Evidence-based enrichment quality
-- [ ] Detection accuracy after enrichment
+**Lab recording**:
+- [ ] `record-atomics.ps1` on Windows (events.xml), Ubuntu (audit.log, journal.log) and macOS (es.ndjson, unified.ndjson, plists.ndjson)
+- [ ] `--mde-export` against a Defender for Endpoint trial tenant
+- [ ] A run appearing as Your lab, and a group's detections checked against it
 
 **Query Execution**:
 - [ ] MDE OAuth2 authentication
@@ -249,11 +160,11 @@ Your validation helps make these features production-ready!
 
 **Example validation report**:
 ```markdown
-**Feature**: Adversary Emulation
-**Environment**: Ubuntu 22.04, Atomic Red Team v3.0
+**Feature**: Lab recording
+**Environment**: Ubuntu 24.04, auditd with Neo23x0's rules, PowerShell 7.5
 **Status**: ✅ Working
-**Notes**: Local execution works perfectly. Remote SSH needed minor SSH config changes.
-**Fixes Applied**: Added SSH connection timeout handling
+**Notes**: 10 techniques recorded; audit.log and journal.log in every test folder.
+**Fixes Applied**: None
 ```
 
 ---
@@ -268,4 +179,4 @@ Once a feature is validated by the community:
 
 ---
 
-**Last Updated**: 2024-11-14
+**Last Updated**: 2026-10-16

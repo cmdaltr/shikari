@@ -1,6 +1,6 @@
 # Part C — Storage & Output
 
-Part C of the master diagram. Shows where processed detections and correlations are stored (YAMLs, JSON, caches, database) and the outputs delivered to the user (results page, Excel export, VECTR, JSON API, detection library).
+Part C of the master diagram. Shows where processed detections and correlations are stored (YAMLs, JSON, caches, database) and the outputs delivered to the user (results page, Excel export, attack flow as STIX, JSON API, detection library).
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -19,7 +19,7 @@ flowchart TD
         direction LR
         RESULTS["Results Page<br/>Queries, chains, metrics"]
         XLSX["Excel Export"]
-        VECTR_O["VECTR Export"]
+        FLOW_O["Attack Flow<br/>STIX bundle"]
         JSON_O["JSON API"]
         LIBRARY["Detection Library"]
     end
@@ -28,14 +28,14 @@ flowchart TD
     READY --> CACHE
     YAMLS & CORR_F --> RESULTS
     RESULTS --> XLSX & JSON_O & LIBRARY
-    RESULTS --> VECTR_O
+    RESULTS --> FLOW_O
 
     style FROM_B fill:#7ed321,stroke:#4a8c0f,color:#fff
     style STORAGE fill:#e8e8e8,stroke:#666
     style OUTPUTS fill:#d4f8d4,stroke:#4a8c0f
     style RESULTS fill:#7ed321,stroke:#4a8c0f,color:#fff
     style XLSX fill:#7ed321,stroke:#4a8c0f,color:#fff
-    style VECTR_O fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style FLOW_O fill:#7ed321,stroke:#4a8c0f,color:#fff
     style JSON_O fill:#7ed321,stroke:#4a8c0f,color:#fff
     style LIBRARY fill:#7ed321,stroke:#4a8c0f,color:#fff
     style YAMLS fill:#e8e8e8,stroke:#666

@@ -544,10 +544,9 @@ Time = min(Pairs, 10000) × 0.001s
 
 ## References
 
-- **Source Code:** [archer/ai/genai/engine.py](../archer/ai/genai/engine.py) - Correlation engine
-- **Detection Builder:** [archer/build/detections.py](../archer/build/detections.py) - Query generation
-- **MITRE Integration:** [archer/mitre/enterprise.py](../archer/mitre/enterprise.py) - Data fetching
-- **Performance Tests:** [test_correlation_filters.py](../test_correlation_filters.py) - Benchmarking script
+- **Source Code:** [archer/ai/genai/engine.py](../../archer/ai/genai/engine.py) - Correlation engine
+- **Detection Builder:** [archer/build/detections.py](../../archer/build/detections.py) - Query generation
+- **MITRE Integration:** [archer/mitre/enterprise.py](../../archer/mitre/enterprise.py) - Data fetching
 
 ---
 

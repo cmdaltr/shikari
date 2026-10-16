@@ -19,7 +19,7 @@ For detailed documentation on each category, see:
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | **setup_local_llm.py** | **Auto-configure local LLM based on system RAM** | `python scripts/ai/setup_local_llm.py` |
-| **setup_local_llm.sh** | Shell version (Linux/macOS only) | `bash scripts/ai/setup_local_llm.sh` |
+| **setup_local_llm.sh** | Shell version (Linux/macOS only) | `bash scripts/ai/setup_local_llm.py` |
 | **train_ai.py** | Unified training data collection (CVE, reports, OSINT, custom queries) | `python scripts/ai/train_ai.py <command> [options]` |
 
 **Documentation**: [scripts/ai/LOCAL_LLM.md](../scripts/ai/LOCAL_LLM.md), [docs/ai/](ai/)

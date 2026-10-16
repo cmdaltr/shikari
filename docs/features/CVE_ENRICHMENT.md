@@ -1,5 +1,7 @@
 # CVE Enrichment Workflow
 
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/enrich_cves.py` and `validate_training_data.py`; the dataset files it shows are examples of output, not files in the repository. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+
 Complete workflow for enriching CVEs with blog posts and technical analysis to generate high-fidelity detection training data.
 
 ## Overview
@@ -66,7 +68,7 @@ The CVE enrichment pipeline transforms raw CVE data into comprehensive training 
 
 ```bash
 # Enrich CVE-2021-44228 (Log4Shell)
-python scripts/train_ai.py cve --cves CVE-2021-44228
+python scripts/ai/train_ai.py cve --cves CVE-2021-44228
 
 # Output files:
 # ✓ archer/ai/training/datasets/cve_data/cache/CVE-2021-44228.json
@@ -78,14 +80,14 @@ python scripts/train_ai.py cve --cves CVE-2021-44228
 
 ```bash
 # Enrich top 50 critical/high CVEs from 2024
-python scripts/train_ai.py cve --year 2024 --min-cvss 7.0 --limit 50
+python scripts/ai/train_ai.py cve --year 2024 --min-cvss 7.0 --limit 50
 ```
 
 ### 3. Enrich ITW Exploits Only
 
 ```bash
 # Focus on CVEs with in-the-wild exploitation
-python scripts/train_ai.py cve --year 2024 --itw-only --min-cvss 8.0
+python scripts/ai/train_ai.py cve --year 2024 --itw-only --min-cvss 8.0
 ```
 
 ## Complete Example: Log4Shell (CVE-2021-44228)
@@ -93,7 +95,7 @@ python scripts/train_ai.py cve --year 2024 --itw-only --min-cvss 8.0
 ### Step 1: Run Enrichment
 
 ```bash
-python scripts/train_ai.py cve --cves CVE-2021-44228
+python scripts/ai/train_ai.py cve --cves CVE-2021-44228
 ```
 
 ### Step 2: Review Enriched CVE
@@ -321,7 +323,7 @@ EOF
 
 ```bash
 # Enrich all CVEs from file
-python scripts/train_ai.py cve --file priority_cves.txt
+python scripts/ai/train_ai.py cve --file priority_cves.txt
 
 # Output: cve_batch_YYYYMMDD_HHMMSS.jsonl
 ```

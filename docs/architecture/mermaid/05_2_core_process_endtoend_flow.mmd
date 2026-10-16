@@ -73,8 +73,8 @@ flowchart TD
 
     ENRICH -- "OSINT" --> OSINT["Cross-reference with<br/>open-source intel"]
     ENRICH -- "Validation" --> TESTQ["Test queries in<br/>sandboxed SIEM"]
-    ENRICH -- "Emulation" --> ATOMIC["Run attack simulation<br/><i>Atomic Red Team</i>"]
-    ENRICH -- "Export" --> EXPORT["Send to VECTR<br/>or download XLSX"]
+    ENRICH -- "Emulate" --> ATOMIC["Check indicators against<br/>recorded attacks<br/><i>Emulate</i>"]
+    ENRICH -- "Export" --> EXPORT["Download XLSX<br/>or attack flow (STIX)"]
     ENRICH -- "No" --> RESULTS
 
     OSINT --> RESULTS

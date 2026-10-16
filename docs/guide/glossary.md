@@ -27,5 +27,10 @@
 | SPL | Splunk's Search Processing Language |
 | EQL, ES\|QL | Elastic's event and piped query languages |
 | UDM | Google SecOps's Unified Data Model: the field names YARA-L rules use |
+| Recording | One attack (a tool or Atomic Red Team test) run in a lab with logging on, and the events it produced. Emulate's evidence |
+| Native logs | Logging the operating system has built in: Windows Security, System and PowerShell logs; Linux auditd and the journal; the macOS unified log. Sysmon and EDR agents are extra, and less widely deployed |
+| Atomic Red Team | Red Canary's library of small tests, one or more per ATT&CK technique, used to produce recordings |
+| GUIDE | Microsoft's dataset of Defender XDR alerts from thousands of organisations, with triage grades; Emulate's source for Defender's own alerting |
+| True, benign, false positive | Customers' triage grades in GUIDE: a real attack; real activity that wasn't malicious; a wrong alert |
 | IISS | The International Institute for Strategic Studies, whose cyber power tiers the Cyber Powers map uses |
 | MCP | Model Context Protocol: how AI clients such as Claude Code call Archer's tools |

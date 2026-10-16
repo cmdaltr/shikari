@@ -1,5 +1,7 @@
 # AI Training & Query Refinement System
 
+> **Status (2026-10-16):** some of what this document names was never built: the fine-tuning and deployment scripts (`fine_tune_llama.py`, `deploy_model.py`, `export_training_data.py`), the training-table migration and `config/ai_models.json`; local models are configured in Profile → API Keys instead. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+
 Complete implementation guide for training the AI component to improve Splunk and MDE query accuracy.
 
 ---
@@ -50,7 +52,7 @@ The current detection generation uses **heuristic-based** correlation rather tha
 
 ## Current Architecture
 
-### Location: [archer/ai/genai/engine.py](../archer/ai/genai/engine.py)
+### Location: [archer/ai/genai/engine.py](../../archer/ai/genai/engine.py)
 
 Current system:
 ```python
@@ -85,7 +87,7 @@ replaced with a true GenAI integration later (e.g., OpenAI, local LLM).
 
 ### New Tables
 
-Add these models to [archer/database/models.py](../archer/database/models.py):
+Add these models to [archer/database/models.py](../../archer/database/models.py):
 
 ```python
 from datetime import datetime
@@ -219,7 +221,7 @@ class QueryGenerationLog(Base):
 
 ### Migration Script
 
-Create [archer/database/migrations/add_ai_training_tables.py](../archer/database/migrations/add_ai_training_tables.py):
+Create archer/database/migrations/add_ai_training_tables.py:
 
 ```python
 """
@@ -247,7 +249,7 @@ if __name__ == "__main__":
 
 ## Backend APIs
 
-### Add to [archer/app.py](../archer/app.py)
+### Add to [archer/app.py](../../archer/app.py)
 
 ```python
 from archer.database.models import QueryFeedback, QueryTrainingExample, QueryGenerationLog, QueryPlatform
@@ -577,7 +579,7 @@ def _get_technique_description(technique_id):
 
 ### Add Rating Component to Library
 
-Update [templates/library.html](../templates/library.html) or create new template sections:
+Update [templates/library.html](../../templates/library.html) or create new template sections:
 
 ```html
 <!-- Rating Component -->
@@ -973,7 +975,7 @@ wget https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/
 
 ##### Step 3: Configure Model Path
 
-Create [config/ai_models.json](../config/ai_models.json):
+Create config/ai_models.json:
 
 ```json
 {

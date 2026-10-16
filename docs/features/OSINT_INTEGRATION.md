@@ -1,5 +1,7 @@
 # OSINT Detection Enhancement System
 
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/cleanup.py` and `test_osint.py`; the OSINT code is `archer/build/osint_*.py`, updated by `scripts/data/update_osint.py` and `build_osint_index.py`. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+
 **Last Updated:** 2025-11-14
 **Status:** ✅ Fully Operational
 **Version:** 2.0
@@ -845,7 +847,7 @@ data/osint_cache/
 pkill -f "update_osint_repos"
 
 # Try again with better network connection
-python scripts/update_osint_repos.py --force
+python scripts/data/update_osint.py --force
 ```
 
 **Note:** Azure Sentinel is ~256MB and can take 10-20 minutes on slower connections. This is normal.
@@ -913,7 +915,7 @@ rm -rf data/osint_cache/*
 rm -rf data/repos/
 
 # Re-clone fresh
-python scripts/update_osint_repos.py --force
+python scripts/data/update_osint.py --force
 ```
 
 ### Missing AWS Detections for Cloud Techniques
@@ -963,7 +965,7 @@ python scripts/update_osint_repos.py --force
 
 | File | Purpose | Changes |
 |------|---------|---------|
-| `archer/build/osint_enrichment.py` | Main OSINT search logic | Created |
+| `archer/build/osint_query_enhancer.py` | Main OSINT search logic | Created |
 | `archer/build/osint_repos.py` | Repository cloning/updating | Created |
 | `archer/build/osint_comparison.py` | Query snippet extraction | Added `extract_operations_from_osint_snippets()` |
 | `archer/build/detections.py` | Detection generation | Added generic term filtering, OSINT integration |
@@ -977,8 +979,8 @@ python scripts/update_osint_repos.py --force
 
 | File | Changes |
 |------|---------|
-| `archer/mappings/indicatorMapping.json` | Added `api` indicator type |
-| `archer/mappings/schemaSplunk.json` | Added transformation pipelines for `api` type |
+| `bespoke/mappings/indicatorMapping.json` | Added `api` indicator type |
+| `bespoke/mappings/schemas/schemaSplunk.json` | Added transformation pipelines for `api` type |
 
 ### Frontend
 
@@ -992,7 +994,7 @@ python scripts/update_osint_repos.py --force
 
 | File | Purpose |
 |------|---------|
-| `scripts/update_osint_repos.py` | Manual repository update script |
+| `scripts/data/update_osint.py` | Manual repository update script |
 | `scripts/test_osint.py` | OSINT functionality testing |
 
 ---

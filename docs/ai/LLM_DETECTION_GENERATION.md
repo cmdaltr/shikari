@@ -1,5 +1,7 @@
 # LLM-Based Detection Generation
 
+> **Status (2026-10-16):** some of what this document names was never built: none of its scripts, but the dataset files it shows are examples of output, not files in the repository. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+
 ## Overview
 
 Archer's LLM-based detection generation infrastructure enables training and deploying local Large Language Models (LLMs) to automatically generate high-fidelity detection rules, correlations, and threat reports. This system replaces the traditional heuristic regex-based detection generation with AI-powered generation trained on curated security datasets.
@@ -268,7 +270,7 @@ The CVE enrichment pipeline combines technical CVE data with real-world blog pos
 
 ```bash
 # Enrich specific CVEs with full context
-python scripts/train_ai.py cve --cves CVE-2024-1234 CVE-2024-5678
+python scripts/ai/train_ai.py cve --cves CVE-2024-1234 CVE-2024-5678
 
 # Output:
 # ✓ Enriched CVE-2024-1234 → archer/ai/training/datasets/cve_data/enriched/CVE-2024-1234.json
@@ -279,13 +281,13 @@ python scripts/train_ai.py cve --cves CVE-2024-1234 CVE-2024-5678
 
 ```bash
 # Enrich high-severity CVEs from 2024
-python scripts/train_ai.py cve --year 2024 --min-cvss 7.0 --limit 50
+python scripts/ai/train_ai.py cve --year 2024 --min-cvss 7.0 --limit 50
 
 # Enrich only CVEs with known ITW exploitation
-python scripts/train_ai.py cve --year 2024 --itw-only --min-cvss 8.0
+python scripts/ai/train_ai.py cve --year 2024 --itw-only --min-cvss 8.0
 
 # Enrich from file
-python scripts/train_ai.py cve --file priority_cves.txt
+python scripts/ai/train_ai.py cve --file priority_cves.txt
 ```
 
 #### Enrichment Sources
@@ -391,13 +393,13 @@ The enriched CVE is converted to a training example:
 
 ```bash
 # Convert single PDF threat report to JSON
-python scripts/train_ai.py reports --pdf threat_report.pdf
+python scripts/ai/train_ai.py reports --pdf threat_report.pdf
 
 # Batch convert all PDFs in directory
-python scripts/train_ai.py reports --dir archer/ai/training/datasets/threat_reports/
+python scripts/ai/train_ai.py reports --dir archer/ai/training/datasets/threat_reports/
 
 # Specify custom output directory
-python scripts/train_ai.py reports --dir reports/ --output custom_output/
+python scripts/ai/train_ai.py reports --dir reports/ --output custom_output/
 ```
 
 **Requirements**: `pip install pdfplumber`
@@ -406,16 +408,16 @@ python scripts/train_ai.py reports --dir reports/ --output custom_output/
 
 ```bash
 # Extract Elastic detection rules
-python scripts/train_ai.py osint --source elastic
+python scripts/ai/train_ai.py osint --source elastic
 
 # Extract Splunk security content
-python scripts/train_ai.py osint --source splunk
+python scripts/ai/train_ai.py osint --source splunk
 
 # Extract from all sources
-python scripts/train_ai.py osint --all
+python scripts/ai/train_ai.py osint --all
 
 # Use custom repository
-python scripts/train_ai.py osint --source elastic --repo https://github.com/custom/detection-rules-fork
+python scripts/ai/train_ai.py osint --source elastic --repo https://github.com/custom/detection-rules-fork
 ```
 
 **Requirements**: `pip install pyyaml toml`
@@ -645,7 +647,7 @@ MODEL_CONFIG = {
 The LLM pipeline integrates with Archer's existing workflow:
 
 ```python
-# In archer/core/orchestrator.py
+# In archer/build/orchestrator.py
 
 from archer.ai.training.pipelines.llm_inference import LLMInference
 

@@ -242,7 +242,7 @@ with open("report.html", "wb") as f:
 ### New Files
 1. `archer/reports/__init__.py` - Package initialization
 2. `archer/reports/generator.py` - Report generators (600+ lines)
-3. `test_report_generation.py` - Test suite
+3. `tests/unit/test_report_generation.py` - Test suite
 4. `REPORT_GENERATION_COMPLETE.md` - This document
 
 ### Modified Files
@@ -273,7 +273,7 @@ Already included in `requirements.txt`
 
 ### Run Test Suite
 ```bash
-python test_report_generation.py
+python tests/unit/test_report_generation.py
 ```
 
 **Expected Output**:

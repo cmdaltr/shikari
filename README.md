@@ -38,14 +38,17 @@ archer stop
 - 🎯 **MITRE ATT&CK Integration** - Automated detection generation from threat group TTPs
 - 📤 **File Upload & Intelligence Extraction** - Upload threat intel files (PDF, TXT, JSON, CSV, XLSX, YARA, DOCX) for automatic TTP/IOC extraction
 - 🌐 **Blog Analysis** - Paste a threat intel blog URL and extract TTPs/IOCs automatically
-- 📰 **Threat Feed** - A searchable wall of the last 7 days of vendor and government research (26 sources, and admins can add their own), each post tagged with targeted industries, the attacker's nation, and opportunistic or financial motive; plus a keyword search of all research at any date. No AI involved ([details](#threat-feed))
+- 📰 **Threat Feed** - A searchable wall of the last 7 days of vendor and government research (26 sources, and admins can add their own), each post tagged with targeted industries, the attacker's nation, and opportunistic or financial motive; a keyword search of all research at any date; and watchlists, saved searches that flag new matching posts (optionally by email). No AI involved ([details](#threat-feed))
 - 🌍 **Cyber Powers** - IISS cyber power tiers, ATT&CK attribution confidence and targeting on an Equal Earth world map ([guide](docs/guide/11-cyber-powers.md))
 - 🧪 **Regex tester** - Test a pattern on your own text and check it for Defender XDR and SecOps (RE2), Splunk (PCRE) or Elastic (Lucene), with per-SIEM escaping ([guide](docs/guide/14-regex.md))
+- 🧬 **Emulate** - Which logs record each technique, from 1,694 attacks recorded in public labs (Windows, Linux, macOS, ESXi and cloud): native OS logs first, with Sysmon and EDR optional; your detections' indicators checked against the recordings; and Defender XDR's own alerting per technique from Microsoft's GUIDE dataset. Recording your own lab is coming soon ([guide](docs/guide/19-emulate.md))
+- 🧱 **Technology stack** - Group hunts leave out techniques and procedures for platforms and products you don't run (Profile → Technology stack)
 - 🪚 **MITRESaw** - Every group's ATT&CK procedures and the indicators in them, rebuilt as ATT&CK changes ([guide](docs/guide/12-mitresaw.md))
 - 🗺️ **Attack Flows** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow
 - 🔍 **Multi-Platform Support** - Google SecOps (YARA-L) and Microsoft Defender (KQL); Splunk and Elastic are switched off for now ([onboarding](docs/SIEM_ONBOARDING.md))
-- 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries
-- 🛡️ **Threat Briefing** - Grounded ATT&CK prioritisation grounded in real MITRE data and your detection coverage gaps
+- 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries; each correlation carries its detections' OSINT enrichment and says when a part's query has changed since
+- 🛡️ **Threat Briefing** - ATT&CK prioritisation grounded in real MITRE data and your detection coverage gaps
+- 🧹 **IOC sweeps** - Report and CVE indicators as sweep queries: a known-good list, files in system folders matched only when written, and IPs and domains that expire after 90 days ([details](docs/guide/03-analyse.md#what-the-ioc-sweep-leaves-out-or-narrows))
 - 🔬 **Research Tab** - Actor technique consolidation with keyword/country filtering, tactic filtering, and professional XLSX export
 - 💬 **Ask Archer** - Conversational Q&A panel for ATT&CK questions and SIEM query generation
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
@@ -62,7 +65,8 @@ archer stop
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Defender XDR/Splunk API integration (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md))
-- **Adversary emulation, VECTR, CALDERA, MACAT** - Planned (see [FUTURE.md](docs/other/FUTURE.md) and #22)
+- **Running atomics from Archer** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
+- **Threat library with red and blue outcomes (VECTR-style), CALDERA, MACAT** - Planned (see [FUTURE.md](docs/other/FUTURE.md) and #24)
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)
@@ -78,9 +82,9 @@ archer stop
 
 ### Threat Feed
 
-The Threat Feed (the RSS icon in the header, or `intel/feed` in the console) is a wall of the last seven days of research, one card per post: title, a two-to-three sentence description, and tags. The search box matches titles and descriptions; the filters show posts relevant to you (your industries, plus anything opportunistic or financially motivated), your industries only, opportunistic or financial only, or everything. Set your industries in Profile → Threat Feed industries. **Analyse in Archer** opens a post on the Home page's Analyse tab.
+The Threat Feed (Intel → Feed, or `intel/feed` in the console) is a wall of the last seven days of research, one card per post: title, a two-to-three sentence description, and tags. The search box matches titles and descriptions; the filters show posts relevant to you (your industries, plus anything opportunistic or financially motivated), your industries only, opportunistic or financial only, or everything. Set your industries in Profile → Threat Feed industries. **Analyse in Archer** opens a post on the Home page's Analyse tab.
 
-The feed is collected in the background every time Archer starts and whenever you press **Refresh now**. Only posts it hasn't seen are fetched and analysed, so a refresh with nothing new takes about ten seconds. No AI is involved: tags come from regular expressions over the text and ATT&CK's own group data.
+The feed is collected in the background every time Archer starts, whenever you press **Refresh now**, and when the Feed is opened six hours after the last collection; while any watchlist exists, every six hours. **Watch** saves a search as a watchlist: posts that match it later are flagged on the Feed and counted on the menu, and can be emailed. Only posts it hasn't seen are fetched and analysed, so a refresh with nothing new takes about ten seconds. No AI is involved: tags come from regular expressions over the text and ATT&CK's own group data.
 
 Sources (RSS/Atom): Microsoft Threat Intelligence, Google Threat Intelligence (Mandiant), Unit 42, Cisco Talos, CrowdStrike, SentinelLABS, Kaspersky Securelist, ESET WeLiveSecurity, Proofpoint, The DFIR Report, Red Canary, Huntress, Elastic Security Labs, CISA, NCSC (UK), Recorded Future, Trend Micro Research, Rapid7, FortiGuard Labs, Symantec Threat Hunter, Volexity, Zscaler ThreatLabz, Sekoia, Group-IB, Bitdefender Labs and JPCERT/CC. Admins can add their own.
 
@@ -119,10 +123,11 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 **Quick Links:**
 - **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](GETTING_STARTED.md#step-4-configure-mapping-files-critical) | [User Guide](docs/guide/README.md)
 - **Interactive Console:** [adfconsole Guide](#-interactive-console-adfconsole)
-- **Usage:** [Web UI, CLI & API](docs/USAGE.md) | [Auto-Generated API Docs](http://localhost:8000/docs)
-- **Research Tab:** [Actor Consolidation & XLSX Export](docs/USAGE.md#research-tab)
-- **Threat Briefing:** [Usage Guide](docs/USAGE.md#threat-briefing) | [API Reference](docs/features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
-- **Ask Archer:** [Conversational Q&A](docs/USAGE.md#ask-archer)
+- **Usage:** [Where everything is, and the CLI](docs/USAGE.md) | [Auto-Generated API Docs](http://localhost:8000/docs)
+- **Research:** [Actor consolidation and XLSX export](docs/guide/05-research.md)
+- **Threat Briefing:** [On the Results page](docs/guide/06-results.md) | [API Reference](docs/features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
+- **Ask Archer:** [Agents and Ask Archer](docs/guide/15-agents-and-ask-archer.md)
+- **Emulate:** [Recorded telemetry](docs/guide/19-emulate.md) | [Recording a lab (coming soon)](docs/guide/20-recording-a-lab.md)
 - **Agents & MCP:** [Agents guide](docs/agents/README.md) | [Minimal agent example](examples/agents/minimal_agent.py)
 - **API Integration:** [API Integration Guide](docs/features/API_INTEGRATION_GUIDE.md)
 - **Correlation Tuning:** [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) | [Quick Reference](docs/architecture/CORRELATION_QUICK_REFERENCE.md)
@@ -142,7 +147,7 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 
 ## 🖥️ Interactive Console (adfconsole)
 
-`adfconsole` is a Metasploit-style interactive shell for building detection queries, running correlations, hunting techniques, and executing adversary emulations.
+`adfconsole` is a Metasploit-style interactive shell for building detection queries, running correlations and hunting techniques.
 
 ### Launch
 
@@ -159,8 +164,8 @@ Local modules run in the console's own process. Server modules drive a running A
 | `generate` | local | Generate detections for a threat group (`MODE llm` uses the profile's detection provider: `PROVIDER`, `MODEL`, `MAX_CALLS`) |
 | `correlate` | local | Build correlation queries from existing detection YAMLs (`MIN_RELEVANCE`) |
 | `hunt` | local | Look up a technique and compile its detections |
-| `emulate` | local | Execute adversary emulation tests |
-| `hunt/group` | server | Group hunt with AI, OSINT, merging, SIEM exclusions, validation, emulation and an optional briefing |
+| `emulate` | local | Adversary emulation (coming soon) |
+| `hunt/group` | server | Group hunt with AI, OSINT, merging, SIEM exclusions, validation and an optional briefing |
 | `hunt/cve` | server | CVE hunt: exploitation detections plus IOC sweeps from the CVE's references |
 | `hunt/technique` | server | Technique hunt across every group that uses the techniques |
 | `intel/report` | server | Extract TTPs and IOCs from a report URL or file and hunt them (`MODE all \| iocs \| review`) |
@@ -256,7 +261,7 @@ adfconsole (hunt/cve) > run
   … detections
   … complete
 
-  6 detections across 1 techniques (Splunk: 4, GoogleSecOps: 1, MicrosoftThreatProtection: 1)
+  2 detections across 1 techniques (GoogleSecOps: 1, MicrosoftThreatProtection: 1)
   IOC sweeps: GoogleSecOps, MicrosoftThreatProtection
   IOC flow (58 IOCs, 1 links) from references for CVE-2024-3400 (unit42.paloaltonetworks.com, www.volexity.com)
     Staging / download (7)

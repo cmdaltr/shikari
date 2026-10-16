@@ -556,7 +556,7 @@ These three parameters can be adjusted via **Profile → Config** in the web UI 
 | **Max Correlations/Vendor** | **60** | `engine.py` function parameter | Prevent overload | ✅ **YES** |
 | **Tech Frequency Limit** | **20** | `_apply_correlation_grouping()` | Ensure diversity | ✅ **YES** |
 
-**See:** [Correlation Quick Reference](../reference/CORRELATION_QUICK_REFERENCE.md) for detailed tuning guide.
+**See:** [Correlation Quick Reference](CORRELATION_QUICK_REFERENCE.md) for detailed tuning guide.
 
 ### Fixed Parameters
 
@@ -951,4 +951,4 @@ The `individual_queries` field is preserved when correlations are saved to the l
 
 **Last Updated:** March 4, 2025
 **Author:** Archer Development Team
-**Location:** `docs/CORRELATION_ENGINE.md`
+**Location:** `docs/architecture/CORRELATION_ENGINE.md`

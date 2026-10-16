@@ -4,6 +4,7 @@ Command-line interface for Archer functionality.
 Run this script directly to access core features without starting the web server.
 """
 
+import importlib.util
 import os
 import sys
 import argparse
@@ -549,7 +550,7 @@ Optional API Keys (for enhanced features):
     # Optional: Emulation testing
     emulate_parser = subparsers.add_parser(
         "emulate",
-        help="Execute adversary emulation tests",
+        help="Execute adversary emulation tests (coming soon)",
     )
     emulate_parser.add_argument(
         "target",
@@ -627,6 +628,9 @@ Optional API Keys (for enhanced features):
     elif args.command == "hunt":
         generate_detection(args.technique)
     elif args.command == "emulate":
+        if importlib.util.find_spec("archer.emulation") is None:
+            print("Coming soon: running atomics from Archer. Record them on a test machine for now: docs/guide/20-recording-a-lab.md")
+            return
         run_emulation(
             target=args.target,
             framework=args.framework,

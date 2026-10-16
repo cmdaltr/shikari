@@ -34,7 +34,7 @@ On **first run**, Archer will clone 4 OSINT detection repositories (~425MB total
 ### What Happens:
 
 1. Container starts
-2. `scripts/docker_entrypoint.py` (cross-platform Python script) checks if repos exist
+2. `scripts/deployment/docker_entrypoint.py` (cross-platform Python script) checks if repos exist
 3. If not found → clones all repos
 4. App starts after repos are ready
 
@@ -170,7 +170,7 @@ volumes:
 
 **Speed it up:**
 - Use fast internet connection
-- Pre-clone repos on host: `python scripts/update_osint_repos.py`
+- Pre-clone repos on host: `python scripts/data/update_osint.py`
 - Repos in `./data/repos/` will be used by container
 
 ### Out of Disk Space
@@ -197,7 +197,7 @@ To avoid 15-20 minute wait on first Docker run:
 
 ```bash
 # On your host machine, clone repos first
-python scripts/update_osint_repos.py
+python scripts/data/update_osint.py
 
 # Now when you start Docker, repos are already there!
 docker-compose up
@@ -210,7 +210,7 @@ To clone repos during Docker **build** (not runtime):
 
 ```dockerfile
 # Add to Dockerfile after COPY commands:
-RUN python scripts/update_osint_repos.py --force
+RUN python scripts/data/update_osint.py --force
 ```
 
 **Pros:** Image includes repos, no wait on container start

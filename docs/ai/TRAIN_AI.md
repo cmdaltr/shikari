@@ -1,5 +1,7 @@
 # Archer Training Data Collection Scripts
 
+> **Status (2026-10-16):** some of what this document names was never built: none of its scripts, but the dataset files it shows are examples of output, not files in the repository. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+
 ## Table of Contents
 
 - [train_ai.py](#train_aipy)
@@ -186,7 +188,7 @@ python scripts/ai/train_ai.py custom --interactive --output custom_output/
 }
 ```
 
-**Template**: See [CUSTOM_QUERY_TEMPLATE.json](CUSTOM_QUERY_TEMPLATE.json) for a complete template with all available fields
+**Template**: See [CUSTOM_QUERY_TEMPLATE.json](../examples/CUSTOM_QUERY_TEMPLATE.json) for a complete template with all available fields
 
 **Output**: Training examples in JSONL format at `archer/ai/training/datasets/hunting_queries/`
 
@@ -670,8 +672,8 @@ python -m archer.ai.training.pipelines.llm_inference \
 
 ## Additional Resources
 
-- [AI Model Configuration Guide](AI_MODEL_CONFIGURATION.md) - **Start here to configure AI models**
-- [CVE Enrichment Workflow](../docs/CVE_ENRICHMENT_WORKFLOW.md)
-- [LLM Detection Generation Guide](../docs/features/LLM_DETECTION_GENERATION.md)
-- [CVE Data README](../archer/ai/training/datasets/cve_data/README.md)
-- [AI Training Architecture](../docs/features/AI_TRAINING.md)
+- [AI Model Configuration Guide](MODEL_CONFIGURATION.md) - **Start here to configure AI models**
+- [CVE Enrichment Workflow](../features/CVE_ENRICHMENT.md)
+- [LLM Detection Generation Guide](LLM_DETECTION_GENERATION.md)
+- [CVE Data README](../../archer/ai/training/datasets/cve_data/README.md)
+- [AI Training Architecture](AI_TRAINING.md)

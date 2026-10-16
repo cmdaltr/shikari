@@ -181,7 +181,7 @@ with open("my_report.docx", "wb") as f:
     f.write(report_bytes)
 ```
 
-See `docs/reports/REPORT_GENERATION_COMPLETE.md` for complete API documentation.
+See `docs/features/REPORT_GENERATION.md` for complete API documentation.
 
 ## Notes
 

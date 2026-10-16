@@ -10,7 +10,7 @@ These features have configuration stubs or placeholder code but are not yet func
 
 ## VECTR Integration
 
-**Status**: CLI stub exists but not yet functional
+**Status**: Superseded by a threat library built into Archer ([#24](https://github.com/cmdaltr/archer/issues/24)): VECTR's methodology (intelligence-led test cases, red and blue outcomes, progress over time) on top of Emulate, with VECTR import and export as an option rather than a dependency. The plan below is kept for the export side.
 
 ### Overview
 
@@ -47,9 +47,7 @@ python3 archer.py vectr sync
 
 ### What Exists Now
 
-- CLI argument parser for `vectr` subcommand
-- Placeholder functions in codebase
-- Configuration variable definitions
+- Nothing VECTR-specific: no `vectr` command. [Emulate](../guide/19-emulate.md) already gives the evidence a test case needs (which logs record a technique, whether a detection's indicators appear in a recording)
 
 ### What's Missing
 
@@ -67,8 +65,8 @@ python3 archer.py vectr sync
 
 ### Timeline
 
-- **Target**: Q1-Q2 2025
-- **Blockers**: Requires VECTR instance for testing, API documentation review
+- **Target**: after the threat library (#24)
+- **Blockers**: Requires a VECTR instance for testing the import and export
 - **Help Wanted**: Contributors with VECTR experience
 
 ---
@@ -133,7 +131,7 @@ python3 archer.py caldera sync
 
 ### Timeline
 
-- **Target**: Q2-Q3 2025
+- **Target**: not scheduled; after recording your own lab (#22) and the threat library (#24)
 - **Blockers**: Requires CALDERA instance for testing, API integration complexity
 - **Help Wanted**: Contributors with CALDERA deployment experience
 
@@ -177,9 +175,7 @@ python3 archer.py macat test-suite --category persistence
 
 ### What Exists Now
 
-- Environment variable definition
-- Configuration placeholder in code
-- Reference in documentation
+- macOS telemetry in [Emulate](../guide/19-emulate.md): osquery and Elastic Endpoint recordings, and a recorder for Endpoint Security events, the unified log and launch item plists on your own macOS VM ([coming soon](../guide/20-recording-a-lab.md)), using Atomic Red Team's macOS tests rather than MACAT
 
 ### What's Missing
 
@@ -198,7 +194,7 @@ python3 archer.py macat test-suite --category persistence
 
 ### Timeline
 
-- **Target**: Q3-Q4 2025
+- **Target**: not scheduled; Atomic Red Team covers macOS recording for now
 - **Blockers**: Requires macOS environment, MACAT testing, ES/osquery query generation
 - **Help Wanted**: Contributors with macOS security experience
 
@@ -208,12 +204,13 @@ python3 archer.py macat test-suite --category persistence
 
 ### Multi-SIEM Support Expansion
 
-**Supported**: Google SecOps (YARA-L), Microsoft Defender (KQL), Splunk (SPL), Elastic Security (Query DSL). No other SIEMs are planned.
+**Generated**: Google SecOps (YARA-L) and Microsoft Defender XDR (KQL). Splunk (SPL) and Elastic are switched off for now: their reference queries and coverage are still shown, and turning them back on is planned. No other SIEMs are planned.
 
 ### AI/ML Enhancements
 
+**Done**: local models through Ollama, LM Studio or llama.cpp (Profile → API Keys), and the [agents](../guide/15-agents-and-ask-archer.md).
+
 **Planned**:
-- Local LLM support (llama.cpp, Ollama)
 - Fine-tuned models for detection generation
 - Automated detection quality scoring
 - False positive prediction
@@ -352,7 +349,8 @@ Have an idea for a new feature? We'd love to hear it!
 | [#20](https://github.com/cmdaltr/archer/issues/20) | Detections as code: export to git, push to the SIEM, diff between runs |
 | ~~[#21](https://github.com/cmdaltr/archer/issues/21)~~ | Technology stack: only hunt what applies to the products the organisation runs (done) |
 | ~~[#23](https://github.com/cmdaltr/archer/issues/23)~~ | Correlations: include OSINT enrichment (done) |
-| [#22](https://github.com/cmdaltr/archer/issues/22) | Emulate: which logs record each technique. Stage 1 (Splunk attack_data, Security-Datasets, EVTX-to-MITRE-Attack) done; Atomic Red Team labs in Docker and a Windows VM to come |
+| [#22](https://github.com/cmdaltr/archer/issues/22) | Emulate: which logs record each technique. Done: four public sources, native logs first, Windows/Linux/macOS/ESXi/cloud, Defender XDR alerting (GUIDE). Coming soon: recording your own lab ([tooling done](../guide/20-recording-a-lab.md), no run yet) |
+| [#24](https://github.com/cmdaltr/archer/issues/24) | Threat library: intelligence-led test cases with red and blue outcomes (VECTR-style) |
 
 ---
 
@@ -364,15 +362,15 @@ Have an idea for a new feature? We'd love to hear it!
 
 Based on community interest and impact, current priority features are:
 
-1. **VECTR Integration** - High demand, clear use case
-2. **Detection Testing Suite** - Critical for production deployments
-3. **Elastic Support** - Frequently requested SIEM platform
-4. **Local LLM Support** - Reduce dependency on external AI providers
+1. **Threat library** ([#24](https://github.com/cmdaltr/archer/issues/24)) - VECTR-style test cases and outcomes, built on Emulate
+2. **Hit counts** ([#16](https://github.com/cmdaltr/archer/issues/16)) - Detections measured read-only against the SIEM
+3. **Detections as code** ([#20](https://github.com/cmdaltr/archer/issues/20)) - Export to git, push, diff
+4. **Splunk and Elastic generation** - Switched off for now; reference queries and coverage still shown
 
 Vote on features by adding 👍 to the corresponding GitHub issue!
 
 ---
 
-**Last Updated**: 2024-11-14
+**Last Updated**: 2026-10-16
 
 **Questions?** Open a [GitHub Discussion](https://github.com/cmdaltr/archer/discussions)

@@ -18,22 +18,22 @@ flowchart TD
         direction LR
         IN_GROUP["Threat Actor"]
         IN_CVE["CVE"]
-        IN_BLOG["Blog / Report"]
+        IN_BLOG["Report<br/>URL or file"]
         IN_TECH["Technique IDs"]
         IN_MANUAL["Manual Data"]
     end
 
-    subgraph UI ["BROWSER — 6 Tabs"]
+    subgraph UI ["BROWSER — Home, Detections, Intel, Build"]
         direction LR
-        TAB_GEN["Generate"]
-        TAB_MANUAL["Manual"]
-        TAB_HUNT["Hunt"]
-        TAB_RESEARCH["Research"]
-        TAB_EMULATE["Emulate"]
-        TAB_LIBRARY["Library"]
+        TAB_GEN["Home → Hunt"]
+        TAB_MANUAL["Build → Manual"]
+        TAB_HUNT["Home → Analyse"]
+        TAB_RESEARCH["Home → Research"]
+        TAB_EMULATE["Build → Emulate"]
+        TAB_LIBRARY["Detections → Library"]
     end
 
-    subgraph SERVER ["WEB SERVER — 84 endpoints"]
+    subgraph SERVER ["WEB SERVER — FastAPI"]
         direction LR
         API["API Router"]
         AUTH["Auth"]
@@ -42,23 +42,23 @@ flowchart TD
 
     subgraph INTEL ["INTELLIGENCE"]
         direction LR
-        MITRE["MITRE ATT&CK<br/>3 attribution paths"]
+        MITRE["MITRE ATT&CK + MITRESaw<br/>3 attribution paths"]
         CVE_R["CVE Research<br/>NVD + PoC search"]
-        BLOG_A["Blog Analyser"]
+        BLOG_A["Report Analyser"]
         BRIEF["Threat Briefing"]
     end
 
     subgraph BUILD ["BUILD — For each technique"]
         direction LR
         ORCH["Orchestrator"]
-        COMPILE["Extract indicators<br/>→ Check platform<br/>→ Build queries"]
-        VENDORS["Splunk | MDE<br/>SecOps | Elastic"]
+        COMPILE["Technology stack filter<br/>→ Extract indicators<br/>→ Build queries<br/>→ Precision checks"]
+        VENDORS["SecOps | MDE<br/><i>Splunk, Elastic: off for now</i>"]
         YAML_OUT["Save YAML"]
         ORCH --> COMPILE --> VENDORS --> YAML_OUT
     end
 
-    IN_GROUP & IN_CVE & IN_BLOG --> TAB_GEN
-    IN_TECH --> TAB_HUNT
+    IN_GROUP & IN_CVE & IN_TECH --> TAB_GEN
+    IN_BLOG --> TAB_HUNT
     IN_MANUAL --> TAB_MANUAL
 
     UI --> SERVER
@@ -118,17 +118,16 @@ flowchart TD
 
     subgraph ENRICH ["ENRICHMENT — All optional"]
         direction LR
-        OSINT["OSINT<br/>Cross-reference with<br/>public detection repos"]
+        OSINT["OSINT<br/>Inherited from each<br/>chain's detections"]
         VALID["Validation<br/>Test in Docker SIEM<br/>→ Measure accuracy<br/>→ AI refines query"]
-        EMUL["Emulation<br/>Atomic Red Team<br/>simulates attack"]
+        EMUL["Emulate<br/>Do the indicators appear<br/>in recorded attacks?"]
     end
 
     subgraph EXT ["EXTERNAL SYSTEMS"]
         direction LR
-        LLM["LLM Providers<br/>Claude · GPT-4o · Local"]
+        LLM["AI, opt-in<br/>Anthropic · OpenAI · Gemini · Local"]
         NVD_GH["NVD · GitHub"]
-        ART["Atomic Red Team"]
-        VECTR_E["VECTR"]
+        ART["Recorded attacks<br/>4 public sources + GUIDE"]
     end
 
     YAMLS_IN --> MODE
@@ -136,7 +135,6 @@ flowchart TD
 
     LLM -.-> AIGEN
     ART -.-> EMUL
-    VECTR_E -.-> ENRICH
 
     OSINT & VALID & EMUL ==>|"To Part C"| CONTINUE2((" "))
 
@@ -171,7 +169,7 @@ flowchart TD
         direction LR
         RESULTS["Results Page<br/>Queries, chains, metrics"]
         XLSX["Excel Export"]
-        VECTR_O["VECTR Export"]
+        FLOW_O["Attack Flow<br/>STIX bundle"]
         JSON_O["JSON API"]
         LIBRARY["Detection Library"]
     end
@@ -180,14 +178,14 @@ flowchart TD
     READY --> CACHE
     YAMLS & CORR_F --> RESULTS
     RESULTS --> XLSX & JSON_O & LIBRARY
-    RESULTS --> VECTR_O
+    RESULTS --> FLOW_O
 
     style FROM_B fill:#7ed321,stroke:#4a8c0f,color:#fff
     style STORAGE fill:#e8e8e8,stroke:#666
     style OUTPUTS fill:#d4f8d4,stroke:#4a8c0f
     style RESULTS fill:#7ed321,stroke:#4a8c0f,color:#fff
     style XLSX fill:#7ed321,stroke:#4a8c0f,color:#fff
-    style VECTR_O fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style FLOW_O fill:#7ed321,stroke:#4a8c0f,color:#fff
     style JSON_O fill:#7ed321,stroke:#4a8c0f,color:#fff
     style LIBRARY fill:#7ed321,stroke:#4a8c0f,color:#fff
     style YAMLS fill:#e8e8e8,stroke:#666
@@ -199,7 +197,7 @@ flowchart TD
 
 ## 1. System Overview — What Is Archer?
 
-Archer takes a **threat actor name** (or CVE, or blog post) and automatically produces **detection queries** for your security tools (Splunk, Microsoft Defender, Google SecOps, Elastic). It does this by looking up what that threat actor actually does (via MITRE ATT&CK), then building tailored searches for each technique.
+Archer takes a **threat actor name** (or CVE, report, ATT&CK techniques or company) and automatically produces **detection queries** for your SIEMs (Google SecOps and Microsoft Defender XDR; Splunk and Elastic generation is switched off for now). It does this by looking up what that threat actor actually does (via MITRE ATT&CK), then building tailored searches for each technique.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -219,10 +217,10 @@ graph TB
     end
 
     subgraph "What You Get Back"
-        I["Splunk Searches<br/><i>SPL</i>"]
-        J["Microsoft Defender Queries<br/><i>KQL</i>"]
-        K["Google SecOps Rules<br/><i>YARAL</i>"]
-        L["Elastic Queries<br/><i>EQL</i>"]
+        I["Google SecOps Rules<br/><i>YARA-L 2.0</i>"]
+        J["Defender XDR Queries<br/><i>KQL</i>"]
+        K["Splunk & Elastic<br/><i>reference queries;<br/>generation off for now</i>"]
+        L["IOC Sweeps"]
         M["Correlated Attack Chains"]
         N["Coverage Reports & Exports"]
     end
@@ -267,7 +265,16 @@ This is the full journey from "I want detections for Scattered Spider" to finish
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 flowchart TD
-    START(["User submits a<br/>threat actor name"]) --> VALIDATE{"Does this actor<br/>exist in MITRE<br/>ATT&CK?"}
+    subgraph "Entry Points"
+        WEB(["Web UI"])
+        CLI(["archer.py CLI"])
+        ADF(["adfconsole<br/><i>Interactive Shell</i>"])
+    end
+
+    WEB --> START
+    CLI --> START
+    ADF --> START
+    START(["Submit threat<br/>actor name"]) --> VALIDATE{"Does this actor<br/>exist in MITRE<br/>ATT&CK?"}
 
     VALIDATE -- "No" --> ERR["Return error:<br/>actor not found"]
     VALIDATE -- "Yes" --> RETRIEVE["Retrieve all known<br/>attack techniques<br/>for this actor"]
@@ -312,6 +319,13 @@ flowchart TD
     YARAL --> YAML
     EQL --> YAML
 
+    VENDORS --> BESPOKE{"Bespoke mode?"}
+    BESPOKE -- "LLM (Mode 1)" --> LLM["Send prompt + evidence<br/>to LLM → parse response"]
+    BESPOKE -- "Fallback (Mode 2)" --> TMPL["Map indicators to<br/>SIEM fields via templates"]
+    BESPOKE -- "Standard" --> YAML
+    LLM --> YAML
+    TMPL --> YAML
+
     YAML --> NEXT{"More techniques<br/>to process?"}
     NEXT -- "Yes" --> LOOP
     NEXT -- "No" --> CORRELATE["Build attack chain<br/>correlations"]
@@ -320,8 +334,8 @@ flowchart TD
 
     ENRICH -- "OSINT" --> OSINT["Cross-reference with<br/>open-source intel"]
     ENRICH -- "Validation" --> TESTQ["Test queries in<br/>sandboxed SIEM"]
-    ENRICH -- "Emulation" --> ATOMIC["Run attack simulation<br/><i>Atomic Red Team</i>"]
-    ENRICH -- "Export" --> EXPORT["Send to VECTR<br/>or download XLSX"]
+    ENRICH -- "Emulate" --> ATOMIC["Check indicators against<br/>recorded attacks<br/><i>Emulate</i>"]
+    ENRICH -- "Export" --> EXPORT["Download XLSX<br/>or attack flow (STIX)"]
     ENRICH -- "No" --> RESULTS
 
     OSINT --> RESULTS
@@ -338,6 +352,8 @@ flowchart TD
     style PLATFORM fill:#f8e71c,stroke:#b8a700,color:#333
     style NEXT fill:#f8e71c,stroke:#b8a700,color:#333
     style ENRICH fill:#f8e71c,stroke:#b8a700,color:#333
+    style BESPOKE fill:#f8e71c,stroke:#b8a700,color:#333
+    style ADF fill:#9b59b6,stroke:#6c3483,color:#fff
     linkStyle default stroke:#ff6600,stroke-width:3px
 ```
 
@@ -347,90 +363,100 @@ flowchart TD
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
-graph TD
-    UI["Browser UI"]
+graph TB
+    subgraph IFACE ["Interfaces"]
+        direction LR
+        WEB["Web UI<br/>server-rendered"]
+        CON["adfconsole"]
+        CLI["archer.py · archer CLI"]
+        MCP["MCP server"]
+    end
 
-    subgraph SERVER ["Web Server"]
-        API["API Router<br/>84 endpoints"]
-        AUTH["Auth"]
-        BG["Background Workers"]
+    subgraph SERVER ["FastAPI Server"]
+        direction LR
+        API["Pages + REST API<br/>/docs"]
+        AUTH["Auth + roles"]
+        JOBS["Background jobs<br/>runs, Feed every 6 h"]
     end
 
     subgraph INTEL ["Intelligence"]
-        MITRE["MITRE ATT&CK"]
-        CVE_HUNT["CVE Researcher"]
-        BLOG["Blog Analyser"]
-        BRIEFING["Threat Briefing"]
+        direction LR
+        MITRE["ATT&CK + MITRESaw<br/>procedures, indicators"]
+        CVE["CVE Research<br/>NVD + PoCs"]
+        REPORT["Report Analyser<br/>URL, PDF, DOCX"]
+        FEED["Threat Feed<br/>+ watchlists"]
+        OSINT["OSINT rule index<br/>+ LOLBAS, LOLDrivers"]
     end
 
-    subgraph PIPELINE ["Build Pipeline"]
+    subgraph PIPE ["Build Pipeline"]
+        direction LR
+        STACK["Technology stack<br/>filter"]
         ORCH["Orchestrator"]
-        COMPILE["Query Compiler"]
-        YAML_W["YAML Writer"]
+        BUILD["Query builders<br/>SecOps · MDE"]
+        PREC["Precision checks"]
+        IOC["IOC sweeps<br/>known-good, expiry"]
     end
 
-    subgraph CORR_ENG ["Correlation Engine"]
+    subgraph CORR ["Correlation"]
+        direction LR
         HEUR["Heuristic"]
         SEM["Semantic"]
-        AIGEN["AI Generator"]
+        AIC["AI, opt-in"]
     end
 
-    subgraph VALID ["Validation · Optional"]
-        DOCKER["Docker SIEMs"]
-        TESTER["Test & Refine"]
+    subgraph TEL ["Recorded Telemetry — Emulate"]
+        direction LR
+        REC["Recordings<br/>Splunk · OTRF · EVTX · macOS"]
+        GUIDE["GUIDE<br/>Defender XDR alerting"]
+        LAB["Your lab<br/>Coming soon"]
     end
 
-    subgraph EXT ["External · Optional"]
-        LLM_P["LLM Providers"]
-        VECTR_I["VECTR"]
-        ATOMIC_I["Atomic Red Team"]
-        NVD["NVD / GitHub"]
+    subgraph TOOLS ["Tools"]
+        direction LR
+        REGEX["Regex<br/>RE2 · PCRE2"]
+        AGENTS["Agents, opt-in"]
+        VAL["Runtime validation<br/>Docker SIEMs"]
     end
 
     subgraph STORE ["Storage"]
-        YAMLS["Detection YAMLs"]
-        CORR_F["Correlations"]
-        DB["Database"]
+        direction LR
+        DB["archer.db<br/>Library, users, Feed"]
+        YAML["Detection YAMLs<br/>data/groups/"]
+        CJSON["Correlations<br/>data/correlate/"]
+        BESPOKE["bespoke/ mappings<br/>gitignored"]
     end
 
-    UI --> API
+    WEB & CON & CLI & MCP --> API
     API --> AUTH
-    API --> BG
+    API --> JOBS
+    JOBS --> MITRE & CVE & REPORT & FEED
+    MITRE & CVE & REPORT --> STACK --> ORCH --> BUILD --> PREC
+    BUILD --> IOC
+    BESPOKE -.-> BUILD
+    OSINT -.-> BUILD
+    PREC --> YAML
+    YAML --> HEUR & SEM & AIC
+    HEUR & SEM & AIC --> CJSON
+    OSINT -.->|"inherited"| CJSON
+    YAML -.->|"indicators checked"| REC
+    LAB -.-> REC
+    API --> REGEX & AGENTS & VAL
+    API --> DB
 
-    BG --> MITRE
-    BG --> CVE_HUNT
-    BG --> BLOG
-    BG --> BRIEFING
-
-    MITRE --> ORCH
-    CVE_HUNT --> ORCH
-    BLOG --> ORCH
-    ORCH --> COMPILE --> YAML_W
-
-    YAML_W --> HEUR
-    YAML_W --> SEM
-    YAML_W --> AIGEN
-
-    YAML_W --> YAMLS
-    HEUR --> CORR_F
-    SEM --> CORR_F
-    AUTH --> DB
-
-    AIGEN --> LLM_P
-    BRIEFING --> LLM_P
-    CVE_HUNT --> NVD
-    ORCH --> VECTR_I
-    ORCH --> ATOMIC_I
-    ORCH --> DOCKER --> TESTER
-
-    style UI fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style IFACE fill:#d4e8fc,stroke:#4a90d9
+    style SERVER fill:#e8d4f8,stroke:#9013fe
+    style INTEL fill:#fef3d4,stroke:#f5a623
+    style PIPE fill:#fef3d4,stroke:#f5a623
+    style CORR fill:#fde8d4,stroke:#e8752a
+    style TEL fill:#d4f8ef,stroke:#2ca089
+    style TOOLS fill:#f0d4f8,stroke:#bd10e0
+    style STORE fill:#e8e8e8,stroke:#666
     style API fill:#9013fe,stroke:#6b0fb8,color:#fff
     style ORCH fill:#f5a623,stroke:#c17d10,color:#fff
-    style COMPILE fill:#f5a623,stroke:#c17d10,color:#fff
-    style MITRE fill:#f5a623,stroke:#c17d10,color:#fff
-    style YAMLS fill:#7ed321,stroke:#4a8c0f,color:#fff
-    style CORR_F fill:#7ed321,stroke:#4a8c0f,color:#fff
-    style DB fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style BUILD fill:#f5a623,stroke:#c17d10,color:#fff
+    style REC fill:#50e3c2,stroke:#2ca089,color:#333
+    style GUIDE fill:#50e3c2,stroke:#2ca089,color:#333
+    style LAB fill:#f5f5f5,stroke:#999,stroke-dasharray:4 3,color:#777
     linkStyle default stroke:#ff6600,stroke-width:3px
 ```
 
@@ -494,8 +520,8 @@ flowchart TD
         D13 -- "Yes" --> D13A["Spin up test SIEM in Docker<br/>→ Generate fake events<br/>→ Run query<br/>→ Measure accuracy<br/>→ Suggest improvements"]
         D13 -- "No" --> D13B["Skip"]
 
-        D14{"Emulation enabled?"}
-        D14 -- "Yes" --> D14A["Run Atomic Red Team tests<br/>to simulate the attack<br/>and verify detection fires"]
+        D14{"Check against recordings?"}
+        D14 -- "Yes" --> D14A["Emulate: which logs record<br/>the technique, and do the<br/>indicators appear in them?"]
         D14 -- "No" --> D14B["Skip"]
     end
 
@@ -543,6 +569,7 @@ flowchart TD
         NVD_S["NVD"]
         GH_S["GitHub PoCs"]
         OSINT_S["Public Detection Repos"]
+        TEL_S["Recorded attacks<br/>+ GUIDE"]
     end
 
     subgraph PROCESS ["Archer Processing"]
@@ -561,7 +588,7 @@ flowchart TD
     subgraph OUT ["Outputs"]
         BROWSER["Results Page"]
         XLSX_O["Excel Export"]
-        VECTR_O["VECTR"]
+        FLOW_O["Attack Flow (STIX)"]
         JSON_O["JSON API"]
     end
 
@@ -576,10 +603,11 @@ flowchart TD
     CORRELATE_P --> ENRICH_P
 
     OSINT_S -->|"Cross-reference"| ENRICH_P
+    TEL_S -->|"Emulate"| ENRICH_P
 
     ENRICH_P --> BROWSER
     ENRICH_P --> XLSX_O
-    ENRICH_P --> VECTR_O
+    ENRICH_P --> FLOW_O
     ENRICH_P --> JSON_O
 
     YAMLS_S -.->|"Read back"| BROWSER
@@ -590,9 +618,10 @@ flowchart TD
     style NVD_S fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style GH_S fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style OSINT_S fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style TEL_S fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style BROWSER fill:#7ed321,stroke:#4a8c0f,color:#fff
     style XLSX_O fill:#7ed321,stroke:#4a8c0f,color:#fff
-    style VECTR_O fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style FLOW_O fill:#7ed321,stroke:#4a8c0f,color:#fff
     style JSON_O fill:#7ed321,stroke:#4a8c0f,color:#fff
     linkStyle default stroke:#ff6600,stroke-width:3px
 ```
@@ -604,89 +633,134 @@ flowchart TD
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 graph LR
-    ARCHER["ARCHER"]
+    ARCHER(("<b>Archer</b>"))
 
-    subgraph REQUIRED ["Required"]
-        MITRE_I["MITRE ATT&CK"]
+    subgraph REQ ["Required"]
+        STIX["MITRE ATT&CK<br/>STIX bundle"]
     end
 
-    subgraph AI ["AI Providers · Optional"]
-        CLAUDE["Claude"]
-        GPT["GPT-4o"]
-        LLAMA["Local LLM"]
+    subgraph AI ["AI — opt-in"]
+        CLOUD["Cloud models<br/>Anthropic · OpenAI · Gemini"]
+        LOCAL["Local models<br/>Ollama · LM Studio · llama.cpp"]
     end
 
-    subgraph VULN ["Vulnerability Intel · Optional"]
-        NVD_I["NVD API"]
-        GH_I["GitHub PoC"]
+    subgraph INTEL ["Intelligence"]
+        NVD["NVD"]
+        GHPOC["GitHub PoCs"]
+        RULES["Public detection repos"]
+        FEEDS["Threat Feed sources"]
+        LOL["LOLBAS · LOLDrivers"]
     end
 
-    subgraph SIM ["Simulation · Optional"]
-        ART["Atomic Red Team"]
-        CAL["CALDERA"]
-        SPL_D["Docker SIEMs"]
+    subgraph TEL ["Recorded Attacks — Emulate"]
+        SPL["Splunk attack_data"]
+        OTRF["OTRF Security-Datasets"]
+        EVTX["EVTX-to-MITRE-Attack"]
+        MAC["macOS-ATTACK-DATASET"]
+        GUIDE["Microsoft GUIDE<br/>via Kaggle"]
     end
 
-    subgraph EXPORT ["Export · Optional"]
-        VECTR_E["VECTR"]
-        XLSX_E["Excel"]
+    subgraph SIEM ["Your SIEMs"]
+        SECOPS["Google SecOps"]
+        MDE["Defender XDR"]
+        DOCKER["Docker SIEMs<br/>runtime validation"]
     end
 
-    ARCHER --> MITRE_I
-    ARCHER -.-> CLAUDE
-    ARCHER -.-> GPT
-    ARCHER -.-> LLAMA
-    ARCHER -.-> NVD_I
-    ARCHER -.-> GH_I
-    ARCHER -.-> ART
-    ARCHER -.-> CAL
-    ARCHER -.-> SPL_D
-    ARCHER -.-> VECTR_E
-    ARCHER --> XLSX_E
+    subgraph SOON ["Coming Soon / Planned"]
+        LAB["Your lab<br/>Atomic Red Team + recorder"]
+        VECTR["VECTR import/export<br/>threat library, issue 24"]
+    end
 
-    style ARCHER fill:#9013fe,stroke:#6b0fb8,color:#fff
-    style MITRE_I fill:#f5a623,stroke:#c17d10,color:#fff
-    style CLAUDE fill:#bd10e0,stroke:#8a0ba5,color:#fff
-    style GPT fill:#bd10e0,stroke:#8a0ba5,color:#fff
-    style LLAMA fill:#bd10e0,stroke:#8a0ba5,color:#fff
+    STIX --> ARCHER
+    CLOUD -.-> ARCHER
+    LOCAL -.-> ARCHER
+    NVD -.-> ARCHER
+    GHPOC -.-> ARCHER
+    RULES -.-> ARCHER
+    FEEDS -.-> ARCHER
+    LOL -.-> ARCHER
+    SPL & OTRF & EVTX & MAC -.-> ARCHER
+    GUIDE -.-> ARCHER
+    ARCHER -.->|"queries"| SECOPS
+    ARCHER -.->|"queries"| MDE
+    ARCHER -.-> DOCKER
+    LAB -.-> ARCHER
+    ARCHER -.-> VECTR
+
+    style ARCHER fill:#f5a623,stroke:#c17d10,color:#fff
+    style STIX fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style CLOUD fill:#bd10e0,stroke:#8a0ba5,color:#fff
+    style LOCAL fill:#bd10e0,stroke:#8a0ba5,color:#fff
+    style SECOPS fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style MDE fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style SPL fill:#50e3c2,stroke:#2ca089,color:#333
+    style OTRF fill:#50e3c2,stroke:#2ca089,color:#333
+    style EVTX fill:#50e3c2,stroke:#2ca089,color:#333
+    style MAC fill:#50e3c2,stroke:#2ca089,color:#333
+    style GUIDE fill:#50e3c2,stroke:#2ca089,color:#333
+    style SOON fill:#fafafa,stroke:#bbb,stroke-dasharray:4 3
+    style LAB fill:#f5f5f5,stroke:#999,stroke-dasharray:4 3,color:#777
+    style VECTR fill:#f5f5f5,stroke:#999,stroke-dasharray:4 3,color:#777
     linkStyle default stroke:#ff6600,stroke-width:3px
 ```
 
 ---
 
-## 7. User Interface — The Six Tabs
+## 7. User Interface — Menus and Pages
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 graph LR
-    subgraph "Archer Web Interface"
+    subgraph HOME ["Home"]
         direction TB
-
-        T1["<b>Generate</b><br/>Enter a threat actor name.<br/>Archer builds detections<br/>for everything that<br/>actor is known to do."]
-
-        T2["<b>Manual</b><br/>Paste your own threat data<br/>— IOCs, techniques, procedures —<br/>and Archer builds custom<br/>detections from it."]
-
-        T3["<b>Hunt</b><br/>Pick specific ATT&CK<br/>technique IDs and get<br/>targeted detection queries<br/>for just those techniques."]
-
-        T4["<b>Research</b><br/>Browse threat actors,<br/>view technique coverage,<br/>export intelligence data<br/>to Excel."]
-
-        T5["<b>Emulate</b><br/>Run attack simulations<br/>using Atomic Red Team.<br/>Validate that your<br/>detections actually fire."]
-
-        T6["<b>Library</b><br/>Save, search, tag, and<br/>manage your detection<br/>collection. Export or<br/>share with the team."]
+        H1["<b>Hunt</b><br/>A group, a CVE or<br/>ATT&CK techniques"]
+        H2["<b>Analyse</b><br/>A report: URL or<br/>uploaded file"]
+        H3["<b>Profile</b><br/>The groups likely<br/>to target a company"]
+        H4["<b>Research</b><br/>Find groups by keyword,<br/>compare techniques"]
     end
 
-    T1 --> RESULT["<b>Results Page</b><br/>• Per-technique query blocks<br/>• Copy-to-clipboard<br/>• Attack chain view<br/>• Combined correlation query<br/>• Coverage metrics<br/>• Export options"]
+    RESULT["<b>Results</b><br/>Briefing · detections per SIEM<br/>· correlations · attack flow<br/>· IOC flow · exports"]
 
-    T2 --> RESULT
-    T3 --> RESULT
+    subgraph DET ["Detections"]
+        direction TB
+        D1["<b>Library</b><br/>Saved detections<br/>and correlations"]
+        D2["<b>Coverage</b><br/>The ATT&CK matrix"]
+        D3["<b>Flows</b><br/>What you can and<br/>can't detect"]
+    end
 
-    style T1 fill:#4a90d9,stroke:#2c5f8a,color:#fff
-    style T2 fill:#4a90d9,stroke:#2c5f8a,color:#fff
-    style T3 fill:#4a90d9,stroke:#2c5f8a,color:#fff
-    style T4 fill:#50e3c2,stroke:#2ca089,color:#333
-    style T5 fill:#f5a623,stroke:#c17d10,color:#fff
-    style T6 fill:#50e3c2,stroke:#2ca089,color:#333
+    subgraph INT ["Intel"]
+        direction TB
+        I1["<b>Feed</b><br/>The week's research,<br/>watchlists"]
+        I2["<b>Cyber Powers</b><br/>National capability map"]
+        I3["<b>MITRESaw</b><br/>Procedures, indicators"]
+    end
+
+    subgraph BLD ["Build"]
+        direction TB
+        B1["<b>Manual</b><br/>One technique at a time"]
+        B2["<b>Regex</b><br/>Test per SIEM engine"]
+        B3["<b>Agents</b><br/>Repair, triage — opt-in"]
+        B4["<b>Emulate</b><br/>Which logs record each<br/>technique; your detections<br/>against recorded attacks"]
+    end
+
+    H1 & H2 & H3 --> RESULT
+    H4 --> H1
+    I1 -.-> H2
+    RESULT --> D1
+    RESULT --> D3
+    B1 --> D1
+    D1 -.-> B4
+    RESULT -.->|"Run Emulation<br/>coming soon"| B4
+
+    style H1 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style H2 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style H3 fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    style H4 fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style RESULT fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style D1 fill:#50e3c2,stroke:#2ca089,color:#333
+    style D2 fill:#50e3c2,stroke:#2ca089,color:#333
+    style D3 fill:#50e3c2,stroke:#2ca089,color:#333
+    style B4 fill:#f5a623,stroke:#c17d10,color:#fff
     linkStyle default stroke:#ff6600,stroke-width:3px
 ```
 
@@ -807,4 +881,4 @@ flowchart TD
 
 ## Quick Reference — Explaining Archer in One Paragraph
 
-> **Archer** is a tool that turns threat intelligence into working detection queries. You give it the name of a threat actor (like "Scattered Spider"), and it looks up every attack technique that actor is known to use — drawing from the industry-standard MITRE ATT&CK database. For each technique, it extracts the specific indicators (commands, files, network addresses) and builds tailored search queries for your security tools (Splunk, Microsoft Defender, Google SecOps, or Elastic). It then links related detections into attack chains so you can spot multi-step intrusions, not just individual events. Optionally, it can test those detections in a sandboxed environment, cross-reference them against public intelligence, simulate the actual attacks, and export everything to your purple team platform or a spreadsheet.
+> **Archer** is a tool that turns threat intelligence into working detection queries. You give it the name of a threat actor (like "Scattered Spider"), and it looks up every attack technique that actor is known to use — drawing from the industry-standard MITRE ATT&CK database. For each technique, it extracts the specific indicators (commands, files, network addresses) and builds tailored search queries for your SIEMs (Google SecOps and Microsoft Defender XDR). It then links related detections into attack chains so you can spot multi-step intrusions, not just individual events. Optionally, it can test those detections in a sandboxed environment and cross-reference them against public detection rules. Emulate shows which logs record each technique, from attacks recorded in labs, and whether your detections' indicators appear in them. Everything exports to a spreadsheet, and attack flows to STIX. AI is opt-in throughout.

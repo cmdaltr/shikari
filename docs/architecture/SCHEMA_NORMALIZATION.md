@@ -1,5 +1,7 @@
 # Schema Normalization Scripts
 
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/normalize_schema.sh`, `normalize_splunk_schema.py`, `verify_schema_duplicates.py` and the example script; schema checks are now `scripts/validation/verify_schema.py` and `analyze_schema_fields.py`, and the schemas live in `bespoke/mappings/schemas/`. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+
 This directory contains scripts for managing Splunk schema normalization in Archer.
 
 ## Quick Reference
@@ -101,7 +103,7 @@ When adding new indexes to `schemaSplunk.json`:
 
 ```bash
 # 1. Add your new index to the JSON file
-vim archer/mappings/schemaSplunk.json
+vim bespoke/mappings/schemas/schemaSplunk.json
 
 # 2. Run normalization
 ./scripts/normalize_schema.sh
@@ -110,7 +112,7 @@ vim archer/mappings/schemaSplunk.json
 python3 scripts/verify_schema_duplicates.py
 
 # 4. Commit changes
-git add archer/mappings/schemaSplunk.json
+git add bespoke/mappings/schemas/schemaSplunk.json
 git commit -m "Add and normalize new index"
 ```
 
@@ -270,7 +272,7 @@ security_keywords = [
 
 1. **Run normalization immediately after adding indexes**
    ```bash
-   vim archer/mappings/schemaSplunk.json
+   vim bespoke/mappings/schemas/schemaSplunk.json
    ./scripts/normalize_schema.sh
    ```
 
@@ -281,14 +283,14 @@ security_keywords = [
 
 3. **Commit normalized changes**
    ```bash
-   git add archer/mappings/schemaSplunk.json
+   git add bespoke/mappings/schemas/schemaSplunk.json
    git commit -m "Add and normalize new index"
    ```
 
 4. **Test in development first**
    ```bash
    # Test with copy first
-   cp archer/mappings/schemaSplunk.json /tmp/test.json
+   cp bespoke/mappings/schemas/schemaSplunk.json /tmp/test.json
    ./scripts/normalize_schema.sh --schema /tmp/test.json
    # Review changes, then run on production schema
    ```
@@ -306,14 +308,14 @@ security_keywords = [
 
 ## Related Documentation
 
-- [Mappings README](../archer/mappings/README.md) - Full documentation
-- [Integration Guide](../archer/mappings/INTEGRATION_GUIDE.md) - Quick start
-- [Examples](../examples/schema_normalization_example.py) - Code examples
+- Mappings README - Full documentation
+- Integration Guide - Quick start
+- Examples - Code examples
 
 ## Support
 
 For issues:
-1. Check the [full documentation](../archer/mappings/README.md)
-2. Review [integration guide](../archer/mappings/INTEGRATION_GUIDE.md)
+1. Check the full documentation
+2. Review integration guide
 3. Run verification: `python3 scripts/verify_schema_duplicates.py`
 4. Check script output for specific errors

@@ -1,519 +1,136 @@
 # Getting Started with Archer
 
-Complete guide to installing, configuring, and using Archer for automated threat detection generation.
+Installing Archer, signing in, and the configuration it needs before its queries fit your environment. Once it's running, the [user guide](docs/guide/README.md) covers every page.
 
----
+## Prerequisites
 
-## Table of Contents
+- **Git**: `brew install git` (macOS), `apt install git` (Ubuntu/Debian), or [Git for Windows](https://git-scm.com/download/win).
+- **Either** Docker Desktop (includes Compose; WSL2 on Windows) **or** Python 3.11 or later.
+- Optional: [Ollama](https://ollama.com) for local AI, or an API key for a cloud model. Archer works without AI.
 
-1. [Prerequisites](#prerequisites)
-2. [Installation](#installation)
-3. [Initial Configuration](#initial-configuration)
-   - [Configure Mapping Files](#step-4-configure-mapping-files-critical)
-   - [Configure Bespoke Settings](#step-5-configure-bespoke-settings-recommended)
-4. [First Steps](#first-steps)
-5. [Usage](#usage)
-6. [Additional Information](#additional-information)
-
----
-
-## 🚀 Quick Start
-
-### 1. Prerequisites
-
-**Git** (Required for all installations)
-- [Windows](https://git-scm.com/download/win) - Git for Windows
-- [macOS](https://git-scm.com/download/mac) - Install via Homebrew: `brew install git` or Xcode Command Line Tools
-- [Linux](https://git-scm.com/download/linux) - Install via package manager: `apt install git` (Ubuntu/Debian) or `yum install git` (RHEL/CentOS)
-
----
-
-**Option A: Docker (Recommended)**
-- **Docker Desktop** (includes Docker Compose)
-  - [Windows](https://docs.docker.com/desktop/install/windows-install/) - Requires WSL2
-  - [macOS](https://docs.docker.com/desktop/install/mac-install/) - Intel or Apple Silicon
-  - [Linux](https://docs.docker.com/desktop/install/linux-install/) - Ubuntu, Debian, Fedora, Arch
-
-**Option B: Local Python**
-- **Python 3.11+** - [Download](https://www.python.org/downloads/)
-
----
-
-### 2. Installation
+## Install
 
 ```bash
-# Clone the repository
 git clone https://github.com/cmdaltr/archer.git
 cd archer
 ```
 
----
+**Option A: Docker**
 
-**Option A: Docker (Recommended)**
-``` bash
-# Start with Docker (recommended)
-docker-compose up --build
+```bash
+docker compose up --build        # or: archer docker up --build, once the archer command is installed
+docker compose down              # stop
 ```
 
-**Option B: Local Python**
-``` bash
-# Start locally
-python3 -m venv .venv          # add --copies if this checkout is inside a synced (OneDrive/Dropbox) folder
+Data lives in Docker volumes and survives restarts.
+
+**Option B: local Python**
+
+```bash
+python3 -m venv .venv            # add --copies if the checkout is in a synced folder (OneDrive, Dropbox)
 source .venv/bin/activate
 pip install -r requirements.txt
-./archer-cli install           # once: puts `archer` on your PATH (~/bin)
-archer start                   # background, restarted if it crashes; archer status | logs | stop
+./archer-cli install             # once: puts `archer` on your PATH (~/bin)
+archer start                     # background, restarted if it crashes
+archer status | archer logs -f | archer restart | archer stop
 ```
 
-### 3. Access
-The service will be available at `http://localhost:8000`.
+Day-to-day running, start-up options and what Archer updates when it starts: [Running Archer](docs/guide/01-running-archer.md).
 
-#### Default Login
+## Sign in
 
-> ⚠️ **Change this password immediately** after first login!
+Open `http://localhost:8000`.
+
+### Default login
+
+The default administrator is part of the configuration:
+
 ```
 Email: admin@archer.app
 Password: £missary_0f_the_G0rg0nite$
 ```
 
-### 4. Configure
+Change the password after the first sign-in (Profile → Security). More administrators:
 
-Before generating detections, configure mapping files for your SIEM environment:
+```bash
+python scripts/admin/create_admin.py                       # local
+docker compose exec archer python scripts/admin/create_admin.py   # Docker
+python scripts/admin/reset_password.py                     # a forgotten password
+```
+
+## Tell Archer about your environment
+
+### SIEMs
+
+Archer generates for **Google SecOps** (YARA-L 2.0) and **Microsoft Defender XDR** (KQL). Splunk and Elastic generation is switched off for now. Choose yours under **Profile → SIEM platforms**; Archer generates only for those.
+
+### Mapping files (required)
+
+Query generation reads your organisation's mapping files from `bespoke/mappings/`: index and table names, field mappings, and which indicators each log source can see. They're gitignored, because they describe your estate, and the repository can't regenerate them: keep a copy somewhere safe.
+
+```
+bespoke/mappings/
+  indicatorMapping.json
+  techniquePlatformIndicators.json
+  schemas/   schemaMDE.json, schemaGoogleSecOps.json (and Splunk, Elastic)
+  sources/   platforms.json, dataSources.json, entityMappings.json, logSourceCategories.json
+```
+
+The server lists any missing file at start-up ("N required bespoke mapping file(s) absent"). The wizard adds your Defender tables and Splunk indexes to the schema overrides:
 
 ```bash
 python scripts/validation/setup_mappings.py
 ```
 
-This configures your actual index names and field mappings so generated queries work in your environment.
+The full layout, and what each file does: [bespoke/README.md](bespoke/README.md) and [BESPOKE.md](docs/BESPOKE.md).
 
-## Additional Steps
-
-### Leveraging AI
-- **OpenAI API Key** - For AI-enhanced TTP extraction
-- **Anthropic API Key** - For Claude-based extraction
-
-### Adversary Emulation
-- **Atomic Red Team** - For adversary emulation module
-- **SSH/WinRM Access** - For remote emulation testing
-- **MDE or Splunk API Credentials** - For query execution
-
-(see [docs/UNTESTED.md](docs/UNTESTED.md))
-
----
-
-## Managing Archer
-
-**Option A: Docker (Recommended)**
-
-* **Pros**: Isolated environment, easy deployment, consistent across platforms
-  * Data is stored in Docker volumes and persists across restarts
-* **Cons**: Requires Docker
-
-``` bash
-# Starting Archer
-docker-compose up --build
-
-# Stoping Archer
-docker-compose down
-```
-
-**Option B: Local Python**
-
-* **Pros**: Direct access to code, easier debugging
-* **Cons**: Requires Python 3.11+, manual dependency management
-
-``` bash
-# Start locally
-python3 -m venv .venv          # add --copies if this checkout is inside a synced (OneDrive/Dropbox) folder
-source .venv/bin/activate
-pip install -r requirements.txt
-./archer-cli install           # once: puts `archer` on your PATH (~/bin)
-archer start                   # background, restarted if it crashes; archer status | logs | stop
-```
-
-
-## Initial Configuration
-
-### Step 1: Access Archer
-
-Open your browser and navigate to: `http://localhost:8000`
-
-### Step 2: Login with Default Admin Account
-
-> ⚠️ **SECURITY WARNING**: Change this password immediately!
-```
-Email: admin@archer.app
-Password: £missary_0f_the_G0rg0nite$
-```
-
-**To change password**:
-1. Login with default credentials
-2. Go to **Profile** → **Change Password**
-3. Enter new strong password
-
-### Step 3: Create Additional Admin Users (Optional)
+### Organisation settings (recommended)
 
 ```bash
-# Docker installation
-docker-compose exec archer python scripts/admin/create_admin.py
-
-# Local installation
-python scripts/admin/create_admin.py
+cp bespoke/exclusions.yaml.example bespoke/exclusions.yaml   # global exclusions
+cp bespoke/config.yaml.example bespoke/config.yaml           # organisation settings
 ```
 
-You'll be prompted for:
-- Email address
-- Full name
-- Password (with confirmation)
+Then, in **Profile**:
 
-### Step 4: Configure Mapping Files (CRITICAL!)
+| Setting | What it changes |
+|---|---|
+| SIEM platforms | Which SIEMs Archer generates for |
+| Technology stack | Group hunts leave out techniques and procedures for platforms and products you don't run |
+| Threat Feed industries | Which posts the Feed shows as relevant |
+| API keys | AI providers and models, and the optional OSINT keys |
 
-**⚠️ IMPORTANT**: Archer ships with placeholder mapping files that **will not work** in your environment!
+Details: [Profile and settings](docs/guide/16-profile-and-settings.md).
 
-Mapping files tell Archer:
-- Your actual index/source names (e.g., `windows_security` instead of `windows_events`)
-- Field name mappings for your log format
-- Which data sources you have available
+## First steps
 
-#### Quick Setup (Recommended)
+1. **Hunt a group.** Home → Hunt → type a group ("APT29", "Scattered Spider") → **Hunt**. The [Results](docs/guide/06-results.md) page shows the threat briefing, detections per SIEM, correlations, the attack flow and the IOC flow. Save what you want to the [Library](docs/guide/07-library.md).
+2. **Analyse a report.** Home → Analyse → a URL or an uploaded PDF, DOCX or text file. Archer extracts the techniques and IOCs and hunts them ([Analyse](docs/guide/03-analyse.md)).
+3. **See your coverage.** Detections → [Coverage](docs/guide/08-coverage.md): the ATT&CK matrix, coloured by reference queries or your own detections.
+4. **Check what your logs can see.** Build → [Emulate](docs/guide/19-emulate.md): which logs record each technique, from attacks recorded in labs, and your detections' indicators checked against them.
+5. **Watch the news.** Intel → [Feed](docs/guide/10-threat-feed.md): the week's research, tagged for your industries, with watchlists.
 
-Run the interactive setup wizard:
+Detections are YAML files, one per technique and SIEM. Copy a query into Defender XDR's custom detection rules or a SecOps rule; Results and the Library also export them.
+
+## Without the browser
 
 ```bash
-# Docker installation
-docker-compose exec archer python scripts/validation/setup_mappings.py
-
-# Local installation
-python scripts/validation/setup_mappings.py
+./adfconsole                                   # Metasploit-style console
+python archer.py generate "APT29" --correlate  # the pipeline, locally
+python archer.py correlate "APT29"             # correlations from its detections
+python archer.py hunt "PowerShell"             # one technique, by name or ID
 ```
 
-This wizard will guide you through:
-1. Selecting your SIEM platform (Splunk, Microsoft Defender, etc.)
-2. Entering your actual index/source names
-3. Mapping field names to your log format
-4. Validating the configuration
-
-#### Manual Setup
-
-```bash
-# Copy example files
-cp archer/mappings/schemaSplunk.json archer/mappings/schemaSplunk_custom.json
-cp archer/mappings/schemaMDE.json archer/mappings/schemaMDE_custom.json
-
-# Edit with your actual values
-vim archer/mappings/schemaSplunk_custom.json
-```
-
-**Example Splunk Mapping**:
-```json
-{
-  "index": "windows_security",  // YOUR actual index name
-  "source": "WinEventLog:Security",
-  "fields": {
-    "EventCode": "EventCode",    // YOUR field names
-    "Computer": "host",
-    "User": "user"
-  }
-}
-```
-
-#### Why This Matters
-
-❌ **Without proper mappings**:
-- Generated queries reference non-existent indices
-- Field names don't match your log format
-- Detections return no results or false positives
-
-✅ **With proper mappings**:
-- Queries work immediately in your environment
-- Field names match your logs
-- Detections are production-ready
-
-**📚 Detailed Documentation**: [docs/guides/MAPPING_SETUP_GUIDE.md](docs/guides/MAPPING_SETUP_GUIDE.md)
-
-### Step 5: Configure Bespoke Settings (RECOMMENDED)
-
-The `bespoke/` directory (at the project root) contains customizations that significantly improve detection quality:
-
-```
-bespoke/
-├── prompts/            # LLM prompt templates for query generation
-├── query_templates/    # SIEM query templates per log source
-└── mappings/           # Environment-specific field and index mappings
-    └── MDE/
-```
-
-#### Bespoke Mappings
-
-These extend the base schema mappings with your organization's specific configurations:
-- Custom field names and index patterns
-- Environment-specific data source names
-- Platform-specific query optimizations
-
-#### Reference Queries
-
-Reference queries are real-world examples that improve generated detection quality:
-- Provide platform-specific syntax examples to the LLM
-- Ensure consistent query structure and best practices
-- Cover edge cases from production detections
-
-**View current reference query coverage**:
-```bash
-# Via API
-curl http://localhost:8000/api/reference/coverage
-
-# Via Web UI
-http://localhost:8000/coverage
-```
-
-**📚 Complete Guide**: [docs/BESPOKE.md](docs/BESPOKE.md) - Full documentation for bespoke mappings and reference queries
-
----
-
-## Suggested First Steps
-
-### 1. Explore the Dashboard
-
-After logging in, you'll see the main dashboard with:
-- **Home** - Overview and quick actions
-- **Generate** - Create detections for threat groups
-- **Upload** - Analyze threat reports
-- **Profile** - Company threat profiling
-- **Library** - Manage your detections
-- **Settings** - Configure API keys and preferences
-
-### 2. Generate Your First Detections
-
-Archer offers three methods to generate detections:
-
-1. **Threat Group Detection** - Generate detections based on threat actor TTPs
-2. **CVE-Based Detection** - Generate detections for specific vulnerabilities
-3. **Threat Report Upload** - Extract TTPs from uploaded threat intelligence files
-
-**📚 [Complete Generation Guide](docs/USAGE.md#generate-detections)** - Detailed steps for each method
-
-**Quick Start**:
-- Navigate to **Generate** tab
-- Enter threat group name (e.g., "APT29") or CVE ID (e.g., "CVE-2021-44228")
-- Configure options (OSINT Enhancement, Correlation)
-- Click **Generate Detections**
-- Download results as ZIP file
-
-### 3. Review Generated Detections
-
-Your detection package includes:
-- **Individual detection YAML files** - Platform-specific queries (Splunk, MDE, Elastic)
-- **Multi-stage attack correlations** - Related detections for complex attack chains
-- **MITRE ATT&CK Flow visualizations** - Visual representation of threat coverage
-
-**📚 [Detection Package Structure](docs/USAGE.md#for-threat-groups)** - Complete file structure and contents
-
-### 4. Import Detections to Your SIEM
-
-**Splunk** (SPL Queries):
-```bash
-# Extract YAML files
-unzip APT29.zip
-
-# Convert YAML to Splunk alerts
-# (Manual: Copy queries from YAML files to Splunk Alert creation)
-```
-
-**Microsoft Defender** (KQL Queries):
-```bash
-# Extract YAML files
-unzip APT29.zip
-
-# Import to Microsoft 365 Defender Custom Detections
-# (Manual: Copy queries from YAML files to Custom Detection rules)
-```
-
-**Elastic** (EQL Queries):
-```bash
-# Extract YAML files
-unzip APT29.zip
-
-# Import to Elastic Detection Rules
-# (Manual: Copy queries from YAML files to Detection engine)
-```
-
----
-
-## Usage
-
-Archer provides three ways to generate and manage threat detections:
-
-- **Web Interface** - VirusTotal-inspired tabbed interface at `http://localhost:8000`
-- **Command Line Interface (CLI)** - Console scripts for automation
-- **REST API** - Programmatic access for workflow integration
-
-**📚 [Complete Usage Guide](docs/USAGE.md)** - Detailed documentation for Web UI, CLI, and API
-
-### Quick Usage Examples
-
-**Web UI**:
-1. Navigate to **Generate** tab
-2. Enter threat group name (e.g., "APT29")
-3. Configure options (OSINT, Correlation)
-4. Click **Generate Detections**
-5. Download ZIP when complete
-
-**CLI**:
-```bash
-# Generate detections
-python archer.py generate "APT29" --correlate
-
-# Hunt for technique
-python archer.py hunt "PowerShell"
-```
-
-**Interactive Console (adfconsole)**:
-```bash
-./adfconsole
-adfconsole > use generate
-adfconsole (generate) > set GROUP APT29
-adfconsole (generate) > set MODE llm
-adfconsole (generate) > run
-```
-
-**API**:
-```python
-import requests
-
-session = requests.Session()
-session.post('http://localhost:8000/login', data={'email': 'user@example.com', 'password': 'password'})
-session.post('http://localhost:8000/generate', data={'group_name': 'APT29'})
-```
-
-For complete workflows, parameter tuning, and troubleshooting, see **[docs/USAGE.md](docs/USAGE.md)**
-
----
-
-## Additional Information
-
-### Documentation
-
-**📖 [Complete Documentation Index](docs/DOCS_INDEX.md)** - Browse all documentation by category
-
-**Quick Links by Use Case**:
-
-**For SOC Analysts**:
-- [Getting Started Guide](docs/guides/GETTING_STARTED.md) - Basic setup
-- [Correlation Guide](docs/guides/CORRELATION_GUIDE.md) - Using the correlation builder
-- [CVE Hunting Guide](docs/guides/CVE_HUNTING_GUIDE.md) - CVE-based detection
-
-**For Security Engineers**:
-- [Correlation Quick Reference](docs/architecture/CORRELATION_QUICK_REFERENCE.md) - Tune correlation parameters
-- [Detection Validation](docs/features/DETECTION_VALIDATION.md) - Validate detection quality
-- [Testing Guide](docs/guides/TESTING_GUIDE.md) - Testing workflows
-
-**For Platform Administrators**:
-- [Mapping Setup Guide](docs/guides/MAPPING_SETUP_GUIDE.md) - Configure for your environment
-- [API Integration Guide](docs/features/API_INTEGRATION_GUIDE.md) - REST API integration
-- [Security Features](docs/features/SECURITY_FEATURES.md) - User management and security
-
-**For Developers**:
-- [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) - Engine internals
-- [Performance Architecture](docs/architecture/PERFORMANCE_ARCHITECTURE.md) - System design
-- [Schema Normalization](docs/architecture/SCHEMA_NORMALIZATION.md) - Field mapping
-- [API Integration Guide](docs/features/API_INTEGRATION_GUIDE.md) - REST API workflows
-
-### Scripts & Utilities
-
-**Data Collection**:
-```bash
-# Collect CVE training data
-python scripts/train_ai.py cve --year 2024
-
-# Convert threat reports to training data
-python scripts/train_ai.py reports --dir reports/
-
-# Extract OSINT detection samples
-python scripts/train_ai.py osint --all
-```
-
-**User Management**:
-```bash
-# Create admin user
-python scripts/admin/create_admin.py
-
-# Reset user password
-python scripts/reset_password.py
-```
-
-**Schema Validation**:
-```bash
-# Verify YAML schema compliance
-python scripts/verify_schema.py
-
-# Analyze schema field usage
-python scripts/analyze_schema_fields.py
-```
-
-**OSINT Updates**:
-```bash
-# Update OSINT repositories
-python scripts/update_osint.py
-```
-
-**📚 Complete Scripts Reference**: [docs/SCRIPTS.md](docs/SCRIPTS.md)
-
-### Additional Features
-
-Archer includes additional features that are implemented but not yet validated with live deployments:
-
-- **Adversary Emulation** - Atomic Red Team integration with remote execution
-- **Query Execution** - MDE and Splunk API integration
-- **Future Integrations** - VECTR, CALDERA, MACAT
-
-📚 **[UNTESTED.md](docs/UNTESTED.md)** - Complete documentation for implemented but untested features
-📚 **[FUTURE.md](docs/FUTURE.md)** - Roadmap and planned features
-
-### Troubleshooting
-
-**Issue: Cannot login with default credentials**
-
-**Solution**:
-```bash
-# Reset admin password
-python scripts/reset_password.py
-
-# Or create new admin
-python scripts/admin/create_admin.py
-```
-
-**Issue: Generated queries don't work in my SIEM**
-
-**Solution**: Configure mapping files!
-```bash
-python scripts/validation/setup_mappings.py
-```
-See [docs/guides/MAPPING_SETUP_GUIDE.md](docs/guides/MAPPING_SETUP_GUIDE.md)
-
-**Issue: Docker container won't start**
-
-**Solution**:
-```bash
-# Check Docker logs
-docker-compose logs archer
-
-# Rebuild from scratch
-docker-compose down -v
-docker-compose up --build
-```
-
-**Issue: Port 8000 already in use**
-
-**Solution**:
-```bash
-# Find process using port 8000
-lsof -i :8000  # macOS/Linux
-netstat -ano | findstr :8000  # Windows
-
-# Kill the process or change Archer's port
-# Edit docker-compose.yml: "8001:8000"
-```
-
----
-
-**Need Help?** Check the [documentation index](docs/DOCS_INDEX.md) or open an [issue](https://github.com/cmdaltr/archer/issues).
+The console, the Python client, the REST API (live reference at `http://localhost:8000/docs`) and the MCP server: [Console, API and MCP](docs/guide/17-console-api-mcp.md).
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| Can't sign in with the default login | `python scripts/admin/reset_password.py`, or `scripts/admin/create_admin.py` for a new administrator |
+| Queries don't match my SIEM's tables or fields | The mapping files (above): start-up names any that are missing |
+| Port 8000 in use | `lsof -i :8000`, or `archer start --port 8001` |
+| Docker won't start | `docker compose logs archer`; rebuild with `docker compose down -v && docker compose up --build` |
+| A page shows old data after an update | `archer restart --skip-index` |
+
+More: the [documentation index](docs/DOCS_INDEX.md), or open an [issue](https://github.com/cmdaltr/archer/issues).

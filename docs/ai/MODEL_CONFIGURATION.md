@@ -1008,8 +1008,8 @@ response = claude.generate(prompt, max_tokens=2000)
 ## Additional Resources
 
 - [Training Data Collection Guide](TRAIN_AI.md)
-- [LLM Detection Generation Documentation](features/LLM_DETECTION_GENERATION.md)
-- [AI Training Architecture](features/AI_TRAINING.md)
+- [LLM Detection Generation Documentation](LLM_DETECTION_GENERATION.md)
+- [AI Training Architecture](AI_TRAINING.md)
 - [Ollama Documentation](https://ollama.com/docs)
 - [Anthropic API Reference](https://docs.anthropic.com/)
 - [OpenAI API Reference](https://platform.openai.com/docs/)
