@@ -21,14 +21,16 @@ Everything runs in your browser. Nothing you type is sent to Archer or anywhere 
 
 ## The flavours
 
-| Flavour | Engine | Where the regex runs | Matches |
-|---|---|---|---|
-| Defender XDR | RE2 | `matches regex`, `extract()`, `replace_regex()` | Anywhere in the value |
-| Google SecOps | RE2 | `re.regex()`, `re.capture()` in YARA-L | Anywhere in the value |
-| Splunk | PCRE | `regex`, `rex`, `match()` | Anywhere in the value |
-| Elastic | Lucene regexp | EQL `regex`, ES\|QL `RLIKE`, the `regexp` query | **The whole value** |
-| Python | `re` | Archer's own code, scripts | Anywhere (with `search`) |
-| JavaScript | ECMAScript | Browsers, Node | Anywhere |
+| Flavour | Engine | Where the regex runs | Matches | Tested with |
+|---|---|---|---|---|
+| Defender XDR | RE2 | `matches regex`, `extract()`, `replace_regex()` | Anywhere in the value | RE2 (re2js) |
+| Google SecOps | RE2 | `re.regex()`, `re.capture()` in YARA-L | Anywhere in the value | RE2 (re2js) |
+| Splunk | PCRE2 | `regex`, `rex`, `match()` | Anywhere in the value | PCRE2 10.49, with Splunk's limits |
+| Elastic | Lucene regexp | EQL `regex`, ES\|QL `RLIKE`, the `regexp` query | **The whole value** | JavaScript, translated |
+| Python | `re` | Archer's own code, scripts | Anywhere (with `search`) | JavaScript, translated |
+| JavaScript | ECMAScript | Browsers, Node | Anywhere | JavaScript |
+
+The status line names the engine each result came from. Defender XDR and Google SecOps patterns run in re2js, the JavaScript port of Google's RE2/J, so a pattern RE2 refuses fails here with RE2's own message. Splunk patterns run in PCRE2 built to WebAssembly from the official release, with Splunk's default `[rex]` limits from `limits.conf` (`match_limit = 100000`, `depth_limit = 1000`). A pattern that reaches them is reported as Splunk would stop it.
 
 RE2 never backtracks, so a pattern can't hang a Defender XDR or Google SecOps search. That's also why it has no lookarounds or back-references. PCRE, Python and JavaScript backtrack, and a badly nested pattern can take exponential time on a near-miss.
 
@@ -51,6 +53,8 @@ RE2 never backtracks, so a pattern can't hang a Defender XDR or Google SecOps se
 
 ## Limits
 
-- Matching uses your browser's engine, with the pattern translated where the flavour only spells something differently (`(?P<name>)`, a leading `(?i)`, `\A`, `\z`, `\Q…\E`, POSIX classes). Constructs JavaScript has no equivalent for, such as possessive quantifiers, atomic groups and conditionals, are checked but not run: the status line says so. Running each flavour in its real engine (RE2 and PCRE2 in WebAssembly) is feature request [#14](https://github.com/cmdaltr/archer/issues/14).
+- Elastic and Python have no engine that runs in a browser. Their patterns run in JavaScript, translated where the flavour only spells something differently (`(?P<name>)`, a leading `(?i)`, `\A`, `\z`, `\Q…\E`, POSIX classes). Python constructs JavaScript can't express, such as possessive quantifiers and atomic groups, are checked but not run: the status line says so.
+- Splunk's own PCRE2 build may differ in options from the one here (Unicode is on here); results for plain ASCII text are the same.
+- The engines are vendored under `static/vendor/` with their licences. `scripts/build/pcre2_wasm/build.sh` rebuilds PCRE2 from the release, checked against its published SHA-256.
 - Matching stops after 1.5 seconds, and reports that the pattern backtracks without end on that text.
 - The checks cover common mistakes. They don't prove a pattern is right for your data: test it on real events in your SIEM before you deploy it.

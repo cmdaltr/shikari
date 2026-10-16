@@ -59,10 +59,58 @@ class TestRegexMatching:
 
     def test_runaway_pattern_is_stopped(self, regex_page):
         page = regex_page
-        page.click('[data-flavour="spl"]')
+        page.click('[data-flavour="js"]')
         page.fill("#rx-pattern", "(a+)+$")
         page.fill("#rx-text", "a" * 40 + "!")
         page.wait_for_function("document.getElementById('rx-status').textContent.startsWith('Stopped')", timeout=5000)
+
+    def test_splunk_stops_at_its_match_limit(self, regex_page):
+        page = regex_page
+        page.click('[data-flavour="spl"]')
+        page.fill("#rx-pattern", "(a+)+$")
+        page.fill("#rx-text", "a" * 40 + "!")
+        page.wait_for_function("document.getElementById('rx-status').textContent.includes('match_limit')", timeout=8000)
+
+
+def status_after(page, flavour, pattern, text):
+    page.click(f'[data-flavour="{flavour}"]')
+    page.fill("#rx-text", text)
+    page.fill("#rx-pattern", pattern)
+    page.wait_for_function(
+        "s => document.getElementById('rx-status').dataset.for === s",
+        arg=f"{flavour}|{pattern}|{text}", timeout=8000)
+    return page.inner_text("#rx-status"), page.inner_text("#rx-count")
+
+
+class TestRealEngines:
+    def test_re2_runs_in_re2(self, regex_page):
+        status, count = status_after(regex_page, "kql", r"(?P<bin>\w+)\.exe", "run cmd.exe and net.exe")
+        assert "Matched with RE2" in status and count.startswith("2 match")
+
+    def test_re2_refuses_what_it_cannot_compile(self, regex_page):
+        status, _ = status_after(regex_page, "yaral", r"(?<=net )user", "net user")
+        assert status.startswith("Won't compile in RE2")
+
+    def test_pcre2_runs_what_javascript_cannot(self, regex_page):
+        # Possessive and atomic groups had no JavaScript equivalent, so they were never run
+        status, count = status_after(regex_page, "spl", r"(?>cmd)\.exe\s++/c", "cmd.exe /c whoami")
+        assert "Matched with PCRE2 10.49" in status and count.startswith("1 match")
+
+    def test_pcre2_offsets_with_non_ascii_text(self, regex_page):
+        page = regex_page
+        status_after(page, "spl", r"(?<name>[a-z]+)\.exe", "é 😀 net.exe")
+        assert "net" in page.inner_text("#rx-matches")
+        assert page.evaluate("document.querySelector('#rx-backdrop mark').textContent") == "net.exe"
+
+    def test_python_is_translated(self, regex_page):
+        status, count = status_after(regex_page, "python", r"(?P<x>a)", "a")
+        assert "run as JavaScript" in status and count.startswith("1 match")
+
+    def test_substitution_in_a_real_engine(self, regex_page):
+        page = regex_page
+        page.fill("#rx-replace", r"<\g<bin>>")
+        status_after(page, "spl", r"(?<bin>\w+)\.exe", "cmd.exe")
+        assert page.inner_text("#rx-replaced") == "<cmd>"
 
 
 class TestRegexSnippets:

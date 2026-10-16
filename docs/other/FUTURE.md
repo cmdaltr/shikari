@@ -357,11 +357,7 @@ Have an idea for a new feature? We'd love to hear it!
 
 ## Regex tester: real engines
 
-**Status**: Feature request [#14](https://github.com/cmdaltr/archer/issues/14)
-
-Build → Regex matches with the browser's JavaScript engine, translating the pattern where a flavour only spells something differently. Constructs JavaScript lacks (possessive quantifiers, atomic groups, conditionals) are checked but not run, and behaviour that differs between engines shows JavaScript's result. The plan: RE2 and PCRE2 compiled to WebAssembly, vendored and loaded in the existing worker only for their flavour, with the translation kept as the fallback.
-
----
+**Status**: Done ([#14](https://github.com/cmdaltr/archer/issues/14)). Defender XDR and Google SecOps run in RE2 (re2js), Splunk in PCRE2 10.49 (WebAssembly). Elastic and Python stay translated to JavaScript.
 
 ## Priority Features
 

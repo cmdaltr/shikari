@@ -1,8 +1,8 @@
 // Regex page (templates/regex.html): test a pattern and check it for the SIEM it will run in.
 // Everything runs here, in the browser: the pattern is tokenised once, and the tokens drive
-// the explanation, the flavour checks and the translation to JavaScript for matching. Matching
-// runs in a worker that's stopped after a time limit, so a pattern that backtracks without end
-// can't hang the page.
+// the explanation and the flavour checks. Matching runs in a worker (regex_worker.js) that's
+// stopped after a time limit, so a pattern that backtracks without end can't hang the page:
+// RE2 flavours in RE2, Splunk in PCRE2, and the rest in JavaScript on a translated pattern.
 (function () {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -15,7 +15,7 @@
   const F = {
     kql: { name: 'Defender XDR', engine: 'RE2', unanchored: true, backtracks: false, caseNote: 'matches regex is case-sensitive: turn on i to add (?i)' },
     yaral: { name: 'Google SecOps', engine: 'RE2', unanchored: true, backtracks: false, caseNote: 're.regex is case-sensitive: turn on i to add nocase' },
-    spl: { name: 'Splunk', engine: 'PCRE', unanchored: true, backtracks: true, caseNote: 'regex and rex are case-sensitive: turn on i to add (?i)' },
+    spl: { name: 'Splunk', engine: 'PCRE2', unanchored: true, backtracks: true, caseNote: 'regex and rex are case-sensitive: turn on i to add (?i)' },
     elastic: { name: 'Elastic', engine: 'Lucene', unanchored: false, backtracks: false, caseNote: 'regex is case-sensitive: turn on i to use regex~ (EQL) or case_insensitive' },
     python: { name: 'Python', engine: 're', unanchored: true, backtracks: true, caseNote: '' },
     js: { name: 'JavaScript', engine: 'ECMAScript', unanchored: true, backtracks: true, caseNote: '' },
@@ -362,35 +362,12 @@
   }
 
   // ------------------------------------------------------------------ matching (in a worker)
-  const WORKER_SRC = `onmessage = e => {
-    const { src, flags, text, perLine, replace, max } = e.data;
-    try {
-      const re = new RegExp(src, flags + 'gd');
-      const matches = [];
-      const lines = perLine ? text.split('\\n') : [text];
-      let offset = 0;
-      for (const line of lines) {
-        if (perLine) {
-          const whole = new RegExp('^(?:' + src + ')$', flags + 'd').exec(line);
-          if (whole) matches.push({ i: whole.index + offset, t: whole[0], g: [...whole].slice(1), n: whole.groups || null, d: whole.indices.slice(1).map(x => x ? [x[0] + offset, x[1] + offset] : null) });
-        } else {
-          let m;
-          while ((m = re.exec(line)) && matches.length < max) {
-            matches.push({ i: m.index, t: m[0], g: [...m].slice(1), n: m.groups || null, d: m.indices.slice(1).map(x => x || null) });
-            if (m[0] === '') re.lastIndex++;
-          }
-        }
-        offset += line.length + 1;
-      }
-      let replaced = null;
-      if (replace !== null) replaced = text.replace(new RegExp(src, flags + 'g'), replace);
-      postMessage({ matches, replaced });
-    } catch (err) { postMessage({ error: err.message }); }
-  };`;
-  const workerUrl = URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }));
+  // RE2 flavours run in RE2 and Splunk in PCRE2 (regex_worker.js); the rest in JavaScript
+  const ENGINE = { kql: 're2', yaral: 're2', spl: 'pcre2' };
+  const workerUrl = (document.currentScript && document.currentScript.src || location.href).replace(/regex\.js(\?[^/]*)?$/, 'regex_worker.js$1');
   let worker = null, timer = null, runId = 0;
 
-  function runMatch(src, flags, text, perLine, replace) {
+  function runMatch(job) {
     return new Promise(resolve => {
       if (worker) worker.terminate();
       clearTimeout(timer);
@@ -398,8 +375,10 @@
       worker = new Worker(workerUrl);
       worker.onmessage = e => { if (id === runId) { clearTimeout(timer); resolve(e.data); } };
       worker.onerror = e => { if (id === runId) { clearTimeout(timer); resolve({ error: e.message }); } };
-      timer = setTimeout(() => { worker.terminate(); worker = null; if (id === runId) resolve({ timeout: true }); }, TIME_LIMIT);
-      worker.postMessage({ src, flags, text, perLine, replace, max: MAX_MATCHES });
+      // Loading PCRE2 the first time takes a moment; the limit is for matching
+      const limit = job.engine === 'pcre2' ? TIME_LIMIT + 3000 : TIME_LIMIT;
+      timer = setTimeout(() => { worker.terminate(); worker = null; if (id === runId) resolve({ timeout: true }); }, limit);
+      worker.postMessage({ ...job, max: MAX_MATCHES });
     });
   }
 
@@ -510,28 +489,36 @@
     renderCopy(pattern, flags);
     const js = toJs(tokens, flags);
     const status = $('rx-status');
-    if (js.error || js.untestable && js.src === undefined) {
+    const engine = ENGINE[flavour] || 'js';
+    const clear = () => { renderBackdrop(text, []); $('rx-matches').innerHTML = ''; $('rx-count').textContent = ''; $('rx-replaced').textContent = ''; };
+    if (engine === 'js' && (js.error || js.untestable && js.src === undefined)) {
       status.textContent = js.error ? `Won't compile: ${js.error}` : `Can't be run in the browser: ${js.untestable.join(', ')} has no JavaScript equivalent. The checks still apply.`;
       status.className = 'rx-status is-bad';
-      renderBackdrop(text, []); $('rx-matches').innerHTML = ''; $('rx-count').textContent = ''; $('rx-replaced').textContent = '';
+      clear();
       return;
     }
-    const replace = replaceRaw ? replaceRaw.replace(/\\(\d)/g, '$$$1').replace(/\\g<(\w+)>/g, '$$<$1>') : null;
-    const r = await runMatch(js.src, js.flags, text, perLine, replace);
+    const r = await runMatch({ engine, pattern, src: js.src, flags: engine === 'js' ? js.flags : flags, text, perLine,
+      replace: replaceRaw ? replaceRaw : null });
     if (r.timeout) {
       status.textContent = `Stopped after ${TIME_LIMIT / 1000}s: the pattern backtracks without end on this text. In PCRE, Python or JavaScript that would hang the search; RE2 would finish.`;
       status.className = 'rx-status is-bad';
-      renderBackdrop(text, []); $('rx-count').textContent = '';
+      clear();
       return;
     }
     if (r.error) {
-      status.textContent = `Won't compile: ${r.error.replace(/^Invalid regular expression: /, '')}`;
+      status.textContent = `Won't compile in ${r.engine === 're2' ? 'RE2' : r.engine === 'pcre2' ? 'PCRE2' : 'JavaScript'}: ${r.error}`;
+      status.dataset.for = `${flavour}|${pattern}|${text}`;
       status.className = 'rx-status is-bad';
-      renderBackdrop(text, []); $('rx-count').textContent = '';
+      clear();
       return;
     }
-    status.textContent = js.untestable && js.untestable.length ? `Tested in the browser, approximately: ${js.untestable.join(', ')}.` : 'Compiles.';
-    status.className = 'rx-status is-ok';
+    const approx = engine === 'js' && flavour !== 'js'
+      ? ` ${F[flavour].engine} has no engine in the browser: run as JavaScript${js.untestable && js.untestable.length ? `, approximately (${js.untestable.join(', ')})` : ', translated where it spells something differently'}.`
+      : '';
+    const limit = r.limit ? ` Stopped at Splunk's ${r.limit} (limits.conf [rex]): Splunk would stop this search with an error.` : '';
+    status.textContent = `Compiles. Matched with ${r.engine}.${approx}${limit}`;
+    status.dataset.for = `${flavour}|${pattern}|${text}`;  // which input this status is for (tests wait on it)
+    status.className = r.limit ? 'rx-status is-bad' : 'rx-status is-ok';
     $('rx-count').textContent = `${r.matches.length}${r.matches.length >= MAX_MATCHES ? '+' : ''} match${r.matches.length === 1 ? '' : 'es'}`;
     renderBackdrop(text, r.matches);
     renderMatches(r.matches, tokens);

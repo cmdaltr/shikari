@@ -62,7 +62,7 @@ archer stop
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Defender XDR/Splunk API integration (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md))
-- **Adversary emulation, VECTR, CALDERA, MACAT** - Planned (see [FUTURE.md](docs/other/FUTURE.md) and #11)
+- **Adversary emulation, VECTR, CALDERA, MACAT** - Planned (see [FUTURE.md](docs/other/FUTURE.md) and #22)
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)

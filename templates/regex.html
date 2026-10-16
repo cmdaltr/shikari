@@ -19,7 +19,7 @@
     <h2 class="section-title">Expression</h2>
     <div class="rx-flavours" role="radiogroup" aria-label="Regex flavour">
       {% for key, label, engine in [('kql', 'Defender XDR', 'KQL · RE2'), ('yaral', 'Google SecOps', 'YARA-L · RE2'),
-                                    ('spl', 'Splunk', 'SPL · PCRE'), ('elastic', 'Elastic', 'Lucene regexp'),
+                                    ('spl', 'Splunk', 'SPL · PCRE2'), ('elastic', 'Elastic', 'Lucene regexp'),
                                     ('python', 'Python', 're'), ('js', 'JavaScript', 'ECMAScript')] %}
       <button type="button" class="ui-pill rx-flavour{{ ' is-active' if loop.first }}" data-flavour="{{ key }}" role="radio"
               aria-checked="{{ 'true' if loop.first else 'false' }}">{{ label }} <span>{{ engine }}</span></button>
@@ -86,11 +86,11 @@
   <section class="ui-card rx-card" data-collapsed-default>
     <h2 class="section-title">What each flavour supports</h2>
     <div class="rx-table-wrap"><table class="rx-support" id="rx-support"></table></div>
-    <p class="rx-note">Matching on this page runs in your browser's engine (JavaScript), with the pattern translated where the
-      flavour spells something differently (<code>(?P&lt;name&gt;)</code>, <code>(?i)</code>, <code>\A</code>, <code>\z</code>,
-      <code>\Q…\E</code>). Constructs JavaScript has no equivalent for, such as possessive quantifiers and atomic groups,
-      are checked but can't be run here. RE2 (Defender XDR, Google SecOps) never backtracks, so it can't hang on a pattern;
-      PCRE, Python and JavaScript can. Nothing you type leaves your browser.</p>
+    <p class="rx-note">Defender XDR and Google SecOps patterns run in RE2 (re2js, the JavaScript port of Google's RE2/J),
+      and Splunk patterns in PCRE2 with Splunk's default match and depth limits. Elastic and Python have no engine that runs
+      in a browser: their patterns run in JavaScript, translated where the flavour spells something differently
+      (<code>(?P&lt;name&gt;)</code>, <code>(?i)</code>, <code>\A</code>, <code>\z</code>, <code>\Q…\E</code>). RE2 never
+      backtracks, so it can't hang on a pattern; PCRE, Python and JavaScript can. Nothing you type leaves your browser.</p>
   </section>
 </div>
 <script src="{{ url_for('static', path='js/regex.js') }}?v={{ request.app.state.asset_version }}" defer></script>
