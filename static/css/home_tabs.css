@@ -197,6 +197,8 @@
 .home-tabs .hp-split .hp-primary .form-label, .home-tabs .hp-split .hp-secondary .form-label { margin-bottom: 6px; }
 .home-tabs .hp-split .form-input { height: 50px; box-sizing: border-box; }
 .home-tabs .hp-under { margin: 10px 0 0; }
+.home-tabs .hp-feed-hint { margin: 6px 0 0; font-size: 0.85rem; color: #6b7280; }
+[data-theme="dark"] .home-tabs .hp-feed-hint { color: var(--text-secondary); }
 .home-tabs .hp-under .option-item { display: inline-flex; padding: 0.5em 0.75em; }
 .home-tabs .hp-formats { color: #6b7280; font-size: 0.85rem; padding: 0.5em 0; }
 .home-tabs .form-separator.is-vertical { flex-direction: column; margin: 0; gap: 0.6em; }
