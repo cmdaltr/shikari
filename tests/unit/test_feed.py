@@ -177,3 +177,15 @@ def test_any_country_before_nexus_counts():
 def test_nations_with_few_attack_groups_get_no_industry_profile():
     meta = {f"G{i:04d}": {"nexus": "Vietnam", "target_sectors": "Government"} for i in range(2)}
     assert feed.nation_profiles(meta)["Vietnam"] == []
+
+
+def test_custom_sources_are_checked_before_they_are_added(tmp_path, monkeypatch):
+    monkeypatch.setattr(feed, "CUSTOM_SOURCES_PATH", str(tmp_path / "sources.json"))
+    assert feed.add_source("", "")["error"]
+    assert "private or local" in feed.add_source("Local", "http://127.0.0.1/feed")["error"]
+    assert "already" in feed.add_source("Volexity", "https://example.com/feed")["error"]
+    monkeypatch.setattr(feed, "check_source", lambda url: {"ok": True, "items": 3, "latest": None})
+    assert feed.add_source("Mine", "https://example.com/rss")["ok"]
+    assert ("Mine", "https://example.com/rss") in feed.all_sources()
+    assert feed.remove_source("https://example.com/rss") and not feed.custom_sources()
+    assert not feed.remove_source(feed.SOURCES[0][1])  # built-ins stay

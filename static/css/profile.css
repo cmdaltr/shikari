@@ -599,7 +599,19 @@
 }
 /* SIEM logos in the "Generate for" picker: the height of the text beside them */
 .siem-pick-logo { width: 1.15em; height: 1.15em; flex: none; }
-/* Country field: the chosen country's flag inside the select, on the left */
+/* Country field (profile.js): a button showing the flag and name, and a searchable list */
 .pf-country { position: relative; }
-.pf-country-flag { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 15px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.12); object-fit: cover; pointer-events: none; }
-.pf-country select.has-flag { padding-left: 40px; }
+.pf-country.is-enhanced select { display: none; }
+.pf-country-btn { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; cursor: pointer; }
+.pf-country-btn > span:not(.pf-flag) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-caret { width: 14px; height: 14px; flex: none; color: var(--text-secondary); }
+.pf-flag { width: 20px; height: 15px; flex: none; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.12); object-fit: cover; }
+.pf-flag.is-none { display: inline-block; background: var(--border-color); box-shadow: none; }
+/* Right-aligned to the field, so it opens into the form rather than off its edge */
+.pf-country-pop { position: absolute; z-index: 50; top: calc(100% + 4px); right: 0; width: max(100%, 280px); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.18); padding: 8px; }
+.pf-country-search { width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary, var(--bg-primary)); color: var(--text-primary); font: inherit; margin-bottom: 6px; }
+.pf-country-list { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow-y: auto; }
+.pf-country-list li { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: var(--text-primary); }
+.pf-country-list li.is-active { background: var(--bg-secondary, rgba(0,0,0,.06)); }
+.pf-country-list li[aria-selected="true"] { font-weight: 600; }
+.pf-country-none { color: var(--text-secondary) !important; cursor: default !important; }

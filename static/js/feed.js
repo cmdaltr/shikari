@@ -17,7 +17,7 @@
     posts = data.posts;
     $('fd-days').textContent = data.days;
     $('fd-industries').textContent = data.labels.length ? data.labels.join(', ') : 'none set';
-    $('fd-sources').textContent = data.sources.join(' · ');
+    sources(data);
     const when = data.last_refresh ? new Date(data.last_refresh * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'never';
     $('fd-status').textContent = data.refreshing
       ? 'Collecting this week\'s posts…'
@@ -26,6 +26,47 @@
     render();
     if (data.refreshing) timer = setTimeout(load, 4000);
   }
+
+  // Sources: each one's last collection; an admin can add and remove their own
+  function sources(data) {
+    const bad = data.sources.filter(s => s.ok === false).length;
+    $('fd-sources-count').textContent = `${data.sources.length}${bad ? `, ${bad} not responding` : ''}`;
+    $('fd-sources').innerHTML = data.sources.map(s => {
+      const state = s.ok === undefined ? ['', 'Not collected yet'] : s.ok
+        ? ['is-ok', `${s.posts} post${s.posts === 1 ? '' : 's'} this week`] : ['is-bad', `Failed: ${s.error}`];
+      return `<li class="${state[0]}"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>
+        <span class="fd-source-state">${esc(state[1])}</span>${s.custom ? '<span class="fd-source-own">Added</span>' : ''}
+        ${s.custom && data.can_edit_sources ? `<button type="button" class="fd-source-remove" data-url="${esc(s.url)}" title="Remove ${esc(s.name)}">Remove</button>` : ''}</li>`;
+    }).join('');
+    $('fd-add-source').hidden = !data.can_edit_sources;
+    document.querySelectorAll('.fd-source-remove').forEach(b => b.addEventListener('click', async () => {
+      await fetch('/api/feed/sources', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: b.dataset.url }) });
+      load();
+    }));
+  }
+
+  $('fd-add-source')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = $('fd-source-msg'), btn = $('fd-source-add');
+    btn.disabled = true;
+    msg.className = 'fd-source-msg';
+    msg.textContent = 'Checking the feed…';
+    try {
+      const res = await fetch('/api/feed/sources', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: $('fd-source-name').value, url: $('fd-source-url').value }) });
+      const r = await res.json();
+      if (!r.ok) throw new Error(r.error || res.status);
+      msg.classList.add('is-ok');
+      msg.textContent = `Added: ${r.items} posts in the feed. Its posts arrive at the next collection.`;
+      $('fd-source-name').value = $('fd-source-url').value = '';
+      fetch('/api/feed/refresh', { method: 'POST' }).then(load);
+    } catch (err) {
+      msg.classList.add('is-bad');
+      msg.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   function visible(p, words) {
     if (show === 'both' && !p.relevant) return false;

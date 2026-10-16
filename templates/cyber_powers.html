@@ -16,14 +16,17 @@
   </div>
 
   <section class="cp-card">
-    <div class="cp-views" role="radiogroup" aria-label="Map view">
-      <button type="button" class="cp-view is-active" data-view="nations" role="radio" aria-checked="true">Nations</button>
-      <button type="button" class="cp-view" data-view="groups" role="radio" aria-checked="false">Groups</button>
-      <button type="button" class="cp-view" data-view="targets" role="radio" aria-checked="false">Targets</button>
+    <!-- Views on the left, the current view's key on the right -->
+    <div class="cp-toolbar">
+      <div class="cp-views" role="radiogroup" aria-label="Map view">
+        <button type="button" class="cp-view is-active" data-view="nations" role="radio" aria-checked="true">Nations</button>
+        <button type="button" class="cp-view" data-view="groups" role="radio" aria-checked="false">Groups</button>
+        <button type="button" class="cp-view" data-view="targets" role="radio" aria-checked="false">Targets</button>
+      </div>
+      <ul class="cp-key" id="cp-key" aria-label="Key"></ul>
     </div>
     <p class="cp-view-hint" id="cp-hint"></p>
     <div class="cp-map" id="cp-map">{{ map_svg | safe }}</div>
-    <ul class="cp-key" id="cp-key" aria-label="Key"></ul>
     {% if not data.home %}<p class="cp-home-hint">{% if user %}Set your country in <a href="/profile">Profile</a> to see it in green.{% else %}<a href="/login?next_url=/cyber-powers">Log in</a> and set your country in Profile to see it in green.{% endif %}</p>{% endif %}
   </section>
 

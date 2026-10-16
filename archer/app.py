@@ -10053,7 +10053,7 @@ def api_feed(request: Request, archer_session: Optional[str] = Cookie(None)):
     db.close()
     feed.refresh_in_background(getattr(request.app.state, "bundle", None),
                                getattr(request.app.state, "group_metadata", {}) or {})
-    return feed.view(_user_industries(user))
+    return {**feed.view(_user_industries(user)), "can_edit_sources": user.role == UserRole.ADMIN}
 
 
 @app.post("/api/feed/refresh")
@@ -10068,6 +10068,44 @@ def api_feed_refresh(request: Request, archer_session: Optional[str] = Cookie(No
     started = feed.refresh_in_background(getattr(request.app.state, "bundle", None),
                                          getattr(request.app.state, "group_metadata", {}) or {}, force=True)
     return {"started": started}
+
+
+def _feed_admin(request: Request, archer_session: Optional[str]):
+    """The admin user, or the JSONResponse refusing: sources are fetched by the server for everyone."""
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"error": "Only an admin can change the feed's sources"}, status_code=403)
+    return user
+
+
+@app.post("/api/feed/sources")
+async def api_feed_add_source(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Add a custom feed source (admin): it must read as RSS or Atom from a public address."""
+    from archer.intelligence import feed
+
+    admin = _feed_admin(request, archer_session)
+    if isinstance(admin, JSONResponse):
+        return admin
+    body = await request.json()
+    from starlette.concurrency import run_in_threadpool
+    result = await run_in_threadpool(feed.add_source, body.get("name"), body.get("url"))
+    return JSONResponse(result, status_code=200 if result["ok"] else 400)
+
+
+@app.delete("/api/feed/sources")
+async def api_feed_remove_source(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Remove a custom feed source (admin); the built-in ones stay."""
+    from archer.intelligence import feed
+
+    admin = _feed_admin(request, archer_session)
+    if isinstance(admin, JSONResponse):
+        return admin
+    body = await request.json()
+    return {"ok": feed.remove_source(body.get("url") or "")}
 
 
 @app.post("/api/profile/picture")

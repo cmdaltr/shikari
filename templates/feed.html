@@ -37,7 +37,16 @@
 
   <ol class="fd-wall" id="fd-wall"></ol>
 
-  <details class="fd-sources"><summary>Sources</summary><p id="fd-sources"></p></details>
+  <details class="fd-sources"><summary>Sources <span class="fd-sources-count" id="fd-sources-count"></span></summary>
+    <p class="fd-sources-note">Each one's result at the last collection. Built-in sources come with Archer; ones added here are this installation's own (data/feed/sources.json).</p>
+    <ul class="fd-source-list" id="fd-sources"></ul>
+    <form class="fd-add-source" id="fd-add-source" hidden>
+      <input type="text" id="fd-source-name" placeholder="Name, e.g. Sophos X-Ops" maxlength="80" required aria-label="Source name">
+      <input type="url" id="fd-source-url" placeholder="RSS or Atom feed URL" required aria-label="Feed URL">
+      <button type="submit" class="btn-primary" id="fd-source-add">Add source</button>
+      <span class="fd-source-msg" id="fd-source-msg" role="status"></span>
+    </form>
+  </details>
 </div>
 <script src="{{ url_for('static', path='js/feed.js') }}?v={{ request.app.state.asset_version }}"></script>
 {% endblock %}

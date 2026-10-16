@@ -75,7 +75,16 @@ SOURCES = [
     ("Trend Micro Research", "http://feeds.trendmicro.com/TrendMicroResearch"),
     ("Rapid7", "https://www.rapid7.com/rss.xml"),
     ("FortiGuard Labs", "https://feeds.fortinet.com/fortinet/blog/threat-research"),
+    ("Symantec Threat Hunter", "https://www.security.com/rss/v1/blogs/rss.xml/221"),
+    ("Volexity", "https://www.volexity.com/feed/"),
+    ("Zscaler ThreatLabz", "https://www.zscaler.com/blogs/feeds/security-research"),
+    ("Sekoia", "https://blog.sekoia.io/feed/"),
+    ("Group-IB", "https://www.group-ib.com/blog/feed/"),
+    ("Bitdefender Labs", "https://www.bitdefender.com/blog/api/rss/labs/"),
+    ("JPCERT/CC", "https://blogs.jpcert.or.jp/en/atom.xml"),
 ]
+# Sources an admin adds on the Feed page (add_source): this installation's, not committed
+CUSTOM_SOURCES_PATH = os.path.join(DATA_DIR, "feed", "sources.json")
 
 # Industries a user can follow and posts are tagged with
 INDUSTRIES = [
@@ -315,7 +324,106 @@ def parse_feed(xml: bytes, source: str) -> List[Dict]:
     return posts
 
 
-def fetch_sources(days: int = FEED_DAYS, sources=SOURCES) -> List[Dict]:
+def custom_sources() -> List[tuple]:
+    try:
+        with open(CUSTOM_SOURCES_PATH, encoding="utf-8") as f:
+            return [(s["name"], s["url"]) for s in json.load(f) if s.get("name") and s.get("url")]
+    except (OSError, ValueError, TypeError, KeyError):
+        return []
+
+
+def all_sources() -> List[tuple]:
+    return list(SOURCES) + custom_sources()
+
+
+def _public_url(url: str) -> Optional[str]:
+    """Why the server shouldn't fetch this URL, or None: http(s) to a public address only."""
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return "Use an http or https URL"
+    try:
+        addresses = {info[4][0] for info in socket.getaddrinfo(parsed.hostname, parsed.port or None)}
+    except OSError:
+        return f"{parsed.hostname} doesn't resolve"
+    for address in addresses:
+        ip = ipaddress.ip_address(address.split("%")[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            return f"{parsed.hostname} is a private or local address"
+    return None
+
+
+def _why(e: Exception) -> str:
+    """A failed fetch, said plainly."""
+    import requests
+
+    if isinstance(e, requests.HTTPError) and e.response is not None:
+        return f"the server answered {e.response.status_code}"
+    if isinstance(e, (requests.Timeout, requests.ConnectionError)):
+        return "no response"
+    if isinstance(e, requests.RequestException):
+        return "couldn't be fetched"
+    return "not an RSS or Atom feed"
+
+
+def check_source(url: str) -> Dict:
+    """Fetch and parse a feed: {ok, items, latest} or {ok: False, error}."""
+    import requests
+
+    why = _public_url(url)
+    if why:
+        return {"ok": False, "error": why}
+    try:
+        r = requests.get(url, timeout=FETCH_TIMEOUT, headers=HEADERS)
+        r.raise_for_status()
+        posts = parse_feed(r.content, "")
+    except Exception as e:
+        return {"ok": False, "error": f"That URL: {_why(e)}"}
+    if not posts:
+        return {"ok": False, "error": "It's a feed, but has no posts with links"}
+    return {"ok": True, "items": len(posts), "latest": max((p["published"] or "" for p in posts), default=None)}
+
+
+def add_source(name: str, url: str) -> Dict:
+    """Add a custom source once it reads as a feed. {ok, ...check_source} or {ok: False, error}."""
+    name, url = (name or "").strip()[:80], (url or "").strip()
+    if not name or not url:
+        return {"ok": False, "error": "Give it a name and a feed URL"}
+    taken = all_sources()
+    if any(n.lower() == name.lower() for n, _ in taken):
+        return {"ok": False, "error": f"There's already a source called {name}"}
+    if any(u.rstrip("/") == url.rstrip("/") for _, u in taken):
+        return {"ok": False, "error": "That feed is already a source"}
+    result = check_source(url)
+    if result["ok"]:
+        os.makedirs(os.path.dirname(CUSTOM_SOURCES_PATH), exist_ok=True)
+        custom = [{"name": n, "url": u} for n, u in custom_sources()] + [{"name": name, "url": url}]
+        tmp = CUSTOM_SOURCES_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(custom, f, indent=1)
+        os.replace(tmp, CUSTOM_SOURCES_PATH)
+    return result
+
+
+def remove_source(url: str) -> bool:
+    """Remove a custom source (built-in ones stay). Whether it was there."""
+    custom = custom_sources()
+    kept = [(n, u) for n, u in custom if u != url]
+    if len(kept) == len(custom):
+        return False
+    with open(CUSTOM_SOURCES_PATH, "w", encoding="utf-8") as f:
+        json.dump([{"name": n, "url": u} for n, u in kept], f, indent=1)
+    return True
+
+
+# Each source's last collection: {name: {ok, posts, error, checked}}
+_source_status: Dict[str, Dict] = {}
+
+
+def fetch_sources(days: int = FEED_DAYS, sources=None) -> List[Dict]:
     import requests
 
     since = datetime.now(timezone.utc) - timedelta(days=days)
@@ -325,14 +433,17 @@ def fetch_sources(days: int = FEED_DAYS, sources=SOURCES) -> List[Dict]:
         try:
             r = requests.get(url, timeout=FETCH_TIMEOUT, headers=HEADERS)
             r.raise_for_status()
-            return [p for p in parse_feed(r.content, name)
-                    if p["published"] and datetime.fromisoformat(p["published"]) >= since]
+            recent = [p for p in parse_feed(r.content, name)
+                      if p["published"] and datetime.fromisoformat(p["published"]) >= since]
+            _source_status[name] = {"ok": True, "posts": len(recent), "checked": time.time()}
+            return recent
         except Exception as e:
             print(f"Threat feed: {name} unavailable: {e}")
+            _source_status[name] = {"ok": False, "error": _why(e), "checked": time.time()}
             return []
 
     with ThreadPoolExecutor(max_workers=8) as pool:
-        posts = [p for batch in pool.map(one, sources) for p in batch]
+        posts = [p for batch in pool.map(one, sources if sources is not None else all_sources()) for p in batch]
     seen, unique = set(), []
     for p in sorted(posts, key=lambda p: p["published"], reverse=True):
         if p["url"] not in seen:
@@ -563,7 +674,7 @@ def refresh(bundle, group_meta: Dict, days: int = FEED_DAYS, workers: int = 10) 
         with ThreadPoolExecutor(max_workers=workers) as pool:
             for post in pool.map(lambda p: analyse_post(p, groups, profiles), fresh):
                 posts[post["url"]] = post
-        data = {"posts": posts, "last_refresh": time.time()}
+        data = {"posts": posts, "last_refresh": time.time(), "sources": dict(_source_status)}
         _save(data)
         _status["last_refresh"] = data["last_refresh"]
         return data
@@ -620,4 +731,5 @@ def view(industries: Iterable[str], days: int = FEED_DAYS) -> Dict:
     return {"industries": industries, "labels": industries, "days": days,
             "posts": posts, "relevant": sum(1 for p in posts if p["relevant"]), "considered": considered,
             "last_refresh": data.get("last_refresh"), "refreshing": _status["refreshing"],
-            "sources": [name for name, _ in SOURCES]}
+            "sources": [{"name": n, "url": u, "custom": (n, u) not in SOURCES, **(data.get("sources") or {}).get(n, {})}
+                        for n, u in all_sources()]}

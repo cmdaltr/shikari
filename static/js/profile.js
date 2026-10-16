@@ -864,16 +864,70 @@ document.head.appendChild(style);
   });
 })();
 
-// Country (Profile tab): the chosen country's flag in the field (options can't show images)
+// Country (Profile tab): a searchable list with each country's flag. Native options can't
+// hold images, so the <select> stays (hidden) as the value the form saves, and this drives it
 (function () {
-  const select = document.getElementById('country'), img = document.getElementById('country-flag');
-  if (!select || !img) return;
-  const show = () => {
-    const url = select.selectedOptions[0]?.dataset.flag || '';
-    img.hidden = !url;
-    if (url) img.src = url;
-    select.classList.toggle('has-flag', !!url);
-  };
-  select.addEventListener('change', show);
-  show();
+  const select = document.getElementById('country'), box = select?.closest('.pf-country');
+  if (!select || !box) return;
+  const options = [...select.options].map(o => ({ value: o.value, name: o.textContent.trim(), flag: o.dataset.flag || '' }));
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const flagImg = url => url ? `<img class="pf-flag" src="${esc(url)}" alt="" width="20" height="15">` : '<span class="pf-flag is-none"></span>';
+
+  box.classList.add('is-enhanced');
+  box.insertAdjacentHTML('beforeend', `
+    <button type="button" class="form-input pf-country-btn" id="country-btn" aria-haspopup="listbox" aria-expanded="false"></button>
+    <div class="pf-country-pop" id="country-pop" hidden>
+      <input type="search" class="pf-country-search" id="country-search" placeholder="Search countries" aria-label="Search countries" autocomplete="off">
+      <ul class="pf-country-list" id="country-list" role="listbox" aria-label="Country"></ul>
+    </div>`);
+  const btn = document.getElementById('country-btn'), pop = document.getElementById('country-pop');
+  const search = document.getElementById('country-search'), list = document.getElementById('country-list');
+  let shown = [], active = 0;
+
+  function label() {
+    const o = options.find(o => o.value === select.value) || options[0];
+    btn.innerHTML = `${flagImg(o.flag)}<span>${esc(o.name)}</span><svg class="pf-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>`;
+  }
+  function render() {
+    const q = search.value.trim().toLowerCase();
+    shown = options.filter(o => !q || o.name.toLowerCase().includes(q));
+    active = Math.max(0, Math.min(active, shown.length - 1));
+    list.innerHTML = shown.length ? shown.map((o, i) => `<li role="option" id="country-opt-${i}" data-i="${i}"
+        aria-selected="${o.value === select.value}" class="${i === active ? 'is-active' : ''}">${flagImg(o.flag)}${esc(o.name)}</li>`).join('')
+      : '<li class="pf-country-none">No country matches</li>';
+    list.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
+  }
+  function open() {
+    pop.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    search.value = '';
+    active = Math.max(0, options.findIndex(o => o.value === select.value));
+    render();
+    search.focus();
+  }
+  function close(focusBtn = true) {
+    pop.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+    if (focusBtn) btn.focus();
+  }
+  function choose(i) {
+    const o = shown[i];
+    if (!o) return;
+    select.value = o.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    label();
+    close();
+  }
+
+  btn.addEventListener('click', () => (pop.hidden ? open() : close()));
+  search.addEventListener('input', () => { active = 0; render(); });
+  search.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { active = Math.min(active + 1, shown.length - 1); render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { active = Math.max(active - 1, 0); render(); e.preventDefault(); }
+    else if (e.key === 'Enter') { choose(active); e.preventDefault(); }
+    else if (e.key === 'Escape') { close(); e.preventDefault(); }
+  });
+  list.addEventListener('mousedown', e => { const li = e.target.closest('[data-i]'); if (li) { e.preventDefault(); choose(+li.dataset.i); } });
+  document.addEventListener('mousedown', e => { if (!pop.hidden && !box.contains(e.target)) close(false); });
+  label();
 })();
