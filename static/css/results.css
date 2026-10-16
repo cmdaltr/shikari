@@ -1164,3 +1164,12 @@
   white-space: nowrap;
 }
 /* ── end individual queries ───────────────────────────────────────────────── */
+
+/* Correlations: inherited OSINT enrichment and stale combined queries (#23) */
+.corr-stale { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid #d97706; background: rgba(217, 119, 6, .1); border-radius: 4px; font-size: .88em; color: var(--text-primary); }
+.corr-inherited { margin-top: 10px; font-size: .88em; }
+.corr-inherited summary { cursor: pointer; color: var(--text-secondary); font-weight: 600; }
+.corr-inherited-note { margin: 6px 0; color: var(--text-secondary); }
+.corr-inherited ul { margin: 6px 0 0; padding-left: 18px; }
+.corr-inherited li { margin: 4px 0; overflow-wrap: anywhere; }
+.corr-inherited-tid { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .85em; padding: 0 5px; border-radius: 4px; background: rgba(100, 116, 139, .14); }

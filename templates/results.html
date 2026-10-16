@@ -1277,6 +1277,11 @@
               </div>
               {% endif %}
 
+              {% if correlation.stale_parts %}
+              <!-- A detection was rewritten after the correlation was built (archer.build.correlation_osint) -->
+              <p class="corr-stale" role="note">The combined query was built from an older version of {{ correlation.stale_parts|join(', ') }}: the queries above are current, the combined one isn't.{% if can_regenerate %} <strong>Regenerate</strong> rebuilds it.{% else %} Hunt the group again to rebuild it.{% endif %}</p>
+              {% endif %}
+
               <!-- Combined Query (collapsible) -->
               <div style="margin-top: 10px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1359,6 +1364,23 @@
                   </div>
                 </div>
               </div>
+              {% endif %}
+              {% if correlation.known_false_positives or correlation.lol_references %}
+              <!-- Inherited from the detections' OSINT enrichment (#23) -->
+              <details class="corr-inherited">
+                <summary>{% if correlation.known_false_positives %}{{ correlation.known_false_positives|length }} known false positive{{ 's' if correlation.known_false_positives|length != 1 }}{% endif %}{% if correlation.known_false_positives and correlation.lol_references %} and {% endif %}{% if correlation.lol_references %}{{ correlation.lol_references|length }} LOL reference{{ 's' if correlation.lol_references|length != 1 }}{% endif %} from its detections</summary>
+                {% if correlation.known_false_positives %}
+                <p class="corr-inherited-note">What the public rules for these techniques say fires legitimately. Tune the combined query for the ones you see.</p>
+                <ul>{% for fp in correlation.known_false_positives %}
+                  <li><span class="corr-inherited-tid">{{ fp.technique }}</span> {{ fp.text }} <a href="{{ fp.url }}" target="_blank" rel="noopener">{{ fp.source }}: {{ fp.rule }}</a></li>
+                {% endfor %}</ul>
+                {% endif %}
+                {% if correlation.lol_references %}
+                <ul>{% for ref in correlation.lol_references %}
+                  <li><span class="corr-inherited-tid">{{ ref.technique }}</span> {% if ref.url %}<a href="{{ ref.url }}" target="_blank" rel="noopener">{{ ref.name or ref.url }}</a>{% else %}{{ ref.name }}{% endif %}{% if ref.source %} ({{ ref.source }}){% endif %}</li>
+                {% endfor %}</ul>
+                {% endif %}
+              </details>
               {% endif %}
             </div>
             {% endfor %}

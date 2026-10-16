@@ -567,7 +567,10 @@ def merge_correlations(vendor_corrs: list) -> list:
     merged_correlations = []
 
     for key, group in groups.items():
-        if len(group) == 1:
+        # _build_merged_query can only merge KQL; for YARA-L and SPL it returned the first
+        # pair's query under a card listing every technique. The engine already ORs a
+        # SecOps rule's follow-on techniques together (archer.ai.genai.engine)
+        if len(group) == 1 or key[0] not in ("mde", "microsoft"):
             # No merging needed - only one correlation for this first technique
             merged_correlations.append(group[0])
             continue
@@ -6664,6 +6667,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     time_window = "1h"  # Default
 
                     total_indicators = 0  # Track total indicators across both detections
+                    part_docs = []  # The detections as they are now (archer.build.correlation_osint)
 
                     # Get techniques_involved for later use in building the techniques list
                     techniques_involved = corr.get("techniques_involved", [])
@@ -6696,6 +6700,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
 
                                 # Extract metadata from YAML file including actual technique name and data source
                                 yaml_data = load_yaml_file(full_path)
+                                if yaml_data:
+                                    part_docs.append(yaml_data)
                                 technique_name = technique_id  # Default to ID if name not found
                                 data_source = "Unknown"  # Default
                                 friendly_source = "Unknown"
@@ -6970,8 +6976,18 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                             if t.get("query")
                         ]
 
+                        from archer.build.correlation_osint import inherited, stale_parts
+
+                        osint = inherited(part_docs)
                         correlations.append(
                             {
+                                # What the detections' OSINT enrichment brings, and parts rewritten since (#23)
+                                "osint_data": {"indicators": {"query_snippets": osint["snippets"]},
+                                               "sources": osint["sources"]} if osint["snippets"] or osint["sources"] else None,
+                                "osint_enriched": osint["enhanced"],
+                                "known_false_positives": osint["known_false_positives"],
+                                "lol_references": osint["lol_references"],
+                                "stale_parts": stale_parts(combined_query, part_docs),
                                 "techniques": techniques,
                                 "flow_file": f"{safe_group}_corr_{idx+1}.html",
                                 "vendor": vendor_display,

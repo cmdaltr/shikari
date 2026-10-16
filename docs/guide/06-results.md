@@ -47,6 +47,12 @@ A correlation joins several detections into one query that fires when the steps 
 
 **Show Combined Query** shows the single chained query.
 
+The combined query is built from its detections' queries, so the indicators OSINT Enhancement merged into them are in it too. Under the queries, a correlation also lists what its detections' enrichment found: the false positives the public Elastic and Splunk rules for those techniques document, and the LOLBAS, LOLDrivers and LOLRMM entries behind added indicators, each tagged with its technique. **View OSINT Enhancement Details** shows the public rules they were compared with. The false positives are guidance for tuning, not exclusions: the public rules describe them in prose ("administrators may legitimately use runas"), so Archer doesn't turn them into query conditions.
+
+Detection files are shared between groups and runs. When a later run rewrites one after the correlation was built, the card says so: the queries shown for each technique are current, the combined query isn't. **Regenerate** (or hunting the group again) rebuilds it.
+
+Google SecOps rules already combine every follow-on technique into one rule, so the Results page only merges Defender XDR correlations that share a first technique.
+
 ## Precision checks
 
 Before a detection is written, Archer removes conditions that parse but can't fire for the right reason, and keeps the rest of the query. A query left with no condition isn't written.

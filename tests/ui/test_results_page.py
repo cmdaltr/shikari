@@ -47,7 +47,7 @@ class TestResultsPageLayout:
         page.goto(f"{base_url}/results?group_name=APT28")
         page.wait_for_load_state("networkidle")
 
-        osint = page.locator("[class*='osint'], [class*='comparison'], text='OSINT'")
+        osint = page.locator("[class*='osint'], [class*='comparison']").or_(page.get_by_text('OSINT'))
         if osint.count() > 0:
             page.screenshot(path=os.path.join(screenshot_dir, "33_osint_comparison.png"))
 
@@ -56,7 +56,7 @@ class TestResultsPageLayout:
         page.goto(f"{base_url}/results?group_name=APT28")
         page.wait_for_load_state("networkidle")
 
-        correlation = page.locator("[class*='correlation'], text='Correlation'")
+        correlation = page.locator("[class*='correlation']").or_(page.get_by_text('Correlation'))
         if correlation.count() > 0:
             page.screenshot(path=os.path.join(screenshot_dir, "34_correlation_results.png"))
 
