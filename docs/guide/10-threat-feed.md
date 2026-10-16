@@ -8,8 +8,9 @@
 |---|---|
 | Search box | Matches titles and descriptions on the wall |
 | Your industries | Posts about groups that target your industries |
+| Your stack | Posts that name a product in your [technology stack](16-profile-and-settings.md#technology-stack) |
 | Opportunistic / financial | Posts about opportunistic or financially motivated activity, which can land in any industry |
-| Both | Either of the above (the default) |
+| Both | Any of the above (the default), leaving out posts aimed only at products you don't run |
 | All | Every technical post of the week |
 | Refresh now | Collect again (only new posts are fetched, so it's usually quick) |
 | Analyse in Archer | Open the post on Home → [Analyse](03-analyse.md) |
@@ -24,6 +25,8 @@ A card shows the source, date, title, a two-to-three sentence description, and i
 | Nation | Attribution in the post ("China-nexus", "DPRK", "Russian GRU", "<country>-nexus") and the nation of each named group. Any nation the IISS assesses as a cyber power counts, plus Pakistan, Belarus, Lebanon and South Korea |
 | Opportunistic | Supply-chain or package compromise, mass exploitation, ransomware-as-a-service, infostealers, botnets, malvertising, initial access brokers |
 | Financially motivated | Ransomware, extortion, BEC, crypto theft or mining, banking trojans, carding, or a named group whose ATT&CK objective is financial |
+| Product | A product in your technology stack that the post names |
+| Not your stack | The post names products you don't run and none you do (MOVEit exploitation when you have no MOVEit). It stays under All |
 
 Groups are recognised by their ATT&CK names and aliases, and by vendor naming schemes ATT&CK doesn't have yet: Microsoft's weather names (… Typhoon, Storm-NNNN), CrowdStrike's animals (… Spider, … Panda), Unit 42's constellations, and UNC, FIN, TA and UAT numbers.
 

@@ -37,6 +37,8 @@ REASONS = {
     "osint_empty": "no indicators from ATT&CK and nothing usable from OSINT",
     "ai_none": "neither ATT&CK nor the AI produced a query for it",
     "ai_failed": "the AI call failed; see the server log",
+    "stack_platform": "none of its ATT&CK platforms is in your technology stack (Profile → Technology stack)",
+    "stack_product": "its procedures target products that aren't in your technology stack (Profile → Technology stack)",
     "pre_compromise": "pre-compromise activity (Reconnaissance or Resource Development) "
                       "that no log source sees",
 }

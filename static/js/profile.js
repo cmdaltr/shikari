@@ -841,6 +841,57 @@ document.head.appendChild(style);
 })();
 
 
+// Technology stack (Profile tab): products by category, and the ATT&CK platforms they bring
+(function () {
+  const grid = document.getElementById('tech-stack-grid');
+  if (!grid) return;
+  const status = document.getElementById('tech-stack-status');
+  const platformsLine = document.getElementById('tech-stack-platforms');
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  let choices = [];
+  const showPlatforms = () => {
+    const ticked = new Set(Array.from(grid.querySelectorAll('input:checked')).map(i => i.value));
+    const platforms = [...new Set(choices.filter(c => ticked.has(c.id)).flatMap(c => c.platforms))].sort();
+    platformsLine.textContent = ticked.size
+      ? `ATT&CK platforms covered: ${platforms.join(', ') || 'none'}` + (platforms.some(p => ['Windows', 'Linux', 'macOS'].includes(p)) ? '' : '. No operating system is ticked, so endpoint techniques will be left out.')
+      : 'Nothing ticked: every technique and procedure applies.';
+  };
+  fetch('/api/profile/stack').then(r => r.json()).then(data => {
+    const chosen = new Set(data.stack || []);
+    choices = data.choices || [];
+    grid.innerHTML = (data.categories || []).map(cat => {
+      const items = choices.filter(c => c.category === cat);
+      if (!items.length) return '';
+      return `<fieldset class="tech-stack-group"><legend>${esc(cat)}</legend>` + items.map(c =>
+        `<label class="industry-option" title="ATT&CK platforms: ${esc(c.platforms.join(', '))}"><input type="checkbox" value="${esc(c.id)}"${chosen.has(c.id) ? ' checked' : ''}> <span>${esc(c.label)}</span></label>`).join('') + '</fieldset>';
+    }).join('');
+    showPlatforms();
+  });
+  grid.addEventListener('change', showPlatforms);
+  document.getElementById('tech-stack-filter').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    grid.querySelectorAll('.tech-stack-group').forEach(g => {
+      let any = false;
+      g.querySelectorAll('.industry-option').forEach(l => {
+        const hit = !q || l.textContent.toLowerCase().includes(q);
+        l.hidden = !hit;
+        any = any || hit;
+      });
+      g.hidden = !any;
+    });
+  });
+  document.getElementById('tech-stack-save').addEventListener('click', async () => {
+    const stack = Array.from(grid.querySelectorAll('input:checked')).map(i => i.value);
+    const res = await fetch('/api/profile/stack', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stack }),
+    });
+    const data = await res.json().catch(() => ({}));
+    status.textContent = res.ok ? (stack.length ? `Saved: ${stack.length} product${stack.length === 1 ? '' : 's'}` : 'Saved: everything applies') : (data.error || 'Not saved');
+    status.className = 'industries-status ' + (res.ok ? 'is-ok' : 'is-error');
+  });
+})();
+
+
 // SIEM platforms every hunt generates for (Profile tab)
 (function () {
   const grid = document.getElementById('siems-grid');

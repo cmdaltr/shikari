@@ -587,6 +587,14 @@
 .industries-status.is-ok { color: #15803d; }
 .industries-status.is-error { color: #b91c1c; }
 
+/* Technology stack: products grouped by category */
+.tech-stack-filter { width: 100%; max-width: 320px; margin: 0 0 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary, transparent); color: var(--text-primary); font: inherit; }
+.tech-stack-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px 24px; align-items: start; }
+.tech-stack-group { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.tech-stack-group legend { padding: 0 0 6px; font-weight: 600; font-size: .85em; text-transform: uppercase; letter-spacing: .4px; color: var(--text-secondary); }
+.tech-stack-group[hidden], .tech-stack-group .industry-option[hidden] { display: none; }
+.tech-stack-platforms { margin: 14px 0 0; }
+
 /* Profile: Full Name with Save Changes on the input's row, the same height */
 .pf-name-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); column-gap: 16px; margin-top: 16px; }
 .pf-name-label { grid-column: 1 / -1; }

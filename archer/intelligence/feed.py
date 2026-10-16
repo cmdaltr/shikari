@@ -44,6 +44,7 @@ from email.utils import parsedate_to_datetime
 from typing import Dict, Iterable, List, Optional
 
 from archer.config import DATA_DIR
+from archer.intelligence.tech_stack import as_stack, label, products_named, targets_in
 
 FEED_DAYS = 7
 ANALYSIS_VERSION = 9        # bump when the matchers change: cached posts are analysed again
@@ -619,6 +620,7 @@ def analyse_post(post: Dict, groups: List[Dict], profiles: Optional[Dict[str, Li
         "groups": [{"id": g["id"], "name": g["name"], "nexus": g["nexus"]} for g in named][:15],
         "actors": others,
         "industries": reasons,
+        "products": products_named(f"{post['title']}\n{context}"),
         "nations": nations,
         "opportunistic": opportunistic,
         "financial": financial[:8],
@@ -715,13 +717,15 @@ def refresh_in_background(bundle, group_meta: Dict, force: bool = False) -> bool
     return True
 
 
-def view(industries: Iterable[str], days: int = FEED_DAYS) -> Dict:
+def view(industries: Iterable[str], days: int = FEED_DAYS, stack: Iterable[str] = ()) -> Dict:
     """
     The wall: every technical post of the window, newest first, with its tags. relevant: it
     targets one of the user's industries, or it's opportunistic or financially motivated
-    (which can land in any industry).
+    (which can land in any industry), or it names a product in the user's technology stack;
+    and it isn't aimed only at products the stack doesn't have (archer.intelligence.tech_stack).
     """
     industries = as_industries(industries)
+    stack = as_stack(stack)
     data = _load()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     posts, considered = [], 0
@@ -732,6 +736,12 @@ def view(industries: Iterable[str], days: int = FEED_DAYS) -> Dict:
         if not technical(post):
             continue
         yours = {i: post["industries"][i] for i in industries if i in post.get("industries", {})}
+        # Posts analysed before products were recorded: their title and description
+        named = post.get("products")
+        if named is None:
+            named = products_named(f"{post.get('title', '')}\n{post.get('description') or ''}")
+        in_stack = [label(p) for p in named if p in stack]
+        off = bool(stack) and not in_stack and bool(targets_in(named))
         posts.append({
             **{k: post.get(k) for k in ("title", "url", "source", "published", "description", "techniques", "cves", "iocs")},
             "groups": [g["name"] for g in post.get("groups", [])] + [a["name"] for a in post.get("actors", [])],
@@ -739,9 +749,11 @@ def view(industries: Iterable[str], days: int = FEED_DAYS) -> Dict:
             "yours": yours,
             "opportunistic": post.get("opportunistic", []),
             "financial": post.get("financial", []),
-            "relevant": bool(yours or post.get("opportunistic") or post.get("financial")),
+            "stack": in_stack,
+            "off_stack": [label(p) for p in targets_in(named)] if off else [],
+            "relevant": bool(yours or post.get("opportunistic") or post.get("financial") or in_stack) and not off,
         })
-    return {"industries": industries, "labels": industries, "days": days,
+    return {"industries": industries, "labels": industries, "days": days, "stack": [label(p) for p in stack],
             "posts": posts, "relevant": sum(1 for p in posts if p["relevant"]), "considered": considered,
             "last_refresh": data.get("last_refresh"), "refreshing": _status["refreshing"],
             "sources": [{"name": n, "url": u, "custom": (n, u) not in SOURCES, **(data.get("sources") or {}).get(n, {})}

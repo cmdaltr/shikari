@@ -42,6 +42,7 @@ class User(Base):
     country = Column(String(80), nullable=True)  # Map name (archer.intelligence.cyber_powers.countries); green on Cyber Powers
     industries = Column(Text, nullable=True)  # JSON array: threat feed industries (archer.intelligence.feed)
     siem_platforms = Column(Text, nullable=True)  # JSON array: SIEMs hunts generate for (empty: all)
+    tech_stack = Column(Text, nullable=True)  # JSON array: product ids (archer.intelligence.tech_stack; empty: everything applies)
     password_hash = Column(String(255), nullable=False)  # bcrypt hash
     role = Column(Enum(UserRole), nullable=False, default=UserRole.STANDARD)
     is_active = Column(Boolean, default=True, nullable=False)

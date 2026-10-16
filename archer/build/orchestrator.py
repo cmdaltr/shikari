@@ -14,6 +14,7 @@ from archer.build import yaml_patch  # This patches yaml.additional_tactics()
 
 from archer.build.detections import compile_query, load_indicator_mappings, MappingsError
 from archer.build import run_files
+from archer.intelligence import tech_stack as stack
 from archer.build.progress import write_progress
 from archer.ai.genai import generate_correlations
 from archer.config import GENERATE_DIR, CORRELATE_DIR
@@ -59,7 +60,30 @@ def _produced(group_name, before):
     return before is None or after is None or after > before
 
 
-def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, lol_datasets=True, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None):
+def _off_stack(procedure, tech_stack):
+    """The technique_yield reason a group procedure can't happen in the stack, or None."""
+    if not tech_stack:
+        return None
+    if len(procedure) > 10 and not stack.platform_applies(procedure[10], tech_stack):
+        return "stack_platform"
+    if not stack.text_applies(procedure[3] or "", tech_stack):
+        return "stack_product"
+    return None
+
+
+def _warn_off_stack(group_name, technique, name, platforms, text, tech_stack):
+    """An explicit input (technique, CVE, report) is generated anyway; the results page says why it may not apply."""
+    if platforms and not stack.platform_applies(platforms, tech_stack):
+        run_files.warn(group_name, f"{technique} {name} runs on {', '.join(platforms)}; "
+                                   "nothing in your technology stack provides those platforms")
+    off = [] if stack.text_applies(text, tech_stack) else stack.off_stack(text, tech_stack)
+    if off:
+        run_files.warn(group_name, f"{technique} {name} targets {', '.join(off)}, "
+                                   "which isn't in your technology stack")
+
+
+def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None, run_correlation=False, osint_enhancement=False, osint_comparison=False, lol_datasets=True, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None, tech_stack=None):
+    """tech_stack: product ids (archer.intelligence.tech_stack); a group hunt leaves out what can't happen there."""
     global _dry_run_active
     _dry_run_active = dry_run
 
@@ -179,6 +203,9 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                             break
 
                 retrieved_data["technique_platforms"] = technique_platforms if technique_platforms else ["Windows", "Linux", "macOS"]
+                if tech_stack:
+                    _warn_off_stack(group_name, technique, retrieved_data["technique"], technique_platforms,
+                                    tech_info.get("activity_desc") or "", tech_stack)
 
                 # Add activity_desc - use detect_guidance (string) not op_guidance (dict)
                 # For CVEs, op_guidance is the IOC dict, detect_guidance is the description string
@@ -208,7 +235,9 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
         try:
             group_id = retrieve_group(bundle, group_name)
             retrieved_techniques = retrieve_techniques(bundle, group_id)
-            procedures = retrieve_procedures(bundle, retrieved_techniques)
+            procedures = retrieve_procedures(
+                bundle, retrieved_techniques,
+                keep_desc=(lambda d: stack.text_applies(d, tech_stack)) if tech_stack else None)
         except Exception as e:
             import traceback
             print(f"❌ Error retrieving MITRE data for '{group_name}': {e}")
@@ -250,6 +279,13 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             if len(procedure) > 9:
                 retrieved_data["technique_description"] = procedure[9]
                 retrieved_data["technique_platforms"] = procedure[10]
+
+            off = _off_stack(procedure, tech_stack)
+            if off:
+                run_files.outcome(group_name, procedure[0], procedure[1], False, off)
+                processed += 1
+                _report_detections(group_name, processed, created, total)
+                continue
 
             _report_technique(group_name, procedure[0], procedure[1])
             try:

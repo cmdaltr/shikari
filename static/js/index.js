@@ -1237,6 +1237,12 @@ function showThreatGroupSelection(domain, recommendedGroups, profile) {
   if (evidence.length) {
     html += '<p style="margin: 0.3em 0;color:#666;font-size:0.9em;"><strong>Source:</strong> ' + escapeHtml(evidence.join('; ')) + '</p>';
   }
+  var detected = profile.detected_stack || [];
+  if (detected.length) {
+    html += '<p style="margin: 0.3em 0;"><strong>Products seen:</strong> ' + escapeHtml(detected.map(function(p) { return p.label; }).join(', ')) +
+      ' <button type="button" id="profile-add-stack" style="margin-left:0.5em;padding:2px 10px;border:1px solid #ccc;border-radius:4px;background:white;cursor:pointer;" title="Add them to Profile → Technology stack (only if this is your organisation)">Add to my technology stack</button>' +
+      ' <span id="profile-add-stack-status" role="status" style="color:#555;font-size:0.9em;"></span></p>';
+  }
   html += '<p style="margin: 0.3em 0;"><strong>Risk Score:</strong> ' + (profile.risk_score || 0) + '/100</p>';
   html += '<p style="margin: 0.3em 0;"><strong>Recommended Groups:</strong> ' + recommendedGroups.length + '</p>';
   html += '</div>';
@@ -1270,6 +1276,20 @@ function showThreatGroupSelection(domain, recommendedGroups, profile) {
   modal.innerHTML = html;
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+
+  // Products seen on the site join the user's stack (it's added to, never replaced)
+  var addStack = document.getElementById('profile-add-stack');
+  if (addStack) addStack.addEventListener('click', function() {
+    var status = document.getElementById('profile-add-stack-status');
+    addStack.disabled = true;
+    fetch('/api/profile/stack').then(function(r) { return r.json(); }).then(function(cur) {
+      var stack = (cur.stack || []).slice();
+      detected.forEach(function(p) { if (stack.indexOf(p.id) < 0) stack.push(p.id); });
+      return fetch('/api/profile/stack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stack: stack }) });
+    }).then(function(r) { return r.json(); }).then(function(res) {
+      status.textContent = res.success ? 'Added: your stack has ' + res.stack.length + ' product' + (res.stack.length === 1 ? '' : 's') : (res.error || 'Not saved');
+    }).catch(function(e) { status.textContent = e.message; addStack.disabled = false; });
+  });
 
   // Time estimate from each group's ATT&CK procedure count
   var groupSizes = {};
@@ -1347,3 +1367,16 @@ function showThreatGroupSelection(domain, recommendedGroups, profile) {
     });
   });
 }
+
+
+// Profile → Technology stack: say when group hunts are filtered by it, with a way out
+document.addEventListener('DOMContentLoaded', function () {
+  var note = document.getElementById('hp-stack-note');
+  if (!note) return;
+  fetch('/api/profile/stack').then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+    var n = data && data.stack ? data.stack.length : 0;
+    if (!n) return;
+    document.getElementById('hp-stack-count').textContent = n + ' product' + (n === 1 ? '' : 's');
+    note.hidden = false;
+  }).catch(function () {});
+});

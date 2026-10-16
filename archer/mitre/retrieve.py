@@ -346,7 +346,8 @@ def get_all_groups(bundle):
     return groups
 
 
-def retrieve_procedures(bundle, retrieved_techniques):
+def retrieve_procedures(bundle, retrieved_techniques, keep_desc=None):
+    """keep_desc(text): False leaves another group's procedure out of the evidence (Profile → Technology stack)."""
     procedures = []
     index = _bundle_index(bundle)
 
@@ -403,6 +404,8 @@ def retrieve_procedures(bundle, retrieved_techniques):
                 for group_id, add_desc, add_ref in additional_data:
                     # Skip if it's from the same group we're already processing
                     if group_id in [t[1] for t in retrieved_techniques]:
+                        continue
+                    if keep_desc is not None and not keep_desc(add_desc or ""):
                         continue
 
                     # Get additional evidence

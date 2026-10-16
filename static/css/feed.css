@@ -24,6 +24,7 @@
 .fd-tag.is-nation { background: rgba(139, 0, 0, .12); color: #8B0000; }
 .fd-tag.is-opp { background: rgba(245, 158, 11, .18); color: #B45309; }
 .fd-tag.is-fin { background: rgba(124, 58, 237, .14); color: #6d28d9; }
+.fd-tag.is-off-stack { background: transparent; border: 1px dashed var(--border-color); color: var(--text-secondary); }
 .fd-analyse { margin-top: auto; padding-top: 6px; font-weight: 600; font-size: .88em; color: var(--fd-accent); text-decoration: none; }
 mark { background: rgba(250, 204, 21, .45); color: inherit; border-radius: 2px; }
 .fd-empty { color: var(--text-secondary); }

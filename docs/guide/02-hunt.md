@@ -8,6 +8,8 @@ Type a group's ATT&CK name or any of its aliases: `APT29`, `Cozy Bear`, `Scatter
 
 A name ATT&CK doesn't know opens the [Manual](13-manual.md) page instead, so you can enter the group's techniques yourself.
 
+When you've set a [technology stack](16-profile-and-settings.md#technology-stack), a note under the field says so. The hunt then leaves out techniques and procedures that can't happen in your estate. Tick **Ignore it for this hunt** to use all of ATT&CK.
+
 ## CVE
 
 Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. Each must look like `CVE-20YY-NNNN`. Archer reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds three kinds of query:

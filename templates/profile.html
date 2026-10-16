@@ -342,6 +342,19 @@
                 </div>
               </section>
             </div>
+
+            <!-- Products the organisation runs (archer.intelligence.tech_stack): group hunts leave out what can't happen there -->
+            <section class="industries tech-stack" id="tech-stack">
+              <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Technology stack</h3>
+              <p class="industries-hint">Tick everything your organisation runs, operating systems included. Group hunts then leave out techniques whose ATT&amp;CK platforms you don't have (ESXi, containers, network devices) and procedures aimed at products you don't run (a SolarWinds supply-chain compromise when you have no SolarWinds). Technique, CVE and report hunts are generated anyway, with a note on Results. Leave it all unticked and everything applies.</p>
+              <input type="search" class="tech-stack-filter" id="tech-stack-filter" placeholder="Filter products" aria-label="Filter products">
+              <div class="tech-stack-groups" id="tech-stack-grid"></div>
+              <p class="industries-hint tech-stack-platforms" id="tech-stack-platforms" aria-live="polite"></p>
+              <div class="industries-actions">
+                <button type="button" class="btn-primary" id="tech-stack-save">Save technology stack</button>
+                <span class="industries-status" id="tech-stack-status" role="status"></span>
+              </div>
+            </section>
           </div>
 
           <!-- TIMELINE TAB -->

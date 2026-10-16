@@ -149,6 +149,15 @@
     </script>
     {% endif %}
 
+    {% if stack_warnings %}
+    <!-- Explicit inputs (technique, CVE, report) outside Profile → Technology stack: generated anyway -->
+    <details class="no-detection" id="stack-warnings" open>
+      <summary>{{ stack_warnings|length }} item{{ 's' if stack_warnings|length != 1 }} outside your technology stack</summary>
+      <ul class="kept-list">{% for w in stack_warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+      <p class="no-detection-hint">You asked for these, so they were generated anyway. Change the products on <a href="/profile#tech-stack">Profile → Technology stack</a>.</p>
+    </details>
+    {% endif %}
+
     {% if no_detection %}
     <!-- Techniques the latest run built nothing for, and why -->
     {% if kept_edited %}
@@ -176,6 +185,9 @@
       </table>
       {% if no_detection|selectattr('reason', 'equalto', 'no_indicators')|list %}
       <p class="no-detection-hint">Run again with an AI model or OSINT enhancement to build queries for the "no indicator" techniques; the standard pipeline never will.</p>
+      {% endif %}
+      {% if no_detection|selectattr('reason', 'in', ['stack_platform', 'stack_product'])|list %}
+      <p class="no-detection-hint">Techniques outside your technology stack were left out. Change it on <a href="/profile#tech-stack">Profile → Technology stack</a>, or hunt again with <strong>Ignore my technology stack</strong> ticked.</p>
       {% endif %}
     </details>
     {% endif %}

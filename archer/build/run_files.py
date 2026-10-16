@@ -28,6 +28,7 @@ _missed: Dict[str, Dict[str, dict]] = {}
 _hit: Dict[str, Set[str]] = {}
 _regenerate: Set[str] = set()
 _kept: Dict[str, Set[str]] = {}
+_warnings: Dict[str, List[str]] = {}
 
 
 def _manifest_path(group: str) -> str:
@@ -41,6 +42,7 @@ def begin(group: str, regenerate: bool = False) -> None:
         _missed[group] = {}
         _hit[group] = set()
         _kept[group] = set()
+        _warnings[group] = []
         if regenerate:
             _regenerate.add(group)
         else:
@@ -60,6 +62,13 @@ def kept(path: str, group: Optional[str]) -> None:
     with _lock:
         if group in _kept:
             _kept[group].add(os.path.basename(path))
+
+
+def warn(group: Optional[str], text: str) -> None:
+    """Something the results page should say about the run (an explicit input outside the technology stack)."""
+    with _lock:
+        if group in _warnings and text not in _warnings[group]:
+            _warnings[group].append(text)
 
 
 def note(path: str, group: Optional[str]) -> None:
@@ -108,6 +117,7 @@ def finish(group: str, started_at: Optional[float] = None) -> None:
         missed = list(_missed.pop(group, {}).values())
         _hit.pop(group, None)
         kept_files = sorted(_kept.pop(group, set()))
+        warnings = _warnings.pop(group, [])
         _regenerate.discard(group)
     if files is None:
         return
@@ -117,7 +127,7 @@ def finish(group: str, started_at: Optional[float] = None) -> None:
         json.dump({"group": group, "started_at": started_at, "completed_at": time.time(),
                    "files": sorted(files),
                    "no_detection": sorted(missed, key=lambda m: m["technique"]),
-                   "kept_edited": kept_files}, fh, indent=2)
+                   "kept_edited": kept_files, "stack_warnings": warnings}, fh, indent=2)
     os.replace(tmp, _manifest_path(group))
 
 

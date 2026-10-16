@@ -199,6 +199,8 @@
 .home-tabs .hp-under { margin: 10px 0 0; }
 .home-tabs .hp-feed-hint { margin: 6px 0 0; font-size: 0.85rem; color: #6b7280; }
 [data-theme="dark"] .home-tabs .hp-feed-hint { color: var(--text-secondary); }
+.home-tabs .hp-stack-note label { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; cursor: pointer; white-space: nowrap; }
+.home-tabs .hp-stack-note[hidden] { display: none; }
 .home-tabs .hp-under .option-item { display: inline-flex; padding: 0.5em 0.75em; }
 .home-tabs .hp-formats { color: #6b7280; font-size: 0.85rem; padding: 0.5em 0; }
 .home-tabs .form-separator.is-vertical { flex-direction: column; margin: 0; gap: 0.6em; }

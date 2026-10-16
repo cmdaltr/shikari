@@ -144,6 +144,10 @@ class CompanyProfiler:
                 domain
             )
 
+        # Products seen (Profile → Technology stack can take them)
+        from archer.intelligence.tech_stack import from_profile, label
+        profile['detected_stack'] = [{'id': pid, 'label': label(pid)} for pid in from_profile(profile)]
+
         # 7. Generate threat recommendations
         profile = self._generate_threat_recommendations(profile)
 
@@ -688,17 +692,9 @@ class CompanyProfiler:
         These are high-probability technologies that are commonly disclosed
         or can be inferred from public information.
         """
-        common_techs = []
-
-        # Check domain registrar/hosting (from WHOIS or IP)
-        # This is a simplified inference - in production you'd check actual data
-        common_techs.extend([
-            'Microsoft Office 365',  # Very common
-            'Active Directory',       # Enterprise standard
-            'VPN Solutions',          # Standard security
-        ])
-
-        return common_techs
+        # Nothing is inferred: this used to add Office 365, Active Directory and "VPN Solutions"
+        # for every domain, which then read as observed technologies (and a technology stack)
+        return []
 
     def _gather_domain_info(self, domain: str) -> Dict[str, Any]:
         """Gather basic information about the domain."""

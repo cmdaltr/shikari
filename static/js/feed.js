@@ -17,6 +17,7 @@
     posts = data.posts;
     $('fd-days').textContent = data.days;
     $('fd-industries').textContent = data.labels.length ? data.labels.join(', ') : 'none set';
+    $('fd-stack').textContent = data.stack && data.stack.length ? `${data.stack.length} product${data.stack.length === 1 ? '' : 's'}` : 'none set';
     sources(data);
     const when = data.last_refresh ? new Date(data.last_refresh * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'never';
     $('fd-status').textContent = data.refreshing
@@ -72,6 +73,7 @@
     if (show === 'both' && !p.relevant) return false;
     if (show === 'yours' && !Object.keys(p.yours).length) return false;
     if (show === 'motive' && !p.tags.motives.length) return false;
+    if (show === 'stack' && !(p.stack || []).length) return false;
     const hay = `${p.title} ${p.description || ''}`.toLowerCase();
     return words.every(w => hay.includes(w));
   }
@@ -91,6 +93,8 @@
       const tag = (cls, text, title) => `<li class="fd-tag ${cls}"${title ? ` title="${esc(title)}"` : ''}>${esc(text)}</li>`;
       const tags = [
         ...p.tags.industries.map(i => tag(yours.has(i) ? 'is-yours' : 'is-industry', i, yours.has(i) ? `Your industry: ${p.yours[i].join(', ')}` : '')),
+        ...(p.stack || []).map(s => tag('is-yours', s, 'In your technology stack')),
+        ...((p.off_stack || []).length ? [tag('is-off-stack', 'Not your stack', `Aimed at ${p.off_stack.join(', ')}, which your technology stack doesn't have`)] : []),
         ...p.tags.nations.map(n => tag('is-nation', n)),
         ...p.tags.motives.map(m => tag(m === 'Opportunistic' ? 'is-opp' : 'is-fin', m,
           (m === 'Opportunistic' ? p.opportunistic : p.financial).join(', '))),

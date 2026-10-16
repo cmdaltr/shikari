@@ -350,7 +350,7 @@ Have an idea for a new feature? We'd love to hear it!
 | [#18](https://github.com/cmdaltr/archer/issues/18) | Threat Feed watchlists |
 | [#19](https://github.com/cmdaltr/archer/issues/19) | STIX/TAXII and MISP import and export |
 | [#20](https://github.com/cmdaltr/archer/issues/20) | Detections as code: export to git, push to the SIEM, diff between runs |
-| [#21](https://github.com/cmdaltr/archer/issues/21) | Technology stack: only hunt what applies to the products the organisation runs |
+| ~~[#21](https://github.com/cmdaltr/archer/issues/21)~~ | Technology stack: only hunt what applies to the products the organisation runs (done) |
 | [#23](https://github.com/cmdaltr/archer/issues/23) | Correlations: include OSINT enrichment |
 | [#22](https://github.com/cmdaltr/archer/issues/22) | Emulate: which logs record each technique (Security-Datasets, then Atomic Red Team labs in Docker and a Windows VM) |
 

@@ -154,7 +154,11 @@ class CVEHunter:
                 "cwe": self._extract_cwe(vuln),
                 "references": [ref.get("url") for ref in vuln.get("references", [])],
                 "vendor": self._extract_vendor(vuln),
-                "product": self._extract_product(vuln)
+                "product": self._extract_product(vuln),
+                # Every vulnerable CPE (not the platforms they run on): Profile → Technology stack
+                "cpes": sorted({m.get("criteria", "") for c in vuln.get("configurations", [])
+                                for node in c.get("nodes", []) for m in node.get("cpeMatch", [])
+                                if m.get("vulnerable") and m.get("criteria")})[:200],
             }
 
         except Exception as e:

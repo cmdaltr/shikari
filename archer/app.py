@@ -2118,6 +2118,44 @@ def _siem_args(archer_session: Optional[str], *extra_excluded: str) -> dict:
     return {"excluded_vendors": sorted(excluded)} if excluded else {}
 
 
+def _user_stack(user) -> list:
+    from archer.intelligence.tech_stack import as_stack
+
+    try:
+        return as_stack(json.loads(user.tech_stack)) if user and user.tech_stack else []
+    except (ValueError, TypeError):
+        return []
+
+
+def _session_stack(archer_session: Optional[str]) -> list:
+    if not archer_session:
+        return []
+    db = next(get_db())
+    try:
+        return _user_stack(get_user_from_session_id(archer_session, db))
+    finally:
+        db.close()
+
+
+def _stack_args(archer_session: Optional[str], ignore: bool = False) -> dict:
+    """process_group's tech_stack (Profile → Technology stack) for a group hunt; ignore: all of ATT&CK."""
+    chosen = [] if ignore else _session_stack(archer_session)
+    return {"tech_stack": chosen} if chosen else {}
+
+
+def _warn_cve_off_stack(group_name: str, cve: str, nvd: dict, archer_session: Optional[str]) -> None:
+    """A CVE hunt is generated anyway; the results page says when NVD's products aren't in the stack."""
+    from archer.build import run_files
+    from archer.intelligence.tech_stack import cpe_products, label
+
+    chosen = _session_stack(archer_session)
+    cpes = nvd.get("cpes") or ([f"cpe:2.3:a:{nvd['vendor']}:{nvd.get('product') or '*'}"] if nvd.get("vendor") else [])
+    affected = cpe_products(cpes)
+    if chosen and affected and not set(affected) & set(chosen):
+        run_files.warn(group_name, f"{cve} affects {', '.join(label(p) for p in affected)}, "
+                                   "which isn't in your technology stack")
+
+
 def _report_ai_args(archer_session: Optional[str], extraction: dict) -> dict:
     """
     genai_mode and use_llm/llm_config for generating from an upload or blog post: the AI
@@ -2932,6 +2970,7 @@ async def generate(
     exclude_elastic: str = Form(None),
     auto_validate: str = Form(None),
     regenerate: str = Form(None),
+    ignore_stack: str = Form(None),
     archer_session: Optional[str] = Cookie(None),
 ):
     # Called when the user clicks Generate on the index page, or Regenerate on a results
@@ -2979,6 +3018,7 @@ async def generate(
                     merge_by_parent=(merge_by_parent == "true"),
                     **siem_args,
                     **llm_args,
+                    **_stack_args(archer_session, ignore=(ignore_stack == "true")),
                 )
 
                 # Run emulation if requested (feature-flagged — see _archive/REINTEGRATION.md)
@@ -3276,6 +3316,7 @@ async def generate_cve(
                 exploit_sources.extend(exp.get("sources") or [])
                 # The shell run on the exploited host is a command indicator like any other
                 all_iocs["cmd"].extend((exp.get("indicators") or {}).get("cmd", []))
+                _warn_cve_off_stack(group_name, cve, research.get("nvd_data") or {}, archer_session)
 
             # Exploitation indicators from the advisories and write-ups: one sweep per SIEM.
             # For an appliance CVE (PAN-OS, Ivanti, Citrix) these are the detections there are.
@@ -3483,6 +3524,7 @@ async def generate_cve(
                 osint_comparison=False,  # Default to false for CVE hunting
                 lol_datasets=(lol_datasets != "false"),
                 **siem_args,
+                **_stack_args(archer_session),
                 **llm_args,
             )
 
@@ -3665,6 +3707,7 @@ async def hunt_technique(
                 merge_by_parent=merge_parent,
                 correlation_min_relevance=correlation_threshold,
                 **siem_args,
+                **_stack_args(archer_session),
                 **llm_args,
             )
 
@@ -3966,6 +4009,7 @@ async def manual_submit(
                 genai_mode=None,
                 run_correlation=False,
                 **_siem_args(archer_session),
+                **_stack_args(archer_session),
             )
         except Exception:
             try:
@@ -4388,6 +4432,7 @@ def modified_process_group_wrapper(
     correlation_min_relevance=None,
     use_llm=False,
     llm_config=None,
+    tech_stack=None,
 ):
     """Wrapper for process_group to ensure proper completion and transition to GenAI."""
 
@@ -4441,6 +4486,7 @@ def modified_process_group_wrapper(
             excluded_vendors=excluded_vendors,
             use_llm=use_llm,
             llm_config=llm_config,
+            tech_stack=tech_stack,
         )
 
         # print(f"DEBUG: process_group completed successfully")
@@ -4796,6 +4842,7 @@ async def generate_from_upload(
                 lol_datasets=(lol_datasets != "false"),
                 **report_ai,
                 **_siem_args(archer_session),
+                **_stack_args(archer_session),
             )
 
         # Fresh record first, so the thread's own updates land after it
@@ -5033,6 +5080,7 @@ async def generate_from_blog(
                 lol_datasets=(lol_datasets != "false"),
                 **report_ai,
                 **_siem_args(archer_session),
+                **_stack_args(archer_session),
             )
 
         # Fresh record first, so the thread's own updates land after it
@@ -7132,6 +7180,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             "run_view": run_view,
             # Detections the last run left alone because their query was edited by hand
             "kept_edited": (_latest_run_record(group_name) or {}).get("kept_edited") or [],
+            "stack_warnings": (_latest_run_record(group_name) or {}).get("stack_warnings") or [],
             # Regenerate re-runs a threat group through /generate
             "can_regenerate": _is_attack_group(group_name),
             "no_detection": no_detection,
@@ -10085,6 +10134,42 @@ async def set_profile_industries(request: Request, archer_session: Optional[str]
         db.close()
 
 
+@app.get("/api/profile/stack")
+def get_profile_stack(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """The products this user's organisation runs, and the catalogue to choose from."""
+    from archer.intelligence.tech_stack import catalogue
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    cat = catalogue()
+    return {"stack": _user_stack(user), "categories": cat["categories"],
+            "choices": [{"id": pid, "label": p["label"], "category": p["category"], "platforms": p["platforms"]}
+                        for pid, p in cat["products"].items()]}
+
+
+@app.post("/api/profile/stack")
+async def set_profile_stack(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Body: {"stack": ["windows", "m365", ...]} (ids from GET; an empty list means everything applies)."""
+    from archer.intelligence.tech_stack import as_stack, catalogue
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        wanted = (await request.json()).get("stack") or []
+        if not isinstance(wanted, list) or any(p not in catalogue()["products"] for p in wanted):
+            return JSONResponse({"error": "Unknown product"}, status_code=400)
+        user.tech_stack = json.dumps(as_stack(wanted))
+        db.commit()
+        return {"success": True, "stack": _user_stack(user)}
+    finally:
+        db.close()
+
+
 @app.get("/feed", response_class=HTMLResponse)
 def feed_page(request: Request, archer_session: Optional[str] = Cookie(None)):
     """The last week's research that matters to the user's industries, plus opportunistic activity."""
@@ -10108,7 +10193,7 @@ def api_feed(request: Request, archer_session: Optional[str] = Cookie(None)):
     db.close()
     feed.refresh_in_background(getattr(request.app.state, "bundle", None),
                                getattr(request.app.state, "group_metadata", {}) or {})
-    return {**feed.view(_user_industries(user)), "can_edit_sources": user.role == UserRole.ADMIN}
+    return {**feed.view(_user_industries(user), stack=_user_stack(user)), "can_edit_sources": user.role == UserRole.ADMIN}
 
 
 @app.get("/api/feed/search")
