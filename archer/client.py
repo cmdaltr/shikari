@@ -22,6 +22,8 @@ from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 DEFAULT_URL = "http://127.0.0.1:8000"
 TERMINAL_STATUSES = {"complete", "error", "failed", "cancelled"}
@@ -44,6 +46,12 @@ class ArcherClient:
         self._password = password or os.getenv("ARCHER_PASSWORD")
         self.timeout = timeout
         self.session = requests.Session()
+        # A pooled connection the server closed while idle fails the next request on it;
+        # reads (GET) are safe to send again, anything that starts a run is not
+        retry = Retry(total=3, connect=3, read=2, status=0, backoff_factor=0.5,
+                      allowed_methods=frozenset({"GET", "HEAD"}), raise_on_status=False)
+        self.session.mount("http://", HTTPAdapter(max_retries=retry))
+        self.session.mount("https://", HTTPAdapter(max_retries=retry))
         self._signed_in = False
         if session_cookie:
             self.session.cookies.set("archer_session", session_cookie)

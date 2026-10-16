@@ -96,3 +96,10 @@ def test_default_on_boxes_sent_explicitly():
     assert sent["osint_enhancement"] == "false" and sent["lol_datasets"] == "true"
     c.hunt_group("FIN7", provider="", osint=True, lol=False)
     assert sent["osint_enhancement"] == "true" and sent["lol_datasets"] == "false"
+
+
+def test_reads_retry_on_a_dropped_connection_and_runs_do_not():
+    from archer.client import ArcherClient
+    retry = ArcherClient(url="http://127.0.0.1:1", token="t").session.get_adapter("http://x").max_retries
+    assert retry.read == 2 and retry.connect == 3
+    assert "GET" in retry.allowed_methods and "POST" not in retry.allowed_methods

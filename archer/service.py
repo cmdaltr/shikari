@@ -316,7 +316,9 @@ def supervise(settings, skip_index=False):
     if not skip_index:
         build_osint_index(py)
 
-    cmd = [py, "-m", "uvicorn", "archer.app:app", "--host", settings["host"], "--port", str(settings["port"])]
+    # Keep-alive longer than any poll interval (see archer.app's __main__)
+    cmd = [py, "-m", "uvicorn", "archer.app:app", "--host", settings["host"], "--port", str(settings["port"]),
+           "--timeout-keep-alive", "75"]
     if settings["reload"]:
         cmd.append("--reload")
     children.append(Child("archer", cmd))

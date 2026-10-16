@@ -2248,7 +2248,7 @@ async def set_llm_preference(
 
 
 @app.get("/api/status/osint")
-async def get_osint_status():
+def get_osint_status():
     """Get OSINT repository initialization status, with each clone's last commit date."""
     from archer.config import OSINT_REPOS_DIR
 
@@ -4637,7 +4637,11 @@ async def upload_file(
         # Parse the file to extract TTPs and IOCs; the AI chosen in the run's prompt (if any)
         # reads it as well as the patterns
         llm_config = _hunt_llm_args(archer_session, ai_provider, ai_model).get("llm_config")
-        result = parse_intelligence_file(
+        # Off the event loop: a PDF or an AI read takes long enough to stall every other request
+        from starlette.concurrency import run_in_threadpool
+
+        result = await run_in_threadpool(
+            parse_intelligence_file,
             file_path=safe_filename,
             file_content=file_content,
             llm_config=llm_config,
@@ -4826,7 +4830,7 @@ async def generate_from_upload(
 
 
 @app.post("/analyze_blog")
-async def analyze_blog(
+def analyze_blog(
     request: Request,
     url: str = Form(...),
     ai_provider: str = Form(None),
@@ -5210,7 +5214,7 @@ async def emulate_technique(
 
 
 @app.post("/profile")
-async def profile_company(
+def profile_company(
     request: Request,
     domain: str = Form(...),
     include_industry: str = Form(None),
@@ -11341,6 +11345,9 @@ def main():
         port=args.port,
         reload=args.reload,
         workers=args.workers if not args.reload else 1,
+        # Longer than any poll interval: at uvicorn's 5s default a client polling every 5s
+        # reuses a connection the server is just closing, and the poll fails
+        timeout_keep_alive=75,
     )
 
 
