@@ -10,6 +10,8 @@ Archer automates threat hunting and detection engineering from MITRE ATT&CK. Giv
 
 ## 🛠️ Setup and Usage
 
+**📘 User guide, one page per part of Archer: [docs/guide](docs/guide/README.md)**
+
 **📖 Setup instructions: [GETTING_STARTED.md](GETTING_STARTED.md)**
 
 **⌨️ Usage instructions and guidance: [USAGE.md](docs/USAGE.md)**
@@ -36,7 +38,9 @@ archer stop
 - 🎯 **MITRE ATT&CK Integration** - Automated detection generation from threat group TTPs
 - 📤 **File Upload & Intelligence Extraction** - Upload threat intel files (PDF, TXT, JSON, CSV, XLSX, YARA, DOCX) for automatic TTP/IOC extraction
 - 🌐 **Blog Analysis** - Paste a threat intel blog URL and extract TTPs/IOCs automatically
-- 📰 **Threat Feed** - A searchable wall of the last 7 days of vendor and government research (20 sources), each post tagged with targeted industries, the attacker's nation, and opportunistic or financial motive; collected on start-up and on demand, no AI involved ([details](#threat-feed))
+- 📰 **Threat Feed** - A searchable wall of the last 7 days of vendor and government research (26 sources, and admins can add their own), each post tagged with targeted industries, the attacker's nation, and opportunistic or financial motive; plus a keyword search of all research at any date. No AI involved ([details](#threat-feed))
+- 🌍 **Cyber Powers** - IISS cyber power tiers, ATT&CK attribution confidence and targeting on an Equal Earth world map ([guide](docs/guide/11-cyber-powers.md))
+- 🪚 **MITRESaw** - Every group's ATT&CK procedures and the indicators in them, rebuilt as ATT&CK changes ([guide](docs/guide/12-mitresaw.md))
 - 🗺️ **Attack Flows** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow
 - 🔍 **Multi-Platform Support** - Google SecOps (YARA-L) and Microsoft Defender (KQL); Splunk and Elastic are switched off for now ([onboarding](docs/SIEM_ONBOARDING.md))
 - 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries
@@ -56,7 +60,7 @@ archer stop
 - **Detection Library** - Save, search, tag, share, and export your generated detections
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
-- **Query Execution** - Defender XDR/Splunk API integration (code implemented, see [UNTESTED.md](docs/UNTESTED.md))
+- **Query Execution** - Defender XDR/Splunk API integration (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md))
 - **Adversary emulation, VECTR, CALDERA, MACAT** - Planned (see [FUTURE.md](docs/other/FUTURE.md) and #11)
 
 ### Security & User Management
@@ -112,7 +116,7 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 **📖 [Complete Documentation Index](docs/DOCS_INDEX.md)** - Browse all documentation by category
 
 **Quick Links:**
-- **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](docs/guides/MAPPING_SETUP_GUIDE.md)
+- **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](GETTING_STARTED.md#step-4-configure-mapping-files-critical) | [User Guide](docs/guide/README.md)
 - **Interactive Console:** [adfconsole Guide](#-interactive-console-adfconsole)
 - **Usage:** [Web UI, CLI & API](docs/USAGE.md) | [Auto-Generated API Docs](http://localhost:8000/docs)
 - **Research Tab:** [Actor Consolidation & XLSX Export](docs/USAGE.md#research-tab)

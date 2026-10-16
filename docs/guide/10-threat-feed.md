@@ -1,0 +1,58 @@
+# Threat Feed
+
+**Intel → Feed** is a wall of the last seven days of technical threat research from vendor and government sources, one card per post, each tagged with the industries targeted, the attacker's nation and whether the activity is opportunistic or financially motivated. No AI is involved.
+
+## Using the wall
+
+| Control | What it does |
+|---|---|
+| Search box | Matches titles and descriptions on the wall |
+| Your industries | Posts about groups that target your industries |
+| Opportunistic / financial | Posts about opportunistic or financially motivated activity, which can land in any industry |
+| Both | Either of the above (the default) |
+| All | Every technical post of the week |
+| Refresh now | Collect again (only new posts are fetched, so it's usually quick) |
+| Analyse in Archer | Open the post on Home → [Analyse](03-analyse.md) |
+
+Set your industries in Profile → Threat Feed industries.
+
+A card shows the source, date, title, a two-to-three sentence description, and its tags:
+
+| Tag | Comes from |
+|---|---|
+| Industry | The targeting in ATT&CK of any group the post names; the industries most of a nation's groups target, when the post attributes activity to that nation; industries the post itself names twice or in its title. Yours are highlighted |
+| Nation | Attribution in the post ("China-nexus", "DPRK", "Russian GRU", "<country>-nexus") and the nation of each named group. Any nation the IISS assesses as a cyber power counts, plus Pakistan, Belarus, Lebanon and South Korea |
+| Opportunistic | Supply-chain or package compromise, mass exploitation, ransomware-as-a-service, infostealers, botnets, malvertising, initial access brokers |
+| Financially motivated | Ransomware, extortion, BEC, crypto theft or mining, banking trojans, carding, or a named group whose ATT&CK objective is financial |
+
+Groups are recognised by their ATT&CK names and aliases, and by vendor naming schemes ATT&CK doesn't have yet: Microsoft's weather names (… Typhoon, Storm-NNNN), CrowdStrike's animals (… Spider, … Panda), Unit 42's constellations, and UNC, FIN, TA and UAT numbers.
+
+Tags only come from the title and the post's technical paragraphs: ones with a technique ID, hash, IP, domain, file name, command, registry key or command-line switch, and the paragraphs either side. A passing mention in a policy piece doesn't count. Posts with no technical content (product news, webinars, newsletters) aren't shown.
+
+## Search all research
+
+The **Search all research** card (collapsed by default; click its title) finds a campaign, tool or actor at any date: `GhostAction`, `RedSun`, `Salt Typhoon`.
+
+| Where it searches | What it matches |
+|---|---|
+| Archer's sources | Every post the sources' feeds have carried since Archer started collecting, back to 2016 for some sources: title, summary, and the analysed description |
+| MITRE ATT&CK | Groups, software and campaigns whose name, aliases or description mention it. Name and alias matches come first |
+| Web news (optional) | Google News and Bing News: English only, de-duplicated, and only stories that read as security news |
+
+Every word of the search must appear, as a whole word or the start of one. Results are kept for an hour, so repeating a search is instant.
+
+**Include web news** sends your keyword to Google and Bing. Untick it for a search that stays on your machine.
+
+## Sources
+
+The **Sources** section at the foot of the page lists each source and the result of its last collection: posts this week, or why it failed.
+
+Built in: Microsoft Threat Intelligence, Google Threat Intelligence (Mandiant), Unit 42, Cisco Talos, CrowdStrike, SentinelLABS, Kaspersky Securelist, ESET WeLiveSecurity, Proofpoint, The DFIR Report, Red Canary, Huntress, Elastic Security Labs, CISA, NCSC (UK), Recorded Future, Trend Micro Research, Rapid7, FortiGuard Labs, Symantec Threat Hunter, Volexity, Zscaler ThreatLabz, Sekoia, Group-IB, Bitdefender Labs and JPCERT/CC.
+
+An administrator can add any RSS or Atom feed (name and URL) and remove ones they added. Archer checks the feed reads before adding it, and only accepts public addresses. Added sources are this installation's own (`data/feed/sources.json`, not in git).
+
+## Limits
+
+- Collection happens on start-up, on **Refresh now**, and when the page is opened six hours or more after the last collection.
+- Tags are pattern matches, not reading comprehension. A post that discusses a group without naming it, or attributes in unusual wording, can go untagged.
+- The research archive only holds what the feeds carried. Some feeds carry ten posts, some hundreds, so older coverage varies by source.

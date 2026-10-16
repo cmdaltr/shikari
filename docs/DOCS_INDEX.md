@@ -4,6 +4,34 @@ Single-page index of all project documentation.
 
 ---
 
+## User Guide (start here)
+
+Plain-language guide to every part of Archer, one page each: what it's for, how to use it, every option, where its data comes from, and its limits.
+
+| Page | Covers |
+|------|--------|
+| [Overview](guide/README.md) | What Archer does, where everything is, which SIEMs, what uses AI |
+| [Running Archer](guide/01-running-archer.md) | `archer start/stop/status`, signing in, what happens at start-up |
+| [Hunt](guide/02-hunt.md) | Threat group, CVE and technique hunts; every option |
+| [Analyse](guide/03-analyse.md) | Detections from a report URL or file |
+| [Company profile](guide/04-company-profile.md) | Who targets a company, then their detections |
+| [Research](guide/05-research.md) | Find groups by keyword, compare their techniques, export |
+| [Results](guide/06-results.md) | Detections, correlations, attack flow, briefing, buttons |
+| [Library](guide/07-library.md) | Saved detections: search, filter, tag, export |
+| [Coverage](guide/08-coverage.md) | Reference and detection coverage across ATT&CK |
+| [Flows](guide/09-flows.md) | Attack flows: what you can and can't detect |
+| [Threat Feed](guide/10-threat-feed.md) | The week's research, tags, search all research, sources |
+| [Cyber Powers](guide/11-cyber-powers.md) | The map's three views and how attribution is read |
+| [MITRESaw](guide/12-mitresaw.md) | Procedures, rebuilds, OSINT repositories, exclusions |
+| [Manual](guide/13-manual.md) | Detections from your own TTPs |
+| [Agents and Ask Archer](guide/14-agents-and-ask-archer.md) | The AI features |
+| [Profile and settings](guide/15-profile-and-settings.md) | Account, SIEMs, industries, keys, MFA, tokens, users |
+| [Console, API and MCP](guide/16-console-api-mcp.md) | `adfconsole`, the Python client, REST, `archer-mcp` |
+| [Data and updates](guide/17-data-and-updates.md) | What's downloaded, when, and where everything is kept |
+| [Glossary](guide/glossary.md) | The terms used throughout |
+
+---
+
 ## Getting Started
 
 | Document | Description |
@@ -105,7 +133,6 @@ Single-page index of all project documentation.
 |----------|-------------|
 | [bespoke/prompts/CloudLLM_Master.md](../bespoke/prompts/CloudLLM_Master.md) | Cloud LLM master prompt for detection generation |
 | [bespoke/prompts/LocalLLM_Master.md](../bespoke/prompts/LocalLLM_Master.md) | Local LLM master prompt (smaller context) |
-| [bespoke/prompts/PROMPT_Interactive_Console.md](../bespoke/prompts/PROMPT_Interactive_Console.md) | Reusable prompt for creating interactive CLI consoles |
 | [bespoke/query_templates/DetectionGeneration_Templates.md](../bespoke/query_templates/DetectionGeneration_Templates.md) | Per-telemetry query templates (AWS, Windows, MDE, Unix, Proxy, etc.) |
 | [bespoke/llm_references/README.md](../bespoke/llm_references/README.md) | Reference query format and examples |
 
