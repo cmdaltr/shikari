@@ -9,14 +9,15 @@
 | [Splunk attack_data](https://github.com/splunk/attack_data) | Apache-2.0 | Atomic Red Team and tool runs in Splunk's Attack Range. Maintained |
 | [Security-Datasets (OTRF)](https://github.com/OTRF/Security-Datasets) | MIT | Empire, Covenant and tool runs in OTRF's lab. Last updated March 2024 |
 | [EVTX-to-MITRE-Attack](https://github.com/mdecrevoisier/EVTX-to-MITRE-Attack) | CC0-1.0 | Windows event log samples of attacks, one .evtx per attack, filed by technique. Maintained |
+| [macOS-ATTACK-DATASET](https://github.com/sbousseaden/macOS-ATTACK-DATASET) | GPL-3.0 | macOS attacks recorded with Elastic Endpoint (2021), filed by tactic; the technique of each file is Archer's reading of its name. Built on your machine only, never committed |
 
 Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs, auditd, syslog), mapped to ATT&CK by the people who recorded it. It shows that a technique can be recorded and by which log, for that tool in that lab, not every way the technique can be done.
 
-All three ship with Archer: `archer/data/telemetry_datasets.json` (each recording's techniques and event types) and `archer/data/telemetry_values.json.gz` (the distinct values of the fields detections match on). **Update** on the page (admins) or the command below fetches only the recordings the sources have changed since:
+Splunk attack_data also holds Linux (auditd, syslog, auth.log, Sysmon for Linux) and macOS (osquery's Endpoint Security process events and launchd plists) recordings. The first three sources ship with Archer: `archer/data/telemetry_datasets.json` (each recording's techniques and event types) and `archer/data/telemetry_values.json.gz` (the distinct values of the fields detections match on). **Update** on the page (admins) or the command below fetches only the recordings the sources have changed since:
 
 ```
-python -m archer.telemetry --build                  # all three
-python -m archer.telemetry --build --source evtx    # or splunk, otrf
+python -m archer.telemetry --build                  # all four
+python -m archer.telemetry --build --source macos   # or splunk, otrf, evtx
 ```
 
 A full build downloads about 1.2 GB. Splunk's logs are read up to 3 MB each: the median is 10 KB, but a few captures run to hundreds of MB of lab background.
@@ -35,11 +36,13 @@ The filter card applies to whichever view is open below it, and shows only the f
 | Groups | Groups you've hunted. By technique or data source: the techniques their detections are for |
 | Data sources | The SIEM's tables or UDM event types |
 | Logs | Recorded event types: Sysmon 1, Security 4688 |
+| Collection | Which kinds of logging count: Native OS logs, Sysmon, EDR, osquery, Cloud and SaaS. For Google SecOps the default leaves out Sysmon, which is deployed far less than native logging. For Defender XDR it's kept: Sysmon's recordings stand in for the MDE sensor, which records the same process, file, network, registry and image-load activity without Sysmon installed |
+| Platforms | Windows, Linux, macOS, ESXi, Cloud and SaaS: only the logs from these platforms count, so Linux shows what Linux logging records of each technique |
 | Seen | By group only: Seen, Not seen, No recordings, No indicators, or any noisy indicator |
 
 ## Telemetry by technique
 
-Every recorded technique, 20 to a page, with its recordings per source, the **logs** at least half its recordings hold, and those logs' tables or UDM event types for the chosen SIEM: the logs you have to ingest to see it. Select a row for every event type its recordings hold and the recordings themselves. An event type marked **common** turns up in 40% or more of a source's recordings (Security 4688, Sysmon 1), so it's a hint that the event is lab background as much as the attack; it's never taken out.
+Every recorded technique, 20 to a page, with its recordings per source, the **logs** at least half its recordings hold, and those logs' tables or UDM event types for the chosen SIEM: the logs you have to ingest to see it. Only the kinds of logging chosen under Collection count, so with Sysmon left out a technique shows what native logging alone records; one none of whose recordings hold the chosen logs is marked **No recording holds the chosen logs**, a gap for that kind of logging. Select a row for every event type its recordings hold and the recordings themselves. An event type marked **common** turns up in 40% or more of a source's recordings (Security 4688, Sysmon 1), so it's a hint that the event is lab background as much as the attack; it's never taken out.
 
 ## Telemetry by group
 
@@ -62,6 +65,8 @@ Each table or UDM event type for the chosen SIEM, with how many techniques it re
 
 ## Limits
 
-- Three labs, each with their own logging policy: an event type missing from the recordings may just not have been collected.
+- Four labs, each with their own logging policy: an event type missing from the recordings may just not have been collected.
+- No public set of attacks recorded by Microsoft Defender for Endpoint itself exists that Archer has found; Defender XDR tables are mapped from the Windows, Linux and macOS events that record the same activity.
+- macOS is thin: osquery and Elastic Endpoint recordings, no unified log.
 - The Windows event ID, auditd and cloud log mappings are in `archer/mappings/telemetry_map.json`; an event type not listed there shows without a table.
 - Running Atomic Red Team in your own lab (a Linux container, then a Windows VM) is the next stage of [#22](https://github.com/cmdaltr/archer/issues/22).

@@ -11,7 +11,7 @@ another estate; it's a cheap first look before hit counts against a real SIEM (#
 
 import os
 from collections import Counter, defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from archer.build.indicator_hygiene import GAP
 from archer.telemetry import datasets as ds
@@ -90,6 +90,7 @@ def check(doc: Dict) -> Dict:
             if did in own_ids:
                 for etype, field, vals in hits[:3]:
                     seen.append({"dataset": did, "source": did.split(":", 1)[0], "title": titles[did], "event": etype,
+                                 "collection": ds.collection(etype),
                                  "label": ds.describe(etype)["label"], "field": field, "example": _example(value, vals)})
             else:
                 elsewhere += 1
@@ -104,30 +105,36 @@ def check(doc: Dict) -> Dict:
     return result
 
 
-def technique(tid: str) -> Dict:
-    """What recorded telemetry shows for a technique: its recordings, and the event types they hold."""
-    recs = ds.for_technique(tid)
+def technique(tid: str, collections: Optional[Iterable[str]] = None, platforms: Optional[Iterable[str]] = None) -> Dict:
+    """What recorded telemetry shows for a technique: its recordings, and the event types (of the
+    chosen kinds of collection) they hold."""
+    allowed, on = _allowed(collections), _allowed(platforms)
+    recs = [d for d in ds.for_technique(tid) if _on(d, on)]
     by_type: Counter = Counter()
     events: Counter = Counter()
     common = set()
+    visible = 0
     for d in recs:
-        by_type.update(d["events"].keys())
-        events.update(d["events"])
+        held = _held(d, allowed, on)
+        visible += bool(held)
+        by_type.update(held)
+        events.update({e: d["events"][e] for e in held})
         common |= set(d.get("background") or [])
     rows = []
     for etype, n in by_type.most_common():
         info = ds.describe(etype)
         rows.append({"event": etype, "label": info["label"], "mde": info.get("mde", ""), "udm": info.get("udm", ""),
-                     "recordings": n, "events": events[etype], "common": etype in common})
+                     "collection": ds.collection(etype), "recordings": n, "events": events[etype], "common": etype in common})
     exact = any(tid.upper() in d["techniques"] for d in recs)
     # What most of its recordings hold: Sysmon 1 is in nearly every recording because nearly
     # every attack starts processes, so how common an event type is elsewhere doesn't exclude it
-    usual = [r for r in rows if r["recordings"] * 2 >= len(recs)]
+    usual = [r for r in rows if r["recordings"] * 2 >= visible]
     need = {"mde": Counter(r["mde"].split(" (")[0] for r in usual if r["mde"]),
             "udm": Counter(r["udm"] for r in usual if r["udm"])}
-    return {"technique": tid.upper(), "exact": exact,
+    return {"technique": tid.upper(), "exact": exact, "visible": visible,
             "recordings": [{k: d.get(k) for k in ("id", "source", "title", "techniques", "tools", "url", "date")}
-                           | {"events": sum(d["events"].values())} for d in recs],
+                           | {"events": sum(d["events"].values()), "platforms": ds.platforms(d),
+                              "visible": bool(_held(d, allowed, on))} for d in recs],
             "event_types": rows,
             "need": {k: [{"name": n, "recordings": c} for n, c in v.most_common()] for k, v in need.items()}}
 
@@ -154,38 +161,80 @@ def group(group_name: str, generate_dir: str) -> Dict:
     return {"group": group_name, "detections": rows, "counts": dict(counts), "values": ds.values() is not None}
 
 
-def _usual() -> Dict[str, Dict]:
-    """{technique: {recordings, sources, usual}}: the event types in at least half its recordings."""
-    recs, holding, sources = Counter(), defaultdict(Counter), defaultdict(Counter)
+def _allowed(collections: Optional[Iterable[str]]) -> Optional[frozenset]:
+    return frozenset(collections) if collections else None
+
+
+def _held(d: Dict, allowed: Optional[frozenset], on: Optional[frozenset] = None) -> List[str]:
+    """A recording's event types from the chosen kinds of collection, on the chosen platforms."""
+    given = None
+    out = []
+    for e in d["events"]:
+        if allowed is not None and ds.collection(e) not in allowed:
+            continue
+        if on is not None:
+            p = ds.event_platform(e, d)
+            if p is None:
+                given = ds._given(d) if given is None else given
+                if not given & on:
+                    continue
+            elif p not in on:
+                continue
+        out.append(e)
+    return out
+
+
+def _on(d: Dict, platforms: Optional[frozenset]) -> bool:
+    return platforms is None or bool(platforms & set(ds.platforms(d)))
+
+
+def _usual(collections: Optional[Iterable[str]] = None, platforms: Optional[Iterable[str]] = None) -> Dict[str, Dict]:
+    """{technique: {recordings, visible, sources, platforms, usual}}: the event types (of the chosen
+    collections) in at least half the recordings that hold any of them."""
+    allowed, on = _allowed(collections), _allowed(platforms)
+    key = ("usual", allowed, on, id(ds.load()))
+    if key in _haystack:
+        return _haystack[key]
+    recs, visible, holding = Counter(), Counter(), defaultdict(Counter)
+    sources, plats = defaultdict(Counter), defaultdict(set)
     for d in ds.load()["datasets"]:
+        if not _on(d, on):
+            continue
+        held = _held(d, allowed, on)
         for t in d["techniques"]:
             if t == "T0000":  # Security-Datasets' placeholder for a recording with no technique
                 continue
             recs[t] += 1
             sources[t][d["source"]] += 1
-            holding[t].update(d["events"].keys())
-    return {t: {"recordings": recs[t], "sources": dict(sources[t]),
-                "usual": [e for e, n in types.most_common() if n * 2 >= recs[t]]} for t, types in holding.items()}
+            plats[t].update(p for p in ds.platforms(d) if on is None or p in on)
+            if held:
+                visible[t] += 1
+                holding[t].update(held)
+    out = {t: {"recordings": recs[t], "visible": visible[t], "sources": dict(sources[t]), "platforms": sorted(plats[t]),
+               "usual": [e for e, n in holding[t].most_common() if visible[t] and n * 2 >= visible[t]]} for t in recs}
+    _haystack[key] = out
+    return out
 
 
-def overview() -> List[Dict]:
-    """Every recorded technique: its recordings per source, the logs most of them hold, and those
-    logs' Defender XDR tables and UDM event types."""
+def overview(collections: Optional[Iterable[str]] = None, platforms: Optional[Iterable[str]] = None) -> List[Dict]:
+    """Every recorded technique: its recordings per source, how many hold the chosen kinds of log,
+    the logs most of those hold, and their Defender XDR tables and UDM event types."""
     rows = []
-    for t, u in sorted(_usual().items()):
+    for t, u in sorted(_usual(collections, platforms).items()):
         infos = [ds.describe(e) for e in u["usual"]]
-        rows.append({"technique": t, "recordings": u["recordings"], "sources": u["sources"],
-                     "logs": [i["label"] for i in infos],
+        rows.append({"technique": t, "recordings": u["recordings"], "visible": u["visible"], "sources": u["sources"],
+                     "platforms": u["platforms"], "logs": [i["label"] for i in infos],
+                     "collections": sorted({ds.collection(e) for e in u["usual"]}),
                      "mde": sorted({i["mde"].split(" (")[0] for i in infos if i.get("mde")}),
                      "udm": sorted({i["udm"] for i in infos if i.get("udm")})})
     return rows
 
 
-def by_data_source() -> Dict[str, List[Dict]]:
+def by_data_source(collections: Optional[Iterable[str]] = None, platforms: Optional[Iterable[str]] = None) -> Dict[str, List[Dict]]:
     """For each Defender XDR table and UDM event type: the techniques at least half of whose
-    recordings hold it, and the recorded logs it comes from."""
+    recordings hold it (from the chosen kinds of log), and the logs it comes from."""
     mde, udm = defaultdict(lambda: (set(), Counter())), defaultdict(lambda: (set(), Counter()))
-    for t, u in _usual().items():
+    for t, u in _usual(collections, platforms).items():
         for etype in u["usual"]:
             info = ds.describe(etype)
             for m, name in ((mde, info.get("mde", "").split(" (")[0]), (udm, info.get("udm", ""))):

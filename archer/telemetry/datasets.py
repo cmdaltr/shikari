@@ -37,10 +37,13 @@ from typing import Dict, Iterable, List, Optional, Tuple
 HERE = os.path.dirname(os.path.dirname(__file__))
 SUMMARY_PATH = os.path.join(HERE, "data", "telemetry_datasets.json")
 VALUES_PATH = os.path.join(HERE, "data", "telemetry_values.json.gz")
+# Sources whose licence keeps them out of git (INFO["local"]): built on this machine only
+LOCAL_SUMMARY_PATH = os.path.join(HERE, "data", "cache", "telemetry_local.json")
+LOCAL_VALUES_PATH = os.path.join(HERE, "data", "cache", "telemetry_local_values.json.gz")
 STATE_PATH = os.path.join(HERE, "data", "cache", "telemetry_state.json")
 MAP_FILES = (os.path.join(HERE, "mappings", "telemetry_map.json"),
              os.path.join("bespoke", "mappings", "telemetry_map.json"))
-PARSER_VERSION = 2  # part of each recording's build key: a parser change fetches everything again
+PARSER_VERSION = 3  # part of each recording's build key: a parser change fetches everything again
 BACKGROUND_SHARE = 0.4  # an event type recorded in this share of datasets is the lab's background
 MAX_VALUES = 150  # distinct values per field per event type per dataset
 MAX_LEN = 500
@@ -63,6 +66,55 @@ KIND_FIELDS = {"cmd": ("cmd",), "sw": ("file", "cmd"), "path": ("file", "cmd"), 
                "reg": ("reg", "cmd"), "evt": ("other",), "api": ("other", "cmd"), "operation": ("other",),
                "op": ("other",), "network": ("network", "cmd"), "domain": ("network", "cmd"), "ip": ("network",),
                "port": ("network",), "service": ("other", "cmd"), "acct": ("other",)}
+
+# How each kind of log is collected: native OS logging is everywhere, Sysmon and agents only
+# where someone deployed them
+COLLECTIONS = {"native": "Native OS logs", "sysmon": "Sysmon", "edr": "EDR", "osquery": "osquery", "cloud": "Cloud and SaaS"}
+_CLOUD = ("CloudTrail ", "Office 365 ", "Azure ", "Entra ID ", "GCP ", "Google Workspace ", "Okta ")
+
+
+def collection(etype: str) -> str:
+    if etype.startswith(("Microsoft-Windows-Sysmon/", "Linux-Sysmon/")):
+        return "sysmon"
+    if etype.startswith(("CrowdStrike ", "Elastic Endpoint ")):
+        return "edr"
+    if etype.startswith("osquery "):
+        return "osquery"
+    if etype.startswith(_CLOUD):
+        return "cloud"
+    return "native"
+
+
+PLATFORMS = {"windows": "Windows", "linux": "Linux", "macos": "macOS", "esxi": "ESXi", "cloud": "Cloud and SaaS"}
+_MAC_TYPES = ("osquery es_process_events", "osquery launchd", "osquery es_")
+
+
+def _given(d: Dict) -> set:
+    out = {str(p).lower() for p in d.get("platform") or []}
+    return {"macos" if p in ("macos", "osx", "mac") else p for p in out} & set(PLATFORMS)
+
+
+def event_platform(etype: str, d: Dict) -> Optional[str]:
+    """The platform an event type in a recording comes from; None when only the recording says."""
+    if etype.startswith("syslog ") and "esxi" in d["id"].lower():
+        return "esxi"
+    if etype.startswith(("auditd ", "syslog ", "Linux-Sysmon/")):
+        return "linux"
+    if etype.startswith(_MAC_TYPES) or ("macos" in d["id"].lower() and etype.startswith("osquery ")):
+        return "macos"
+    if etype.startswith(_CLOUD):
+        return "cloud"
+    if etype.startswith(("osquery ", "Elastic Endpoint ", "CrowdStrike ")):
+        return None
+    return "windows"
+
+
+def platforms(d: Dict) -> List[str]:
+    """The platforms a recording's logs come from (its own "platform" where the source gives one)."""
+    out = _given(d)
+    out.update(p for p in (event_platform(e, d) for e in d["events"]) if p)
+    return sorted(out)
+
 
 # Channel names as recorded, in whichever case a lab wrote them
 _CHANNELS = {c.lower(): c for c in (
@@ -167,13 +219,16 @@ def _json_events(text: str, default_channel: str = "") -> Iterable[Tuple[str, Di
                 return
             except ValueError:
                 pass
-        for line in text.splitlines():
-            line = line.strip()
-            if line.startswith("{"):
-                try:
-                    yield json.loads(line)
-                except ValueError:
-                    continue
+        lines = [line.strip() for line in text.splitlines() if line.strip().startswith("{")]
+        parsed = 0
+        for line in lines:
+            try:
+                yield json.loads(line)
+                parsed += 1
+            except ValueError:
+                continue
+        if not parsed and stripped.startswith("{"):
+            yield from _pretty_records(stripped)
 
     for e in records():
         if not isinstance(e, dict):
@@ -197,9 +252,59 @@ def _json_events(text: str, default_channel: str = "") -> Iterable[Tuple[str, Di
             yield cloud[0], _keep({}, {"Operation": cloud[1], "UserAgent": e.get("userAgent"),
                                        "Parameters": json.dumps(e.get("requestParameters") or e.get("Parameters")
                                                                 or e.get("properties"))[:MAX_LEN]})
+        elif isinstance(e.get("columns"), dict) and e.get("name"):
+            yield _osquery(e)
+        elif isinstance(e.get("_source"), dict) or "endpoint.events" in json.dumps(e.get("data_stream") or e.get("event") or {}):
+            elastic = _elastic_endpoint(e.get("_source") if isinstance(e.get("_source"), dict) else e)
+            if elastic:
+                yield elastic
         elif e.get("event_simpleName"):
             yield f"CrowdStrike {e['event_simpleName']}", _keep({}, {
                 "CommandLine": e.get("CommandLine"), "Image": e.get("ImageFileName"), "TargetFilename": e.get("TargetFileName")})
+
+
+def _pretty_records(text: str) -> Iterable[Dict]:
+    """Pretty-printed objects one after another, as Kibana's Dev Tools copies them ("\"\"\"…\"\"\"" strings too)."""
+    text = re.sub(r'"""(.*?)"""', lambda m: json.dumps(m.group(1)), text, flags=re.S)
+    decoder, i = json.JSONDecoder(), 0
+    while i < len(text):
+        while i < len(text) and text[i] in " \r\n\t,[]":
+            i += 1
+        if i >= len(text):
+            break
+        try:
+            obj, i = decoder.raw_decode(text, i)
+        except ValueError:
+            return
+        yield obj
+
+
+def _osquery(e: Dict) -> Tuple[str, Dict]:
+    """An osquery result: "osquery es_process_events" (macOS Endpoint Security), "osquery launchd" (plists)."""
+    name = re.sub(r"^pack_[^_]+(?:-[^_]+)*_", "", str(e["name"]))
+    c = e["columns"]
+    args = c.get("program_arguments") or c.get("program")
+    return f"osquery {name}", _keep({}, {
+        "CommandLine": c.get("cmdline") or args, "Image": c.get("path") if "cmdline" in c else None,
+        "ParentImage": c.get("parent_path"), "TargetFilename": c.get("path") if "cmdline" not in c else c.get("target_path"),
+        "TaskName": c.get("label"), "DestinationIp": c.get("remote_address"), "DestinationPort": c.get("remote_port")})
+
+
+def _elastic_endpoint(s: Dict) -> Optional[Tuple[str, Dict]]:
+    """An Elastic Endpoint (Elastic Defend) event: "Elastic Endpoint process exec"."""
+    ds = str((s.get("data_stream") or {}).get("dataset") or (s.get("event") or {}).get("dataset") or "")
+    if not ds.startswith("endpoint.events."):
+        return None
+    action = (s.get("event") or {}).get("action")
+    action = action[0] if isinstance(action, list) and action else action
+    proc, parent = s.get("process") or {}, (s.get("process") or {}).get("parent") or {}
+    line = lambda p: p.get("command_line") or (" ".join(map(str, p["args"])) if isinstance(p.get("args"), list) else None)
+    dns = ((s.get("dns") or {}).get("question") or {}).get("name")
+    return f"Elastic Endpoint {ds.rsplit('.', 1)[1]} {action or ''}".strip(), _keep({}, {
+        "CommandLine": line(proc), "Image": proc.get("executable"), "ParentCommandLine": line(parent),
+        "ParentImage": parent.get("executable"), "TargetFilename": (s.get("file") or {}).get("path"),
+        "DestinationIp": (s.get("destination") or {}).get("ip"), "DestinationPort": (s.get("destination") or {}).get("port"),
+        "QueryName": dns})
 
 
 def _auditd_events(text: str) -> Iterable[Tuple[str, Dict]]:
@@ -308,14 +413,18 @@ def mark_background(datasets: List[Dict], share: float = BACKGROUND_SHARE) -> No
 # ---------------------------------------------------------------- saving and reading
 
 def save(datasets: List[Dict], values: Dict[str, Dict], sources: Dict[str, Dict]) -> None:
+    """The shipped files, and beside them (gitignored) the sources whose licence keeps them local."""
     mark_background(datasets)
-    os.makedirs(os.path.dirname(SUMMARY_PATH), exist_ok=True)
-    with open(SUMMARY_PATH, "w", encoding="utf-8") as fh:
-        json.dump({"sources": sources, "datasets": sorted(datasets, key=lambda d: (d["source"], d["id"]))},
-                  fh, indent=1)
-    os.makedirs(os.path.dirname(VALUES_PATH), exist_ok=True)
-    with gzip.open(VALUES_PATH, "wt", encoding="utf-8") as fh:
-        json.dump(values, fh, separators=(",", ":"))
+    local = {k for k, v in sources.items() if v.get("local")}
+    for keep, summary_path, values_path in ((lambda s: s not in local, SUMMARY_PATH, VALUES_PATH),
+                                            (lambda s: s in local, LOCAL_SUMMARY_PATH, LOCAL_VALUES_PATH)):
+        part = [d for d in datasets if keep(d["source"])]
+        os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+        with open(summary_path, "w", encoding="utf-8") as fh:
+            json.dump({"sources": {k: v for k, v in sources.items() if keep(k)},
+                       "datasets": sorted(part, key=lambda d: (d["source"], d["id"]))}, fh, indent=1)
+        with gzip.open(values_path, "wt", encoding="utf-8") as fh:
+            json.dump({d["id"]: values[d["id"]] for d in part if d["id"] in values}, fh, separators=(",", ":"))
     _cache.clear()
 
 
@@ -324,11 +433,16 @@ _cache: Dict[str, object] = {}
 
 def load() -> Dict:
     if "summary" not in _cache:
-        try:
-            with open(SUMMARY_PATH, encoding="utf-8") as fh:
-                _cache["summary"] = json.load(fh)
-        except (OSError, ValueError):
-            _cache["summary"] = {"sources": {}, "datasets": []}
+        summary = {"sources": {}, "datasets": []}
+        for path in (SUMMARY_PATH, LOCAL_SUMMARY_PATH):
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    part = json.load(fh)
+            except (OSError, ValueError):
+                continue
+            summary["sources"].update(part.get("sources") or {})
+            summary["datasets"].extend(part.get("datasets") or [])
+        _cache["summary"] = summary
     return _cache["summary"]
 
 
@@ -340,6 +454,13 @@ def values() -> Optional[Dict]:
                 _cache["values"] = json.load(fh)
         except (OSError, ValueError, EOFError):
             _cache["values"] = None
+        try:
+            with gzip.open(LOCAL_VALUES_PATH, "rt", encoding="utf-8") as fh:
+                local = json.load(fh)
+            if _cache["values"] is not None:
+                _cache["values"].update(local)
+        except (OSError, ValueError, EOFError):
+            pass
     return _cache["values"]
 
 

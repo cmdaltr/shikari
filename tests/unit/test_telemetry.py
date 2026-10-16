@@ -108,3 +108,36 @@ def test_evtx_samples_are_filed_by_technique():
     # Only auditd's process records are process events
     assert ds.describe("auditd EXECVE")["udm"] == "PROCESS_LAUNCH"
     assert ds.describe("auditd DAEMON_START")["mde"] == ""
+
+
+def test_native_logs_alone():
+    a, b = recorded()
+    with a, b:
+        native = {t["technique"]: t for t in check.overview(["native"])}
+        everything = {t["technique"]: t for t in check.overview()}
+    # Every recording here is Sysmon: without it, nothing records the technique
+    assert native["T1003.001"]["visible"] == 0 and native["T1003.001"]["logs"] == []
+    assert everything["T1003.001"]["visible"] == 2
+    assert ds.collection("Security 4688") == "native" and ds.collection("Microsoft-Windows-Sysmon/Operational 1") == "sysmon"
+
+
+def test_osquery_and_elastic_endpoint():
+    osq = b'{"name":"pack_incident-response_launchd","hostIdentifier":"mac","columns":{"label":"com.evil","path":"/Library/LaunchDaemons/com.evil.plist","program_arguments":"/tmp/evil"}}\n'
+    assert list(ds.parse(osq)) == [("osquery launchd", {"CommandLine": "/tmp/evil", "TargetFilename": "/Library/LaunchDaemons/com.evil.plist", "TaskName": "com.evil"})]
+    elastic = b'''{\r\n "_source": {"data_stream": {"dataset": "endpoint.events.process"}, "event": {"action": "exec"},
+      "process": {"executable": "/usr/bin/security", "args": ["security", "dump-keychain", """-d"""]}}\r\n}'''
+    assert list(ds.parse(elastic)) == [("Elastic Endpoint process exec", {"CommandLine": "security dump-keychain -d", "Image": "/usr/bin/security"})]
+    assert ds.platforms({"id": "x", "events": {"auditd EXECVE": 1, "osquery launchd": 1}}) == ["linux", "macos"]
+
+
+def test_platform_counts_only_its_own_logs():
+    mixed = {"datasets": [{"id": "splunk:T1021.004/x", "source": "splunk", "title": "ssh", "techniques": ["T1021.004"],
+                           "background": [], "events": {"auditd EXECVE": 2, "Security 4688": 3}},
+                          {"id": "splunk:T1021.004/esxi_ssh_enabled", "source": "splunk", "title": "esxi", "techniques": ["T1021.004"],
+                           "background": [], "events": {"syslog shell": 1}}]}
+    check._haystack.clear()
+    with patch.object(ds, "load", return_value=mixed):
+        linux = {t["technique"]: t for t in check.overview(platforms=["linux"])}
+        esxi = {t["technique"]: t for t in check.overview(platforms=["esxi"])}
+    assert linux["T1021.004"]["logs"] == ["Linux auditd: EXECVE (command line)"] and linux["T1021.004"]["recordings"] == 1
+    assert esxi["T1021.004"]["platforms"] == ["esxi"]

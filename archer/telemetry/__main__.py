@@ -1,4 +1,4 @@
-"""python -m archer.telemetry --build [--source splunk|otrf|evtx]   (see archer.telemetry.datasets)"""
+"""python -m archer.telemetry --build [--source splunk|otrf|evtx|macos]   (see archer.telemetry.datasets)"""
 
 import argparse
 import json
@@ -8,7 +8,7 @@ import time
 
 from archer.telemetry import datasets as ds
 
-SOURCES = ("splunk", "otrf", "evtx")
+SOURCES = ("splunk", "otrf", "evtx", "macos")
 
 
 def _module(name):
@@ -16,6 +16,8 @@ def _module(name):
         from archer.telemetry import splunk_attack_data as m
     elif name == "evtx":
         from archer.telemetry import evtx_attack as m
+    elif name == "macos":
+        from archer.telemetry import macos_attack as m
     else:
         from archer.telemetry import security_datasets as m
     return m
@@ -59,7 +61,7 @@ def build(sources=SOURCES, log=print) -> dict:
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="Recorded attack telemetry (Splunk attack_data, Security-Datasets, EVTX-to-MITRE-Attack)")
+    p = argparse.ArgumentParser(description="Recorded attack telemetry (Splunk attack_data, Security-Datasets, EVTX-to-MITRE-Attack, macOS-ATTACK-DATASET)")
     p.add_argument("--build", action="store_true", help="download what changed and rebuild")
     p.add_argument("--source", choices=SOURCES, action="append", help="only this source (repeatable)")
     args = p.parse_args(argv)

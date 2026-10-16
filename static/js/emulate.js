@@ -17,6 +17,7 @@
     splunk: { name: 'Splunk attack_data', img: '/static/images/siem/splunk.png' },
     otrf: { name: 'Security-Datasets (OTRF)', img: '/static/images/brands/otrf.png' },
     evtx: { name: 'EVTX-to-MITRE-Attack', svg: EVTX_ICON },
+    macos: { name: 'macOS-ATTACK-DATASET', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>' },
   };
   const logo = (src, cls = 'em-logo') => {
     const s = SOURCES[src] || { name: src };
@@ -24,12 +25,20 @@
     return `<span class="${cls} is-${esc(src)}" title="${esc(s.name)}">${inner}</span>`;
   };
   const STATUS = { seen: 'Seen', not_seen: 'Not seen', no_recordings: 'No recordings', no_indicators: 'No indicators', noisy: 'Noisy indicator' };
+  const PLATFORM = { windows: 'Windows', linux: 'Linux', macos: 'macOS', esxi: 'ESXi', cloud: 'Cloud' };
+  const COLLECTION = { native: 'native', sysmon: 'Sysmon', edr: 'EDR', osquery: 'osquery', cloud: 'cloud' };
   const STATUS_ORDER = ['seen', 'not_seen', 'no_indicators', 'no_recordings', 'no_values'];
 
   const state = {
     view: 'technique', siem: page.dataset.siem || 'secops', q: '', page: 1, open: new Set(),
-    sel: { technique: new Set(), group: new Set(), source: new Set(), log: new Set(), seen: new Set() },
+    sel: { technique: new Set(), group: new Set(), source: new Set(), log: new Set(), collection: new Set(), platform: new Set(), seen: new Set() },
+    collectionTouched: false,
   };
+  // What a SIEM sees by default: SecOps gets the logs forwarded to it, and Sysmon is deployed far
+  // less than native logging; with Defender XDR, Sysmon's recordings stand in for the MDE sensor,
+  // which records the same process, file, network, registry and image-load activity itself
+  const DEFAULT_COLLECTIONS = { secops: ['native', 'edr', 'osquery', 'cloud'], mde: ['native', 'sysmon', 'edr', 'osquery', 'cloud'] };
+  const collectionsParam = () => `collections=${[...state.sel.collection].sort().join(',')}&platforms=${[...state.sel.platform].sort().join(',')}`;
   const data = { names: {}, techniques: null, sources: null, groups: [], checks: {}, groupTechs: {}, search: {}, details: {}, values: null };
   const siemKey = () => (state.siem === 'mde' ? 'mde' : 'udm');
   const siemName = () => (state.siem === 'mde' ? 'Defender XDR' : 'Google SecOps');
@@ -56,7 +65,7 @@
     else if (r.job.state === 'failed') setCheck('is-error', 'Error', r.job.error || '');
     else if (r.values) setCheck('is-ready', 'Ready', "Detections' indicators can be checked against the recordings");
     else setCheck('is-unavailable', 'Unavailable', "The recordings' field values aren't on this machine");
-    const order = ['splunk', 'otrf', 'evtx'];
+    const order = ['splunk', 'otrf', 'evtx', 'macos'];
     $('em-sources').innerHTML = Object.entries(r.sources).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([k, s]) => `<li>
       ${logo(k, 'em-source-logo')}
       <div><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>
@@ -84,7 +93,11 @@
 
   // ---------- Multiselect filters ----------
   const multis = {};
-  const options = { technique: [], group: [], source: [], log: [], seen: Object.entries(STATUS).map(([v, l]) => ({ value: v, label: l })) };
+  const options = {
+    technique: [], group: [], source: [], log: [], seen: Object.entries(STATUS).map(([v, l]) => ({ value: v, label: l })),
+    collection: [['native', 'Native OS logs'], ['sysmon', 'Sysmon'], ['edr', 'EDR'], ['osquery', 'osquery'], ['cloud', 'Cloud and SaaS']].map(([v, l]) => ({ value: v, label: l })),
+    platform: [['windows', 'Windows'], ['linux', 'Linux'], ['macos', 'macOS'], ['esxi', 'ESXi'], ['cloud', 'Cloud and SaaS']].map(([v, l]) => ({ value: v, label: l })),
+  };
 
   document.querySelectorAll('.em-ms').forEach(el => {
     const key = el.dataset.key;
@@ -142,7 +155,14 @@
   function changed(key) {
     multis[key].label();
     state.page = 1;
+    if (key === 'collection') state.collectionTouched = true;
+    if (key === 'collection' || key === 'platform') { reload(); return; }
     render();
+  }
+
+  function defaultCollections() {
+    state.sel.collection = new Set(DEFAULT_COLLECTIONS[state.siem] || DEFAULT_COLLECTIONS.secops);
+    multis.collection.label();
   }
 
   function sourceOptions() {
@@ -160,14 +180,22 @@
     searchTimer = setTimeout(() => { state.q = $('em-q').value.trim(); state.page = 1; render(); }, 350);
   });
   $('em-siem').value = state.siem;
-  $('em-siem').addEventListener('change', () => { state.siem = $('em-siem').value; sourceOptions(); state.page = 1; render(); });
+  $('em-siem').addEventListener('change', () => {
+    state.siem = $('em-siem').value;
+    state.page = 1;
+    if (!state.collectionTouched) { defaultCollections(); reload(); return; }
+    sourceOptions();
+    render();
+  });
   $('em-view').addEventListener('change', () => { state.view = $('em-view').value; state.page = 1; render(); });
   $('em-clear').addEventListener('click', () => {
     Object.values(state.sel).forEach(s => s.clear());
     Object.values(multis).forEach(m => m.label());
     $('em-q').value = state.q = '';
     state.page = 1;
-    render();
+    state.collectionTouched = false;
+    defaultCollections();
+    reload();
   });
   $('em-filters-toggle').addEventListener('click', () => {
     const body = $('em-filters-body');
@@ -255,7 +283,9 @@
 
   // By technique: every recorded technique, the logs most of its recordings hold, and their tables or event types
   function renderTechniques() {
-    $('em-view-note').innerHTML = `Every technique the labs recorded. <strong>Logs</strong> and <strong>${esc(siemName())}</strong> are what at least half its recordings hold. Select a row for each log and recording.`;
+    $('em-view-note').innerHTML = `Every technique the labs recorded. <strong>Logs</strong> and <strong>${esc(siemName())}</strong> are what at least half its recordings hold, counting only the logs chosen under <strong>Collection</strong>.
+      ${state.siem === 'mde' ? 'With Defender XDR, Sysmon\'s recordings stand in for the MDE sensor, which records the same activity without Sysmon installed.' : ''}
+      A technique none of whose recordings hold those logs is marked. Select a row for each log and recording.`;
     if (!data.techniques) return message('Loading…');
     const groupT = groupTechniques();
     const hits = searched();
@@ -266,6 +296,7 @@
       && (!groupT || groupT.has(t.technique))
       && (!s.source.size || anyIn(t[siemKey()], s.source))
       && (!s.log.size || anyIn(t.logs, s.log))
+      && (!s.platform.size || anyIn(t.platforms, s.platform))
       && (!hits || hits[t.technique]));
     shown(rows.length, data.techniques.length, 'technique');
     if (!rows.length) return message('No recorded technique matches the filters.');
@@ -274,11 +305,14 @@
       <tbody>${pageOf(rows).map(t => {
         const info = data.names[t.technique] || {};
         const open = state.open.has(t.technique);
-        return `<tr class="em-row${open ? ' is-open' : ''}" data-tid="${esc(t.technique)}" tabindex="0" aria-expanded="${open}">
+        const gap = !t.visible;
+        return `<tr class="em-row${open ? ' is-open' : ''}${gap ? ' is-gap' : ''}" data-tid="${esc(t.technique)}" tabindex="0" aria-expanded="${open}">
           <td><strong>${esc(t.technique)}</strong> ${esc(info.name || '')}${info.tactics ? `<br><small>${esc(info.tactics.join(', '))}</small>` : ''}
             ${hits ? `<br><small class="em-hit">Search found in: ${esc(hits[t.technique].join(', '))}</small>` : ''}</td>
-          <td class="em-nowrap">${t.recordings}<div class="em-logos">${Object.entries(t.sources).map(([k, n]) => `${logo(k)}<small>${n}</small>`).join('')}</div></td>
-          <td>${chips(t.logs, 4)}</td><td>${chips(t[siemKey()], 4)}</td></tr>
+          <td class="em-nowrap">${t.recordings}${t.visible !== t.recordings ? ` <small>· ${t.visible} in these logs</small>` : ''}
+            <div class="em-logos">${Object.entries(t.sources).map(([k, n]) => `${logo(k)}<small>${n}</small>`).join('')}</div>
+            <small>${esc(t.platforms.map(p => PLATFORM[p] || p).join(', '))}</small></td>
+          ${gap ? '<td colspan="2"><span class="em-gap">No recording holds the chosen logs</span></td>' : `<td>${chips(t.logs, 4)}</td><td>${chips(t[siemKey()], 4)}</td>`}</tr>
           ${open ? `<tr class="em-detail"><td colspan="4">${detail(t.technique)}</td></tr>` : ''}`;
       }).join('')}</tbody></table></div>`;
   }
@@ -288,7 +322,7 @@
     if (!r) {
       if (r === undefined) {
         data.details[tid] = null;
-        json(`/api/telemetry/technique/${encodeURIComponent(tid)}`).then(d => { data.details[tid] = d; render(); })
+        json(`/api/telemetry/technique/${encodeURIComponent(tid)}?${collectionsParam()}`).then(d => { data.details[tid] = d; render(); })
           .catch(e => { data.details[tid] = { error: e.message }; render(); });
       }
       return '<p class="ms-note">Loading…</p>';
@@ -298,12 +332,13 @@
     return `<table class="ms-table em-table em-sub">
         <thead><tr><th>Log</th><th>Recordings</th><th>Events</th><th>${esc(siemName())}</th></tr></thead>
         <tbody>${r.event_types.map(e => `<tr${e.common ? ' class="is-common" title="In 40% or more of a source\'s recordings, whatever the technique: lab background as much as the attack"' : ''}>
-          <td>${esc(e.label)}${e.common ? ' <span class="em-common">common</span>' : ''}</td><td>${e.recordings} of ${r.recordings.length}</td>
+          <td>${esc(e.label)} <span class="em-coll is-${esc(e.collection)}">${esc(COLLECTION[e.collection] || e.collection)}</span>${e.common ? ' <span class="em-common">common</span>' : ''}</td><td>${e.recordings} of ${r.visible}</td>
           <td>${e.events.toLocaleString()}</td><td>${e[key] ? `<code>${esc(e[key])}</code>` : '–'}</td></tr>`).join('')}</tbody>
       </table>
-      <details class="em-recs"><summary>${plural(r.recordings.length, 'recording')}</summary><ul>${r.recordings.map(d => `<li>
+      ${r.visible < r.recordings.length ? `<p class="ms-note">${r.recordings.length - r.visible} of ${plural(r.recordings.length, 'recording')} hold none of the chosen logs.</p>` : ''}
+      <details class="em-recs"><summary>${plural(r.recordings.length, 'recording')}</summary><ul>${r.recordings.map(d => `<li${d.visible ? '' : ' class="is-gap"'}>
         ${logo(d.source)} <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a>
-        <span>${esc(d.techniques.join(', '))} · ${plural(d.events, 'event')}</span></li>`).join('')}</ul></details>`;
+        <span>${esc(d.techniques.join(', '))} · ${esc((d.platforms || []).map(p => PLATFORM[p] || p).join(', '))} · ${plural(d.events, 'event')}</span></li>`).join('')}</ul></details>`;
   }
 
   // By group: each detection's indicators against its technique's recordings
@@ -327,12 +362,21 @@
     });
     if (groups.some(g => data.checks[g] === 'loading')) return message(`Checking ${esc(groups.join(', '))}…`);
     const errors = groups.map(g => data.checks[g].error).filter(Boolean);
-    const all = groups.flatMap(g => data.checks[g].detections || []).filter(d => !d.siem || d.siem === state.siem);
+    const allowed = state.sel.collection;
+    const platformsOf = Object.fromEntries((data.techniques || []).map(t => [t.technique, t.platforms]));
+    // Hits only in logs left out under Collection don't count
+    const all = groups.flatMap(g => data.checks[g].detections || []).filter(d => !d.siem || d.siem === state.siem).map(d => {
+      if (!allowed.size || d.status !== 'seen') return d;
+      const indicators = d.indicators.map(i => ({ ...i, seen: i.seen.filter(h => allowed.has(h.collection)) }));
+      const hits = indicators.flatMap(i => i.seen);
+      return { ...d, indicators, status: hits.length ? 'seen' : 'not_seen', events: [...new Set(hits.map(h => h.label))].sort() };
+    });
     const s = state.sel;
     const q = state.q.toLowerCase();
     const rows = all.filter(d => (!s.technique.size || s.technique.has(d.technique))
       && (!s.source.size || anyIn(d[siemKey()], s.source))
       && (!s.log.size || anyIn(d.events, s.log))
+      && (!s.platform.size || anyIn(platformsOf[d.technique], s.platform))
       && (!s.seen.size || s.seen.has(d.status) || (s.seen.has('noisy') && (d.indicators || []).some(i => i.noisy)))
       && (!q || (d.indicators || []).some(i => i.value.toLowerCase().includes(q))))
       .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || a.technique.localeCompare(b.technique));
@@ -366,10 +410,12 @@
     if (groupT === undefined) return message('Loading…');
     const s = state.sel;
     const all = data.sources[siemKey()];
+    const platformsOf = Object.fromEntries((data.techniques || []).map(t => [t.technique, t.platforms]));
     const rows = all.filter(d => (!s.source.size || s.source.has(d.name))
       && (!s.technique.size || anyIn(d.technique_ids, s.technique))
       && (!s.log.size || anyIn(d.logs, s.log))
-      && (!groupT || d.technique_ids.some(t => groupT.has(t))));
+      && (!groupT || d.technique_ids.some(t => groupT.has(t)))
+      && (!s.platform.size || d.technique_ids.some(t => anyIn(platformsOf[t], s.platform))));
     shown(rows.length, all.length, 'data source');
     if (!rows.length) return message('No data source matches the filters.');
     $('em-results').innerHTML = `<div class="ms-table-wrap"><table class="ms-table em-table">
@@ -408,12 +454,18 @@
   }
 
   // ---------- Loading ----------
+  let loading = 0;
   function reload() {
-    data.details = {}; data.search = {}; data.checks = {};
+    data.details = {}; data.search = {};
+    const mine = ++loading;
+    const q = `?${collectionsParam()}`;
+    data.techniques = data.sources = null;
+    render();
     return Promise.all([
-      json('/api/telemetry/techniques').then(r => { data.techniques = r.techniques; }).catch(() => { data.techniques = []; }),
-      json('/api/telemetry/data-sources').then(r => { data.sources = r; }).catch(() => { data.sources = { mde: [], udm: [] }; }),
+      json(`/api/telemetry/techniques${q}`).then(r => { if (mine === loading) data.techniques = r.techniques; }).catch(() => { data.techniques = []; }),
+      json(`/api/telemetry/data-sources${q}`).then(r => { if (mine === loading) data.sources = r; }).catch(() => { data.sources = { mde: [], udm: [] }; }),
     ]).then(() => {
+      if (mine !== loading) return;
       const logs = new Set();
       data.techniques.forEach(t => t.logs.forEach(l => logs.add(l)));
       setOptions('log', [...logs].sort().map(l => ({ value: l, label: l })));
@@ -449,6 +501,7 @@
   if (params.get('group')) { state.sel.group.add(params.get('group')); state.view = 'group'; multis.group.label(); }
   if (['technique', 'group', 'source'].includes(params.get('view'))) state.view = params.get('view');
   $('em-view').value = state.view;
+  defaultCollections();
   render();
   status();
   reload();

@@ -22,7 +22,7 @@ def test_views_filters_and_pages(authenticated_page, base_url):
     page.goto(f"{base_url}/emulate")
     assert page.locator(".em-page").get_attribute("data-signed-in") == "true"
     page.wait_for_selector(".em-check.is-ready, .em-check.is-unavailable", timeout=20000)
-    assert page.locator("#em-sources li").count() == 3
+    assert page.locator("#em-sources li").count() >= 3
     page.wait_for_selector("tr.em-row")
     assert page.locator("tr.em-row").count() == 20  # a page
     assert page.locator("#em-pager").is_visible()
@@ -43,6 +43,20 @@ def test_views_filters_and_pages(authenticated_page, base_url):
     page.fill("#em-q", "comsvcs")
     page.wait_for_selector(".em-hit")
     assert page.locator('tr.em-row[data-tid="T1003.001"]').count() == 1
+
+    # Native logs only: a technique Sysmon alone recorded is marked as a gap
+    page.click("#em-clear")
+    page.click('.em-ms[data-key="collection"] .em-ms-btn')
+    page.locator('.em-ms[data-key="collection"] input[value="sysmon"]').uncheck()
+    page.locator('.em-ms[data-key="collection"] input[value="edr"]').uncheck()
+    page.locator('.em-ms[data-key="collection"] input[value="osquery"]').uncheck()
+    page.click("h1")
+    page.wait_for_selector("tr.em-row")
+    page.click('.em-ms[data-key="platform"] .em-ms-btn')
+    page.locator('.em-ms[data-key="platform"] input[value="linux"]').check()
+    page.click("h1")
+    page.wait_for_selector("tr.em-row")
+    shot(page, "linux-native")
 
     # Data sources for the other SIEM
     page.click("#em-clear")

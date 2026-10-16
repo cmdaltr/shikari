@@ -73,15 +73,28 @@ def start_build(archer_session: Optional[str] = Cookie(None)):
     return {"started": True, "job": dict(_job)}
 
 
+def _collections(collections: str) -> Optional[list]:
+    """?collections=native,edr: the kinds of log that count (archer.telemetry.datasets.COLLECTIONS); all when absent."""
+    picked = [c for c in (collections or "").split(",") if c in ds.COLLECTIONS]
+    return picked or None
+
+
+def _platforms(platforms: str) -> Optional[list]:
+    """?platforms=linux,macos: only recordings from these platforms; all when absent."""
+    picked = [p for p in (platforms or "").split(",") if p in ds.PLATFORMS]
+    return picked or None
+
+
 @router.get("/technique/{tid}")
-def technique(tid: str):
-    return check.technique(tid)
+def technique(tid: str, collections: str = "", platforms: str = ""):
+    return check.technique(tid, _collections(collections), _platforms(platforms))
 
 
 @router.get("/techniques")
-def techniques():
+def techniques(collections: str = "", platforms: str = ""):
     """Every recorded technique with its recordings per source, logs and data sources."""
-    return {"techniques": check.overview()}
+    return {"techniques": check.overview(_collections(collections), _platforms(platforms)),
+            "collections": ds.COLLECTIONS, "platforms": ds.PLATFORMS}
 
 
 @router.get("/search")
@@ -94,8 +107,8 @@ def search(q: str):
 
 
 @router.get("/data-sources")
-def data_sources():
-    return check.by_data_source()
+def data_sources(collections: str = "", platforms: str = ""):
+    return check.by_data_source(_collections(collections), _platforms(platforms))
 
 
 @router.get("/groups")
