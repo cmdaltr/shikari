@@ -3254,6 +3254,7 @@ async def generate_cve(
             reference_iocs = {"ip": [], "domain": [], "hash": []}
             reference_sources = []
             reference_mentions = {}
+            exploit, exploit_sources = {}, []
             for cve in cve_ids:
                 # print(f"Researching {cve}...")
                 research = research_and_hunt(cve)
@@ -3269,6 +3270,12 @@ async def generate_cve(
                     reference_iocs.setdefault(ioc_type, []).extend(values)
                 reference_sources.extend(refs.get("sources") or [])
                 reference_mentions = merge_mentions(reference_mentions, refs.get("mentions"))
+                exp = research.get("exploit") or {}
+                for kind, values in (exp.get("indicators") or {}).items():
+                    exploit.setdefault(kind, []).extend(v for v in values if v not in exploit.get(kind, []))
+                exploit_sources.extend(exp.get("sources") or [])
+                # The shell run on the exploited host is a command indicator like any other
+                all_iocs["cmd"].extend((exp.get("indicators") or {}).get("cmd", []))
 
             # Exploitation indicators from the advisories and write-ups: one sweep per SIEM.
             # For an appliance CVE (PAN-OS, Ivanti, Citrix) these are the detections there are.
@@ -3281,6 +3288,14 @@ async def generate_cve(
             if sweeps:
                 print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
             write_progress(group_name, {"ioc_sweeps": len(sweeps)})
+
+            # The exploit's own request, from the PoCs: the CVE-specific T1190 detection
+            from archer.build.exploit_detection import write_exploit_detections
+
+            exploits = write_exploit_detections(group_name, cve_ids, exploit, exploit_sources, GENERATE_DIR,
+                                                excluded_vendors=siem_args.get("excluded_vendors"))
+            if exploits:
+                print(f"Exploit request detections: {', '.join(os.path.basename(p) for p in exploits)}")
 
             # Deduplicate
             all_techniques = list(set(all_techniques))

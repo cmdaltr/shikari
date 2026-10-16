@@ -53,6 +53,9 @@ class CVEHunter:
             if "mentions" not in (cached.get("reference_iocs") or {}):  # cached before references were read
                 cached["reference_iocs"] = self._reference_iocs(cached.get("nvd_data") or {})
                 self._cache_research(cve_id, cached)
+            if "exploit" not in cached:  # cached before exploit requests were read
+                cached["exploit"] = self._exploit(cached.get("nvd_data") or {}, cached.get("pocs") or [])
+                self._cache_research(cve_id, cached)
             return cached
 
         result = {
@@ -96,6 +99,7 @@ class CVEHunter:
         result["techniques"] = self._map_to_attack(result)
         result["iocs"] = self._extract_iocs(result)
         result["reference_iocs"] = self._reference_iocs(result["nvd_data"])
+        result["exploit"] = self._exploit(result["nvd_data"], result["pocs"])
 
         # 5. Generate detection queries
         result["detection_queries"] = self._generate_detection_queries(result)
@@ -535,6 +539,51 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
                 sources.append(url)
                 mentions = merge_mentions(mentions, page.get("ioc_mentions"))
         return {"iocs": merged, "sources": sources, "mentions": mentions}
+
+    MAX_POC_READMES = 5
+
+    def _exploit(self, nvd_data: Dict, pocs: List[Dict]) -> Dict[str, Any]:
+        """
+        The exploit request (from PoC READMEs) and the shell run after it (from the
+        write-ups' code blocks): see archer.build.exploit_detection.
+        """
+        from bs4 import BeautifulSoup
+
+        from archer.build.exploit_detection import exploit_indicators
+        from archer.parsers.blog_analyzer import _fetch_public_url
+
+        headers = {"Accept": "application/vnd.github.raw"}
+        if self.github_token:
+            headers["Authorization"] = f"token {self.github_token}"
+        poc_texts, sources = [], []
+        repos = [p for p in pocs if p.get("type") == "github" and p.get("source")]
+        for poc in sorted(repos, key=lambda p: -(p.get("stars") or 0))[: self.MAX_POC_READMES]:
+            try:
+                r = requests.get(f"https://api.github.com/repos/{poc['source']}/readme", headers=headers, timeout=10)
+                if r.ok:
+                    poc_texts.append(r.text)
+                    sources.append(poc.get("url") or poc["source"])
+            except Exception as e:
+                print(f"Could not read PoC README {poc['source']}: {e}")
+        code, read = [], 0
+        for url in dict.fromkeys(nvd_data.get("references") or []):
+            if read >= self.MAX_REFERENCE_PAGES:
+                break
+            if not url or any(h in url.lower() for h in self._NO_INDICATOR_HOSTS):
+                continue
+            read += 1
+            try:
+                soup = BeautifulSoup(_fetch_public_url(url, timeout=20).text, "html.parser")
+            except Exception:
+                continue
+            # <pre>, or a <code> long enough to be a command rather than a name in prose
+            blocks = [b.get_text("\n") for b in soup.find_all(["pre", "code"])
+                      if b.name == "pre" or len(b.get_text()) > 40]
+            # Write-ups also show requests in their code blocks
+            poc_texts.extend(blocks)
+            code.extend(blocks)
+        found = exploit_indicators(poc_texts, code)
+        return {"indicators": found, "sources": sources if found.get("paths") else []}
 
     def _extract_from_text(self, text: str, iocs: Dict) -> Dict:
         """Extract IOCs from arbitrary text."""

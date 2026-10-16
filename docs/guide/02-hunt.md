@@ -10,10 +10,15 @@ A name ATT&CK doesn't know opens the [Manual](13-manual.md) page instead, so you
 
 ## CVE
 
-Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. Each must look like `CVE-20YY-NNNN`. Archer reads the CVE's record from the NVD and builds two kinds of query:
+Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. Each must look like `CVE-20YY-NNNN`. Archer reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds three kinds of query:
 
-- **Exploitation detections**: the behaviour of exploiting it, mapped to ATT&CK.
-- **IOC sweeps**: the indicators published in the CVE's references (hashes, IPs, domains).
+| Query | From | What it matches |
+|---|---|---|
+| Exploit request (**T1190**) | The PoCs' HTTP requests | Requests to the vulnerable path in HTTP logs: Defender XDR's inspected inbound HTTP on an onboarded server, Google SecOps `NETWORK_HTTP` events from a proxy, WAF or the appliance. High severity when the payload (`../`, `${jndi:`) is in the URL; low when it travels in a cookie or the body, which these logs don't keep, so the query also matches normal use of that path |
+| Exploitation detections | ATT&CK and the write-ups | The behaviour of exploiting it, including the shell the write-ups show running afterwards (`wget -qO- http://… \| bash`) |
+| IOC sweeps | The references | The hashes, IPs and domains the advisories and write-ups publish |
+
+For an appliance (PAN-OS, Ivanti, Citrix) no EDR runs where the exploit lands, so the exploit request and the sweep are the queries that can see it.
 
 ## ATT&CK techniques
 

@@ -28,7 +28,9 @@ def group_yaml_files(group_name: str, generate_dir: str) -> List[str]:
     tags = {f"{group_name} (Group)", f"{safe_group} (Group)"}
     bespoke = re.compile(rf"^threat_groups:\n(?:- .*\n)*?- {re.escape(group_name)}$", re.M)
     named = {os.path.basename(p) for p in glob.glob(os.path.join(generate_dir, f"{safe_group}_*.yaml"))}
-    named |= {os.path.basename(p) for p in glob.glob(os.path.join(generate_dir, f"IOCSweep{re.sub(r'[^A-Za-z0-9]+', '', group_name)}_*.yaml"))}
+    compact = re.sub(r'[^A-Za-z0-9]+', '', group_name)
+    for prefix in ("IOCSweep", "Exploit"):  # ioc_sweep, exploit_detection
+        named |= {os.path.basename(p) for p in glob.glob(os.path.join(generate_dir, f"{prefix}{compact}_*.yaml"))}
     files = []
     for path in sorted(glob.glob(os.path.join(generate_dir, "*.yaml"))):
         if os.path.basename(path) in named:
