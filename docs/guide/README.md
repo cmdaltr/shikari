@@ -32,7 +32,7 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Data and updates | — | What Archer downloads, when, and where it keeps it | [Data and updates](18-data-and-updates.md) |
 | Terms | — | ATT&CK, IOC, correlation, OSINT and the rest | [Glossary](glossary.md) |
 
-Emulate (Build → Emulate) is marked **Soon**: adversary emulation isn't available yet.
+Emulate (Build → Emulate) is marked **Soon**: adversary emulation isn't available yet. The plan is feature request [#22](https://github.com/cmdaltr/archer/issues/22).
 
 ## Which SIEMs
 
