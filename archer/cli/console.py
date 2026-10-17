@@ -26,9 +26,6 @@ class ArcherConsole(cmd.Cmd):
     def _setup_history(self):
         """Configure readline history."""
         histfile = os.path.expanduser("~/.archer-cli_history")
-        old = os.path.expanduser("~/.adfconsole_history")  # the console's name before 2026-10-17
-        if os.path.exists(old) and not os.path.exists(histfile):
-            os.replace(old, histfile)
         try:
             readline.read_history_file(histfile)
         except OSError:
