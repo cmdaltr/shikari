@@ -9,7 +9,7 @@ The tooling is in Archer (`scripts/telemetry/record-atomics.ps1`, `python -m arc
 | **Your lab** on the Emulate page | A run copied into `data/telemetry/lab/` (part 7) |
 | Genuine Defender XDR rows (`MDE Device…` logs) | A machine onboarded to Defender (part 2) and `--mde-export` (part 6) |
 | macOS unified log, Endpoint Security and plist recordings | The macOS VM (part 5) |
-| `archer.py emulate`, the console's `emulate` module, **Run Emulation** on Results | Running atomics from Archer itself, which this replaces for now |
+| `archer-cli offline emulate`, the console's `emulate` module, **Run Emulation** on Results | Running atomics from Archer itself, which this replaces for now |
 
 The atomics change the machines they run on. Run them only on VMs you can throw away, and take a snapshot first.
 

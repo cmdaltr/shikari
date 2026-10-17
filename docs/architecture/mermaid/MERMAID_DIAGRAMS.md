@@ -267,8 +267,8 @@ This is the full journey from "I want detections for Scattered Spider" to finish
 flowchart TD
     subgraph "Entry Points"
         WEB(["Web UI"])
-        CLI(["archer.py CLI"])
-        ADF(["adfconsole<br/><i>Interactive Shell</i>"])
+        CLI(["archer-cli offline"])
+        ADF(["archer-cli console<br/><i>Interactive Shell</i>"])
     end
 
     WEB --> START
@@ -367,8 +367,8 @@ graph TB
     subgraph IFACE ["Interfaces"]
         direction LR
         WEB["Web UI<br/>server-rendered"]
-        CON["adfconsole"]
-        CLI["archer.py · archer CLI"]
+        CON["archer-cli console"]
+        CLI["archer-cli"]
         MCP["MCP server"]
     end
 

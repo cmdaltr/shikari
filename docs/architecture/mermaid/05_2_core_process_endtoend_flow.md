@@ -7,8 +7,8 @@ The full end-to-end journey from submitting a threat actor name to getting finis
 flowchart TD
     subgraph "Entry Points"
         WEB(["Web UI"])
-        CLI(["archer.py CLI"])
-        ADF(["adfconsole<br/><i>Interactive Shell</i>"])
+        CLI(["archer-cli offline"])
+        ADF(["archer-cli console<br/><i>Interactive Shell</i>"])
     end
 
     WEB --> START

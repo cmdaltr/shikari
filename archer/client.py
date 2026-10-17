@@ -1,7 +1,7 @@
 """
 HTTP client for a running Archer server.
 
-The console (adfconsole), the MCP server and the agents drive Archer through this
+The console (archer-cli console), the MCP server and the agents drive Archer through this
 rather than importing the route logic, so every surface runs the same code as the web
 app: profile AI assignment and call cap, IOC sweeps, IOC flow, latest-run view.
 
@@ -79,7 +79,7 @@ class ArcherClient:
         try:
             page = self.session.get(f"{self.url}/login", timeout=15)
         except requests.ConnectionError:
-            raise ArcherError(f"Archer isn't running at {self.url} (start it with `archer start`, or set ARCHER_URL)")
+            raise ArcherError(f"Archer isn't running at {self.url} (start it with `archer-cli start`, or set ARCHER_URL)")
         token = re.search(r'name="csrf_token"\s+value="([^"]+)"', page.text)
         if not token:
             raise ArcherError("The login page had no CSRF token")
@@ -98,7 +98,7 @@ class ArcherClient:
         try:
             r = self.session.request(method, f"{self.url}{path}", **kwargs)
         except requests.ConnectionError:
-            raise ArcherError(f"Archer isn't running at {self.url} (start it with `archer start`, or set ARCHER_URL)")
+            raise ArcherError(f"Archer isn't running at {self.url} (start it with `archer-cli start`, or set ARCHER_URL)")
         if r.status_code == 401:
             raise ArcherError("Invalid or revoked API token" if "Authorization" in self.session.headers
                               else "Not signed in (session expired?)")

@@ -69,7 +69,7 @@ platforms:
     index_pattern: "logs-*"
 
 # ---------------------------------------------------------------------------
-# LLM Configuration (for --llm mode in adfconsole / archer.py generate)
+# LLM Configuration (for --llm mode in archer-cli console / archer-cli offline generate)
 # ---------------------------------------------------------------------------
 # Provider options: anthropic | openai | azure | copilot | local
 #

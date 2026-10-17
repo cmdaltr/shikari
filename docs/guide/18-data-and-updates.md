@@ -17,7 +17,7 @@ Archer downloads public data, keeps it up to date by itself, and stores everythi
 | Your lab's recordings | `scripts/telemetry/record-atomics.ps1` on your test machines | When you add a run | `data/telemetry/lab/` (never committed) |
 | World map, flags | Natural Earth; flag-icons (MIT) | Committed; rebuilt only by `scripts/data/` | `static/images/`, `static/vendor/flag-icons/` |
 
-Starting with `archer start --skip-index` skips rebuilding the OSINT technique index, for a faster start.
+Starting with `archer-cli start --skip-index` skips rebuilding the OSINT technique index, for a faster start.
 
 ## What you make
 

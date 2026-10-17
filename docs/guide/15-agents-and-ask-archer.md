@@ -27,4 +27,4 @@ It uses the provider assigned to Ask Archer in Profile → API Keys → AI Assig
 
 **How this agent is built** shows each agent's instructions, its tools, and which tools need approval.
 
-The same agents are in the console (`agent/repair`, `agent/ask`, `agent/triage`) and in any MCP client through `archer-mcp`. The design, the loop and the checks are explained in [Agents in Archer](../agents/README.md).
+The same agents are in the console (`agent/repair`, `agent/ask`, `agent/triage`) and in any MCP client through `archer-cli mcp`. The design, the loop and the checks are explained in [Agents in Archer](../agents/README.md).

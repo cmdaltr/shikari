@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-status-archer.py: Show whether Archer and Ollama are running (archer status).
+status-archer.py: Show whether Archer and Ollama are running (archer-cli status).
 Kept for older instructions; the implementation is archer/service.py, which `archer` runs.
 """
 

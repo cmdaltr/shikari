@@ -22,11 +22,11 @@ Set the variables for your provider and run:
 ```bash
 # Anthropic Claude
 export ANTHROPIC_API_KEY="sk-ant-..."
-./adfconsole
-adfconsole > use generate
-adfconsole (generate) > set GROUP APT29
-adfconsole (generate) > set MODE llm
-adfconsole (generate) > run
+archer-cli console
+archer-cli > use generate
+archer-cli (generate) > set GROUP APT29
+archer-cli (generate) > set MODE llm
+archer-cli (generate) > run
 
 # OpenAI / ChatGPT
 export OPENAI_API_KEY="sk-..."
@@ -161,18 +161,18 @@ ollama serve
 
 # Configure Archer
 export LLM_ENDPOINT="http://localhost:11434"
-./adfconsole
-adfconsole > use generate
-adfconsole (generate) > set MODE llm
-adfconsole (generate) > set GROUP APT29
-adfconsole (generate) > run
+archer-cli console
+archer-cli > use generate
+archer-cli (generate) > set MODE llm
+archer-cli (generate) > set GROUP APT29
+archer-cli (generate) > run
 ```
 
 ## Resolution Order
 
 When `--llm` mode is used, Archer resolves the LLM provider in this order:
 
-1. **Explicit config** passed via code (API/adfconsole)
+1. **Explicit config** passed via code (API/archer-cli console)
 2. **`bespoke/config.yaml`** → `llm:` section
 3. **Environment variables** (auto-detected by provider)
 

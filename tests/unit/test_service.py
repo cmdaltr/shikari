@@ -1,4 +1,4 @@
-"""archer start/stop/status (archer/service.py): crash restarts and the Ollama models folder."""
+"""archer-cli start/stop/status (archer/service.py): crash restarts and the Ollama models folder."""
 
 import importlib.util
 import sys

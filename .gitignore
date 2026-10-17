@@ -173,7 +173,7 @@ restore-elastic-splunk.patch
 # UI walkthrough run output
 tests/screenshots/walkthrough/
 
-# archer start/stop supervisor state (archer/service.py)
+# archer-cli start/stop supervisor state (archer/service.py)
 data/run/
 logs/
 

@@ -11518,11 +11518,11 @@ def main():
     Archer CLI entry point.
 
     Usage:
-      archer                        Start the Archer server (default: port 8000)
-      archer --port 8001            Start on a custom port
-      archer --host 0.0.0.0         Bind to all interfaces
-      archer --reload               Enable auto-reload (development)
-      archer clear-cache            Clear server-side caches and reset browser preferences
+      archer-cli serve              Start the Archer server (default: port 8000)
+      archer-cli serve --port 8001  Start on a custom port
+      archer-cli serve --host 0.0.0.0  Bind to all interfaces
+      archer-cli serve --reload     Enable auto-reload (development)
+      archer-cli clear-cache        Clear server-side caches and reset browser preferences
     """
     import sys
     import argparse
@@ -11538,7 +11538,7 @@ def main():
         return
 
     parser = argparse.ArgumentParser(
-        prog="archer",
+        prog="archer-cli serve",
         description="Archer – Threat Detection Engineering Platform",
     )
     parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")

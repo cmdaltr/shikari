@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# archer: start, stop, restart and check the local Archer server (and Ollama) from anywhere.
-# `./archer-cli install` links this file into ~/bin as `archer`. The work is in archer/service.py.
+# archer-cli: Archer's one command: the server (and Ollama), the console, preview, MCP and the
+# offline pipeline. `./archer-cli install` links this file into ~/bin. The work is in archer/service.py.
 set -euo pipefail
 
 self="${BASH_SOURCE[0]}"

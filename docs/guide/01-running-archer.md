@@ -4,18 +4,18 @@ Installation (Docker or local Python, mapping files, bespoke settings) is in [GE
 
 ## Start, stop and check
 
-Install the `archer` command once, then use it for everything:
+Install the `archer-cli` command once, then use it for everything:
 
 ```bash
-./archer-cli install      # once: puts `archer` on your PATH (~/bin)
-archer start              # start in the background
-archer status             # what's running, and on which port
-archer logs -f            # follow the log
-archer restart            # stop, then start
-archer stop               # stop Archer, and the Ollama it started
+./archer-cli install  # once: puts `archer-cli` on your PATH (~/bin)
+archer-cli start      # start in the background
+archer-cli status     # what's running, and on which port
+archer-cli logs -f    # follow the log
+archer-cli restart    # stop, then start
+archer-cli stop       # stop Archer, and the Ollama it started
 ```
 
-`archer start` runs a small supervisor. It starts the web server and, if Ollama is installed but not running, `ollama serve` too. If either stops, the supervisor starts it again, waiting 1 second at first and up to 60 seconds after repeated failures. It gives up after six failed starts in a row (usually a port already in use).
+`archer-cli start` runs a small supervisor. It starts the web server and, if Ollama is installed but not running, `ollama serve` too. If either stops, the supervisor starts it again, waiting 1 second at first and up to 60 seconds after repeated failures. It gives up after six failed starts in a row (usually a port already in use).
 
 | Option | What it does | Remembered |
 |---|---|---|
@@ -25,7 +25,17 @@ archer stop               # stop Archer, and the Ollama it started
 | `--ollama-models DIR` | Where Ollama keeps its models (an external drive that isn't mounted falls back to Ollama's default folder) | Yes |
 | `--skip-index` | Don't rebuild the OSINT technique index first: a faster start | No |
 
-`archer serve` runs the server in the foreground with no supervisor. `archer docker ...` runs `docker compose` with the project's compose file.
+`archer-cli serve` runs the server in the foreground with no supervisor. `archer-cli docker ...` runs `docker compose` with the project's compose file.
+
+The same command covers everything else Archer does from a terminal:
+
+| Command | What it does |
+|---|---|
+| `archer-cli console` | The interactive console: [Console, API and MCP](17-console-api-mcp.md) |
+| `archer-cli preview <group>` | A group's queries on stdout, nothing written (`--siem`, `--index`, `--limit`, `--output`) |
+| `archer-cli mcp` | Archer's tools for an MCP client, over stdio |
+| `archer-cli offline generate\|correlate\|hunt\|emulate` | The pipeline without the server: [USAGE.md](../USAGE.md) |
+| `archer-cli clear-cache` | Clear server-side caches and reset browser preferences |
 
 ## Signing in
 

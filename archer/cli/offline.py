@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 """
-Command-line interface for Archer functionality.
-Run this script directly to access core features without starting the web server.
+archer-cli offline: the pipeline without the server (generate, correlate, hunt, emulate),
+writing to data/groups as the server would.
 """
 
 import importlib.util
@@ -11,7 +10,7 @@ import argparse
 from pathlib import Path
 
 # Add the project root to the path so we can import our modules
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
 def process_group(group_name, hypothesis=None, manual_data=None, run_correlation=False):
@@ -454,7 +453,8 @@ def run_emulation(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Archer CLI - Threat hunting detection generator",
+        prog="archer-cli offline",
+        description="The Archer pipeline without the server",
         epilog="""
 Typical workflow: generate → correlate
 

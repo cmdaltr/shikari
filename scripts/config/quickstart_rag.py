@@ -285,7 +285,7 @@ def print_completion():
     print("     python scripts/config/search_similar_detections.py --technique T1003.001 --show-query")
     print()
     print("  3. Generate enhanced detections:")
-    print("     python archer.py generate APT29")
+    print("     archer-cli offline generate APT29")
     print()
     print("  4. Read the documentation:")
     print("     docs/rag/FIDELITY_IMPLEMENTATION_GUIDE.md")
@@ -341,7 +341,7 @@ Steps:
 
     # Check if running from project root
     root = get_project_root()
-    if not (root / "archer.py").exists():
+    if not (root / "archer-cli").exists():
         print_error("Please run this script from the archer project root directory")
         sys.exit(1)
 

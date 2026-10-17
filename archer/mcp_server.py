@@ -93,7 +93,7 @@ def main() -> None:
     try:
         client.login()  # fail now with a clear message rather than on the first tool call
     except ArcherError as e:
-        print(f"archer-mcp: {e}", file=sys.stderr)
+        print(f"archer-cli mcp: {e}", file=sys.stderr)
         sys.exit(1)
     server = build_server(client)
 

@@ -18,7 +18,6 @@ COPY templates/ ./templates/
 COPY static/ ./static/
 COPY scripts/ ./scripts/
 COPY data/ ./data/
-COPY archer.py .
 
 # Make Python entrypoint executable
 RUN chmod +x scripts/deployment/docker_entrypoint.py

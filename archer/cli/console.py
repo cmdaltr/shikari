@@ -16,7 +16,7 @@ class AdfConsole(cmd.Cmd):
     """Metasploit-style interactive console for Archer."""
 
     intro = ""
-    prompt = "\033[1;36madfconsole\033[0m > "
+    prompt = "\033[1;36marcher-cli\033[0m > "
 
     def __init__(self):
         super().__init__()
@@ -25,7 +25,10 @@ class AdfConsole(cmd.Cmd):
 
     def _setup_history(self):
         """Configure readline history."""
-        histfile = os.path.expanduser("~/.adfconsole_history")
+        histfile = os.path.expanduser("~/.archer-cli_history")
+        old = os.path.expanduser("~/.adfconsole_history")  # the console's name before 2026-10-17
+        if os.path.exists(old) and not os.path.exists(histfile):
+            os.replace(old, histfile)
         try:
             readline.read_history_file(histfile)
         except OSError:
@@ -46,9 +49,9 @@ class AdfConsole(cmd.Cmd):
 
     def postcmd(self, stop, line):
         if self.current_module:
-            self.prompt = f"\033[1;36madfconsole\033[0m (\033[1;33m{self.current_module.name}\033[0m) > "
+            self.prompt = f"\033[1;36marcher-cli\033[0m (\033[1;33m{self.current_module.name}\033[0m) > "
         else:
-            self.prompt = "\033[1;36madfconsole\033[0m > "
+            self.prompt = "\033[1;36marcher-cli\033[0m > "
         return stop
 
     # ------------------------------------------------------------------
@@ -235,7 +238,7 @@ class AdfConsole(cmd.Cmd):
 
     def do_exit(self, arg):
         """Exit the ADF console."""
-        print("  Exiting adfconsole...")
+        print("  Exiting the console...")
         return True
 
     def do_quit(self, arg):
@@ -290,12 +293,12 @@ class AdfConsole(cmd.Cmd):
 
 
 def main():
-    """Entry point for the adfconsole command."""
+    """Entry point for archer-cli console."""
     console = AdfConsole()
     try:
         console.cmdloop()
     except KeyboardInterrupt:
-        print("\n  Exiting adfconsole...")
+        print("\n  Exiting the console...")
 
 
 if __name__ == "__main__":

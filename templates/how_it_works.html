@@ -769,16 +769,16 @@
             <div class="workflow-step">
                 <h4>Available CLI Commands</h4>
                 <pre><code># Generate detections for a threat group
-python archer.py process_group "APT29"
+archer-cli offline generate "APT29"
 
-# Generate single technique detection
-python archer.py generate_detection T1003.001
+# Generate detections for one technique (name or ID)
+archer-cli offline hunt T1003.001
 
 # Build correlation rules
-python archer.py build_correlations "APT29"
+archer-cli offline correlate "APT29"
 
-# Run adversary emulation (Atomic Red Team)
-python archer.py run_emulation "APT29" --mode simulate</code></pre>
+# Adversary emulation (coming soon)
+archer-cli offline emulate "APT29"</code></pre>
             </div>
 
             <div class="workflow-step">
@@ -1185,7 +1185,7 @@ AI recognizes this as:
             </table>
             <p style="line-height: 1.6;">
                 Run them from the <a href="/agents" style="color: #C53030;">Agents</a> page, the console
-                (<code>use agent/repair</code>) or any MCP client: <code>archer-mcp</code> exposes the same tools and the
+                (<code>use agent/repair</code>) or any MCP client: <code>archer-cli mcp</code> exposes the same tools and the
                 agents' prompts to Claude Code, Claude Desktop or your own agent. <code>examples/agents/minimal_agent.py</code>
                 is a complete agent in about 100 lines. Full guide: <code>docs/agents/README.md</code>.
             </p>

@@ -237,10 +237,7 @@ Repository = "https://github.com/yourusername/archer"
 Issues = "https://github.com/yourusername/archer/issues"
 
 [project.scripts]
-archer = "archer.app:main"
-adfconsole = "archer.cli.console:main"
-archer-preview = "archer.cli.preview:main"
-archer-mcp = "archer.mcp_server:main"
+archer-cli = "archer.service:main"
 
 [tool.setuptools]
 packages = ["archer"]

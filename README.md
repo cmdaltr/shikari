@@ -19,15 +19,15 @@ Archer automates threat hunting and detection engineering from MITRE ATT&CK. Giv
 ### Running Archer
 
 ```bash
-./archer-cli install      # once: links `archer` into ~/bin
-archer start              # background; restarts Archer (and Ollama) if they crash
-archer status
-archer logs -f
-archer restart
-archer stop
+./archer-cli install  # once: links `archer-cli` into ~/bin
+archer-cli start      # background; restarts Archer (and Ollama) if they crash
+archer-cli status
+archer-cli logs -f
+archer-cli restart
+archer-cli stop
 ```
 
-`archer start` runs a small supervisor (`archer/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `archer serve` runs the server in the foreground without the supervisor; `archer docker ...` is `docker compose` with the project's compose file.
+`archer-cli start` runs a small supervisor (`archer/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `archer-cli serve` runs the server in the foreground without the supervisor; `archer-cli docker ...` is `docker compose` with the project's compose file. The same command has the console (`archer-cli console`), a dry-run preview (`archer-cli preview <group>`), the MCP server (`archer-cli mcp`) and the pipeline without the server (`archer-cli offline generate|correlate|hunt`).
 
 ---
 <br>
@@ -52,9 +52,9 @@ archer stop
 - 🔬 **Research Tab** - Actor technique consolidation with keyword/country filtering, tactic filtering, and professional XLSX export
 - 💬 **Ask Archer** - Conversational Q&A panel for ATT&CK questions and SIEM query generation
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
-- 🖥️ **Interactive Console (`adfconsole`)** - Metasploit-style interactive shell with module selection, options, tab-completion
+- 🖥️ **Interactive Console (`archer-cli console`)** - Metasploit-style interactive shell with module selection, options, tab-completion
 - 🤖 **Agents** - Detection repair, Ask Archer with tools, and intel triage: a model in a loop with Archer's tools, with approval for anything that changes something ([docs](docs/agents/README.md))
-- 🔌 **MCP Server (`archer-mcp`)** - Archer's tools and agent prompts for Claude Code, Claude Desktop or any MCP client
+- 🔌 **MCP Server (`archer-cli mcp`)** - Archer's tools and agent prompts for Claude Code, Claude Desktop or any MCP client
 - 🎯 **RAG Fidelity Enhancement** - Improve query quality using 3,400+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
 
@@ -122,7 +122,7 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 
 **Quick Links:**
 - **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](GETTING_STARTED.md#step-4-configure-mapping-files-critical) | [User Guide](docs/guide/README.md)
-- **Interactive Console:** [adfconsole Guide](#-interactive-console-adfconsole)
+- **Interactive Console:** [archer-cli console Guide](#-interactive-console-archer-cli-console)
 - **Usage:** [Where everything is, and the CLI](docs/USAGE.md) | [Auto-Generated API Docs](http://localhost:8000/docs)
 - **Research:** [Actor consolidation and XLSX export](docs/guide/05-research.md)
 - **Threat Briefing:** [On the Results page](docs/guide/06-results.md) | [API Reference](docs/features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
@@ -145,14 +145,14 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 ---
 <br>
 
-## 🖥️ Interactive Console (adfconsole)
+## 🖥️ Interactive Console (archer-cli console)
 
-`adfconsole` is a Metasploit-style interactive shell for building detection queries, running correlations and hunting techniques.
+`archer-cli console` is a Metasploit-style interactive shell for building detection queries, running correlations and hunting techniques.
 
 ### Launch
 
 ```bash
-./adfconsole
+archer-cli console
 ```
 
 ### Modules
@@ -203,16 +203,16 @@ Tab-completion is supported for commands, module names, option names, and option
 ### Example Session
 
 ```
-$ ./adfconsole
+$ archer-cli console
 
-adfconsole > use generate
-adfconsole (generate) > set GROUP APT29
+archer-cli > use generate
+archer-cli (generate) > set GROUP APT29
   GROUP => APT29
-adfconsole (generate) > set MODE llm
+archer-cli (generate) > set MODE llm
   MODE => llm
-adfconsole (generate) > set CORRELATE true
+archer-cli (generate) > set CORRELATE true
   CORRELATE => True
-adfconsole (generate) > show options
+archer-cli (generate) > show options
 
   Module options (generate):
 
@@ -226,7 +226,7 @@ adfconsole (generate) > show options
   OSINT                False                     no         Enable OSINT enhancement
   OSINT_COMPARE        False                     no         Enable OSINT comparison
 
-adfconsole (generate) > run
+archer-cli (generate) > run
 [*] Generating detections for APT29 (mode: llm)
 ...
 ```
@@ -243,10 +243,10 @@ Search across three domains from the console:
 | `all` | All three domains |
 
 ```
-adfconsole > search mitre PowerShell
-adfconsole > search library APT29
-adfconsole > search bespoke credential
-adfconsole > search all T1059
+archer-cli > search mitre PowerShell
+archer-cli > search library APT29
+archer-cli > search bespoke credential
+archer-cli > search all T1059
 ```
 
 Results are colour-coded by type (technique, group, software, detection, correlation, reference) with highlighted search terms.
@@ -254,9 +254,9 @@ Results are colour-coded by type (technique, group, software, detection, correla
 ### Server Module Example
 
 ```
-adfconsole > use hunt/cve
-adfconsole (hunt/cve) > set CVE CVE-2024-3400
-adfconsole (hunt/cve) > run
+archer-cli > use hunt/cve
+archer-cli (hunt/cve) > set CVE CVE-2024-3400
+archer-cli (hunt/cve) > run
   Run started: CVE-2024-3400
   … detections
   … complete

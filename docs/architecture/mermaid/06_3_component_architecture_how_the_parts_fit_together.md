@@ -8,8 +8,8 @@ graph TB
     subgraph IFACE ["Interfaces"]
         direction LR
         WEB["Web UI<br/>server-rendered"]
-        CON["adfconsole"]
-        CLI["archer.py · archer CLI"]
+        CON["archer-cli console"]
+        CLI["archer-cli"]
         MCP["MCP server"]
     end
 

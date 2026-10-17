@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-restart-archer.py: Restart Archer in the background (archer restart).
+restart-archer.py: Restart Archer in the background (archer-cli restart).
 Kept for older instructions; the implementation is archer/service.py, which `archer` runs.
 """
 

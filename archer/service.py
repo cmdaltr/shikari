@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 """
-archer start | stop | restart | status | logs: run Archer (and Ollama) in the background
-under a supervisor that restarts them when they crash.
+archer-cli: Archer's one command. start | stop | restart | status | logs run Archer (and
+Ollama) in the background under a supervisor that restarts them when they crash; console,
+preview, mcp and offline hand over to the tools in archer/cli and archer/mcp_server.py.
 
 Run as a file (python archer/service.py ...), not as archer.service: importing the archer
 package loads the whole app, and stop/status should work even when the app is broken.
 Standard library only.
 
-    archer start [--port 8000] [--no-reload] [--no-ollama] [--ollama-models DIR] [--skip-index]
-    archer stop
-    archer restart [same options as start]
-    archer status
-    archer logs [archer|ollama|supervisor] [-f] [-n 100]
-    archer run [options]          supervise in the foreground (Ctrl+C stops everything)
-    archer install                put `archer` on your PATH (~/bin, or ~/.local/bin)
-    archer docker <args>          docker compose with the project's docker-compose.yml
+    archer-cli start [--port 8000] [--no-reload] [--no-ollama] [--ollama-models DIR] [--skip-index]
+    archer-cli stop
+    archer-cli restart [same options as start]
+    archer-cli status
+    archer-cli logs [archer|ollama|supervisor] [-f] [-n 100]
+    archer-cli run [options]          supervise in the foreground (Ctrl+C stops everything)
+    archer-cli serve [--port N]       the server in the foreground, no supervisor
+    archer-cli clear-cache            clear server-side caches and reset browser preferences
+    archer-cli console                the interactive console (modules, options, run)
+    archer-cli preview <group> [...]  a group's queries on stdout, no files written
+    archer-cli mcp                    Archer's tools for an MCP client, over stdio
+    archer-cli offline <command>      generate | correlate | hunt | emulate without the server
+    archer-cli install                put `archer-cli` on your PATH (~/bin, or ~/.local/bin)
+    archer-cli docker <args>          docker compose with the project's docker-compose.yml
 
 Options given to start or restart are remembered in settings.json in the state directory:
 ~/Library/Application Support/Archer (macOS) or $XDG_STATE_HOME/archer (Linux), or
@@ -385,7 +392,7 @@ def load_settings(args=None):
 
 def cmd_start(args):
     if supervisor_pid():
-        print(f"Archer is already running (supervisor pid {supervisor_pid()}). Use: archer restart")
+        print(f"Archer is already running (supervisor pid {supervisor_pid()}). Use: archer-cli restart")
         return 0
     settings = load_settings(args)
     port = settings["port"]
@@ -393,7 +400,7 @@ def cmd_start(args):
         print(f"Port {port} is in use:")
         for pid, cmd in listeners(port):
             print(f"  pid {pid}: {cmd[:100]}")
-        print("Stop it first (archer stop --force stops an Archer started another way), or use --port.")
+        print("Stop it first (archer-cli stop --force stops an Archer started another way), or use --port.")
         return 1
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     cmd = [python(), str(Path(__file__).resolve()), "run"] + (["--skip-index"] if args.skip_index else [])
@@ -409,11 +416,11 @@ def cmd_start(args):
             show_ollama(read_json(STATE_FILE, {}))
             return 0
         if proc.poll() is not None:
-            print(f"\nThe supervisor exited ({proc.returncode}). See: archer logs supervisor")
+            print(f"\nThe supervisor exited ({proc.returncode}). See: archer-cli logs supervisor")
             return 1
         print(".", end="", flush=True)
         time.sleep(1)
-    print("\nStill starting; the supervisor will keep trying. Check with: archer status  (logs: archer logs)")
+    print("\nStill starting; the supervisor will keep trying. Check with: archer-cli status  (logs: archer-cli logs)")
     return 0
 
 
@@ -456,10 +463,10 @@ def cmd_stop(args):
         print("Archer isn't running.")
         return 0
     if not args.force:
-        print(f"Archer is running on port {port} but wasn't started with `archer start`:")
+        print(f"Archer is running on port {port} but wasn't started with `archer-cli start`:")
         for p, c in stray:
             print(f"  pid {p}: {c[:100]}")
-        print("Stop it with: archer stop --force")
+        print("Stop it with: archer-cli stop --force")
         return 1
     for p, _ in stray:
         try:
@@ -467,7 +474,7 @@ def cmd_stop(args):
         except (ProcessLookupError, PermissionError):
             os.kill(p, signal.SIGTERM)
     time.sleep(2)
-    print("Stopped." if not listeners(port) else "Some processes are still listening; check with: archer status")
+    print("Stopped." if not listeners(port) else "Some processes are still listening; check with: archer-cli status")
     return 0
 
 
@@ -486,7 +493,7 @@ def show_ollama(state):
             line += f", restarts: {child['restarts']}"
         print(line)
     else:
-        print(f"Ollama   {'running (not managed by archer)' if up else 'not running'}")
+        print(f"Ollama   {'running (not managed by archer-cli)' if up else 'not running'}")
 
 
 def cmd_status(args):
@@ -508,12 +515,12 @@ def cmd_status(args):
             print(f"         restarted {archer['restarts']}x after crashes (last: exit {last.get('code')} at {when})")
         print(f"         reload {'on' if settings['reload'] else 'off'}, supervisor pid {pid}")
     elif healthy:
-        print(f"Archer   running on port {port}, but not under `archer start` (no crash restarts)")
+        print(f"Archer   running on port {port}, but not under `archer-cli start` (no crash restarts)")
     else:
         last = read_json(STATE_FILE, {})
-        print("Archer   stopped" + ("   (gave up after repeated crashes; see: archer logs)" if last.get("status") == "failed" else ""))
+        print("Archer   stopped" + ("   (gave up after repeated crashes; see: archer-cli logs)" if last.get("status") == "failed" else ""))
     show_ollama(state)
-    print(f"Logs     {LOG_DIR}/archer.log  (archer logs -f)")
+    print(f"Logs     {LOG_DIR}/archer.log  (archer-cli logs -f)")
     return 0 if healthy else 1
 
 
@@ -533,8 +540,12 @@ def cmd_install(args):
         target_dir = Path.home() / ".local" / "bin"
         print(f"Add {target_dir} to your PATH (e.g. in ~/.zshrc): export PATH=\"$HOME/.local/bin:$PATH\"")
     target_dir.mkdir(parents=True, exist_ok=True)
-    link = target_dir / "archer"
+    link = target_dir / "archer-cli"
     source = ROOT / "archer-cli"
+    old = target_dir / "archer"  # the name before 2026-10-17
+    if old.is_symlink() and old.resolve() == source.resolve():
+        old.unlink()
+        print(f"Removed the old name: {old}")
     if link.is_symlink() or link.exists():
         if link.is_symlink() and link.resolve() == source.resolve():
             print(f"Already installed: {link} -> {source}")
@@ -545,7 +556,7 @@ def cmd_install(args):
         link.unlink()
     link.symlink_to(source)
     print(f"Installed: {link} -> {source}")
-    found = shutil.which("archer")
+    found = shutil.which("archer-cli")
     if found and Path(found) != link:
         print(f"Note: {found} comes earlier in your PATH and will run instead. Remove it or reorder PATH.")
     return 0
@@ -555,15 +566,30 @@ def cmd_docker(args):
     os.execvp("docker", ["docker", "compose", "-f", str(ROOT / "docker-compose.yml")] + args.args)
 
 
+# command -> (module whose main() runs it, whether the command name stays in its argv)
+HANDOVER = {
+    "serve": ("archer.app", False),
+    "clear-cache": ("archer.app", True),
+    "console": ("archer.cli.console", False),
+    "preview": ("archer.cli.preview", False),
+    "mcp": ("archer.mcp_server", False),
+    "offline": ("archer.cli.offline", False),
+}
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
-    if argv and argv[0] in ("serve", "clear-cache"):
-        # The app's own entry point: foreground server without supervision, or cache clearing
+    if argv and argv[0] in HANDOVER:
+        # Commands that need the archer package run in a fresh interpreter, so this file stays
+        # importable (and stop/status keep working) when the app is broken
+        module, keep_name = HANDOVER[argv[0]]
+        rest = argv if keep_name else argv[1:]
+        prog = "archer-cli" if keep_name else f"archer-cli {argv[0]}"
         os.chdir(ROOT)
-        rest = argv[1:] if argv[0] == "serve" else argv
-        os.execv(python(), [python(), "-c", "import sys; from archer.app import main; sys.argv = ['archer'] + sys.argv[1:]; main()"] + rest)
+        os.execv(python(), [python(), "-c", f"import sys; sys.path.insert(0, {str(ROOT)!r}); from {module} import main; "
+                            f"sys.argv = [{prog!r}] + sys.argv[1:]; main()"] + rest)
 
-    parser = argparse.ArgumentParser(prog="archer", description="Run Archer in the background, restarting it if it crashes.")
+    parser = argparse.ArgumentParser(prog="archer-cli", description="Archer's command line: the server, the console and the pipeline.")
     sub = parser.add_subparsers(dest="command")
 
     def server_options(p):
@@ -580,16 +606,17 @@ def main(argv=None):
     server_options(sub.add_parser("restart", help="stop, then start"))
     server_options(sub.add_parser("run", help="supervise in the foreground"))
     sub.add_parser("stop", help="stop Archer (and the Ollama it started)").add_argument(
-        "--force", action="store_true", help="also stop an Archer that wasn't started with `archer start`")
+        "--force", action="store_true", help="also stop an Archer that wasn't started with `archer-cli start`")
     sub.add_parser("status", help="show what's running")
     logs = sub.add_parser("logs", help="show a log")
     logs.add_argument("name", nargs="?", default="archer", choices=["archer", "ollama", "supervisor"])
     logs.add_argument("-f", "--follow", action="store_true")
     logs.add_argument("-n", "--lines", type=int, default=100)
-    sub.add_parser("install", help="put `archer` on your PATH").add_argument("--force", action="store_true")
+    sub.add_parser("install", help="put `archer-cli` on your PATH").add_argument("--force", action="store_true")
     docker = sub.add_parser("docker", help="docker compose with the project's compose file")
     docker.add_argument("args", nargs=argparse.REMAINDER)
-    parser.epilog = "Also: archer serve [--port N] (foreground, no supervisor), archer clear-cache"
+    parser.epilog = ("Also: serve [--port N] (foreground, no supervisor) · clear-cache · console (interactive) · "
+                     "preview <group> · mcp (MCP server on stdio) · offline generate|correlate|hunt|emulate")
 
     args = parser.parse_args(argv)
     commands = {"start": cmd_start, "stop": cmd_stop, "restart": cmd_restart, "status": cmd_status,

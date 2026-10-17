@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-start-archer.py: Start Archer: -b/--background runs it under the crash-restarting supervisor (archer start);
-otherwise it supervises in the foreground (archer run).
+start-archer.py: Start Archer: -b/--background runs it under the crash-restarting supervisor (archer-cli start);
+otherwise it supervises in the foreground (archer-cli run).
 Kept for older instructions; the implementation is archer/service.py, which `archer` runs.
 """
 

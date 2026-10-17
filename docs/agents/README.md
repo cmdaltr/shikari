@@ -7,8 +7,8 @@ Archer has three agents, an MCP server that gives the same tools to any MCP clie
 | Where | What |
 |---|---|
 | Web | **Agents** page (robot icon in the top bar) |
-| Console | `adfconsole` → `use agent/repair`, `agent/ask`, `agent/triage` |
-| MCP | `archer-mcp`: Archer's tools and the three agents' prompts in Claude Code, Claude Desktop or your own agent |
+| Console | `archer-cli console` → `use agent/repair`, `agent/ask`, `agent/triage` |
+| MCP | `archer-cli mcp`: Archer's tools and the three agents' prompts in Claude Code, Claude Desktop or your own agent |
 | Example | [`examples/agents/minimal_agent.py`](../../examples/agents/minimal_agent.py): about 100 lines, no Archer dependency |
 
 Agents run on any provider in your profile that can call tools (Profile → API Keys): Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok, or a local endpoint (Ollama, LM Studio, llama.cpp). Pick one on the Agents page or with `set PROVIDER` in the console. Without a choice, Claude is used if you have an Anthropic key (it's the most reliable at multi-step tool use), otherwise your Ask Archer provider.
@@ -112,7 +112,7 @@ claude mcp add archer --env ARCHER_TOKEN=arch_... -- /path/to/archer/.venv/bin/p
 
 Create the token in Profile → Security → API Tokens. It's shown once, works with MFA, and revoking it signs out whatever uses it; `ARCHER_EMAIL` and `ARCHER_PASSWORD` still work for accounts without MFA.
 
-`archer-mcp` exposes the same 20 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the three agents' instructions as prompts (`repair`, `ask`, `triage`). It signs in to a running Archer as you, so hunts use your AI settings and your keys stay on the server.
+`archer-cli mcp` exposes the same 20 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the three agents' instructions as prompts (`repair`, `ask`, `triage`). It signs in to a running Archer as you, so hunts use your AI settings and your keys stay on the server.
 
 ## Building your own
 
@@ -126,7 +126,7 @@ Create the token in Profile → Security → API Tokens. It's shown once, works 
 
 On local `qwen3:8b` through Ollama, the Ask agent answered "which of FIN7's Execution techniques have no detection?" correctly in 2 turns (one `group_coverage` call), taking about 110 seconds on an Intel Mac Mini. Small models get through short lookups like that; on longer runs (repair, triage) they tend to stop early, skip the check step, or call tools with malformed arguments. Two settings matter:
 
-- **Context.** Ollama defaults to 4k tokens and truncates silently, and one tool result can be 5k. `archer start` runs Ollama with `OLLAMA_CONTEXT_LENGTH=16384` unless you set it yourself.
+- **Context.** Ollama defaults to 4k tokens and truncates silently, and one tool result can be 5k. `archer-cli start` runs Ollama with `OLLAMA_CONTEXT_LENGTH=16384` unless you set it yourself.
 - **Tool support.** The model has to support tool calling (qwen3, qwen2.5, llama3.1, mistral do; base and coder-base models don't).
 
 ## Known gaps

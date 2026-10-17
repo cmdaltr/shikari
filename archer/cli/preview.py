@@ -1,10 +1,10 @@
 """Preview detection queries for a threat group without writing files.
 
 Usage:
-    archer-preview APT29
-    archer-preview "Scattered Spider" --limit 5
-    archer-preview APT29 --siem splunk,mde
-    archer-preview APT29 --siem elastic,secops --limit 3
+    archer-cli preview APT29
+    archer-cli preview "Scattered Spider" --limit 5
+    archer-cli preview APT29 --siem splunk,mde
+    archer-cli preview APT29 --siem elastic,secops --limit 3
 """
 
 import argparse
@@ -26,7 +26,7 @@ def _parse_siem(value: str) -> set:
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="archer-preview",
+        prog="archer-cli preview",
         description="Preview detection queries for a threat group (no files written)",
     )
     parser.add_argument("group", help="Threat group name (e.g. APT29, 'Scattered Spider')")

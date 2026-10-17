@@ -11,7 +11,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | Page | Covers |
 |------|--------|
 | [Overview](guide/README.md) | What Archer does, where everything is, which SIEMs, what uses AI |
-| [Running Archer](guide/01-running-archer.md) | `archer start/stop/status`, signing in, what happens at start-up |
+| [Running Archer](guide/01-running-archer.md) | `archer-cli start/stop/status`, signing in, what happens at start-up |
 | [Hunt](guide/02-hunt.md) | Threat group, CVE and technique hunts; every option |
 | [Analyse](guide/03-analyse.md) | Detections from a report URL or file |
 | [Company profile](guide/04-company-profile.md) | Who targets a company, then their detections |
@@ -27,7 +27,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [Regex](guide/14-regex.md) | Regex tester and per-SIEM checks (RE2, PCRE, Lucene) |
 | [Agents and Ask Archer](guide/15-agents-and-ask-archer.md) | The AI features |
 | [Profile and settings](guide/16-profile-and-settings.md) | Account, SIEMs, industries, keys, MFA, tokens, users |
-| [Console, API and MCP](guide/17-console-api-mcp.md) | `adfconsole`, the Python client, REST, `archer-mcp` |
+| [Console, API and MCP](guide/17-console-api-mcp.md) | `archer-cli console`, the Python client, REST, `archer-cli mcp` |
 | [Data and updates](guide/18-data-and-updates.md) | What's downloaded, when, and where everything is kept |
 | [Emulate](guide/19-emulate.md) | Which logs record each technique (native, Sysmon, EDR; Windows, Linux, macOS, ESXi, cloud), detections checked against lab recordings, Defender XDR's own alerting |
 | [Recording a lab](guide/20-recording-a-lab.md) | **Coming soon**: Atomic Red Team on your own VMs, with Defender for Endpoint's rows, into Emulate |
@@ -39,17 +39,17 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 
 | Document | Description |
 |----------|-------------|
-| [README.md](../README.md) | Project overview, features, adfconsole usage |
+| [README.md](../README.md) | Project overview, features, archer-cli console usage |
 | [GETTING_STARTED.md](../GETTING_STARTED.md) | Installation, setup, first run |
-| [USAGE.md](USAGE.md) | Where each task is done, and the `archer.py` CLI |
+| [USAGE.md](USAGE.md) | Where each task is done, and `archer-cli offline` |
 
 ---
 
-## Interactive Console (adfconsole)
+## Interactive Console (archer-cli console)
 
 | Document | Description |
 |----------|-------------|
-| [README.md — adfconsole](../README.md#-interactive-console-adfconsole) | Commands, modules, example session |
+| [README.md — archer-cli console](../README.md#-interactive-console-archer-cli-console) | Commands, modules, example session |
 
 ---
 

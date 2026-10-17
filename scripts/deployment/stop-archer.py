@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-stop-archer.py: Stop Archer (archer stop --force).
+stop-archer.py: Stop Archer (archer-cli stop --force).
 Kept for older instructions; the implementation is archer/service.py, which `archer` runs.
 """
 

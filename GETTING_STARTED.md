@@ -18,8 +18,8 @@ cd archer
 **Option A: Docker**
 
 ```bash
-docker compose up --build        # or: archer docker up --build, once the archer command is installed
-docker compose down              # stop
+docker compose up --build  # or: archer-cli docker up --build, once archer-cli is installed
+docker compose down        # stop
 ```
 
 Data lives in Docker volumes and survives restarts.
@@ -30,9 +30,9 @@ Data lives in Docker volumes and survives restarts.
 python3 -m venv .venv            # add --copies if the checkout is in a synced folder (OneDrive, Dropbox)
 source .venv/bin/activate
 pip install -r requirements.txt
-./archer-cli install             # once: puts `archer` on your PATH (~/bin)
-archer start                     # background, restarted if it crashes
-archer status | archer logs -f | archer restart | archer stop
+./archer-cli install  # once: puts `archer-cli` on your PATH (~/bin)
+archer-cli start      # background, restarted if it crashes
+archer-cli status | archer-cli logs -f | archer-cli restart | archer-cli stop
 ```
 
 Day-to-day running, start-up options and what Archer updates when it starts: [Running Archer](docs/guide/01-running-archer.md).
@@ -115,10 +115,10 @@ Detections are YAML files, one per technique and SIEM. Copy a query into Defende
 ## Without the browser
 
 ```bash
-./adfconsole                                   # Metasploit-style console
-python archer.py generate "APT29" --correlate  # the pipeline, locally
-python archer.py correlate "APT29"             # correlations from its detections
-python archer.py hunt "PowerShell"             # one technique, by name or ID
+archer-cli console                               # Metasploit-style console
+archer-cli offline generate "APT29" --correlate  # the pipeline, locally
+archer-cli offline correlate "APT29"             # correlations from its detections
+archer-cli offline hunt "PowerShell"             # one technique, by name or ID
 ```
 
 The console, the Python client, the REST API (live reference at `http://localhost:8000/docs`) and the MCP server: [Console, API and MCP](docs/guide/17-console-api-mcp.md).
@@ -129,8 +129,8 @@ The console, the Python client, the REST API (live reference at `http://localhos
 |---|---|
 | Can't sign in with the default login | `python scripts/admin/reset_password.py`, or `scripts/admin/create_admin.py` for a new administrator |
 | Queries don't match my SIEM's tables or fields | The mapping files (above): start-up names any that are missing |
-| Port 8000 in use | `lsof -i :8000`, or `archer start --port 8001` |
+| Port 8000 in use | `lsof -i :8000`, or `archer-cli start --port 8001` |
 | Docker won't start | `docker compose logs archer`; rebuild with `docker compose down -v && docker compose up --build` |
-| A page shows old data after an update | `archer restart --skip-index` |
+| A page shows old data after an update | `archer-cli restart --skip-index` |
 
 More: the [documentation index](docs/DOCS_INDEX.md), or open an [issue](https://github.com/cmdaltr/archer/issues).

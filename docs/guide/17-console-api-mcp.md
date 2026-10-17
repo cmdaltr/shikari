@@ -9,16 +9,16 @@ export ARCHER_URL=http://127.0.0.1:8000
 export ARCHER_TOKEN=arch_...
 ```
 
-## The console (`adfconsole`)
+## The console (`archer-cli console`)
 
 A Metasploit-style shell: choose a module, set its options, run it. Tab completion works throughout.
 
 ```bash
-adfconsole
-adfconsole > use hunt/group
-adfconsole (hunt/group) > set GROUP Scattered Spider
-adfconsole (hunt/group) > show options
-adfconsole (hunt/group) > run
+archer-cli console
+archer-cli > use hunt/group
+archer-cli (hunt/group) > set GROUP Scattered Spider
+archer-cli (hunt/group) > show options
+archer-cli (hunt/group) > run
 ```
 
 | Module | What it does |
@@ -58,12 +58,12 @@ Other methods include `hunt_cve`, `hunt_techniques`, `analyse_url`, `analyse_fil
 
 Every page works through the HTTP API. The full, live reference is at `http://localhost:8000/docs`. Worked examples are in [API_INTEGRATION_GUIDE.md](../features/API_INTEGRATION_GUIDE.md).
 
-## MCP server (`archer-mcp`)
+## MCP server (`archer-cli mcp`)
 
 Gives any MCP client (Claude Code, Claude Desktop, your own agent) Archer's tools and the three agents' instructions as prompts. Tools that change something are marked so the client asks first. Your AI keys stay on the Archer server.
 
 ```bash
-claude mcp add archer --env ARCHER_TOKEN=arch_... -- /path/to/archer/.venv/bin/python -m archer.mcp_server
+claude mcp add archer --env ARCHER_TOKEN=arch_... -- archer-cli mcp
 ```
 
 ## Recorded telemetry
