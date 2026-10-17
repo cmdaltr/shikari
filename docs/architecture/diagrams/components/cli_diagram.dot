@@ -9,7 +9,7 @@ digraph ArcherCLI {
     user [label="User/Script", shape=ellipse, fillcolor="#fff9c4", style="filled"];
 
     // CLI entry point
-    cli [label="archer.py\nCLI Interface", fillcolor="#c8e6c9"];
+    cli [label="archer-cli offline\nCLI Interface", fillcolor="#c8e6c9"];
 
     // Core modules
     subgraph cluster_core {

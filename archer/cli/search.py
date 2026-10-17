@@ -1,5 +1,5 @@
 """
-Search functionality for the ADF console.
+Search for archer-cli console.
 
 Three search domains:
   bespoke  — prompts, templates, reference queries, mappings

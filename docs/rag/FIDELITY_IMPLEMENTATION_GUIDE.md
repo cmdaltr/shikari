@@ -1,6 +1,6 @@
 # Detection Fidelity Improvement System - Implementation Guide
 
-> **Status (2026-10-16):** some of what this document names was never built: the knowledge-base maintenance and benchmarking scripts (`add_to_kb.py`, `batch_enhance.py`, `benchmark_fidelity.py`, `ab_test.py` and the rest under `scripts/`) and the test-sample files. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+> **Status (2026-10-16):** some of what this document names was never built: the knowledge-base maintenance and benchmarking scripts (`add_to_kb.py`, `batch_enhance.py`, `benchmark_fidelity.py`, `ab_test.py` and the rest under `scripts/`) and the test-sample files. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md). `archer-cli offline generate` has none of the flags shown here (`--use-rag`, `--no-rag`, `--min-fidelity`, `--validate`, `--parallel`, `--workers`); its options are `--correlate`, `--llm`/`--no-llm` and `--hypothesis`.
 
 **Version:** 1.0
 **Date:** 2024-11-28
@@ -455,22 +455,22 @@ The RAG system is automatically integrated into the detection generation pipelin
 # RAG enhancement is now enabled by default
 
 # Generate detections with RAG enhancement
-python archer.py generate APT29 --use-rag
+archer-cli offline generate APT29 --use-rag
 ```
 
 **CLI Options:**
 ```bash
 # Generate with RAG enhancement (default)
-python archer.py generate APT29
+archer-cli offline generate APT29
 
 # Generate without RAG (use original heuristics only)
-python archer.py generate APT29 --no-rag
+archer-cli offline generate APT29 --no-rag
 
 # Generate with specific confidence threshold
-python archer.py generate APT29 --min-fidelity 0.8
+archer-cli offline generate APT29 --min-fidelity 0.8
 
 # Generate with validation
-python archer.py generate APT29 --validate
+archer-cli offline generate APT29 --validate
 ```
 
 ### Step 4.2: Use RAG in Web Interface
@@ -674,7 +674,7 @@ validation:
 
 ```bash
 # Generate detection for APT29 with RAG enhancement
-python archer.py generate APT29 --use-rag --validate
+archer-cli offline generate APT29 --use-rag --validate
 
 # Output: data/groups/APT29_*.yaml files with confidence scores
 ```
@@ -753,7 +753,7 @@ rag:
 
 ```bash
 # Process multiple techniques in parallel
-python archer.py generate APT29 --parallel --workers 4
+archer-cli offline generate APT29 --parallel --workers 4
 ```
 
 ---
@@ -802,7 +802,7 @@ python scripts/config/import_community_rules.py --all
 python scripts/add_to_kb.py --from-directory my_detections/
 
 # Lower minimum fidelity threshold temporarily
-python archer.py generate APT29 --min-fidelity 0.6
+archer-cli offline generate APT29 --min-fidelity 0.6
 ```
 
 ### Issue: "LLM timeout or errors"

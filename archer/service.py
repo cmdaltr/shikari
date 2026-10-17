@@ -4,9 +4,9 @@ archer-cli: Archer's one command. start | stop | restart | status | logs run Arc
 Ollama) in the background under a supervisor that restarts them when they crash; console,
 preview, mcp and offline hand over to the tools in archer/cli and archer/mcp_server.py.
 
-Run as a file (python archer/service.py ...), not as archer.service: importing the archer
-package loads the whole app, and stop/status should work even when the app is broken.
-Standard library only.
+Standard library only, and the archer package loads nothing until it's used, so stop and
+status work even when the app is broken: as a file (./archer-cli runs python archer/service.py)
+or as archer.service (the pip-installed archer-cli).
 
     archer-cli start [--port 8000] [--no-reload] [--no-ollama] [--ollama-models DIR] [--skip-index]
     archer-cli stop

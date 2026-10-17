@@ -1,4 +1,4 @@
-"""Base module class for the ADF console."""
+"""Base module class for archer-cli console."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field

@@ -1,5 +1,7 @@
 # Detection Fidelity Enhancement System - Implementation Summary
 
+> **Status (2026-10-17):** a 2024 plan, not all of it built. `archer-cli offline generate` has none of the flags shown here (`--use-rag`, `--no-rag`, `--min-fidelity`, `--validate`, `--parallel`, `--workers`); its options are `--correlate`, `--llm`/`--no-llm` and `--hypothesis`.
+
 **Status:** 🚧 Core Implementation Complete - Ready for Testing
 **Date:** 2024-11-28
 **Version:** 1.0
@@ -237,7 +239,7 @@ def compile_query(procedure, use_rag=True):
     # ... rest of existing code ...
 ```
 
-#### 2. In `archer.py` CLI
+#### 2. In `archer-cli offline` (archer/cli/offline.py)
 
 ```python
 # Add argument to generate command
@@ -400,7 +402,7 @@ The core RAG system is **fully functional** without these components:
 
 7. **Generate Enhanced Detections**
    ```bash
-   python archer.py generate APT29 --use-rag
+   archer-cli offline generate APT29 --use-rag
    ```
 
 ### Medium-term (Next 2 Weeks)

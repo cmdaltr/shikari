@@ -36,13 +36,13 @@ export VECTR_API_KEY=your-api-key
 
 ```bash
 # Push detections to VECTR campaign (planned)
-python3 archer.py vectr push "APT29" --campaign "Q4-2024-Hunt"
+archer-cli offline vectr push "APT29" --campaign "Q4-2024-Hunt"
 
 # Pull VECTR test results to validate detections (planned)
-python3 archer.py vectr pull --campaign "Q4-2024-Hunt"
+archer-cli offline vectr pull --campaign "Q4-2024-Hunt"
 
 # Sync detection coverage (planned)
-python3 archer.py vectr sync
+archer-cli offline vectr sync
 ```
 
 ### What Exists Now
@@ -99,13 +99,13 @@ export CALDERA_API_KEY=your-api-key
 
 ```bash
 # Generate detections from CALDERA abilities (planned)
-python3 archer.py caldera generate --adversary apt29
+archer-cli offline caldera generate --adversary apt29
 
 # Execute CALDERA operation and enrich detections (planned)
-python3 archer.py caldera emulate "APT29" --operation "purple-team-test" --enrich
+archer-cli offline caldera emulate "APT29" --operation "purple-team-test" --enrich
 
 # Sync CALDERA abilities with Archer (planned)
-python3 archer.py caldera sync
+archer-cli offline caldera sync
 ```
 
 ### What Exists Now
@@ -164,13 +164,13 @@ export MACAT_PATH=/path/to/macat
 
 ```bash
 # Emulate macOS technique (planned)
-python3 archer.py macat emulate T1059.002 --enrich
+archer-cli offline macat emulate T1059.002 --enrich
 
 # Generate macOS-specific detections (planned)
-python3 archer.py macat generate "macOS threats" --format osquery
+archer-cli offline macat generate "macOS threats" --format osquery
 
 # Execute MACAT test suite (planned)
-python3 archer.py macat test-suite --category persistence
+archer-cli offline macat test-suite --category persistence
 ```
 
 ### What Exists Now

@@ -1,4 +1,4 @@
-"""Main interactive console for the Archer Defensive Framework."""
+"""archer-cli console: the interactive console."""
 
 import cmd
 import os
@@ -12,7 +12,7 @@ from archer.cli.modules.base import BaseModule
 from archer.cli.search import run_search, SEARCH_DOMAINS
 
 
-class AdfConsole(cmd.Cmd):
+class ArcherConsole(cmd.Cmd):
     """Metasploit-style interactive console for Archer."""
 
     intro = ""
@@ -237,12 +237,12 @@ class AdfConsole(cmd.Cmd):
     # ------------------------------------------------------------------
 
     def do_exit(self, arg):
-        """Exit the ADF console."""
+        """Exit the console."""
         print("  Exiting the console...")
         return True
 
     def do_quit(self, arg):
-        """Exit the ADF console."""
+        """Exit the console."""
         return self.do_exit(arg)
 
     def do_EOF(self, arg):
@@ -294,7 +294,7 @@ class AdfConsole(cmd.Cmd):
 
 def main():
     """Entry point for archer-cli console."""
-    console = AdfConsole()
+    console = ArcherConsole()
     try:
         console.cmdloop()
     except KeyboardInterrupt:

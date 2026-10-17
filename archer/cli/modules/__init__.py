@@ -1,4 +1,4 @@
-"""Module registry for the ADF console."""
+"""Module registry for archer-cli console."""
 
 from .generate import GenerateModule
 from .correlate import CorrelateModule

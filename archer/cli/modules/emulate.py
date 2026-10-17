@@ -71,7 +71,7 @@ class EmulateModule(BaseModule):
         # Delegate to the existing emulation runner
         # Import is done lazily to avoid startup cost
         try:
-            from archer import run_emulation
+            from archer.cli.offline import run_emulation
             run_emulation(
                 target=target,
                 framework=framework,
