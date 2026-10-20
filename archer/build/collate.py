@@ -148,7 +148,8 @@ def collate_data(identifiers, log_sources, procedure_platforms, software_platfor
                 # given: merge only this type's queries, or every earlier one is merged in again
                 prev_mde_count = len(mde_queries)
                 mde_queries = compile_mde_queries(
-                    indicator_mapping, indicators, indicator_type, mde_queries, detection_name, platform=platform
+                    indicator_mapping, indicators, indicator_type, mde_queries, detection_name,
+                    platform=sorted(procedure_platforms) if procedure_platforms and not isinstance(procedure_platforms, str) else platform
                 )
 
                 # Group queries by table for potential merging

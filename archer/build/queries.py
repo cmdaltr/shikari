@@ -166,6 +166,18 @@ def load_log_source_categories():
 
 LOG_SOURCE_CATEGORIES, CLOUD_INDICATOR_MAPPINGS = load_log_source_categories()
 
+# ATT&CK platforms whose activity cloud-native sources (CloudAppEvents, IdentityLogonEvents,
+# CloudTrail…) record. A technique on none of these, with no cloud indicators, gets no
+# cloud-native table: Windows API names searched in IdentityLogonEvents can never match.
+CLOUD_PLATFORMS = {"AWS", "Azure", "Azure AD", "GCP", "IaaS", "SaaS", "Office 365", "Office Suite",
+                   "Identity Provider", "Google Workspace"}
+
+
+def _cloud_native_sources(vendor):
+    """The vendor's tables/indexes logSourceCategories.json files under a cloud_native_* category."""
+    return {t for key, cat in LOG_SOURCE_CATEGORIES.items() if key.startswith("cloud_native_")
+            for t in (cat or {}).get(vendor, []) or []}
+
 
 def detect_cloud_platform_from_indicators(indicators, indicator_type):
     """
@@ -229,6 +241,10 @@ def get_valid_indices_for_platform(indicator_mapping_section, vendor, detected_p
         Dict of {index/table: fields} that are valid for this platform combination
     """
     valid_indices = {}
+    # One platform or all of a procedure's
+    platforms = {technique_platform} if isinstance(technique_platform, str) else set(technique_platform or ())
+    platforms.discard(None)
+    technique_platform = next(iter(platforms & {"AWS", "Azure", "Azure AD", "GCP"}), None) or next(iter(platforms), None)
 
     # Only "api" indicator type has the nested cloud categorization structure
     # Other types (cmd, reg, evt, sw, network) have flat structures
@@ -237,8 +253,13 @@ def get_valid_indices_for_platform(indicator_mapping_section, vendor, detected_p
                                for key in indicator_mapping_section.keys()))
 
     if not has_cloud_categories:
-        # Legacy flat structure - return all indices
-        return indicator_mapping_section
+        # Flat structure: every source, but (Defender XDR) a cloud-native table only for a cloud
+        # technique or cloud indicators. Splunk keeps its rule: cloud indexes always apply
+        # (is_query_applicable).
+        if vendor != "MDE" or detected_platforms or platforms & CLOUD_PLATFORMS:
+            return indicator_mapping_section
+        cloud = _cloud_native_sources(vendor)
+        return {k: v for k, v in indicator_mapping_section.items() if k.replace("index=", "") not in cloud}
 
     # Handle endpoint sources
     # For non-API indicators: Always include endpoint sources
