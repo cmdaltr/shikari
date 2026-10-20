@@ -299,13 +299,37 @@ async function refresh() {
     // The first group that produced something, else this one
     const target = queue.find(g => queueState[g] === 'done') || (outcome === 'done' ? group : null);
     clearInterval(pollTimer);
-    if (!target) return;
+    if (!target) { nothingGenerated(group, j.progress || {}); return; }
     redirecting = true;
-    // A moment on the finished bars before the results page
-    setTimeout(() => { window.location.href = resultsUrl(target); }, 1000);
+    // A moment on the finished bars, then a card that says the results page is being built:
+    // a big run's page takes a while to render, and the browser shows nothing until it arrives
+    setTimeout(() => {
+      const card = document.getElementById('pg-opening');
+      if (card) {
+        card.hidden = false;
+        const started = Date.now(), clock = document.getElementById('pg-opening-time');
+        setInterval(() => { clock.textContent = `${Math.round((Date.now() - started) / 1000)}s`; }, 1000);
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      window.location.href = resultsUrl(target);
+    }, 1000);
   } catch (e) {
     console.error('Progress polling error:', e);
   }
+}
+
+// Nothing to show: say why and offer the next step, rather than leaving a finished page
+function nothingGenerated(name, p) {
+  const box = document.getElementById('pg-nothing');
+  if (!box || p.status === 'failed') return;
+  const cve = /^CVE-\d{4}-\d+$/i.test(name);
+  box.querySelector('h2').textContent = `Nothing generated for ${name.replace(/_/g, ' ')}`;
+  box.querySelector('.pg-nothing-why').textContent = cve
+    ? 'Archer found no ATT&CK techniques with indicators for this CVE, so there was nothing to build a query from. '
+      + 'If there is a report on it (a vendor advisory or threat brief with IOCs and TTPs), analyse that instead.'
+    : (p.error || 'None of the selected techniques produced a query.');
+  box.hidden = false;
+  box.querySelector('a, button').focus();
 }
 
 renderQueue();

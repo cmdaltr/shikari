@@ -473,7 +473,7 @@
     const btn = $('af-expand');
     btn.classList.toggle('is-on', on);
     btn.setAttribute('aria-pressed', String(on));
-    btn.textContent = on ? 'Close' : 'Expand';
+    btn.title = btn.ariaLabel = on ? 'Exit full screen' : 'Full screen';
     requestAnimationFrame(draw);
   }
 

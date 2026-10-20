@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Archer - {{ group_name|replace('_', ' ') }} Attack Flow{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/attack_flow.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+{# The attack flow alone, opened from its Open in New Tab button #}
+<div class="results-container af-standalone">
+  <div class="page-header">
+    <h1>{{ group_name|replace('_', ' ') }}</h1>
+    <p><a href="/results?group_name={{ group_name|urlencode }}">Open results →</a></p>
+  </div>
+  {% if attack_flow %}
+    {% include "partials/attack_flow.html" %}
+  {% else %}
+  <section class="detection-section">
+    <p class="af-empty">No attack flow for {{ group_name|replace('_', ' ') }} yet:
+      <a href="/results?group_name={{ group_name|urlencode }}">open its results</a> once and it will be here.</p>
+  </section>
+  {% endif %}
+</div>
+{% if attack_flow %}<script src="{{ url_for('static', path='js/attack_flow.js') }}?v={{ request.app.state.asset_version }}"></script>{% endif %}
+{% endblock %}

@@ -384,16 +384,17 @@
   opacity: 1;
 }
 
-/* Tooltip arrow */
+/* Tooltip arrow: points at the icon wherever common.js placed the tooltip */
 .option-info-tooltip::after {
   content: '';
   position: absolute;
   top: 100%;
-  left: 50%;
+  left: var(--arrow-x, 50%);
   transform: translateX(-50%);
   border: 6px solid transparent;
   border-top-color: #2d3748;
 }
+.option-info-tooltip.is-below::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: #2d3748; }
 
 .option-label {
   font-weight: 500;

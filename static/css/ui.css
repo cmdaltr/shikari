@@ -412,6 +412,7 @@ input[type="checkbox"] {
 
 /* ---------- Collapsible cards: click a card's title (static/js/card_collapse.js) ---------- */
 .card-title-toggle { cursor: pointer; user-select: none; }
+.expand-btn.is-title-driven { display: none !important; }
 .card-title-toggle::after {
   content: '';
   width: 8px; height: 8px; flex-shrink: 0;

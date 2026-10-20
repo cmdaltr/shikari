@@ -813,6 +813,8 @@ function escapeHtml(text) {
 function showExtractionResults(data) {
   var modal = document.createElement('div');
   modal.id = 'extraction-results-modal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9500;display:flex;align-items:center;justify-content:center;';
 
   var modalContent = document.createElement('div');

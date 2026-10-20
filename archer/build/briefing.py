@@ -1,13 +1,15 @@
 """
-Threat briefing for a run, without AI: coverage, the weakest stage of the kill chain and
-the gaps to close first, from the run's attack flow (archer.visualization.flow_view) and
-the techniques it built nothing for (run_files' no_detection manifest).
+Threat briefing for a run, without AI: coverage, the weakest tactic and the gaps to close
+first, from the run's attack flow (archer.visualization.flow_view) and the techniques it
+built nothing for (run_files' no_detection manifest).
 
 Gaps are techniques ATT&CK attributes to the group that have no detection, plus the
 run's own techniques that produced none, so a CVE, report or technique hunt (no ATT&CK
-attribution) still gets one. The earlier a gap sits in the kill chain, the sooner a
-detection there interrupts an intrusion, so gaps are ranked by tactic, then by how many
-correlation links the technique has.
+attribution) still gets one. ATT&CK isn't a sequence, so a gap's tactic position says
+nothing about when it matters. Gaps are ranked by what closes them: one you can build
+now (indicators exist, or the run never tried it) before one that needs research
+(no indicators anywhere); then by severity (archer.build.severity: an alert there means
+damage is under way); then by correlation links, which make a detection worth more.
 
 An AI-written summary is optional (POST /api/briefing/summary): it's saved beside the
 attack flows and shown until the run changes.
@@ -21,6 +23,14 @@ from typing import Dict, List, Optional
 from archer.config import DATA_DIR
 
 TOP_GAPS = 5
+
+# How a gap closes, best first: (rank, what to do)
+ACTIONS = {
+    "build": (0, "Build it: ATT&CK attributes it and this run built nothing for it"),
+    "source": (1, "Map a data source: it has indicators, but none fit a configured source"),
+    "research": (2, "Needs research: no indicators from ATT&CK or OSINT"),
+}
+_REASON_ACTION = {"no_source": "source", "osint_empty": "research", "no_indicators": "research", "llm_empty": "research"}
 BRIEFINGS_DIR = os.path.join(DATA_DIR, "briefings")
 
 
@@ -29,9 +39,20 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
     lanes = (flow or {}).get("lanes") or []
     if not lanes:
         return None
-    from archer.visualization.flow_view import _lane_index
+    from archer.build.severity import RATINGS, rate
 
-    why = {m.get("technique"): m.get("text") or m.get("reason") or "" for m in no_detection or []}
+    from archer.build.technique_yield import REASONS
+
+    why = {m.get("technique"): m.get("text") or REASONS.get(m.get("reason"), m.get("reason") or "") for m in no_detection or []}
+    reason = {m.get("technique"): m.get("reason") for m in no_detection or []}
+
+    def gap(tid, name, tactic, url, degree):
+        action = _REASON_ACTION.get(reason.get(tid), "build" if tid not in why else "research")
+        severity = rate([tactic]) if tactic else "Medium"
+        return {"id": tid, "name": name, "tactic": tactic, "url": url, "action": action,
+                "todo": ACTIONS[action][1], "severity": severity,
+                "why": why.get(tid, "ATT&CK attributes it; no detection yet"),
+                "order": (ACTIONS[action][0], -RATINGS.index(severity), -(degree or 0), tid)}
     tactics, gaps, total, detected = [], [], 0, 0
     # Intel-only techniques (adversary-side Reconnaissance/Resource Development,
     # archer.tactic_scope) are neither coverage nor gaps
@@ -46,15 +67,12 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
         tactics.append({"tactic": lane["tactic"], "total": len(nodes), "detected": hit})
         for n in nodes:
             if not n.get("detected") and (n.get("attributed") or n["id"] in why):
-                gaps.append({"id": n["id"], "name": n.get("name", n["id"]), "tactic": lane["tactic"],
-                             "url": n.get("url"), "why": why.get(n["id"], "ATT&CK attributes it; no detection yet"),
-                             "order": (_lane_index(lane["tactic"]), -(n.get("degree") or 0), n["id"])})
+                gaps.append(gap(n["id"], n.get("name", n["id"]), lane["tactic"], n.get("url"), n.get("degree")))
     # Techniques the run built nothing for that never reached the flow
     in_flow = {n["id"] for lane in lanes for n in lane.get("nodes") or []}
     for tid, text in why.items():
         if tid and tid not in in_flow and tid not in intel:
-            gaps.append({"id": tid, "name": tid, "tactic": "", "url": "https://attack.mitre.org/techniques/"
-                         + tid.replace(".", "/") + "/", "why": text, "order": (99, 0, tid)})
+            gaps.append(gap(tid, tid, "", "https://attack.mitre.org/techniques/" + tid.replace(".", "/") + "/", 0))
     gaps.sort(key=lambda g: g["order"])
     for g in gaps:
         g.pop("order")
@@ -67,6 +85,7 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
         "techniques": total, "detected": detected, "gap_count": len(gaps),
         "coverage": round(100 * detected / total) if total else 0,
         "tactics": tactics, "weakest": weakest, "gaps": gaps[:TOP_GAPS], "more_gaps": max(0, len(gaps) - TOP_GAPS),
+        "by_action": {a: sum(1 for g in gaps if g["action"] == a) for a in ACTIONS},
         "summary": _sentences(total, detected, len(tactics), weakest, gaps),
     }
 
@@ -76,10 +95,10 @@ def _sentences(total: int, detected: int, n_tactics: int, weakest: Optional[Dict
     parts = [f"Archer has detections for {detected} of {total} techniques ({pct}%) across {n_tactics} "
              f"tactic{'s' if n_tactics != 1 else ''}."]
     if weakest:
-        parts.append(f"The weakest stage is {weakest['tactic']}: {weakest['detected']} of {weakest['total']} detected.")
+        parts.append(f"The weakest tactic is {weakest['tactic']}: {weakest['detected']} of {weakest['total']} detected.")
     if gaps:
         first = ", ".join(f"{g['id']} {g['name']}" if g["name"] != g["id"] else g["id"] for g in gaps[:3])
-        parts.append(f"Close the earliest gaps first: {first}.")
+        parts.append(f"Close first: {first}.")
     else:
         parts.append("Every technique in this run has a detection.")
     return " ".join(parts)
@@ -93,13 +112,13 @@ def prompt(group: str, briefing: Dict) -> str:
     """Facts for the model: it writes prose from these, nothing else."""
     lines = [f"Run: {group.replace('_', ' ')}",
              f"Coverage: {briefing['detected']} of {briefing['techniques']} techniques ({briefing['coverage']}%)",
-             "By tactic, in kill-chain order: " + "; ".join(
+             "By ATT&CK tactic (not a sequence: groups use tactics in any order): " + "; ".join(
                  f"{t['tactic']} {t['detected']}/{t['total']}" for t in briefing["tactics"])]
     if briefing["weakest"]:
         lines.append(f"Weakest tactic: {briefing['weakest']['tactic']}")
     if briefing["gaps"]:
-        lines.append("Earliest gaps: " + "; ".join(f"{g['id']} {g['name']} ({g['tactic'] or 'no tactic'}): {g['why']}"
-                                                  for g in briefing["gaps"]))
+        lines.append("Gaps to close first (buildable before research, then by severity): " + "; ".join(
+            f"{g['id']} {g['name']} ({g['tactic'] or 'no tactic'}, {g['severity']}): {g['todo']}" for g in briefing["gaps"]))
     return ("Write a threat briefing of 3 to 5 sentences for a detection engineer, in British English, "
             "from these facts only. Say what is covered, where the risk is, and what to build next. "
             "No headings, no lists, no preamble.\n\n" + "\n".join(lines))

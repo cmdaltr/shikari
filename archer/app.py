@@ -40,6 +40,8 @@ import re
 import html
 from urllib.parse import quote, urlencode, urlparse
 import yaml
+
+from archer import yaml_cache
 from archer.build.progress import read_progress, start_progress, write_progress
 from archer.config import (
     DATA_DIR,
@@ -130,8 +132,7 @@ def load_yaml_file(file_path: str) -> Optional[dict]:
         Parsed YAML data as dictionary, or None if loading fails
     """
     try:
-        with open(file_path, "r") as f:
-            return yaml.safe_load(f)
+        return yaml_cache.load(file_path)
     except yaml.YAMLError as e:
         # YAML parsing error - log filename and specific error
         filename = os.path.basename(file_path)
@@ -1011,6 +1012,32 @@ def markdown_links_to_plain(text):
     return re.sub(pattern, r"\1", text)
 
 
+def without_osint(vendors):
+    """
+    The results page's detections for its save and export scripts, minus osint_data:
+    that's most of a big run's page (14 MB of Scattered Spider's 16), so the server
+    puts it back from the detection's file instead (with_osint).
+    """
+    def strip(items):
+        return [{k: v for k, v in d.items() if k != "osint_data"} for d in items or []]
+
+    return [dict(v, detections=strip(v.get("detections")), **({"all_files": strip(v["all_files"])} if "all_files" in v else {}))
+            for v in vendors or []]
+
+
+def with_osint(content):
+    """A detection the results page sent without osint_data, with it read back from its YAML."""
+    if not isinstance(content, dict) or "osint_data" in content or not content.get("file"):
+        return content
+    path = os.path.join(GENERATE_DIR, os.path.basename(str(content["file"])))
+    if not os.path.isfile(path):
+        return content
+    return dict(content, osint_data=check_osint_enriched(path)[1])
+
+
+templates.env.filters["without_osint"] = without_osint
+
+
 def check_osint_enriched(yaml_file, file_content=None):
     """
     Check if a YAML file has OSINT comparison/enhancement metadata.
@@ -1025,65 +1052,46 @@ def check_osint_enriched(yaml_file, file_content=None):
     """
     try:
         if file_content is None:
-            with open(yaml_file, "r") as f:
+            with open(yaml_file, "r", encoding="utf-8") as f:
                 content = f.read()
         else:
             content = file_content
 
-            # Check for OSINT comparison (default behavior - always enabled)
-            has_osint_comparison = "osint_compared: true" in content
+        # OSINT comparison runs by default; enhancement is the optional checkbox
+        if "osint_compared: true" not in content:
+            return False, {}
+        has_osint_enhancement = "osint_enhanced: true" in content
+        osint_data = {}
 
-            # Check for OSINT enhancement (optional - checkbox feature)
-            has_osint_enhancement = "osint_enhanced: true" in content
+        date_match = re.search(r"comparison_date:\s*(.+)", content)
+        if date_match:
+            osint_data["comparison_date"] = date_match.group(1).strip()
 
-            if has_osint_comparison:
-                osint_data = {}
+        sources = []
+        in_sources = False
+        for line in content.split("\n"):
+            if "osint_sources:" in line:
+                in_sources = True
+                continue
+            if in_sources:
+                if line.strip().startswith("- "):
+                    sources.append(line.strip()[2:])
+                elif not line.strip().startswith(" ") and line.strip():
+                    break
+        if sources:
+            osint_data["sources"] = sources
 
-                # Extract comparison date
-                date_match = re.search(r"comparison_date:\s*(.+)", content)
-                if date_match:
-                    osint_data["comparison_date"] = date_match.group(1).strip()
-
-                # Extract sources
-                sources = []
-                in_sources = False
-                for line in content.split("\n"):
-                    if "osint_sources:" in line:
-                        in_sources = True
-                        continue
-                    if in_sources:
-                        if line.strip().startswith("- "):
-                            sources.append(line.strip()[2:])
-                        elif not line.strip().startswith(" ") and line.strip():
-                            break
-                if sources:
-                    osint_data["sources"] = sources
-
-                # Extract osint_indicators using proper YAML parsing
-                import yaml as yaml_lib
-
-                try:
-                    yaml_data = yaml_lib.safe_load(content)
-                    if yaml_data and "osint_indicators" in yaml_data:
-                        indicators = yaml_data["osint_indicators"]
-                        if indicators:
-                            osint_data["indicators"] = indicators
-                except yaml_lib.YAMLError as e:
-                    # YAML parsing error - skip with warning
-                    filename = os.path.basename(yaml_file)
-                    logger.debug(
-                        f"Skipping OSINT indicators for {filename}: {str(e).split(chr(10))[0]}"
-                    )
-                    osint_data["indicators"] = {}
-                except Exception as e:
-                    logger.warning(
-                        f"Error extracting OSINT indicators from {os.path.basename(yaml_file)}: {e}"
-                    )
-                    # Fallback to empty indicators
-                    osint_data["indicators"] = {}
-
-                # Return enhancement flag and OSINT data
-                return has_osint_enhancement, osint_data
+        try:
+            yaml_data = yaml_cache.load(yaml_file, content)
+            if yaml_data and yaml_data.get("osint_indicators"):
+                osint_data["indicators"] = yaml_data["osint_indicators"]
+        except yaml.YAMLError as e:
+            logger.debug(f"Skipping OSINT indicators for {os.path.basename(yaml_file)}: {str(e).splitlines()[0]}")
+            osint_data["indicators"] = {}
+        except Exception as e:
+            logger.warning(f"Error extracting OSINT indicators from {os.path.basename(yaml_file)}: {e}")
+            osint_data["indicators"] = {}
+        return has_osint_enhancement, osint_data
     except Exception as e:
         logger.error(f"Error checking OSINT in {yaml_file}: {e}")
     return False, {}
@@ -4983,7 +4991,11 @@ def analyze_blog(
         url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
         # SECURITY: Sanitize group name
         # No group named: the run is called after the article ("Report_Nightmare-Eclipse_Tooling…")
-        title_words = re.sub(r"[^\w-]+", "_", result.get("title") or "").strip("_")[:60].rstrip("_")
+        # Asides like "(Updated October 19)" go, and a long title is cut between words, not inside one ("Upd")
+        title = re.sub(r"\s*[(\[][^)\]]*[)\]]", "", result.get("title") or "")
+        title_words = re.sub(r"[^\w-]+", "_", title).strip("_")
+        if len(title_words) > 60:
+            title_words = title_words[:61].rsplit("_", 1)[0] if "_" in title_words[:61] else title_words[:60]
         raw_group_name = group_name or (f"Report_{title_words}" if title_words else f"BlogAnalysis_{url_hash}")
         synthetic_group_name = sanitize_group_name(raw_group_name)
 
@@ -8267,6 +8279,41 @@ def flows_page(request: Request, group: str = "", archer_session: Optional[str] 
     })
 
 
+@app.get("/flow", response_class=HTMLResponse)
+def flow_only_page(request: Request, group_name: str, archer_session: Optional[str] = Cookie(None)):
+    """
+    One group's attack flow on its own page (the flow's Open in New Tab): the view the
+    results page last built (data/attack_flows/<group>_flow_view.json), with the user's edits.
+    """
+    from archer.visualization.flow_layouts import load_layout, results_in_library
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+    user, db = auth_result
+    safe_group = sanitize_group_name(group_name)
+    view = None
+    path = os.path.join(ATTACK_FLOWS_DIR, f"{safe_group}_flow_view.json")
+    if safe_group and os.path.dirname(os.path.abspath(path)) == os.path.abspath(ATTACK_FLOWS_DIR):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                view = json.load(fh).get("view")
+        except (OSError, ValueError):
+            view = None
+    layout = {"logged_in": True, "persist": False, "state": None, "group_name": safe_group}
+    try:
+        if view:
+            layout["persist"] = results_in_library(db, user.id, safe_group)
+            if layout["persist"]:
+                layout["state"] = load_layout(db, user.id, safe_group)
+    finally:
+        db.close()
+    return templates.TemplateResponse("flow_only.html", {
+        "request": request, "user": user, "group_name": safe_group,
+        "attack_flow": view, "flow_layout": layout, "flow_only": True,
+    })
+
+
 LIBRARY_VENDORS = (("googlesecops", "Google SecOps"), ("mde", "Defender XDR"), ("splunk", "Splunk"), ("elastic", "Elastic"))
 # Not generated yet: shown, marked Coming Soon (as on the Profile page)
 LIBRARY_COMING_SOON = {"elastic"}
@@ -9232,7 +9279,8 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
 
         # If direct export data provided (from results page), use it directly
         if direct_export_data:
-            export_data = direct_export_data
+            export_data = [dict(item, content=with_osint(item.get("content"))) if item.get("type") == "detection" else item
+                           for item in direct_export_data]
         else:
             # Original flow: Get data from library using IDs
             if not detection_ids and not correlation_ids:
@@ -9602,6 +9650,8 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
 
         if not title or not detection_type or not content:
             raise HTTPException(status_code=400, detail="Missing required fields")
+        if "correlation" not in detection_type.lower():
+            content = with_osint(content)
         # A detection must carry a query: a placeholder ({"query": "x"}, saved by a test
         # run) showed in the Library as an Unknown rule with no ATT&CK mapping
         if "correlation" not in detection_type.lower() and not _looks_like_query(content):

@@ -18,8 +18,8 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Dict, Iterable, List, Optional
 
-import yaml
 
+from archer import yaml_cache
 from archer.tactic_scope import intel_only
 
 # ATT&CK enterprise kill-chain order. v18 split Defense Evasion into Stealth and
@@ -54,8 +54,7 @@ def _lane_index(tactic: str) -> int:
 @lru_cache(maxsize=4096)
 def _read_detection(path: str, mtime: float) -> Optional[Dict]:
     try:
-        with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh) or {}
+        data = yaml_cache.load(path) or {}
     except Exception:
         return None
     tid = str(data.get("technique_id") or "").upper()

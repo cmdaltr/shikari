@@ -2,7 +2,9 @@
    (archer.visualization.flow_view.build_flow_view); flow_frameworks is a global (archer.visualization.frameworks) #}
 {% set vendor_names = {'googlesecops': 'Google SecOps', 'mde': 'Defender XDR', 'splunk': 'Splunk', 'elastic': 'Elastic'} %}
 
-<div id="attack-flow" class="detection-section af-section" data-framework="attack">
+{% set af_empty = not (attack_flow and attack_flow.lanes) %}
+{# Nothing to show: the reason sits in the header and the card stays shut (data-card-static, static/js/card_collapse.js) #}
+<div id="attack-flow" class="detection-section af-section{% if af_empty %} af-is-empty{% endif %}" data-framework="attack"{% if af_empty %} data-card-static{% endif %}>
   <div class="detection-header">
     <h2>
       <div class="card-icon attack-flow" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
@@ -12,7 +14,26 @@
       </div>
       Attack Flow
     </h2>
+    {% if af_empty %}
+    <span class="af-empty-note">No results: no detection in this run has an ATT&amp;CK technique ID</span>
+    {% endif %}
     {% if attack_flow and attack_flow.lanes %}
+    <div class="af-corner">
+      {% if not flow_only %}
+      <a class="af-icon-btn" id="af-new-tab" href="/flow?group_name={{ group_name|urlencode }}" target="_blank" rel="noopener"
+         title="Open the attack flow on its own in a new tab (Shift-click for a new window)" aria-label="Open in a new tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+      {% endif %}
+      <button type="button" class="af-icon-btn" id="af-expand" aria-pressed="false" title="Full screen" aria-label="Full screen">
+        <svg class="af-ico-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        <svg class="af-ico-shrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if attack_flow and attack_flow.lanes %}
     <div class="af-toolbar" role="toolbar" aria-label="Attack flow filters">
       {% for v in attack_flow.vendors %}
       <button type="button" class="af-vendor-toggle is-on" data-vendor="{{ v.key }}" aria-pressed="true"
@@ -40,12 +61,7 @@
          data-group="{{ group_name }}"
          title="Attack Flow 2.x STIX bundle of the flow as shown (opens in the CTID Attack Flow Builder)">STIX</a>
       {% endif %}
-      <button type="button" class="af-chip" id="af-expand" aria-pressed="false" title="Full screen">Expand</button>
     </div>
-    {% endif %}
-  </div>
-
-  {% if attack_flow and attack_flow.lanes %}
   <div class="af-tabs" role="tablist" aria-label="Lifecycle model">
     <button type="button" class="af-tab is-on" role="tab" aria-selected="true" data-framework="attack">MITRE ATT&amp;CK</button>
     {% for fw in flow_frameworks %}
@@ -159,6 +175,5 @@
   <script type="application/json" id="af-frameworks">{{ flow_frameworks|tojson }}</script>
   <script type="application/json" id="af-layout">{{ (flow_layout or {})|tojson }}</script>
   {% else %}
-  <p class="af-empty">No attack flow for this run: there are no detections with ATT&amp;CK technique IDs.</p>
   {% endif %}
 </div>

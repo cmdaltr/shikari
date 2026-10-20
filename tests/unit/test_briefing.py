@@ -15,14 +15,22 @@ FLOW = {"lanes": [
 ]}
 
 
-def test_coverage_weakest_stage_and_gaps_in_kill_chain_order():
-    b = briefing.build(FLOW)
+def test_coverage_weakest_tactic_and_gaps_by_action_then_severity():
+    b = briefing.build(FLOW, [{"technique": "T1190", "reason": "osint_empty"}])
     assert (b["techniques"], b["detected"], b["coverage"]) == (7, 4, 57)
     assert b["weakest"]["tactic"] == "Defense Evasion"
-    # Earliest tactic first; within a tactic, the most-linked technique first
-    assert [g["id"] for g in b["gaps"]] == ["T1190", "T1027", "T1070"]
+    # Buildable before research, whatever the tactic's column; then severity, then links
+    assert [g["id"] for g in b["gaps"]] == ["T1027", "T1070", "T1190"]
+    assert [g["action"] for g in b["gaps"]] == ["build", "build", "research"]
+    assert b["by_action"] == {"build": 2, "source": 0, "research": 1}
     assert b["summary"].startswith("Archer has detections for 4 of 7 techniques (57%) across 3 tactics.")
     assert "Defense Evasion: 1 of 3 detected" in b["summary"]
+
+
+def test_higher_severity_gaps_come_first():
+    flow = {"lanes": [{"tactic": "Discovery", "nodes": [_node("T1087", False, degree=5)]},
+                      {"tactic": "Lateral Movement", "nodes": [_node("T1021", False)]}]}
+    assert [g["id"] for g in briefing.build(flow)["gaps"]] == ["T1021", "T1087"]
 
 
 def test_run_techniques_with_no_detection_count_as_gaps_without_attribution():
@@ -48,4 +56,4 @@ def test_ai_summary_is_kept_only_for_the_same_coverage(tmp_path, monkeypatch):
     assert briefing.load_summary("G1", b)["text"] == "Prose."
     changed = briefing.build({"lanes": FLOW["lanes"][:2]})
     assert briefing.load_summary("G1", changed) is None
-    assert "Earliest gaps: T1190" in briefing.prompt("G1", b)
+    assert "Gaps to close first" in briefing.prompt("G1", b) and "T1190" in briefing.prompt("G1", b)

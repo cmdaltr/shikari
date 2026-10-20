@@ -255,3 +255,22 @@ document.addEventListener('DOMContentLoaded', function() {
     updateIcons(newTheme);
   });
 });
+
+// Option info tooltips (the "i" beside a home-page option): placed in the viewport when
+// shown, so a card that clips its overflow can't cut them off near the page edge
+document.addEventListener('mouseover', e => {
+  const icon = e.target.closest && e.target.closest('.option-info-icon');
+  const tip = icon && icon.querySelector('.option-info-tooltip');
+  if (!tip || window.matchMedia('(max-width: 768px)').matches) return;
+  const r = icon.getBoundingClientRect();
+  tip.style.position = 'fixed';
+  tip.style.transform = 'none';
+  tip.style.bottom = 'auto';
+  const w = tip.offsetWidth, h = tip.offsetHeight, gap = 8;
+  const left = Math.min(Math.max(gap, r.left + r.width / 2 - w / 2), window.innerWidth - w - gap);
+  const above = r.top - h - gap >= gap;
+  tip.style.left = `${left}px`;
+  tip.style.top = `${above ? r.top - h - gap : r.bottom + gap}px`;
+  tip.style.setProperty('--arrow-x', `${r.left + r.width / 2 - left}px`);
+  tip.classList.toggle('is-below', !above);
+});

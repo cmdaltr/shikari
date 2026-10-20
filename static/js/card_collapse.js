@@ -5,10 +5,11 @@
 // Collapse/Expand control (an .expand-btn with "toggle" in its id) keeps it: the title works it.
 // A card drawn in more than one box names the others: data-collapse-with="<selector>".
 // A card that starts collapsed until opened says so: data-collapsed-default.
+// A card with nothing to open (its header says why) opts out: data-card-static.
 (function () {
   const TITLES = 'h2, h3, .section-title, .tactic-section-title, .tactic-filter-label, .mn-card-title, .hiw-section-title';
   // Page titles, dialogs, sub-headings and lanes aren't card titles
-  const SKIP = '.global-nav-controls, .modal-dialog, .modal, .mapping-overlay, [role="dialog"], details, .af-canvas';
+  const SKIP = '.global-nav-controls, .modal-dialog, .modal, [id$="-modal"], [data-card-static], .mapping-overlay, [role="dialog"], details, .af-canvas';
   const HIDDEN = 'data-card-hidden';
 
   const transparent = c => c === 'transparent' || c === 'rgba(0, 0, 0, 0)';
@@ -74,7 +75,9 @@
         title.tabIndex = 0;
         if (!own) set(title, card, remembered(keyOf(title), collapsedByDefault(card)));
       }
-      if (own) title.setAttribute('aria-expanded', String(ownExpanded(own)));
+      // The title (with its chevron) works the card's own Collapse/Expand control, so the
+      // control's text button isn't shown
+      if (own) { own.classList.add('is-title-driven'); title.setAttribute('aria-expanded', String(ownExpanded(own))); }
       else if (card.classList.contains('is-card-collapsed')) {
         set(title, card, true);   // re-hide anything added since
       }
