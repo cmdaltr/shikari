@@ -1,7 +1,8 @@
-{# Kill-chain attack flow. Context: attack_flow (archer.visualization.flow_view.build_flow_view) #}
+{# Attack flow by ATT&CK tactic, Cyber Kill Chain or Targeted Attack Lifecycle phase. Context: attack_flow
+   (archer.visualization.flow_view.build_flow_view); flow_frameworks is a global (archer.visualization.frameworks) #}
 {% set vendor_names = {'googlesecops': 'Google SecOps', 'mde': 'Defender XDR', 'splunk': 'Splunk', 'elastic': 'Elastic'} %}
 
-<div id="attack-flow" class="detection-section af-section">
+<div id="attack-flow" class="detection-section af-section" data-framework="attack">
   <div class="detection-header">
     <h2>
       <div class="card-icon attack-flow" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
@@ -9,7 +10,7 @@
           <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
         </svg>
       </div>
-      ATT&amp;CK Flow
+      Attack Flow
     </h2>
     {% if attack_flow and attack_flow.lanes %}
     <div class="af-toolbar" role="toolbar" aria-label="Attack flow filters">
@@ -45,6 +46,25 @@
   </div>
 
   {% if attack_flow and attack_flow.lanes %}
+  <div class="af-tabs" role="tablist" aria-label="Lifecycle model">
+    <button type="button" class="af-tab is-on" role="tab" aria-selected="true" data-framework="attack">MITRE ATT&amp;CK</button>
+    {% for fw in flow_frameworks %}
+    <button type="button" class="af-tab" role="tab" aria-selected="false" data-framework="{{ fw.key }}">{{ fw.name }}</button>
+    {% endfor %}
+  </div>
+  <p class="af-about" data-framework="attack">
+    Techniques by <a href="https://attack.mitre.org/tactics/enterprise/" target="_blank" rel="noopener">ATT&amp;CK tactic</a>.
+    ATT&amp;CK isn't a sequence: tactics are the group's goals, not steps, so a group can reach them in any order and
+    return to one again. The columns follow ATT&amp;CK's usual order; the correlation links show the order Archer saw.
+  </p>
+  {% for fw in flow_frameworks %}
+  <p class="af-about" data-framework="{{ fw.key }}" hidden>
+    The same techniques by <a href="{{ fw.url }}" target="_blank" rel="noopener">{{ fw.name }}</a> phase ({{ fw.source }}),
+    from the tactic each sits under in the ATT&amp;CK tab, or the technique itself where that says more (phishing is Delivery).
+    Archer's mapping, not an official crosswalk; rearrange and link techniques in the ATT&amp;CK tab.
+    {% if fw.key == 'tal' %}↻ marks the maintain-presence loop the intruder repeats while moving through the estate.{% endif %}
+  </p>
+  {% endfor %}
   <p class="af-stats">
     <span class="af-save-status" id="af-save-status" hidden></span>
     <strong>{{ attack_flow.stats.techniques }}</strong> techniques across {{ attack_flow.stats.tactics }} tactics ·
@@ -87,6 +107,16 @@
           {% endfor %}
         </section>
         {% endfor %}
+        {# Phase lanes of the other models: the cards move into them when that tab is open (static/js/attack_flow.js) #}
+        {% for fw in flow_frameworks %}{% for ph in fw.phases %}
+        <section class="af-lane af-phase-lane is-off" aria-label="{{ ph.name }}" data-framework="{{ fw.key }}" data-phase="{{ ph.name }}">
+          <h3 class="af-lane-head" title="{{ ph.about }}">{{ ph.name }}{% if ph.cycle %} <span class="af-cycle" title="Repeats: the maintain-presence loop">↻</span>{% endif %} <span class="af-lane-count">0</span></h3>
+        </section>
+        {% endfor %}
+        <section class="af-lane af-phase-lane is-off" aria-label="Unmapped" data-framework="{{ fw.key }}" data-phase="Unmapped">
+          <h3 class="af-lane-head" title="Its tactic has no phase in this model">Unmapped <span class="af-lane-count">0</span></h3>
+        </section>
+        {% endfor %}
       </div>
     </div>
 
@@ -101,9 +131,9 @@
     <span><span class="af-legend-gap"></span> attributed to the group, no detection</span>
     {% if attack_flow.stats.intel_only %}<span><span class="af-legend-intel"></span> intel only: Reconnaissance or Resource Development no log source sees</span>{% endif %}
     <span><span class="af-legend-edge"></span> correlation: first technique seen before the second on the same host</span>
-    <span><span class="af-legend-edge is-back"></span> the second technique sits in an earlier tactic</span>
+    <span><span class="af-legend-edge is-back"></span> the second technique sits in an earlier column: groups don't move through tactics in order</span>
     <span><span class="af-legend-edge is-manual"></span> a link you drew</span>
-    <span class="af-legend-hint">Drag a technique onto a tactic to move it there, or along its tactic to reorder · drag a tactic's name to reorder tactics · drag a card's dot onto another to link them · Option/Alt-drag to place freely · Alt+arrow keys do the same from the keyboard · ⌘/Ctrl-click to select several · click a link to remove it</span>
+    <span class="af-legend-hint af-attack-only">Drag a technique onto a tactic to move it there, or along its tactic to reorder · drag a tactic's name to reorder tactics · drag a card's dot onto another to link them · Option/Alt-drag to place freely · Alt+arrow keys do the same from the keyboard · ⌘/Ctrl-click to select several · click a link to remove it</span>
   </div>
 
   <details class="af-notes">
@@ -126,6 +156,7 @@
   </details>
 
   <script type="application/json" id="af-data">{{ attack_flow|tojson }}</script>
+  <script type="application/json" id="af-frameworks">{{ flow_frameworks|tojson }}</script>
   <script type="application/json" id="af-layout">{{ (flow_layout or {})|tojson }}</script>
   {% else %}
   <p class="af-empty">No attack flow for this run: there are no detections with ATT&amp;CK technique IDs.</p>

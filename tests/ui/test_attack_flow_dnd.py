@@ -112,3 +112,26 @@ def test_edits_reach_the_export(flow):
     flow.wait_for_timeout(300)
     state = flow.sent["export"][-1]["state"]
     assert ids[0] in state["arrangement"][dst]
+
+
+def test_lifecycle_tabs_regroup_the_same_cards(flow):
+    ids = sorted(i for _, tids in lanes(flow) for i in tids)
+    flow.click('.af-tab[data-framework="ckc"]')
+    phases = flow.evaluate("""() => [...document.querySelectorAll('#attack-flow .af-lane:not([hidden])')]
+        .map(l => [l.dataset.phase, [...l.querySelectorAll('.af-node:not([hidden])')].map(n => n.dataset.id)])""")
+    names = [p for p, _ in phases]
+    assert names[:7] == ["Reconnaissance", "Weaponization", "Delivery", "Exploitation", "Installation",
+                         "Command & Control", "Actions on Objectives"]
+    assert sorted(i for _, tids in phases for i in tids) == ids
+    assert flow.locator('.af-about[data-framework="ckc"]').is_visible()
+    # Read-only here: a drag doesn't move the card or record an edit
+    first = next(tids[0] for _, tids in phases if tids)
+    x, y = centre(flow, f'.af-node[data-id="{first}"]')
+    drag(flow, (x, y), (x + 400, y))
+    assert flow.is_disabled("#af-undo")
+    flow.click('.af-tab[data-framework="tal"]')
+    assert "Maintain Presence" in flow.evaluate(
+        "() => [...document.querySelectorAll('#attack-flow .af-lane:not([hidden])')].map(l => l.dataset.phase)")
+    flow.click('.af-tab[data-framework="attack"]')
+    assert sorted(i for _, tids in lanes(flow) for i in tids) == ids
+    assert all(t for t, _ in lanes(flow))

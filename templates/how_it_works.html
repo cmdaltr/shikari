@@ -1323,6 +1323,19 @@ data/APT29/
                 <a href="https://github.com/center-for-threat-informed-defense/attack-flow" target="_blank" style="color: #C53030;">
                 MITRE ATT&CK Flow specification</a>. These visualizations show technique sequences and attack paths.
             </p>
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                <strong>ATT&amp;CK isn't linear.</strong> Its tactics are an adversary's goals, not steps in a fixed order:
+                a group can reach Discovery before Execution, return to Credential Access after Lateral Movement, or skip tactics altogether.
+                Archer lays tactics out left to right in ATT&amp;CK's usual order for reading, but never treats that order as the sequence a group followed.
+                The order that matters is the one the correlation links show: one technique seen before another on the same host.
+            </p>
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                The results page's attack flow has three tabs over the same techniques: <strong>MITRE ATT&amp;CK</strong> (by tactic, where you
+                rearrange and link them), the <a href="https://www.lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html" target="_blank" style="color: #C53030;">Cyber Kill Chain</a>
+                (Lockheed Martin) and the <a href="https://cloud.google.com/security/resources/insights/targeted-attack-lifecycle" target="_blank" style="color: #C53030;">Targeted Attack Lifecycle</a>
+                (Mandiant). A technique goes by its tactic, or by the technique itself where that says more, such as phishing as Delivery.
+                The mapping is Archer's own (<code>archer/visualization/frameworks.py</code>), since neither model has an official ATT&amp;CK crosswalk.
+            </p>
             
             <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
             <h3>Types of Attack Flows</h3>

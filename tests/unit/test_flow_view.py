@@ -155,3 +155,25 @@ def test_drag_and_drop_edits_reach_the_view_and_bundle(tmp_path):
     assert actions["T1486"]["effect_refs"] == [actions["T1566"]["id"]]
     flow = next(o for o in bundle["objects"] if o["type"] == "attack-flow")
     assert "arrows the analyst drew" in flow["description"]
+
+
+def test_every_tactic_has_a_phase_in_each_lifecycle_model():
+    from archer.visualization.flow_view import TACTIC_ORDER
+    from archer.visualization.frameworks import FRAMEWORKS
+
+    for fw in FRAMEWORKS:
+        phases = {p["name"] for p in fw["phases"]}
+        assert set(fw["tactics"]) == set(TACTIC_ORDER), fw["key"]
+        assert set(fw["tactics"].values()) | set(fw["techniques"].values()) <= phases, fw["key"]
+
+
+def test_phase_goes_by_technique_then_parent_then_tactic():
+    from archer.visualization.frameworks import UNMAPPED, phase_of
+
+    assert phase_of("ckc", "T1566.001", "Initial Access") == "Delivery"
+    assert phase_of("ckc", "T1190", "Initial Access") == "Exploitation"
+    assert phase_of("ckc", "T1204.002", "Execution") == "Exploitation"  # via its parent
+    assert phase_of("ckc", "T1059.001", "Command and Control") == "Command & Control"  # a card moved to C2
+    assert phase_of("tal", "T1078.002", "Defense Evasion") == "Maintain Presence"
+    assert phase_of("tal", "T1003.001", "Credential Access") == "Escalate Privileges"
+    assert phase_of("tal", "T1000", "Not A Tactic") == UNMAPPED

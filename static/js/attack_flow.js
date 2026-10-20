@@ -1,4 +1,5 @@
-// Results page: interactive kill-chain attack flow (templates/partials/attack_flow.html)
+// Results page: interactive attack flow (templates/partials/attack_flow.html). The ATT&CK tab is the editor;
+// the Cyber Kill Chain and Targeted Attack Lifecycle tabs regroup the same cards by phase
 (function () {
   const dataEl = document.getElementById('af-data');
   if (!dataEl) return;
@@ -20,7 +21,23 @@
   const nodeEls = {};
   section.querySelectorAll('.af-node').forEach(el => { nodeEls[el.dataset.id] = el; });
   const laneEls = {};
-  section.querySelectorAll('.af-lane').forEach(el => { laneEls[el.dataset.tactic] = el; });
+  section.querySelectorAll('.af-lane[data-tactic]').forEach(el => { laneEls[el.dataset.tactic] = el; });
+  const phaseEls = {};
+  section.querySelectorAll('.af-phase-lane').forEach(el => { phaseEls[`${el.dataset.framework}|${el.dataset.phase}`] = el; });
+  let FRAMEWORKS = [];
+  try { FRAMEWORKS = JSON.parse(($('af-frameworks') || {}).textContent || '[]'); } catch (e) { FRAMEWORKS = []; }
+  // Which tab is open: a per-viewer preference, not part of the saved edits
+  const FW_KEY = 'archer.flowFramework';
+  let framework = 'attack';
+  try { framework = localStorage.getItem(FW_KEY) || 'attack'; } catch (e) { /* storage blocked */ }
+  if (!FRAMEWORKS.some(f => f.key === framework)) framework = 'attack';
+  const editing = () => framework === 'attack';
+
+  // A technique's phase: its own mapping, its parent technique's, then its (current) tactic's
+  function phaseOf(fw, id, tactic) {
+    const parent = id.split('.')[0];
+    return fw.techniques[id] || fw.techniques[parent] || fw.tactics[tactic] || 'Unmapped';
+  }
   const DEFAULT_LANES = flow.lanes.map(l => l.tactic);
   const defaultLane = {};
   flow.lanes.forEach(l => l.nodes.forEach(n => { defaultLane[n.id] = l.tactic; }));
@@ -181,6 +198,22 @@
 
   function arrange() {
     const members = laneMembers();
+    const fw = FRAMEWORKS.find(f => f.key === framework);
+    section.dataset.framework = framework;
+    Object.values(laneEls).forEach(el => el.classList.toggle('is-off', !!fw));
+    Object.values(phaseEls).forEach(el => el.classList.toggle('is-off', !fw || el.dataset.framework !== fw.key));
+    if (fw) {
+      // Cards keep the ATT&CK tab's order within each phase; a moved card goes by the tactic it was moved to
+      const phases = fw.phases.map(p => p.name).concat('Unmapped');
+      laneSequence().forEach(lane => members[lane].forEach(id => {
+        const phase = phaseOf(fw, id, lane);
+        phaseEls[`${fw.key}|${phase}`].appendChild(nodeEls[id]);
+        laneOf[id] = phases.indexOf(phase);
+        nodeEls[id].classList.remove('is-retagged');
+        nodeEls[id].title = `${phase} · ATT&CK: ${lane}`;
+      }));
+      return;
+    }
     laneSequence().forEach((lane, i) => {
       const el = laneEls[lane];
       el.style.order = i;
@@ -208,8 +241,15 @@
     $('af-orient').textContent = state.vertical ? 'Vertical' : 'Horizontal';
     $('af-order').textContent = state.reversed ? 'Reverse' : 'Forward';
     arrange();
+    section.querySelectorAll('.af-tab').forEach(tab => {
+      const on = tab.dataset.framework === framework;
+      tab.classList.toggle('is-on', on);
+      tab.setAttribute('aria-selected', String(on));
+    });
+    section.querySelectorAll('.af-about').forEach(p => { p.hidden = p.dataset.framework !== framework; });
     Object.entries(nodeEls).forEach(([id, el]) => {
-      const o = state.offsets[id];
+      // Free positions belong to the ATT&CK layout
+      const o = editing() ? state.offsets[id] : null;
       el.style.transform = o ? `translate(${o[0]}px, ${o[1]}px)` : '';
       el.classList.toggle('is-moved', !!o);
     });
@@ -241,7 +281,9 @@
     section.querySelectorAll('.af-lane').forEach(lane => {
       const shown = lane.querySelectorAll('.af-node:not([hidden])').length;
       lane.querySelector('.af-lane-count').textContent = shown;
-      lane.hidden = shown === 0;
+      // A model's phases all show, empty or not, so its shape stays visible; ATT&CK's empty tactics don't
+      lane.hidden = lane.classList.contains('is-off')
+        || (shown === 0 && !(lane.classList.contains('af-phase-lane') && lane.dataset.phase !== 'Unmapped'));
     });
     draw();
     if (state.selected && nodeEls[state.selected].hidden) select(state.selected);
@@ -388,6 +430,7 @@
       <p class="af-detail-id"><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.id)} ↗</a></p>
       <h3>${esc(n.name)}</h3>
       <p class="af-detail-tactics">${n.tactics.map(esc).join(' · ')}</p>
+      ${editing() ? '' : `<p class="af-detail-phase">${esc(nodeEls[id].closest('.af-phase-lane').dataset.phase)}</p>`}
       ${coverage ? `<ul class="af-detail-cov">${coverage}</ul>` : n.intel_only
         ? `<p class="af-detail-gap is-intel">Intel only: this happens on the adversary's side, before the estate, so no log source sees it and it isn't counted as a gap.</p>`
         : `<p class="af-detail-gap">No detection${n.attributed ? '. ATT&amp;CK attributes this technique to the group.' : ''}</p>`}
@@ -490,7 +533,7 @@
   }
 
   // Lane headers: drag one along the others to reorder the tactics
-  section.querySelectorAll('.af-lane-head').forEach(head => {
+  section.querySelectorAll('.af-lane[data-tactic] .af-lane-head').forEach(head => {
     const laneEl = head.closest('.af-lane');
     head.setAttribute('title', 'Drag to move this tactic; Alt+arrow keys too');
     head.tabIndex = 0;
@@ -553,7 +596,7 @@
     const from = handle.closest('.af-node').dataset.id;
     let ln = null;
     handle.addEventListener('pointerdown', e => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || !editing()) return;
       e.stopPropagation();
       ln = true;
       handle.setPointerCapture(e.pointerId);
@@ -633,7 +676,7 @@
     el.addEventListener('focus', () => focus(el.dataset.id));
     el.addEventListener('blur', unfocus);
     el.addEventListener('keydown', e => {
-      if (!e.altKey || !/^Arrow/.test(e.key)) return;
+      if (!e.altKey || !/^Arrow/.test(e.key) || !editing()) return;
       e.preventDefault();
       record();
       if (!moveByKey(el.dataset.id, e.key)) { history.pop(); $('af-undo').disabled = !history.length; return; }
@@ -646,7 +689,7 @@
       else select(el.dataset.id);
     });
     el.addEventListener('pointerdown', e => {
-      if (e.button !== 0 || e.target.closest('.af-link-handle')) return;
+      if (e.button !== 0 || e.target.closest('.af-link-handle') || !editing()) return;
       const id = el.dataset.id;
       const ids = state.picked.has(id) ? [...state.picked] : [id];
       drag = { x: e.clientX, y: e.clientY, moved: false, ids, free: e.altKey,
@@ -746,6 +789,11 @@
     if (first) first.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   });
   $('af-expand').addEventListener('click', toggleExpand);
+  section.querySelectorAll('.af-tab').forEach(tab => tab.addEventListener('click', () => {
+    framework = tab.dataset.framework;
+    try { localStorage.setItem(FW_KEY, framework); } catch (e) { /* storage blocked */ }
+    render();
+  }));
   $('af-pick-mode').addEventListener('click', () => {
     state.picking = !state.picking;
     syncChip('af-pick-mode', state.picking);

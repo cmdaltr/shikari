@@ -75,9 +75,12 @@ from archer.database.models import User, UserRole, APIKey
 from archer.validation.query_syntax_validator import validate_query_syntax
 from archer.validation import get_validation_router
 from archer.chat import router as chat_router
+from archer.visualization.frameworks import FRAMEWORKS as FLOW_FRAMEWORKS
 
 
 templates = Jinja2Templates(directory="templates")
+# Attack flow tabs (partials/attack_flow.html): the Cyber Kill Chain and Targeted Attack Lifecycle mappings
+templates.env.globals["flow_frameworks"] = FLOW_FRAMEWORKS
 
 # Data source display name mapping (used for detection titles and correlation displays)
 DATA_SOURCE_DISPLAY_NAMES = {
