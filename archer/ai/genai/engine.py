@@ -595,6 +595,10 @@ _ATTACK_PROGRESSIONS = [
     ("resource-development", "initial-access"),
     ("reconnaissance", "initial-access"),
 ]
+# ATT&CK v18 split Defense Evasion into Stealth and Defense Impairment: they pair as it does
+_ATTACK_PROGRESSIONS += [(new if a == "defense-evasion" else a, new if b == "defense-evasion" else b)
+                         for new in ("stealth", "defense-impairment")
+                         for a, b in _ATTACK_PROGRESSIONS if "defense-evasion" in (a, b)]
 
 # Tactic priority weights (higher = more critical to detect)
 _TACTIC_PRIORITY = {

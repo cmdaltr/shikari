@@ -79,7 +79,7 @@ MITRE ATT&CK STIX data across all three attribution paths (direct, via_software,
 For each technique you are told:
 - technique_id (ATT&CK ID, e.g. T1078.004)
 - technique_name
-- tactic (kill chain stage, e.g. Initial Access)
+- tactic (ATT&CK tactic, e.g. Initial Access)
 - attribution_type (direct / via_software:ToolName / via_campaign:CampaignName)
 - covered (true = Archer already has a detection YAML for this; false = gap)
 
@@ -87,10 +87,14 @@ Your task: Return the top {n} most critical techniques to prioritize for detecti
 
 Ranking criteria (in order of weight):
 1. Uncovered gaps — prefer techniques with no existing detection
-2. Kill chain position — Initial Access and Execution enable everything downstream
+2. Enabling position — entry points and techniques the group's other techniques depend on.
+   ATT&CK is not linear: tactics are goals, not steps, and a group can reach them in any order,
+   so don't rank by a tactic's column position
 3. Attribution confidence — direct > via_software > via_campaign
 4. Detection opportunity — prefer techniques with rich, available telemetry (process, network, auth logs)
-5. Chaining potential — techniques that bridge multiple kill-chain stages
+5. Chaining potential — techniques that bridge several tactics
+
+attack_chain is the order this group is reported to use its tactics in, not ATT&CK's column order.
 
 Return a JSON object with EXACTLY this structure (no markdown, no preamble):
 {{
