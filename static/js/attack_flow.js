@@ -266,7 +266,8 @@
       const detected = nodeDetected(n);
       // Adversary-side Reconnaissance/Resource Development: known, not a gap
       const intel = !detected && n.intel_only;
-      el.classList.toggle('is-gap', !detected && !intel);
+      // A sub-technique expanded from an attributed parent isn't the group's, so never a gap
+      el.classList.toggle('is-gap', !detected && !intel && !n.via_parent);
       el.classList.toggle('is-intel', intel);
       el.hidden = (!detected && !state.gaps) || state.removed.has(n.id);
       el.querySelectorAll('.af-node-cov .af-logo').forEach(l => { l.style.display = state.vendors.has(l.dataset.vendor) ? '' : 'none'; });
@@ -430,6 +431,7 @@
       <p class="af-detail-id"><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.id)} ↗</a></p>
       <h3>${esc(n.name)}</h3>
       <p class="af-detail-tactics">${n.tactics.map(esc).join(' · ')}</p>
+      ${n.via_parent ? `<p class="af-detail-note">Not attributed to the group: built because ATT&amp;CK attributes its parent, ${esc(n.id.split('.')[0])}.</p>` : ''}
       ${editing() ? '' : `<p class="af-detail-phase">${esc(nodeEls[id].closest('.af-phase-lane').dataset.phase)}</p>`}
       ${coverage ? `<ul class="af-detail-cov">${coverage}</ul>` : n.intel_only
         ? `<p class="af-detail-gap is-intel">Intel only: this happens on the adversary's side, before the estate, so no log source sees it and it isn't counted as a gap.</p>`

@@ -87,6 +87,7 @@
     <strong>{{ attack_flow.stats.detected }}</strong> detected ·
     <strong class="af-stats-gap">{{ attack_flow.stats.gaps }}</strong> gaps ·
     {% if attack_flow.stats.intel_only %}<strong>{{ attack_flow.stats.intel_only }}</strong> intel only ·{% endif %}
+    {% if attack_flow.stats.via_parent %}<span title="Sub-techniques ATT&amp;CK doesn't attribute to the group, built because it attributes their parent"><strong>{{ attack_flow.stats.via_parent }}</strong> expanded from attributed parents ·</span>{% endif %}
     <strong id="af-stat-edges">{{ attack_flow.stats.edges }}</strong> correlation links
   </p>
 

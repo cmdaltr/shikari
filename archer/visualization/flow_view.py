@@ -129,6 +129,11 @@ def current_tactics(bundle) -> Dict[str, List[str]]:
 _TACTICS_CACHE: Dict = {}
 
 
+def via_parent(tid: str, attributed_ids) -> bool:
+    """A sub-technique the run built from its attributed parent, not attributed itself."""
+    return "." in tid and tid not in attributed_ids and tid.split(".")[0] in attributed_ids
+
+
 def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: List[Dict],
                     attributed: Optional[List[Dict]] = None,
                     tactic_lookup: Optional[Dict[str, List[str]]] = None) -> Dict:
@@ -137,7 +142,10 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
 
     detection_paths: vendor -> detection YAML paths shown on the results page
     correlations:    the group's vendor_correlations (from data/correlate/<group>.json)
-    attributed:      ATT&CK techniques for the group (attributed_techniques()), for gaps
+    attributed:      ATT&CK techniques for the group (attributed_techniques()), for gaps.
+                     A built sub-technique ATT&CK doesn't attribute, whose parent it does,
+                     is via_parent: the run expands attributed parents into their
+                     sub-techniques (archer.mitre.retrieve). It's extra coverage, never a gap.
     tactic_lookup:   current tactics per technique (current_tactics()); overrides the
                      procedures CSV, which can predate the loaded ATT&CK version
     """
@@ -191,7 +199,9 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
                 e["vendors"].append(vendor)
             e["relevance"] = max(e["relevance"], float(corr.get("relevance_score") or 0))
 
+    attributed_ids = {tid for tid, n in nodes.items() if n["attributed"]}
     for n in nodes.values():
+        n["via_parent"] = via_parent(n["id"], attributed_ids)
         # Primary tactic: the detection's first tactic; it decides the lane
         n["tactic"] = n["tactics"][0] if n["tactics"] else "Unknown"
         n["detected"] = bool(n["vendors"])
@@ -215,6 +225,8 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
             "techniques": len(nodes),
             "detected": sum(1 for n in nodes.values() if n["detected"]),
             "gaps": sum(1 for n in nodes.values() if n["attributed"] and not n["detected"] and not n["intel_only"]),
+            "attributed": len(attributed_ids),
+            "via_parent": sum(1 for n in nodes.values() if n["via_parent"]),
             "intel_only": sum(1 for n in nodes.values() if n["intel_only"]),
             "edges": len(edges),
             "tactics": len(lanes),

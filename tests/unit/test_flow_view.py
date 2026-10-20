@@ -39,7 +39,8 @@ def test_lanes_coverage_gaps_and_edges(tmp_path):
     assert {(e["from"], e["to"], tuple(e["vendors"])) for e in view["edges"]} == {
         ("T1566", "T1059.001", ("googlesecops",)), ("T1059.001", "T1071.001", ("mde",))}
     assert [v["key"] for v in view["vendors"]] == ["googlesecops", "mde"]
-    assert view["stats"] == {"techniques": 4, "detected": 3, "gaps": 1, "edges": 2, "tactics": 4, "intel_only": 0}
+    assert view["stats"] == {"techniques": 4, "detected": 3, "gaps": 1, "edges": 2, "tactics": 4, "intel_only": 0,
+                             "attributed": 1, "via_parent": 0}
 
 
 def test_attack_flow_bundle_follows_correlations(tmp_path):
@@ -177,3 +178,14 @@ def test_phase_goes_by_technique_then_parent_then_tactic():
     assert phase_of("tal", "T1078.002", "Defense Evasion") == "Maintain Presence"
     assert phase_of("tal", "T1003.001", "Credential Access") == "Escalate Privileges"
     assert phase_of("tal", "T1000", "Not A Tactic") == UNMAPPED
+
+
+def test_built_sub_technique_of_an_attributed_parent_is_via_parent(tmp_path):
+    sub = _det(tmp_path, "DLL Injection", "T1055.001", ["Defense Evasion"], "GoogleSecOps")
+    other = _det(tmp_path, "PowerShell", "T1059.001", ["Execution"], "GoogleSecOps")
+    view = build_flow_view({"googlesecops": [sub, other]}, [],
+                           attributed=[{"id": "T1055", "name": "Process Injection", "tactics": ["Defense Evasion"]}])
+    nodes = {n["id"]: n for l in view["lanes"] for n in l["nodes"]}
+    assert nodes["T1055.001"]["via_parent"] and not nodes["T1055"]["via_parent"]
+    assert not nodes["T1059.001"]["via_parent"]  # its parent isn't attributed
+    assert (view["stats"]["attributed"], view["stats"]["via_parent"]) == (1, 1)

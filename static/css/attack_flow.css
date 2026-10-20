@@ -150,6 +150,7 @@
 .af-detail-id { margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 0.85em; }
 .af-detail-tactics { margin: 0 0 10px; color: var(--af-muted); font-size: 0.85em; }
 .af-detail-phase { margin: -6px 0 10px; font-size: 0.8em; font-weight: 600; color: var(--accent); }
+.af-detail-note { margin: -4px 0 10px; color: var(--af-muted); font-size: 0.8em; }
 .af-detail-cov, .af-detail-links { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 .af-detail-cov li { display: flex; align-items: center; gap: 6px; font-size: 0.88em; }
 .af-detail-gap { color: var(--af-gap); font-weight: 600; font-size: 0.88em; }

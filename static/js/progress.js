@@ -169,6 +169,10 @@ function render(p) {
   const total = Number(p.total_yaml) || 0;
   const processed = Number(p.processed_yaml ?? p.created_yaml) || 0;
   const created = Number(p.created_yaml) || 0;
+  // The *_yaml counts are procedures; a technique can have several. Older runs lack technique counts.
+  const techTotal = Number(p.total_techniques) || 0;
+  const techMade = Number(p.created_techniques) || 0;
+  const procs = n => `${fmt(n)} procedure${n === 1 ? '' : 's'}`;
   const sweeps = Number(p.ioc_sweeps) || 0;   // report IOC sweeps, one per SIEM
   const sweepNote = sweeps ? `IOC sweeps for ${sweeps} SIEM${sweeps === 1 ? '' : 's'}` : '';
 
@@ -204,7 +208,7 @@ function render(p) {
     detPctShown = Math.max(detPctShown, pct);
     paint(det, {
       state: 'active', indeterminate: total === 0, pct: detPctShown,
-      count: total ? `${fmt(processed)} / ${fmt(total)} techniques` : '',
+      count: total ? `${fmt(processed)} / ${procs(total)}${techTotal ? ` (${fmt(techTotal)} techniques)` : ''}` : '',
       detail: p.current_technique ? `Building ${p.current_technique}` : 'Building detections',
       time: timing('detections', now, p),
     });
@@ -212,11 +216,11 @@ function render(p) {
   } else {
     detPctShown = 100;
     const made = total || created
-      ? `${fmt(created)} techniques produced detections${sweeps ? `, plus ${sweepNote}` : ''}`
+      ? `${techTotal ? `${fmt(techMade)} of ${fmt(techTotal)} techniques (${procs(created)})` : procs(created)} produced detections${sweeps ? `, plus ${sweepNote}` : ''}`
       : `${sweepNote} (no techniques were selected)`;
     paint(det, {
       state: 'done', pct: 100,
-      count: total ? `${fmt(processed || total)} / ${fmt(total)} techniques` : '',
+      count: total ? `${fmt(processed || total)} / ${procs(total)}` : '',
       detail: [strong('Complete: '), document.createTextNode(made)],
       time: timing('detections', now, p),
     });

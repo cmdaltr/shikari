@@ -156,11 +156,12 @@
       <div class="briefing-stats">
         <div class="briefing-stat">
           <strong>{{ briefing.coverage }}%</strong><span>Coverage</span>
-          <small>Techniques in this flow with at least one detection on any SIEM</small>
+          <small>Share of those techniques with at least one detection on any SIEM</small>
         </div>
         <div class="briefing-stat">
           <strong>{{ briefing.detected }} / {{ briefing.techniques }}</strong><span>Techniques detected</span>
-          <small>Out of every technique in the flow: those this run built, plus those ATT&amp;CK attributes to the group</small>
+          {% if briefing.attributed %}<small>Out of the techniques ATT&amp;CK attributes to the group{% if briefing.extra_total %}; plus {{ briefing.extra_detected }} of {{ briefing.extra_total }} sub-techniques this run expanded from attributed parents{% endif %}</small>
+          {% else %}<small>Out of every technique this run built</small>{% endif %}
         </div>
         <div class="briefing-stat">
           <strong>{{ briefing.gap_count }}</strong><span>Gap{{ '' if briefing.gap_count == 1 else 's' }}</span>

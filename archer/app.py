@@ -9077,6 +9077,11 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         from archer.visualization.flow_layouts import library_flows
 
         flows = library_flows(db, user.id, getattr(request.app.state, "bundle", None))
+        # Denominators from the loaded ATT&CK: Library technique IDs include sub-techniques
+        live = [o for o in (getattr(request.app.state, "bundle", None) or {}).get("objects", [])
+                if not o.get("revoked") and not o.get("x_mitre_deprecated")]
+        attack_techniques = sum(1 for o in live if o.get("type") == "attack-pattern")
+        attack_tactics = sum(1 for o in live if o.get("type") == "x-mitre-tactic")
 
         template_response = templates.TemplateResponse(
             "library.html",
@@ -9095,6 +9100,8 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "manual_hours": manual_hours,
                 "archer_hours": archer_hours,
                 "flows": flows,
+                "attack_techniques": attack_techniques,
+                "attack_tactics": attack_tactics,
             },
         )
         return template_response

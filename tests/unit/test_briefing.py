@@ -23,7 +23,7 @@ def test_coverage_weakest_tactic_and_gaps_by_action_then_severity():
     assert [g["id"] for g in b["gaps"]] == ["T1027", "T1070", "T1190"]
     assert [g["action"] for g in b["gaps"]] == ["build", "build", "research"]
     assert b["by_action"] == {"build": 2, "source": 0, "research": 1}
-    assert b["summary"].startswith("Archer has detections for 4 of 7 techniques (57%) across 3 tactics.")
+    assert b["summary"].startswith("Archer has detections for 4 of 7 attributed techniques (57%) across 3 tactics.")
     assert "Defense Evasion: 1 of 3 detected" in b["summary"]
 
 
@@ -57,3 +57,13 @@ def test_ai_summary_is_kept_only_for_the_same_coverage(tmp_path, monkeypatch):
     changed = briefing.build({"lanes": FLOW["lanes"][:2]})
     assert briefing.load_summary("G1", changed) is None
     assert "Gaps to close first" in briefing.prompt("G1", b) and "T1190" in briefing.prompt("G1", b)
+
+
+def test_sub_techniques_expanded_from_attributed_parents_are_extra_not_gaps():
+    sub = dict(_node("T1055.001", True, attributed=False), via_parent=True)
+    flow = {"lanes": [{"tactic": "Defense Evasion", "nodes": [_node("T1055", False), sub]}]}
+    # T1055.002 built nothing and never reached the flow: its parent is attributed, so no gap
+    b = briefing.build(flow, [{"technique": "T1055.002", "reason": "no_indicators"}])
+    assert (b["techniques"], b["detected"], b["extra_detected"], b["extra_total"]) == (1, 0, 1, 1)
+    assert [g["id"] for g in b["gaps"]] == ["T1055"]
+    assert "also covers 1 sub-technique of attributed techniques" in b["summary"]

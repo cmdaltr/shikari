@@ -5,7 +5,9 @@ built nothing for (run_files' no_detection manifest).
 
 Gaps are techniques ATT&CK attributes to the group that have no detection, plus the
 run's own techniques that produced none, so a CVE, report or technique hunt (no ATT&CK
-attribution) still gets one. ATT&CK isn't a sequence, so a gap's tactic position says
+attribution) still gets one. Sub-techniques the run expanded from an attributed parent
+(the flow's via_parent) aren't the group's: they're extra coverage, outside the count
+and never gaps. ATT&CK isn't a sequence, so a gap's tactic position says
 nothing about when it matters. Gaps are ranked by what closes them: one you can build
 now (indicators exist, or the run never tried it) before one that needs research
 (no indicators anywhere); then by severity (archer.build.severity: an alert there means
@@ -57,8 +59,11 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
     # Intel-only techniques (adversary-side Reconnaissance/Resource Development,
     # archer.tactic_scope) are neither coverage nor gaps
     intel = {n["id"] for lane in lanes for n in lane.get("nodes") or [] if n.get("intel_only")}
+    from archer.visualization.flow_view import via_parent
+    attributed_ids = {n["id"] for lane in lanes for n in lane.get("nodes") or [] if n.get("attributed")}
+    extra = {n["id"]: n.get("detected") for lane in lanes for n in lane.get("nodes") or [] if n.get("via_parent")}
     for lane in lanes:
-        nodes = [n for n in lane.get("nodes") or [] if n["id"] not in intel]
+        nodes = [n for n in lane.get("nodes") or [] if n["id"] not in intel and n["id"] not in extra]
         if not nodes:
             continue
         hit = sum(1 for n in nodes if n.get("detected"))
@@ -71,7 +76,7 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
     # Techniques the run built nothing for that never reached the flow
     in_flow = {n["id"] for lane in lanes for n in lane.get("nodes") or []}
     for tid, text in why.items():
-        if tid and tid not in in_flow and tid not in intel:
+        if tid and tid not in in_flow and tid not in intel and not via_parent(tid, attributed_ids):
             gaps.append(gap(tid, tid, "", "https://attack.mitre.org/techniques/" + tid.replace(".", "/") + "/", 0))
     gaps.sort(key=lambda g: g["order"])
     for g in gaps:
@@ -84,16 +89,23 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
     return {
         "techniques": total, "detected": detected, "gap_count": len(gaps),
         "coverage": round(100 * detected / total) if total else 0,
+        "attributed": bool(attributed_ids),
+        "extra_detected": sum(1 for hit in extra.values() if hit), "extra_total": len(extra),
         "tactics": tactics, "weakest": weakest, "gaps": gaps[:TOP_GAPS], "more_gaps": max(0, len(gaps) - TOP_GAPS),
         "by_action": {a: sum(1 for g in gaps if g["action"] == a) for a in ACTIONS},
-        "summary": _sentences(total, detected, len(tactics), weakest, gaps),
+        "summary": _sentences(total, detected, len(tactics), weakest, gaps, bool(attributed_ids),
+                              sum(1 for hit in extra.values() if hit)),
     }
 
 
-def _sentences(total: int, detected: int, n_tactics: int, weakest: Optional[Dict], gaps: List[Dict]) -> str:
+def _sentences(total: int, detected: int, n_tactics: int, weakest: Optional[Dict], gaps: List[Dict],
+               attributed: bool = False, extra: int = 0) -> str:
     pct = round(100 * detected / total) if total else 0
-    parts = [f"Archer has detections for {detected} of {total} techniques ({pct}%) across {n_tactics} "
-             f"tactic{'s' if n_tactics != 1 else ''}."]
+    parts = [f"Archer has detections for {detected} of {total} {'attributed ' if attributed else ''}techniques "
+             f"({pct}%) across {n_tactics} tactic{'s' if n_tactics != 1 else ''}."]
+    if extra:
+        parts.append(f"It also covers {extra} sub-technique{'s' if extra != 1 else ''} of attributed techniques "
+                     f"that ATT&CK doesn't attribute to the group.")
     if weakest:
         parts.append(f"The weakest tactic is {weakest['tactic']}: {weakest['detected']} of {weakest['total']} detected.")
     if gaps:
@@ -111,7 +123,10 @@ def _sentences(total: int, detected: int, n_tactics: int, weakest: Optional[Dict
 def prompt(group: str, briefing: Dict) -> str:
     """Facts for the model: it writes prose from these, nothing else."""
     lines = [f"Run: {group.replace('_', ' ')}",
-             f"Coverage: {briefing['detected']} of {briefing['techniques']} techniques ({briefing['coverage']}%)",
+             f"Coverage: {briefing['detected']} of {briefing['techniques']} {'attributed ' if briefing.get('attributed') else ''}"
+             f"techniques ({briefing['coverage']}%)"
+             + (f"; plus {briefing['extra_detected']} unattributed sub-techniques of attributed ones"
+                if briefing.get("extra_detected") else ""),
              "By ATT&CK tactic (not a sequence: groups use tactics in any order): " + "; ".join(
                  f"{t['tactic']} {t['detected']}/{t['total']}" for t in briefing["tactics"])]
     if briefing["weakest"]:

@@ -43,7 +43,9 @@ def _report_technique(group_name, technique_id, technique_name):
     safe_progress_update(group_name, {"current_technique": label})
 
 
-def _report_detections(group_name, processed, created, total):
+def _report_detections(group_name, processed, created, total, produced_ids=()):
+    """The *_yaml counts are procedures (one technique can have several); created_techniques
+    is the distinct techniques that produced a detection, out of total_techniques."""
     safe_progress_update(group_name, {
         "status": "creating_yamls",
         "phase": "detections",
@@ -51,6 +53,7 @@ def _report_detections(group_name, processed, created, total):
         "processed_yaml": processed,
         "created_yaml": created,
         "total_yaml": total,
+        "created_techniques": len(produced_ids),
     })
 
 
@@ -133,6 +136,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             )
         # compute total expected YAMLs for progress reporting
         total = sum(len(entry.get("techniques", [])) for entry in manual_data)
+        produced_ids = set()
         safe_progress_update(
             group_name,
             {
@@ -142,6 +146,8 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 "created_yaml": 0,
                 "processed_yaml": 0,
                 "total_yaml": total,
+                "created_techniques": 0,
+                "total_techniques": len({t.get("technique") for e in manual_data for t in e.get("techniques", [])}),
             },
         )
         processed = 0
@@ -221,6 +227,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                     run_files.outcome(group_name, technique, retrieved_data["technique"], produced, reason)
                     if produced:
                         created += 1
+                        produced_ids.add(technique)
                 except Exception as e:
                     import traceback
                     print(f"❌ Error processing technique {technique}: {e}")
@@ -228,7 +235,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                     # Continue to next technique instead of failing completely
                 # Failed techniques count as processed: the bar tracks work done, not successes
                 processed += 1
-                _report_detections(group_name, processed, created, total)
+                _report_detections(group_name, processed, created, total, produced_ids)
 
     else:
         # retrieve group id based on group name provided
@@ -247,6 +254,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
         created = 0
         total = len(procedures)
+        produced_ids = set()
         print(f"📋 Processing {total} procedures for '{group_name}'")
         safe_progress_update(
             group_name,
@@ -257,6 +265,8 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 "created_yaml": 0,
                 "processed_yaml": 0,
                 "total_yaml": total,
+                "created_techniques": 0,
+                "total_techniques": len({p[0] for p in procedures}),
             },
         )
         processed = 0
@@ -284,7 +294,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             if off:
                 run_files.outcome(group_name, procedure[0], procedure[1], False, off)
                 processed += 1
-                _report_detections(group_name, processed, created, total)
+                _report_detections(group_name, processed, created, total, produced_ids)
                 continue
 
             _report_technique(group_name, procedure[0], procedure[1])
@@ -295,13 +305,14 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 run_files.outcome(group_name, procedure[0], procedure[1], produced, reason)
                 if produced:
                     created += 1
+                    produced_ids.add(procedure[0])
             except Exception as e:
                 import traceback
                 print(f"❌ Error processing procedure {procedure[0]} ({procedure[1]}): {e}")
                 traceback.print_exc()
                 # Continue to next procedure instead of failing completely
             processed += 1
-            _report_detections(group_name, processed, created, total)
+            _report_detections(group_name, processed, created, total, produced_ids)
 
     if dry_run:
         _dry_run_active = False
