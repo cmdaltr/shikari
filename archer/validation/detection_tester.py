@@ -145,7 +145,12 @@ class DetectionTester:
                     error_message="Failed to ingest events into SIEM",
                 )
 
-            # Execute the query
+            # Execute the query. The SecOps simulator runs rules: a UDM search goes as the
+            # single-event rule it amounts to (archer.build.udm)
+            if vendor == "secops":
+                from archer.build.udm import to_yaral
+
+                query = to_yaral(query)
             query_result = self.docker_manager.execute_query(session_id, vendor, query)
 
             execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
@@ -536,8 +541,10 @@ class DetectionTester:
                 patterns.append({"field": field, "value": value.strip("*"), "type": "contains"})
 
         elif vendor == "secops":
-            # Match re.regex patterns (YARA-L)
-            matches = re.findall(r're\.regex\(\$\w+\.([^,]+),\s*`([^`]+)`\)', query)
+            # Match re.regex patterns (YARA-L), from a UDM search's rule form
+            from archer.build.udm import to_yaral
+
+            matches = re.findall(r're\.regex\(\$\w+\.([^,]+),\s*`([^`]+)`\)', to_yaral(query))
             for field, pattern in matches:
                 patterns.append({"field": field.strip(), "value": pattern, "type": "regex"})
 

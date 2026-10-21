@@ -32,7 +32,7 @@ from archer.client import ArcherClient, ArcherError
 # stdout is the MCP channel: everything else goes to stderr
 logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
 
-INSTRUCTIONS = """Archer generates SIEM detections (Google SecOps YARA-L, Defender XDR KQL, Splunk SPL, Elastic) from \
+INSTRUCTIONS = """Archer generates SIEM detections (Google SecOps UDM searches, Defender XDR KQL, Splunk SPL, Elastic) from \
 MITRE ATT&CK groups, CVEs, techniques and threat reports. Read tools look things up (coverage, results, \
 ATT&CK, the library) and check queries; hunt_* tools start runs that take minutes (follow with wait_for_run, \
 then get_run_results); save_query_fix rewrites a query in a detection file (refused while it has errors). \

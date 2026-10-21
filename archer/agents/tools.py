@@ -192,7 +192,7 @@ def build_tools(ctx: ToolContext, names: Optional[List[str]] = None) -> List[Too
              get_run_results),
         Tool("get_detection", "The full YAML of one detection file.", _schema({"file": _str("File name, e.g. T1190__waf_prod_bespoke.yaml")}, ["file"]),
              get_detection),
-        Tool("check_query", "Statically check a query: KQL (MDE schema and contract lint), YARA-L (SecOps lint), "
+        Tool("check_query", "Statically check a query: KQL (MDE schema and contract lint), UDM (SecOps search structure and joins), "
              "SPL (structure and commands), Elastic (structure). Errors mean it won't parse or can't match; "
              "warnings are style.",
              _schema({"query": _str("The query"), "platform": _str("mde | secops | splunk | elastic (blank = detect)")}, ["query"]),

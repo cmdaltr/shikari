@@ -206,8 +206,8 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
             vendor = "splunk"
         elif query.lstrip().startswith("Device"):
             vendor = "mde"
-        elif "rule " in query.lower() and "events:" in query.lower():
-            # YARA-L rules start with "rule " and contain "events:" sections
+        elif _is_yaral(query):
+            # A UDM search, or a YARA-L rule written before SecOps output moved to UDM
             vendor = "googlesecops"
         elif query.lstrip().startswith("{") and "query" in query.lower() and "bool" in query.lower():
             # Elastic Query DSL starts with { and typically contains "query" and "bool"
@@ -284,7 +284,11 @@ def _vendor_priority(vendor: str) -> int:
 
 
 def _is_yaral(query: str) -> bool:
-    return isinstance(query, str) and query.lstrip().startswith("rule ")
+    """A Google SecOps query: a UDM search (archer.build.udm) or a legacy YARA-L rule."""
+    if not isinstance(query, str):
+        return False
+    q = query.lstrip()
+    return q.startswith("rule ") or q.startswith("// archer_") or bool(re.match(r"\(*(\$e\d?\.)?metadata\.event_type\s*=", q))
 
 
 def _source_label(path: Optional[str]) -> str:
@@ -335,7 +339,7 @@ def _combine_queries(vendor: str, query_a: str, query_b: str, a: str = None, b: 
     elif is_mde_a and is_mde_b:
         detected_vendor = "mde"
 
-    # YARA-L has a native multi-event form; no AI/parser path to choose between
+    # A two-event UDM join is built directly; no AI/parser path to choose between
     if detected_vendor == "googlesecops":
         return _basic_combine_queries(detected_vendor, query_a, query_b, _source_label(a), _source_label(b))
 
@@ -1230,12 +1234,12 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
     vendor = corr_data.get("vendor", "").lower()
 
     if vendor == "googlesecops":
-        from archer.build.secops import build_correlation_rule
+        from archer.build.udm import build_join
 
         split = lambda q: [r for r in (q or "").split("\nUNION\n") if r.strip()]
-        rule = build_correlation_rule(split(query_a), split(query_b),
-                                      _source_label(corr_data.get("a")), _source_label(corr_data.get("b")))
-        return rule or corr_data.get("combined_query", "")
+        query = build_join(split(query_a), split(query_b),
+                           _source_label(corr_data.get("a")), _source_label(corr_data.get("b")))
+        return query or corr_data.get("combined_query", "")
 
     # Detect if this is a Splunk or non-MDE query
     is_splunk = (
@@ -1480,7 +1484,7 @@ def _get_account_field_for_table(table_name: str) -> str:
 def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> List[Dict]:
     """
     Group each vendor's correlations separately. Merging is by technique pair, so
-    grouping across vendors would splice YARA-L, KQL and SPL into one query.
+    grouping across vendors would splice UDM, KQL and SPL into one query.
     """
     by_vendor: Dict[str, List[Dict]] = {}
     for corr in correlations:
@@ -2441,11 +2445,11 @@ def _basic_combine_queries(
 
     # Handle MDE/KQL queries
     elif vendor == "googlesecops":
-        from archer.build.secops import build_correlation_rule
+        from archer.build.udm import build_join
 
-        rule = build_correlation_rule(query_a, query_b, source_a or "", source_b or "")
-        if rule:
-            return rule
+        query = build_join(query_a, query_b, source_a or "", source_b or "")
+        if query:
+            return query
         return f"// Could not build a SecOps correlation from {source_a or 'Query A'} and {source_b or 'Query B'}"
 
     elif vendor in ["mde", "microsoft", "sentinel", "kql"]:
@@ -2713,7 +2717,7 @@ def _detect_platform(yaml_data: Dict) -> str:
         return "splunk"
     elif query.lstrip().startswith("Device"):
         return "mde"
-    elif "rule " in query and ("events:" in query or "match:" in query):  # YARA-L for Google SecOps
+    elif _is_yaral(query):  # Google SecOps: UDM search (or a legacy YARA-L rule)
         return "googlesecops"
     elif query.lstrip().startswith("FROM ") or " FROM " in query.upper()[:100]:  # Elastic EQL/ES|QL
         return "elastic"

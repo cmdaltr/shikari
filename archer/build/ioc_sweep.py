@@ -15,6 +15,7 @@ from typing import Dict, List, Optional
 
 from archer.build.indicator_hygiene import clean_indicator
 from archer.build.secops import _re_literal
+from archer.build.udm import from_yaral
 from archer.build.severity import RISK_SCORE
 
 _DOMAIN = re.compile(r"^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
@@ -225,7 +226,8 @@ def secops_sweep(iocs: Dict[str, List[str]], label: str) -> Optional[str]:
     if not alts:
         return None
     name = "archer_ioc_sweep_" + re.sub(r"\W+", "_", label).strip("_").lower()
-    return f"""rule {name} {{
+    # Built as a single-event rule, written as the UDM search it amounts to (archer.build.udm)
+    return from_yaral(f"""rule {name} {{
   meta:
     author = "Archer Detection Engineering"
     description = "IOC sweep for {label.replace('"', "'")}"
@@ -244,7 +246,7 @@ def secops_sweep(iocs: Dict[str, List[str]], label: str) -> Optional[str]:
 
   condition:
     $e
-}}"""
+}}""")
 
 
 def apply_expiry(group_name: str, clean: Dict[str, List[str]], regenerate: bool,

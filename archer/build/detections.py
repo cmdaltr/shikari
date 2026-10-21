@@ -387,12 +387,12 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                 try:
                     from archer.build.secops import SecOpsGenerator
                     cg = SecOpsGenerator()
-                    result = cg.generate_yaral_rule(
+                    result = cg.generate_query(
                         technique_id=tid, technique_name=name, tactic=tactic,
                         description=tdesc, indicators=identifiers, group_name=tag
                     )
-                    if result and result.get("yaral_code"):
-                        secops_queries = [result["yaral_code"]]
+                    if result and result.get("query"):
+                        secops_queries = [result["query"]]
                 except Exception as e:
                     print(f"  ⚠️  Google SecOps preview failed: {e}")
 

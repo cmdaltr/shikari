@@ -62,11 +62,10 @@ def test_report_iocs_are_refanged_validated_and_patterned():
     assert r'matches regex @"(?i)(^|[./])[a-z0-9-]+-sso\.com($|[/:])"' in kql
     assert "MD5 in (ioc_md5)" in kql and kql.startswith("let ioc_domain")
     rule = secops_sweep(clean, "UNC3944")
-    assert rule.startswith("rule archer_ioc_sweep_unc3944 {")
-    assert r"re.regex($e.network.dns.questions.name, `(^|\.)fleetdeck\.io$`) nocase" in rule
-    assert '$e.target.ip = "45.153.240.1"' in rule
-    events = rule.split("events:")[1].split("outcome:")[0].split("condition:")[0]
-    assert len([l for l in events.splitlines() if l.strip()]) == 1  # alternatives on one line
+    assert rule.startswith("// archer_ioc_sweep_unc3944:")
+    assert r"network.dns.questions.name = /(^|\.)fleetdeck\.io$/ nocase" in rule
+    assert 'target.ip = "45.153.240.1"' in rule
+    assert len(rule.splitlines()) == 2  # the header, then one expression of alternatives
 
 
 def test_citation_links_are_not_iocs():

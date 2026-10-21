@@ -694,77 +694,7 @@
                   </svg>
                   {% if detection.osint_enriched %}OSINT Enhancement Details{% else %}OSINT Comparison Details{% endif %}
                 </div>
-                <div style="font-size: 0.9em; color: #333;">
-                  {% if detection.osint_data.indicators %}
-                  <div style="display: flex; flex-direction: column; gap: 12px;">
-                    {% for category, items in detection.osint_data.indicators.items() %}
-                      {% if items %}
-                      <div>
-                        {% if category == 'query_snippets' %}
-                        <!-- Query snippets with source links -->
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                          {% for item in items %}
-                          {% set url_parts = item.split('|||') %}
-                          {% set snippet_with_source = url_parts[0] %}
-                          {% set source_url = url_parts[1] if url_parts|length > 1 else '' %}
-                          {% set parts = snippet_with_source.split('] ', 1) %}
-                          {% if parts|length == 2 %}
-                          {% set source_name = parts[0].replace('[', '') %}
-                          {% set snippet = parts[1] %}
-                          <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
-                            <!-- Vendor badge -->
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                              <span style="background: {% if source_name == 'Elastic' %}#00bfb3{% elif source_name == 'Splunk' %}#e91e8c{% else %}#0369a1{% endif %}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.7em; font-weight: 600;">
-                                {{ source_name }}
-                              </span>
-                              <span style="font-size: 0.7em; color: #6b7280; font-style: italic;">Detection Rule Query (excerpt)</span>
-                            </div>
-                            <!-- Query snippet -->
-                            <code style="display: block; background: #f8fafc; color: #0c4a6e; padding: 10px; border-radius: 4px; font-size: 0.8em; font-family: 'Courier New', monospace; line-height: 1.5; word-break: break-all; border-left: 3px solid {% if source_name == 'Elastic' %}#00bfb3{% elif source_name == 'Splunk' %}#e91e8c{% else %}#0369a1{% endif %};">{{ snippet }}...</code>
-                            <!-- Source link -->
-                            {% if source_url %}
-                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
-                              <div style="display: flex; align-items: center; gap: 6px;">
-                                <svg width="14" height="14" viewBox="0 0 16 16" fill="#6b7280">
-                                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                                </svg>
-                                <a href="{{ source_url }}" target="_blank" style="font-size: 0.75em; color: #4b5563; text-decoration: none; font-family: monospace;">
-                                  View full detection rule on GitHub →
-                                </a>
-                              </div>
-                            </div>
-                            {% endif %}
-                          </div>
-                          {% endif %}
-                          {% endfor %}
-                        </div>
-                        {% else %}
-                        <!-- Other indicator types (cmd, sw, reg, evt) -->
-                        <div style="font-size: 0.8em; color: #1e40af; font-weight: 600; margin-bottom: 6px;">
-                          {% if category == 'cmd' %}Commands:
-                          {% elif category == 'sw' %}Software/Processes:
-                          {% elif category == 'reg' %}Registry Keys:
-                          {% elif category == 'evt' %}Event Codes:
-                          {% else %}{{ category.replace('_', ' ').title() }}:
-                          {% endif %}
-                        </div>
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                          {% for item in items %}
-                          <code style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 3px; font-size: 0.8em; font-family: 'Courier New', monospace;">{{ item }}</code>
-                          {% endfor %}
-                        </div>
-                        {% endif %}
-                      </div>
-                      {% endif %}
-                    {% endfor %}
-                  </div>
-                  {% endif %}
-                  {% if detection.osint_data.enrichment_date %}
-                  <p style="margin: 12px 0 0 0; font-size: 0.85em; color: #666; font-style: italic;">
-                    Enriched on: {{ detection.osint_data.enrichment_date }}
-                  </p>
-                  {% endif %}
-                </div>
+                <div class="osint-lazy" data-osint-kind="detection" data-osint-files='{{ detection.files|tojson }}'>Loading…</div>
               </div>
               {% endif %}
 
@@ -1171,50 +1101,7 @@
                     </svg>
                     {% if correlation.osint_enriched %}OSINT Enhancement Details{% else %}OSINT Comparison Details{% endif %}
                   </div>
-                  <div style="font-size: 0.9em; color: #333;">
-                    {% if correlation.osint_data.indicators and correlation.osint_data.indicators.query_snippets %}
-                    <div>
-                      <strong style="display: block; margin-bottom: 12px;">OSINT Detection Query Snippets:</strong>
-                      <!-- Query snippets with source links and vendor grouping -->
-                      <div style="display: flex; flex-direction: column; gap: 12px;">
-                        {% for item in correlation.osint_data.indicators.query_snippets %}
-                        {% set url_parts = item.split('|||') %}
-                        {% set snippet_with_source = url_parts[0] %}
-                        {% set source_url = url_parts[1] if url_parts|length > 1 else '' %}
-                        {% set parts = snippet_with_source.split('] ', 1) %}
-                        {% if parts|length == 2 %}
-                        {% set source_name = parts[0].replace('[', '') %}
-                        {% set snippet = parts[1] %}
-                        <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
-                          <!-- Vendor badge -->
-                          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                            <span style="background: {% if source_name == 'Elastic' %}#00bfb3{% elif source_name == 'Splunk' %}#e91e8c{% else %}#0369a1{% endif %}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.7em; font-weight: 600;">
-                              {{ source_name }}
-                            </span>
-                            <span style="font-size: 0.7em; color: #6b7280; font-style: italic;">Detection Rule Query (excerpt)</span>
-                          </div>
-                          <!-- Query snippet -->
-                          <code style="display: block; background: #f8fafc; color: #0c4a6e; padding: 10px; border-radius: 4px; font-size: 0.8em; font-family: 'Courier New', monospace; line-height: 1.5; word-break: break-all; border-left: 3px solid {% if source_name == 'Elastic' %}#00bfb3{% elif source_name == 'Splunk' %}#e91e8c{% else %}#0369a1{% endif %};">{{ snippet }}...</code>
-                          <!-- Source link -->
-                          {% if source_url %}
-                          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                              <svg width="14" height="14" viewBox="0 0 16 16" fill="#6b7280">
-                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                              </svg>
-                              <a href="{{ source_url }}" target="_blank" style="font-size: 0.75em; color: #4b5563; text-decoration: none; font-family: monospace;">
-                                View full detection rule on GitHub →
-                              </a>
-                            </div>
-                          </div>
-                          {% endif %}
-                        </div>
-                        {% endif %}
-                        {% endfor %}
-                      </div>
-                    </div>
-                    {% endif %}
-                  </div>
+                  <div class="osint-lazy" data-osint-kind="correlation" data-osint-files='{{ correlation.osint_files|tojson }}'>Loading…</div>
                 </div>
               </div>
               {% endif %}
@@ -1509,8 +1396,8 @@
   </div>
 </div>
 
-{# Detections (minus osint_data, which the server restores) and correlations for Save to Library and Generate Report #}
-<script type="application/json" id="results-data">{{ {"detections": detections | without_osint, "correlations": correlations} | tojson }}</script>
+{# Detections and correlations for Save to Library and Generate Report, minus osint_data: the server restores it (with_osint) #}
+<script type="application/json" id="results-data">{{ {"detections": detections | without_osint, "correlations": correlations | without_corr_osint} | tojson }}</script>
 <script>
 // Parsed when a save or export needs it, not on page load
 const resultsData = () => JSON.parse(document.getElementById('results-data').textContent);
@@ -1559,10 +1446,24 @@ function toggleOsintDetails(detId) {
   if (detailsDiv) {
     if (detailsDiv.style.display === 'none' || detailsDiv.style.display === '') {
       detailsDiv.style.display = 'block';
+      loadOsintDetails(detailsDiv);
     } else {
       detailsDiv.style.display = 'none';
     }
   }
+}
+
+// OSINT details arrive when first opened (GET /api/osint-details), not with the page
+function loadOsintDetails(detailsDiv) {
+  const box = detailsDiv.querySelector('.osint-lazy:not([data-loaded])');
+  if (!box) return;
+  box.dataset.loaded = '1';
+  const params = new URLSearchParams({ kind: box.dataset.osintKind });
+  JSON.parse(box.dataset.osintFiles || '[]').forEach(f => params.append('files', f));
+  fetch('/api/osint-details?' + params)
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(html => { box.innerHTML = html; })
+    .catch(() => { delete box.dataset.loaded; box.textContent = 'Could not load the OSINT details. Close and open them to try again.'; });
 }
 
 // Copy text content to clipboard

@@ -3,7 +3,8 @@ Static checks for one query, any SIEM, without a running SIEM: what the repair a
 the MCP server and the console validate against.
 
   kql (MDE)        contract lint (archer.contract) + MDE schema (table and field names)
-  yara_l (SecOps)  contract lint
+  udm (SecOps)     UDM Search: structure, regex literals, fields, join shape
+  yara_l (SecOps)  contract lint, for rules written before SecOps output moved to UDM
   spl (Splunk)     structure: quotes, brackets, known commands after each pipe, a search scope
   elastic          structure: quotes and brackets
 
@@ -43,12 +44,19 @@ SPL_COMMANDS = {
 
 
 def normalise_platform(platform: Optional[str], query: str = "") -> Optional[str]:
+    from archer.build.udm import is_udm
+    from archer.contract.validator import detect_siem
+
     if platform:
         key = re.sub(r"[^a-z_]", "", platform.lower())
         if key in PLATFORM_ALIASES:
-            return PLATFORM_ALIASES[key]
-    from archer.contract.validator import detect_siem
-
+            siem = PLATFORM_ALIASES[key]
+            # SecOps output is UDM Search; a rule is a detection written before the move
+            if siem == "yara_l" and detect_siem(query or "") != "yara_l" and (query or "").strip():
+                return "udm"
+            return siem
+    if is_udm(query or ""):
+        return "udm"
     return detect_siem(query or "")
 
 
@@ -166,10 +174,35 @@ def _check_yaral(query: str, findings: List[Dict]) -> None:
     _structure(query, findings, quotes='"`')
 
 
+def _check_udm(query: str, findings: List[Dict]) -> None:
+    """A UDM search (archer.build.udm): it must parse, filter on UDM fields, and a join
+    must bind both events to a placeholder its match section groups by."""
+    from archer.build import udm
+
+    body = "\n".join(l for l in query.splitlines() if not l.strip().startswith("//"))
+    _structure(body, findings, quotes='"/')
+    for m in re.finditer(r"=\s*/((?:\\.|[^/\\])*)/", body):
+        try:
+            re.compile(m.group(1).replace("\\/", "/"))
+        except re.error as e:
+            findings.append({"check": "UDM-2", "message": f"/{m.group(1)}/ isn't a valid regex: {e}"})
+    if not re.search(r"(?<![\w.])(\$e\d*\.)?(" + "|".join(udm._ROOTS) + r")\.\w", body):
+        findings.append({"check": "UDM-1", "message": "no UDM field: a search filters on fields like metadata.event_type"})
+    if udm.is_join(body):
+        window = re.search(r"^\s*match\s*:\s*\n\s*(\$\w+(?:\s*,\s*\$\w+)*)\s+(?:over|by)\s+\d+[smhd]\b", body, re.M)
+        if not window:
+            findings.append({"check": "UDM-3", "message": "a join's match section needs a placeholder and a window ($host over 1h)"})
+        else:
+            for var in re.findall(r"\$\w+", window.group(1)):
+                bound = set(re.findall(rf"(\$e\d*)\.[\w.]+\s*=\s*{re.escape(var)}\b", body))
+                if len(bound) < 2:
+                    findings.append({"check": "UDM-4", "message": f"{var} binds {len(bound)} event: a join needs both"})
+
+
 # Findings that mean the query won't parse or can never match. Everything else is the
 # contract's style rules (KQL-5 escaping, KQL-14/15 summarize shape, YL-1 naming...)
 ERROR_CHECKS = {"EMPTY", "PLACEHOLDER", "STRUCT-1", "STRUCT-2", "SPL-1", "SPL-3", "SPL-4", "MDE-FIELD",
-                "KQL-16", "YL-21",
+                "KQL-16", "YL-21", "UDM-1", "UDM-2", "UDM-3", "UDM-4",
                 # archer.validation.precision: parses, but can't fire for the right reason
                 "PREC-CONTEXT", "PREC-NUMERIC", "PREC-PLACEHOLDER", "PREC-EMPTY"}
 
@@ -188,7 +221,7 @@ def check_query(query: str, platform: Optional[str] = None, technique_platforms=
     from archer.validation.precision import check as precision_check
 
     result = _check(query, platform)
-    if result["platform"] in ("kql", "yara_l") and (query or "").strip():
+    if result["platform"] in ("kql", "yara_l", "udm") and (query or "").strip():
         result["findings"] += [{"check": f["check"], "message": f["message"]}
                                for f in precision_check(query, result["platform"], technique_platforms)]
     for f in result["findings"]:
@@ -213,6 +246,8 @@ def _check(query: str, platform: Optional[str] = None) -> Dict:
         _check_kql(query, findings)
     elif siem == "yara_l":
         _check_yaral(query, findings)
+    elif siem == "udm":
+        _check_udm(query, findings)
     elif siem == "elastic":
         _structure(query, findings)
     else:

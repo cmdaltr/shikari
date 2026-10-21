@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response, HTTPException, Body
+from fastapi import FastAPI, Form, Request, UploadFile, File, Cookie, Response, HTTPException, Body, Query
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
@@ -7,7 +7,7 @@ from archer.build.group_files import group_yaml_files
 from archer.build.attack_mapping import rule_name as attack_rule_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 _PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -348,7 +348,7 @@ def extract_tables_indexes(query: str, vendor: str) -> list:
         tables_indexes = sorted(set(matches))
 
     elif vendor.lower() == "googlesecops":
-        # UDM event types the YARA-L rule matches on
+        # UDM event types the SecOps search matches on
         tables_indexes = sorted(set(re.findall(r'metadata\.event_type\s*=\s*"([A-Z_]+)"', query)))
 
     return tables_indexes
@@ -1025,8 +1025,48 @@ def without_osint(vendors):
             for v in vendors or []]
 
 
+def library_content(raw):
+    """
+    A Library item's content, decoded. SecOps queries saved as YARA-L rules, before SecOps
+    output moved to UDM Search, come out as the UDM searches they amount to
+    (archer.build.udm); the stored copy is left as it is. OSINT snippets quote public
+    YARA-L rules and stay as they are.
+    """
+    from archer.build.udm import from_yaral, is_yaral
+
+    content = json.loads(raw) if isinstance(raw, str) else raw
+    if not isinstance(content, dict):
+        return content
+    convert = lambda q: (from_yaral(q) or q) if isinstance(q, str) and is_yaral(q) else q
+    for key in ("query", "combined_query", "query_a", "query_b"):
+        if key in content:
+            content[key] = convert(content[key])
+    if isinstance(content.get("queries"), list):
+        content["queries"] = [convert(q) for q in content["queries"]]
+    for part in (content.get("individual_queries") or []) + (content.get("techniques") or []):
+        if isinstance(part, dict) and "query" in part:
+            part["query"] = convert(part["query"])
+    return content
+
+
+def without_corr_osint(vendors):
+    """The results page's correlations minus osint_data; with_osint rebuilds it from osint_files."""
+    return [dict(v, correlations=[{k: c[k] for k in c if k != "osint_data"} for c in v.get("correlations") or []])
+            for v in vendors or []]
+
+
 def with_osint(content):
-    """A detection the results page sent without osint_data, with it read back from its YAML."""
+    """
+    A detection or correlation the results page sent without osint_data, with it read back:
+    a detection's from its YAML, a correlation's inherited from its parts' YAMLs.
+    """
+    if isinstance(content, dict) and "osint_data" not in content and content.get("osint_files"):
+        from archer.build.correlation_osint import inherited
+
+        paths = [os.path.join(GENERATE_DIR, os.path.basename(str(f))) for f in content["osint_files"]]
+        osint = inherited([d for d in (load_yaml_file(p) for p in paths if os.path.isfile(p)) if d])
+        return dict(content, osint_data={"indicators": {"query_snippets": osint["snippets"]}, "sources": osint["sources"]}
+                    if osint["snippets"] or osint["sources"] else None)
     if not isinstance(content, dict) or "osint_data" in content or not content.get("file"):
         return content
     path = os.path.join(GENERATE_DIR, os.path.basename(str(content["file"])))
@@ -1036,6 +1076,7 @@ def with_osint(content):
 
 
 templates.env.filters["without_osint"] = without_osint
+templates.env.filters["without_corr_osint"] = without_corr_osint
 
 
 def check_osint_enriched(yaml_file, file_content=None):
@@ -7018,6 +7059,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                                 "osint_data": {"indicators": {"query_snippets": osint["snippets"]},
                                                "sources": osint["sources"]} if osint["snippets"] or osint["sources"] else None,
                                 "osint_enriched": osint["enhanced"],
+                                # Its details are fetched when opened (GET /api/osint-details)
+                                "osint_files": [os.path.basename(f) for f in files_to_process if f],
                                 "known_false_positives": osint["known_false_positives"],
                                 "lol_references": osint["lol_references"],
                                 "stale_parts": stale_parts(combined_query, part_docs),
@@ -8281,6 +8324,30 @@ def flows_page(request: Request, group: str = "", archer_session: Optional[str] 
     })
 
 
+@app.get("/api/osint-details", response_class=HTMLResponse)
+def results_osint(request: Request, kind: str = "detection", files: List[str] = Query(default=[])):
+    """
+    A results card's OSINT details, rendered when first opened: shipping every card's
+    query snippets with the page made it tens of megabytes. kind=detection merges the
+    files' osint_data, as the results page groups them; kind=correlation inherits from
+    its parts (archer.build.correlation_osint).
+    """
+    paths = [os.path.join(GENERATE_DIR, os.path.basename(f)) for f in files[:50] if f.endswith(".yaml")]
+    paths = [p for p in paths if os.path.isfile(p)]
+    if kind == "correlation":
+        from archer.build.correlation_osint import inherited
+
+        osint = inherited([d for d in map(load_yaml_file, paths) if d])
+        data = {"indicators": {"query_snippets": osint["snippets"]}} if osint["snippets"] else {}
+    else:
+        data = {}
+        for p in paths:
+            data.update(check_osint_enriched(p)[1] or {})
+    if not data:
+        return HTMLResponse('<p class="osint-empty">No OSINT details are recorded for this any more.</p>')
+    return templates.TemplateResponse("partials/osint_details.html", {"request": request, "osint": data})
+
+
 @app.get("/flow", response_class=HTMLResponse)
 def flow_only_page(request: Request, group_name: str, archer_session: Optional[str] = Cookie(None)):
     """
@@ -8420,7 +8487,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             # Parse the content JSON to extract detection details
             try:
                 content_data = (
-                    json.loads(det.content) if isinstance(det.content, str) else det.content
+                    library_content(det.content)
                 )
             except (json.JSONDecodeError, ValueError):
                 content_data = {}
@@ -8794,7 +8861,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
             # Parse the content JSON
             try:
                 content_data = (
-                    json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                    library_content(corr.content)
                 )
             except (json.JSONDecodeError, ValueError):
                 content_data = {}
@@ -9288,8 +9355,7 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
 
         # If direct export data provided (from results page), use it directly
         if direct_export_data:
-            export_data = [dict(item, content=with_osint(item.get("content"))) if item.get("type") == "detection" else item
-                           for item in direct_export_data]
+            export_data = [dict(item, content=with_osint(item.get("content"))) for item in direct_export_data]
         else:
             # Original flow: Get data from library using IDs
             if not detection_ids and not correlation_ids:
@@ -9340,7 +9406,7 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
                         "visibility": detection.visibility.value,
                         "creator": creator.full_name if creator else "Unknown",
                         "platform": detection.platform,
-                        "content": json.loads(detection.content) if detection.content else {},
+                        "content": library_content(detection.content) if detection.content else {},
                         "created_at": detection.created_at.isoformat(),
                     }
                 )
@@ -9445,7 +9511,7 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
                 # Original flow: Get correlations from database query result
                 for corr in correlations:
                     corr_content = (
-                        json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                        library_content(corr.content)
                     )
                     correlation_dict = {
                         "name": corr.title,
@@ -9536,7 +9602,7 @@ async def export_library(request: Request, archer_session: Optional[str] = Cooki
                 # Original flow: Get correlations from database query result
                 for corr in correlations:
                     corr_content = (
-                        json.loads(corr.content) if isinstance(corr.content, str) else corr.content
+                        library_content(corr.content)
                     )
                     correlation_dict = {
                         "name": corr.title,
@@ -9659,8 +9725,7 @@ async def save_to_library(request: Request, archer_session: Optional[str] = Cook
 
         if not title or not detection_type or not content:
             raise HTTPException(status_code=400, detail="Missing required fields")
-        if "correlation" not in detection_type.lower():
-            content = with_osint(content)
+        content = with_osint(content)
         # A detection must carry a query: a placeholder ({"query": "x"}, saved by a test
         # run) showed in the Library as an Unknown rule with no ATT&CK mapping
         if "correlation" not in detection_type.lower() and not _looks_like_query(content):
@@ -9908,7 +9973,7 @@ async def change_library_mapping(request: Request, archer_session: Optional[str]
         changed, unchanged = 0, None
         for row in rows:
             try:
-                content = json.loads(row.content)
+                content = library_content(row.content)
             except (TypeError, ValueError):
                 return JSONResponse({"error": f"Library item {row.id} isn't a detection"}, status_code=422)
             if not isinstance(content, dict):

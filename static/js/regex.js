@@ -14,7 +14,7 @@
   // Support: true, false, or a string (supported, with a caveat)
   const F = {
     kql: { name: 'Defender XDR', engine: 'RE2', unanchored: true, backtracks: false, caseNote: 'matches regex is case-sensitive: turn on i to add (?i)' },
-    yaral: { name: 'Google SecOps', engine: 'RE2', unanchored: true, backtracks: false, caseNote: 're.regex is case-sensitive: turn on i to add nocase' },
+    yaral: { name: 'Google SecOps', engine: 'RE2', unanchored: true, backtracks: false, caseNote: 'UDM regex is case-sensitive: turn on i to add nocase' },
     spl: { name: 'Splunk', engine: 'PCRE2', unanchored: true, backtracks: true, caseNote: 'regex and rex are case-sensitive: turn on i to add (?i)' },
     elastic: { name: 'Elastic', engine: 'Lucene', unanchored: false, backtracks: false, caseNote: 'regex is case-sensitive: turn on i to use regex~ (EQL) or case_insensitive' },
     python: { name: 'Python', engine: 're', unanchored: true, backtracks: true, caseNote: '' },
@@ -345,13 +345,12 @@
     const i = flags.includes('i'), extra = (flags.includes('m') ? 'm' : '') + (flags.includes('s') ? 's' : '');
     const inline = (i ? 'i' : '') + extra;
     const withInline = inline && !/^\(\?[a-zA-Z]+\)/.test(pattern) ? `(?${inline})${pattern}` : pattern;
-    const bt = pattern.includes('`');
     // Triple-quoted (raw) strings, unless the pattern would close them early
     const triple = v => /"""|"$/.test(v) ? `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"` : `"""${v}"""`;
     return [
       ['Defender XDR (KQL)', `| where ProcessCommandLine matches regex @"${withInline.replace(/"/g, '""')}"`],
-      ['Google SecOps (YARA-L)', bt ? `re.regex($e.target.process.command_line, "${(extra ? `(?${extra})` : '') + pattern.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")${i ? ' nocase' : ''}`
-        : `re.regex($e.target.process.command_line, \`${(extra ? `(?${extra})` : '') + pattern}\`)${i ? ' nocase' : ''}`],
+      // UDM Search: a /regex/ literal, so an unescaped / in the pattern is escaped
+      ['Google SecOps (UDM search)', `target.process.command_line = /${udmSlash((extra ? `(?${extra})` : '') + pattern)}/${i ? ' nocase' : ''}`],
       ['Splunk (SPL)', `| regex CommandLine="${withInline.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`],
       ['Elastic (EQL)', `process where process.command_line regex${i ? '~' : ''} ${triple(pattern)}`],
       ['Elastic (ES|QL)', i ? `| WHERE TO_LOWER(process.command_line) RLIKE ${triple(pattern)}  // RLIKE has no (?i): write the pattern's letters in lower case`
@@ -363,6 +362,13 @@
 
   // ------------------------------------------------------------------ matching (in a worker)
   // RE2 flavours run in RE2 and Splunk in PCRE2 (regex_worker.js); the rest in JavaScript
+  // A / ends a UDM /regex/ literal unless escaped; escapes are followed pair by pair
+  function udmSlash(p) {
+    let out = '', esc = false;
+    for (const ch of p) { if (ch === '/' && !esc) out += '\\'; out += ch; esc = ch === '\\' && !esc; }
+    return out;
+  }
+
   const ENGINE = { kql: 're2', yaral: 're2', spl: 'pcre2' };
   const workerUrl = (document.currentScript && document.currentScript.src || location.href).replace(/regex\.js(\?[^/]*)?$/, 'regex_worker.js$1');
   let worker = null, timer = null, runId = 0;

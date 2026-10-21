@@ -210,7 +210,12 @@ def severity(check: str) -> str:
 
 
 def check(query: str, siem: Optional[str], technique_platforms: Optional[Iterable[str]] = None) -> List[Dict]:
-    """Findings ({check, severity, message}) for a KQL or YARA-L query; [] for other SIEMs."""
+    """Findings ({check, severity, message}) for a KQL, UDM or YARA-L query; [] for other SIEMs."""
+    if siem == "udm":
+        # The same checks, on the rule the search amounts to (joins aren't checked)
+        from archer.build.udm import to_yaral
+
+        query, siem = to_yaral(query), "yara_l"
     found = check_kql(query, technique_platforms) if siem == "kql" else check_yaral(query) if siem == "yara_l" else []
     for f in found:
         f["severity"] = severity(f["check"])

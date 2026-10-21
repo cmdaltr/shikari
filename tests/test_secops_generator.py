@@ -30,13 +30,13 @@ class TestSecOpsGenerator:
         # Schema may or may not be loaded depending on file existence
         assert hasattr(generator, "schema")
 
-    def test_generate_yaral_rule_basic(self):
+    def test_generate_query_basic(self):
         """Test generating a basic YARA-L rule."""
         from archer.build.secops import SecOpsGenerator
 
         generator = SecOpsGenerator()
 
-        result = generator.generate_yaral_rule(
+        result = generator.generate_query(
             technique_id="T1003.001",
             technique_name="OS Credential Dumping: LSASS Memory",
             tactic="Credential Access",
@@ -48,9 +48,9 @@ class TestSecOpsGenerator:
 
         # Verify result structure
         assert isinstance(result, dict)
-        assert "rule_name" in result or "yaral_code" in result or "error" in result
+        assert "rule_name" in result or "query" in result or "error" in result
 
-    def test_generate_yaral_rule_with_indicators(self):
+    def test_generate_query_with_indicators(self):
         """Test generating YARA-L rule with IOC indicators."""
         from archer.build.secops import SecOpsGenerator
 
@@ -62,7 +62,7 @@ class TestSecOpsGenerator:
             "ip": ["10.0.0.100"],
         }
 
-        result = generator.generate_yaral_rule(
+        result = generator.generate_query(
             technique_id="T1003.001",
             technique_name="LSASS Memory",
             tactic="Credential Access",
@@ -80,7 +80,7 @@ class TestSecOpsGenerator:
 
         generator = SecOpsGenerator()
 
-        result = generator.generate_yaral_rule(
+        result = generator.generate_query(
             technique_id="T1059.001",
             technique_name="PowerShell",
             tactic="Execution",
@@ -98,7 +98,7 @@ class TestSecOpsGenerator:
 
         generator = SecOpsGenerator()
 
-        result = generator.generate_yaral_rule(
+        result = generator.generate_query(
             technique_id="T1566.001",
             technique_name="Spearphishing Attachment",
             tactic="Initial Access",
@@ -129,7 +129,7 @@ def test_secops_generator():
     # Test basic generation
     try:
         print("\nGenerating YARA-L rule for T1003.001 - LSASS Memory...")
-        result = generator.generate_yaral_rule(
+        result = generator.generate_query(
             technique_id="T1003.001",
             technique_name="OS Credential Dumping: LSASS Memory",
             tactic="Credential Access",
@@ -146,10 +146,10 @@ def test_secops_generator():
             print(f"Rule Name: {result.get('rule_name', 'N/A')}")
         if "severity" in result:
             print(f"Severity: {result.get('severity', 'N/A')}")
-        if "yaral_code" in result:
+        if "query" in result:
             print("\nYARA-L Code (preview):")
             print("-" * 40)
-            code = result.get("yaral_code", "")
+            code = result.get("query", "")
             print(code[:500] + "..." if len(code) > 500 else code)
 
         print("\n✓ Test completed successfully!")

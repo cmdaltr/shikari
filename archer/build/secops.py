@@ -1,7 +1,9 @@
 """
-Google SecOps YARA-L Detection Generator
-Converts MITRE ATT&CK techniques into YARA-L detection rules for Google SecOps
-Uses template-based generation with UDM (Unified Data Model) field mappings
+Google SecOps query generator: ATT&CK techniques as UDM searches for Search.
+
+The indicator logic builds a single-event YARA-L rule internally (its tests and the
+correlation builder were written against that form); archer.build.udm turns it into the
+UDM search Archer writes, so no SecOps output is a rule.
 """
 
 import os
@@ -30,7 +32,7 @@ class SecOpsGenerator:
                 return json.load(f)
         return {}
 
-    def generate_yaral_rule(
+    def generate_query(
         self,
         technique_id: str,
         technique_name: str,
@@ -42,12 +44,14 @@ class SecOpsGenerator:
         tactics: Optional[List[str]] = None,
     ) -> Dict[str, any]:
         """
-        Generate YARA-L detection rule for Google SecOps using templates
+        A UDM search for the technique, from its indicators.
 
         Returns:
-            Dict with keys: rule_name, yaral_code, description, severity,
-                           data_sources, event_types
+            Dict with keys: rule_name (the search's name), query (UDM search, None when
+            nothing to match on), description, severity, data_sources, event_types
         """
+        from archer.build.udm import from_yaral
+
         rule_name = yaral_rule_name(technique_id)
 
         # The technique's kill-chain stage (archer.build.severity), as the YAML records it
@@ -64,7 +68,7 @@ class SecOpsGenerator:
 
         return {
             "rule_name": rule_name,
-            "yaral_code": yaral_code,
+            "query": from_yaral(yaral_code) if yaral_code else None,
             "description": f"Detects {technique_name} ({technique_id})",
             "severity": severity,
             "data_sources": event_types,

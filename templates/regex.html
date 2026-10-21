@@ -18,7 +18,7 @@
   <section class="ui-card rx-card">
     <h2 class="section-title">Expression</h2>
     <div class="rx-flavours" role="radiogroup" aria-label="Regex flavour">
-      {% for key, label, engine in [('kql', 'Defender XDR', 'KQL · RE2'), ('yaral', 'Google SecOps', 'YARA-L · RE2'),
+      {% for key, label, engine in [('kql', 'Defender XDR', 'KQL · RE2'), ('yaral', 'Google SecOps', 'UDM · RE2'),
                                     ('spl', 'Splunk', 'SPL · PCRE2'), ('elastic', 'Elastic', 'Lucene regexp'),
                                     ('python', 'Python', 're'), ('js', 'JavaScript', 'ECMAScript')] %}
       <button type="button" class="ui-pill rx-flavour{{ ' is-active' if loop.first }}" data-flavour="{{ key }}" role="radio"

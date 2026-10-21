@@ -4,8 +4,8 @@ R04.3): the later the stage, the more an alert there means damage is already und
 Credential access, lateral movement and impact are never Low; delivery alone is never
 Critical. A technique listed under several tactics takes the most severe. No AI.
 
-The same rating goes in the YAML's severity field and, upper-cased, in a YARA-L rule's
-meta.severity, so the two always agree (validator YL-16).
+The same rating goes in the YAML's severity field and, upper-cased, in a SecOps search's header
+comment (a legacy YARA-L rule's meta.severity), so the two always agree (validator YL-16).
 """
 
 from typing import Iterable, Union

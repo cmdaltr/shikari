@@ -72,16 +72,25 @@ def inherited(detections: List[Dict]) -> Dict:
 
 
 def _norm(text: str) -> str:
-    # Combined YARA-L renames each detection's $e to $e1, $e2…
-    return re.sub(r"\s+", " ", re.sub(r"\$[a-z]+\d*\b", "$e", text or "")).strip()
+    # A UDM join binds each detection's fields to $e1, $e2 (a legacy rule renamed its $e):
+    # compare the fields bare
+    text = re.sub(r"\$e\d*\.", "", text or "")
+    return re.sub(r"\s+", " ", re.sub(r"\$[a-z]+\d*\b", "$e", text)).strip()
 
 
 def conditions(query: str) -> List[str]:
-    """A detection's filter lines: KQL '| where' (not the time window) or YARA-L regex/field tests."""
+    """A detection's filter lines: KQL '| where' (not the time window), a UDM search's field
+    tests, or a legacy YARA-L rule's regex/field tests."""
     lines = [l.strip() for l in (query or "").splitlines()]
     kql = [l[len("| where "):] for l in lines if l.startswith("| where ") and "ago(" not in l]
     if kql:
         return kql
+    from archer.build.udm import is_udm, is_yaral
+
+    if is_udm(query) and not is_yaral(query):
+        body = " ".join(l for l in lines if not l.startswith("//"))
+        tests = re.findall(r'(?<![\w.$])[a-z_]+(?:\.[a-z_]+)+\s*=\s*(?:/(?:\\.|[^/\\])*/|"(?:\\.|[^"\\])*")(?:\s+nocase)?', body)
+        return [t for t in tests if not t.startswith("metadata.event_type")]
     events, inside = [], False
     for l in lines:
         if l == "events:":

@@ -245,8 +245,10 @@ class DetectionRefiner:
             matches = re.findall(r'([a-z_][a-z0-9_.]*)\s*:', query, re.IGNORECASE)
             fields.extend(matches)
         elif vendor == "secops":
-            # Match $e.field.path
-            matches = re.findall(r'\$\w+\.([a-z_.]+)', query, re.IGNORECASE)
+            # UDM fields: bare in a search (target.process...), $e.-prefixed in a join or rule
+            from archer.build.udm import _ROOTS
+
+            matches = re.findall(r'(?<![\w.])(?:\$\w+\.)?((?:' + "|".join(_ROOTS) + r')\.[a-z_.]+)', query, re.IGNORECASE)
             fields.extend(matches)
         elif vendor == "mde":
             # Match field contains or field ==
@@ -329,7 +331,7 @@ class DetectionRefiner:
                 elif vendor == "elastic":
                     exclusion = f' and not process.name:"{value}"'
                 elif vendor == "secops":
-                    exclusion = f' and not re.regex($e.target.process.file.full_path, `{value}`)'
+                    exclusion = f' and not target.process.file.full_path = /{re.escape(value).replace("/", chr(92) + "/")}/ nocase'
                 elif vendor == "mde":
                     exclusion = f' and FileName !contains "{value}"'
                 else:

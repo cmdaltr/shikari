@@ -6,7 +6,7 @@ def test_redacted_segment_becomes_a_wildcard():
     assert "file" not in clean
     assert clean["file_pattern"][0] == r"^c:[\\/]users[\\/][^\\/]+[\\/]downloads[\\/]kk[\\/]undef\.exe$"
     assert r'FolderPath matches regex @"(?i)^c:[\\/]users[\\/][^\\/]+' in mde_sweep(clean)
-    assert r"re.regex($e.target.process.file.full_path, `^c:[\\/]users" in secops_sweep(clean, "r")
+    assert r"target.process.file.full_path = /^c:[\\\/]users" in secops_sweep(clean, "r")
 
 
 def test_system_files_are_swept_for_being_written():
@@ -18,7 +18,7 @@ def test_system_files_are_swept_for_being_written():
     kql = mde_sweep(clean)
     assert 'ActionType in ("FileCreated", "FileModified", "FileRenamed") and FolderPath in~ (ioc_system_file)' in kql
     assert "FileName in~ (ioc_file)" in kql and "tieringengineservice" not in kql.split("ioc_file =")[1].split(";")[0]
-    assert '$e.metadata.event_type = "FILE_CREATION"' in secops_sweep(clean, "r")
+    assert 'metadata.event_type = "FILE_CREATION"' in secops_sweep(clean, "r")
 
 
 def test_known_good_values_are_left_out():

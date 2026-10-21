@@ -107,9 +107,10 @@ function detectVendorFromQuery(query) {
         return 'mde';
     }
 
-    // YARA-L patterns (Google SecOps)
+    // Google SecOps: a UDM search (or a legacy YARA-L rule)
     if ((lowerQuery.includes('rule ') && lowerQuery.includes('events:')) ||
-        lowerQuery.includes('$e.metadata') ||
+        lowerQuery.trimStart().startsWith('// archer_') ||
+        /(^|[\s(])(\$e\d*\.)?metadata\.event_type\s*=/.test(lowerQuery) ||
         lowerQuery.includes('re.regex(')) {
         return 'secops';
     }

@@ -8,8 +8,8 @@ force, so correlations, flows and severity follow a change without knowing about
 attack_override records the ATT&CK default, the comment, who and when; it's absent when
 the default applies. attack_mapping_history logs every change and restore.
 
-A SecOps rule's meta (technique, description, severity, $risk_score) follows the
-mapping too. Its rule name stays as generated unless the change asks for a rename:
+A SecOps query's header comment (name, technique, ATT&CK ID, severity; archer.build.udm),
+or a legacy YARA-L rule's meta and $risk_score, follows the mapping too. Its rule name stays as generated unless the change asks for a rename:
 SecOps treats a renamed rule as a new rule. Restore puts the generated name back.
 The generator stamp's query hash is refreshed when the query was unedited before, so a
 mapping change alone never marks the query as edited by hand.
@@ -33,9 +33,11 @@ OVERRIDE_KEY = "attack_override"
 HISTORY_KEY = "attack_mapping_history"
 _STAMP = re.compile(r"^# archer-generator: (\d+) query-sha256: ([0-9a-f]{64})\s*$")
 _RULE = re.compile(r"^(\s*rule )(\w+)(\s*\{)", re.M)
+# A UDM search's header: // archer_t1136: Create Account · ATT&CK T1136 · severity MEDIUM
+_HEADER = re.compile(r"^(//\s*)(archer_\w+)(:?)(.*)$", re.M)
 # Query lines the mapping owns; everything else must come through a rewrite untouched
 _MAPPING_LINE = re.compile(
-    r'mitre_attack_technique = |description = "Detects |^\s*severity = "|\$risk_score = |^\s*rule \w+\s*\{')
+    r'mitre_attack_technique = |description = "Detects |^\s*severity = "|\$risk_score = |^\s*rule \w+\s*\{|^//\s*archer_\w+')
 
 
 class MappingError(ValueError):
@@ -56,8 +58,25 @@ def yaral_rule_name(technique_id: str) -> str:
 
 
 def rule_name(query) -> Optional[str]:
-    m = _RULE.search(str(query or ""))
+    """A SecOps query's name: the UDM header's, or a legacy rule's."""
+    text = str(query or "")
+    m = _RULE.search(text)
+    if m:
+        return m.group(2)
+    m = _HEADER.match(text.lstrip())
     return m.group(2) if m else None
+
+
+def _retarget_header(text: str, old: Dict, new: Dict, severity: str) -> str:
+    def fix(m):
+        rest = m.group(4)
+        if old.get("technique_id"):
+            rest = re.sub(rf"^(\s*){re.escape(old.get('name') or '')}(\s*·|$)", rf"\g<1>{new['name']}\g<2>", rest, count=1) \
+                if old.get("name") else rest
+            rest = rest.replace(f"ATT&CK {old['technique_id']}", f"ATT&CK {new['technique_id']}")
+        rest = re.sub(r"severity [A-Z]+", f"severity {severity.upper()}", rest)
+        return m.group(1) + (new.get("rule_name") or m.group(2)) + m.group(3) + rest
+    return _HEADER.sub(fix, text, count=1)
 
 
 def _logic(query) -> List[str]:
@@ -65,8 +84,10 @@ def _logic(query) -> List[str]:
 
 
 def _retarget(text: str, old: Dict, new: Dict, severity: str) -> str:
-    """Carry a mapping into a YARA-L rule's meta, outcome and (when asked) its name.
-    Harmless on KQL/SPL: none of these patterns occur there."""
+    """Carry a mapping into a SecOps query's header (UDM) or a YARA-L rule's meta, outcome
+    and (when asked) its name. Harmless on KQL/SPL: none of these patterns occur there."""
+    if _HEADER.match(text.lstrip()):
+        return _retarget_header(text, old, new, severity)
     if old.get("technique_id"):
         text = re.sub(r'(mitre_attack_technique = ")[^"]*(")', rf"\g<1>{new['technique_id']}\g<2>", text)
         text = text.replace(f'"Detects {old["name"]} ({old["technique_id"]})"',
@@ -363,9 +384,10 @@ def content_state(content: Dict, index: Optional[Dict[str, Dict]] = None) -> Dic
     query = content.get("query") or ""
     tid = str(content.get(keys["technique_id"]) or "")
     if not tid:
-        # Saved before Library copies carried the ID: a YARA-L rule names it, else the
+        # Saved before Library copies carried the ID: a SecOps query names it, else the
         # technique name does when only one technique has it
-        m = re.search(r'mitre_attack_technique = "([^"]+)"', query)
+        m = re.search(r'mitre_attack_technique = "([^"]+)"', query) or \
+            re.search(r"^//\s*archer_\w+:.*?ATT&CK (T\d{4}(?:\.\d{3})?)", query)
         name = str(content.get(keys["name"]) or "").lower()
         hits = [t for t, v in (index or {}).items() if v["name"].lower() == name]
         tid = m.group(1) if m else (hits[0] if len(hits) == 1 else "")

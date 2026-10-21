@@ -947,14 +947,14 @@ def construct_yaml(
             )
 
     # Writing Google SecOps YAML file (if Google SecOps support is enabled)
-    # Google SecOps uses template-based YARA-L detection rules with UDM field mappings
+    # Google SecOps: a UDM search from the indicators (archer.build.secops, archer.build.udm)
     # Skip if Google SecOps is excluded
     if not excluded_vendors or "googlesecops" not in excluded_vendors:
       try:
         from archer.build.secops import SecOpsGenerator
 
         googlesecops_gen = SecOpsGenerator()
-        googlesecops_rule = googlesecops_gen.generate_yaral_rule(
+        googlesecops_rule = googlesecops_gen.generate_query(
             technique_id=tid,
             technique_name=name,
             tactic=tactic,
@@ -965,7 +965,7 @@ def construct_yaml(
             group_name=tag
         )
 
-        if googlesecops_rule and googlesecops_rule.get("yaral_code"):
+        if googlesecops_rule and googlesecops_rule.get("query"):
             # Create Google SecOps YAML file
             yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_GoogleSecOps.yaml")
             rewrite = detection_action(yamlfile, tag)
@@ -982,7 +982,7 @@ def construct_yaml(
                     "GoogleSecOps",
                     all_tactics,
                     tag,
-                    googlesecops_rule["yaral_code"],
+                    googlesecops_rule["query"],
                     datatype=datatype_str,
                     indicators=identifiers,
                     osint_data=osint_enhancement_data,
@@ -991,7 +991,7 @@ def construct_yaml(
                     reference_sources=reference_sources,
                     **rewrite,
                 )
-                print(f"  ✅ Generated Google SecOps YARA-L rule: {googlesecops_rule['rule_name']}")
+                print(f"  ✅ Generated Google SecOps UDM search: {googlesecops_rule['rule_name']}")
       except Exception as e:
         # Google SecOps generation is optional - don't fail if it errors
         print(f"  ⚠️  Google SecOps generation failed for {name}: {e}")

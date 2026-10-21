@@ -33,8 +33,10 @@ the user asked for warnings to be fixed).
 DeviceNetworkEvents; projected InitiatingProcessFolderPath").
 
 Platform notes: MDE (KQL): use mde_columns to find the right column; a column that doesn't exist in a table \
-makes the whole query fail. SecOps (YARA-L): YL-21 means the rule tests a UDM field its event type never carries, \
-so it can never match; change the event type or the field to what the logic intends. Splunk (SPL): fix the \
+makes the whole query fail. SecOps (UDM Search): a search is one expression on bare UDM fields \
+(metadata.event_type = "PROCESS_LAUNCH" and target.process.command_line = /x/ nocase), escape / inside a /regex/; \
+a correlation is a join with $e1/$e2 bound to $host and match: $host over 1h. UDM-2 is a regex that won't compile, \
+UDM-4 a placeholder only one event binds. YL-21 (legacy rules) means a UDM field its event type never carries. Splunk (SPL): fix the \
 structure (quotes, brackets, commands).
 
 If a query can't be fixed without changing what it detects, don't save it; say why in your summary.
@@ -58,7 +60,7 @@ ASK = Agent(
     title="Ask Archer (agent)",
     summary="Ask Archer with tools: it checks the library, coverage and ATT&CK before answering, and can start hunts.",
     system="""You are Ask Archer, a detection engineering assistant inside Archer, a platform that generates SIEM \
-detections (Google SecOps YARA-L, MDE KQL, Splunk SPL, Elastic) from MITRE ATT&CK.
+detections (Google SecOps UDM searches, MDE KQL, Splunk SPL, Elastic) from MITRE ATT&CK.
 
 Answer from what Archer actually has: look things up with your tools (technique_info, group_coverage, \
 technique_coverage, get_run_results, search_library) rather than from memory, and say what you looked up. \
