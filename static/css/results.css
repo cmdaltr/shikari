@@ -1106,41 +1106,8 @@
   border-radius: 10px;
 }
 
-.iq-copy {
-  margin-left: auto;
-  background: none;
-  border: none;
-  cursor: pointer;
-  opacity: 0.6;
-  font-size: 14px;
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-
-.iq-copy:hover {
-  opacity: 1;
-  background: #e2e8f0;
-}
-
-.iq-query {
-  margin: 0;
-  padding: 12px 14px;
-  background: #1e1e2e;
-  color: #cdd6f4;
-  font-family: 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  overflow-x: auto;
-  border-radius: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.iq-query code {
-  font-family: inherit;
-  font-size: inherit;
-  color: inherit;
-  background: none;
+.iq-body {
+  padding: 10px 12px;
 }
 
 .iq-connector {

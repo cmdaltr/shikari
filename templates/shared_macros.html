@@ -18,10 +18,22 @@
     {% set bg_color = '#FFF9C4' %}
     {% set text_color = '#F57F17' %}
     {% set emoji = '👑' %}
-  {% elif tactic == 'Defense Evasion' %}
+  {% elif tactic in ('Defense Evasion', 'Stealth') %}
     {% set bg_color = '#F3E5F5' %}
     {% set text_color = '#4A148C' %}
     {% set emoji = '🥷' %}
+  {% elif tactic == 'Defense Impairment' %}
+    {% set bg_color = '#FCE4EC' %}
+    {% set text_color = '#880E4F' %}
+    {% set emoji = '🧯' %}
+  {% elif tactic == 'Reconnaissance' %}
+    {% set bg_color = '#ECEFF1' %}
+    {% set text_color = '#37474F' %}
+    {% set emoji = '🔭' %}
+  {% elif tactic == 'Resource Development' %}
+    {% set bg_color = '#F1F8E9' %}
+    {% set text_color = '#33691E' %}
+    {% set emoji = '🛠️' %}
   {% elif tactic == 'Credential Access' %}
     {% set bg_color = '#FFEBEE' %}
     {% set text_color = '#B71C1C' %}
@@ -128,7 +140,7 @@
     {% endfor %}
   {% else %}
     {# Display normal (non-merged) correlation - Sort by MITRE ATT&CK order #}
-    {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
+    {% set tactic_order = ['Reconnaissance', 'Resource Development', 'Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Stealth', 'Defense Impairment', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
     {% set sorted_techniques = [] %}
     {% for tactic in tactic_order %}
       {% for tech in correlation.techniques %}

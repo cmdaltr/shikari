@@ -297,6 +297,25 @@ def retrieve_techniques(bundle, group_id):
                             existing_tech_refs.add(target_ref)
                             break
 
+    # And the software those campaigns use (Impacket in C0027 for Scattered Spider), as
+    # MITRESaw and mitreattack-python attribute it; software the group uses itself is done
+    types = {o.get("id"): o.get("type") for o in bundle.objects if o.get("type") in ("tool", "malware")}
+    done = {ref for _, ref in software_to_expand}
+    campaign_software = []
+    for obj in bundle.objects:
+        if (obj.get("type") == "relationship" and obj.get("relationship_type") == "uses"
+                and obj.get("source_ref") in campaign_ids and obj.get("target_ref") in types
+                and obj.get("target_ref") not in done):
+            done.add(obj["target_ref"])
+            campaign_software.append((obj.get("description"), obj["target_ref"]))
+    for sw_desc, sw_ref in campaign_software:
+        for rel_obj in bundle.objects:
+            if (rel_obj.get("type") == "relationship" and rel_obj.get("relationship_type") == "uses"
+                    and rel_obj.get("source_ref") == sw_ref and rel_obj.get("target_ref") not in existing_tech_refs):
+                tech_desc = rel_obj.get("description")
+                techniques.append((f"{sw_desc} {tech_desc}" if tech_desc else sw_desc, rel_obj["target_ref"]))
+                existing_tech_refs.add(rel_obj["target_ref"])
+
     return techniques
 
 

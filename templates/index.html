@@ -1101,6 +1101,9 @@
                 'Persistence':           { bg: '#f3e8ff', color: '#6b21a8' },
                 'Privilege Escalation':  { bg: '#ede9fe', color: '#5b21b6' },
                 'Defense Evasion':       { bg: '#e0e7ff', color: '#3730a3' },
+                'Stealth':               { bg: '#e0e7ff', color: '#3730a3' },
+                'Defense Impairment':    { bg: '#fce7f3', color: '#831843' },
+                'Command and Control':   { bg: '#f0fdf4', color: '#14532d' },
                 'Credential Access':     { bg: '#dbeafe', color: '#1e40af' },
                 'Discovery':             { bg: '#cffafe', color: '#155e75' },
                 'Lateral Movement':      { bg: '#d1fae5', color: '#065f46' },
@@ -1118,8 +1121,8 @@
               /* MITRE ATT&CK tactic kill-chain order */
               var TACTIC_ORDER = [
                 'Reconnaissance','Resource Development','Initial Access','Execution',
-                'Persistence','Privilege Escalation','Defense Evasion','Credential Access',
-                'Discovery','Lateral Movement','Collection','Command And Control',
+                'Persistence','Privilege Escalation','Stealth','Defense Impairment','Defense Evasion','Credential Access',
+                'Discovery','Lateral Movement','Collection','Command and Control','Command And Control',
                 'Exfiltration','Impact'
               ];
 

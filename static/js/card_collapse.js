@@ -114,6 +114,8 @@
 
   let queued = false;
   const later = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; scan(); }); } };
-  const start = () => { scan(); new MutationObserver(later).observe(document.body, { childList: true, subtree: true }); };
-  document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', start) : start();
+  // Watch from the start, not DOMContentLoaded: a big results page parses for seconds, and
+  // its cards should get their toggles as they arrive
+  new MutationObserver(later).observe(document.documentElement, { childList: true, subtree: true });
+  document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', scan) : scan();
 })();

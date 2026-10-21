@@ -35,8 +35,9 @@
 }
 .af-vendor-toggle.is-on { opacity: 1; filter: none; border-color: var(--accent); }
 .af-vendor-toggle .af-logo { width: 22px; height: 22px; }
+.af-vendor-toggle.is-unavailable { opacity: 0.25; cursor: not-allowed; border-style: dashed; }
 /* Toolbar buttons are Library's outlined buttons, and the search box's height and border are shared too (static/css/ui.css) */
-.af-search { font: inherit; font-size: 0.95em; box-sizing: border-box; padding: 0 12px; flex: 1 1 120px; width: 120px; min-width: 120px; max-width: 240px; color: var(--af-text); }
+.af-search { font: inherit; font-size: 0.95em; box-sizing: border-box; padding: 0 12px; flex: 1 1 140px; width: 140px; min-width: 120px; color: var(--af-text); }
 .af-vendor-toggle:focus-visible, .af-chip:focus-visible, .af-search:focus-visible, .af-node:focus-visible {
   outline: 2px solid var(--af-focus); outline-offset: 2px;
 }
@@ -154,8 +155,14 @@
 .af-detail-cov, .af-detail-links { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 .af-detail-cov li { display: flex; align-items: center; gap: 6px; font-size: 0.88em; }
 .af-detail-gap { color: var(--af-gap); font-weight: 600; font-size: 0.88em; }
+.af-detail-links li { display: flex; align-items: stretch; gap: 4px; }
+.af-unlink {
+  flex: none; width: 26px; padding: 0; font: inherit; font-size: 0.95em; line-height: 1; cursor: pointer;
+  border-radius: 5px; border: 1px solid var(--af-border); background: var(--af-lane-bg); color: var(--af-muted);
+}
+.af-unlink:hover { border-color: var(--af-gap); color: var(--af-gap); }
 .af-jump {
-  display: flex; align-items: center; gap: 5px; width: 100%; text-align: left; font: inherit; font-size: 0.84em; cursor: pointer;
+  display: flex; align-items: center; gap: 5px; flex: 1; min-width: 0; text-align: left; font: inherit; font-size: 0.84em; cursor: pointer;
   padding: 5px 7px; border-radius: 5px; border: 1px solid var(--af-border); background: var(--af-lane-bg); color: var(--af-text);
 }
 .af-jump:hover { border-color: var(--af-focus); }

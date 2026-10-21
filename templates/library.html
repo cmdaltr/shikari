@@ -451,10 +451,22 @@
                     {% set bg_color = '#FFF9C4' %}
                     {% set text_color = '#F57F17' %}
                     {% set emoji = '👑' %}
-                  {% elif tactic == 'Defense Evasion' %}
+                  {% elif tactic in ('Defense Evasion', 'Stealth') %}
                     {% set bg_color = '#F3E5F5' %}
                     {% set text_color = '#4A148C' %}
                     {% set emoji = '🥷' %}
+                  {% elif tactic == 'Defense Impairment' %}
+                    {% set bg_color = '#FCE4EC' %}
+                    {% set text_color = '#880E4F' %}
+                    {% set emoji = '🧯' %}
+                  {% elif tactic == 'Reconnaissance' %}
+                    {% set bg_color = '#ECEFF1' %}
+                    {% set text_color = '#37474F' %}
+                    {% set emoji = '🔭' %}
+                  {% elif tactic == 'Resource Development' %}
+                    {% set bg_color = '#F1F8E9' %}
+                    {% set text_color = '#33691E' %}
+                    {% set emoji = '🛠️' %}
                   {% elif tactic == 'Credential Access' %}
                     {% set bg_color = '#FFEBEE' %}
                     {% set text_color = '#B71C1C' %}
@@ -821,7 +833,7 @@
                 <span title="Relevance Score"><strong>Relevance:</strong> {{ correlation.relevance_score }}%</span>
                 <span title="Time Window"><strong>Time Window:</strong> {{ correlation.time_window }}</span>
                 {% if correlation.techniques_by_tactic %}
-                {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
+                {% set tactic_order = ['Reconnaissance', 'Resource Development', 'Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Stealth', 'Defense Impairment', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
                 {% set ordered_tactics = [] %}
                 {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
                   {% set _ = ordered_tactics.append(tactic) %}
@@ -834,7 +846,7 @@
               {% if correlation.techniques_by_tactic and correlation.techniques_by_tactic|length > 1 %}
               <div style="margin-top: 12px; margin-bottom: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 16px;">
                 <strong style="color: #555; display: block; margin-bottom: 12px;">Attack Flow:</strong>
-                {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
+                {% set tactic_order = ['Reconnaissance', 'Resource Development', 'Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Stealth', 'Defense Impairment', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
                 {% set displayed_tactics = [] %}
                 {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
                   {% set _ = displayed_tactics.append(tactic) %}
@@ -887,10 +899,22 @@
                           {% set flow_emoji = '👑' %}
                           {% set flow_bg = '#FFF9C4' %}
                           {% set flow_border = '#F57F17' %}
-                        {% elif tactic == 'Defense Evasion' %}
+                        {% elif tactic in ('Defense Evasion', 'Stealth') %}
                           {% set flow_emoji = '🥷' %}
                           {% set flow_bg = '#F3E5F5' %}
                           {% set flow_border = '#4A148C' %}
+                        {% elif tactic == 'Defense Impairment' %}
+                          {% set flow_emoji = '🧯' %}
+                          {% set flow_bg = '#FCE4EC' %}
+                          {% set flow_border = '#880E4F' %}
+                        {% elif tactic == 'Reconnaissance' %}
+                          {% set flow_emoji = '🔭' %}
+                          {% set flow_bg = '#ECEFF1' %}
+                          {% set flow_border = '#37474F' %}
+                        {% elif tactic == 'Resource Development' %}
+                          {% set flow_emoji = '🛠️' %}
+                          {% set flow_bg = '#F1F8E9' %}
+                          {% set flow_border = '#33691E' %}
                         {% elif tactic == 'Credential Access' %}
                           {% set flow_emoji = '🔑' %}
                           {% set flow_bg = '#FFEBEE' %}

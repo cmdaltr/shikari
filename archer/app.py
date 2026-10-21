@@ -7227,6 +7227,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             "correlations": grouped_correlations,
             "attack_flow_exists": attack_flow_exists,
             "attack_flow": attack_flow,
+            # Vendor keys the user generates for (Profile → SIEM platforms; none chosen means all)
+            "profile_vendors": [SIEM_PLATFORMS[s] for s in _user_siems(user)] or list(SIEM_PLATFORMS.values()),
             "ioc_flow": ioc_flow,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "validation_results": validation_results,

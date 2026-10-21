@@ -64,12 +64,15 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
     extra = {n["id"]: n.get("detected") for lane in lanes for n in lane.get("nodes") or [] if n.get("via_parent")}
     for lane in lanes:
         nodes = [n for n in lane.get("nodes") or [] if n["id"] not in intel and n["id"] not in extra]
+        n_intel = sum(1 for n in lane.get("nodes") or [] if n["id"] in intel)
         if not nodes:
+            if n_intel:  # e.g. Resource Development: shown, but nothing to detect
+                tactics.append({"tactic": lane["tactic"], "total": 0, "detected": 0, "intel": n_intel})
             continue
         hit = sum(1 for n in nodes if n.get("detected"))
         total += len(nodes)
         detected += hit
-        tactics.append({"tactic": lane["tactic"], "total": len(nodes), "detected": hit})
+        tactics.append({"tactic": lane["tactic"], "total": len(nodes), "detected": hit, "intel": n_intel})
         for n in nodes:
             if not n.get("detected") and (n.get("attributed") or n["id"] in why):
                 gaps.append(gap(n["id"], n.get("name", n["id"]), lane["tactic"], n.get("url"), n.get("degree")))
@@ -93,7 +96,8 @@ def build(flow: Optional[Dict], no_detection: Optional[List[Dict]] = None) -> Op
         "extra_detected": sum(1 for hit in extra.values() if hit), "extra_total": len(extra),
         "tactics": tactics, "weakest": weakest, "gaps": gaps[:TOP_GAPS], "more_gaps": max(0, len(gaps) - TOP_GAPS),
         "by_action": {a: sum(1 for g in gaps if g["action"] == a) for a in ACTIONS},
-        "summary": _sentences(total, detected, len(tactics), weakest, gaps, bool(attributed_ids),
+        "build_ids": [g["id"] for g in gaps if g["action"] == "build"],
+        "summary": _sentences(total, detected, sum(1 for t in tactics if t["total"]), weakest, gaps, bool(attributed_ids),
                               sum(1 for hit in extra.values() if hit)),
     }
 
@@ -128,7 +132,7 @@ def prompt(group: str, briefing: Dict) -> str:
              + (f"; plus {briefing['extra_detected']} unattributed sub-techniques of attributed ones"
                 if briefing.get("extra_detected") else ""),
              "By ATT&CK tactic (not a sequence: groups use tactics in any order): " + "; ".join(
-                 f"{t['tactic']} {t['detected']}/{t['total']}" for t in briefing["tactics"])]
+                 f"{t['tactic']} {t['detected']}/{t['total']}" for t in briefing["tactics"] if t["total"])]
     if briefing["weakest"]:
         lines.append(f"Weakest tactic: {briefing['weakest']['tactic']}")
     if briefing["gaps"]:

@@ -35,10 +35,17 @@
 
   {% if attack_flow and attack_flow.lanes %}
     <div class="af-toolbar" role="toolbar" aria-label="Attack flow filters">
-      {% for v in attack_flow.vendors %}
-      <button type="button" class="af-vendor-toggle is-on" data-vendor="{{ v.key }}" aria-pressed="true"
-              title="{{ v.name }}: show its coverage and correlations" aria-label="{{ v.name }}">
-        <img class="af-logo" src="/static/images/siem/{{ {'googlesecops': 'secops'}.get(v.key, v.key) }}.png" alt="">
+      {# Every SIEM, so the set is always visible; one with nothing in this run is greyed out and says why #}
+      {% set present = attack_flow.vendors | map(attribute='key') | list %}
+      {% for key, name in vendor_names.items() %}
+      {% if key in present %}
+      <button type="button" class="af-vendor-toggle is-on" data-vendor="{{ key }}" aria-pressed="true"
+              title="{{ name }}: show its coverage and correlations" aria-label="{{ name }}">
+      {% else %}
+      <button type="button" class="af-vendor-toggle is-unavailable" data-vendor="{{ key }}" disabled aria-label="{{ name }}"
+              title="{{ name }}: {% if key == 'elastic' %}Elastic queries aren't generated yet{% elif profile_vendors is defined and key not in profile_vendors %}not selected in Profile → SIEM platforms{% else %}no detections in this run{% endif %}">
+      {% endif %}
+        <img class="af-logo" src="/static/images/siem/{{ {'googlesecops': 'secops'}.get(key, key) }}.png" alt="">
       </button>
       {% endfor %}
       <span class="af-toolbar-sep" aria-hidden="true"></span>

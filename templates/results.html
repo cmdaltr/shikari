@@ -26,11 +26,20 @@
 .briefing-stat small { display: block; margin-top: 4px; font-size: .8em; line-height: 1.4; color: var(--text-secondary, #666); }
 @media (max-width: 700px) { .briefing-stats { grid-template-columns: 1fr; } }
 .briefing-chain { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
-.briefing-chain li { padding: 4px 10px; border-radius: 6px; font-size: .85em; font-weight: 500; background: rgba(16,185,129,.12); color: #047857; }
+/* Hue follows coverage: 0% red, through orange and amber, to 100% green */
+.briefing-chain li { --hue: calc(var(--pct, 100) * 1.4); flex: 1 1 auto; text-align: center; white-space: nowrap; padding: 4px 10px; border-radius: 6px; font-size: .85em; font-weight: 500;
+  background: hsl(var(--hue) 80% 45% / .14); color: hsl(var(--hue) 75% 30%); }
 .briefing-chain li b { font-weight: 700; margin-left: 2px; }
-.briefing-chain li.is-partial { background: rgba(245,158,11,.15); color: #b45309; }
-.briefing-chain li.is-none { background: rgba(197,48,48,.1); color: #b91c1c; }
+.briefing-chain li.is-intel { background: rgba(127,127,127,.12); color: var(--text-secondary, #666); }
+:root[data-theme="dark"] .briefing-chain li:not(.is-intel) { color: hsl(var(--hue) 70% 68%); }
 .briefing-chain li.is-weakest { outline: 2px solid currentColor; }
+.briefing-act { padding: 3px 10px; border-radius: 5px; border: 1px solid var(--accent, #c53030); background: transparent;
+  color: var(--accent, #c53030); font: inherit; font-size: .8em; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.briefing-act:hover:not(:disabled) { background: var(--accent, #c53030); color: #fff; }
+.briefing-act:disabled { opacity: .6; cursor: progress; }
+.briefing-act-cell { text-align: right; white-space: nowrap; }
+.briefing-act-hint { font-size: .8em; color: var(--text-secondary, #666); white-space: nowrap; cursor: help; }
+.briefing-act-err { display: block; margin-top: 4px; font-size: .8em; color: #b91c1c; white-space: normal; }
 .briefing-note { margin: 0 0 8px; font-size: .85em; color: var(--text-secondary, #666); line-height: 1.5; }
 .briefing-gaps { width: 100%; border-collapse: collapse; font-size: .9em; margin: 0 0 8px; }
 .briefing-gaps th { text-align: left; font-size: .78em; text-transform: uppercase; letter-spacing: .4px; color: var(--text-secondary, #666); padding: 6px 8px; border-bottom: 2px solid var(--border-color, #e2e8f0); }
@@ -99,6 +108,32 @@
     {% endif %}
 
     {# Run notes: what the run left out, kept or warned about. Inside the briefing when there is one #}
+    {% macro gap_action(tid, action) -%}
+      {%- if action == 'build' -%}<button type="button" class="briefing-act" data-hunt="{{ tid }}" title="Start a technique hunt for {{ tid }}">Build</button>
+      {%- elif action == 'research' -%}<button type="button" class="briefing-act" data-hunt="{{ tid }}" data-osint="1" title="Hunt {{ tid }} with OSINT enhancement: indicators from threat reports, not just ATT&amp;CK">Hunt with OSINT</button>
+      {%- elif action == 'source' -%}<span class="briefing-act-hint" title="Add a field or table for its indicators to the SIEM's file in bespoke/mappings/, then run again">Edit <code>bespoke/mappings/</code></span>
+      {%- endif -%}
+    {%- endmacro %}
+    <script>
+    // Briefing and run-notes actions: start a technique hunt, then follow it on the progress page
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.briefing-act[data-hunt]');
+      if (!btn) return;
+      var form = new FormData();
+      form.append('technique_ids', btn.dataset.hunt);
+      form.append('osint_enhancement', btn.dataset.osint ? 'true' : 'false');
+      var label = btn.textContent, note = btn.parentNode.querySelector('.briefing-act-err');
+      if (!note) { note = document.createElement('span'); note.className = 'briefing-act-err'; note.setAttribute('role', 'alert'); btn.after(note); }
+      btn.disabled = true; btn.textContent = 'Starting…'; note.textContent = '';
+      fetch('/hunt/technique', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok || !res.d.redirect_url) throw new Error(res.d.error || 'Not started');
+          window.location = res.d.redirect_url;
+        })
+        .catch(function (err) { btn.disabled = false; btn.textContent = label; note.textContent = err.message; });
+    });
+    </script>
     {% set run_notes %}
     {% if stack_warnings %}
     <!-- Explicit inputs (technique, CVE, report) outside Profile → Technology stack: generated anyway -->
@@ -122,12 +157,14 @@
     <details class="no-detection">
       <summary>{{ no_detection|length }} technique{{ '' if no_detection|length == 1 else 's' }} in the latest run produced no detection</summary>
       <table>
-        <thead><tr><th>Technique</th><th>Why</th></tr></thead>
+        <thead><tr><th>Technique</th><th>Why</th><th></th></tr></thead>
         <tbody>
         {% for m in no_detection %}
           <tr>
             <td><a href="{{ m.url }}" target="_blank" rel="noopener">{{ m.technique }}</a> {{ m.name if m.name != m.technique else '' }}</td>
             <td>{{ m.text }}</td>
+            <td class="briefing-act-cell">{{ gap_action(m.technique, {'no_indicators': 'research', 'osint_empty': 'research', 'no_source': 'source',
+                'llm_empty': 'build', 'ai_none': 'build', 'ai_failed': 'build'}.get(m.reason)) }}</td>
           </tr>
         {% endfor %}
         </tbody>
@@ -151,7 +188,6 @@
           Threat Briefing
         </h2>
       </div>
-      <p class="briefing-lead">{{ briefing.summary }}</p>
 
       <div class="briefing-stats">
         <div class="briefing-stat">
@@ -172,8 +208,12 @@
       <h3>Coverage by tactic</h3>
       <ul class="briefing-chain" aria-label="Coverage by ATT&amp;CK tactic">
         {% for t in briefing.tactics %}
-        <li class="{% if t.detected == 0 %}is-none{% elif t.detected < t.total %}is-partial{% endif %}{% if briefing.weakest and briefing.weakest.tactic == t.tactic %} is-weakest{% endif %}"
-            title="{{ t.detected }} of {{ t.total }} detected{% if briefing.weakest and briefing.weakest.tactic == t.tactic %}: the weakest tactic{% endif %}">{{ t.tactic }} <b>{{ t.detected }}/{{ t.total }}</b></li>
+        {% if t.total %}
+        <li style="--pct: {{ (100 * t.detected / t.total) | round | int }}"{% if briefing.weakest and briefing.weakest.tactic == t.tactic %} class="is-weakest"{% endif %}
+            title="{{ t.detected }} of {{ t.total }} detected ({{ (100 * t.detected / t.total) | round | int }}%){% if t.intel %}; {{ t.intel }} more intel only{% endif %}{% if briefing.weakest and briefing.weakest.tactic == t.tactic %}: the weakest tactic{% endif %}">{{ t.tactic }} <b>{{ t.detected }}/{{ t.total }}</b></li>
+        {% else %}
+        <li class="is-intel" title="{{ t.intel }} technique{{ '' if t.intel == 1 else 's' }}, all on the adversary's side: no log source on the estate sees them, so none count as gaps">{{ t.tactic }} <b>intel only</b></li>
+        {% endif %}
         {% endfor %}
       </ul>
 
@@ -181,8 +221,14 @@
       <h3>Close first</h3>
       <p class="briefing-note">Ranked by what closes the gap (build it, map a data source, or research it), then by severity, then by correlation links.
         A tactic's column isn't part of it: groups don't use tactics in order.</p>
+      {% if briefing.build_ids %}
+      <p class="briefing-note">
+        <button type="button" class="briefing-act" data-hunt="{{ briefing.build_ids|join(',') }}">Build all {{ briefing.build_ids|length }}</button>
+        Builds every technique marked <em>Build</em> as a technique hunt; its detections open on their own results page.
+      </p>
+      {% endif %}
       <table class="briefing-gaps">
-        <thead><tr><th>Technique</th><th>Tactic</th><th>Severity</th><th>Next step</th></tr></thead>
+        <thead><tr><th>Technique</th><th>Tactic</th><th>Severity</th><th>Next step</th><th></th></tr></thead>
         <tbody>
         {% for g in briefing.gaps %}
           <tr>
@@ -190,6 +236,7 @@
             <td>{{ g.tactic or '—' }}</td>
             <td><span class="sev sev-{{ g.severity|lower }}">{{ g.severity }}</span></td>
             <td>{{ g.todo }}</td>
+            <td class="briefing-act-cell">{{ gap_action(g.id, g.action) }}</td>
           </tr>
         {% endfor %}
         </tbody>
@@ -509,10 +556,22 @@
                     {% set bg_color = '#FFF9C4' %}
                     {% set text_color = '#F57F17' %}
                     {% set emoji = '👑' %}
-                  {% elif tactic == 'Defense Evasion' %}
+                  {% elif tactic in ('Defense Evasion', 'Stealth') %}
                     {% set bg_color = '#F3E5F5' %}
                     {% set text_color = '#4A148C' %}
                     {% set emoji = '🥷' %}
+                  {% elif tactic == 'Defense Impairment' %}
+                    {% set bg_color = '#FCE4EC' %}
+                    {% set text_color = '#880E4F' %}
+                    {% set emoji = '🧯' %}
+                  {% elif tactic == 'Reconnaissance' %}
+                    {% set bg_color = '#ECEFF1' %}
+                    {% set text_color = '#37474F' %}
+                    {% set emoji = '🔭' %}
+                  {% elif tactic == 'Resource Development' %}
+                    {% set bg_color = '#F1F8E9' %}
+                    {% set text_color = '#33691E' %}
+                    {% set emoji = '🛠️' %}
                   {% elif tactic == 'Credential Access' %}
                     {% set bg_color = '#FFEBEE' %}
                     {% set text_color = '#B71C1C' %}
@@ -883,7 +942,7 @@
                 <span title="Relevance Score"><strong>Relevance:</strong> {{ correlation.relevance_score }}%</span>
                 <span title="Time Window"><strong>Time Window:</strong> {{ correlation.time_window }}</span>
                 {% if correlation.techniques_by_tactic %}
-                {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
+                {% set tactic_order = ['Reconnaissance', 'Resource Development', 'Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Stealth', 'Defense Impairment', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
                 {% set ordered_tactics = [] %}
                 {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
                   {% set _ = ordered_tactics.append(tactic) %}
@@ -896,7 +955,7 @@
               {% if correlation.techniques_by_tactic and correlation.techniques_by_tactic|length > 1 %}
               <div style="margin-top: 12px; margin-bottom: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 16px;">
                 <strong style="color: #555; display: block; margin-bottom: 12px;">Attack Flow:</strong>
-                {% set tactic_order = ['Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
+                {% set tactic_order = ['Reconnaissance', 'Resource Development', 'Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Stealth', 'Defense Impairment', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
                 {% set displayed_tactics = [] %}
                 {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
                   {% set _ = displayed_tactics.append(tactic) %}
@@ -949,10 +1008,22 @@
                           {% set flow_emoji = '👑' %}
                           {% set flow_bg = '#FFF9C4' %}
                           {% set flow_border = '#F57F17' %}
-                        {% elif tactic == 'Defense Evasion' %}
+                        {% elif tactic in ('Defense Evasion', 'Stealth') %}
                           {% set flow_emoji = '🥷' %}
                           {% set flow_bg = '#F3E5F5' %}
                           {% set flow_border = '#4A148C' %}
+                        {% elif tactic == 'Defense Impairment' %}
+                          {% set flow_emoji = '🧯' %}
+                          {% set flow_bg = '#FCE4EC' %}
+                          {% set flow_border = '#880E4F' %}
+                        {% elif tactic == 'Reconnaissance' %}
+                          {% set flow_emoji = '🔭' %}
+                          {% set flow_bg = '#ECEFF1' %}
+                          {% set flow_border = '#37474F' %}
+                        {% elif tactic == 'Resource Development' %}
+                          {% set flow_emoji = '🛠️' %}
+                          {% set flow_bg = '#F1F8E9' %}
+                          {% set flow_border = '#33691E' %}
                         {% elif tactic == 'Credential Access' %}
                           {% set flow_emoji = '🔑' %}
                           {% set flow_bg = '#FFEBEE' %}
@@ -1019,18 +1090,34 @@
 
               <!-- Individual Queries — stacked with chain connectors -->
               {% if correlation.individual_queries %}
+              {% set corr_id = 'iq-' ~ vendor.name ~ '-' ~ loop.index %}
               <div class="individual-queries" style="margin-top: 10px;">
                 {% for iq in correlation.individual_queries %}
+                {% set qid = corr_id ~ '-' ~ loop.index %}
                 <div class="iq-block">
                   <div class="iq-header">
                     <span class="iq-name">{{ iq.technique_name }}</span>
                     {% if iq.technique_id %}<span class="iq-id">{{ iq.technique_id }}</span>{% endif %}
                     {% if iq.tactic %}<span class="iq-tactic">{{ iq.tactic }}</span>{% endif %}
                     {{ am.badge(iq.attack_override) }}
-                    <button class="iq-copy" title="Copy query"
-                            onclick="navigator.clipboard.writeText(this.closest('.iq-block').querySelector('code').textContent)">📋</button>
                   </div>
-                  <pre class="iq-query"><code>{{ iq.query }}</code></pre>
+                  <!-- The same controls as a detection card's query -->
+                  <div class="iq-body">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <button onclick="toggleDetectionQuery('{{ qid }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
+                        <span id="{{ qid }}-toggle">▶ View Query</span>
+                      </button>
+                      <button id="{{ qid }}-copy-btn" onclick="copyToClipboard('{{ qid }}-content', this)" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;" title="Copy to clipboard">
+                        📋 Copy Query
+                      </button>
+                    </div>
+                    <div id="{{ qid }}-query" style="display: none; margin-top: 10px;">
+                      <div style="position: relative;">
+                        <div id="{{ qid }}-content" style="background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ iq.query }}</div>
+                        <button onclick="expandCodeBlock('{{ qid }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333; display: inline-flex; align-items: center; gap: 4px;" title="Expand to full screen"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Expand</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 {% if not loop.last %}
                 <div class="iq-connector">
@@ -1354,13 +1441,15 @@
       </div>
 
       <!-- Validation Warning Message (moved outside detection-section, hidden but occupies space) -->
-      <div id="validation-warning" style="margin-top: 12px; padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; color: #856404; font-size: 0.9em; display: flex; align-items: center; gap: 8px; visibility: hidden;">
+      <div id="validation-warning" style="margin-top: 12px; padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; color: #856404; font-size: 0.9em; display: flex; align-items: center; gap: 8px;" role="note">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
-        <span>Archer leverages AI and is not 100% accurate; complete all validation steps above to proceed.</span>
+        <span><strong>Download All</strong>, <strong>Save to Library</strong> and <strong>Generate Report</strong> unlock once every step in
+          <a href="#validation-checklist" onclick="var c = document.getElementById('validation-content'); if (c && c.style.display === 'none') toggleValidationChecklist();" style="color: inherit; font-weight: 600;">Validation</a>
+          is ticked. Archer writes these queries automatically, so check them against your own estate before they're deployed or shared.</span>
       </div>
 
     </div>
@@ -1834,9 +1923,8 @@ function checkValidationStatus() {
     generateReportBtn.disabled = false;
     generateReportBtn.style.opacity = '1';
     generateReportBtn.style.cursor = 'pointer';
-    // Hide warning message (but keep space)
     if (warningMsg) {
-      warningMsg.style.visibility = 'hidden';
+      warningMsg.style.display = 'none';
     }
   } else {
     downloadBtn.disabled = true;
@@ -1850,7 +1938,7 @@ function checkValidationStatus() {
     generateReportBtn.style.cursor = 'not-allowed';
     // Show warning message
     if (warningMsg) {
-      warningMsg.style.visibility = 'visible';
+      warningMsg.style.display = 'flex';
     }
   }
 }
