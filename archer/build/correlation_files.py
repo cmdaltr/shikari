@@ -43,10 +43,23 @@ def _label(path: Optional[str]) -> str:
 
 
 def _techniques(corr: Dict) -> List[str]:
-    names = [str(n) for n in corr.get("techniques_involved") or [] if n]
-    if not names:
-        names = [n for n in (_label(corr.get("a")), _label(corr.get("b"))) if n]
-    return list(dict.fromkeys(names))
+    """
+    The pair first (a, then b), then the rest it was merged with. techniques_involved mixes
+    display names and filename stems ('Access Token Manipulation', 'AccessTokenManipulation'),
+    so names are compared on letters and digits alone and a display name wins over a stem.
+    """
+    def key(name):
+        return re.sub(r"[^a-z0-9]", "", name.lower())
+
+    b = corr.get("b")
+    pair = [_label(corr.get("a"))] + [_label(p) for p in (b if isinstance(b, list) else [b])]
+    involved = [str(n) for n in corr.get("techniques_involved") or [] if n]
+    display = {key(n): n for n in involved if " " in n}
+    names = {}
+    for name in pair + involved:
+        if key(name):
+            names.setdefault(key(name), display.get(key(name)) or (name if " " in name else _label(name)))
+    return list(names.values())
 
 
 def title(corr: Dict) -> str:

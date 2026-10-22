@@ -7190,7 +7190,7 @@ def _group_zip(group_name: str, detections: Optional[set] = None, correlations: 
         for corr_yaml in sorted(glob.glob(os.path.join(group_dir(group_name), "*.yaml"))):
             if correlations is not None and os.path.basename(corr_yaml) not in correlations:
                 continue
-            zip_file.write(corr_yaml, f"correlations/{group_name}/{os.path.basename(corr_yaml)}")
+            zip_file.write(corr_yaml, f"correlations/{os.path.basename(corr_yaml)}")
             files_added += 1
 
         # Add attack flows - try both sanitized and original group name patterns

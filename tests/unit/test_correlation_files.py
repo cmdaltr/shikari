@@ -52,7 +52,8 @@ def test_an_edited_file_is_kept_and_wins(tmp_path, monkeypatch):
 
 def test_files_a_run_no_longer_makes_are_removed_unless_edited(tmp_path, monkeypatch):
     monkeypatch.setattr(cf, "CORRELATE_DIR", str(tmp_path))
-    keep, gone = _corr(), _corr(techniques_involved=["Phishing", "PowerShell"])
+    keep, gone = _corr(), _corr(a="data/groups/Phishing_GoogleSecOps.yaml", b="data/groups/PowerShell_GoogleSecOps.yaml",
+                                techniques_involved=["Phishing", "PowerShell"])
     cf.write("G", [keep, gone])
     (tmp_path / keep["file"]).write_text((tmp_path / keep["file"]).read_text().replace("over 1h", "over 3h"))
 
@@ -66,3 +67,13 @@ def test_same_pair_twice_gets_numbered(tmp_path, monkeypatch):
     a, b = _corr(), _corr(combined_query=JOIN.replace("1h", "2h"))
     cf.write("G", [a, b])
     assert a["file"] != b["file"] and b["file"].endswith("_GoogleSecOps_2.yaml")
+
+
+def test_name_leads_with_the_pair_and_counts_a_technique_once():
+    corr = {"vendor": "mde", "a": "data/groups/AccessTokenManipulation_DeviceEvents.yaml",
+            "b": "data/groups/CloudAccounts_DeviceEvents.yaml",
+            "techniques_involved": ["Access Token Manipulation", "AccessTokenManipulation", "CachedDomainCredentials",
+                                    "Cloud Accounts", "Deobfuscate/Decode Files or Information"]}
+    assert cf.filename(corr) == "AccessTokenManipulation_and_CloudAccounts_plus2_DefenderXDR.yaml"
+    assert cf.title(corr) == "Access Token Manipulation and Cloud Accounts (+2 more)"
+    assert cf._techniques(corr)[2:] == ["Cached Domain Credentials", "Deobfuscate/Decode Files or Information"]

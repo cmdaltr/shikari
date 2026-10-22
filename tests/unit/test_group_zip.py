@@ -44,13 +44,13 @@ def _contents(group, detections=None, correlations=None):
 def test_everything_includes_each_correlation_file(dirs):
     names = set(_contents("G1").namelist())
     assert names == {"detections/A_GoogleSecOps.yaml", "detections/B_GoogleSecOps.yaml", "correlations/G1.json",
-                     "correlations/G1/A_and_B_GoogleSecOps.yaml", "correlations/G1/B_and_C_GoogleSecOps.yaml"}
+                     "correlations/A_and_B_GoogleSecOps.yaml", "correlations/B_and_C_GoogleSecOps.yaml"}
 
 
 def test_selection_keeps_only_ticked_files_and_index_entries(dirs):
     z = _contents("G1", {"A_GoogleSecOps.yaml"}, {"B_and_C_GoogleSecOps.yaml"})
     assert set(z.namelist()) == {"detections/A_GoogleSecOps.yaml", "correlations/G1.json",
-                                 "correlations/G1/B_and_C_GoogleSecOps.yaml"}
+                                 "correlations/B_and_C_GoogleSecOps.yaml"}
     index = json.loads(z.read("correlations/G1.json"))
     assert [c["file"] for c in index["vendor_correlations"]] == ["G1/B_and_C_GoogleSecOps.yaml"]
 
