@@ -676,6 +676,12 @@ def with_osint(content):
 
 templates.env.filters["without_osint"] = without_osint
 templates.env.filters["without_corr_osint"] = without_corr_osint
+def technique_key(name) -> str:
+    """Technique names compared on letters and digits: 'Multi-Factor Authentication' == 'Multi-FactorAuthentication'."""
+    return re.sub(r"[^a-z0-9]", "", str(name or "").lower())
+
+
+templates.env.filters["technique_key"] = technique_key
 
 
 def check_osint_enriched(yaml_file, file_content=None):
@@ -6474,49 +6480,36 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
 
                         # Map each technique to its primary tactic and get formatted name
                         # Build attack flow from ALL techniques (including merged ones)
+                        seen_technique_keys = set()
                         for tech_name in techniques_involved:
                             # Look for YAML file matching this technique name
                             # Normalize technique name to match filename format (remove spaces)
                             filename_pattern = tech_name.replace(" ", "").replace("/", "")
                             pattern = os.path.join(GENERATE_DIR, f"{filename_pattern}_*.yaml")
                             matching_files = glob.glob(pattern)
+                            yaml_data = load_yaml_file(matching_files[0]) if matching_files else None
 
-                            if matching_files:
-                                # Use first matching file
-                                yaml_data = load_yaml_file(matching_files[0])
-                                if yaml_data:
-                                    # Get formatted name from YAML
-                                    raw_name = yaml_data.get("name", tech_name)
-                                    formatted_name = format_technique_name(raw_name)
-
-                                    tech_tactics = yaml_data.get("tactics", [])
-                                    # Use first tactic as primary
-                                    primary_tactic = tech_tactics[0] if tech_tactics else "Unknown"
-                                    technique_tactic_map[formatted_name] = primary_tactic
-                                    techniques_involved_formatted.append(formatted_name)
-
-                                    # Group by ALL tactics (not just primary) for attack flow visualization
-                                    for tactic in tech_tactics:
-                                        if tactic not in techniques_by_tactic:
-                                            techniques_by_tactic[tactic] = []
-                                        if formatted_name not in techniques_by_tactic[tactic]:
-                                            techniques_by_tactic[tactic].append(formatted_name)
-                                else:
-                                    # Fallback: format the filename-based name
-                                    formatted_name = tech_name.replace("-", " ")
-                                    technique_tactic_map[formatted_name] = "Unknown"
-                                    techniques_involved_formatted.append(formatted_name)
-                                    if "Unknown" not in techniques_by_tactic:
-                                        techniques_by_tactic["Unknown"] = []
-                                    techniques_by_tactic["Unknown"].append(formatted_name)
+                            if yaml_data:
+                                formatted_name = format_technique_name(yaml_data.get("name", tech_name))
+                                tech_tactics = yaml_data.get("tactics") or []
                             else:
                                 # Fallback: format the filename-based name
                                 formatted_name = tech_name.replace("-", " ")
-                                technique_tactic_map[formatted_name] = "Unknown"
-                                techniques_involved_formatted.append(formatted_name)
-                                if "Unknown" not in techniques_by_tactic:
-                                    techniques_by_tactic["Unknown"] = []
-                                techniques_by_tactic["Unknown"].append(formatted_name)
+                                tech_tactics = ["Unknown"]
+
+                            # Each technique once: techniques_involved can name one twice
+                            # ('Multi-Factor Authentication', 'Multi-FactorAuthentication')
+                            key = technique_key(formatted_name)
+                            if key in seen_technique_keys:
+                                continue
+                            seen_technique_keys.add(key)
+
+                            # Use first tactic as primary
+                            technique_tactic_map[formatted_name] = tech_tactics[0] if tech_tactics else "Unknown"
+                            techniques_involved_formatted.append(formatted_name)
+                            # Group by ALL tactics (not just primary) for attack flow visualization
+                            for tactic in tech_tactics:
+                                techniques_by_tactic.setdefault(tactic, []).append(formatted_name)
 
                         # Sort techniques_involved_formatted by MITRE ATT&CK tactic order
                         # Sort by PRIMARY tactic to match how techniques are highlighted
@@ -6638,6 +6631,12 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                                     }
                                 )
 
+                        # One technique can span several parts (an MDE detection per table): one badge, every query
+                        parts_by_name = {}
+                        for tech in techniques:
+                            parts_by_name.setdefault(tech["name"], []).append(
+                                dict(tech, tactic=technique_tactic_map.get(tech["name"], tech.get("tactic", "Unknown"))))
+
                         # Use the rebuilt list
                         techniques = techniques_rebuilt
 
@@ -6648,8 +6647,12 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                                 "tactic": t["tactic"],
                                 "query": t.get("query", ""),
                                 "attack_override": t.get("attack_override"),
+                                # Which part, when a technique has several: the table/index in its filename
+                                "variant": os.path.basename(t.get("file") or "").rsplit(".", 1)[0].partition("_")[2]
+                                if len(parts_by_name[name]) > 1 else "",
                             }
-                            for t in techniques
+                            for name in techniques_involved_formatted
+                            for t in parts_by_name.get(name, [])
                             if t.get("query")
                         ]
 

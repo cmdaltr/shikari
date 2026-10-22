@@ -1089,6 +1089,11 @@
   color: #1a1a2e;
 }
 
+.iq-variant {
+  font-weight: 400;
+  color: #666;
+}
+
 .iq-id {
   font-size: 11px;
   background: #e3f2fd;

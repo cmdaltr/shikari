@@ -925,7 +925,7 @@
                 <ol class="corr-flow" aria-label="Tactics this correlation spans">
                 {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
                   {% set is_primary = correlation.primary_tactics and tactic in correlation.primary_tactics %}
-                  {% set n = correlation.techniques_by_tactic[tactic]|length %}
+                  {% set n = correlation.techniques_by_tactic[tactic]|map('technique_key')|unique|list|length %}
                   {% if tactic == 'Initial Access' %}
                           {% set flow_emoji = '🚪' %}
                           {% set flow_bg = '#E3F2FD' %}
@@ -1053,7 +1053,7 @@
                 {% set qid = corr_id ~ '-' ~ loop.index %}
                 <div class="iq-block">
                   <div class="iq-header">
-                    <span class="iq-name">{{ iq.technique_name }}</span>
+                    <span class="iq-name">{{ iq.technique_name }}{% if iq.variant %} <span class="iq-variant">({{ iq.variant }})</span>{% endif %}</span>
                     {% if iq.technique_id %}<span class="iq-id">{{ iq.technique_id }}</span>{% endif %}
                     {% if iq.tactic %}<span class="iq-tactic">{{ iq.tactic }}</span>{% endif %}
                     {{ am.badge(iq.attack_override) }}

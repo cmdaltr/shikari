@@ -119,13 +119,24 @@
 
 {# Macro to render correlation techniques with flow (arrows/slashes) #}
 {% macro render_correlation_techniques(correlation) %}
-  {% if correlation.is_merged and correlation.techniques|length >= 2 %}
+  {# Each technique once: a technique can be named twice ('Multi-Factor Authentication',
+     'Multi-FactorAuthentication') or have a part per table, and saved Library items predate the fix #}
+  {% set unique_techniques = [] %}
+  {% set seen = [] %}
+  {% for tech in correlation.techniques or [] %}
+    {% set key = tech.name|technique_key %}
+    {% if key not in seen %}
+      {% set _ = seen.append(key) %}
+      {% set _ = unique_techniques.append(tech) %}
+    {% endif %}
+  {% endfor %}
+  {% if correlation.is_merged and unique_techniques|length >= 2 %}
     {# Display techniques in the order they appear (merged correlations) #}
-    {% for tech in correlation.techniques %}
+    {% for tech in unique_techniques %}
       {% set tactic = tech.tactic %}
       {# Add separator before technique (except first) #}
       {% if not loop.first %}
-        {% set prev_tech = correlation.techniques[loop.index0 - 1] %}
+        {% set prev_tech = unique_techniques[loop.index0 - 1] %}
         {% set prev_tactic = prev_tech.tactic %}
         {% if tactic == prev_tactic %}
           {# Same tactic: use slash separator #}
@@ -143,14 +154,14 @@
     {% set tactic_order = ['Reconnaissance', 'Resource Development', 'Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Stealth', 'Defense Impairment', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
     {% set sorted_techniques = [] %}
     {% for tactic in tactic_order %}
-      {% for tech in correlation.techniques %}
+      {% for tech in unique_techniques %}
         {% if tech.tactic == tactic %}
           {% set _ = sorted_techniques.append(tech) %}
         {% endif %}
       {% endfor %}
     {% endfor %}
     {# Fallback: append any techniques not in tactic order #}
-    {% for tech in correlation.techniques %}
+    {% for tech in unique_techniques %}
       {% if tech not in sorted_techniques %}
         {% set _ = sorted_techniques.append(tech) %}
       {% endif %}

@@ -878,7 +878,7 @@
                       <!-- Technique Count Badge -->
                       <div style="text-align: center; margin-bottom: 4px;">
                         <span style="display: inline-block; background: #4CAF50; color: white; font-size: 0.7em; font-weight: 600; padding: 2px 8px; border-radius: 10px;">
-                          {{ correlation.techniques_by_tactic[tactic]|length }} technique{{ 's' if correlation.techniques_by_tactic[tactic]|length > 1 else '' }}
+                          {{ correlation.techniques_by_tactic[tactic]|map('technique_key')|unique|list|length }} technique{{ 's' if correlation.techniques_by_tactic[tactic]|map('technique_key')|unique|list|length > 1 else '' }}
                         </span>
                       </div>
                       <!-- Tactic Stage Indicator -->
