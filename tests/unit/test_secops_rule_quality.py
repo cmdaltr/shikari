@@ -131,7 +131,7 @@ def test_wrapped_description_still_writes_valid_yaml(tmp_path, monkeypatch):
     from archer.build import yaml as yaml_writer
 
     monkeypatch.chdir(yaml_writer.os.path.dirname(yaml_writer.__file__) + "/../..")
-    out = tmp_path / "SystemdService_GoogleSecOps.yaml"
+    out = tmp_path / "SystemdService_UDM.yaml"
     desc = ("[Scattered Spider](https://attack.mitre.org/groups/G1015) has run `SYSTEMD_UNIT_PATH=\"/lib/systemd/\n"
             "system/teleport.service` to establish persistence.")
     yaml_writer.write_yaml(str(out), "Systemd Service", "T1543.002", desc, "GoogleSecOps",

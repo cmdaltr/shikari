@@ -134,8 +134,8 @@ indicators:
 |----------|--------|---------|
 | Splunk | `[technique_name]_[platform].yaml` | `account_access_removal_aws.yaml` |
 | MDE | `[TechniqueName]_MDE_[DataSource].yaml` | `SSH_DeviceProcessEvents.yaml` |
-| GoogleSecOps | `[TechniqueName]_GoogleSecOps.yaml` | `SSH_GoogleSecOps.yaml` |
-| Elastic | `[TechniqueName]_Elastic.yaml` | `SSH_Elastic.yaml` |
+| Google SecOps | `[TechniqueName]_UDM.yaml` | `SSH_UDM.yaml` |
+| Elastic | `[TechniqueName]_ESQL.yaml` | `SSH_ESQL.yaml` |
 
 ## Required Fields
 

@@ -293,7 +293,7 @@ def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str
     """
     from archer.build import run_files
     from archer.build.ioc_flow import build_ioc_flow, save_ioc_flow
-    from archer.build.yaml import file_state, write_yaml
+    from archer.build.yaml import LANGUAGE_SUFFIX, file_state, write_yaml
 
     clean = clean_report_iocs(iocs)
     expires = apply_expiry(group_name, clean, regenerate=run_files.regenerating(group_name)) if clean else None
@@ -322,7 +322,7 @@ def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str
         query = build()
         if not query:
             continue
-        path = os.path.join(generate_dir, f"IOCSweep{safe}_{connector}.yaml")
+        path = os.path.join(generate_dir, f"IOCSweep{safe}_{LANGUAGE_SUFFIX[connector]}.yaml")
         # A sweep is rewritten every run with the report's current IOCs, unless someone
         # edited it by hand (Regenerate replaces it anyway)
         if os.path.exists(path) and file_state(path)["edited"] and not run_files.regenerating(group_name):

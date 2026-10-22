@@ -289,12 +289,18 @@ def _is_yaral(query: str) -> bool:
     return q.startswith("rule ") or q.startswith("// archer_") or bool(re.match(r"\(*(\$e\d?\.)?metadata\.event_type\s*=", q))
 
 
+def _same_technique(group_a, group_b) -> bool:
+    """True when every detection on both sides is one technique (At_DeviceFileEvents.yaml with At_DeviceProcessEvents.yaml)."""
+    paths = (group_a if isinstance(group_a, list) else [group_a]) + (group_b if isinstance(group_b, list) else [group_b])
+    return len({os.path.basename(str(p)).split("_")[0] for p in paths}) == 1
+
+
 def _source_label(path: Optional[str]) -> str:
-    """Technique name from a detection filename: AccessTokenManipulation_GoogleSecOps.yaml -> Access Token Manipulation."""
+    """Technique name from a detection filename: AccessTokenManipulation_UDM.yaml -> Access Token Manipulation."""
     if not path or not isinstance(path, str):
         return ""
     stem = os.path.basename(path).rsplit(".", 1)[0]
-    stem = re.sub(r"_(GoogleSecOps|microsoft_defender.*|Device\w+|\w+_prod)$", "", stem)
+    stem = re.sub(r"_(UDM|KQL|SPL|ESQL|GoogleSecOps|microsoft_defender.*|Device\w+|\w+_prod)$", "", stem)
     return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", stem).replace("_", " ").strip()
 
 
@@ -2040,6 +2046,7 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             "excessive_overlap": 0,
             "insufficient_overlap": 0,
             "same_table": 0,
+            "same_technique": 0,
             "no_progression": 0,
             "no_high_impact": 0,
         }
@@ -2097,6 +2104,12 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                 if _has_only_generic_terms(query_a) or _has_only_generic_terms(query_b):
                     skip_pair = True
                     skip_reason = "generic_terms"
+
+                # One technique on both sides (its DeviceFileEvents and DeviceProcessEvents
+                # queries): a join of a technique with itself, not a chain of two
+                if not skip_pair and _same_technique(group_a, group_b):
+                    skip_pair = True
+                    skip_reason = "same_technique"
 
                 # Filter out identical queries (normalizing whitespace for comparison)
                 if not skip_pair:

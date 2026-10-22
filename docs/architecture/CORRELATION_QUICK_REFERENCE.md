@@ -495,7 +495,7 @@ elif num_targets > 15:  # Change from 10 to be more aggressive
 | **Correlation Engine** | `archer/ai/genai/engine.py` |
 | **Configuration** | `archer/config.py` |
 | **Detection Files** | `data/groups/*.yaml` |
-| **Correlation Output** | `data/correlate/{group_name}.json` |
+| **Correlation Output** | `data/correlate/{group_name}.json` (index) and `data/correlate/{group_name}/<A>_and_<B>[_plusN]_<UDM, KQL, SPL or ESQL>.yaml` (one per correlation) |
 | **Full Documentation** | `docs/architecture/CORRELATION_ENGINE.md` |
 
 ---

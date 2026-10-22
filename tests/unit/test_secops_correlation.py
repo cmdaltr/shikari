@@ -109,3 +109,12 @@ def test_a_side_with_only_a_bare_binary_is_not_correlated():
     corr["query_b"] = wmic + "\nUNION\n" + from_yaral(PHISH)
     out = engine._build_join_correlation_query(corr, {})
     assert "mshta" in out and "wmic" not in out
+
+
+def test_a_technique_is_not_paired_with_itself():
+    same = engine._same_technique("data/groups/AccessTokenManipulation_DeviceFileEvents.yaml",
+                                  ["data/groups/AccessTokenManipulation_DeviceProcessEvents.yaml"])
+    chain = engine._same_technique("data/groups/AccessTokenManipulation_DeviceFileEvents.yaml",
+                                   ["data/groups/AccessTokenManipulation_DeviceProcessEvents.yaml",
+                                    "data/groups/AccountManipulation_DeviceProcessEvents.yaml"])
+    assert same and not chain

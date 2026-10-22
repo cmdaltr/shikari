@@ -24,12 +24,18 @@ Starting with `archer-cli start --skip-index` skips rebuilding the OSINT techniq
 | What | Where |
 |---|---|
 | Accounts, Library, settings, encrypted API keys | `data/archer.db` (SQLite) and `data/.encryption_key` |
-| Generated detections (YAML) | `data/groups/` |
-| Correlations | `data/correlate/` |
+| Generated detections (YAML) | `data/groups/`: `<Technique>_<table or index>.yaml`, or `<Technique>_UDM.yaml` (and `KQL`, `SPL`, `ESQL`) where there's one file per SIEM |
+| Correlations | `data/correlate/<group>.json` (the index) and one YAML per correlation in `data/correlate/<group>/`: `<A>_and_<B>[_plusN]_<UDM, KQL, SPL or ESQL>.yaml` |
 | Run records and progress | `data/runs/`, `data/progress/` |
 | Attack flows, IOC flows, briefings | `data/attack_flows/`, `data/ioc_flows/`, `data/briefings/` |
 | Uploaded reports and their extractions | `data/uploads/`, `data/blog_analysis/` |
 | Feed posts, research archive, added sources | `data/feed/` |
+
+Files made before the query-language names (`_GoogleSecOps.yaml`, `_MicrosoftThreatProtection.yaml`, `_DefenderXDR.yaml`) are renamed, along with the names the correlation indexes and run records hold, by:
+
+```bash
+python -m archer.build.migrate_names            # --dry-run to see what it would do
+```
 
 ## Your organisation's own material
 

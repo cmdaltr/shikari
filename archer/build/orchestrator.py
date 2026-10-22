@@ -153,6 +153,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
         processed = 0
 
         created = 0
+        errors = 0
         for entry in manual_data:
             tactic = entry.get("tactic")
             techniques = entry.get("techniques", [])
@@ -230,6 +231,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                         produced_ids.add(technique)
                 except Exception as e:
                     import traceback
+                    errors += 1
                     print(f"❌ Error processing technique {technique}: {e}")
                     traceback.print_exc()
                     # Continue to next technique instead of failing completely
@@ -253,6 +255,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
             raise
 
         created = 0
+        errors = 0
         total = len(procedures)
         produced_ids = set()
         print(f"📋 Processing {total} procedures for '{group_name}'")
@@ -308,6 +311,7 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                     produced_ids.add(procedure[0])
             except Exception as e:
                 import traceback
+                errors += 1
                 print(f"❌ Error processing procedure {procedure[0]} ({procedure[1]}): {e}")
                 traceback.print_exc()
                 # Continue to next procedure instead of failing completely
@@ -320,6 +324,18 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
         print(f"  Preview complete — {created} technique(s) had queries")
         print(f"{'=' * 60}\n")
         return
+
+    # Detections the group's earlier runs made that this one didn't stop being the group's,
+    # before anything is correlated. A run that produced nothing, hit an error or covered
+    # only one SIEM or index leaves them alone
+    produced = run_files.produced(group_name)
+    if created > 0 and produced and not errors and not (siem_filter or index_filter):
+        from archer.build.group_files import prune
+
+        pruned = prune(group_name, produced, GENERATE_DIR)
+        if pruned["untagged"] or pruned["removed"]:
+            print(f"🧹 {group_name}: {len(pruned['untagged'])} earlier detection(s) no longer the group's, "
+                  f"{len(pruned['removed'])} removed (no group left); {len(pruned['kept_edited'])} kept (edited)")
 
     # After YAMLs are created, run the GenAI correlation generator only if requested and YAMLs exist
     if run_correlation and created > 0:

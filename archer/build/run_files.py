@@ -90,6 +90,13 @@ def seen(path: str, group: Optional[str]) -> bool:
         return os.path.basename(path) in _active.get(group, ())
 
 
+def produced(group: str) -> Optional[Set[str]]:
+    """The file names written or tagged so far in the group's run; None when no run is tracked."""
+    with _lock:
+        files = _active.get(group)
+        return set(files) if files is not None else None
+
+
 def touches(group: str) -> Optional[int]:
     """Files written or tagged so far in the group's run; None when no run is tracked."""
     with _lock:

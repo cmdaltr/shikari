@@ -54,8 +54,8 @@ The Archer Correlation Engine automatically generates high-quality detection cor
 
 **Logic:**
 ```python
-# Find files matching group name pattern
-files = glob.glob(f"{GENERATE_DIR}/{group_name}_*.yaml")
+# The group's detections: tagged "<group> (Group)", or named for it (IOC sweeps, exploit rules)
+files = group_yaml_files(group_name, GENERATE_DIR)  # archer/build/group_files.py
 
 # Group by vendor (MDE, Splunk, Elastic, etc.)
 by_vendor = group_files_by_vendor(files)
@@ -65,6 +65,12 @@ by_vendor = group_files_by_vendor(files)
 - ✅ Files must exist in `data/groups/`
 - ✅ Files must match group name or contain group tag
 - ✅ Must have valid YAML format
+
+Detection files are shared between groups, so before correlating, a run takes its group's
+tag off every detection it didn't produce this time (`group_files.prune`): a technique no
+longer attributed, a table a query no longer uses, a query a check refused. A file left
+with no group is deleted; a file edited by hand is never touched. The run doesn't prune
+when it produced nothing, hit a technique error, or covered only one SIEM or index.
 
 ---
 
@@ -85,6 +91,21 @@ for vendor in vendors:
                 "b": files[j]
             })
 ```
+
+**Skipped before scoring:**
+
+| Filter | Pair skipped when |
+|---|---|
+| `generic_terms` | Either query has only generic terms |
+| `identical_queries` | The two queries are the same once whitespace is normalised |
+| `same_technique` | Every detection on both sides is one technique, e.g. its `DeviceFileEvents` and `DeviceProcessEvents` queries: a join of a technique with itself, not a chain |
+| `excessive_overlap` | The queries overlap by more than 80% |
+| `no_progression` | The tactics don't form a valid progression |
+
+When the JOIN is built (Phase 8), a part whose values are all bare built-in binaries
+(`wmic.exe`) or all Windows API names (`OpenThread`) is left out (PREC-BARE, PREC-API in
+`archer/validation/precision.py`): either matches anything on its own, or can never appear
+in a process command line. A side left with no part drops the correlation.
 
 **Result:**
 - 100 detections → 4,950 possible pairs
@@ -711,6 +732,7 @@ Merged Correlation:
       "query_b": "DeviceEvents | where ...",
       "combined_query": "let DeviceFileEvents_... JOIN ...",
       "relevance_score": 0.92,
+      "file": "APT29/MultiFactorAuthentication_and_AdditionalCloudCredentials_plus6_KQL.yaml",
       "techniques_involved": [
         "Multi-FactorAuthentication",
         "AdditionalCloudCredentials",
@@ -726,6 +748,23 @@ Merged Correlation:
   "cross_vendor_correlations": []
 }
 ```
+
+### Correlation Files
+
+Each correlation is also written as its own YAML, ready to paste into the SIEM
+(`archer/build/correlation_files.py`): `data/correlate/<group>/<A>_and_<B>[_plusN]_<language>.yaml`.
+A and B are the pair the correlation was built from; `_plusN` counts the techniques merged
+in after them, each counted once however `techniques_involved` spells it. The language is
+`UDM` (Google SecOps), `KQL` (Defender XDR), `SPL` (Splunk) or `ESQL` (Elastic). The file
+carries the same stamp as a detection: one edited by hand is kept on the next run and its
+query wins; files a run no longer makes are removed unless edited.
+
+Detections are named the same way where a technique has one file per SIEM (`At_UDM.yaml`,
+`IOCSweepAPT29_KQL.yaml`); MDE detections are named for their table
+(`At_DeviceProcessEvents.yaml`) and Splunk detections for their index. Files named for the
+product before this (`_GoogleSecOps`, `_MicrosoftThreatProtection`, `_DefenderXDR`) are
+renamed by `python -m archer.build.migrate_names`, which also updates the names the
+correlation indexes and run records hold.
 
 ### UI Display
 
@@ -743,7 +782,8 @@ Correlations are displayed in the web UI with:
    - Tactics: Credential Access, Persistence
 
 3. **Techniques Involved:** (For super-merged correlations)
-   - Shows all 8 techniques as colored badges
+   - Shows all 8 techniques as colored badges, each once (names are compared on letters
+     and digits, so `Multi-Factor Authentication` and `Multi-FactorAuthentication` are one)
    - Color indicates attack phase (early/mid/late/final)
 
 4. **Combined Query:** Expandable JOIN-based query with technique comments

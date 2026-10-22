@@ -20,6 +20,10 @@ import yaml as yaml_lib
 # the fix reaches files already on disk without anyone deleting them.
 GENERATOR_VERSION = 3  # 3: KQL aggregates per finding, verbatim paths, bracketed and/or
 
+# A detection file's suffix when it isn't named for its table or index: the query language
+# (At_UDM.yaml), never the product. archer.build.migrate_names renames files made before this.
+LANGUAGE_SUFFIX = {"GoogleSecOps": "UDM", "MicrosoftThreatProtection": "KQL", "Splunk": "SPL", "Elastic": "ESQL"}
+
 # BeautifulSoup and requests only needed for OLD slow additional_tactics function
 # This function is replaced by yaml_patch.py, so these imports are optional
 try:
@@ -246,7 +250,6 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
             # Adversary-side Reconnaissance/Resource Development: the estate's logs don't see it
             print(f"  ⏭️  Not written: {os.path.basename(query_file)} is intel only (pre-compromise)")
             return
-    run_files.note(query_file, tag)
     with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
         template = queryTemplate.read()
 
@@ -518,6 +521,9 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
             return
         with open(query_file, "w") as new_yaml:
             new_yaml.write(_stamp(yaml_content) + yaml_content)
+        # Only a file actually written is the run's: one refused above keeps any older
+        # version on disk out of the run (and out of its correlations)
+        run_files.note(query_file, tag)
         attack_mapping.reapply(query_file, attack_override, attack_mapping_history)
 
 
@@ -967,7 +973,7 @@ def construct_yaml(
 
         if googlesecops_rule and googlesecops_rule.get("query"):
             # Create Google SecOps YAML file
-            yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_GoogleSecOps.yaml")
+            yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_{LANGUAGE_SUFFIX['GoogleSecOps']}.yaml")
             rewrite = detection_action(yamlfile, tag)
             if rewrite is not None:
                 # Get event type from the rule (e.g., PROCESS_LAUNCH)
@@ -1022,7 +1028,7 @@ def construct_yaml(
                 elastic_query_str = elastic_gen.format_query_for_display(elastic_query_result["query_dsl"])
 
                 # Create Elastic YAML file
-                yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_Elastic.yaml")
+                yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_{LANGUAGE_SUFFIX['Elastic']}.yaml")
                 rewrite = detection_action(yamlfile, tag)
                 if rewrite is not None:
                     write_yaml(

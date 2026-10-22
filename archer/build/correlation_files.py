@@ -1,6 +1,6 @@
 """
 One YAML file per correlation, written once a run's correlations are final (scored,
-filtered and grouped): data/correlate/<group>/<A>_and_<B>_<Vendor>.yaml.
+filtered and grouped): data/correlate/<group>/<A>_and_<B>_<language>.yaml (UDM, KQL, SPL, ESQL).
 
 The group's JSON (data/correlate/<group>.json) stays as the index: relevance, parts and
 the file each correlation lives in. The file holds the query, ready to paste into the
@@ -19,12 +19,12 @@ import sys
 import uuid
 from typing import Dict, List, Optional
 
-from archer.build.yaml import GENERATOR_VERSION, _STAMP, _query_block
+from archer.build.yaml import GENERATOR_VERSION, LANGUAGE_SUFFIX, _STAMP, _query_block
 from archer.config import CORRELATE_DIR
 
 CONNECTOR = {"googlesecops": "GoogleSecOps", "mde": "MicrosoftThreatProtection", "splunk": "Splunk",
              "elastic": "Elastic"}
-SUFFIX = {"googlesecops": "GoogleSecOps", "mde": "DefenderXDR", "splunk": "Splunk", "elastic": "Elastic"}
+SUFFIX = {vendor: LANGUAGE_SUFFIX[connector] for vendor, connector in CONNECTOR.items()}  # googlesecops -> UDM
 _NAMESPACE = uuid.UUID("8f5c1d2e-6a0b-4c7e-9a41-2f3b5d6e7c80")
 
 
@@ -37,7 +37,7 @@ def _camel(name: str) -> str:
 
 
 def _label(path: Optional[str]) -> str:
-    """Technique name from a detection filename: AccessTokenManipulation_GoogleSecOps.yaml -> Access Token Manipulation."""
+    """Technique name from a detection filename: AccessTokenManipulation_UDM.yaml -> Access Token Manipulation."""
     stem = os.path.basename(str(path or "")).rsplit(".", 1)[0].split("_")[0]
     return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", stem).strip()
 
