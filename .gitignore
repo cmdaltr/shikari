@@ -46,6 +46,8 @@ data/mitre_procedures.csv
 data/mitre_procedures.xlsx
 data/mitre_procedures.meta.json
 data/mitre_procedures.tmp
+data/mitre_procedures.building.csv
+data/mitre_procedures.building.json
 data/*.sqlite
 data/*.sqlite3
 
