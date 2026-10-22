@@ -40,6 +40,7 @@
 .briefing-act-cell { text-align: right; white-space: nowrap; }
 .briefing-act-hint { font-size: .8em; color: var(--text-secondary, #666); white-space: nowrap; cursor: help; }
 .briefing-act-err { display: block; margin-top: 4px; font-size: .8em; color: #b91c1c; white-space: normal; }
+.corr-file { margin: 10px 0 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: .78em; color: var(--text-secondary, #666); word-break: break-all; }
 .briefing-note { margin: 0 0 8px; font-size: .85em; color: var(--text-secondary, #666); line-height: 1.5; }
 .briefing-gaps { width: 100%; border-collapse: collapse; font-size: .9em; margin: 0 0 8px; }
 .briefing-gaps th { text-align: left; font-size: .78em; text-transform: uppercase; letter-spacing: .4px; color: var(--text-secondary, #666); padding: 6px 8px; border-bottom: 2px solid var(--border-color, #e2e8f0); }
@@ -1065,6 +1066,9 @@
               <p class="corr-stale" role="note">The combined query was built from an older version of {{ correlation.stale_parts|join(', ') }}: the queries above are current, the combined one isn't.{% if can_regenerate %} <strong>Regenerate</strong> rebuilds it.{% else %} Hunt the group again to rebuild it.{% endif %}</p>
               {% endif %}
 
+              {% if correlation.query_file %}
+              <p class="corr-file" title="One file per correlation; edit it and the next run keeps your version">data/correlate/{{ correlation.query_file }}{% if correlation.query_edited %} · edited by hand, kept{% endif %}</p>
+              {% endif %}
               <!-- Combined Query (collapsible) -->
               <div style="margin-top: 10px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">

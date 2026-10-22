@@ -16,7 +16,7 @@ import json
 import os
 import sys
 
-from archer.build.udm import from_yaral, is_yaral
+from archer.build.udm import from_yaral, is_yaral, normalise_join
 from archer.build.yaml import _STAMP, _query_block
 from archer.config import DATA_DIR, GENERATE_DIR
 
@@ -66,6 +66,9 @@ def migrate_correlations(path: str, dry_run: bool = False) -> int:
         if isinstance(q, str) and is_yaral(q):
             changed += 1
             return from_yaral(q) or q
+        if isinstance(q, str) and normalise_join(q) != q:
+            changed += 1
+            return normalise_join(q)
         return q
 
     for corr in data.get("vendor_correlations", []) if isinstance(data, dict) else []:
@@ -96,7 +99,7 @@ def main(argv=None) -> int:
     queries = 0
     if os.path.isdir(CORRELATE_DIR):
         for name in sorted(os.listdir(CORRELATE_DIR)):
-            if name.endswith(".json"):
+            if name.endswith(".json") and not name.startswith("."):  # .*_example.json are samples
                 queries += migrate_correlations(os.path.join(CORRELATE_DIR, name), args.dry_run)
     verb = "Would convert" if args.dry_run else "Converted"
     print(verb, counts.get("migrated", 0) + counts.get("migrated-edited", 0), "SecOps detections to UDM;",

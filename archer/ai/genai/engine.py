@@ -166,14 +166,12 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
     for line in text.splitlines():
         line_lower = line.lower().strip()
 
-        # Look for common search query markers
+        # Look for common search query markers: top-level keys only. OSINT reference rules
+        # further down the file have their own (indented) query: keys, other vendors' rules
         if not query_marker:
-            if (
-                line_lower.startswith("search:")
-                or line_lower.startswith("query:")
-                or line_lower.startswith("kql:")
-                or line_lower.startswith("spl:")
-            ):
+            if query_lines:
+                break  # the detection's own query is done
+            if line.startswith(("search:", "query:", "kql:", "spl:", "Query:", "Search:")):
                 query_marker = True
                 # Extract just the query part after the colon
                 if ":" in line:
@@ -1215,6 +1213,37 @@ def _combine_queries_for_group(
     return (combined, queries)
 
 
+_AGO = re.compile(r"\bTimestamp\s*>\s*ago\(\s*\d+[smhd]\s*\)", re.I)
+
+
+def _where_clauses(query: str) -> List[str]:
+    """
+    Each '| where' clause of a KQL query, whole: a clause runs on over continuation lines
+    to the next pipe, and taking only its first line left a dangling 'or'. The time
+    filter is dropped (the correlation sets its own); a clause that was only that goes.
+    """
+    clauses, current = [], None
+    for line in query.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("|"):
+            if current is not None:
+                clauses.append(current)
+            current = stripped[len("| where"):].strip() if re.match(r"\|\s*where\b", stripped) else None
+        elif current is not None and stripped and not stripped.startswith("//"):
+            current += " " + stripped
+    if current is not None:
+        clauses.append(current)
+    out = []
+    for clause in clauses:
+        clause = _AGO.sub("", clause)
+        clause = re.sub(r"^\s*(?:and|or)\s+|\s+(?:and|or)\s*$", "", clause.strip(), flags=re.I).strip()
+        clause = re.sub(r"\(\s*(?:and|or)\s+", "(", clause, flags=re.I)
+        clause = re.sub(r"\s+(?:and|or)\s*\)", ")", clause, flags=re.I)
+        if clause and clause != "()":
+            out.append(clause)
+    return out
+
+
 def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
     """
     Build a JOIN-based correlation query that chains events by DeviceName and AccountName.
@@ -1276,15 +1305,18 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
     # Parse queries to extract table names and conditions
     queries_with_metadata = []
 
-    # Split UNION queries into individual queries
-    all_queries = []
-    for query_text in [query_a, query_b]:
-        if "UNION" in query_text:
-            # Split by UNION
-            parts = query_text.split("\nUNION\n")
-            all_queries.extend(parts)
-        elif query_text:
-            all_queries.append(query_text)
+    from archer.validation.precision import check as precision_check
+
+    # Split UNION queries into individual queries. A part that can't fire for the right
+    # reason (a protocol alone, a placeholder) is left out; a side with none left means
+    # there's nothing to correlate
+    # The engine's copy keeps the YAML's indentation ("  | where"): check it flush left
+    flush = lambda q: "\n".join(l.strip() for l in q.splitlines())
+    precise = lambda q: q.strip() and not any(f["severity"] == "error" for f in precision_check(flush(q), "kql"))
+    sides = [[q for q in (text or "").split("\nUNION\n") if precise(q)] for text in (query_a, query_b)]
+    if not all(sides):
+        return ""
+    all_queries = sides[0] + sides[1]
 
     # Process each individual query
     for query in all_queries:
@@ -1296,16 +1328,7 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
         table_match = re.match(r"^(\w+)", query)
         table_name = table_match.group(1) if table_match else "DeviceEvents"
 
-        # Extract just the condition part - skip "Timestamp > ago" lines
-        # Get all "| where" clauses
-        where_lines = []
-        for line in query.split("\n"):
-            stripped = line.strip()
-            if stripped.startswith("| where") and "Timestamp > ago" not in stripped:
-                # Extract just the condition after "| where"
-                condition = stripped.replace("| where", "").strip()
-                if condition:
-                    where_lines.append(condition)
+        where_lines = _where_clauses(query)
 
         # Join all where conditions
         where_clause = " and ".join(where_lines) if where_lines else ""
@@ -1348,7 +1371,7 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
         )
 
     if not queries_with_metadata:
-        return query_a + "\n" + query_b  # Fallback to UNION approach
+        return ""
 
     # Group by tactic and table
     by_tactic_table = {}
@@ -1405,7 +1428,8 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
     join_query = "\n\n".join(join_parts)
     join_query += f"\n\n// Chain events by DeviceName and AccountName\n{first_table}"
 
-    table_names = [f"{qm['table']}_{qm['tactic'].replace(' ', '')}" for qm in queries_with_metadata]
+    # Each table group once: two parts on the same table and tactic share one let
+    table_names = [f"{table}_{tactic.replace(' ', '')}" for tactic, table in by_tactic_table]
     for i, table_name in enumerate(table_names[1:], 1):
         join_query += f"""
 | join kind=inner (
@@ -2254,6 +2278,30 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
     out_dir = CORRELATE_DIR
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f"{group_name}.json")
+
+    # Last gate: a correlation whose query won't parse or can't fire for the right reason
+    # isn't written (archer.validation.static_check)
+    from archer.build.correlation_files import errors as correlation_errors
+
+    kept = []
+    for corr in vendor_corr:
+        problems = correlation_errors(corr)
+        if problems:
+            print(f"   Dropped correlation {corr.get('a')} + {corr.get('b')} ({corr.get('vendor')}): {problems[0]}")
+        else:
+            kept.append(corr)
+    vendor_corr = results["vendor_correlations"] = kept
+
+    # The final correlations, one file each (archer.build.correlation_files); the JSON
+    # below is their index. A hand-edited file keeps its query.
+    try:
+        from archer.build.correlation_files import write as write_correlation_files
+
+        report = write_correlation_files(group_name, vendor_corr)
+        print(f"   Correlation files: {len(report['written'])} written, {len(report['kept_edited'])} kept as edited, "
+              f"{len(report['removed'])} removed")
+    except Exception as e:
+        print(f"GenAI: Error writing correlation files: {e}")
 
     try:
         with open(out_path, "w", encoding="utf-8") as fh:

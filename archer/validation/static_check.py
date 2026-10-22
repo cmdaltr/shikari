@@ -154,11 +154,30 @@ def _check_kql(query: str, findings: List[Dict], schema: bool = True) -> None:
     if schema and not re.search(r"^\s*union\b", query, re.M):
         from archer.validation.mde_field_validator import validate_mde_query
 
-        result = validate_mde_query(query)
-        if result.get("valid") is False:
-            for field in result.get("invalid_fields") or []:
-                findings.append({"check": "MDE-FIELD", "message": f"{field} isn't a column of {result.get('table')}. "
-                                 f"{(result.get('suggestions') or {}).get(field, '')}".strip()})
+        # A correlation joins several tables, each in its own let: check each against its
+        # table (the join section after them uses the lets' own columns)
+        blocks = _let_blocks(query) or [query]
+        for block in blocks:
+            result = validate_mde_query(block)
+            if result.get("valid") is False:
+                for field in result.get("invalid_fields") or []:
+                    findings.append({"check": "MDE-FIELD", "message": f"{field} isn't a column of {result.get('table')}. "
+                                     f"{(result.get('suggestions') or {}).get(field, '')}".strip()})
+
+
+_LET_TABLE = re.compile(r"^\s*let\s+\w+\s*=\s*(Device\w+|Email\w+|Identity\w+|Alert\w+|Cloud\w+|Url\w+)\s*$", re.M)
+
+
+def _let_blocks(query: str) -> List[str]:
+    """Each 'let X = Table ... ;' of a query as a standalone query on that table."""
+    blocks = []
+    for m in _LET_TABLE.finditer(query):
+        end = query.find(";", m.end())
+        body = query[m.end(): end if end != -1 else len(query)]
+        # project NewName=Column makes NewName (the join key): check only the column it reads
+        body = re.sub(r"(\|\s*(?:project|extend)\b[^\n]*)", lambda p: re.sub(r"\b\w+\s*=\s*(?=\w)", "", p.group(1)), body)
+        blocks.append(m.group(1) + body)
+    return blocks
 
 
 def _check_yaral(query: str, findings: List[Dict]) -> None:

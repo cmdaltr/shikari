@@ -533,407 +533,6 @@ def format_technique_name(name: str) -> str:
     return result
 
 
-def merge_correlations(vendor_corrs: list) -> list:
-    """
-    Merge correlations that share the same first technique (file 'a') and have
-    multiple second techniques (file 'b') from the same tactic into a single correlation.
-
-    Example:
-        Before:
-        - MFA → Create Process with Token (Defense Evasion)
-        - MFA → SID-History Injection (Defense Evasion)
-        - MFA → Access Token Manipulation (Defense Evasion)
-
-        After:
-        - MFA → Create Process with Token/SID-History Injection/Access Token Manipulation
-
-    Args:
-        vendor_corrs: List of correlation dictionaries from JSON
-
-    Returns:
-        List of correlations with merged entries where applicable
-    """
-    import os
-    import glob
-
-    # Group correlations by (vendor, file_a)
-    groups = {}
-    for corr in vendor_corrs:
-        vendor = corr.get("vendor", "unknown")
-        file_a = corr.get("a", "")
-        key = (vendor, file_a)
-
-        if key not in groups:
-            groups[key] = []
-        groups[key].append(corr)
-
-    # Process each group and merge where appropriate
-    merged_correlations = []
-
-    for key, group in groups.items():
-        # _build_merged_query can only merge KQL; for YARA-L and SPL it returned the first
-        # pair's query under a card listing every technique. The engine already ORs a
-        # SecOps rule's follow-on techniques together (archer.ai.genai.engine)
-        if len(group) == 1 or key[0] not in ("mde", "microsoft"):
-            # No merging needed - only one correlation for this first technique
-            merged_correlations.append(group[0])
-            continue
-
-        # Group by PRIMARY tactic of second technique (most specific tactic)
-        # Only merge if techniques share a rare/specific tactic (not common ones like Persistence/Defense Evasion)
-        by_tactic = {}
-
-        # Common tactics that should NOT trigger merging (too broad)
-        common_tactics = {"Persistence", "Defense Evasion", "Privilege Escalation"}
-
-        for corr in group:
-            file_b = corr.get("b", "")
-            if not file_b:
-                continue
-
-            # Extract tactics from file_b YAML
-            full_path = os.path.join(GENERATE_DIR, os.path.basename(file_b))
-            if os.path.exists(full_path):
-                yaml_data = load_yaml_file(full_path)
-                if yaml_data:
-                    tactics = yaml_data.get("tactics", [])
-
-                    # Find the first tactic as primary (prefer non-common tactics)
-                    primary_tactic = "Unknown"
-                    # First try to find a non-common tactic
-                    for tactic in tactics:
-                        if tactic not in common_tactics:
-                            primary_tactic = tactic
-                            break
-
-                    # If no non-common tactic found, use the first tactic (even if common)
-                    if primary_tactic == "Unknown" and tactics:
-                        primary_tactic = tactics[0]
-
-                    if primary_tactic not in by_tactic:
-                        by_tactic[primary_tactic] = []
-                    by_tactic[primary_tactic].append(corr)
-            else:
-                # If file doesn't exist, add to "Unknown" tactic with unique key
-                basename_b = os.path.basename(file_b).replace(".yaml", "").split("_")[0]
-                unique_key = f"_unique_{basename_b}"
-                if unique_key not in by_tactic:
-                    by_tactic[unique_key] = []
-                by_tactic[unique_key].append(corr)
-
-        # Merge groups with 2+ techniques in same SPECIFIC tactic
-        for tactic, tactic_corrs in by_tactic.items():
-            if len(tactic_corrs) >= 2 and not tactic.startswith("_unique_"):
-                # Merge these correlations (they share a specific tactic)
-                merged = _merge_correlation_group(tactic_corrs)
-                merged_correlations.append(merged)
-            else:
-                # Add as-is (unique techniques or single correlation)
-                merged_correlations.extend(tactic_corrs)
-
-    return merged_correlations
-
-
-def find_yaml_for_technique(technique_name: str, yaml_dir: str) -> str:
-    """
-    Find the YAML file for a given technique name by searching the directory.
-
-    Args:
-        technique_name: The technique name to search for (e.g., "Clear Windows Event Logs")
-        yaml_dir: Directory containing YAML files
-
-    Returns:
-        Filename of matching YAML file, or None if not found
-    """
-    import glob
-
-    # Normalize technique name for filename matching (remove spaces, special chars)
-    normalized = technique_name.replace(" ", "").replace("-", "").lower()
-
-    # Search for YAML files
-    yaml_files = glob.glob(os.path.join(yaml_dir, "*.yaml"))
-
-    for yaml_file in yaml_files:
-        yaml_data = load_yaml_file(yaml_file)
-        if yaml_data:
-            # Check if the 'name' field matches
-            yaml_name = yaml_data.get("name", "")
-            if yaml_name == technique_name:
-                return os.path.basename(yaml_file)
-
-    # Fallback: try filename matching
-    for yaml_file in yaml_files:
-        basename = os.path.basename(yaml_file).replace(".yaml", "")
-        # Remove data source suffix (e.g., "_DeviceProcessEvents")
-        basename_clean = basename.split("_")[0].lower()
-        if basename_clean == normalized:
-            return os.path.basename(yaml_file)
-
-    return None
-
-
-def _merge_correlation_group(correlations: list) -> dict:
-    """
-    Merge multiple correlations into a single correlation with combined queries.
-
-    Args:
-        correlations: List of correlations to merge (all share same first technique and tactic)
-
-    Returns:
-        Single merged correlation dictionary
-    """
-    if not correlations:
-        return {}
-
-    # Use first correlation as base
-    base = correlations[0].copy()
-
-    # Collect all file_b paths and technique names with their tactics
-    files_b = []
-    techniques_with_tactics = []
-
-    # Get first technique
-    first_tech = base.get("techniques_involved", [])[0] if base.get("techniques_involved") else None
-    if first_tech:
-        # Get primary tactic of first technique
-        file_a = base.get("a", "")
-        full_path_a = os.path.join(GENERATE_DIR, os.path.basename(file_a))
-        if os.path.exists(full_path_a):
-            yaml_data = load_yaml_file(full_path_a)
-            if yaml_data:
-                tactics_a = yaml_data.get("tactics", [])
-                primary_tactic_a = tactics_a[0] if tactics_a else "Unknown"
-                techniques_with_tactics.append((first_tech, primary_tactic_a))
-
-    # Extract ALL technique names from file paths (a and b) for each correlation
-    # This ensures we capture all techniques that appear in the merged queries
-    for corr in correlations:
-        # Process file_a (first technique) - skip if already added
-        file_a = corr.get("a", "")
-        if file_a:
-            basename_a = os.path.basename(file_a).replace(".yaml", "").replace(".yml", "")
-            full_path_a = os.path.join(GENERATE_DIR, basename_a + ".yaml")
-            if os.path.exists(full_path_a):
-                yaml_data_a = load_yaml_file(full_path_a)
-                if yaml_data_a:
-                    tech_name_a = yaml_data_a.get("name", "")
-                    if tech_name_a and not any(
-                        t[0] == tech_name_a for t in techniques_with_tactics
-                    ):
-                        tactics_a = yaml_data_a.get("tactics", [])
-                        primary_tactic_a = tactics_a[0] if tactics_a else "Unknown"
-                        techniques_with_tactics.append((tech_name_a, primary_tactic_a))
-
-        # Process file_b (second technique)
-        file_b = corr.get("b", "")
-        if file_b:
-            files_b.append(file_b)
-
-            basename_b = os.path.basename(file_b).replace(".yaml", "").replace(".yml", "")
-            full_path_b = os.path.join(GENERATE_DIR, basename_b + ".yaml")
-            if os.path.exists(full_path_b):
-                yaml_data_b = load_yaml_file(full_path_b)
-                if yaml_data_b:
-                    tech_name_b = yaml_data_b.get("name", "")
-                    if tech_name_b and not any(
-                        t[0] == tech_name_b for t in techniques_with_tactics
-                    ):
-                        tactics_b = yaml_data_b.get("tactics", [])
-                        primary_tactic_b = tactics_b[0] if tactics_b else "Unknown"
-                        techniques_with_tactics.append((tech_name_b, primary_tactic_b))
-
-    # Sort techniques by MITRE ATT&CK tactic order
-    tactic_order = [
-        "Initial Access",
-        "Execution",
-        "Persistence",
-        "Privilege Escalation",
-        "Defense Evasion",
-        "Credential Access",
-        "Discovery",
-        "Lateral Movement",
-        "Collection",
-        "Command and Control",
-        "Exfiltration",
-        "Impact",
-    ]
-
-    def get_tactic_index(tech_tuple):
-        tactic = tech_tuple[1]
-        try:
-            return tactic_order.index(tactic)
-        except ValueError:
-            return 999  # Unknown tactics go last
-
-    techniques_with_tactics.sort(key=get_tactic_index)
-    techniques_involved = [tech[0] for tech in techniques_with_tactics]
-
-    # Debug: Log what techniques were collected
-    if len(techniques_involved) > 2:
-        print(
-            f"DEBUG _merge_correlation_group: Collected {len(techniques_involved)} techniques: {techniques_involved}"
-        )
-
-    # Merge queries using OR logic
-    merged_query = _build_merged_query(correlations)
-
-    # Update base correlation with merged data
-    base["b"] = files_b  # Now an array
-    base["merged"] = True
-    base["techniques_involved"] = techniques_involved
-    base["combined_query"] = merged_query
-
-    # Merge individual_queries from all correlations in the group
-    merged_individual_queries = []
-    seen_tech_ids = set()
-    for corr in correlations:
-        for iq in corr.get("individual_queries", []):
-            tid = iq.get("technique_id", "")
-            if tid not in seen_tech_ids:
-                merged_individual_queries.append(iq)
-                seen_tech_ids.add(tid)
-    base["individual_queries"] = merged_individual_queries
-
-    # Combine all tactics
-    all_tactics = set()
-    for corr in correlations:
-        all_tactics.update(corr.get("tactics", []))
-    base["tactics"] = sorted(list(all_tactics))
-
-    # Use highest relevance score
-    base["relevance_score"] = max(c.get("relevance_score", 0.0) for c in correlations)
-
-    return base
-
-
-def _build_merged_query(correlations: list) -> str:
-    """
-    Build a merged query that combines multiple second techniques with OR conditions.
-    Supports both KQL (MDE) and Splunk query languages.
-
-    Args:
-        correlations: List of correlations to merge
-
-    Returns:
-        Combined query string
-    """
-    if not correlations:
-        return ""
-
-    # Extract first technique query (same for all correlations)
-    first_corr = correlations[0]
-    combined_query = first_corr.get("combined_query", "")
-    vendor = first_corr.get("vendor", "").lower()
-
-    # Parse out the first technique section
-    import re
-
-    # Detect if this is a Splunk query
-    is_splunk = vendor == "splunk" or (
-        isinstance(combined_query, str)
-        and ("index=" in combined_query or "earliest=" in combined_query)
-    )
-
-    # For Splunk queries, we can't easily merge the transaction-based correlation syntax
-    # Return the first correlation's combined query as-is
-    # TODO: Implement proper Splunk correlation merging if needed
-    if is_splunk:
-        # For now, just return the original combined query
-        # Splunk correlations use transaction-based syntax which is complex to merge
-        return combined_query
-
-    # KQL/MDE query merging logic below
-    # Extract the first "let" statement (first technique)
-    first_let_match = re.search(r"(let\s+\w+\s*=.*?\|\s*project[^;]+;)", combined_query, re.DOTALL)
-    if not first_let_match:
-        return combined_query  # Can't parse, return original
-
-    first_let = first_let_match.group(1)
-
-    # Build combined second technique conditions
-    second_conditions = []
-    second_let_statements = []
-    table_counter = {}
-
-    for idx, corr in enumerate(correlations):
-        query = corr.get("combined_query", "")
-        techniques = corr.get("techniques_involved", [])
-
-        # Extract second let statement
-        # Find all let statements after the first one
-        let_matches = list(
-            re.finditer(
-                r"let\s+(\w+)\s*=\s*(\w+)\s*\n\|\s*where\s+Timestamp[^;]+\|\s*where\s+([^\n]+(?:\n(?!\|)[^\n]+)*)",
-                query,
-                re.DOTALL,
-            )
-        )
-
-        if len(let_matches) > 1:
-            # Get the second let statement
-            table_name = let_matches[1].group(2)  # e.g., "DeviceEvents"
-            where_condition = let_matches[1].group(3).strip()
-
-            # Track unique table names
-            if table_name not in table_counter:
-                table_counter[table_name] = 0
-            table_counter[table_name] += 1
-
-            # Extract the technique name from the existing comment in the WHERE condition
-            # Look for // TechniqueName pattern
-            comment_match = re.search(r"//\s*([^\n]+)", where_condition)
-            if comment_match:
-                technique_name = comment_match.group(1).strip()
-            else:
-                # Fallback: use second technique from list, or all techniques after the first
-                technique_name = (
-                    " / ".join(techniques[1:]) if len(techniques) > 1 else f"Technique{idx+1}"
-                )
-
-            # Strip any existing comment lines from the where_condition to avoid duplication
-            # Remove lines that start with // (with optional leading whitespace)
-            condition_lines = where_condition.split("\n")
-            cleaned_lines = [line for line in condition_lines if not line.lstrip().startswith("//")]
-            cleaned_condition = "\n".join(cleaned_lines).strip()
-
-            # Format the condition with technique comment
-            second_conditions.append(f"  // {technique_name}\n  ({cleaned_condition})")
-
-    # Build the merged query
-    if not second_conditions:
-        return combined_query  # Can't merge, return original
-
-    # Create the second technique query with OR conditions
-    # Determine which table is most common
-    most_common_table = (
-        max(table_counter.keys(), key=lambda k: table_counter[k])
-        if table_counter
-        else "DeviceEvents"
-    )
-
-    # Parse the original query to extract join template
-    join_match = re.search(r"(//\s*Chain events.*?\|\s*project\s+\*)", combined_query, re.DOTALL)
-    join_template = join_match.group(1) if join_match else ""
-
-    # Build new combined query
-    conditions_joined = " or\n".join(second_conditions)
-    merged = f"""{first_let}
-
-let {most_common_table}_Combined = {most_common_table}
-| where Timestamp > ago(1h)
-| where
-{conditions_joined}
-| project Timestamp, DeviceName, AccountName=AccountName, *;
-
-{join_template}"""
-
-    # Fix the join to use the new combined table
-    join_replacement = f"| join kind=inner (\n    {most_common_table}_Combined"
-    merged = re.sub(r"\|\s*join\s+kind=inner\s*\(\s*\w+", join_replacement, merged)
-
-    return merged
-
-
 def get_platform_from_data_source(data_source: str) -> str:
     """
     Map a data source to its platform/vendor.
@@ -1032,12 +631,12 @@ def library_content(raw):
     (archer.build.udm); the stored copy is left as it is. OSINT snippets quote public
     YARA-L rules and stay as they are.
     """
-    from archer.build.udm import from_yaral, is_yaral
+    from archer.build.udm import from_yaral, is_yaral, normalise_join
 
     content = json.loads(raw) if isinstance(raw, str) else raw
     if not isinstance(content, dict):
         return content
-    convert = lambda q: (from_yaral(q) or q) if isinstance(q, str) and is_yaral(q) else q
+    convert = lambda q: normalise_join((from_yaral(q) or q) if is_yaral(q) else q) if isinstance(q, str) else q
     for key in ("query", "combined_query", "query_a", "query_b"):
         if key in content:
             content[key] = convert(content[key])
@@ -6705,12 +6304,11 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                 # The file uses "vendor_correlations" not "correlations"
                 vendor_corrs = _run_correlations(corr_data.get("vendor_correlations", []), run_only)
 
-                # Merge correlations with same first technique and related second techniques
-                print(f"[MERGE] Before merging: {len(vendor_corrs)} correlations", flush=True)
-                pre_merge_count = len(vendor_corrs)
-                vendor_corrs = merge_correlations(vendor_corrs)
-                post_merge_count = len(vendor_corrs)
-                print(f"[MERGE] After merging: {post_merge_count} correlations", flush=True)
+                # Shown as the engine left them: ranked and grouped already, one file each
+                # (archer.build.correlation_files). Merging again here showed one SecOps
+                # correlation per first technique and dropped the rest, and gave Defender XDR
+                # cards a query no file held
+                pre_merge_count = post_merge_count = len(vendor_corrs)
 
                 # Update progress with post-merge correlation count
                 from archer.build.progress import write_progress
@@ -6730,6 +6328,11 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     file_b = corr.get("b", "")
                     relevance_score = corr.get("relevance_score", 0.0)
                     combined_query = corr.get("combined_query", "")
+                    # The correlation's own file (archer.build.correlation_files) wins: it may be edited
+                    if corr.get("file"):
+                        from archer.build.correlation_files import read_query
+
+                        combined_query = read_query(os.path.join(CORRELATE_DIR, corr["file"])) or combined_query
                     is_merged = corr.get("merged", False)
 
                     # Parse filename format: "example_index.yaml"
@@ -7075,6 +6678,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                                 "time_window": time_window,
                                 "tactics": list(tactics_set),
                                 "combined_query": combined_query,
+                                "query_file": corr.get("file"),
+                                "query_edited": bool(corr.get("edited")),
                                 "tables_indexes": tables_indexes,  # Add tables/indexes
                                 "techniques_involved": techniques_involved_formatted,  # Add formatted technique names
                                 "technique_tactic_map": technique_tactic_map,  # Map techniques to their primary tactics

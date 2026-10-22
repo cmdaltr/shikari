@@ -41,9 +41,10 @@ def test_two_searches_become_one_host_bound_join():
     assert "$e1.principal.hostname = $host" in q and "$e2.principal.hostname = $host" in q
     assert "$e1.target.process.command_line = /mshta/ nocase" in q
     assert re.search(r"match:\s*\$host over 1h", q)
-    # Search can't order events: no timestamp comparison, but each side's time is an outcome
+    # Only what Google's Search join examples use: no ordering, condition, outcome or != "" filter
     assert "event_timestamp.seconds <=" not in q and "condition:" not in q
-    assert "$first_a = min($e1.metadata.event_timestamp.seconds)" in q
+    assert "outcome:" not in q and '!= ""' not in q
+    assert q.rstrip().endswith("match:\n  $host over 1h")
     assert "ATT&CK T1566, T1059.001" in q.splitlines()[0]
 
 
@@ -89,3 +90,11 @@ def test_grouping_never_mixes_vendors():
     secops = grouped[0]["combined_query"]
     assert secops.startswith("// archer_corr_") and "DeviceProcessEvents" not in secops
     assert "archer_corr" not in grouped[1]["combined_query"]
+
+
+def test_older_joins_lose_outcome_and_empty_filter():
+    from archer.build.udm import normalise_join
+
+    old = build_join(PHISH, PWSH) + '\n\noutcome:\n  $first = min($e1.metadata.event_timestamp.seconds)'
+    old = old.replace("match:", '$host != ""\n\nmatch:')
+    assert normalise_join(old) == build_join(PHISH, PWSH)

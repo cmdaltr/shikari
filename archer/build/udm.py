@@ -6,9 +6,10 @@ Archer's SecOps output is for hunting in Search, so every query is a UDM search:
 - a single event is one boolean expression over UDM fields
   (``metadata.event_type = "PROCESS_LAUNCH" and target.process.command_line = /x/ nocase``)
 - a correlation is a two-event join: ``$e1``/``$e2`` filters sharing a ``$host``
-  placeholder, ``match: $host over 1h``, and an ``outcome`` with each side's timestamps.
-  Search buckets by fixed windows and can't require $e1 before $e2 (rules only), so the
-  order is shown in the outcome rather than enforced.
+  placeholder and ``match: $host over 1h``, in the shape of Google's documented Search
+  joins and nothing more: no outcome section (no Search join example has one) and no
+  ``$host != ""`` (broad filters can make a join fail). Search can't require $e1 before
+  $e2 (rules only), so a join pairs them on the host in either order.
 
 The indicator logic still builds YARA-L internally (archer.build.secops, ioc_sweep,
 exploit_detection); from_yaral() turns it into UDM, and migrates stored rules the same way.
@@ -138,9 +139,28 @@ def from_yaral(rule: str) -> Optional[str]:
     lines = [_convert_regex(line.rstrip()) for line in events.splitlines() if not _ORDERING.match(line)]
     out = [head, "\n".join(l[4:] if l.startswith("    ") else l.strip() for l in lines).strip("\n"),
            "", "match:", "  " + " ".join(sec["match"].split())]
-    if sec.get("outcome"):
-        out += ["", "outcome:"] + ["  " + l.strip() for l in sec["outcome"].splitlines() if l.strip()]
-    return "\n".join(out)
+    return normalise_join("\n".join(out))
+
+
+_NONEMPTY = re.compile(r'^\s*\$\w+\s*!=\s*""\s*$')
+
+
+def normalise_join(query: str) -> str:
+    """A join reduced to the documented Search shape: filters and match only. Drops an
+    outcome section and placeholder != "" filters (both written before this)."""
+    if not is_join(query) or is_yaral(query):
+        return query
+    out, skipping = [], False
+    for line in query.splitlines():
+        if re.match(r"^\s*outcome\s*:\s*$", line):
+            skipping = True
+            continue
+        if skipping and re.match(r"^\s*(match|order|limit|dedup)\s*:\s*$", line):
+            skipping = False
+        if skipping or _NONEMPTY.match(line):
+            continue
+        out.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).rstrip()
 
 
 # ── Correlation joins ──────────────────────────────────────────────────────
@@ -215,17 +235,8 @@ $e1.principal.hostname = $host
 {side(b, "$e2")}
 $e2.principal.hostname = $host
 
-$host != ""
-
 match:
-  $host over {window}
-
-outcome:
-  $first_a = min($e1.metadata.event_timestamp.seconds)
-  $last_b = max($e2.metadata.event_timestamp.seconds)
-  $users = array_distinct($e1.principal.user.userid)
-  $commands_a = array_distinct($e1.target.process.command_line)
-  $commands_b = array_distinct($e2.target.process.command_line)"""
+  $host over {window}"""
 
 
 # ── Back to YARA-L, for tools that parse rules ─────────────────────────────
