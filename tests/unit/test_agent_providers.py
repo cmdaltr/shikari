@@ -34,6 +34,16 @@ def db(tmp_path, monkeypatch):
     session.close()
 
 
+def _wait_until_saved(session, deadline):
+    """Until the session ends and its end is stored: the status changes before the last event is
+    written, so a test that reads the store as soon as the status changes races the write."""
+    while time.time() < deadline:
+        saved = store.load(session.id, session.user_id)
+        if session.status != "running" and saved and saved.status == session.status:
+            return
+        time.sleep(0.01)
+
+
 def _key(db, platform, value="sk-test"):
     db.add(APIKey(user_id=1, platform=platform, encrypted_key=encrypt_api_key(value)))
     db.commit()
@@ -88,8 +98,7 @@ def test_the_loop_runs_on_an_openai_compatible_api_and_is_saved(db):
         session = start(agent, {}, user_id=1, llm={"provider": "local", "base_url": "http://h/v1", "model": "m"},
                         context=None, persist=store.save)
         deadline = time.time() + 5
-        while session.status == "running" and time.time() < deadline:
-            time.sleep(0.01)
+        _wait_until_saved(session, deadline)
 
     assert session.status == "done" and session.answer == "It's 42" and seen == ["x"]
     assert sent[0]["tools"][0]["function"]["name"] == "lookup" and sent[0]["messages"][0]["role"] == "system"
@@ -142,8 +151,7 @@ def test_an_interrupted_session_continues_from_its_saved_conversation(db):
         session = resume(saved, agent, llm={"provider": "local", "base_url": "http://h/v1", "model": "m"},
                          context=None, persist=store.save)
         deadline = time.time() + 5
-        while session.status == "running" and time.time() < deadline:
-            time.sleep(0.01)
+        _wait_until_saved(session, deadline)
 
     assert session.status == "done" and session.answer == "It's 42" and session.turns == 2
     assert sent[0]["messages"][1:] == conversation  # after the system message
