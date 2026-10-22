@@ -7120,6 +7120,22 @@ def download_all_detections(group_name: str):
     """
     Download all detections, correlations, and attack flows for a group as a ZIP file.
     """
+    return _group_zip(group_name)
+
+
+@app.post("/api/download/all/{group_name}")
+def download_selected_detections(group_name: str, detections: List[str] = Form([]),
+                                 correlations: List[str] = Form([])):
+    """
+    The same ZIP with only the detections and correlations ticked on the results page:
+    detection file names and correlation files (as their index records them).
+    """
+    return _group_zip(group_name, {os.path.basename(d) for d in detections},
+                      {os.path.basename(c) for c in correlations})
+
+
+def _group_zip(group_name: str, detections: Optional[set] = None, correlations: Optional[set] = None):
+    """None means every one; a set keeps only those files (and the index's matching entries)."""
     print(f"\n{'='*60}")
     print(f"DOWNLOAD ALL REQUEST RECEIVED")
     print(f"Group name: {group_name}")
@@ -7143,6 +7159,8 @@ def download_all_detections(group_name: str):
                         # Check if this YAML file contains the group tag
                         if formatted_tag in content:
                             filename = os.path.basename(yaml_file)
+                            if detections is not None and filename not in detections:
+                                continue
                             zip_file.write(yaml_file, f"detections/{filename}")
                             files_added += 1
                             logger.info(f"Added detection: {filename}")
@@ -7152,12 +7170,28 @@ def download_all_detections(group_name: str):
 
         # Add correlation JSON - use original group name (with spaces)
         corr_file = os.path.join(CORRELATE_DIR, f"{group_name}.json")
-        if os.path.exists(corr_file):
+        if os.path.exists(corr_file) and correlations is not None:
+            with open(corr_file, encoding="utf-8") as fh:
+                index = json.load(fh)
+            index["vendor_correlations"] = [c for c in index.get("vendor_correlations") or []
+                                            if os.path.basename(c.get("file") or "") in correlations]
+            zip_file.writestr(f"correlations/{group_name}.json", json.dumps(index, indent=2))
+            files_added += 1
+        elif os.path.exists(corr_file):
             zip_file.write(corr_file, f"correlations/{group_name}.json")
             files_added += 1
             logger.info(f"Added correlation: {group_name}.json")
         else:
             logger.warning(f"Correlation file not found: {corr_file}")
+
+        # One YAML per correlation (archer.build.correlation_files); the JSON above is their index
+        from archer.build.correlation_files import group_dir
+
+        for corr_yaml in sorted(glob.glob(os.path.join(group_dir(group_name), "*.yaml"))):
+            if correlations is not None and os.path.basename(corr_yaml) not in correlations:
+                continue
+            zip_file.write(corr_yaml, f"correlations/{group_name}/{os.path.basename(corr_yaml)}")
+            files_added += 1
 
         # Add attack flows - try both sanitized and original group name patterns
         flow_dir = ATTACK_FLOWS_DIR

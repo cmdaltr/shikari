@@ -553,7 +553,7 @@
             <div class="detection-item" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}">
               <div class="detection-title card-row" style="position: relative;">
                 <div style="display: flex; align-items: center; flex: 1; flex-wrap: wrap; gap: 4px; min-width: 0;">
-                  <input type="checkbox" class="detection-checkbox" checked data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
+                  <input type="checkbox" class="detection-checkbox" checked data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" data-files='{{ detection.files|tojson }}' title="Include in downloads and library saves">
 
                   {# Tactic badge with emoji and color #}
                   {% set tactic = detection.tactic %}
@@ -839,7 +839,7 @@
             <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}" data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}">
               <div class="detection-title card-row" style="position: relative;">
                 <div style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
-                <input type="checkbox" class="correlation-checkbox" checked data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
+                <input type="checkbox" class="correlation-checkbox" checked data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}" data-vendor="{{ vendor.name }}" data-file="{{ correlation.query_file or '' }}" title="Include in downloads and library saves">
                 <!-- Technique Flow - using shared macro -->
                 {{ render_correlation_techniques(correlation) }}
 
@@ -1868,9 +1868,40 @@ if (downloadAllBtnElement) {
       return;
     }
 
-    // Download everything for this group (detections, correlations, attack flows)
+    // Everything for this group (detections, correlations, attack flows), or only what's ticked
     const groupName = '{{ group_name }}'.replace(/_/g, ' ');
     const url = `/api/download/all/${encodeURIComponent(groupName)}`;
+    if (document.querySelector('.detection-checkbox:not(:checked), .correlation-checkbox:not(:checked)')) {
+      if (!document.querySelector('.detection-checkbox:checked, .correlation-checkbox:checked')) {
+        showModal('Nothing Selected', 'Tick at least one detection or correlation to download.', 'OK');
+        return;
+      }
+      // A form post into a hidden iframe: the browser's own download, with the selection
+      const frame = document.createElement('iframe');
+      frame.name = 'download-frame-' + Date.now();
+      frame.style.display = 'none';
+      document.body.appendChild(frame);
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = url;
+      form.target = frame.name;
+      const add = (name, value) => {
+        const input = document.createElement('input');
+        input.type = 'hidden'; input.name = name; input.value = value;
+        form.appendChild(input);
+      };
+      document.querySelectorAll('.detection-checkbox:checked').forEach(cb => {
+        JSON.parse(cb.dataset.files || '[]').forEach(f => add('detections', f));
+      });
+      document.querySelectorAll('.correlation-checkbox:checked').forEach(cb => {
+        if (cb.dataset.file) add('correlations', cb.dataset.file);
+      });
+      document.body.appendChild(form);
+      form.submit();
+      hasDownloadedOrSaved = true;
+      setTimeout(() => { form.remove(); frame.remove(); }, 2000);
+      return;
+    }
 
     console.log('=== DOWNLOAD ALL CLICKED v3 (iframe method) ===');
     console.log('URL:', url);
