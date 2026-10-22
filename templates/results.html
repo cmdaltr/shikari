@@ -40,7 +40,23 @@
 .briefing-act-cell { text-align: right; white-space: nowrap; }
 .briefing-act-hint { font-size: .8em; color: var(--text-secondary, #666); white-space: nowrap; cursor: help; }
 .briefing-act-err { display: block; margin-top: 4px; font-size: .8em; color: #b91c1c; white-space: normal; }
-.corr-file { margin: 10px 0 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: .78em; color: var(--text-secondary, #666); word-break: break-all; }
+.corr-flow-wrap { margin: 10px 0; }
+.corr-flow { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.corr-flow-step { display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 4px; border: 1px solid #ddd; border-radius: 999px; background: #fff; font-size: .9em; font-weight: 600; color: #555; }
+.corr-flow-step.is-primary { border-color: #1976d2; color: #1976d2; }
+.corr-flow-step b { font-weight: 700; color: #2e7d32; }
+.corr-flow-emoji { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid; border-radius: 50%; font-size: 1em; }
+[data-theme="dark"] .corr-flow-step { background: var(--bg-secondary); border-color: var(--border-color, #444); color: var(--text-secondary); }
+.card-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.card-right { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; flex-shrink: 0; margin-left: auto; font-size: 0.9rem; }
+.osint-details-btn { display: inline-flex; align-items: center; gap: 6px; background: #f0f7ff; border: 1px solid #3b82f6; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: .85em; color: #1e40af; white-space: nowrap; }
+.rating-badge { padding: 4px 10px; border-radius: 6px; font-size: .85em; font-weight: 600; white-space: nowrap; }
+.corr-foot { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 16px; margin-top: 10px; }
+.corr-foot > details { flex: 0 1 auto; }
+.corr-foot > details[open] { flex-basis: 100%; }
+.corr-foot > .corr-inherited { margin-top: 0; }
+.corr-parts { margin-left: auto; }
+.corr-parts > summary { width: fit-content; margin-left: auto; cursor: pointer; font-size: .88em; font-weight: 600; color: var(--text-secondary, #555); }
 .briefing-note { margin: 0 0 8px; font-size: .85em; color: var(--text-secondary, #666); line-height: 1.5; }
 .briefing-gaps { width: 100%; border-collapse: collapse; font-size: .9em; margin: 0 0 8px; }
 .briefing-gaps th { text-align: left; font-size: .78em; text-transform: uppercase; letter-spacing: .4px; color: var(--text-secondary, #666); padding: 6px 8px; border-bottom: 2px solid var(--border-color, #e2e8f0); }
@@ -535,8 +551,8 @@
             {% else %}
             {% for detection in vendor.detections %}
             <div class="detection-item" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}">
-              <div class="detection-title" style="position: relative;">
-                <div style="display: flex; align-items: center; flex: 1;">
+              <div class="detection-title card-row" style="position: relative;">
+                <div style="display: flex; align-items: center; flex: 1; flex-wrap: wrap; gap: 4px; min-width: 0;">
                   <input type="checkbox" class="detection-checkbox" checked data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
 
                   {# Tactic badge with emoji and color #}
@@ -632,8 +648,12 @@
                   {% endif %}
                   <span class="detection-technique{% if detection.osint_enriched %} osint-enhanced{% endif %}" style="display: inline-block; background: {{ technique_bg }}; color: {{ technique_text }}; padding: 6px 4px; border-radius: 4px; font-weight: 600; margin-left: 4px; margin-right: 8px;">{{ technique_emoji }} {{ detection.technique }} ({{ tactic }})</span>
 
+                  {{ am.badge(detection.attack_override) }}
+                  {{ am.legacy_badge(detection.legacy) }}
+                </div>
+                <div class="card-right">
                   {% if detection.osint_enriched %}
-                  <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);" title="This detection was enhanced with additional indicators from OSINT sources merged into the query logic.">
+                  <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                       <circle cx="12" cy="12" r="10"/>
                       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
@@ -650,9 +670,8 @@
                     Compared with OSINT
                   </span>
                   {% endif %}
-
                   {% if detection.reference_used %}
-                  <span class="reference-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #0d9488 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3); margin-left: 8px;" title="This detection referenced example queries from the bespoke/llm_references directory to improve query structure and patterns.">
+                  <span class="reference-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #0d9488 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -660,19 +679,22 @@
                     Referenced
                   </span>
                   {% endif %}
-
-                  {{ am.badge(detection.attack_override) }}
-                  {{ am.legacy_badge(detection.legacy) }}
                 </div>
+              </div>
+              <div class="card-row" style="margin-top: 8px; margin-bottom: 6px;">
+                <span style="margin-left: 26px; font-weight: 400; color: #666;">{{ detection.title.replace(', ', ' | ') }}</span>
+                <div class="card-right">
                 {% if detection.osint_data %}
-                <button onclick="toggleOsintDetails('det-osint-{{ vendor.name }}-{{ loop.index }}-details')" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 500; margin-left: 12px; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3b82f6'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#3b82f6';">
-                  {% if detection.osint_enriched %}Show Enhancement{% else %}Show Comparison{% endif %}
+                <button type="button" class="osint-details-btn" onclick="toggleOsintDetails('det-osint-{{ vendor.name }}-{{ loop.index }}-details')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4M12 8h.01"/>
+                  </svg>
+                  {% if detection.osint_enriched %}View OSINT Enhancement Details{% else %}View OSINT Comparison Details{% endif %}
                 </button>
                 {% endif %}
-              </div>
-              <div style="margin-top: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="margin-left: 26px; font-weight: 400; color: #666;">{{ detection.title.replace(', ', ' | ') }}</span>
-                <span style="background: {{ likelihood_bg }}; color: {{ likelihood_text }}; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; white-space: nowrap;" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">{{ likelihood_label }}</span>
+                  <span class="rating-badge" style="background: {{ likelihood_bg }}; color: {{ likelihood_text }};" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">{{ likelihood_label }} likelihood</span>
+                </div>
               </div>
               {% if detection.indicators %}
               <div class="detection-indicators">
@@ -815,115 +837,96 @@
             {% elif vendor.correlations %}
             {% for correlation in vendor.correlations %}
             <div class="detection-item{% if correlation.needs_review %} unchecked{% endif %}" data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}">
-              <div class="detection-title" style="display: flex; justify-content: space-between; align-items: flex-start; position: relative;">
+              <div class="detection-title card-row" style="position: relative;">
                 <div style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
                 <input type="checkbox" class="correlation-checkbox" checked data-correlation-id="corr-{{ vendor.name }}-{{ loop.index }}" data-vendor="{{ vendor.name }}" title="Include in downloads and library saves">
                 <!-- Technique Flow - using shared macro -->
                 {{ render_correlation_techniques(correlation) }}
 
-                <!-- Severity Badge -->
-                {% if correlation.severity == 'Critical' %}
-                <span style="background: #d32f2f; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🔴 Critical</span>
-                {% elif correlation.severity == 'High' %}
-                <span style="background: #f57c00; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 8px;">🟠 High</span>
-                {% endif %}
 
-                <!-- Needs Review Badge -->
-                {% if correlation.needs_review %}
-                <span class="needs-review-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);" title="At least one detection in this correlation has no threat indicators extracted automatically. Review the queries to validate effectiveness.">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                  </svg>
-                  Compared with OSINT
-                </span>
-                {% endif %}
                 </div>
-
-                <!-- OSINT Enhanced Badge (Right-aligned) -->
-                {% if correlation.osint_enriched %}
-                <div style="flex-shrink: 0; margin-left: 12px;">
-                  <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);" title="This correlation includes detections enhanced with additional indicators from OSINT sources merged into the query logic.">
+                <div class="card-right">
+                  {% if correlation.osint_enriched %}
+                  <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                       <circle cx="12" cy="12" r="10"/>
                       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                     </svg>
                     Enhanced with OSINT
                   </span>
-                </div>
-                {% endif %}
-
-                <!-- Reference Badge (Right-aligned) -->
-                {% if correlation.reference_used %}
-                <div style="flex-shrink: 0; margin-left: 12px;">
-                  <span class="reference-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #0d9488 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);" title="This correlation includes detections that referenced example queries from the bespoke/llm_references directory.">
+                  {% elif correlation.needs_review %}
+                  <span class="needs-review-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);" title="No threat indicators extracted automatically. This detection may use complex logic, behavioral patterns, or aggregations. Review the query to validate effectiveness.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Compared with OSINT
+                  </span>
+                  {% endif %}
+                  {% if correlation.reference_used %}
+                  <span class="reference-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #0d9488 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     </svg>
                     Referenced
                   </span>
+                  {% endif %}
                 </div>
-                {% endif %}
               </div>
 
               <!-- Correlation Metadata -->
-              <div style="display: flex; gap: 20px; margin-top: 8px; margin-bottom: 12px; font-size: 0.9em; color: #666; flex-wrap: wrap; align-items: center;">
+              <div class="card-row" style="justify-content: flex-start; gap: 20px; margin-top: 8px; margin-bottom: 12px; font-size: 0.9em; color: #666; flex-wrap: wrap;">
                 <span title="Relevance Score"><strong>Relevance:</strong> {{ correlation.relevance_score }}%</span>
                 <span title="Time Window"><strong>Time Window:</strong> {{ correlation.time_window }}</span>
-                {% if correlation.techniques_by_tactic %}
-                {% set tactic_order = ['Reconnaissance', 'Resource Development', 'Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Stealth', 'Defense Impairment', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
-                {% set ordered_tactics = [] %}
-                {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
-                  {% set _ = ordered_tactics.append(tactic) %}
-                {% endfor %}
-                <span title="MITRE ATT&CK Tactics"><strong>Tactics:</strong> {{ ordered_tactics|join(', ') }}</span>
+                {% if correlation.tables_indexes %}
+                <span><strong>{% if vendor.name in ('MDE', 'Defender XDR') %}Tables:{% elif vendor.name == 'Google SecOps' %}Event types:{% else %}Indexes:{% endif %}</strong>
+                {% for table_idx in correlation.tables_indexes %}
+                <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
+                {% endfor %}</span>
                 {% endif %}
+                <div class="card-right">
+                {% if correlation.osint_data %}
+                <button type="button" class="osint-details-btn" onclick="toggleOsintDetails('corr-osint-{{ vendor.name }}-{{ loop.index }}-details')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4M12 8h.01"/>
+                  </svg>
+                  {% if correlation.osint_enriched %}View OSINT Enhancement Details{% else %}View OSINT Comparison Details{% endif %}
+                </button>
+                {% endif %}
+                {% set sev_style = {'Critical': ('#fee2e2', '#b91c1c'), 'High': ('#ffedd5', '#c2410c'), 'Medium': ('#fef3c7', '#a16207'), 'Low': ('#dcfce7', '#166534')} %}
+                {% if correlation.severity in sev_style %}
+                <span class="rating-badge" style="background: {{ sev_style[correlation.severity][0] }}; color: {{ sev_style[correlation.severity][1] }};" title="Severity: the most severe of its detections">{{ correlation.severity }} severity</span>
+                {% endif %}
+                </div>
               </div>
+              <!-- OSINT Details (Collapsible) -->
+              {% if correlation.osint_data %}
+              <div>
+                <div id="corr-osint-{{ vendor.name }}-{{ loop.index }}-details" style="display: none; margin-top: 12px; background: #f0f7ff; border: 1px solid #3b82f6; border-radius: 6px; padding: 14px;">
+                  <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                    {% if correlation.osint_enriched %}OSINT Enhancement Details{% else %}OSINT Comparison Details{% endif %}
+                  </div>
+                  <div class="osint-lazy" data-osint-kind="correlation" data-osint-files='{{ correlation.osint_files|tojson }}'>Loading…</div>
+                </div>
+              </div>
+              {% endif %}
 
-              <!-- Attack Flow Diagram (overlaid on tactic columns) -->
-              {% if correlation.techniques_by_tactic and correlation.techniques_by_tactic|length > 1 %}
-              <div style="margin-top: 12px; margin-bottom: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 16px;">
-                <strong style="color: #555; display: block; margin-bottom: 12px;">Attack Flow:</strong>
+              {% if correlation.techniques_by_tactic %}
+              <!-- Tactics this correlation spans: one row of pills, ATT&CK column order (not a sequence) -->
+              <div class="corr-flow-wrap">
                 {% set tactic_order = ['Reconnaissance', 'Resource Development', 'Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Stealth', 'Defense Impairment', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
-                {% set displayed_tactics = [] %}
+                <ol class="corr-flow" aria-label="Tactics this correlation spans">
                 {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
-                  {% set _ = displayed_tactics.append(tactic) %}
-                {% endfor %}
-                {# Adjust box size based on number of tactics #}
-                {% set num_tactics = displayed_tactics|length %}
-                {% if num_tactics <= 5 %}
-                  {% set min_box_width = '120px' %}
-                {% elif num_tactics == 6 %}
-                  {% set min_box_width = '100px' %}
-                {% else %}
-                  {% set min_box_width = '90px' %}
-                {% endif %}
-                <div style="display: flex; gap: 8px; align-items: stretch; overflow-x: auto;">
-                {% for tactic in displayed_tactics %}
-                    <!-- Tactic Column (highlighted if primary) -->
-                    {% set is_primary = correlation.primary_tactics and tactic in correlation.primary_tactics %}
-                    <div style="flex: 1; min-width: {{ min_box_width }}; background: white; border: 2px solid {% if is_primary %}#1976d2{% else %}#ddd{% endif %}; border-radius: 4px; padding: 8px; position: relative; {% if is_primary %}box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);{% endif %}">
-                      <!-- Tactic Header -->
-                      <div style="font-size: 0.75em; font-weight: 700; color: {% if is_primary %}#1976d2{% else %}#555{% endif %}; text-align: center; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        {% if tactic == 'Command and Control' or tactic == 'Command And Control' %}
-                          Command<br>and Control
-                        {% elif ' ' in tactic %}
-                          {% for part in tactic.split(' ', 1) %}{{ part }}{% if not loop.last %}<br>{% endif %}{% endfor %}
-                        {% else %}
-                          {{ tactic }}<br><span style="color: white;">_</span>
-                        {% endif %}
-                      </div>
-                      <!-- Technique Count Badge -->
-                      <div style="text-align: center; margin-bottom: 4px;">
-                        <span style="display: inline-block; background: #4CAF50; color: white; font-size: 0.7em; font-weight: 600; padding: 2px 8px; border-radius: 10px;">
-                          {{ correlation.techniques_by_tactic[tactic]|length }} technique{{ 's' if correlation.techniques_by_tactic[tactic]|length > 1 else '' }}
-                        </span>
-                      </div>
-                      <!-- Tactic Stage Indicator -->
-                      <div style="height: 40px; display: flex; align-items: center; justify-content: center;">
-                        {% if tactic == 'Initial Access' %}
+                  {% set is_primary = correlation.primary_tactics and tactic in correlation.primary_tactics %}
+                  {% set n = correlation.techniques_by_tactic[tactic]|length %}
+                  {% if tactic == 'Initial Access' %}
                           {% set flow_emoji = '🚪' %}
                           {% set flow_bg = '#E3F2FD' %}
                           {% set flow_border = '#01579B' %}
@@ -988,40 +991,63 @@
                           {% set flow_bg = '#E3F2FD' %}
                           {% set flow_border = '#01579B' %}
                         {% endif %}
-                        <div style="width: 32px; height: 32px; background: {{ flow_bg }}; border: 2px solid {{ flow_border }}; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                          <span style="font-size: 1.2em;">{{ flow_emoji }}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <!-- Arrow between tactics (only if not the last displayed tactic) -->
-                    {% if not loop.last %}
-                    <div style="display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0 4px;">
-                      <svg width="26" height="26" viewBox="0 0 24 24" style="fill: #999;">
-                        <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-                      </svg>
-                    </div>
-                    {% endif %}
+                  <li class="corr-flow-step{% if is_primary %} is-primary{% endif %}" title="{{ tactic }}: {{ n }} technique{{ 's' if n != 1 }}{% if is_primary %} (primary){% endif %}">
+                    <span class="corr-flow-emoji" style="background: {{ flow_bg }}; border-color: {{ flow_border }};">{{ flow_emoji }}</span>{{ tactic }}{% if n > 1 %} <b>{{ n }}</b>{% endif %}
+                  </li>
                 {% endfor %}
-                </div>
-                <div style="margin-top: 8px; text-align: center; font-size: 0.75em; color: #666;">
-                  Attack chain progresses through {{ correlation.primary_tactics|length }} primary tactic{{ 's' if correlation.primary_tactics|length > 1 else '' }}
-                </div>
+                </ol>
               </div>
               {% endif %}
 
-              <!-- Tables/Indexes Display (if available) -->
-              {% if correlation.tables_indexes %}
-              <div style="margin-top: 8px; margin-bottom: 12px; font-size: 0.85em;">
-                <strong style="color: #555;">{% if vendor.name in ('MDE', 'Defender XDR') %}Tables:{% elif vendor.name == 'Google SecOps' %}Event types:{% else %}Indexes:{% endif %}</strong>
-                {% for table_idx in correlation.tables_indexes %}
-                <span style="display: inline-block; font-family: 'Courier New', monospace; background: #e8f4f8; color: #0277bd; padding: 3px 8px; border-radius: 4px; margin: 2px 4px 2px 0; border: 1px solid #b3e5fc;">{{ table_idx }}</span>
-                {% endfor %}
-              </div>
+
+
+              {% if correlation.stale_parts %}
+              <!-- A detection was rewritten after the correlation was built (archer.build.correlation_osint) -->
+              <p class="corr-stale" role="note">The combined query was built from an older version of {{ correlation.stale_parts|join(', ') }}: the queries above are current, the combined one isn't.{% if can_regenerate %} <strong>Regenerate</strong> rebuilds it.{% else %} Hunt the group again to rebuild it.{% endif %}</p>
               {% endif %}
 
-              <!-- Individual Queries — stacked with chain connectors -->
+              <!-- Combined Query (collapsible) -->
+              <div style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <button onclick="toggleQuery('corr-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
+                    <span id="corr-{{ vendor.name }}-{{ loop.index }}-toggle">▶ {% if correlation.individual_queries %}Show Combined Query{% else %}View Query{% endif %}</span>
+                  </button>
+                  <button id="corr-{{ vendor.name }}-{{ loop.index }}-copy-btn" onclick="copyToClipboard('corr-{{ vendor.name }}-{{ loop.index }}-content', this)" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;" title="Copy to clipboard">
+                    📋 Copy Query
+                  </button>
+                </div>
+                <div id="corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px;">
+                  <div style="position: relative;">
+                    <div id="corr-{{ vendor.name }}-{{ loop.index }}-content" style="background: #1e1e2e; border: 1px solid #3d3d5c; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Fira Code', 'Cascadia Code', 'Courier New', monospace; font-size: 0.85em; color: #cdd6f4; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; line-height: 1.6;">{{ correlation.combined_query }}</div>
+                    <button onclick="expandCodeBlock('corr-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333; display: inline-flex; align-items: center; gap: 4px;" title="Expand to full screen"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Expand</button>
+                  </div>
+                </div>
+              </div>
+
+
+              {% if correlation.individual_queries or correlation.known_false_positives or correlation.lol_references %}
+              <div class="corr-foot">
+              {% if correlation.known_false_positives or correlation.lol_references %}
+              <!-- Inherited from the detections' OSINT enrichment (#23) -->
+              <details class="corr-inherited">
+                <summary>{% if correlation.known_false_positives %}{{ correlation.known_false_positives|length }} known false positive{{ 's' if correlation.known_false_positives|length != 1 }}{% endif %}{% if correlation.known_false_positives and correlation.lol_references %} and {% endif %}{% if correlation.lol_references %}{{ correlation.lol_references|length }} LOL reference{{ 's' if correlation.lol_references|length != 1 }}{% endif %} from its detections</summary>
+                {% if correlation.known_false_positives %}
+                <p class="corr-inherited-note">What the public rules for these techniques say fires legitimately. Tune the combined query for the ones you see.</p>
+                <ul>{% for fp in correlation.known_false_positives %}
+                  <li><span class="corr-inherited-tid">{{ fp.technique }}</span> {{ fp.text }} <a href="{{ fp.url }}" target="_blank" rel="noopener">{{ fp.source }}: {{ fp.rule }}</a></li>
+                {% endfor %}</ul>
+                {% endif %}
+                {% if correlation.lol_references %}
+                <ul>{% for ref in correlation.lol_references %}
+                  <li><span class="corr-inherited-tid">{{ ref.technique }}</span> {% if ref.url %}<a href="{{ ref.url }}" target="_blank" rel="noopener">{{ ref.name or ref.url }}</a>{% else %}{{ ref.name }}{% endif %}{% if ref.source %} ({{ ref.source }}){% endif %}</li>
+                {% endfor %}</ul>
+                {% endif %}
+              </details>
+              {% endif %}
               {% if correlation.individual_queries %}
               {% set corr_id = 'iq-' ~ vendor.name ~ '-' ~ loop.index %}
+              <details class="corr-parts">
+                <summary>Each technique's query ({{ correlation.individual_queries|length }})</summary>
               <div class="individual-queries" style="margin-top: 10px;">
                 {% for iq in correlation.individual_queries %}
                 {% set qid = corr_id ~ '-' ~ loop.index %}
@@ -1059,72 +1085,9 @@
                 {% endif %}
                 {% endfor %}
               </div>
-              {% endif %}
-
-              {% if correlation.stale_parts %}
-              <!-- A detection was rewritten after the correlation was built (archer.build.correlation_osint) -->
-              <p class="corr-stale" role="note">The combined query was built from an older version of {{ correlation.stale_parts|join(', ') }}: the queries above are current, the combined one isn't.{% if can_regenerate %} <strong>Regenerate</strong> rebuilds it.{% else %} Hunt the group again to rebuild it.{% endif %}</p>
-              {% endif %}
-
-              {% if correlation.query_file %}
-              <p class="corr-file" title="One file per correlation; edit it and the next run keeps your version">data/correlate/{{ correlation.query_file }}{% if correlation.query_edited %} · edited by hand, kept{% endif %}</p>
-              {% endif %}
-              <!-- Combined Query (collapsible) -->
-              <div style="margin-top: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <button onclick="toggleQuery('corr-{{ vendor.name }}-{{ loop.index }}')" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;">
-                    <span id="corr-{{ vendor.name }}-{{ loop.index }}-toggle">▶ {% if correlation.individual_queries %}Show Combined Query{% else %}View Query{% endif %}</span>
-                  </button>
-                  <button id="corr-{{ vendor.name }}-{{ loop.index }}-copy-btn" onclick="copyToClipboard('corr-{{ vendor.name }}-{{ loop.index }}-content', this)" style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333;" title="Copy to clipboard">
-                    📋 Copy Query
-                  </button>
-                </div>
-                <div id="corr-{{ vendor.name }}-{{ loop.index }}-query" style="display: none; margin-top: 10px;">
-                  <div style="position: relative;">
-                    <div id="corr-{{ vendor.name }}-{{ loop.index }}-content" style="background: #1e1e2e; border: 1px solid #3d3d5c; border-radius: 4px; padding: 12px; padding-bottom: 32px; font-family: 'Fira Code', 'Cascadia Code', 'Courier New', monospace; font-size: 0.85em; color: #cdd6f4; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; line-height: 1.6;">{{ correlation.combined_query }}</div>
-                    <button onclick="expandCodeBlock('corr-{{ vendor.name }}-{{ loop.index }}-content')" style="position: absolute; bottom: 6px; right: 6px; background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #333; display: inline-flex; align-items: center; gap: 4px;" title="Expand to full screen"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Expand</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- OSINT Details (Collapsible) -->
-              {% if correlation.osint_data %}
-              <div style="margin-top: 10px;">
-                <button onclick="toggleOsintDetails('corr-osint-{{ vendor.name }}-{{ loop.index }}-details')" style="background: #f0f7ff; border: 1px solid #3b82f6; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; color: #1e40af;">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 16v-4M12 8h.01"/>
-                  </svg>
-                  {% if correlation.osint_enriched %}View OSINT Enhancement Details{% else %}View OSINT Comparison Details{% endif %}
-                </button>
-                <div id="corr-osint-{{ vendor.name }}-{{ loop.index }}-details" style="display: none; margin-top: 12px; background: #f0f7ff; border: 1px solid #3b82f6; border-radius: 6px; padding: 14px;">
-                  <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                      <circle cx="12" cy="12" r="10"/>
-                      <path d="M12 16v-4M12 8h.01"/>
-                    </svg>
-                    {% if correlation.osint_enriched %}OSINT Enhancement Details{% else %}OSINT Comparison Details{% endif %}
-                  </div>
-                  <div class="osint-lazy" data-osint-kind="correlation" data-osint-files='{{ correlation.osint_files|tojson }}'>Loading…</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if correlation.known_false_positives or correlation.lol_references %}
-              <!-- Inherited from the detections' OSINT enrichment (#23) -->
-              <details class="corr-inherited">
-                <summary>{% if correlation.known_false_positives %}{{ correlation.known_false_positives|length }} known false positive{{ 's' if correlation.known_false_positives|length != 1 }}{% endif %}{% if correlation.known_false_positives and correlation.lol_references %} and {% endif %}{% if correlation.lol_references %}{{ correlation.lol_references|length }} LOL reference{{ 's' if correlation.lol_references|length != 1 }}{% endif %} from its detections</summary>
-                {% if correlation.known_false_positives %}
-                <p class="corr-inherited-note">What the public rules for these techniques say fires legitimately. Tune the combined query for the ones you see.</p>
-                <ul>{% for fp in correlation.known_false_positives %}
-                  <li><span class="corr-inherited-tid">{{ fp.technique }}</span> {{ fp.text }} <a href="{{ fp.url }}" target="_blank" rel="noopener">{{ fp.source }}: {{ fp.rule }}</a></li>
-                {% endfor %}</ul>
-                {% endif %}
-                {% if correlation.lol_references %}
-                <ul>{% for ref in correlation.lol_references %}
-                  <li><span class="corr-inherited-tid">{{ ref.technique }}</span> {% if ref.url %}<a href="{{ ref.url }}" target="_blank" rel="noopener">{{ ref.name or ref.url }}</a>{% else %}{{ ref.name }}{% endif %}{% if ref.source %} ({{ ref.source }}){% endif %}</li>
-                {% endfor %}</ul>
-                {% endif %}
               </details>
+              {% endif %}
+              </div>
               {% endif %}
             </div>
             {% endfor %}
