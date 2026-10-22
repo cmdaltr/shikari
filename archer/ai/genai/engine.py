@@ -1264,10 +1264,15 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
 
     if vendor == "googlesecops":
         from archer.build.udm import build_join
+        from archer.validation.precision import correlation_part_ok
 
-        split = lambda q: [r for r in (q or "").split("\nUNION\n") if r.strip()]
-        query = build_join(split(query_a), split(query_b),
-                           _source_label(corr_data.get("a")), _source_label(corr_data.get("b")))
+        # As for KQL below: parts that can't fire for the right reason are left out, and a
+        # side with none left means there's nothing to correlate
+        split = lambda q: [r for r in (q or "").split("\nUNION\n") if correlation_part_ok(r, "udm")]
+        side_a, side_b = split(query_a), split(query_b)
+        if not (side_a and side_b):
+            return ""
+        query = build_join(side_a, side_b, _source_label(corr_data.get("a")), _source_label(corr_data.get("b")))
         return query or corr_data.get("combined_query", "")
 
     # Detect if this is a Splunk or non-MDE query
@@ -1305,14 +1310,14 @@ def _build_join_correlation_query(corr_data: Dict, file_info: Dict) -> str:
     # Parse queries to extract table names and conditions
     queries_with_metadata = []
 
-    from archer.validation.precision import check as precision_check
+    from archer.validation.precision import correlation_part_ok
 
     # Split UNION queries into individual queries. A part that can't fire for the right
-    # reason (a protocol alone, a placeholder) is left out; a side with none left means
-    # there's nothing to correlate
+    # reason (a protocol alone, a placeholder, only a built-in binary's or API's name) is
+    # left out; a side with none left means there's nothing to correlate
     # The engine's copy keeps the YAML's indentation ("  | where"): check it flush left
     flush = lambda q: "\n".join(l.strip() for l in q.splitlines())
-    precise = lambda q: q.strip() and not any(f["severity"] == "error" for f in precision_check(flush(q), "kql"))
+    precise = lambda q: correlation_part_ok(flush(q), "kql")
     sides = [[q for q in (text or "").split("\nUNION\n") if precise(q)] for text in (query_a, query_b)]
     if not all(sides):
         return ""

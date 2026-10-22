@@ -79,3 +79,19 @@ def test_hygiene_leaves_a_gap_for_placeholders():
     assert clean_indicator("[IP address]") is None
     assert clean_indicator("bcdedit /set {default} recoveryenabled No") == "bcdedit /set {default} recoveryenabled No"
     assert clean_indicator("HKLM\\SYSTEM\\{4D36E972-E325-11CE-BFC1-08002BE10318}").endswith("10318}")
+
+
+def test_a_built_in_binary_alone_is_bare():
+    wmic = 'metadata.event_type = "PROCESS_LAUNCH" and (target.process.command_line = /wmic\\.exe/ nocase)'
+    assert "PREC-BARE" in codes(wmic, "udm")
+    assert "PREC-BARE" in codes('DeviceProcessEvents\n| where FileName =~ "wmic.exe"')
+    # With what it was asked to do, or a tool that isn't built in, it says something
+    assert "PREC-BARE" not in codes('DeviceProcessEvents\n| where FileName =~ "wmic.exe" and ProcessCommandLine has "shadowcopy delete"')
+    assert "PREC-BARE" not in codes('DeviceProcessEvents\n| where FileName =~ "AnyDesk.exe"')
+
+
+def test_api_names_alone_on_a_command_line():
+    apc = ('metadata.event_type = "PROCESS_LAUNCH" and (target.process.command_line = /QueueUserAPC/ nocase '
+           'or target.process.command_line = /OpenThread/ nocase)')
+    assert "PREC-API" in codes(apc, "udm")
+    assert "PREC-API" not in codes('DeviceProcessEvents\n| where ProcessCommandLine has_all ("Add-Type", "QueueUserAPC")')

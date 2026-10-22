@@ -11,6 +11,12 @@ static_check asks "will it parse?"; these ask "can it fire for the right reason?
   PREC-EMPTY        error  no condition but the event type (every process launch)
   PREC-DUPLICATE    warn   the same condition more than once
   PREC-TABLE        warn   a table the technique's ATT&CK platforms can't reach
+  PREC-BARE         warn   every value is a built-in binary's name (every wmic.exe launch)
+  PREC-API          warn   every value is a Windows API name (never on a command line unless a
+                           script inlines it)
+
+A correlation part needs more: one that trips PREC-BARE or PREC-API says nothing about what
+the binary did, so pairing it with another technique pairs noise (see correlation_part_ok).
 
 prune_kql removes the conditions an error or warning names, keeping the rest: generation
 uses it before writing a detection, so a bad clause costs that clause, not the detection.
@@ -99,6 +105,43 @@ def _balanced(text: str) -> bool:
     return depth == 0
 
 
+# Built-in binaries when the LOLBAS index isn't cached (archer.build.lol)
+_BUILTIN_BINARIES = {
+    "cmd.exe", "powershell.exe", "pwsh.exe", "wmic.exe", "rundll32.exe", "regsvr32.exe", "mshta.exe",
+    "cscript.exe", "wscript.exe", "certutil.exe", "bitsadmin.exe", "msiexec.exe", "net.exe", "net1.exe",
+    "reg.exe", "sc.exe", "schtasks.exe", "svchost.exe", "explorer.exe", "conhost.exe", "whoami.exe",
+    "nltest.exe", "tasklist.exe", "taskkill.exe", "netsh.exe", "vssadmin.exe", "wevtutil.exe", "at.exe",
+    "msbuild.exe", "installutil.exe", "regasm.exe", "regsvcs.exe", "cmstp.exe", "forfiles.exe", "dsquery.exe",
+}
+_BINARY = re.compile(r"^(?:.*[\\/])?([\w.-]+\.(?:exe|com|dll|cpl|msc))$", re.I)
+
+
+def builtin_binaries() -> set:
+    from archer.build.lol import load_index
+
+    index = load_index() or {}
+    return _BUILTIN_BINARIES | {k for k in index.get("lolbas") or {} if _BINARY.match(k)}
+
+
+def _whole_part(values: List[str]) -> List[Dict]:
+    """PREC-BARE / PREC-API: what every value of a query has in common, if it's nothing useful."""
+    from archer.mitre.extract import classify_name
+
+    values = [v.strip() for v in values if v.strip()]
+    if not values:
+        return []
+    names = [_BINARY.match(v) for v in values]
+    if all(names):
+        builtin = builtin_binaries()
+        if all(m.group(1).lower() in builtin for m in names):
+            shown = ", ".join(sorted({m.group(1).lower() for m in names}))
+            return [{"check": "PREC-BARE", "message": f"every value is a built-in binary ({shown}): it matches every launch"}]
+    if all(re.fullmatch(r"[A-Za-z]\w+", v) and classify_name(v) == "winapi" for v in values):
+        return [{"check": "PREC-API", "message": f"every value is a Windows API name ({', '.join(values[:4])}): "
+                 "process command lines don't carry them"}]
+    return []
+
+
 def is_placeholder(value: str) -> bool:
     return GAP in value or bool(_PLACEHOLDER.search(value)) or any(rx.search(value) for rx in _SLOTS)
 
@@ -151,6 +194,7 @@ def check_kql(query: str, technique_platforms: Optional[Iterable[str]] = None) -
         columns = set(_CONDITION_COLUMN.findall(query[start:stop]))
         if columns and columns <= {"RemotePort", "LocalPort"}:
             findings.append({"check": "PREC-PORT", "message": "the only condition is a port: it matches all traffic on it"})
+    findings += _whole_part([v for start, stop in _where_bodies(query) for v in _STRING.findall(query[start:stop])])
     findings += _table_findings(query, technique_platforms)
     return _dedupe(findings)
 
@@ -182,6 +226,7 @@ def check_yaral(query: str) -> List[Dict]:
     for (field, v), n in ((p, pairs.count(p)) for p in set(pairs)):
         if n > 1:
             findings.append({"check": "PREC-DUPLICATE", "message": f"`{v}` is matched on {field} {n} times"})
+    findings += _whole_part([re.sub(r"\\(.)", r"\1", v) for v in values])
     fields = set(re.findall(r"\$e\.([\w.]+)", body)) - {"metadata.event_type"}
     if body.strip() and not fields:
         findings.append({"check": "PREC-EMPTY", "message": "the only condition is the event type: it matches every such event"})
@@ -203,6 +248,16 @@ def _dedupe(findings: List[Dict]) -> List[Dict]:
 
 
 ERRORS = {"PREC-CONTEXT", "PREC-NUMERIC", "PREC-PLACEHOLDER", "PREC-EMPTY"}
+
+
+# What a correlation part can't have on top of the errors: it would pair noise with a technique
+NOT_FOR_CORRELATION = {"PREC-BARE", "PREC-API"}
+
+
+def correlation_part_ok(query: str, siem: str) -> bool:
+    """A part worth correlating: some condition, no errors, and more than a binary's or API's name."""
+    return bool(query.strip()) and not any(f["severity"] == "error" or f["check"] in NOT_FOR_CORRELATION
+                                           for f in check(query, siem))
 
 
 def severity(check: str) -> str:

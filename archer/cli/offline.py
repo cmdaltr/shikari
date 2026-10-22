@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
-def process_group(group_name, hypothesis=None, manual_data=None, run_correlation=False):
+def process_group(group_name, hypothesis=None, manual_data=None, run_correlation=False, use_llm=False):
     """Run the process_group function to generate YAML files"""
     from archer.build.orchestrator import process_group
 
@@ -23,7 +23,8 @@ def process_group(group_name, hypothesis=None, manual_data=None, run_correlation
     if manual_data:
         print(f" Using manual data with {len(manual_data)} entries")
 
-    process_group(group_name, hypothesis, manual_data, run_correlation=run_correlation)
+    process_group(group_name, hypothesis=hypothesis, manual_data=manual_data, run_correlation=run_correlation,
+                  use_llm=use_llm)
     print(f"Detection query generation complete for {group_name}\n\n")
 
 

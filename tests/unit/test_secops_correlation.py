@@ -98,3 +98,14 @@ def test_older_joins_lose_outcome_and_empty_filter():
     old = build_join(PHISH, PWSH) + '\n\noutcome:\n  $first = min($e1.metadata.event_timestamp.seconds)'
     old = old.replace("match:", '$host != ""\n\nmatch:')
     assert normalise_join(old) == build_join(PHISH, PWSH)
+
+
+def test_a_side_with_only_a_bare_binary_is_not_correlated():
+    wmic = 'metadata.event_type = "PROCESS_LAUNCH" and (target.process.command_line = /wmic\\.exe/ nocase)'
+    corr = {"vendor": "googlesecops", "query_a": PWSH, "query_b": wmic,
+            "a": "a/PowerShell_GoogleSecOps.yaml", "b": "b/CreateAccount_GoogleSecOps.yaml"}
+    assert engine._build_join_correlation_query(corr, {}) == ""
+    # A merged side keeps the parts that say something
+    corr["query_b"] = wmic + "\nUNION\n" + from_yaral(PHISH)
+    out = engine._build_join_correlation_query(corr, {})
+    assert "mshta" in out and "wmic" not in out
