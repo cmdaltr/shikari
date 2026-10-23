@@ -141,6 +141,13 @@ class CVEHunter:
 
         API: https://nvd.nist.gov/developers/vulnerabilities
         """
+        # A CVE of the last 30 days is in the recent-CVE cache (archer.intelligence.cve_feed)
+        from archer.intelligence.cve_feed import record
+
+        cached = record(cve_id)
+        if cached:
+            return {k: v for k, v in cached.items() if k != "kev"}
+
         url = f"https://services.nvd.nist.gov/rest/json/cves/2.0"
         params = {"cveId": cve_id}
         headers = {}
@@ -156,30 +163,34 @@ class CVEHunter:
             if not data.get("vulnerabilities"):
                 return {"error": "CVE not found in NVD"}
 
-            vuln = data["vulnerabilities"][0]["cve"]
-
-            return {
-                "cve_id": cve_id,
-                "description": vuln.get("descriptions", [{}])[0].get("value", ""),
-                "published": vuln.get("published"),
-                "modified": vuln.get("lastModified"),
-                "cvss_v3": self._extract_cvss(vuln, "cvssMetricV31"),
-                "cvss_v2": self._extract_cvss(vuln, "cvssMetricV2"),
-                "cwe": self._extract_cwe(vuln),
-                "references": [ref.get("url") for ref in vuln.get("references", [])],
-                "vendor": self._extract_vendor(vuln),
-                "product": self._extract_product(vuln),
-                # Every vulnerable CPE (not the platforms they run on): Profile → Technology stack
-                "cpes": sorted({m.get("criteria", "") for c in vuln.get("configurations", [])
-                                for node in c.get("nodes", []) for m in node.get("cpeMatch", [])
-                                if m.get("vulnerable") and m.get("criteria")})[:200],
-            }
+            return self.parse_nvd(data["vulnerabilities"][0]["cve"])
 
         except Exception as e:
             print(f"Error fetching NVD data for {cve_id}: {e}")
             return {"error": str(e)}
 
-    def _extract_cvss(self, vuln: Dict, metric_type: str) -> Optional[Dict]:
+    @classmethod
+    def parse_nvd(cls, vuln: Dict) -> Dict[str, Any]:
+        """The fields Archer keeps from an NVD API 2.0 cve object."""
+        return {
+            "cve_id": vuln.get("id"),
+            "description": vuln.get("descriptions", [{}])[0].get("value", ""),
+            "published": vuln.get("published"),
+            "modified": vuln.get("lastModified"),
+            "cvss_v3": cls._extract_cvss(vuln, "cvssMetricV31"),
+            "cvss_v2": cls._extract_cvss(vuln, "cvssMetricV2"),
+            "cwe": cls._extract_cwe(vuln),
+            "references": [ref.get("url") for ref in vuln.get("references", [])],
+            "vendor": cls._extract_vendor(vuln),
+            "product": cls._extract_product(vuln),
+            # Every vulnerable CPE (not the platforms they run on): Profile → Technology stack
+            "cpes": sorted({m.get("criteria", "") for c in vuln.get("configurations", [])
+                            for node in c.get("nodes", []) for m in node.get("cpeMatch", [])
+                            if m.get("vulnerable") and m.get("criteria")})[:200],
+        }
+
+    @staticmethod
+    def _extract_cvss(vuln: Dict, metric_type: str) -> Optional[Dict]:
         """Extract CVSS metrics."""
         metrics = vuln.get("metrics", {}).get(metric_type, [])
         if not metrics:
@@ -192,7 +203,8 @@ class CVEHunter:
             "vector": metric.get("vectorString")
         }
 
-    def _extract_cwe(self, vuln: Dict) -> List[str]:
+    @staticmethod
+    def _extract_cwe(vuln: Dict) -> List[str]:
         """Extract CWE IDs."""
         weaknesses = vuln.get("weaknesses", [])
         cwes = []
@@ -202,7 +214,8 @@ class CVEHunter:
                     cwes.append(desc["value"])
         return cwes
 
-    def _extract_vendor(self, vuln: Dict) -> Optional[str]:
+    @staticmethod
+    def _extract_vendor(vuln: Dict) -> Optional[str]:
         """Extract vendor name from CPE."""
         configs = vuln.get("configurations", [])
         for config in configs:
@@ -215,7 +228,8 @@ class CVEHunter:
                         return parts[3]
         return None
 
-    def _extract_product(self, vuln: Dict) -> Optional[str]:
+    @staticmethod
+    def _extract_product(vuln: Dict) -> Optional[str]:
         """Extract product name from CPE."""
         configs = vuln.get("configurations", [])
         for config in configs:

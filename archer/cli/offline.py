@@ -66,7 +66,7 @@ def generate_detection(technique_name):
         technique = matching[0]
 
     print(f"Using technique: {technique}")
-    procedures = retrieve_procedures(bundle, [technique])
+    procedures = retrieve_procedures(bundle, [technique], merge_expanded=False)  # one technique: its sub-techniques too
 
     if not procedures:
         print(f"No procedures found for {technique}")

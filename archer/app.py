@@ -1428,6 +1428,11 @@ def load_mitre_data():
 
         refresh_feed(bundle, group_meta, force=True)
 
+        # The last 30 days of CVEs and KEV, daily; KEV and stack CVEs researched in advance
+        from archer.intelligence.cve_feed import keep_current
+
+        keep_current(_all_stacks)
+
         # Watchlists need collections nobody asks for: every REFRESH_EVERY while any exist
         from archer.intelligence.watchlists import keep_collecting
 
@@ -1800,6 +1805,15 @@ def _user_stack(user) -> list:
         return as_stack(json.loads(user.tech_stack)) if user and user.tech_stack else []
     except (ValueError, TypeError):
         return []
+
+
+def _all_stacks() -> list:
+    """Every user's technology stack, for the CVEs researched in advance."""
+    db = next(get_db())
+    try:
+        return [s for s in (_user_stack(u) for u in db.query(User).all()) if s]
+    finally:
+        db.close()
 
 
 def _session_stack(archer_session: Optional[str]) -> list:
@@ -2928,6 +2942,13 @@ async def generate_cve(
             },
             status_code=400,
         )
+
+    try:  # kept in the recent-CVE cache past its 30 days: the results refer to it
+        from archer.intelligence.cve_feed import mark_hunted
+
+        mark_hunted(cve_ids)
+    except Exception as e:
+        print(f"Recent CVEs: {e}")
 
     # Use CVE ID directly as group name (no CVE_ prefix since it already starts with CVE-)
     if len(cve_ids) == 1:
@@ -5785,7 +5806,7 @@ def _technique_entries(tid: str, info: Optional[dict], bundle=None) -> list:
     from archer.mitre.retrieve import retrieve_procedures
 
     try:
-        procs = [p for p in retrieve_procedures(bundle, [(description, info["stix_id"])])
+        procs = [p for p in retrieve_procedures(bundle, [(description, info["stix_id"])], merge_expanded=False)
                  if p[0] == tid or p[0].startswith(tid + ".")]
     except Exception as e:
         print(f"Could not gather ATT&CK procedure indicators for {tid}: {e}")
@@ -10039,6 +10060,20 @@ def api_feed(request: Request, archer_session: Optional[str] = Cookie(None)):
 
     return {**feed.view(_user_industries(user), stack=_user_stack(user)), "watched": watched(user.id),
             "can_edit_sources": user.role == UserRole.ADMIN}
+
+
+@app.get("/api/cves/recent")
+def api_recent_cves(request: Request, kev: bool = False, archer_session: Optional[str] = Cookie(None)):
+    """The last 30 days of CVEs, newest first, marked when they name a product in the user's stack."""
+    from archer.intelligence import cve_feed
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    return {"cves": cve_feed.recent(_user_stack(user), kev_only=kev), "status": cve_feed.status(),
+            "window_days": cve_feed.WINDOW_DAYS}
 
 
 @app.get("/api/feed/search")

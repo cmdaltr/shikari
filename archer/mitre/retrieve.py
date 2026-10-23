@@ -365,8 +365,32 @@ def get_all_groups(bundle):
     return groups
 
 
-def retrieve_procedures(bundle, retrieved_techniques, keep_desc=None):
-    """keep_desc(text): False leaves another group's procedure out of the evidence (Profile → Technology stack)."""
+def _merge_guidance(into: dict, add: dict) -> None:
+    """add's indicators into into's, each kind deduplicated without regard to case; descriptions stay."""
+    for key, value in add.items():
+        if key == "description" or not value:
+            continue
+        have = into.get(key) or []
+        have = list(have) if isinstance(have, (list, tuple)) else [have]
+        seen = {str(v).lower() for v in have}
+        for v in value if isinstance(value, (list, tuple)) else [value]:
+            if str(v).lower() not in seen:
+                have.append(v)
+                seen.add(str(v).lower())
+        into[key] = have
+
+
+def retrieve_procedures(bundle, retrieved_techniques, keep_desc=None, merge_expanded=True):
+    """
+    keep_desc(text): False leaves another group's procedure out of the evidence (Profile → Technology stack).
+
+    A parent technique the group is attributed (T1027) is expanded to its sub-techniques
+    for their indicators. merge_expanded folds those into the parent's own procedure, one
+    detection for the family, rather than a procedure per sub-technique the group isn't
+    attributed (Gallmaker: HTML Smuggling, Steganography...). A sub-technique ATT&CK
+    attributes in its own right keeps its procedure. A technique hunt passes False: there
+    each sub-technique's examples are what the vague parent lacks.
+    """
     procedures = []
     index = _bundle_index(bundle)
 
@@ -651,7 +675,9 @@ def retrieve_procedures(bundle, retrieved_techniques, keep_desc=None):
             break
 
     # EXPANSION LOGIC: Process parent techniques to add subtechniques
+    attributed = {p[0] for p in procedures}
     for parent_tech_id, (parent_ref, parent_indicators, parent_proc) in parent_techniques.items():
+        merged = []
         # Find all subtechniques
         subtechniques = find_subtechniques(bundle, parent_tech_id)
 
@@ -714,7 +740,17 @@ def retrieve_procedures(bundle, retrieved_techniques, keep_desc=None):
                     sub_technique_platforms,  # technique_platforms
                 )
 
-                procedures.append(subtechnique_proc)
+                if not merge_expanded:
+                    procedures.append(subtechnique_proc)
+                elif sub_tech_id not in attributed and isinstance(parent_proc[4], dict):
+                    _merge_guidance(parent_proc[4], sub_op_guidance)
+                    merged.append(f"{sub_name} ({sub_tech_id})")
+
+        if merged:
+            # The family's detection says what it covers; the tuple is rebuilt with the note
+            at = next(i for i, p in enumerate(procedures) if p is parent_proc)
+            note = f" Includes the indicators of its sub-techniques: {', '.join(merged)}."
+            procedures[at] = parent_proc[:3] + ((parent_proc[3] or "") + note,) + parent_proc[4:]
 
     return procedures
 

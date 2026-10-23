@@ -4,7 +4,7 @@
 
 ## Threat group
 
-Type a group's ATT&CK name or any of its aliases: `APT29`, `Cozy Bear`, `Scattered Spider`, `UNC3944`. Archer finds the group in ATT&CK, collects every technique it's documented as using (directly, through its campaigns, and through the software it uses), and builds detections for each.
+Type a group's ATT&CK name or any of its aliases: `APT29`, `Cozy Bear`, `Scattered Spider`, `UNC3944`. Archer finds the group in ATT&CK, collects every technique it's documented as using (directly, through its campaigns, and through the software it uses), and builds detections for each. When ATT&CK attributes a parent technique (Gallmaker's **T1027** Obfuscated Files or Information), its sub-techniques' indicators go into the parent's detection, which says which sub-techniques it includes; a sub-technique ATT&CK attributes to the group in its own right keeps its own detection.
 
 A name ATT&CK doesn't know opens the [Manual](13-manual.md) page instead, so you can enter the group's techniques yourself.
 
@@ -12,7 +12,7 @@ When you've set a [technology stack](16-profile-and-settings.md#technology-stack
 
 ## CVE
 
-Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. Each must look like `CVE-20YY-NNNN`. Archer reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds three kinds of query:
+Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. Each must look like `CVE-20YY-NNNN`. A CVE from the last 30 days is read from Archer's recent-CVE cache, and one in CISA's Known Exploited Vulnerabilities or naming a product in your technology stack has usually been researched already, so the hunt starts at once. Archer reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds three kinds of query:
 
 | Query | From | What it matches |
 |---|---|---|

@@ -10,7 +10,8 @@ Archer downloads public data, keeps it up to date by itself, and stores everythi
 | MITRESaw procedures | Built from the ATT&CK bundle | When ATT&CK changes (changed groups only), or from the [MITRESaw](12-mitresaw.md) page | `data/mitre_procedures.csv`, `.xlsx` |
 | OSINT detection rules | Public SecOps, Sentinel, Splunk and Elastic rule repositories | On every start | `data/repos/` |
 | LOLBAS, LOLDrivers, LOLRMM | lolol.farm projects | At most once a day | `data/repos/lol/`, `data/cache/lol_index.json` |
-| CVE records | NVD | When a CVE is first hunted, then cached | `data/cache/cve/` |
+| Recent CVEs | NVD and CISA KEV | On every start and daily: the last 30 days of CVEs, plus older ones KEV added in that time. A hunted CVE is kept past the 30 days | `data/feed/cves.json` |
+| CVE research | NVD, the CVE's references, GitHub PoCs | When a CVE is first hunted, then cached. Each daily refresh also researches up to 60 in advance: KEV CVEs first, then those naming a product in anyone's technology stack | `data/cache/cve/` |
 | Threat Feed | The feed sources' RSS and Atom feeds | On every start, on Refresh now, and when the Feed is opened six hours after the last collection | `data/feed/` |
 | Recorded attack telemetry | Splunk attack_data, OTRF Security-Datasets, EVTX-to-MITRE-Attack | Committed; changed recordings fetched from the [Emulate](19-emulate.md) page or `python -m archer.telemetry --build` | `archer/data/telemetry_*` |
 | Defender XDR alerting per technique | Microsoft GUIDE (Kaggle) | Committed; rebuilt by `python -m archer.telemetry --guide` | `archer/data/telemetry_guide.json` |
