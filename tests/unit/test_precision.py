@@ -95,3 +95,13 @@ def test_api_names_alone_on_a_command_line():
            'or target.process.command_line = /OpenThread/ nocase)')
     assert "PREC-API" in codes(apc, "udm")
     assert "PREC-API" not in codes('DeviceProcessEvents\n| where ProcessCommandLine has_all ("Add-Type", "QueueUserAPC")')
+
+
+def test_an_or_at_a_line_end_still_splits_the_conditions():
+    # "... or\n(Protocol ...)" read as one clause hid the protocol alternative from the check
+    q = ('DeviceNetworkEvents\n| where Timestamp > ago(1d)\n| where (RemoteUrl has_any("BeingDebugged")) or\n'
+         '(Protocol has_any("CIFS", "SSH"))\n| summarize count() by DeviceName')
+    assert "PREC-CONTEXT" in codes(q)
+    from archer.validation.precision import prune_kql
+    pruned = prune_kql(q)[0]
+    assert "Protocol" not in pruned and 'RemoteUrl has_any("BeingDebugged")' in pruned

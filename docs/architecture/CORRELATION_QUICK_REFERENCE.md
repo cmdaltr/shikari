@@ -59,7 +59,7 @@ Frequency Limit (pairs): max 20 appearances per technique
          ↓
 Chains: A–B and B–C both pairs → A + B + C on one host within 1h
     ├─ each technique brings a tactic of its own
-    └─ closed triangles first; max 3 per technique, 20 per vendor
+    └─ a new tactic first, then closed triangles; max 3 per technique, 1 per technique pair, 20 per vendor
          ↓
 Final Output (40-60 correlations per vendor)
 ```
@@ -308,6 +308,7 @@ python scripts/test_correlation_params.py -t 50 -v 60 -f 20
 - Caps the technique pairs kept **per vendor** (MDE, Splunk, etc.); Google SecOps has 100
 - A pair's per-table variants (Defender XDR's `DeviceProcessEvents` and `DeviceFileEvents` queries for the same two techniques) share one place, since they're merged into one correlation
 - Places are filled best first after scoring; a technique already paired with 20 others gives its place to the next-best pair
+- Until a tactic has 3 kept pairs (`PAIRS_PER_TACTIC`), its best pair above the threshold takes the next place
 
 **How it influences correlations:**
 

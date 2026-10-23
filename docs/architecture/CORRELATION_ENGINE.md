@@ -378,19 +378,23 @@ skipped once A had more than ten partners, which is exactly when a hub (Valid Ac
 dominates. A chain is instead all of its techniques on one host within the window.
 
 **Selection:**
-- A–B and B–C must both be scored pairs; a closed triangle (A–C as well) ranks first, then
-  the mean relevance of its pairs, then the number of tactics it spans.
+- A–B and B–C must both be scored pairs. A chain adding a tactic the chains already kept
+  don't cover ranks first, then a closed triangle (A–C as well), then the mean relevance of
+  its pairs, then how many tactics it adds, then the number it spans. Chains are returned
+  best first.
 - Each technique must bring a tactic the other two don't. A technique with four tactics
   (Cloud Accounts: Initial Access, Persistence, Privilege Escalation, Stealth) can't make up
   the spread on its own.
 - A technique is in at most `CHAIN_PER_TECHNIQUE` (3) chains, and a vendor has at most
-  `CHAIN_MAX` (20), so the hubs don't take every chain.
+  `CHAIN_MAX` (20), so the hubs don't take every chain. Two techniques are together in
+  one chain only, so the list isn't A+B with C, then D, then E.
 - Google SecOps and MDE only.
 
 **Queries:** no order is imposed, since ATT&CK tactics are goals, not steps.
 - **UDM** (`archer.build.udm.build_chain`): `$e1`, `$e2`, `$e3`, each bound to `$host`,
   `match: $host over 1h`.
-- **KQL**: each part in its own `let` on its table, each technique's parts unioned and
+- **KQL**: each part in its own `let` on its table (`Device*` tables only, since the join is
+  on `DeviceId`), each technique's parts unioned and
   projected to `T<n>Time, DeviceId, DeviceName`, joined on `DeviceId`, and kept when every
   two are within 60 minutes (`datetime_diff`).
 
@@ -524,6 +528,7 @@ These three parameters can be adjusted via **Profile → Config** in the web UI 
 | **Min Relevance Score (Threshold)** | **40%** (56/140) | `config.py` + `engine.py` | Quality threshold | ✅ **YES** |
 | **Max Correlations/Vendor** | **60** (Google SecOps 100) | `CORRELATION_CAP` | Prevent overload. Counts technique pairs: a pair's per-table variants share one place | ✅ **YES** |
 | **Tech Frequency Limit** | **20** | `PAIRS_PER_TECHNIQUE`, applied while filling the vendor's places | Ensure diversity: a technique past its limit leaves its place to the next-best pair | ✅ **YES** |
+| **Pairs per tactic** | **3** | `PAIRS_PER_TACTIC` | Until a tactic has 3 kept pairs, its best pair above the threshold takes the next place. The score rewards techniques with many tactics, so otherwise Discovery or Collection pairs (FIN13: 0.64 against 1.0) never get a place | ✅ **YES** |
 
 **See:** [Correlation Quick Reference](CORRELATION_QUICK_REFERENCE.md) for detailed tuning guide.
 

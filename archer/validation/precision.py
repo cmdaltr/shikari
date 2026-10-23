@@ -55,7 +55,9 @@ _TABLE_PLATFORMS = [
 
 
 def _top_level(text: str, sep: str = " or ") -> List[str]:
-    """Split on sep outside quotes and brackets."""
+    """Split on sep outside quotes and brackets. A word operator (" or ") matches across a
+    line break too: "... or\n(Protocol ...)" is two clauses."""
+    word = re.compile(r"\s+" + re.escape(sep.strip()) + r"\s+") if sep.strip().isalpha() else None
     parts, depth, quote, start, i = [], 0, None, 0, 0
     while i < len(text):
         c = text[i]
@@ -71,9 +73,9 @@ def _top_level(text: str, sep: str = " or ") -> List[str]:
             depth += 1
         elif c in ")]}":
             depth -= 1
-        elif depth == 0 and text.startswith(sep, i):
+        elif depth == 0 and (word.match(text, i) if word else text.startswith(sep, i)):
             parts.append(text[start:i])
-            start = i + len(sep)
+            start = word.match(text, i).end() if word else i + len(sep)
             i = start
             continue
         i += 1

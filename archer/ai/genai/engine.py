@@ -277,6 +277,7 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
 CORRELATION_VENDORS = ["googlesecops", "mde", "splunk"]
 CORRELATION_CAP = {"googlesecops": 100}
 PAIRS_PER_TECHNIQUE = 20  # a technique's partners in one vendor's pairs
+PAIRS_PER_TACTIC = 3  # places each tactic the pairs reach is sure of, before the best of the rest
 
 
 def _vendor_priority(vendor: str) -> int:
@@ -999,6 +1000,33 @@ def _score_correlation(corr: Dict, file_info: Dict) -> float:
     return min(140.0, score)  # Max 140 now (added tactic priority bonus)
 
 
+def _attributed(group_name: str) -> Optional[set]:
+    try:
+        from archer.mitre.procedures import attributed_techniques
+
+        return attributed_techniques(group_name)
+    except Exception:
+        return None
+
+
+def _expanded_siblings(corr: Dict, file_info: Dict, attributed: Optional[set]) -> bool:
+    """
+    Two techniques from one procedure: sub-techniques of one parent the group is attributed,
+    which the hunt expanded (Gallmaker: T1027 into HTML Smuggling, Steganography...), paired
+    with each other or with that parent. Neither sub-technique is attributed in its own
+    right, so pairing them correlates nothing. A report or CVE run has no attribution to go
+    on (None) and keeps every pair.
+    """
+    if not attributed:
+        return False
+    tids = [str(file_info.get(corr.get(k), {}).get("technique_id") or "").upper() for k in ("a", "b")]
+    if not all(tids) or tids[0] == tids[1] or len({t.split(".")[0] for t in tids}) > 1:
+        return False
+    parent = tids[0].split(".")[0]
+    subs = {t for t in tids if "." in t}
+    return parent in attributed and bool(subs) and not subs & attributed
+
+
 def _score_and_filter_correlations(
     correlations: List[Dict], file_info: Dict, min_relevance: float = 0.5, max_per_vendor: int = 60,
     on_scored=None,
@@ -1035,25 +1063,52 @@ def _score_and_filter_correlations(
     # PAIRS_PER_TECHNIQUE others. Limiting after the cap left the places a hub's extra
     # pairs had taken empty (Valid Accounts, with four tactics, scores with anything).
     # A place is a technique pair: its per-table variants (DeviceProcessEvents,
-    # DeviceFileEvents...) are merged into one correlation later, so they share it
+    # DeviceFileEvents...) are merged into one correlation later, so they share it.
+    # Until a tactic has PAIRS_PER_TACTIC kept pairs, the best pair above the threshold
+    # reaching it goes first. The score rewards techniques with many tactics, so otherwise
+    # those fill every place (FIN13: Discovery pairs score 0.64 against 1.0) and a group's
+    # Discovery or Collection pairs, and the chains built from them, never appear
     min_score_threshold = min_relevance * 100
     name = lambda path: _technique_key(file_info.get(path, {}).get("name") or _source_label(path))
+    tactics_of = lambda corr: set(file_info.get(corr.get("a"), {}).get("tactics") or []) | set(
+        file_info.get(corr.get("b"), {}).get("tactics") or [])
+    ranked = [(score, corr, name(corr.get("a")), name(corr.get("b")))
+              for score, corr in scored_correlations if score >= min_score_threshold]
     partners: Dict[str, set] = {}
-    places = set()
+    places, taken = set(), [False] * len(ranked)
+    per_tactic: Dict[str, int] = {}
     top_correlations = []
-    for score, corr in scored_correlations:
-        if score < min_score_threshold:
+
+    def opens(ka, kb):
+        """Whether a new place can go to this technique pair."""
+        return len(places) < max_per_vendor and not any(
+            other not in partners.get(k, ()) and len(partners.get(k, ())) >= PAIRS_PER_TECHNIQUE
+            for k, other in ((ka, kb), (kb, ka)))
+
+    first = 0
+    while True:
+        while first < len(ranked) and taken[first]:
+            first += 1
+        if first == len(ranked):
             break
-        ka, kb = name(corr.get("a")), name(corr.get("b"))
+        pick = first
+        for j in range(first, len(ranked) if len(places) < max_per_vendor else first):
+            score, corr, ka, kb = ranked[j]
+            if not taken[j] and frozenset((ka, kb)) not in places and opens(ka, kb) and any(
+                    per_tactic.get(t, 0) < PAIRS_PER_TACTIC for t in tactics_of(corr)):
+                pick = j
+                break
+        taken[pick] = True
+        score, corr, ka, kb = ranked[pick]
         place = frozenset((ka, kb))
         if place not in places:
-            if len(places) >= max_per_vendor or any(
-                    other not in partners.get(k, ()) and len(partners.get(k, ())) >= PAIRS_PER_TECHNIQUE
-                    for k, other in ((ka, kb), (kb, ka))):
+            if not opens(ka, kb):
                 continue
             places.add(place)
             partners.setdefault(ka, set()).add(kb)
             partners.setdefault(kb, set()).add(ka)
+            for t in tactics_of(corr):
+                per_tactic[t] = per_tactic.get(t, 0) + 1
         top_correlations.append(corr)
 
     return top_correlations
@@ -1616,7 +1671,9 @@ def _kql_chain(nodes: List[Dict], window: str = "1h", lookback: str = "1d") -> s
         for query in n["queries"]:
             table = re.match(r"\s*(\w+)", query)
             where = _where_clauses(query)
-            if not (table and where and correlation_part_ok(flush(query), "kql")):
+            # Joined on DeviceId: a part needs a table that has one (not CloudAppEvents, Identity*)
+            if not (table and table.group(1).startswith("Device") and where
+                    and correlation_part_ok(flush(query), "kql")):
                 continue
             part = f"T{i}_{len(parts) + 1}"
             parts.append(part)
@@ -1655,7 +1712,11 @@ def _build_chains(pairs: List[Dict], file_info: Dict) -> List[Dict]:
     (A-C too ranks it higher), each technique bringing a tactic the other two don't, so
     a technique with four tactics (Valid Accounts) can't make up the spread alone. The
     query needs all three on one host within the window, in any order: ATT&CK tactics
-    are goals, not steps. A technique is in at most CHAIN_PER_TECHNIQUE chains.
+    are goals, not steps. A technique is in at most CHAIN_PER_TECHNIQUE chains, and two
+    techniques are together in one: otherwise A+B with C, then D, then E fill the list
+    with near-copies. A chain adding a tactic the chains kept so far don't cover goes
+    first; otherwise the multi-tactic techniques' chains (Scheduled Task, the injections)
+    all span the same set. The chains are returned best first.
     """
     from itertools import combinations
 
@@ -1682,12 +1743,19 @@ def _build_chains(pairs: List[Dict], file_info: Dict) -> List[Dict]:
             candidates[trio] = (len(links) == CHAIN_LENGTH, round(sum(links) / len(links), 2),
                                 len(set().union(*tactics)))
 
-    chains, used = [], {}
-    for trio, (closed, relevance, n_tactics) in sorted(
-            candidates.items(), key=lambda kv: (kv[1], sorted(kv[0])), reverse=True):
-        if len(chains) >= CHAIN_MAX:
-            break
-        if any(used.get(k, 0) >= CHAIN_PER_TECHNIQUE for k in trio):
+    chains, used, together, covered = [], {}, set(), set()
+    remaining = dict(candidates)
+
+    def rank(item):
+        trio, (closed, relevance, n_tactics) = item
+        new = len(set().union(*(nodes[k]["tactics"] for k in trio)) - covered)
+        return bool(new), closed, relevance, new, n_tactics, sorted(trio)
+
+    while remaining and len(chains) < CHAIN_MAX:
+        trio, (closed, relevance, n_tactics) = max(remaining.items(), key=rank)
+        del remaining[trio]
+        duos = set(map(frozenset, combinations(trio, 2)))
+        if any(used.get(k, 0) >= CHAIN_PER_TECHNIQUE for k in trio) or duos & together:
             continue
         members = sorted((nodes[k] for k in trio), key=lambda n: n["name"].lower())
         query = _chain_query(vendor, members)
@@ -1695,6 +1763,11 @@ def _build_chains(pairs: List[Dict], file_info: Dict) -> List[Dict]:
             continue
         for k in trio:
             used[k] = used.get(k, 0) + 1
+        together |= duos
+        covered |= set().union(*(n["tactics"] for n in members))
+        remaining = {t: v for t, v in remaining.items()  # so each pick scans only what can still be kept
+                     if all(used.get(k, 0) < CHAIN_PER_TECHNIQUE for k in t)
+                     and not set(map(frozenset, combinations(t, 2))) & together}
         paths = [p for n in members for p in dict.fromkeys(n["paths"])]
         chains.append({
             "vendor": vendor,
@@ -1707,7 +1780,7 @@ def _build_chains(pairs: List[Dict], file_info: Dict) -> List[Dict]:
             "query_a": "", "query_b": "",
             "combined_query": query,
         })
-    return chains
+    return sorted(chains, key=lambda c: c["relevance_score"], reverse=True)
 
 
 def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> List[Dict]:
@@ -2231,8 +2304,13 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
         # Score and filter each vendor (balanced threshold)
         filtered_corr = []
+        attributed = _attributed(group_name)
         for vendor, corrs in by_vendor_corr.items():
             print(f"\n   Vendor: {vendor} - {len(corrs)} raw correlations")
+            kept = [c for c in corrs if not _expanded_siblings(c, file_info, attributed)]
+            if len(kept) < len(corrs):
+                print(f"   {len(corrs) - len(kept)} pairs from one expanded parent left out")
+            corrs = kept
 
             # Use config relevance threshold (default 75%)
             from archer.config import CoreConfig

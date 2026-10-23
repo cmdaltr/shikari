@@ -135,3 +135,101 @@ def test_a_pairs_per_table_variants_share_its_place(monkeypatch):
 
     assert len(kept) == 5  # A-B's three variants, then C0-D and C1-D
     assert {c["a"] for c in kept[3:]} == {"g/C0_DeviceProcessEvents.yaml", "g/C1_DeviceProcessEvents.yaml"}
+
+
+def _graph(tactics, edges, scores=None):
+    """Pairs between made-up techniques, each a process launch, scoring 0.9 unless given."""
+    q = {n: _udm("T1000", n, f'metadata.event_type = "PROCESS_LAUNCH" and target.process.command_line = /{n}/ nocase')
+         for n in tactics}
+    info = {f"g/{n}_UDM.yaml": {"name": n, "tactics": t, "query": q[n]} for n, t in tactics.items()}
+    pairs = [{"vendor": "googlesecops", "a": f"g/{a}_UDM.yaml", "b": f"g/{b}_UDM.yaml", "query_a": q[a],
+              "query_b": q[b], "combined_query": "x", "relevance_score": (scores or {}).get((a, b), 0.9)}
+             for a, b in edges]
+    return [set(c["techniques_involved"]) for c in engine._build_chains(pairs, info)]
+
+
+def test_two_techniques_are_in_one_chain():
+    # Hub and Spoke could take a third partner three times: they're together once, and the
+    # partners left over make their own chain with Hub
+    names = _graph({"Hub": ["Execution"], "Spoke": ["Persistence"], "Xa": ["Discovery"], "Xb": ["Collection"],
+                    "Xc": ["Impact"]},
+                   [("Hub", "Spoke"), ("Hub", "Xa"), ("Hub", "Xb"), ("Hub", "Xc")])
+    assert sum({"Hub", "Spoke"} <= n for n in names) == 1
+    assert all(len(set.intersection(a, b)) < 2 for a, b in zip(names, names[1:]))
+
+
+def test_of_equal_chains_the_one_adding_a_tactic_comes_first():
+    # Closed P-Q-R covers Execution, Credential Access, Persistence. S+T then take Acoll
+    # (Collection, new) rather than Zcred (Credential Access, covered), though Zcred sorts last
+    names = _graph({"P": ["Execution"], "Q": ["Credential Access"], "R": ["Persistence"], "S": ["Initial Access"],
+                    "T": ["Discovery"], "Zcred": ["Credential Access"], "Acoll": ["Collection"]},
+                   [("P", "Q"), ("Q", "R"), ("P", "R"), ("S", "T"), ("T", "Zcred"), ("T", "Acoll")])
+    assert names == [{"P", "Q", "R"}, {"S", "T", "Acoll"}]
+
+
+def test_kql_chain_parts_come_from_device_tables():
+    nodes = [
+        {"name": "Cloud Roles", "technique_id": "T1098.003", "queries": [
+            'CloudAppEvents\n| where ActionType has "AttachUserPolicy"',
+            'DeviceProcessEvents\n| where ProcessCommandLine has_all("aws", "iam", "attach-user-policy")']},
+        {"name": "PowerShell", "technique_id": "T1059.001", "queries": [
+            'DeviceProcessEvents\n| where ProcessCommandLine has "-enc"']},
+        {"name": "Create Account", "technique_id": "T1136", "queries": [
+            'DeviceProcessEvents\n| where ProcessCommandLine has_all("net", "user", "/add")']},
+    ]
+    q = engine._kql_chain(nodes)
+    assert "CloudAppEvents" not in q and "let T1 = union T1_1\n" in q
+    assert check_query(q, "mde")["findings"] == []
+
+
+def test_a_chain_adding_a_tactic_goes_first():
+    # After P-Q-R, S-T-U repeats its tactics at 0.9; Y-X-Q reaches Lateral Movement at 0.7.
+    # With room for two, the one adding a tactic is kept; the list is best first
+    tactics = {"P": ["Execution"], "Q": ["Credential Access"], "R": ["Persistence"],
+               "S": ["Execution"], "T": ["Credential Access"], "U": ["Persistence"],
+               "X": ["Lateral Movement"], "Y": ["Persistence"]}
+    edges = [("P", "Q"), ("Q", "R"), ("P", "R"), ("S", "T"), ("T", "U"), ("X", "Y"), ("Y", "Q")]
+    import pytest
+    mp = pytest.MonkeyPatch()
+    mp.setattr(engine, "CHAIN_MAX", 2)
+    try:
+        names = _graph(tactics, edges, {("X", "Y"): 0.7, ("Y", "Q"): 0.7})
+    finally:
+        mp.undo()
+    assert names == [{"P", "Q", "R"}, {"X", "Y", "Q"}]
+
+
+def test_each_tactic_is_sure_of_a_few_places(monkeypatch):
+    # The Persistence pairs score highest, but Discovery's best pairs get places first
+    monkeypatch.setattr(engine, "PAIRS_PER_TACTIC", 2)
+    monkeypatch.setattr(engine, "_score_correlation", lambda corr, info: corr["score"])
+    info = {f"g/P{i}_UDM.yaml": {"name": f"P{i}", "tactics": ["Persistence"]} for i in range(10)}
+    info.update({f"g/D{i}_UDM.yaml": {"name": f"D{i}", "tactics": ["Discovery"]} for i in range(3)})
+    persist = [{"a": f"g/P{i}_UDM.yaml", "b": f"g/P{i + 1}_UDM.yaml", "score": 140} for i in range(9)]
+    discover = [{"a": f"g/D{i}_UDM.yaml", "b": f"g/P{i}_UDM.yaml", "score": 80} for i in range(3)]
+    weak = [{"a": "g/D2_UDM.yaml", "b": "g/P9_UDM.yaml", "score": 30}]  # below the threshold
+
+    kept = engine._score_and_filter_correlations(persist + discover + weak, info, min_relevance=0.4,
+                                                 max_per_vendor=5)
+
+    assert [c["a"] for c in kept].count("g/D0_UDM.yaml") + [c["a"] for c in kept].count("g/D1_UDM.yaml") == 2
+    assert "g/D2_UDM.yaml" not in [c["a"] for c in kept] and len(kept) == 5
+
+
+def test_sub_techniques_expanded_from_one_parent_are_not_paired():
+    info = {"g/HTMLSmuggling_UDM.yaml": {"technique_id": "T1027.006"},
+            "g/Steganography_UDM.yaml": {"technique_id": "T1027.003"},
+            "g/PowerShell_UDM.yaml": {"technique_id": "T1059.001"},
+            "g/LSASSMemory_UDM.yaml": {"technique_id": "T1003.001"},
+            "g/DCSync_UDM.yaml": {"technique_id": "T1003.006"}}
+    pair = lambda a, b: {"a": f"g/{a}_UDM.yaml", "b": f"g/{b}_UDM.yaml"}
+    gallmaker = {"T1027", "T1059.001"}  # ATT&CK gives the parent only
+
+    assert engine._expanded_siblings(pair("HTMLSmuggling", "Steganography"), info, gallmaker)
+    assert not engine._expanded_siblings(pair("HTMLSmuggling", "PowerShell"), info, gallmaker)
+    info["g/ObfuscatedFilesorInformation_UDM.yaml"] = {"technique_id": "T1027"}
+    assert engine._expanded_siblings(pair("ObfuscatedFilesorInformation", "HTMLSmuggling"), info, gallmaker)
+    # Attributed in their own right, siblings are two procedures
+    assert not engine._expanded_siblings(pair("LSASSMemory", "DCSync"), info, {"T1003", "T1003.001"})
+    # A report or CVE run has no attribution
+    assert not engine._expanded_siblings(pair("HTMLSmuggling", "Steganography"), info, None)
